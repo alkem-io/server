@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IDocument } from './document.interface';
 import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
 import { MimeFileType } from '@common/enums/mime.file.type';
@@ -34,7 +27,6 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy!: string;
 
-  @Index('FK_11155901817dd09d5906537e088')
   @OneToOne(() => AuthorizationPolicy, {
     eager: true,
     cascade: true,
@@ -43,7 +35,6 @@ export class Document extends AuthorizableEntity implements IDocument {
   @JoinColumn()
   authorization?: AuthorizationPolicy;
 
-  @Index('FK_11155450cf75dc486700ca034c6')
   @ManyToOne(() => StorageBucket, storage => storage.documents, {
     eager: false,
     cascade: false,
@@ -51,7 +42,6 @@ export class Document extends AuthorizableEntity implements IDocument {
   })
   storageBucket!: StorageBucket;
 
-  @Index('FK_222838434c7198a323ea6f475fb')
   @OneToOne(() => Tagset, {
     eager: true,
     cascade: true,

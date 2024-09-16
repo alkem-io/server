@@ -1,4 +1,4 @@
-import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { ILicensePlan } from './license.plan.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Licensing } from '@platform/licensing/licensing.entity';
@@ -8,7 +8,6 @@ import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
-  @Index('FK_42becb5fd6dc563f51ecb71abcc')
   @ManyToOne(() => Licensing, licensing => licensing.plans, {
     eager: false,
     cascade: false,

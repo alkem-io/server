@@ -6,7 +6,6 @@ import {
   BeforeUpdate,
   Column,
   Entity,
-  Index,
   JoinColumn,
   ManyToOne,
   OneToOne,
@@ -44,7 +43,6 @@ export class WhiteboardTemplate
     }
   }
 
-  @Index('FK_65556450cf75dc486700ca034c6')
   @ManyToOne(
     () => TemplatesSet,
     templatesSet => templatesSet.whiteboardTemplates,
@@ -56,7 +54,6 @@ export class WhiteboardTemplate
   )
   templatesSet?: TemplatesSet;
 
-  @Index('FK_69991450cf75dc486700ca034c6')
   @OneToOne(() => Profile, {
     eager: true,
     cascade: true,

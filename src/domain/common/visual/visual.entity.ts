@@ -1,4 +1,4 @@
-import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IVisual } from './visual.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -33,7 +33,6 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column('varchar', { length: ALT_TEXT_LENGTH, nullable: true })
   alternativeText?: string;
 
-  @Index('FK_77771450cf75dc486700ca034c6')
   @ManyToOne(() => Profile, profile => profile.visuals, {
     eager: false,
     cascade: false,

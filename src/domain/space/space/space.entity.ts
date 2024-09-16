@@ -2,7 +2,6 @@ import {
   Column,
   Entity,
   Generated,
-  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -24,7 +23,6 @@ import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 import { Profile } from '@domain/common/profile';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
-  @Index('FK_71231450cf75dc486700ca034c6')
   @OneToOne(() => Profile, {
     eager: false,
     cascade: true,
@@ -89,7 +87,6 @@ export class Space extends NameableEntity implements ISpace {
   @Column('text')
   settingsStr: string = '';
 
-  @Index('FK_1114d59c0b805c9c1ecb0070e16')
   @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: true,
