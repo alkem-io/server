@@ -8,7 +8,7 @@ import {
 } from '@src/common/decorators';
 import { Community, ICommunity } from '@domain/community/community';
 import { IUser } from '@domain/community/user/user.interface';
-import { IApplication } from '@domain/community/application';
+import { IApplication } from '@domain/access/application';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IOrganization } from '../organization';
 import { CommunityRoleType } from '@common/enums/community.role';
@@ -18,12 +18,12 @@ import { UserService } from '../user/user.service';
 import { UserFilterInput } from '@core/filtering';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IInvitation } from '../invitation';
 import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 import { IPlatformInvitation } from '@platform/invitation';
 import { CommunityRoleService } from './community.role.service';
 import { CommunityService } from '../community/community.service';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {

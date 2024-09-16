@@ -1,7 +1,7 @@
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { NVPModule } from '@domain/common/nvp/nvp.module';
-import { Application } from '@domain/community/application';
-import { ApplicationService } from '@domain/community/application/application.service';
+import { Application } from '@domain/access/application';
+import { ApplicationService } from '@domain/access/application/application.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from '@domain/community/user/user.module';

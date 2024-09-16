@@ -8,10 +8,10 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
-import { InvitationService } from '../invitation/invitation.service';
-import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
-import { IInvitation } from '../invitation';
 import { CommunityRoleService } from './community.role.service';
+import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
 
 @Injectable()
 export class CommunityRoleInvitationLifecycleOptionsProvider {

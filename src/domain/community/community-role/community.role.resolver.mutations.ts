@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { IApplication } from '@domain/community/application';
-import { ApplicationService } from '@domain/community/application/application.service';
+import { IApplication } from '@domain/access/application';
+import { ApplicationService } from '@domain/access/application/application.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -11,8 +11,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { RemoveCommunityRoleFromUserInput } from './dto/community.role.dto.role.remove.user';
-import { ApplicationEventInput } from '../application/dto/application.dto.event';
-import { ApplicationAuthorizationService } from '../application/application.service.authorization';
+import { ApplicationEventInput } from '../../access/application/dto/application.dto.event';
+import { ApplicationAuthorizationService } from '../../access/application/application.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityJoinInput } from './dto/community.role.dto.join';
 import { CommunityRoleApplyInput } from './dto/community.role.dto.apply';
@@ -25,11 +25,7 @@ import { CommunityRoleType } from '@common/enums/community.role';
 import { AssignCommunityRoleToUserInput } from './dto/community.role.dto.role.assign.user';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
-import { InvitationService } from '../invitation/invitation.service';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
-import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
-import { CreateInvitationInput, IInvitation } from '../invitation';
 import { IOrganization } from '../organization';
 import { IUser } from '../user/user.interface';
 import { CreatePlatformInvitationOnCommunityInput } from './dto/community.role.dto.platform.invitation.community';
@@ -58,6 +54,11 @@ import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
+import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
+import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
 
 @Resolver()
 export class CommunityRoleResolverMutations {

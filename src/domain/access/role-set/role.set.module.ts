@@ -10,8 +10,8 @@ import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
-import { InvitationModule } from '@domain/community/invitation/invitation.module';
-import { ApplicationModule } from '@domain/community/application/application.module';
+import { InvitationModule } from '@domain/access/invitation/invitation.module';
+import { ApplicationModule } from '@domain/access/application/application.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { RoleModule } from '../role/role.module';
 

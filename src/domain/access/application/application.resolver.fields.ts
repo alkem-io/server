@@ -3,11 +3,11 @@ import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { ApplicationService } from './application.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { Application, IApplication } from '@domain/community/application';
+import { Application, IApplication } from '@domain/access/application';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { IContributor } from '../contributor/contributor.interface';
+import { IContributor } from '../../community/contributor/contributor.interface';
 
 @Resolver(() => IApplication)
 export class ApplicationResolverFields {

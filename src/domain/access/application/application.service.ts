@@ -1,9 +1,9 @@
-import { CreateApplicationInput } from '@domain/community/application';
+import { CreateApplicationInput } from '@domain/access/application';
 import {
   Application,
   IApplication,
   DeleteApplicationInput,
-} from '@domain/community/application';
+} from '@domain/access/application';
 
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,12 +17,12 @@ import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
+import { applicationLifecycleConfig } from '@domain/access/application/application.lifecycle.config';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IQuestion } from '@domain/common/question/question.interface';
 import { asyncFilter } from '@common/utils';
-import { IContributor } from '../contributor/contributor.interface';
+import { IContributor } from '../../community/contributor/contributor.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()

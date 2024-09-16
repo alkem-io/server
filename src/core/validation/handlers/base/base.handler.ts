@@ -24,7 +24,7 @@ import {
   CreateTagsetOnProfileInput,
   UpdateProfileInput,
 } from '@domain/common/profile/dto';
-import { ApplicationEventInput } from '@domain/community/application/dto/application.dto.event';
+import { ApplicationEventInput } from '@domain/access/application/dto/application.dto.event';
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';

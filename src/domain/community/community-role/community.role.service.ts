@@ -1,7 +1,7 @@
 import {
   CreateApplicationInput,
   IApplication,
-} from '@domain/community/application';
+} from '@domain/access/application';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
@@ -12,7 +12,7 @@ import {
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community';
-import { ApplicationService } from '@domain/community/application/application.service';
+import { ApplicationService } from '@domain/access/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { LogContext } from '@common/enums/logging.context';
 import { OrganizationService } from '../organization/organization.service';
@@ -24,11 +24,8 @@ import { CommunityContributorsUpdateType } from '@common/enums/community.contrib
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { InvitationService } from '../invitation/invitation.service';
-import { IInvitation } from '../invitation/invitation.interface';
 import { CreatePlatformInvitationOnCommunityInput } from './dto/community.role.dto.platform.invitation.community';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { CommunityRoleEventsService } from './community.role.service.events';
 import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
@@ -45,6 +42,9 @@ import { CommunityService } from '../community/community.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleService } from '@domain/access/role/role.service';
+import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
 
 @Injectable()
 export class CommunityRoleService {

@@ -13,8 +13,7 @@ import { UserModule } from '../user/user.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
-import { ApplicationModule } from '../application/application.module';
-import { InvitationModule } from '../invitation/invitation.module';
+import { ApplicationModule } from '../../access/application/application.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -24,6 +23,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { RoleModule } from '@domain/access/role/role.module';
+import { InvitationModule } from '@domain/access/invitation/invitation.module';
 
 @Module({
   imports: [

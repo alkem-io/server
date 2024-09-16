@@ -1,9 +1,9 @@
-import { CreateInvitationInput } from '@domain/community/invitation';
+import { CreateInvitationInput } from '@domain/access/invitation';
 import {
   Invitation,
   IInvitation,
   DeleteInvitationInput,
-} from '@domain/community/invitation';
+} from '@domain/access/invitation';
 
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,16 +14,16 @@ import {
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { invitationLifecycleConfig } from '@domain/community/invitation/invitation.lifecycle.config';
+import { invitationLifecycleConfig } from '@domain/access/invitation/invitation.lifecycle.config';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { asyncFilter } from '@common/utils';
-import { IUser } from '../user/user.interface';
-import { UserService } from '../user/user.service';
 import { LogContext } from '@common/enums/logging.context';
-import { ContributorService } from '../contributor/contributor.service';
-import { IContributor } from '../contributor/contributor.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { UserService } from '@domain/community/user/user.service';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class InvitationService {

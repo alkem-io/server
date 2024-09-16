@@ -3,11 +3,11 @@ import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { InvitationService } from './invitation.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { IInvitation } from '@domain/community/invitation';
+import { IInvitation } from '@domain/access/invitation';
 import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IContributor } from '../contributor/contributor.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @Resolver(() => IInvitation)
 export class InvitationResolverFields {

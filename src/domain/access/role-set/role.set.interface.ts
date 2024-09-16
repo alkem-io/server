@@ -2,8 +2,8 @@ import { ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IForm } from '@domain/common/form/form.interface';
 import { IPlatformInvitation } from '@platform/invitation';
-import { IApplication } from '@domain/community/application/application.interface';
-import { IInvitation } from '@domain/community/invitation/invitation.interface';
+import { IApplication } from '@domain/access/application/application.interface';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { IRole } from '../role/role.interface';
 
 @ObjectType('RoleSet')

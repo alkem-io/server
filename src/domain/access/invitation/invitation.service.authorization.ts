@@ -6,10 +6,10 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IInvitation } from './invitation.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_COMMUNITY_USER_INVITATION as CREDENTIAL_RULE_COMMUNITY_CONTRIBUTOR_INVITATION } from '@common/constants/authorization/credential.rule.constants';
-import { ContributorService } from '../contributor/contributor.service';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
 
 @Injectable()
 export class InvitationAuthorizationService {

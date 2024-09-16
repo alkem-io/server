@@ -5,8 +5,8 @@ import { Role } from '../role/role.entity';
 import { Form } from '@domain/common/form/form.entity';
 import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
 import { IRoleSet } from './role.set.interface';
-import { Application } from '@domain/community/application/application.entity';
-import { Invitation } from '@domain/community/invitation/invitation.entity';
+import { Application } from '@domain/access/application/application.entity';
+import { Invitation } from '@domain/access/invitation/invitation.entity';
 
 @Entity()
 export class RoleSet
