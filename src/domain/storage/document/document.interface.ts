@@ -31,5 +31,12 @@ export abstract class IDocument extends IAuthorizable {
     description: 'Size of the Document.',
   })
   size!: number;
+
+  @Field(() => Boolean, {
+    description: 'Whether this Document is in its end location or not.',
+  })
+  temporaryLocation!: boolean;
+
+  // Not exposed for security reasons
   externalID!: string;
 }

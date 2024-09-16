@@ -11,6 +11,14 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @Column('varchar', { nullable: false, length: ENUM_LENGTH })
   type!: CalendarEventType;
 
+  // toDo fix createdBy circular dependency https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4529
+  // @Index('FK_6a30f26ca267009fcf514e0e726')
+  // @OneToOne(() => User, {
+  //   eager: false,
+  //   cascade: true,
+  //   onDelete: 'SET NULL',
+  // })
+  // @JoinColumn()
   @Column('char', { length: UUID_LENGTH, nullable: false })
   createdBy!: string;
 

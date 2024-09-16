@@ -131,7 +131,7 @@ export class CollaborationAuthorizationService {
     for (const callout of collaboration.callouts) {
       const updatedCalloutAuthorizations =
         await this.calloutAuthorizationService.applyAuthorizationPolicy(
-          callout,
+          callout.id,
           collaboration.authorization,
           communityPolicy,
           spaceSettings
