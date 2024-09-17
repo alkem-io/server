@@ -332,20 +332,13 @@ export class AccountService {
   async getSubscriptions(
     accountInput: IAccount
   ): Promise<IAccountSubscription[]> {
-    const account = await this.getAccount(accountInput.id, {
+    const account = await this.getAccountOrFail(accountInput.id, {
       relations: {
         agent: {
           credentials: true,
         },
       },
     });
-
-    if (!account) {
-      throw new EntityNotFoundException(
-        `Unable to retrieve Account with id: ${accountInput.id}`,
-        LogContext.ACCOUNT
-      );
-    }
 
     if (!account.agent || !account.agent.credentials) {
       throw new EntityNotFoundException(
