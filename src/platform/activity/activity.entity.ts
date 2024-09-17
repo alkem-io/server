@@ -5,7 +5,6 @@ import {
   MESSAGEID_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
-  TINY_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
 import { ActivityEventType } from '@common/enums/activity.event.type';

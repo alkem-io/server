@@ -23,6 +23,7 @@ import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module'
 import { SpaceDefaultsModule } from '@domain/space/space.defaults/space.defaults.module';
 import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { LicenseEngineModule } from '@core/license-engine/license.engine.module'
     SpaceDefaultsModule,
     CalloutGroupsModule,
     LicenseEngineModule,
+    TemporaryStorageModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
   providers: [
