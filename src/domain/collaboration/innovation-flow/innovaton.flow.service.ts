@@ -10,7 +10,7 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
-import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowEntityInput } from './dto/innovation.flow.dto.update.entity';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -24,8 +24,6 @@ import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dt
 import { UpdateProfileSelectTagsetValueInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.value';
 import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
-import { UpdateInnovationFlowFromTemplateInput } from './dto/innovation.flow.dto.update.from.template';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -36,7 +34,6 @@ export class InnovationFlowService {
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     private innovationFlowStatesService: InnovationFlowStatesService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -45,7 +42,8 @@ export class InnovationFlowService {
   async createInnovationFlow(
     innovationFlowData: CreateInnovationFlowInput,
     tagsetTemplates: ITagsetTemplate[],
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    isTemplate: boolean = false
   ): Promise<IInnovationFlow> {
     const innovationFlow: IInnovationFlow = new InnovationFlow();
     innovationFlow.authorization = new AuthorizationPolicy(
@@ -57,29 +55,31 @@ export class InnovationFlowService {
         LogContext.SPACES
       );
     }
+    if (!isTemplate) {
+      const tagsetInputs =
+        this.profileService.convertTagsetTemplatesToCreateTagsetInput(
+          tagsetTemplates
+        );
 
-    const tagsetInputs =
-      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
-        tagsetTemplates
+      innovationFlowData.profile.tagsets =
+        this.profileService.updateProfileTagsetInputs(
+          innovationFlowData.profile.tagsets,
+          tagsetInputs
+        );
+
+      // Update the flow state tagset to have the default value
+      const newStateNames = innovationFlowData.states.map(
+        state => state.displayName
       );
-
-    innovationFlowData.profile.tagsets =
-      this.profileService.updateProfileTagsetInputs(
-        innovationFlowData.profile.tagsets,
-        tagsetInputs
+      const defaultSelectedState = newStateNames[0]; // default to first in the list
+      const flowTagsetInput = innovationFlowData.profile.tagsets.find(
+        t => t.name === TagsetReservedName.FLOW_STATE.valueOf()
       );
-
-    // Update the flow state tagset to have the default value
-    const newStateNames = innovationFlowData.states.map(
-      state => state.displayName
-    );
-    const defaultSelectedState = newStateNames[0]; // default to first in the list
-    const flowTagsetInput = innovationFlowData.profile.tagsets.find(
-      t => t.name === TagsetReservedName.FLOW_STATE.valueOf()
-    );
-    if (flowTagsetInput) {
-      flowTagsetInput.tags = [defaultSelectedState];
+      if (flowTagsetInput) {
+        flowTagsetInput.tags = [defaultSelectedState];
+      }
     }
+
     innovationFlow.profile = await this.profileService.createProfile(
       innovationFlowData.profile,
       ProfileType.INNOVATION_FLOW,
@@ -105,8 +105,9 @@ export class InnovationFlowService {
     return await this.innovationFlowRepository.save(innovationFlow);
   }
 
-  async update(
-    innovationFlowData: UpdateInnovationFlowInput
+  async updateInnovationFlow(
+    innovationFlowData: UpdateInnovationFlowEntityInput,
+    isTemplate: boolean = false
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
@@ -123,14 +124,17 @@ export class InnovationFlowService {
         state => state.displayName
       );
 
-      const defaultSelectedState = newStateNames[0]; // default to first in the list
-      const updateData: UpdateProfileSelectTagsetDefinitionInput = {
-        profileID: innovationFlow.profile.id,
-        allowedValues: newStateNames,
-        defaultSelectedValue: defaultSelectedState,
-        tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
-      };
-      await this.profileService.updateSelectTagsetDefinition(updateData);
+      // InnovationFlow templates don't have a tagset
+      if (!isTemplate) {
+        const defaultSelectedState = newStateNames[0]; // default to first in the list
+        const updateData: UpdateProfileSelectTagsetDefinitionInput = {
+          profileID: innovationFlow.profile.id,
+          allowedValues: newStateNames,
+          defaultSelectedValue: defaultSelectedState,
+          tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+        };
+        await this.profileService.updateSelectTagsetDefinition(updateData);
+      }
 
       const convertedStates =
         this.innovationFlowStatesService.convertInputsToStates(
@@ -151,23 +155,17 @@ export class InnovationFlowService {
     return await this.innovationFlowRepository.save(innovationFlow);
   }
 
-  async updateStatesFromTemplate(
-    innovationFlowData: UpdateInnovationFlowFromTemplateInput
-  ): Promise<IInnovationFlow> {
+  public async updateInnovationFlowStates(
+    innovationFlowID: string,
+    statesStr: string
+  ) {
     const innovationFlow = await this.getInnovationFlowOrFail(
-      innovationFlowData.innovationFlowID,
+      innovationFlowID,
       {
         relations: { profile: true },
       }
     );
-    const innovationFlowTemplate =
-      await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-        innovationFlowData.innovationFlowTemplateID
-      );
-
-    const newStates = this.innovationFlowStatesService.getStates(
-      innovationFlowTemplate.states
-    );
+    const newStates = this.innovationFlowStatesService.getStates(statesStr);
 
     const newStateNames = newStates.map(state => state.displayName);
 
@@ -184,7 +182,7 @@ export class InnovationFlowService {
     innovationFlow.states =
       this.innovationFlowStatesService.serializeStates(newStates);
 
-    return await this.innovationFlowRepository.save(innovationFlow);
+    return await this.save(innovationFlow);
   }
 
   async updateSelectedState(

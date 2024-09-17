@@ -32,10 +32,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
-import {
-  CreateTagsetTemplateInput,
-  ITagsetTemplate,
-} from '@domain/common/tagset-template';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -46,19 +43,17 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
 import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
-import { SpaceDefaultsService } from '@domain/space/space.defaults/space.defaults.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 import { Space } from '@domain/space/space/space.entity';
 import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { CalloutGroupsService } from '../callout-groups/callout.group.service';
-import { SpaceType } from '@common/enums/space.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceLevel } from '@common/enums/space.level';
-import { ISpaceDefaults } from '@domain/space/space.defaults/space.defaults.interface';
 import { Callout } from '@domain/collaboration/callout';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
 
 @Injectable()
 export class CollaborationService {
@@ -75,60 +70,83 @@ export class CollaborationService {
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private timelineService: TimelineService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private calloutGroupsService: CalloutGroupsService
   ) {}
 
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    spaceType: SpaceType,
-    spaceDefaults?: ISpaceDefaults
+    agentInfo?: AgentInfo
   ): Promise<ICollaboration> {
+    if (
+      !collaborationData.calloutGroups ||
+      !collaborationData.calloutsData ||
+      !collaborationData.innovationFlowData ||
+      !collaborationData.defaultCalloutGroupName
+    ) {
+      throw new RelationshipNotFoundException(
+        'Unable to create Collaboration: missing required data',
+        LogContext.COLLABORATION
+      );
+    }
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COLLABORATION
     );
     collaboration.callouts = [];
     collaboration.timeline = this.timelineService.createTimeline();
-    const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);
-    collaboration.groupsStr =
-      this.calloutGroupsService.serializeGroups(calloutGroups);
+    collaboration.groupsStr = this.calloutGroupsService.serializeGroups(
+      collaborationData.calloutGroups
+    );
 
     collaboration.tagsetTemplateSet =
       this.tagsetTemplateSetService.createTagsetTemplateSet();
 
-    // Rely on the logic in Space Defaults to create the right innovation flow input
-    const innovationFlowInput =
-      await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        spaceType,
-        spaceDefaults,
-        collaborationData.innovationFlowTemplateID
+    const innovationFlowStatesTagsetInput =
+      this.createInnovationFlowStatesTagsetTemplateInput(
+        collaborationData.innovationFlowData
       );
-    const allowedStates = innovationFlowInput.states.map(
-      state => state.displayName
-    );
-
-    const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.FLOW_STATE,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: allowedStates,
-      defaultSelectedValue:
-        allowedStates.length > 0 ? allowedStates[0] : undefined,
-    };
-    const statesTagsetTemplate =
+    collaboration.tagsetTemplateSet =
       this.tagsetTemplateSetService.addTagsetTemplate(
         collaboration.tagsetTemplateSet,
-        tagsetTemplateDataStates
+        innovationFlowStatesTagsetInput
       );
+
+    const groupTagsetTemplateInput = this.createCalloutGroupTagsetTemplateInput(
+      collaboration,
+      collaborationData.defaultCalloutGroupName
+    );
+    collaboration.tagsetTemplateSet =
+      this.tagsetTemplateSetService.addTagsetTemplate(
+        collaboration.tagsetTemplateSet,
+        groupTagsetTemplateInput
+      );
+
     // save the tagset template so can use it in the innovation flow as a template for it's tags
     await this.tagsetTemplateSetService.save(collaboration.tagsetTemplateSet);
 
+    collaboration.callouts = await this.addCallouts(
+      collaboration,
+      collaborationData.calloutsData,
+      storageAggregator,
+      agentInfo?.userID
+    );
+
     // Note: need to create the innovation flow after creation of
     // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
+    const statesTagsetTemplate =
+      collaboration.tagsetTemplateSet.tagsetTemplates.find(
+        template => template.name === TagsetReservedName.FLOW_STATE
+      );
+    if (!statesTagsetTemplate) {
+      throw new EntityNotInitializedException(
+        `Unable to find states tagset template on collaboration ${collaboration.id}`,
+        LogContext.COLLABORATION
+      );
+    }
     collaboration.innovationFlow =
       await this.innovationFlowService.createInnovationFlow(
-        innovationFlowInput,
+        collaborationData.innovationFlowData,
         [statesTagsetTemplate],
         storageAggregator
       );
@@ -140,50 +158,48 @@ export class CollaborationService {
     return this.calloutGroupsService.getGroupNames(collaboration.groupsStr);
   }
 
-  public async addCalloutGroupTagsetTemplate(
+  private createCalloutGroupTagsetTemplateInput(
     collaboration: ICollaboration,
     defaultGroup: CalloutGroupName
-  ) {
+  ): CreateTagsetTemplateInput {
     const tagsetTemplateData: CreateTagsetTemplateInput = {
       name: TagsetReservedName.CALLOUT_GROUP,
       type: TagsetType.SELECT_ONE,
       allowedValues: this.getCalloutGroupNames(collaboration),
       defaultSelectedValue: defaultGroup,
     };
-    await this.addTagsetTemplate(collaboration, tagsetTemplateData);
+    return tagsetTemplateData;
   }
-
-  public async addTagsetTemplate(
-    collaboration: ICollaboration,
-    tagsetTemplateData: CreateTagsetTemplateInput
-  ): Promise<ITagsetTemplate> {
-    if (!collaboration.tagsetTemplateSet) {
-      collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
-        collaboration.id
-      );
-    }
-
-    return this.tagsetTemplateSetService.addTagsetTemplate(
-      collaboration.tagsetTemplateSet,
-      tagsetTemplateData
+  private createInnovationFlowStatesTagsetTemplateInput(
+    innovationFlowData: CreateInnovationFlowInput
+  ): CreateTagsetTemplateInput {
+    const allowedStates = innovationFlowData.states.map(
+      state => state.displayName
     );
+    const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
+      name: TagsetReservedName.FLOW_STATE,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: allowedStates,
+      defaultSelectedValue:
+        allowedStates.length > 0 ? allowedStates[0] : undefined,
+    };
+    return tagsetTemplateDataStates;
   }
 
-  public async addDefaultCallouts(
+  private async addCallouts(
     collaboration: ICollaboration,
     calloutsData: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,
     userID: string | undefined
-  ): Promise<ICollaboration> {
-    collaboration.callouts =
-      await this.getCalloutsOnCollaboration(collaboration);
-
-    if (!collaboration.tagsetTemplateSet) {
-      collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
-        collaboration.id
+  ): Promise<ICallout[]> {
+    if (!collaboration.tagsetTemplateSet || !collaboration.callouts) {
+      throw new EntityNotInitializedException(
+        `Collaboration (${collaboration.id}) not initialised`,
+        LogContext.COLLABORATION
       );
     }
 
+    const callouts: ICallout[] = [];
     for (const calloutDefault of calloutsData) {
       const callout = await this.calloutService.createCallout(
         calloutDefault,
@@ -193,37 +209,9 @@ export class CollaborationService {
       );
       // default callouts are already published
       callout.visibility = CalloutVisibility.PUBLISHED;
-      collaboration.callouts.push(callout);
+      callouts.push(callout);
     }
-    return collaboration;
-  }
-
-  public async createCalloutInputsFromCollaboration(
-    collaborationSource: ICollaboration
-  ): Promise<CreateCalloutInput[]> {
-    const sourceCallouts = await this.getCalloutsOnCollaboration(
-      collaborationSource,
-      {
-        relations: {
-          contributionDefaults: true,
-          contributionPolicy: true,
-          framing: {
-            profile: {
-              references: true,
-              location: true,
-              tagsets: true,
-            },
-            whiteboard: {
-              profile: true,
-            },
-          },
-        },
-      }
-    );
-
-    return sourceCallouts.map(
-      this.calloutService.createCalloutInputFromCallout
-    );
+    return callouts;
   }
 
   async save(collaboration: ICollaboration): Promise<ICollaboration> {
@@ -248,18 +236,6 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     return collaboration;
-  }
-
-  public async createCalloutInputsFromCollaborationTemplate(
-    collaborationTemplateID?: string
-  ): Promise<CreateCalloutInput[]> {
-    if (collaborationTemplateID) {
-      const collaboration = await this.getCollaborationOrFail(
-        collaborationTemplateID
-      );
-      return await this.createCalloutInputsFromCollaboration(collaboration);
-    }
-    return [];
   }
 
   public async getChildCollaborationsOrFail(

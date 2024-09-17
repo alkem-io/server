@@ -20,6 +20,7 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { CommunityRole } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class PostAuthorizationService {
@@ -33,8 +34,8 @@ export class PostAuthorizationService {
   async applyAuthorizationPolicy(
     post: IPost,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     if (!post.profile) {
       throw new RelationshipNotFoundException(
@@ -90,8 +91,8 @@ export class PostAuthorizationService {
 
   private appendCredentialRules(
     post: IPost,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings
   ): IAuthorizationPolicy {
     const authorization = post.authorization;
     if (!authorization)
@@ -116,16 +117,22 @@ export class PostAuthorizationService {
     newRules.push(manageCreatedPostPolicy);
 
     // Allow space admins to move post
-    const credentials =
-      this.communityPolicyService.getCredentialsForRoleWithParents(
-        communityPolicy,
-        spaceSettings,
-        CommunityRole.ADMIN
-      );
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
+    const credentials: ICredentialDefinition[] = [
+      {
+        type: AuthorizationCredential.GLOBAL_ADMIN,
+        resourceID: '',
+      },
+    ];
+
+    if (communityPolicy && spaceSettings) {
+      const roleCredentials =
+        this.communityPolicyService.getCredentialsForRoleWithParents(
+          communityPolicy,
+          spaceSettings,
+          CommunityRole.ADMIN
+        );
+      credentials.push(...roleCredentials);
+    }
     const adminsMovePostRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_POST],

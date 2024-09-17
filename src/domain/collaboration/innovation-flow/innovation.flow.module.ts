@@ -11,7 +11,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { InnovationFlowStatesModule } from '../innovation-flow-states/innovation.flow.state.module';
-import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 
 @Module({
   imports: [
@@ -21,7 +20,6 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     ProfileModule,
     TagsetModule,
     TagsetTemplateModule,
-    InnovationFlowTemplateModule,
     TypeOrmModule.forFeature([InnovationFlow]),
   ],
   providers: [

@@ -100,7 +100,7 @@ export class TagsetTemplateSetService {
   public addTagsetTemplate(
     tagsetTemplateSet: ITagsetTemplateSet,
     tagsetTemplateData: CreateTagsetTemplateInput
-  ): ITagsetTemplate {
+  ): ITagsetTemplateSet {
     // Check if the group already exists, if so log a warning
     if (
       this.hasTagsetTemplateWithName(tagsetTemplateSet, tagsetTemplateData.name)
@@ -115,6 +115,6 @@ export class TagsetTemplateSetService {
       this.tagsetTemplateService.createTagsetTemplate(tagsetTemplateData);
     tagsetTemplateSet.tagsetTemplates.push(tagsetTemplate);
 
-    return tagsetTemplate;
+    return tagsetTemplateSet;
   }
 }

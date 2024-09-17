@@ -127,7 +127,6 @@ export class OrganizationService {
     organization.agent = await this.agentService.createAgent({
       type: AgentType.ORGANIZATION,
     });
-
     const account = await this.accountHostService.createAccount(
       AccountType.ORGANIZATION
     );

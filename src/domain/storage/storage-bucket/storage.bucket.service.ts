@@ -56,7 +56,7 @@ export class StorageBucketService {
 
   public createStorageBucket(
     storageBucketData: CreateStorageBucketInput
-  ): Promise<IStorageBucket> {
+  ): IStorageBucket {
     const storage: IStorageBucket = new StorageBucket();
     storage.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.STORAGE_BUCKET
@@ -68,7 +68,7 @@ export class StorageBucketService {
       storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
     storage.storageAggregator = storageBucketData.storageAggregator;
 
-    return this.storageBucketRepository.save(storage);
+    return storage;
   }
 
   async deleteStorageBucket(storageID: string): Promise<IStorageBucket> {
@@ -92,6 +92,10 @@ export class StorageBucketService {
     );
     result.id = storageID;
     return result;
+  }
+
+  public async save(storage: IStorageBucket): Promise<IStorageBucket> {
+    return this.storageBucketRepository.save(storage);
   }
 
   async getStorageBucketOrFail(
