@@ -23,6 +23,7 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     AuthorizationPolicyModule,
     ContributorModule,
     StorageAggregatorModule,
+    TemporaryStorageModule,
     PlatformAuthorizationPolicyModule,
     LicensingModule,
     LicenseIssuerModule,

@@ -35,28 +35,25 @@ export class CalloutAuthorizationService {
   ) {}
 
   public async applyAuthorizationPolicy(
-    calloutInput: ICallout,
+    calloutID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy?: ICommunityPolicy,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
-    const callout = await this.calloutService.getCalloutOrFail(
-      calloutInput.id,
-      {
-        relations: {
-          comments: true,
-          contributions: true,
-          contributionDefaults: true,
-          contributionPolicy: true,
-          framing: {
+    const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      relations: {
+        comments: true,
+        contributions: true,
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: {
+          profile: true,
+          whiteboard: {
             profile: true,
-            whiteboard: {
-              profile: true,
-            },
           },
         },
-      }
-    );
+      },
+    });
 
     if (
       !callout.contributions ||

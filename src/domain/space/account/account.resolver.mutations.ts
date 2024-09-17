@@ -40,6 +40,7 @@ import { TransferAccountVirtualContributorInput } from './dto/account.dto.transf
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { INameable } from '@domain/common/entity/nameable-entity';
+import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -57,7 +58,8 @@ export class AccountResolverMutations {
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
-    private notificationAdapter: NotificationAdapter
+    private notificationAdapter: NotificationAdapter,
+    private temporaryStorageService: TemporaryStorageService
   ) {}
 
   SOFT_LIMIT_SPACE = 3;
@@ -239,6 +241,16 @@ export class AccountResolverMutations {
     const virtual = await this.accountService.createVirtualContributorOnAccount(
       virtualContributorData,
       agentInfo
+    );
+    // Check if avatars etc need to be moved
+    // Now the contribution is saved, we can look to move any temporary documents
+    // to be stored in the storage bucket of the profile.
+    // Note: important to do before auth reset is done
+    const destinationStorageBucket =
+      await this.virtualContributorService.getStorageBucket(virtual.id);
+    await this.temporaryStorageService.moveTemporaryDocuments(
+      virtualContributorData,
+      destinationStorageBucket
     );
 
     const clonedAccountAuth =

@@ -9,6 +9,7 @@ import {
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -46,6 +47,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { UpdateCalloutInput } from './dto/callout.dto.update';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { keyBy } from 'lodash';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class CalloutService {
@@ -486,6 +488,26 @@ export class CalloutService {
     contribution.callout = callout;
 
     return await this.contributionService.save(contribution);
+  }
+
+  public async getStorageBucket(calloutID: string): Promise<IStorageBucket> {
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: {
+        framing: {
+          profile: {
+            storageBucket: true,
+          },
+        },
+      },
+    });
+    const storageBucket = callout?.framing?.profile?.storageBucket;
+    if (!storageBucket) {
+      throw new RelationshipNotFoundException(
+        `Unable to find storage bucket to use for Callout: ${calloutID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return storageBucket;
   }
 
   public async updateContributionCalloutsSortOrder(

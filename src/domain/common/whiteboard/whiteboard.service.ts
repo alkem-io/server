@@ -188,6 +188,8 @@ export class WhiteboardService {
       );
     }
 
+    // TODO: is this still needed? It is a lot of work to be doing on every
+    // whiteboard content save. Plus I think it is an inherent risk.
     const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
       newWhiteboardContent,
       whiteboard?.profile.id
