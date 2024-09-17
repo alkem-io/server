@@ -17,10 +17,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import {
-  CreateCalloutInput,
-  UpdateCalloutInput,
-} from '@domain/collaboration/callout/dto/index';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
 import { limitAndShuffle } from '@common/utils';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
@@ -47,6 +44,7 @@ import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callo
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UpdateCalloutInput } from './dto/callout.dto.update';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { keyBy } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -115,7 +113,7 @@ export class CalloutService {
         policyData
       );
 
-    if (calloutData.type === CalloutType.POST) {
+    if (calloutData.type === CalloutType.POST && calloutData.enableComments) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
@@ -213,13 +211,17 @@ export class CalloutService {
   }
 
   public async updateCallout(
+    calloutInput: ICallout,
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
-    const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
+    const callout = await this.getCalloutOrFail(calloutInput.id, {
       relations: {
         contributionDefaults: true,
         contributionPolicy: true,
-        framing: true,
+        framing: {
+          profile: true,
+          whiteboard: true,
+        },
       },
     });
 
@@ -315,48 +317,6 @@ export class CalloutService {
 
   public getCallouts(options: FindManyOptions<Callout>): Promise<ICallout[]> {
     return this.calloutRepository.find(options);
-  }
-
-  public createCalloutInputFromCallout(
-    calloutInput: ICallout
-  ): CreateCalloutInput {
-    if (
-      !calloutInput.framing ||
-      !calloutInput.contributionDefaults ||
-      !calloutInput.contributionPolicy
-    ) {
-      throw new EntityNotInitializedException(
-        'Missing callout relation',
-        LogContext.COLLABORATION,
-        {
-          cause: 'Relation for Callout not loaded',
-          calloutId: calloutInput.id,
-        }
-      );
-    }
-
-    const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(
-      calloutInput.framing
-    );
-    return {
-      nameID: calloutInput.nameID,
-      type: calloutInput.type,
-      visibility: calloutInput.visibility,
-      groupName: calloutGroupTagset.tags[0],
-      framing:
-        this.calloutFramingService.createCalloutFramingInputFromCalloutFraming(
-          calloutInput.framing
-        ),
-      contributionDefaults:
-        this.contributionDefaultsService.createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-          calloutInput.contributionDefaults
-        ),
-      contributionPolicy:
-        this.contributionPolicyService.createCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          calloutInput.contributionPolicy
-        ),
-      sortOrder: calloutInput.sortOrder,
-    };
   }
 
   public async getActivityCount(callout: ICallout): Promise<number> {

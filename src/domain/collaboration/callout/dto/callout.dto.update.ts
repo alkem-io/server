@@ -1,6 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
@@ -8,7 +7,7 @@ import { UpdateCalloutFramingInput } from '@domain/collaboration/callout-framing
 import { UpdateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.update';
 
 @InputType()
-export class UpdateCalloutInput extends UpdateBaseAlkemioInput {
+export class UpdateCalloutInput {
   @Field(() => Number, {
     nullable: true,
     description: 'The sort order to assign to this Callout.',
