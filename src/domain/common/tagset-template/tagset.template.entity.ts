@@ -1,4 +1,4 @@
-import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { TagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.entity';
 import { BaseAlkemioEntity } from '../entity/base-entity';
@@ -45,7 +45,6 @@ export class TagsetTemplate
   })
   tagsets?: Tagset[];
 
-  @Index('FK_9ad35130cde781b69259eec7d85')
   @ManyToOne(
     () => TagsetTemplateSet,
     tagsetTemplateSet => tagsetTemplateSet.tagsetTemplates,

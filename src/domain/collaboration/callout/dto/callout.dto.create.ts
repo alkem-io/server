@@ -1,4 +1,4 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { CalloutType } from '@common/enums/callout.type';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -9,6 +9,7 @@ import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/ca
 import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
 
 @InputType()
+@ObjectType('CreateCalloutData')
 export class CreateCalloutInput {
   @Field(() => CreateCalloutFramingInput, { nullable: false })
   @ValidateNested({ each: true })
@@ -60,4 +61,11 @@ export class CreateCalloutInput {
       'Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.',
   })
   sendNotification?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Controls if the comments are enabled for this Callout. Defaults to false.',
+  })
+  enableComments?: boolean;
 }

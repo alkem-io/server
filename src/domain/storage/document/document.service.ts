@@ -204,7 +204,7 @@ export class DocumentService {
     return url.startsWith(this.getDocumentsBaseUrlPath());
   }
 
-  private getDocumentsBaseUrlPath(): string {
+  public getDocumentsBaseUrlPath(): string {
     const { endpoint_cluster, path_api_private_rest } = this.configService.get(
       'hosting',
       { infer: true }

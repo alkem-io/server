@@ -6,7 +6,6 @@ import {
   OneToOne,
   OneToMany,
   Generated,
-  Index,
 } from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/community/application/application.entity';
@@ -62,7 +61,6 @@ export class User extends ContributorBase implements IUser {
   @JoinColumn()
   preferenceSet?: PreferenceSet;
 
-  @Index('FK_4444d59c0b805c9c1ecb0070e16')
   @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: true,

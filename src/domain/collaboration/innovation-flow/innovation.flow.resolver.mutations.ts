@@ -7,9 +7,8 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationFlow } from './innovation.flow.interface';
-import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowEntityInput } from './dto/innovation.flow.dto.update.entity';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
-import { UpdateInnovationFlowFromTemplateInput } from './dto/innovation.flow.dto.update.from.template';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 
 @Resolver()
@@ -25,7 +24,8 @@ export class InnovationFlowResolverMutations {
   })
   async updateInnovationFlow(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowData') innovationFlowData: UpdateInnovationFlowInput
+    @Args('innovationFlowData')
+    innovationFlowData: UpdateInnovationFlowEntityInput
   ): Promise<IInnovationFlow> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(
@@ -38,7 +38,9 @@ export class InnovationFlowResolverMutations {
       `updateInnovationFlow: ${innovationFlow.id}`
     );
 
-    return await this.innovationFlowService.update(innovationFlowData);
+    return await this.innovationFlowService.updateInnovationFlow(
+      innovationFlowData
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -63,32 +65,6 @@ export class InnovationFlowResolverMutations {
 
     return await this.innovationFlowService.updateSelectedState(
       innovationFlowStateData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationFlow, {
-    description:
-      'Updates the InnovationFlow states from the specified template.',
-  })
-  async updateInnovationFlowStatesFromTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowData')
-    innovationFlowData: UpdateInnovationFlowFromTemplateInput
-  ): Promise<IInnovationFlow> {
-    const innovationFlow =
-      await this.innovationFlowService.getInnovationFlowOrFail(
-        innovationFlowData.innovationFlowID
-      );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      innovationFlow.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `updateInnovationFlow from template: ${innovationFlow.id}`
-    );
-
-    return await this.innovationFlowService.updateStatesFromTemplate(
-      innovationFlowData
     );
   }
 

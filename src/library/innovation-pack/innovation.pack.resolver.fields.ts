@@ -32,9 +32,9 @@ export class InnovationPackResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('templates', () => ITemplatesSet, {
+  @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,
-    description: 'The templates in use by this InnovationPack',
+    description: 'The templatesSet in use by this InnovationPack',
   })
   @UseGuards(GraphqlGuard)
   async templatesSet(

@@ -28,7 +28,7 @@ import { ApplicationEventInput } from '@domain/community/application/dto/applica
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
-import { UpdateWhiteboardDirectInput } from '@domain/common/whiteboard/types';
+import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
@@ -36,11 +36,8 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
-import { CreateCalloutTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/callout.template.dto.create.on.templates.set';
-import { CreatePostTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/post.template.dto.create.on.templates.set';
-import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/whiteboard.template.dto.create.on.templates.set';
-import { UpdatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.update';
-import { UpdateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.update';
+import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
+import { UpdateTemplateInput } from '@domain/template/template/dto/template.dto.update';
 import { CreateDocumentInput } from '@domain/storage/document/dto/document.dto.create';
 import {
   DeleteDocumentInput,
@@ -60,8 +57,6 @@ import {
   CreateCalloutContributionDefaultsInput,
   UpdateCalloutContributionDefaultsInput,
 } from '@domain/collaboration/callout-contribution-defaults/dto';
-import { UpdateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.update';
-import { CreateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.create';
 import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
 import {
   CreateLinkInput,
@@ -78,6 +73,8 @@ import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create
 import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/community.role.dto.apply';
 import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.invite.contributor';
 import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.platform.invitation.community';
+import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
+import { UpdateInnovationFlowEntityInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.update.entity';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -96,11 +93,9 @@ export class BaseHandler extends AbstractHandler {
       CreateActorInput,
       CreateContributionOnCalloutInput,
       CreateCollaborationInput,
+      CreateCollaborationOnSpaceInput,
       CreateDocumentInput,
-      CreateCalloutTemplateInput,
-      CreateCalloutTemplateOnTemplatesSetInput,
-      CreatePostTemplateOnTemplatesSetInput,
-      CreateWhiteboardTemplateOnTemplatesSetInput,
+      CreateTemplateOnTemplatesSetInput,
       CreateSubspaceInput,
       CreateLinkInput,
       CreateOrganizationInput,
@@ -117,8 +112,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalloutFramingInput,
       UpdateCalloutContributionDefaultsInput,
       UpdateCalloutContributionPolicyInput,
-      UpdateCalloutTemplateInput,
-      UpdatePostTemplateInput,
+      UpdateTemplateInput,
       UpdateCommunityApplicationFormInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,
@@ -131,8 +125,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserInput,
       UpdateUserPlatformSettingsInput,
       UpdateProfileInput,
-      UpdateWhiteboardDirectInput,
-      UpdateWhiteboardTemplateInput,
+      UpdateWhiteboardEntityInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
       UpdateSpaceSettingsEntityInput,
