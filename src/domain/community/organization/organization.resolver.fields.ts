@@ -32,7 +32,6 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { IOrganizationSubscription } from './organization.license.subscription.interface';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -232,13 +231,5 @@ export class OrganizationResolverFields {
       organization.id
     );
     return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
-  }
-
-  @ResolveField('subscriptions', () => [IOrganizationSubscription], {
-    nullable: false,
-    description: 'The subscriptions active for this Organization.',
-  })
-  async subscriptions(@Parent() organization: Organization) {
-    return await this.organizationService.getSubscriptions(organization);
   }
 }

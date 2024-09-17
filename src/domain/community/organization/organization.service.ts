@@ -8,7 +8,11 @@ import {
   ForbiddenException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+} from '@common/enums';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import {
@@ -46,6 +50,7 @@ import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
@@ -55,9 +60,6 @@ import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
-import { LicenseCredential } from '@common/enums/license.credential';
-import { IOrganizationSubscription } from './organization.license.subscription.interface';
-import { Account } from '@domain/space/account/account.entity';
 
 @Injectable()
 export class OrganizationService {
@@ -354,13 +356,9 @@ export class OrganizationService {
     return organization;
   }
 
-  public async getAccount(
-    organization: IOrganization,
-    options?: FindOneOptions<Account>
-  ): Promise<IAccount> {
+  public async getAccount(organization: IOrganization): Promise<IAccount> {
     return await this.accountHostService.getAccountOrFail(
-      organization.accountID,
-      options
+      organization.accountID
     );
   }
 
@@ -421,37 +419,32 @@ export class OrganizationService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  async getSubscriptions(
-    orgInput: IOrganization
-  ): Promise<IOrganizationSubscription[]> {
-    const account = await this.getAccount(orgInput, {
-      relations: {
-        agent: {
-          credentials: true,
-        },
-      },
-    });
+  private getCredentialForRole(
+    role: OrganizationRole,
+    organizationID: string
+  ): ICredentialDefinition {
+    const result: ICredentialDefinition = {
+      type: '',
+      resourceID: organizationID,
+    };
+    switch (role) {
+      case OrganizationRole.ASSOCIATE:
+        result.type = AuthorizationCredential.ORGANIZATION_ASSOCIATE;
+        break;
+      case OrganizationRole.ADMIN:
+        result.type = AuthorizationCredential.ORGANIZATION_ADMIN;
+        break;
+      case OrganizationRole.OWNER:
+        result.type = AuthorizationCredential.ORGANIZATION_OWNER;
+        break;
 
-    if (!account.agent || !account.agent.credentials) {
-      throw new EntityNotFoundException(
-        `Unable to find agent with credentials for the account of organization: ${orgInput.id}`,
-        LogContext.ACCOUNT
-      );
+      default:
+        throw new ForbiddenException(
+          `Role not supported: ${role}`,
+          LogContext.AUTH
+        );
     }
-    const subscriptions: IOrganizationSubscription[] = [];
-    for (const credential of account.agent.credentials) {
-      if (
-        Object.values(LicenseCredential).includes(
-          credential.type as LicenseCredential
-        )
-      ) {
-        subscriptions.push({
-          name: credential.type as LicenseCredential,
-          expires: credential.expires,
-        });
-      }
-    }
-    return subscriptions;
+    return result;
   }
 
   async getMetrics(organization: IOrganization): Promise<INVP[]> {
