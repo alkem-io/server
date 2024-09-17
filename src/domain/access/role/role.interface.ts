@@ -1,5 +1,5 @@
 import { CommunityRoleType } from '@common/enums/community.role';
-import { IBaseAlkemio } from '@domain/common/entity/base-entity';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Role')

@@ -7,7 +7,7 @@ import { RoleSet } from '../role-set/role.set.entity';
 
 @Entity()
 export class Role extends BaseAlkemioEntity implements IRole {
-  @ManyToOne(() => RoleSet, manager => manager.roles, {
+  @ManyToOne(() => RoleSet, roleSet => roleSet.roles, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',

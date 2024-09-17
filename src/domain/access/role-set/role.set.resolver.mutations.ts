@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoleSetService } from './role.set.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
@@ -82,7 +82,6 @@ export class RoleSetResolverMutations {
   @Mutation(() => IUser, {
     description: 'Assigns a User to a role in the specified Community.',
   })
-  @Profiling.api
   async assignCommunityRoleToUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignRoleOnRoleSetToUserInput
@@ -123,7 +122,6 @@ export class RoleSetResolverMutations {
   @Mutation(() => IOrganization, {
     description: 'Assigns an Organization a Role in the specified Community.',
   })
-  @Profiling.api
   async assignCommunityRoleToOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData')
@@ -151,7 +149,6 @@ export class RoleSetResolverMutations {
     description:
       'Assigns a Virtual Contributor to a role in the specified Community.',
   })
-  @Profiling.api
   async assignCommunityRoleToVirtual(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignRoleOnRoleSetToVirtualContributorInput
@@ -207,7 +204,6 @@ export class RoleSetResolverMutations {
   @Mutation(() => IUser, {
     description: 'Removes a User from a Role in the specified Community.',
   })
-  @Profiling.api
   async removeCommunityRoleFromUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveRoleOnRoleSetFromUserInput
@@ -254,7 +250,6 @@ export class RoleSetResolverMutations {
     description:
       'Removes an Organization from a Role in the specified Community.',
   })
-  @Profiling.api
   async removeCommunityRoleFromOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveRoleOnRoleSetFromOrganizationInput
@@ -280,7 +275,6 @@ export class RoleSetResolverMutations {
   @Mutation(() => IVirtualContributor, {
     description: 'Removes a Virtual from a Role in the specified Community.',
   })
-  @Profiling.api
   async removeCommunityRoleFromVirtual(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveRoleOnRoleSetFromVirtualContributorInput
@@ -320,7 +314,6 @@ export class RoleSetResolverMutations {
   @Mutation(() => IApplication, {
     description: 'Apply to join the specified Community as a member.',
   })
-  @Profiling.api
   async applyForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('applicationData') applicationData: ApplyForRoleOnRoleSetInput
@@ -391,7 +384,6 @@ export class RoleSetResolverMutations {
     description:
       'Invite an existing Contriburor to join the specified Community as a member.',
   })
-  @Profiling.api
   async inviteContributorsForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
@@ -548,7 +540,6 @@ export class RoleSetResolverMutations {
     description:
       'Invite a User to join the platform and the specified Community as a member.',
   })
-  @Profiling.api
   async inviteUserToPlatformAndCommunity(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
@@ -641,7 +632,6 @@ export class RoleSetResolverMutations {
     description:
       'Join the specified Community as a member, without going through an approval process.',
   })
-  @Profiling.api
   async joinRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('joinCommunityData') joiningData: JoinAsBaseRoleOnRoleSetInput
@@ -730,7 +720,6 @@ export class RoleSetResolverMutations {
   @Mutation(() => IRoleSet, {
     description: 'Update the Application Form used by this RoleSet.',
   })
-  @Profiling.api
   async updateRoleSetApplicationForm(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('applicationFormData')
