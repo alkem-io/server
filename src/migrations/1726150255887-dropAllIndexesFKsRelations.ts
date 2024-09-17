@@ -58,7 +58,7 @@ export class DropAllIndexesFKsRelations1726150255887
 
     // 3. Drop all regular indexes (except primary keys and indexes on AUTO_INCREMENT columns)
     const indexesResult = await queryRunner.query(`
-      SELECT s.TABLE_NAME, s.INDEX_NAME, c.COLUMN_NAME, c.EXTRA
+      SELECT s.TABLE_NAME, s.INDEX_NAME, c.COLUMN_NAME, MAX(c.EXTRA) AS EXTRA
       FROM information_schema.STATISTICS s
       JOIN information_schema.COLUMNS c
       ON s.TABLE_NAME = c.TABLE_NAME
