@@ -90,14 +90,4 @@ export class CalloutContributionPolicyService {
     result.id = calloutContributionPolicyID;
     return result;
   }
-
-  public createCalloutContributionPolicyInputFromCalloutContributionPolicy(
-    calloutContributionPolicy: ICalloutContributionPolicy
-  ): CreateCalloutContributionPolicyInput {
-    return {
-      state: calloutContributionPolicy.state,
-      allowedContributionTypes:
-        calloutContributionPolicy.allowedContributionTypes,
-    };
-  }
 }

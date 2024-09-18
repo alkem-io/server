@@ -8,16 +8,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceDefaults } from './space.defaults.entity';
-import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
-import { ITemplatesSet } from '@domain/template/templates-set';
-import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
-import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
-import { templatesSetDefaults } from './definitions/space.defaults.templates';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
@@ -53,14 +44,12 @@ import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space
 import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
 import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ITemplate } from '@domain/template/template/template.interface';
 
 @Injectable()
 export class SpaceDefaultsService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private innovationFlowStatesService: InnovationFlowStatesService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
-    private templatesSetService: TemplatesSetService,
     @InjectRepository(SpaceDefaults)
     private spaceDefaultsRepository: Repository<SpaceDefaults>
   ) {}
@@ -76,7 +65,7 @@ export class SpaceDefaultsService {
 
   public async updateSpaceDefaults(
     spaceDefaults: ISpaceDefaults,
-    innovationFlowTemplate: IInnovationFlowTemplate
+    innovationFlowTemplate: ITemplate
   ): Promise<ISpaceDefaults> {
     spaceDefaults.innovationFlowTemplate = innovationFlowTemplate;
 
@@ -224,7 +213,7 @@ export class SpaceDefaultsService {
 
   public getDefaultInnovationFlowTemplate(
     spaceDefaults: ISpaceDefaults
-  ): IInnovationFlowTemplate | undefined {
+  ): ITemplate | undefined {
     return spaceDefaults.innovationFlowTemplate;
   }
 
@@ -268,100 +257,5 @@ export class SpaceDefaultsService {
           LogContext.ROLES
         );
     }
-  }
-
-  public async getCreateInnovationFlowInput(
-    spaceType: SpaceType,
-    spaceDefaults?: ISpaceDefaults,
-    innovationFlowTemplateID?: string
-  ): Promise<CreateInnovationFlowInput> {
-    // Start with using the provided argument
-    if (innovationFlowTemplateID) {
-      const template =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          innovationFlowTemplateID,
-          {
-            relations: { profile: true },
-          }
-        );
-      // Note: no profile currently present, so use the one from the template for now
-      return {
-        profile: {
-          displayName: template.profile.displayName,
-          description: template.profile.description,
-        },
-        states: this.innovationFlowStatesService.getStates(template.states),
-      };
-    }
-
-    // If no argument is provided, then use the default template for the space, if set
-    // for spaces of type challenge or opportunity
-    if (
-      spaceType === SpaceType.CHALLENGE ||
-      spaceType === SpaceType.OPPORTUNITY
-    ) {
-      if (spaceDefaults && spaceDefaults.innovationFlowTemplate) {
-        const template =
-          await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-            spaceDefaults.innovationFlowTemplate.id,
-            {
-              relations: { profile: true },
-            }
-          );
-        spaceDefaults.innovationFlowTemplate;
-        // Note: no profile currently present, so use the one from the template for now
-        const result: CreateInnovationFlowInput = {
-          profile: {
-            displayName: template.profile.displayName,
-            description: template.profile.description,
-          },
-          states: this.innovationFlowStatesService.getStates(template.states),
-        };
-        return result;
-      }
-    }
-
-    // If no default template is set, then pick up the default based on the specified type
-    const innovationFlowStatesDefault =
-      this.getDefaultInnovationFlowStates(spaceType);
-    const result: CreateInnovationFlowInput = {
-      profile: {
-        displayName: 'default',
-        description: 'default flow',
-      },
-      states: innovationFlowStatesDefault,
-    };
-    return result;
-  }
-
-  public getCreateCalloutInputs(
-    defaultCallouts: CreateCalloutInput[],
-    calloutsFromCollaborationTemplateInput: CreateCalloutInput[],
-    collaborationData?: CreateCollaborationInput
-  ): CreateCalloutInput[] {
-    let calloutInputs: CreateCalloutInput[] = [];
-    const addDefaultCallouts = collaborationData?.addDefaultCallouts;
-    if (addDefaultCallouts === undefined || addDefaultCallouts) {
-      const collaborationTemplateID =
-        collaborationData?.collaborationTemplateID;
-      if (collaborationTemplateID) {
-        calloutInputs = calloutsFromCollaborationTemplateInput;
-      } else {
-        calloutInputs = defaultCallouts;
-      }
-    }
-    return calloutInputs;
-  }
-
-  public async addDefaultTemplatesToSpaceLibrary(
-    templatesSet: ITemplatesSet,
-    storageAggregator: IStorageAggregator
-  ): Promise<ITemplatesSet> {
-    return await this.templatesSetService.addTemplates(
-      templatesSet,
-      templatesSetDefaults.posts,
-      templatesSetDefaults.innovationFlows,
-      storageAggregator
-    );
   }
 }

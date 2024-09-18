@@ -31,6 +31,8 @@ import { AccountHostModule } from '../account.host/account.host.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
+import { TemplateModule } from '@domain/template/template/template.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 
 @Module({
   imports: [
@@ -54,9 +56,12 @@ import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.mod
     StorageAggregatorModule,
     ContributionReporterModule,
     CollaborationModule,
+    InputCreatorModule,
     SpaceFilterModule,
     ActivityAdapterModule,
     LoaderCreatorModule,
+    TemplateModule,
+    InputCreatorModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Space]),
   ],

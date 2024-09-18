@@ -112,9 +112,6 @@ export class PostService {
         postData.profileData
       );
     }
-    if (postData.type) {
-      post.type = postData.type;
-    }
 
     await this.savePost(post);
 

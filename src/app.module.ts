@@ -81,6 +81,7 @@ import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module
 import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 
 @Module({
   imports: [
@@ -265,6 +266,7 @@ import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.mo
     ExcalidrawServerModule,
     ChatGuidanceModule,
     VirtualContributorModule,
+    InputCreatorModule,
     LookupModule,
     LookupByNameModule,
     AuthResetSubscriberModule,

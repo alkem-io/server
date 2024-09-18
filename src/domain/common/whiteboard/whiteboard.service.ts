@@ -128,24 +128,33 @@ export class WhiteboardService {
     whiteboardInput: IWhiteboard,
     updateWhiteboardData: UpdateWhiteboardInput
   ): Promise<IWhiteboard> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
+    let whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
       relations: {
         profile: true,
       },
     });
 
-    if (updateWhiteboardData.profileData) {
+    if (updateWhiteboardData.profile) {
       whiteboard.profile = await this.profileService.updateProfile(
         whiteboard.profile,
-        updateWhiteboardData.profileData
+        updateWhiteboardData.profile
       );
     }
 
     if (updateWhiteboardData.contentUpdatePolicy) {
       whiteboard.contentUpdatePolicy = updateWhiteboardData.contentUpdatePolicy;
     }
+    whiteboard = await this.save(whiteboard);
 
-    return this.save(whiteboard);
+    if (updateWhiteboardData.content) {
+      const input: UpdateWhiteboardContentInput = {
+        ID: whiteboard.id,
+        content: updateWhiteboardData.content,
+      };
+      return await this.updateWhiteboardContent(whiteboard, input);
+    }
+
+    return whiteboard;
   }
 
   async updateWhiteboardContent(
@@ -179,6 +188,8 @@ export class WhiteboardService {
       );
     }
 
+    // TODO: is this still needed? It is a lot of work to be doing on every
+    // whiteboard content save. Plus I think it is an inherent risk.
     const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
       newWhiteboardContent,
       whiteboard?.profile.id
@@ -287,18 +298,5 @@ export class WhiteboardService {
     }
 
     return whiteboardContent;
-  }
-
-  public createWhiteboardInputFromWhiteboard(
-    whiteboard?: IWhiteboard
-  ): CreateWhiteboardInput | undefined {
-    if (!whiteboard) return undefined;
-    return {
-      profileData: this.profileService.createProfileInputFromProfile(
-        whiteboard.profile
-      ),
-      content: whiteboard.content,
-      nameID: whiteboard.nameID,
-    };
   }
 }

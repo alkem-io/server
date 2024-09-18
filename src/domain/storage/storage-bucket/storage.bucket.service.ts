@@ -56,7 +56,7 @@ export class StorageBucketService {
 
   public createStorageBucket(
     storageBucketData: CreateStorageBucketInput
-  ): Promise<IStorageBucket> {
+  ): IStorageBucket {
     const storage: IStorageBucket = new StorageBucket();
     storage.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.STORAGE_BUCKET
@@ -68,7 +68,7 @@ export class StorageBucketService {
       storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
     storage.storageAggregator = storageBucketData.storageAggregator;
 
-    return this.storageBucketRepository.save(storage);
+    return storage;
   }
 
   async deleteStorageBucket(storageID: string): Promise<IStorageBucket> {
@@ -92,6 +92,10 @@ export class StorageBucketService {
     );
     result.id = storageID;
     return result;
+  }
+
+  public async save(storage: IStorageBucket): Promise<IStorageBucket> {
+    return this.storageBucketRepository.save(storage);
   }
 
   async getStorageBucketOrFail(
@@ -136,7 +140,8 @@ export class StorageBucketService {
     readStream: ReadStream,
     filename: string,
     mimeType: string,
-    userID: string
+    userID: string,
+    temporaryDocument = false
   ): Promise<IDocument> {
     const buffer = await streamToBuffer(readStream);
 
@@ -145,7 +150,8 @@ export class StorageBucketService {
       buffer,
       filename,
       mimeType,
-      userID
+      userID,
+      temporaryDocument
     );
   }
 
@@ -155,7 +161,7 @@ export class StorageBucketService {
     filename: string,
     mimeType: string,
     userID: string,
-    anonymousReadAccess = false
+    temporaryLocation = false
   ): Promise<IDocument | never> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: {},
@@ -174,7 +180,7 @@ export class StorageBucketService {
       displayName: filename,
       size: size,
       createdBy: userID,
-      anonymousReadAccess,
+      temporaryLocation: temporaryLocation,
     };
 
     try {
@@ -427,8 +433,7 @@ export class StorageBucketService {
       imageBuffer,
       VisualType.AVATAR,
       fileType,
-      userId,
-      false
+      userId
     );
 
     const storageBucket = await this.getStorageBucketOrFail(storageBucketId);

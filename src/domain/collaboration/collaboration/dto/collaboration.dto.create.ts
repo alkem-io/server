@@ -1,24 +1,33 @@
-import { InputType, Field } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
+import { InputType, Field, ObjectType } from '@nestjs/graphql';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
+import { CreateCalloutInput } from '@domain/collaboration/callout';
+import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 @InputType()
+@ObjectType('CreateCollaborationData')
 export class CreateCollaborationInput {
-  @Field(() => UUID, {
+  @Field(() => CreateInnovationFlowInput, {
     nullable: true,
-    description: 'The Innovation Flow template to use for the Collaboration.',
+    description: 'The InnovationFlow Template to use for this Collaboration.',
   })
-  innovationFlowTemplateID?: string;
+  @ValidateNested()
+  @IsOptional()
+  @Type(() => CreateInnovationFlowInput)
+  innovationFlowData?: CreateInnovationFlowInput;
 
-  @Field(() => UUID, {
+  @Field(() => [CreateCalloutInput], {
     nullable: true,
-    description:
-      'The ID of the Collaboration to use for setting up the collaboration of the Collaboration.',
+    description: 'The Callouts to add to this Collaboration.',
   })
-  collaborationTemplateID?: string;
+  @ValidateNested()
+  @IsOptional()
+  @Type(() => CreateCalloutInput)
+  calloutsData?: CreateCalloutInput[];
 
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Add default callouts to the Collaboration; defaults to true.',
-  })
-  addDefaultCallouts? = true;
+  calloutGroups?: ICalloutGroup[];
+
+  defaultCalloutGroupName?: CalloutGroupName;
 }

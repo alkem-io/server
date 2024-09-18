@@ -1,11 +1,11 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { SpaceType } from '@common/enums/space.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateContextInput } from '@domain/context/context/dto/context.dto.create';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
+import { CreateCollaborationOnSpaceInput } from './space.dto.create.collaboration';
 
 @InputType()
 export class CreateSpaceInput extends CreateNameableInput {
@@ -19,11 +19,10 @@ export class CreateSpaceInput extends CreateNameableInput {
   @IsOptional()
   tags?: string[];
 
-  @Field(() => CreateCollaborationInput, { nullable: true })
-  @IsOptional()
+  @Field(() => CreateCollaborationOnSpaceInput, { nullable: false })
   @ValidateNested()
-  @Type(() => CreateCollaborationInput)
-  collaborationData?: CreateCollaborationInput;
+  @Type(() => CreateCollaborationOnSpaceInput)
+  collaborationData!: CreateCollaborationOnSpaceInput;
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;
