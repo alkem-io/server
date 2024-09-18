@@ -1,4 +1,3 @@
-import EventEmitter = require('node:events');
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
@@ -24,18 +23,13 @@ import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
-import { WHITEBOARD_CONTENT_UPDATE } from './events/event.names';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { isEqual } from 'lodash';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class WhiteboardService {
-  // The eventEmitter is used for cross-service communication.
-  // It allows services to send and receive messages, enabling them to coordinate activities or share data.
-  public eventEmitter = new EventEmitter();
   constructor(
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
@@ -146,14 +140,6 @@ export class WhiteboardService {
     }
     whiteboard = await this.save(whiteboard);
 
-    if (updateWhiteboardData.content) {
-      const input: UpdateWhiteboardContentInput = {
-        ID: whiteboard.id,
-        content: updateWhiteboardData.content,
-      };
-      return await this.updateWhiteboardContent(whiteboard, input);
-    }
-
     return whiteboard;
   }
 
@@ -166,20 +152,9 @@ export class WhiteboardService {
         profile: true,
       },
     });
-    const currentWhiteboardContent = JSON.parse(whiteboard.content);
     const newWhiteboardContent = JSON.parse(
       updateWhiteboardContentData.content
     );
-
-    if (isEqual(currentWhiteboardContent, newWhiteboardContent)) {
-      whiteboard.updatedDate = new Date();
-
-      this.subscriptionPublishService.publishWhiteboardSaved(
-        whiteboard.id,
-        whiteboard.updatedDate
-      );
-      return this.save(whiteboard);
-    }
 
     if (!whiteboard?.profile) {
       throw new EntityNotInitializedException(
@@ -196,16 +171,8 @@ export class WhiteboardService {
     );
 
     whiteboard.content = JSON.stringify(newContentWithFiles);
-    const savedWhiteboard = await this.save(whiteboard);
 
-    this.eventEmitter.emit(WHITEBOARD_CONTENT_UPDATE, savedWhiteboard.id);
-
-    this.subscriptionPublishService.publishWhiteboardSaved(
-      whiteboard.id,
-      savedWhiteboard.updatedDate
-    );
-
-    return savedWhiteboard;
+    return this.save(whiteboard);
   }
 
   async isMultiUser(whiteboardId: string): Promise<boolean> {
@@ -249,7 +216,8 @@ export class WhiteboardService {
   public save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
     return this.whiteboardRepository.save(whiteboard);
   }
-
+  // todo: use one optimized query with a "where not exists"
+  // to return just the ones not in the bucket
   private async reuploadDocumentsIfNotInBucket(
     whiteboardContent: ExcalidrawContent,
     profileIdToCheck: string

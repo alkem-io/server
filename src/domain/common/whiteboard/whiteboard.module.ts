@@ -15,7 +15,6 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
-import { WhiteboardSavedResolverSubscription } from './whiteboard.saved.resolver.subscription';
 
 @Module({
   imports: [
@@ -36,7 +35,6 @@ import { WhiteboardSavedResolverSubscription } from './whiteboard.saved.resolver
     WhiteboardAuthorizationService,
     WhiteboardResolverMutations,
     WhiteboardResolverFields,
-    WhiteboardSavedResolverSubscription,
   ],
   exports: [
     WhiteboardService,
