@@ -8,11 +8,7 @@ import {
   ForbiddenException,
   ValidationException,
 } from '@common/exceptions';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-} from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import {
@@ -50,7 +46,6 @@ import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
@@ -410,40 +405,11 @@ export class OrganizationService {
   ): Promise<IPaginatedType<IOrganization>> {
     const qb = this.organizationRepository.createQueryBuilder('organization');
     qb.leftJoinAndSelect('organization.authorization', 'authorization_policy');
-    // qb.leftJoinAndSelect('authorization', 'authorization');
     if (filter) {
       applyOrganizationFilter(qb, filter);
     }
 
     return getPaginationResults(qb, paginationArgs);
-  }
-
-  private getCredentialForRole(
-    role: OrganizationRole,
-    organizationID: string
-  ): ICredentialDefinition {
-    const result: ICredentialDefinition = {
-      type: '',
-      resourceID: organizationID,
-    };
-    switch (role) {
-      case OrganizationRole.ASSOCIATE:
-        result.type = AuthorizationCredential.ORGANIZATION_ASSOCIATE;
-        break;
-      case OrganizationRole.ADMIN:
-        result.type = AuthorizationCredential.ORGANIZATION_ADMIN;
-        break;
-      case OrganizationRole.OWNER:
-        result.type = AuthorizationCredential.ORGANIZATION_OWNER;
-        break;
-
-      default:
-        throw new ForbiddenException(
-          `Role not supported: ${role}`,
-          LogContext.AUTH
-        );
-    }
-    return result;
   }
 
   async getMetrics(organization: IOrganization): Promise<INVP[]> {

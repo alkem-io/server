@@ -26,6 +26,7 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ISpace } from '../space/space.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IAccountSubscription } from './account.license.subscription.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -134,5 +135,13 @@ export class AccountResolverFields {
     @Parent() account: Account
   ): Promise<IStorageAggregator> {
     return await this.accountService.getStorageAggregatorOrFail(account.id);
+  }
+
+  @ResolveField('subscriptions', () => [IAccountSubscription], {
+    nullable: false,
+    description: 'The subscriptions active for this Account.',
+  })
+  async subscriptions(@Parent() account: Account) {
+    return await this.accountService.getSubscriptions(account);
   }
 }
