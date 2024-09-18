@@ -246,7 +246,7 @@ export class AiServerService {
   // }
 
   private getContextCollectionID(contextID: string): string {
-    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}-slon`;
+    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
