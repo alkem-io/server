@@ -19,6 +19,8 @@ import {
   VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
   SUBSCRIPTION_WHITEBOARD_SAVED,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
+  VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import {
@@ -33,6 +35,8 @@ import { authResetServiceFactory } from './auth.reset.service.factory';
 import { virtualContributorEngineGuidanceServiceFactory } from './virtual.contributor.engine.guidance.service.factory';
 import { virtualContributorEngineCommunityManagerServiceFactory } from './virtual.contributor.engine.community.manager.service.factory';
 import { virtualContributorEngineExpertServiceFactory } from './virtual.contributor.engine.expert.service.factory';
+import { virtualContributorEngineGenericServiceFactory } from './virtual.contributor.engine.generic.service.factory';
+import { virtualContributorEngineOpenaiAssistantServiceFactory } from './virtual.contributor.engine.openai.assistant.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -123,6 +127,16 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
+      provide: VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
+      useFactory: virtualContributorEngineGenericServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
+      useFactory: virtualContributorEngineOpenaiAssistantServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
       provide: AUTH_RESET_SERVICE,
       useFactory: authResetServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
@@ -136,6 +150,8 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
     MATRIX_ADAPTER_SERVICE,
     VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
     VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
+    VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
+    VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
     VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
     AUTH_RESET_SERVICE,
     EXCALIDRAW_PUBSUB_PROVIDER,

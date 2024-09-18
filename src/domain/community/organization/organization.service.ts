@@ -409,6 +409,8 @@ export class OrganizationService {
     filter?: OrganizationFilterInput
   ): Promise<IPaginatedType<IOrganization>> {
     const qb = this.organizationRepository.createQueryBuilder('organization');
+    qb.leftJoinAndSelect('organization.authorization', 'authorization_policy');
+    // qb.leftJoinAndSelect('authorization', 'authorization');
     if (filter) {
       applyOrganizationFilter(qb, filter);
     }

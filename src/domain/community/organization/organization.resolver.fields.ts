@@ -58,7 +58,7 @@ export class OrganizationResolverFields {
       parent.id
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
@@ -84,7 +84,7 @@ export class OrganizationResolverFields {
       parent.id
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,

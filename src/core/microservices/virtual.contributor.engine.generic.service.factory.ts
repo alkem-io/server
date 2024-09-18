@@ -5,20 +5,20 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { clientProxyFacotry } from './clientProxyFactory';
 
-export async function walletManagerServiceFactory(
+export async function virtualContributorEngineGenericServiceFactory(
   logger: LoggerService,
   configService: ConfigService<AlkemioConfig, true>
 ): Promise<any> {
   try {
     const proxy = await clientProxyFacotry(
       configService,
-      MessagingQueue.WALLET_MANAGER
+      MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC
     );
     return proxy;
   } catch (err) {
     logger.error(
       `Could not connect to RabbitMQ: ${err}, logging in...`,
-      LogContext.NOTIFICATIONS
+      LogContext.VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC
     );
     return undefined;
   }

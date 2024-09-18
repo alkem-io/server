@@ -18,7 +18,7 @@ export class CreateAiPersonaServiceInput {
 
   @Field(() => JSON, { nullable: true, defaultValue: '' })
   @MaxLength(LONG_TEXT_LENGTH)
-  prompt!: string;
+  prompt!: string[];
 
   @Field(() => AiPersonaDataAccessMode, {
     nullable: true,
@@ -37,4 +37,7 @@ export class CreateAiPersonaServiceInput {
   @Field(() => UUID, { nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   bodyOfKnowledgeID: string = ''; // cannot default to a valid UUID
+
+  @Field(() => String, { nullable: true })
+  apiKey?: string; // cannot default to a valid UUID
 }

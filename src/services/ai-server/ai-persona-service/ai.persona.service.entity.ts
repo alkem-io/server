@@ -24,8 +24,8 @@ export class AiPersonaService
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   dataAccessMode!: AiPersonaDataAccessMode;
 
-  @Column('text', { nullable: false })
-  prompt!: string;
+  @Column('simple-array', { nullable: false })
+  prompt!: string[];
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
@@ -35,4 +35,10 @@ export class AiPersonaService
 
   @Column({ type: 'datetime', nullable: true })
   bodyOfKnowledgeLastUpdated: Date | null = null;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  apiKey?: string;
 }

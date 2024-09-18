@@ -41,6 +41,10 @@ export class VcInteractionService {
     return interaction;
   }
 
+  async save(vcInteraction: IVcInteraction): Promise<IVcInteraction> {
+    return this.interactionRepository.save(vcInteraction);
+  }
+
   async getVcInteraction(interactionID: string): Promise<IVcInteraction> {
     const VcInteraction = await this.interactionRepository.findOneBy({
       id: interactionID,

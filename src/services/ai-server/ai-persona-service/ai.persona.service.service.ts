@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -23,6 +24,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/messages/ingest.space.command';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -32,7 +35,9 @@ export class AiPersonaServiceService {
     private eventBus: EventBus,
     @InjectRepository(AiPersonaService)
     private aiPersonaServiceRepository: Repository<AiPersonaService>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private readonly configService: ConfigService<AlkemioConfig, true>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async createAiPersonaService(
@@ -50,6 +55,9 @@ export class AiPersonaServiceService {
       aiPersonaServiceData.bodyOfKnowledgeType;
     aiPersonaService.prompt = aiPersonaServiceData.prompt;
     aiPersonaService.dataAccessMode = aiPersonaServiceData.dataAccessMode;
+    if (aiPersonaServiceData.apiKey) {
+      aiPersonaService.apiKey = this.encryptKey(aiPersonaServiceData.apiKey);
+    }
 
     const savedAiPersonaService =
       await this.aiPersonaServiceRepository.save(aiPersonaService);
@@ -84,6 +92,9 @@ export class AiPersonaServiceService {
 
     if (aiPersonaServiceData.engine !== undefined) {
       aiPersonaService.engine = aiPersonaServiceData.engine;
+    }
+    if (aiPersonaServiceData.apiKey !== undefined) {
+      aiPersonaService.apiKey = this.encryptKey(aiPersonaServiceData.apiKey);
     }
 
     return await this.aiPersonaServiceRepository.save(aiPersonaService);
@@ -165,6 +176,10 @@ export class AiPersonaServiceService {
       description: personaQuestionInput.description,
     };
 
+    if (aiPersonaService.apiKey) {
+      input.apiKey = this.decryptKey(aiPersonaService.apiKey);
+    }
+
     return this.aiPersonaEngineAdapter.sendQuery(input);
   }
 
@@ -174,5 +189,49 @@ export class AiPersonaServiceService {
       engine: AiPersonaEngine.EXPERT,
       userID: aiPersonaService.id, // TODO: clearly wrong, just getting code to compile
     });
+  }
+
+  private encryptKey(key: string): string {
+    const iv = crypto.randomBytes(16);
+    const encryptionKey = this.configService.get('security.encryption_key', {
+      infer: true,
+    });
+    const cipher = crypto.createCipheriv(
+      'aes-256-gcm',
+      Buffer.from(encryptionKey),
+      iv
+    );
+
+    let encrypted = cipher.update(key);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return Buffer.from(
+      JSON.stringify({
+        iv: iv.toString('hex'),
+        encryptedData: encrypted.toString('hex'),
+        auth: cipher.getAuthTag().toString('hex'),
+      })
+    ).toString('base64');
+  }
+
+  private decryptKey(encrypted: string) {
+    const encryptionKey = this.configService.get('security.encryption_key', {
+      infer: true,
+    });
+
+    const forDecryption = JSON.parse(
+      Buffer.from(encrypted, 'base64').toString('ascii')
+    );
+    const iv = Buffer.from(forDecryption.iv, 'hex');
+    const encryptedData = Buffer.from(forDecryption.encryptedData, 'hex');
+    const auth = Buffer.from(forDecryption.auth, 'hex');
+    const decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      Buffer.from(encryptionKey),
+      iv
+    );
+    decipher.setAuthTag(auth);
+    let decrypted = decipher.update(encryptedData);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
   }
 }

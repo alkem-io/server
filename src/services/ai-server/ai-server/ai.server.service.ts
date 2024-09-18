@@ -246,7 +246,7 @@ export class AiServerService {
   // }
 
   private getContextCollectionID(contextID: string): string {
-    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}-slon`;
+    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
@@ -260,7 +260,7 @@ export class AiServerService {
       // try to get the collection and return true if it is there
       await chroma.getCollection({ name });
       return true;
-    } catch {
+    } catch (err) {
       return false;
     }
   }

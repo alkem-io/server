@@ -16,11 +16,11 @@ export class IAiPersonaService extends IAuthorizable {
   })
   engine!: AiPersonaEngine;
 
-  @Field(() => String, {
+  @Field(() => [String], {
     nullable: false,
     description: 'The prompt used by this Virtual Persona',
   })
-  prompt!: string;
+  prompt!: string[];
 
   @Field(() => AiPersonaDataAccessMode, {
     nullable: false,
@@ -45,4 +45,6 @@ export class IAiPersonaService extends IAuthorizable {
     description: 'When wat the body of knowledge of the VC last updated.',
   })
   bodyOfKnowledgeLastUpdated!: Date | null;
+
+  apiKey?: string;
 }

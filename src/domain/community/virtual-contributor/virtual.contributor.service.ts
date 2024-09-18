@@ -43,6 +43,7 @@ import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -56,6 +57,7 @@ export class VirtualContributorService {
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
     private accountHostService: AccountHostService,
+    private vcInteractionService: VcInteractionService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(VirtualContributor)
@@ -346,7 +348,7 @@ export class VirtualContributorService {
     return storageBucket;
   }
 
-  public async refershBodyOfKnowledge(
+  public async refreshBodyOfKnowledge(
     virtualContributor: IVirtualContributor,
     agentInfo: AgentInfo
   ): Promise<boolean> {
@@ -363,7 +365,7 @@ export class VirtualContributorService {
 
     const aiPersona = virtualContributor.aiPersona;
 
-    return await this.aiServerAdapter.refreshBodyOfKnowlege(
+    return await this.aiServerAdapter.refreshBodyOfKnowledge(
       aiPersona.aiPersonaServiceID
     );
   }
@@ -403,7 +405,19 @@ export class VirtualContributorService {
       displayName: virtualContributor.profile.displayName,
     };
 
-    return await this.aiServerAdapter.askQuestion(aiServerAdapterQuestionInput);
+    const response = await this.aiServerAdapter.askQuestion(
+      aiServerAdapterQuestionInput
+    );
+
+    const vcInteraction =
+      await this.vcInteractionService.getVcInteractionOrFail(
+        vcQuestionInput.vcInteractionID!
+      );
+    vcInteraction.externalMetadata.threadId = response.threadId;
+
+    await this.vcInteractionService.save(vcInteraction);
+
+    return response;
   }
 
   // TODO: move to store
@@ -439,7 +453,7 @@ export class VirtualContributorService {
   async save(
     virtualContributor: IVirtualContributor
   ): Promise<IVirtualContributor> {
-    return await this.virtualContributorRepository.save(virtualContributor);
+    return this.virtualContributorRepository.save(virtualContributor);
   }
 
   public async getAgent(
