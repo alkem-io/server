@@ -144,6 +144,7 @@ export class WhiteboardIntegrationService {
       const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
         data.whiteboardId,
         {
+          loadEagerRelations: false,
           select: { id: true, content: true },
         }
       );
