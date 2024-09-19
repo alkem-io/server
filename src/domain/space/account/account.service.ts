@@ -33,6 +33,8 @@ import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innova
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountHostService } from '../account.host/account.host.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IAccountSubscription } from './account.license.subscription.interface';
+import { LicenseCredential } from '@common/enums/license.credential';
 
 @Injectable()
 export class AccountService {
@@ -325,5 +327,39 @@ export class AccountService {
     }
 
     return account.agent;
+  }
+
+  async getSubscriptions(
+    accountInput: IAccount
+  ): Promise<IAccountSubscription[]> {
+    const account = await this.getAccountOrFail(accountInput.id, {
+      relations: {
+        agent: {
+          credentials: true,
+        },
+      },
+    });
+
+    if (!account.agent || !account.agent.credentials) {
+      throw new EntityNotFoundException(
+        `Unable to find agent with credentials for the account: ${accountInput.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    const subscriptions: IAccountSubscription[] = [];
+    for (const credential of account.agent.credentials) {
+      if (
+        Object.values(LicenseCredential).includes(
+          credential.type as LicenseCredential
+        )
+      ) {
+        subscriptions.push({
+          name: credential.type as LicenseCredential,
+          expires: credential.expires,
+        });
+      }
+    }
+    return subscriptions;
   }
 }
