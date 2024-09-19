@@ -68,6 +68,7 @@ export class AiServerAdapter {
     const vcInteractionID = questionInput.vcInteractionID;
     return this.aiServer.askQuestion({
       ...questionInput,
+      externalMetadata: questionInput.externalMetadata || {},
       interactionID: vcInteractionID,
     });
   }

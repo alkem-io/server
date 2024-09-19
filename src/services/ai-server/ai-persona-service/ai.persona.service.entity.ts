@@ -6,6 +6,7 @@ import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mo
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { IExternalConfig } from './dto/external.config';
 
 @Entity()
 export class AiPersonaService
@@ -37,8 +38,8 @@ export class AiPersonaService
   bodyOfKnowledgeLastUpdated: Date | null = null;
 
   @Column({
-    type: 'text',
+    type: 'simple-json',
     nullable: true,
   })
-  apiKey?: string;
+  externalConfig?: IExternalConfig = {};
 }

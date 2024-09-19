@@ -1,19 +1,19 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddApiKeyToPersonaService1726059437669
+export class AddExternalConfigToAiPersonaService1726736879872
   implements MigrationInterface
 {
-  name = 'AddApiKeyToPersonaService1726059437669';
+  name = 'AddExternalConfigToAiPersonaService1726736879872';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona_service\` ADD \`apiKey\` text NOT NULL`
+      `ALTER TABLE \`ai_persona_service\` ADD \`externalConfig\` text NULL`
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona_service\` DROP COLUMN \`apiKey\``
+      `ALTER TABLE \`ai_persona_service\` DROP COLUMN \`externalConfig\``
     );
   }
 }

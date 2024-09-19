@@ -36,6 +36,7 @@ import { AiPersonaServiceAuthorizationService } from '@services/ai-server/ai-per
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Injectable()
 export class AiServerService {
@@ -165,16 +166,35 @@ export class AiServerService {
         new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
       );
     }
-    const historyLimit = parseInt(
-      this.config.get<number>('platform.virtual_contributors.history_length', {
-        infer: true,
-      })
-    );
 
-    const history = await this.getLastNInteractionMessages(
-      questionInput.interactionID,
-      historyLimit
-    );
+    const personaService =
+      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+        questionInput.aiPersonaServiceID
+      );
+
+    const HISTORY_ENABLED_ENGINES: { [key in AiPersonaEngine]?: boolean } = {
+      [AiPersonaEngine.EXPERT]: true,
+    };
+
+    const loadHistory = HISTORY_ENABLED_ENGINES[personaService.engine];
+
+    // history should be loaded trough the GQL API of the collaboration server
+    let history: InteractionMessage[] = [];
+    if (loadHistory) {
+      const historyLimit = parseInt(
+        this.config.get<number>(
+          'platform.virtual_contributors.history_length',
+          {
+            infer: true,
+          }
+        )
+      );
+
+      history = await this.getLastNInteractionMessages(
+        questionInput.interactionID,
+        historyLimit
+      );
+    }
 
     return await this.aiPersonaServiceService.askQuestion(
       questionInput,

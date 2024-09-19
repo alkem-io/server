@@ -5,6 +5,7 @@ import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mo
 import { IAiServer } from '../ai-server/ai.server.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { IExternalConfig } from './dto/external.config';
 
 @ObjectType('AiPersonaService')
 export class IAiPersonaService extends IAuthorizable {
@@ -46,5 +47,5 @@ export class IAiPersonaService extends IAuthorizable {
   })
   bodyOfKnowledgeLastUpdated!: Date | null;
 
-  apiKey?: string;
+  externalConfig?: IExternalConfig;
 }

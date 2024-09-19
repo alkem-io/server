@@ -26,6 +26,7 @@ import {
 } from '@services/infrastructure/event-bus/messages/ingest.space.command';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
+import { IExternalConfig } from './dto/external.config';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -55,9 +56,10 @@ export class AiPersonaServiceService {
       aiPersonaServiceData.bodyOfKnowledgeType;
     aiPersonaService.prompt = aiPersonaServiceData.prompt;
     aiPersonaService.dataAccessMode = aiPersonaServiceData.dataAccessMode;
-    if (aiPersonaServiceData.apiKey) {
-      aiPersonaService.apiKey = this.encryptKey(aiPersonaServiceData.apiKey);
-    }
+
+    aiPersonaService.externalConfig = this.encryptExternalConfig(
+      aiPersonaServiceData.externalConfig
+    );
 
     const savedAiPersonaService =
       await this.aiPersonaServiceRepository.save(aiPersonaService);
@@ -86,16 +88,18 @@ export class AiPersonaServiceService {
       aiPersonaServiceData.ID
     );
 
-    if (aiPersonaServiceData.prompt !== undefined) {
+    if (aiPersonaServiceData.prompt) {
       aiPersonaService.prompt = aiPersonaServiceData.prompt;
     }
 
-    if (aiPersonaServiceData.engine !== undefined) {
+    if (aiPersonaServiceData.engine) {
       aiPersonaService.engine = aiPersonaServiceData.engine;
     }
-    if (aiPersonaServiceData.apiKey !== undefined) {
-      aiPersonaService.apiKey = this.encryptKey(aiPersonaServiceData.apiKey);
-    }
+
+    aiPersonaService.externalConfig = {
+      ...aiPersonaService.externalConfig,
+      ...this.encryptExternalConfig(aiPersonaServiceData.externalConfig),
+    };
 
     return await this.aiPersonaServiceRepository.save(aiPersonaService);
   }
@@ -172,13 +176,13 @@ export class AiPersonaServiceService {
       contextID: personaQuestionInput.contextID,
       history,
       interactionID: personaQuestionInput.interactionID,
+      externalMetadata: personaQuestionInput.externalMetadata,
       displayName: personaQuestionInput.displayName,
       description: personaQuestionInput.description,
+      externalConfig: this.decryptExternalConfig(
+        aiPersonaService.externalConfig
+      ),
     };
-
-    if (aiPersonaService.apiKey) {
-      input.apiKey = this.decryptKey(aiPersonaService.apiKey);
-    }
 
     return this.aiPersonaEngineAdapter.sendQuery(input);
   }
@@ -191,7 +195,39 @@ export class AiPersonaServiceService {
     });
   }
 
-  private encryptKey(key: string): string {
+  private encryptExternalConfig(
+    config: IExternalConfig | undefined
+  ): IExternalConfig {
+    if (!config) {
+      return {};
+    }
+    const result: IExternalConfig = {};
+    if (config.apiKey) {
+      result.apiKey = this.encrypt(config.apiKey);
+    }
+    if (config.assistantId) {
+      result.assistantId = this.encrypt(config.assistantId);
+    }
+    return result;
+  }
+
+  private decryptExternalConfig(
+    config: IExternalConfig | undefined
+  ): IExternalConfig {
+    if (!config) {
+      return {};
+    }
+    const result: IExternalConfig = {};
+    if (config.apiKey) {
+      result.apiKey = this.decrypt(config.apiKey);
+    }
+    if (config.assistantId) {
+      result.assistantId = this.decrypt(config.assistantId);
+    }
+    return result;
+  }
+
+  private encrypt(key: string): string {
     const iv = crypto.randomBytes(16);
     const encryptionKey = this.configService.get('security.encryption_key', {
       infer: true,
@@ -213,7 +249,7 @@ export class AiPersonaServiceService {
     ).toString('base64');
   }
 
-  private decryptKey(encrypted: string) {
+  private decrypt(encrypted: string) {
     const encryptionKey = this.configService.get('security.encryption_key', {
       infer: true,
     });

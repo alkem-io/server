@@ -394,13 +394,20 @@ export class VirtualContributorService {
       `still need to use the context ${vcQuestionInput.contextSpaceID}, ${vcQuestionInput.userID}`,
       LogContext.AI_PERSONA_SERVICE_ENGINE
     );
+
+    const vcInteraction =
+      await this.vcInteractionService.getVcInteractionOrFail(
+        vcQuestionInput.vcInteractionID!
+      );
+
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
       question: vcQuestionInput.question,
       contextID: vcQuestionInput.contextSpaceID,
       userID: vcQuestionInput.userID,
       threadID: vcQuestionInput.threadID,
-      vcInteractionID: vcQuestionInput.vcInteractionID,
+      vcInteractionID: vcInteraction.id,
+      externalMetadata: vcInteraction.externalMetadata,
       description: virtualContributor.profile.description,
       displayName: virtualContributor.profile.displayName,
     };
@@ -409,13 +416,10 @@ export class VirtualContributorService {
       aiServerAdapterQuestionInput
     );
 
-    const vcInteraction =
-      await this.vcInteractionService.getVcInteractionOrFail(
-        vcQuestionInput.vcInteractionID!
-      );
-    vcInteraction.externalMetadata.threadId = response.threadId;
-
-    await this.vcInteractionService.save(vcInteraction);
+    if (!vcInteraction.externalMetadata.threadId) {
+      vcInteraction.externalMetadata.threadId = response.threadId;
+      await this.vcInteractionService.save(vcInteraction);
+    }
 
     return response;
   }

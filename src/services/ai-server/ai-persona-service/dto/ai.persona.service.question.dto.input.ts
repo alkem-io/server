@@ -1,4 +1,5 @@
 import { UUID } from '@domain/common/scalars';
+import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
@@ -53,4 +54,6 @@ export class AiPersonaServiceQuestionInput {
     description: 'The Virtual Contributor displayName.',
   })
   displayName!: string;
+
+  externalMetadata: ExternalMetadata = {};
 }

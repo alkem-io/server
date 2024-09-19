@@ -1,5 +1,7 @@
+import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { AiPersonaEngineAdapterInputBase } from './ai.persona.engine.adapter.dto.base';
 import { InteractionMessage } from '@services/ai-server/ai-persona-service/dto/interaction.message';
+import { IExternalConfig } from '@services/ai-server/ai-persona-service/dto/external.config';
 
 export interface AiPersonaEngineAdapterQueryInput
   extends AiPersonaEngineAdapterInputBase {
@@ -11,5 +13,6 @@ export interface AiPersonaEngineAdapterQueryInput
   history?: InteractionMessage[];
   description?: string;
   displayName: string;
-  apiKey?: string;
+  externalConfig: IExternalConfig;
+  externalMetadata: ExternalMetadata;
 }

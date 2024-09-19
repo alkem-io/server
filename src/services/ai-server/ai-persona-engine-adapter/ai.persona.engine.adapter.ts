@@ -50,7 +50,6 @@ export class AiPersonaEngineAdapter {
     eventData: AiPersonaEngineAdapterQueryInput
   ): Promise<IMessageAnswerToQuestion> {
     let responseData: AiPersonaEngineAdapterQueryResponse | undefined;
-
     try {
       switch (eventData.engine) {
         case AiPersonaEngine.COMMUNITY_MANAGER:

@@ -6,6 +6,7 @@ import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { UUID } from '@domain/common/scalars';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
+import { IExternalConfig } from './external.config';
 
 @InputType()
 export class CreateAiPersonaServiceInput {
@@ -38,6 +39,6 @@ export class CreateAiPersonaServiceInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   bodyOfKnowledgeID: string = ''; // cannot default to a valid UUID
 
-  @Field(() => String, { nullable: true })
-  apiKey?: string; // cannot default to a valid UUID
+  @Field(() => IExternalConfig, { nullable: true })
+  externalConfig?: IExternalConfig;
 }
