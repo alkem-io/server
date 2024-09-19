@@ -11,7 +11,6 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { UpdateWhiteboardContentInput } from './dto/whiteboard.dto.update.content';
 import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
@@ -144,17 +143,22 @@ export class WhiteboardService {
   }
 
   async updateWhiteboardContent(
-    whiteboardInput: IWhiteboard,
-    updateWhiteboardContentData: UpdateWhiteboardContentInput
+    whiteboardInputId: string,
+    updateWhiteboardContent: string
   ): Promise<IWhiteboard> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
+    const whiteboard = await this.getWhiteboardOrFail(whiteboardInputId, {
+      loadEagerRelations: false,
       relations: {
         profile: true,
       },
+      select: {
+        id: true,
+        profile: {
+          id: true,
+        },
+      },
     });
-    const newWhiteboardContent = JSON.parse(
-      updateWhiteboardContentData.content
-    );
+    const newWhiteboardContent = JSON.parse(updateWhiteboardContent);
 
     if (!whiteboard?.profile) {
       throw new EntityNotInitializedException(
@@ -218,6 +222,7 @@ export class WhiteboardService {
   }
   // todo: use one optimized query with a "where not exists"
   // to return just the ones not in the bucket
+  // https://github.com/alkem-io/server/issues/4559
   private async reuploadDocumentsIfNotInBucket(
     whiteboardContent: ExcalidrawContent,
     profileIdToCheck: string
