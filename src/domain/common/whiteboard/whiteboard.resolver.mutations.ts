@@ -8,10 +8,7 @@ import { IWhiteboard } from './whiteboard.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  UpdateWhiteboardContentInput,
-  UpdateWhiteboardEntityInput,
-} from './types';
+import { UpdateWhiteboardEntityInput } from './types';
 import { DeleteWhiteboardInput } from './dto/whiteboard.dto.delete';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
