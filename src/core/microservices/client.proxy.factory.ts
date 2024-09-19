@@ -5,7 +5,8 @@ import { AlkemioConfig } from '@src/types';
 
 export const clientProxyFacotry = async (
   configService: ConfigService<AlkemioConfig, true>,
-  queue: MessagingQueue
+  queue: MessagingQueue,
+  durable: boolean = true
 ) => {
   const rabbitMqOptions = configService.get('microservices.rabbitmq', {
     infer: true,
@@ -18,7 +19,7 @@ export const clientProxyFacotry = async (
     queue,
     queueOptions: {
       // the queue will survive a broker restart
-      durable: true,
+      durable,
     },
     noAck: true,
   };

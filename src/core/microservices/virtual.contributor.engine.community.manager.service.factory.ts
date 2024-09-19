@@ -3,7 +3,7 @@ import { MessagingQueue } from '@common/enums/messaging.queue';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
-import { clientProxyFacotry } from './clientProxyFactory';
+import { clientProxyFacotry } from './client.proxy.factory';
 
 export async function virtualContributorEngineCommunityManagerServiceFactory(
   logger: LoggerService,
@@ -12,7 +12,8 @@ export async function virtualContributorEngineCommunityManagerServiceFactory(
   try {
     const proxy = await clientProxyFacotry(
       configService,
-      MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER
+      MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
+      false
     );
     return proxy;
   } catch (err) {
