@@ -22,6 +22,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 import { CalloutService } from '../callout/callout.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -35,7 +36,8 @@ export class CollaborationResolverMutations {
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private calloutService: CalloutService,
-    private namingService: NamingService
+    private namingService: NamingService,
+    private temporaryStorageService: TemporaryStorageService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -92,9 +94,20 @@ export class CollaborationResolverMutations {
     // callout needs to be saved to apply the authorization policy
     await this.calloutService.save(callout);
 
+    // Now the contribution is saved, we can look to move any temporary documents
+    // to be stored in the storage bucket of the profile.
+    // Note: important to do before auth reset is done
+    const destinationStorageBucket = await this.calloutService.getStorageBucket(
+      callout.id
+    );
+    await this.temporaryStorageService.moveTemporaryDocuments(
+      calloutData,
+      destinationStorageBucket
+    );
+
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
-        callout,
+        callout.id,
         collaboration.authorization,
         communityPolicy,
         spaceSettings

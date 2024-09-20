@@ -23,6 +23,7 @@ import { SpaceDefaultsModule } from '@domain/space/space.defaults/space.defaults
 import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     SpaceDefaultsModule,
     CalloutGroupsModule,
     LicenseEngineModule,
+    TemporaryStorageModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
   providers: [

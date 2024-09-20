@@ -104,7 +104,7 @@ export class TemplateAuthorizationService {
       // Cascade
       const calloutAuthorizations =
         await this.calloutAuthorizationService.applyAuthorizationPolicy(
-          template.callout,
+          template.callout.id,
           template.authorization
         );
       updatedAuthorizations.push(...calloutAuthorizations);

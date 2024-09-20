@@ -24,6 +24,7 @@ import { CalloutContributionPolicyModule } from '../callout-contribution-policy/
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 import { PostModule } from '../post/post.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     CalloutContributionPolicyModule,
     StorageAggregatorResolverModule,
     PostModule,
+    TemporaryStorageModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
