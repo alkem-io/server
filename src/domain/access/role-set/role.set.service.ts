@@ -80,7 +80,7 @@ export class RoleSetService {
   async createRoleSet(roleSetData: CreateRoleSetInput): Promise<IRoleSet> {
     const roleSet: IRoleSet = new RoleSet();
     roleSet.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.ROLE_MANAGER
+      AuthorizationPolicyType.ROLE_SET
     );
     roleSet.roles = [];
     roleSet.applications = [];
