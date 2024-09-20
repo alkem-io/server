@@ -71,7 +71,7 @@ export class PostAuthorizationService {
     }
 
     // Extend to give the user creating the post more rights
-    post.authorization = this.appendCredentialRules(
+    post.authorization = await this.appendCredentialRules(
       post,
       roleSet,
       spaceSettings
@@ -89,11 +89,11 @@ export class PostAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private appendCredentialRules(
+  private async appendCredentialRules(
     post: IPost,
     roleSet?: IRoleSet,
     spaceSettings?: ISpaceSettings
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     const authorization = post.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -126,7 +126,7 @@ export class PostAuthorizationService {
 
     if (roleSet && spaceSettings) {
       const roleCredentials =
-        this.roleSetService.getCredentialsForRoleWithParents(
+        await this.roleSetService.getCredentialsForRoleWithParents(
           roleSet,
           CommunityRoleType.ADMIN,
           spaceSettings

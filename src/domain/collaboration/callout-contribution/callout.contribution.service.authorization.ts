@@ -109,7 +109,7 @@ export class CalloutContributionAuthorizationService {
       );
 
     // Extend to give the user creating the contribution more rights
-    contribution.authorization = this.appendCredentialRules(
+    contribution.authorization = await this.appendCredentialRules(
       contribution,
       roleSet,
       spaceSettings
@@ -148,11 +148,11 @@ export class CalloutContributionAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private appendCredentialRules(
+  private async appendCredentialRules(
     contribution: ICalloutContribution,
     communityPolicy?: IRoleSet,
     spaceSettings?: ISpaceSettings
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     const authorization = contribution.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -204,7 +204,7 @@ export class CalloutContributionAuthorizationService {
     ];
     if (communityPolicy && spaceSettings) {
       const roleCredentials =
-        this.roleSetService.getCredentialsForRoleWithParents(
+        await this.roleSetService.getCredentialsForRoleWithParents(
           communityPolicy,
           CommunityRoleType.ADMIN,
           spaceSettings

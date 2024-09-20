@@ -19,6 +19,7 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IInvitation } from '../invitation/invitation.interface';
 import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
+import { IRole } from '../role/role.interface';
 
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFields {
@@ -71,7 +72,7 @@ export class RoleSetResolverFields {
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ) {
     const memberRoleCredentials =
-      this.roleSetService.getCredentialDefinitionForRole(
+      await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
         CommunityRoleType.MEMBER
       );
@@ -79,7 +80,7 @@ export class RoleSetResolverFields {
     const parentCommunity = await this.roleSetService.getParentRoleSet(roleSet);
 
     const parentCommunityMemberCredentials = parentCommunity
-      ? this.roleSetService.getCredentialDefinitionForRole(
+      ? await this.roleSetService.getCredentialDefinitionForRole(
           parentCommunity,
           CommunityRoleType.MEMBER
         )
@@ -160,13 +161,13 @@ export class RoleSetResolverFields {
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ) {
     const memberRoleCredentials =
-      this.roleSetService.getCredentialDefinitionForRole(
+      await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
         CommunityRoleType.MEMBER
       );
 
     const leadRoleCredential =
-      this.roleSetService.getCredentialDefinitionForRole(
+      await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
         CommunityRoleType.LEAD
       );
@@ -227,5 +228,15 @@ export class RoleSetResolverFields {
   @Profiling.api
   async applicationForm(@Parent() roleSet: RoleSet): Promise<IForm> {
     return await this.roleSetService.getApplicationForm(roleSet);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('roles', () => [IRole], {
+    nullable: false,
+    description: 'The Role Definitions included in this roleSet.',
+  })
+  @Profiling.api
+  async roles(@Parent() roleSet: RoleSet): Promise<IRole[]> {
+    return await this.roleSetService.getRoleDefinitions(roleSet);
   }
 }

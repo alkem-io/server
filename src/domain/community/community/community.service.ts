@@ -220,10 +220,10 @@ export class CommunityService {
     return undefined;
   }
 
-  public setParentCommunity(
+  public async setParentCommunity(
     community?: ICommunity,
     parentCommunity?: ICommunity
-  ): ICommunity {
+  ): Promise<ICommunity> {
     if (!community || !parentCommunity) {
       throw new EntityNotInitializedException(
         'Community not set',
@@ -232,7 +232,7 @@ export class CommunityService {
     }
     community.parentCommunity = parentCommunity;
     // Also update the communityPolicy
-    community.roleSet = this.roleSetService.inheritParentCredentials(
+    community.roleSet = await this.roleSetService.inheritParentCredentials(
       community.roleSet
     );
 

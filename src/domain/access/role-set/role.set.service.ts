@@ -217,8 +217,11 @@ export class RoleSetService {
   }
 
   // Update the Community policy to have the right resource ID
-  public updateRoleResourceID(roleSet: IRoleSet, resourceID: string): IRoleSet {
-    const roleDefinitions = this.getRoleDefinitions(roleSet);
+  public async updateRoleResourceID(
+    roleSet: IRoleSet,
+    resourceID: string
+  ): Promise<IRoleSet> {
+    const roleDefinitions = await this.getRoleDefinitions(roleSet);
     for (const roleDefinition of roleDefinitions) {
       const credential = this.roleService.getCredentialForRole(roleDefinition);
       credential.resourceID = resourceID;
@@ -339,12 +342,12 @@ export class RoleSetService {
     return undefined;
   }
 
-  async getUsersWithRole(
+  public async getUsersWithRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType,
     limit?: number
   ): Promise<IUser[]> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
+    const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       roleType
     );
@@ -357,11 +360,11 @@ export class RoleSetService {
     );
   }
 
-  async getVirtualContributorsWithRole(
+  public async getVirtualContributorsWithRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType
   ): Promise<IVirtualContributor[]> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
+    const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       roleType
     );
@@ -373,11 +376,11 @@ export class RoleSetService {
     );
   }
 
-  async getOrganizationsWithRole(
+  public async getOrganizationsWithRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType
   ): Promise<IOrganization[]> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
+    const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       roleType
     );
@@ -387,12 +390,12 @@ export class RoleSetService {
     });
   }
 
-  async countContributorsPerRole(
+  public async countContributorsPerRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType,
     contributorType: CommunityContributorType
   ): Promise<number> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
+    const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       roleType
     );
@@ -414,15 +417,15 @@ export class RoleSetService {
     return 0;
   }
 
-  getCredentialDefinitionForRole(
+  public async getCredentialDefinitionForRole(
     roleSet: IRoleSet,
     role: CommunityRoleType
-  ): ICredentialDefinition {
+  ): Promise<ICredentialDefinition> {
     const credential = this.getCredentialForRole(roleSet, role);
     return credential;
   }
 
-  async assignContributorToRole(
+  public async assignContributorToRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType,
     contributorID: string,
@@ -491,7 +494,7 @@ export class RoleSetService {
     );
     if (roleType === CommunityRoleType.ADMIN && parentRoleSet) {
       // also assign as subspace admin in parent roleSet if there is a parent roleSet
-      const credential = this.getCredentialForImplicitRole(
+      const credential = await this.getCredentialForImplicitRole(
         parentRoleSet,
         CommunityRoleImplicit.SUBSPACE_ADMIN
       );
@@ -758,7 +761,7 @@ export class RoleSetService {
       CommunityContributorType.USER
     );
 
-    const roleDefinition = this.getRoleDefinition(roleSet, roleType);
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
 
     const userPolicy = this.roleService.getUserPolicy(roleDefinition);
 
@@ -792,7 +795,7 @@ export class RoleSetService {
       CommunityContributorType.ORGANIZATION
     );
 
-    const roleDefinition = this.getRoleDefinition(roleSet, roleType);
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
 
     const organizationPolicy =
       this.roleService.getOrganizationPolicy(roleDefinition);
@@ -842,7 +845,7 @@ export class RoleSetService {
       contributorType
     );
 
-    const roleCredential = this.getCredentialForRole(roleSet, roleType);
+    const roleCredential = await this.getCredentialForRole(roleSet, roleType);
 
     return await this.agentService.grantCredential({
       agentID: agent.id,
@@ -856,7 +859,7 @@ export class RoleSetService {
     agent: IAgent,
     role: CommunityRoleImplicit
   ): Promise<IAgent> {
-    const credential = this.getCredentialForImplicitRole(roleSet, role);
+    const credential = await this.getCredentialForImplicitRole(roleSet, role);
 
     return await this.agentService.grantCredential({
       agentID: agent.id,
@@ -870,7 +873,7 @@ export class RoleSetService {
     agent: IAgent,
     role: CommunityRoleImplicit
   ): Promise<IAgent> {
-    const credential = this.getCredentialForImplicitRole(roleSet, role);
+    const credential = await this.getCredentialForImplicitRole(roleSet, role);
 
     return await this.agentService.revokeCredential({
       agentID: agent.id,
@@ -879,12 +882,12 @@ export class RoleSetService {
     });
   }
 
-  private getCredentialForImplicitRole(
+  private async getCredentialForImplicitRole(
     roleSet: IRoleSet,
     role: CommunityRoleImplicit
-  ): ICredentialDefinition {
+  ): Promise<ICredentialDefinition> {
     // Use the admin credential to get the resourceID
-    const adminCredential = this.getCredentialDefinitionForRole(
+    const adminCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       CommunityRoleType.ADMIN
     );
@@ -920,7 +923,7 @@ export class RoleSetService {
       );
     }
 
-    const roleCredential = this.getCredentialForRole(roleSet, roleType);
+    const roleCredential = await this.getCredentialForRole(roleSet, roleType);
 
     return await this.agentService.revokeCredential({
       agentID: agent.id,
@@ -929,8 +932,8 @@ export class RoleSetService {
     });
   }
 
-  async isMember(agent: IAgent, roleSet: IRoleSet): Promise<boolean> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
+  public async isMember(agent: IAgent, roleSet: IRoleSet): Promise<boolean> {
+    const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       CommunityRoleType.MEMBER
     );
@@ -945,12 +948,12 @@ export class RoleSetService {
     return validCredential;
   }
 
-  async isInRole(
+  public async isInRole(
     agent: IAgent,
     roleSet: IRoleSet,
     role: CommunityRoleType
   ): Promise<boolean> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
+    const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       role
     );
@@ -970,7 +973,7 @@ export class RoleSetService {
     roleSet: IRoleSet,
     role: CommunityRoleImplicit
   ): Promise<boolean> {
-    const membershipCredential = this.getCredentialForImplicitRole(
+    const membershipCredential = await this.getCredentialForImplicitRole(
       roleSet,
       role
     );
@@ -1173,7 +1176,7 @@ export class RoleSetService {
   }
 
   async getMembersCount(roleSet: IRoleSet): Promise<number> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
+    const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       CommunityRoleType.MEMBER
     );
@@ -1226,7 +1229,7 @@ export class RoleSetService {
     return result;
   }
 
-  public inheritParentCredentials(roleSet: IRoleSet): IRoleSet {
+  public async inheritParentCredentials(roleSet: IRoleSet): Promise<IRoleSet> {
     const roleSetParent = roleSet.parentRoleSet;
     if (!roleSetParent) {
       throw new RelationshipNotFoundException(
@@ -1234,10 +1237,10 @@ export class RoleSetService {
         LogContext.ROLES
       );
     }
-    const roleDefinitions = this.getRoleDefinitions(roleSet);
+    const roleDefinitions = await this.getRoleDefinitions(roleSet);
 
     for (const roleDefinition of roleDefinitions) {
-      const parentRoleDefinition = this.getRoleDefinition(
+      const parentRoleDefinition = await this.getRoleDefinition(
         roleSetParent,
         roleDefinition.type
       );
@@ -1256,11 +1259,11 @@ export class RoleSetService {
     return roleSet;
   }
 
-  getDirectParentCredentialForRole(
+  public async getDirectParentCredentialForRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType
-  ): ICredentialDefinition | undefined {
-    const parentCredentials = this.getParentCredentialsForRole(
+  ): Promise<ICredentialDefinition | undefined> {
+    const parentCredentials = await this.getParentCredentialsForRole(
       roleSet,
       roleType
     );
@@ -1273,29 +1276,37 @@ export class RoleSetService {
     return directParentCredential;
   }
 
-  public getParentCredentialsForRole(
+  public async getParentCredentialsForRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType
-  ): ICredentialDefinition[] {
-    const roleDefinition = this.getRoleDefinition(roleSet, roleType);
+  ): Promise<ICredentialDefinition[]> {
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
     return this.roleService.getParentCredentialsForRole(roleDefinition);
   }
 
-  public getCredentialsForRoleWithParents(
+  public async getCredentialsForRoleWithParents(
     roleSet: IRoleSet,
     roleType: CommunityRoleType,
     spaceSettings: ISpaceSettings
-  ): ICredentialDefinition[] {
-    const result = this.getCredentialsForRole(roleSet, roleType, spaceSettings);
-    return result.concat(this.getParentCredentialsForRole(roleSet, roleType));
+  ): Promise<ICredentialDefinition[]> {
+    const result = await this.getCredentialsForRole(
+      roleSet,
+      roleType,
+      spaceSettings
+    );
+    const parentCredentials = await this.getParentCredentialsForRole(
+      roleSet,
+      roleType
+    );
+    return result.concat(parentCredentials);
   }
 
-  public getCredentialsForRole(
+  public async getCredentialsForRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType,
     spaceSettings: ISpaceSettings // TODO: would like not to have this here; for later
-  ): ICredentialDefinition[] {
-    const result = [this.getCredentialForRole(roleSet, roleType)];
+  ): Promise<ICredentialDefinition[]> {
+    const result = [await this.getCredentialForRole(roleSet, roleType)];
     if (
       roleType === CommunityRoleType.ADMIN &&
       spaceSettings.privacy.allowPlatformSupportAsAdmin
@@ -1308,30 +1319,36 @@ export class RoleSetService {
     return result;
   }
 
-  public getCredentialForRole(
+  public async getCredentialForRole(
     roleSet: IRoleSet,
     roleType: CommunityRoleType
-  ): ICredentialDefinition {
-    const roleDefinition = this.getRoleDefinition(roleSet, roleType);
+  ): Promise<ICredentialDefinition> {
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
     return this.roleService.getCredentialForRole(roleDefinition);
   }
 
-  public getRoleDefinitions(roleSet: IRoleSet): IRole[] {
-    const roleDefinitions = roleSet.roles;
+  public async getRoleDefinitions(roleSetInput: IRoleSet): Promise<IRole[]> {
+    let roleDefinitions = roleSetInput.roles;
+    if (!roleDefinitions) {
+      const roleSet = await this.getRoleSetOrFail(roleSetInput.id, {
+        relations: { roles: true },
+      });
+      roleDefinitions = roleSet.roles;
+    }
     if (!roleDefinitions) {
       throw new RelationshipNotFoundException(
-        `Unable to load roles for RoleSet: ${roleSet.id}`,
+        `Unable to load roles for RoleSet: ${roleSetInput.id}`,
         LogContext.COMMUNITY
       );
     }
     return roleDefinitions;
   }
 
-  public getRoleDefinition(
+  public async getRoleDefinition(
     roleSet: IRoleSet,
     roleType: CommunityRoleType
-  ): IRole {
-    const roleDefinitions = this.getRoleDefinitions(roleSet);
+  ): Promise<IRole> {
+    const roleDefinitions = await this.getRoleDefinitions(roleSet);
     const role = roleDefinitions.find(rd => rd.type === roleType);
     if (!role) {
       throw new RelationshipNotFoundException(

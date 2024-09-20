@@ -261,7 +261,7 @@ export class SpaceService {
       );
     }
     space.community.parentID = space.id;
-    space.community.roleSet = this.roleSetService.updateRoleResourceID(
+    space.community.roleSet = await this.roleSetService.updateRoleResourceID(
       space.community.roleSet,
       space.id
     );
@@ -939,7 +939,7 @@ export class SpaceService {
       agentInfo
     );
 
-    subspace = this.addSubspaceToSpace(space, subspace);
+    subspace = await this.addSubspaceToSpace(space, subspace);
     subspace = await this.save(subspace);
 
     // Before assigning roles in the subspace check that the user is a member
@@ -957,7 +957,10 @@ export class SpaceService {
     return subspace;
   }
 
-  public addSubspaceToSpace(space: ISpace, subspace: ISpace): ISpace {
+  public async addSubspaceToSpace(
+    space: ISpace,
+    subspace: ISpace
+  ): Promise<ISpace> {
     if (!space.community) {
       throw new ValidationException(
         `Unable to add Subspace to space, missing relations: ${space.id}`,
@@ -970,7 +973,7 @@ export class SpaceService {
     subspace.levelZeroSpaceID = space.levelZeroSpaceID;
 
     // Finally set the community relationship
-    subspace.community = this.setCommunityHierarchyForSubspace(
+    subspace.community = await this.setCommunityHierarchyForSubspace(
       space.community,
       subspace.community
     );
@@ -1192,10 +1195,10 @@ export class SpaceService {
     return this.spaceSettingsService.getSettings(space.settingsStr);
   }
 
-  public setCommunityHierarchyForSubspace(
+  public async setCommunityHierarchyForSubspace(
     parentCommunity: ICommunity,
     childCommunity: ICommunity | undefined
-  ): ICommunity {
+  ): Promise<ICommunity> {
     if (!childCommunity) {
       throw new RelationshipNotFoundException(
         `Unable to set subspace community relationship, child community not provied: ${parentCommunity.id}`,
@@ -1203,7 +1206,7 @@ export class SpaceService {
       );
     }
     // Finally set the community relationship
-    return this.communityService.setParentCommunity(
+    return await this.communityService.setParentCommunity(
       childCommunity,
       parentCommunity
     );

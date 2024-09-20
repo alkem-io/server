@@ -6,7 +6,7 @@ import { IApplication } from '@domain/access/application/application.interface';
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { IRole } from '../role/role.interface';
 
-@ObjectType('RoleSet2')
+@ObjectType('RoleSet')
 export abstract class IRoleSet extends IAuthorizable {
   roles?: IRole[];
   applications?: IApplication[];
