@@ -65,8 +65,9 @@ export class RoleSet1726843779059 implements MigrationInterface {
       id: string;
       policyId: string;
       applicationFormId: string;
+      parentCommunityId: string;
     }[] = await queryRunner.query(
-      `SELECT id, policyId, applicationFormId FROM \`community\``
+      `SELECT id, policyId, applicationFormId, parentCommunityId FROM \`community\``
     );
     for (const community of communities) {
       const [policy]: {
@@ -85,6 +86,10 @@ export class RoleSet1726843779059 implements MigrationInterface {
         queryRunner,
         'role-set'
       );
+      let memberRequiresParentRole = true;
+      if (!community.parentCommunityId) {
+        memberRequiresParentRole = false;
+      }
 
       await this.createRole(
         queryRunner,
@@ -94,7 +99,7 @@ export class RoleSet1726843779059 implements MigrationInterface {
         0,
         9,
         false,
-        true
+        memberRequiresParentRole
       );
       await this.createRole(
         queryRunner,
