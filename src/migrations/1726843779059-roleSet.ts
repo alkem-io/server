@@ -194,6 +194,9 @@ export class RoleSet1726843779059 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_3b8f390d76263ef5996869da071\` FOREIGN KEY (\`roleSetId\`) REFERENCES \`role_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_3b8f390d76263ef5996869da07\` ON \`community\``
+    );
 
     await queryRunner.query(`DROP TABLE \`community_policy\``);
   }
