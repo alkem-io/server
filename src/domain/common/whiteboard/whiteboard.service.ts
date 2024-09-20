@@ -24,7 +24,6 @@ import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
@@ -36,7 +35,6 @@ export class WhiteboardService {
     private licenseEngineService: LicenseEngineService,
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
-    private subscriptionPublishService: SubscriptionPublishService,
     private communityResolverService: CommunityResolverService
   ) {}
 
@@ -54,7 +52,7 @@ export class WhiteboardService {
     whiteboard.createdBy = userID;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
-    whiteboard.profile = await this.profileService.createProfile(
+    whiteboard.profile = this.profileService.createProfile(
       whiteboardData.profileData,
       ProfileType.WHITEBOARD,
       storageAggregator

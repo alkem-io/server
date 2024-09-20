@@ -8,7 +8,6 @@ export class SaveOutputData extends BaseOutputData {
 
 export class SaveContentData {
   public readonly success = true;
-  constructor() {}
 }
 
 export class SaveErrorData {

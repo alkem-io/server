@@ -17,6 +17,7 @@ import {
   InfoInputData,
   SaveInputData,
   WhoInputData,
+  FetchInputData,
 } from './inputs';
 import {
   InfoOutputData,
@@ -24,7 +25,6 @@ import {
   SaveOutputData,
   FetchOutputData,
 } from './outputs';
-import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
 
 /**
  * Controller exposing the Whiteboard Integration service via message queue.
