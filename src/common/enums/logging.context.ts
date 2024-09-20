@@ -56,6 +56,7 @@ export enum LogContext {
   MUTATION = 'mutation',
   DOCUMENT = 'document',
   URL_GENERATOR = 'url-generator',
+  INPUT_CREATOR = 'input-creator',
   CONVERSION = 'conversion',
   TASKS = 'tasks',
   LICENSE = 'license',
@@ -64,6 +65,9 @@ export enum LogContext {
   FILE_INTEGRATION = 'file-integration',
   VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   AI_SERVER = 'ai-server',
+  AI_SERVER_ADAPTER = 'ai-server-adapter',
   AI_PERSONA_SERVICE = 'ai-persona-service',
   AI_PERSONA_SERVICE_ENGINE = 'ai-persona-service-engine',
+  AI_SERVER_EVENT_BUS = 'ai-server-event-bus',
+  SUBSCRIPTION_PUBLISH = 'subscription-publish',
 }

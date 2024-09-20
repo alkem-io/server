@@ -13,12 +13,16 @@ import { OrganizationVerification } from '../organization-verification/organizat
 import { PreferenceSet } from '@domain/common/preference-set';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class Organization
   extends ContributorBase
   implements IOrganization, IGroupable
 {
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  accountID!: string;
+
   @Column({
     unique: true,
   })
@@ -66,8 +70,4 @@ export class Organization
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
-
-  constructor() {
-    super();
-  }
 }

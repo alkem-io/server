@@ -1,5 +1,7 @@
 export const SUBSCRIPTION_DISCUSSION_UPDATED =
   'alkemio-subscriptions-discussion-updated';
+export const SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED =
+  'alkemio-subscriptions-vritual-contributor-updated';
 export const SUBSCRIPTION_WHITEBOARD_CONTENT =
   'alkemio-subscriptions-whiteboard-content';
 export const SUBSCRIPTION_WHITEBOARD_SAVED =

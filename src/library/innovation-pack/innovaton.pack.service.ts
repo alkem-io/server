@@ -25,6 +25,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class InnovationPackService {
@@ -43,7 +44,9 @@ export class InnovationPackService {
   ): Promise<IInnovationPack> {
     const innovationPack: IInnovationPack =
       InnovationPack.create(innovationPackData);
-    innovationPack.authorization = new AuthorizationPolicy();
+    innovationPack.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.INNOVATION_PACK
+    );
 
     innovationPack.profile = await this.profileService.createProfile(
       innovationPackData.profileData,
@@ -198,7 +201,7 @@ export class InnovationPackService {
 
     if (!templatesSet) {
       throw new EntityNotFoundException(
-        `Unable to find templatesSet for innovationPack with nameID: ${innovationPackWithTemplates.nameID}`,
+        `Unable to find templatesSet for innovationPack with nameID: ${innovationPackWithTemplates.id}`,
         LogContext.COMMUNITY
       );
     }

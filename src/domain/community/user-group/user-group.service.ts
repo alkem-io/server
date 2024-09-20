@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository, FindManyOptions } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
@@ -29,6 +29,7 @@ import {
   UpdateUserGroupInput,
 } from './dto';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class UserGroupService {
@@ -47,7 +48,9 @@ export class UserGroupService {
     storageAggregator: IStorageAggregator
   ): Promise<IUserGroup> {
     const group = UserGroup.create(userGroupData);
-    group.authorization = new AuthorizationPolicy();
+    group.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.USER_GROUP
+    );
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
       userGroupData.profile,

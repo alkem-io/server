@@ -22,7 +22,6 @@ import {
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
-import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
@@ -36,28 +35,25 @@ export class CalloutAuthorizationService {
   ) {}
 
   public async applyAuthorizationPolicy(
-    calloutInput: ICallout,
+    calloutID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
-  ): Promise<ICallout> {
-    const callout = await this.calloutService.getCalloutOrFail(
-      calloutInput.id,
-      {
-        relations: {
-          comments: true,
-          contributions: true,
-          contributionDefaults: true,
-          contributionPolicy: true,
-          framing: {
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings
+  ): Promise<IAuthorizationPolicy[]> {
+    const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      relations: {
+        comments: true,
+        contributions: true,
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: {
+          profile: true,
+          whiteboard: {
             profile: true,
-            whiteboard: {
-              profile: true,
-            },
           },
         },
-      }
-    );
+      },
+    });
 
     if (
       !callout.contributions ||
@@ -70,6 +66,7 @@ export class CalloutAuthorizationService {
         LogContext.COLLABORATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     callout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -83,42 +80,44 @@ export class CalloutAuthorizationService {
     );
 
     callout.authorization = this.appendCredentialRules(callout);
+    updatedAuthorizations.push(callout.authorization);
 
-    const contributions: ICalloutContribution[] = [];
     for (const contribution of callout.contributions) {
-      const updatedContribution =
+      const updatedContributionAuthorizations =
         await this.contributionAuthorizationService.applyAuthorizationPolicy(
-          contribution,
+          contribution.id,
           callout.authorization,
           communityPolicy,
           spaceSettings
         );
-      contributions.push(updatedContribution);
+      updatedAuthorizations.push(...updatedContributionAuthorizations);
     }
-    callout.contributions = contributions;
 
-    callout.framing =
+    const framingAuthorizations =
       await this.calloutFramingAuthorizationService.applyAuthorizationPolicy(
         callout.framing,
         callout.authorization
       );
+    updatedAuthorizations.push(...framingAuthorizations);
 
     if (callout.comments) {
-      callout.comments = this.roomAuthorizationService.applyAuthorizationPolicy(
-        callout.comments,
-        callout.authorization
-      );
-      callout.comments.authorization =
+      let commentsAuthorization =
+        this.roomAuthorizationService.applyAuthorizationPolicy(
+          callout.comments,
+          callout.authorization
+        );
+      commentsAuthorization =
         this.roomAuthorizationService.allowContributorsToCreateMessages(
-          callout.comments.authorization
+          commentsAuthorization
         );
-      callout.comments.authorization =
+      commentsAuthorization =
         this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-          callout.comments.authorization
+          commentsAuthorization
         );
+      updatedAuthorizations.push(commentsAuthorization);
     }
 
-    return callout;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(callout: ICallout): IAuthorizationPolicy {

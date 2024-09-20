@@ -73,10 +73,19 @@ export class LifecycleService {
         return name === eventName;
       })
     ) {
-      throw new InvalidStateTransitionException(
-        `Unable to update state: provided event (${eventName}) not in valid set of next events: ${nextStates}`,
-        LogContext.LIFECYCLE
-      );
+      const lifecycleMsgPrefix = `Lifecycle (${lifecycle.id}) event (${eventName}): `;
+      const lifecycleMsgSuffix = `event: ${JSON.stringify(lifecycleEventData)}, context: ${JSON.stringify(machineDef.context)}`;
+      if (nextStates.length === 0) {
+        throw new InvalidStateTransitionException(
+          `${lifecycleMsgPrefix} No next states for lifecycle, ${lifecycleMsgSuffix}`,
+          LogContext.LIFECYCLE
+        );
+      } else {
+        throw new InvalidStateTransitionException(
+          `${lifecycleMsgPrefix} Not in valid set of next events: ${nextStates}, ${lifecycleMsgSuffix}`,
+          LogContext.LIFECYCLE
+        );
+      }
     }
 
     const interpretedLifecycle = interpret(machineWithLifecycle);

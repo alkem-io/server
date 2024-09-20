@@ -1,10 +1,4 @@
-import { UUID_LENGTH } from '@common/constants';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-  UserPreferenceType,
-} from '@common/enums';
+import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -26,9 +20,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
   DeleteUserInput,
-  IUser,
   UpdateUserInput,
-  User,
 } from '@domain/community/user';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -36,7 +28,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -55,16 +47,22 @@ import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
-import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { AvatarService } from '@domain/common/visual/avatar.service';
-import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
+import { IUser } from './user.interface';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AgentType } from '@common/enums/agent.type';
+import { ContributorService } from '../contributor/contributor.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountType } from '@common/enums/account.type';
 
 @Injectable()
 export class UserService {
@@ -79,8 +77,8 @@ export class UserService {
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
-    private avatarService: AvatarService,
-    private documentService: DocumentService,
+    private accountHostService: AccountHostService,
+    private contributorService: ContributorService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -105,49 +103,43 @@ export class UserService {
     );
   }
 
-  async createUser(userData: CreateUserInput): Promise<IUser> {
-    await this.validateUserProfileCreationRequest(userData);
-    if (!userData.nameID) {
-      if (userData.firstName && userData.lastName) {
-        userData.nameID = await this.createUserNameID(
-          userData.firstName || '',
-          userData.lastName
-        );
-      } else {
-        throw new ValidationException(
-          `User creation: NameID not provided and first/last name not available: ${userData.email}`,
-          LogContext.COMMUNITY
-        );
-      }
+  async createUser(
+    userData: CreateUserInput,
+    agentInfo?: AgentInfo
+  ): Promise<IUser> {
+    if (userData.nameID) {
+      // Convert nameID to lower case
+      userData.nameID = userData.nameID.toLowerCase();
+      await this.isUserNameIdAvailableOrFail(userData.nameID);
+    } else {
+      userData.nameID = await this.createUserNameID(userData);
     }
 
-    const user: IUser = User.create(userData);
-    user.authorization = new AuthorizationPolicy();
+    await this.validateUserProfileCreationRequest(userData);
+
+    let user: IUser = User.create({
+      ...userData,
+      accountUpn: userData.accountUpn ?? userData.email,
+    });
+    user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
+
+    if (!user.serviceProfile) {
+      user.serviceProfile = false;
+    }
 
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
     user.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.USER
+      );
     user.profile = await this.profileService.createProfile(
       profileData,
       ProfileType.USER,
       user.storageAggregator
     );
 
-    // Set the visuals
-    let avatarURL = profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        user.firstName,
-        user.lastName
-      );
-    }
-    await this.profileService.addVisualOnProfile(
-      user.profile,
-      VisualType.AVATAR,
-      avatarURL
-    );
     await this.profileService.addTagsetOnProfile(user.profile, {
       name: TagsetReservedName.SKILLS,
       tags: [],
@@ -156,13 +148,20 @@ export class UserService {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
+    await this.contributorService.addAvatarVisualToContributorProfile(
+      user.profile,
+      userData.profileData,
+      agentInfo,
+      userData.firstName,
+      userData.lastName
+    );
 
     user.agent = await this.agentService.createAgent({
-      parentDisplayID: user.email,
+      type: AgentType.USER,
     });
 
     this.logger.verbose?.(
-      `Created a new user with nameID: ${user.nameID}`,
+      `Created a new user with email: ${user.email}`,
       LogContext.COMMUNITY
     );
 
@@ -171,35 +170,47 @@ export class UserService {
       this.createPreferenceDefaults()
     );
 
-    const response = await this.save(user);
+    const account = await this.accountHostService.createAccount(
+      AccountType.USER
+    );
+    user.accountID = account.id;
+
+    user = await this.save(user);
+
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      user.profile.id,
+      user.id
+    );
+    // Reload to ensure have the updated avatar URL
+    user = await this.getUserOrFail(user.id);
+
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
     // register the user asynchronously - we don't want to block the creation operation
-    this.communicationAdapter.tryRegisterNewUser(user.email).then(
-      async communicationID => {
-        try {
-          if (!communicationID) {
-            this.logger.warn(
-              `User registration failed on user creation ${user.id}.`
-            );
-            return user;
-          }
-
-          response.communicationID = communicationID;
-
-          await this.save(response);
-          await this.setUserCache(response);
-        } catch (e: any) {
-          this.logger.error(e, e?.stack, LogContext.USER);
-        }
-      },
-      error => this.logger.error(error, error?.stack, LogContext.USER)
+    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
+      user.email
     );
 
-    await this.setUserCache(response);
+    try {
+      if (!communicationID) {
+        this.logger.warn(
+          `User registration failed on user creation ${user.id}.`
+        );
+        return user;
+      }
 
-    return response;
+      user.communicationID = communicationID;
+
+      await this.save(user);
+      await this.setUserCache(user);
+    } catch (e: any) {
+      this.logger.error(e, e?.stack, LogContext.USER);
+    }
+
+    await this.setUserCache(user);
+
+    return user;
   }
 
   private async extendProfileDataWithReferences(
@@ -312,62 +323,23 @@ export class UserService {
       );
     }
 
-    const isAlkemioDocumentURL = this.documentService.isAlkemioDocumentURL(
-      agentInfo.avatarURL
-    );
-
-    const nameID = await this.createUserNameID(
-      agentInfo.firstName,
-      agentInfo.lastName
-    );
-    const user = await this.createUser({
-      nameID,
+    const userData: CreateUserInput = {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
       accountUpn: email,
       profileData: {
-        avatarURL: isAlkemioDocumentURL ? agentInfo.avatarURL : undefined,
+        avatarURL: agentInfo.avatarURL,
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
-    });
+    };
 
-    // Used for creating an avatar from a linkedin profile picture
-    // BUG: https://github.com/alkem-io/server/issues/3944
-
-    // if (!isAlkemioDocumentURL) {
-    //   if (!user.profile?.storageBucket?.id) {
-    //     throw new EntityNotInitializedException(
-    //       `User profile storage bucket not initialized for user with id: ${user.id}`,
-    //       LogContext.COMMUNITY
-    //     );
-    //   }
-
-    //   if (!user.profile.visuals) {
-    //     throw new EntityNotInitializedException(
-    //       `Visuals not initialized for profile with id: ${user.profile.id}`,
-    //       LogContext.COMMUNITY
-    //     );
-    //   }
-
-    //   const { visual, document } = await this.avatarService.createAvatarFromURL(
-    //     user.profile?.storageBucket?.id,
-    //     user.id,
-    //     agentInfo.avatarURL ?? user.profile.visuals[0].uri
-    //   );
-
-    //   user.profile.visuals = [visual];
-    //   user.profile.storageBucket.documents = [document];
-    //   user = await this.save(user);
-    // }
-
-    return user;
+    return await this.createUser(userData, agentInfo);
   }
 
   private async validateUserProfileCreationRequest(
     userData: CreateUserInput
   ): Promise<boolean> {
-    await this.isNameIdAvailableOrFail(userData.nameID);
     const userCheck = await this.isRegisteredUser(userData.email);
     if (userCheck)
       throw new ValidationException(
@@ -379,7 +351,7 @@ export class UserService {
     return true;
   }
 
-  private async isNameIdAvailableOrFail(nameID: string) {
+  private async isUserNameIdAvailableOrFail(nameID: string) {
     const userCount = await this.userRepository.countBy({
       nameID: nameID,
     });
@@ -388,18 +360,6 @@ export class UserService {
         `The provided nameID is already taken: ${nameID}`,
         LogContext.COMMUNITY
       );
-  }
-
-  private async isAccountHost(user: IUser): Promise<boolean> {
-    if (!user.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for user: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(user.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
   }
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
@@ -413,14 +373,17 @@ export class UserService {
       },
     });
 
-    const isAccountHost = await this.isAccountHost(user);
-    if (isAccountHost) {
+    // TODO: give additional feedback?
+    const accountHasResources =
+      await this.accountHostService.areResourcesInAccount(user.accountID);
+    if (accountHasResources) {
       throw new ForbiddenException(
-        'Unable to delete User: host of one or more accounts',
+        'Unable to delete User: account contains one or more resources',
         LogContext.SPACES
       );
     }
     const { id } = user;
+
     await this.clearUserCache(user);
 
     if (user.profile) {
@@ -455,6 +418,10 @@ export class UserService {
     };
   }
 
+  public async getAccount(user: IUser): Promise<IAccount> {
+    return await this.accountHostService.getAccountOrFail(user.accountID);
+  }
+
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
     const user = await this.getUserOrFail(userID, {
       relations: {
@@ -466,7 +433,7 @@ export class UserService {
 
     if (!user.preferenceSet) {
       throw new EntityNotInitializedException(
-        `User preferences not initialized or not found for user with nameID: ${user.nameID}`,
+        `User preferences not initialized or not found for user with nameID: ${user.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -493,28 +460,6 @@ export class UserService {
       );
     }
 
-    // check if the user is registered for communications
-    // should go through this block only once
-    // we want this to happen synchronously
-    if (!Boolean(user.communicationID)) {
-      const communicationID = await this.tryRegisterUserCommunication(user);
-
-      if (!communicationID) {
-        this.logger.warn(
-          `Unable to register user for communication: ${user.email}`,
-          LogContext.COMMUNICATION
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      // need to update the cache in case the user is already in it
-      // but the previous registration attempt has failed
-      await this.setUserCache(user);
-    }
-
     return user;
   }
 
@@ -522,40 +467,10 @@ export class UserService {
     userID: string,
     options: FindOneOptions<User> | undefined
   ): Promise<IUser | null> {
-    let user: IUser | null = null;
-
-    if (await this.isUserIdEmail(userID)) {
-      user = await this.userRepository.findOne({
-        where: {
-          email: userID,
-        },
-        ...options,
-      });
-    } else if (userID.length === UUID_LENGTH) {
-      {
-        user = await this.userRepository.findOne({
-          where: {
-            id: userID,
-          },
-          ...options,
-        });
-      }
-    }
-
-    if (!user)
-      user = await this.userRepository.findOne({
-        where: {
-          nameID: userID,
-        },
-        ...options,
-      });
-
-    return user;
-  }
-
-  private async isUserIdEmail(userId: string): Promise<boolean> {
-    if (userId.includes('@')) return true;
-    return false;
+    return this.userRepository.findOne({
+      where: [{ id: userID }, { nameID: userID }, { email: userID }],
+      ...options,
+    });
   }
 
   async getUserByEmail(
@@ -569,30 +484,10 @@ export class UserService {
       );
     }
 
-    const user = await this.userRepository.findOne({
+    return this.userRepository.findOne({
       where: { email: email },
       ...options,
     });
-
-    // same as in getUserOrFail
-    if (user && !Boolean(user?.communicationID)) {
-      const communicationID = await this.tryRegisterUserCommunication(user);
-
-      if (!communicationID) {
-        this.logger.warn(
-          `User could not be registered for communication ${user.id}`,
-          LogContext.COMMUNICATION
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      await this.setUserCache(user);
-    }
-
-    return user;
   }
 
   async save(user: IUser): Promise<IUser> {
@@ -776,7 +671,7 @@ export class UserService {
     if (userInput.nameID) {
       if (userInput.nameID.toLowerCase() !== user.nameID.toLowerCase()) {
         // new NameID, check for uniqueness
-        await this.isNameIdAvailableOrFail(userInput.nameID);
+        await this.isUserNameIdAvailableOrFail(userInput.nameID);
         user.nameID = userInput.nameID;
       }
     }
@@ -815,7 +710,7 @@ export class UserService {
     if (updateData.nameID) {
       if (updateData.nameID !== user.nameID) {
         // updating the nameID, check new value is allowed
-        await this.isNameIdAvailableOrFail(updateData.nameID);
+        await this.isUserNameIdAvailableOrFail(updateData.nameID);
 
         user.nameID = updateData.nameID;
       }
@@ -859,7 +754,7 @@ export class UserService {
     const profile = userWithProfile.profile;
     if (!profile)
       throw new RelationshipNotFoundException(
-        `Unable to load Profile for User: ${user.nameID} `,
+        `Unable to load Profile for User: ${user.id} `,
         LogContext.COMMUNITY
       );
 
@@ -886,11 +781,11 @@ export class UserService {
       .getMany();
   }
 
-  async countUsersWithCredentials(
+  public countUsersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<number> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const userMatchesCount = await this.userRepository
+    return this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
@@ -901,8 +796,6 @@ export class UserService {
         resourceID: credResourceID,
       })
       .getCount();
-
-    return userMatchesCount;
   }
 
   async getStorageAggregatorOrFail(
@@ -925,14 +818,10 @@ export class UserService {
     return storageAggregator;
   }
 
-  private async tryRegisterUserCommunication(
+  private tryRegisterUserCommunication(
     user: IUser
   ): Promise<string | undefined> {
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      user.email
-    );
-
-    return communicationID;
+    return this.communicationAdapter.tryRegisterNewUser(user.email);
   }
 
   async getCommunityRooms(user: IUser): Promise<CommunicationRoomResult[]> {
@@ -955,37 +844,25 @@ export class UserService {
     return directRooms;
   }
 
-  public async createUserNameID(
-    firstName: string,
-    lastName: string
-  ): Promise<string> {
-    const base = `${firstName}-${lastName}`;
+  private async createUserNameID(userData: CreateUserInput): Promise<string> {
+    let base = '';
+    if (userData.firstName && userData.lastName) {
+      base = `${userData.firstName}-${userData.lastName}`;
+    } else if (userData.firstName) {
+      base = `${userData.firstName}`;
+    } else if (userData.lastName) {
+      base = `${userData.lastName}`;
+    } else if (userData.profileData?.displayName) {
+      base = userData.profileData.displayName;
+    } else {
+      base = userData.email.split('@')[0];
+    }
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsInUsers(); // This will need to be smarter later
     return this.namingService.createNameIdAvoidingReservedNameIDs(
       base,
       reservedNameIDs
     );
-  }
-
-  async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
-    const users = await this.userRepository.find({
-      where: {
-        id: In(userIds),
-      },
-      relations: { profile: true },
-      select: ['id'],
-    });
-
-    const results = users.filter((user: { id: string }) =>
-      userIds.includes(user.id)
-    );
-    const mappedResults = userIds.map(
-      id =>
-        results.find((result: { id: string }) => result.id === id)?.profile ||
-        new Error(`Could not load user ${id}`)
-    );
-    return mappedResults;
   }
 
   public async getAgentInfoMetadata(

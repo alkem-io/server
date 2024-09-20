@@ -11,10 +11,17 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
-import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from '@domain/space/space/space.entity';
-import { SpaceLevel } from '@common/enums/space.level';
+import { isUUID } from 'class-validator';
+import { InvalidUUID } from '@common/exceptions/invalid.uuid';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { IOrganization, Organization } from '@domain/community/organization';
+import { IUser } from '@domain/community/user/user.interface';
+import { Account } from '@domain/space/account/account.entity';
+import { IAccount } from '@domain/space/account/account.interface';
+import { User } from '@domain/community/user/user.entity';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -60,27 +67,32 @@ export class StorageAggregatorResolverService {
     return this.getStorageAggregatorOrFail(result.storageAggregatorId);
   }
 
-  public async getLibraryStorageAggregator(): Promise<IStorageAggregator> {
-    const query = `SELECT \`storageAggregatorId\`
-    FROM \`library\` LIMIT 1`;
-    const [result]: {
-      storageAggregatorId: string;
-    }[] = await this.entityManager.connection.query(query);
-    return this.getStorageAggregatorOrFail(result.storageAggregatorId);
+  public async getParentAccountForStorageAggregator(
+    storageAggregator: IStorageAggregator
+  ): Promise<IAccount> {
+    const account = await this.entityManager.findOne(Account, {
+      where: {
+        storageAggregator: {
+          id: storageAggregator.id,
+        },
+      },
+    });
+    if (!account) {
+      throw new EntityNotFoundException(
+        `Unable to retrieve Account for storage aggregator ${storageAggregator.id}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+    return account;
   }
 
-  public async getParentEntityInformation(
-    storageAggregatorID: string
-  ): Promise<{
-    id: string;
-    displayName: string;
-    level: SpaceLevel;
-    nameID: string;
-  }> {
+  public async getParentSpaceForStorageAggregator(
+    storageAggregator: IStorageAggregator
+  ): Promise<ISpace> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         storageAggregator: {
-          id: storageAggregatorID,
+          id: storageAggregator.id,
         },
       },
       relations: {
@@ -88,50 +100,109 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!space) {
-      throw new NotImplementedException(
-        `Retrieval of parent entity information for storage aggregator on ${storageAggregatorID} type not yet implemented`,
+      throw new EntityNotFoundException(
+        `Unable to retrieve Space for storage aggregator ${storageAggregator.id}`,
         LogContext.STORAGE_AGGREGATOR
       );
     }
+    return space;
+  }
 
-    return {
-      id: space.id,
-      displayName: space.profile.displayName,
-      nameID: space.nameID,
-      level: space.level,
-    };
+  public async getParentOrganizationForStorageAggregator(
+    storageAggregator: IStorageAggregator
+  ): Promise<IOrganization> {
+    const organization = await this.entityManager.findOne(Organization, {
+      where: {
+        storageAggregator: {
+          id: storageAggregator.id,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (!organization) {
+      throw new EntityNotFoundException(
+        `Unable to retrieve Organization for storage aggregator ${storageAggregator.id}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+    return organization;
+  }
+
+  public async getParentUserForStorageAggregator(
+    storageAggregator: IStorageAggregator
+  ): Promise<IUser> {
+    const user = await this.entityManager.findOne(User, {
+      where: {
+        storageAggregator: {
+          id: storageAggregator.id,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (!user) {
+      throw new EntityNotFoundException(
+        `Unable to retrieve User for storage aggregator ${storageAggregator.id}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+    return user;
   }
 
   public async getStorageAggregatorForTemplatesSet(
     templatesSetId: string
   ): Promise<IStorageAggregator> {
+    if (!isUUID(templatesSetId)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided to find the StorageAggregator of a templateSet',
+        LogContext.COMMUNITY,
+        { provided: templatesSetId }
+      );
+    }
+
+    // First try on Space
     const space = await this.entityManager.findOne(Space, {
       where: {
-        account: {
-          library: {
-            id: templatesSetId,
-          },
+        library: {
+          id: templatesSetId,
         },
       },
       relations: {
         storageAggregator: true,
       },
     });
-
     if (space && space.storageAggregator) {
-      return await this.getStorageAggregatorOrFail(space.storageAggregator.id);
+      return this.getStorageAggregatorOrFail(space.storageAggregator.id);
     }
 
-    const query = `SELECT \`id\` FROM \`innovation_pack\`
-      WHERE \`innovation_pack\`.\`templatesSetId\`='${templatesSetId}'`;
-    const [result] = await this.entityManager.connection.query(query);
-    if (result) {
-      // use the library sorage aggregator
-      return await this.getLibraryStorageAggregator();
+    // Then on InnovationPack
+    const innovationPack = await this.entityManager.findOne(InnovationPack, {
+      where: {
+        templatesSet: {
+          id: templatesSetId,
+        },
+      },
+      relations: {
+        account: {
+          storageAggregator: true,
+        },
+      },
+    });
+    if (
+      innovationPack &&
+      innovationPack.account &&
+      innovationPack.account.storageAggregator
+    ) {
+      return this.getStorageAggregatorOrFail(
+        innovationPack.account.storageAggregator.id
+      );
     }
 
-    throw new StorageAggregatorNotFoundException(
-      `Could not find storage aggregator for templatesSet with id: ${templatesSetId}`,
+    throw new NotImplementedException(
+      `Unable to retrieve storage aggregator to use for TemplatesSet ${templatesSetId}`,
       LogContext.STORAGE_AGGREGATOR
     );
   }
@@ -147,9 +218,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCalendar(
     calendarID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCalendar(
-      calendarID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCalendar(calendarID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
@@ -192,9 +262,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCommunity(
     communityID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCommunity(
-      communityID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCommunity(communityID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
@@ -223,9 +292,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCallout(
     calloutID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCallout(
-      calloutID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCallout(calloutID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 

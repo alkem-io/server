@@ -8,7 +8,6 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CollaborationResolverMutations } from '@domain/collaboration/collaboration/collaboration.resolver.mutations';
 import { CollaborationResolverFields } from '@domain/collaboration/collaboration/collaboration.resolver.fields';
-import { RelationModule } from '@domain/collaboration/relation/relation.module';
 import { CollaborationAuthorizationService } from './collaboration.service.authorization';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { PostModule } from '../post/post.module';
@@ -24,6 +23,7 @@ import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module'
 import { SpaceDefaultsModule } from '@domain/space/space.defaults/space.defaults.module';
 import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
   imports: [
@@ -37,7 +37,6 @@ import { LicenseEngineModule } from '@core/license-engine/license.engine.module'
     NamingModule,
     EntityResolverModule,
     StorageAggregatorResolverModule,
-    RelationModule,
     WhiteboardModule,
     PostModule,
     TimelineModule,
@@ -46,6 +45,7 @@ import { LicenseEngineModule } from '@core/license-engine/license.engine.module'
     SpaceDefaultsModule,
     CalloutGroupsModule,
     LicenseEngineModule,
+    TemporaryStorageModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
   providers: [

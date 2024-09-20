@@ -398,9 +398,6 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
-          account: {
-            license: true,
-          },
         },
       });
 
@@ -409,8 +406,8 @@ export class SearchService {
         return (
           space.nameID.toLowerCase().includes(lowerCasedTerm) ||
           space.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.description.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.description?.toLowerCase().includes(lowerCasedTerm) ||
           space.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
@@ -418,19 +415,15 @@ export class SearchService {
           space.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
           space.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
           space.profile.location?.country
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          space.profile.location?.city.toLowerCase().includes(lowerCasedTerm)
+          space.profile.location?.city?.toLowerCase().includes(lowerCasedTerm)
         );
       });
 
       // Filter the spaces + score them
       for (const space of filteredSpaceMatches) {
-        if (
-          space.account &&
-          space.account.license &&
-          space.account.license.visibility !== SpaceVisibility.ARCHIVED
-        ) {
+        if (space.visibility !== SpaceVisibility.ARCHIVED) {
           // Score depends on various factors, hardcoded for now
           const score_increment = this.getScoreIncrementSpace(space, agentInfo);
 
@@ -448,7 +441,7 @@ export class SearchService {
 
   // Determine the score increment based on whether the user has read access or not
   private getScoreIncrementSpace(space: ISpace, agentInfo: AgentInfo): number {
-    switch (space.account?.license?.visibility) {
+    switch (space.visibility) {
       case SpaceVisibility.ACTIVE:
         return this.getScoreIncrementReadAccess(space.authorization, agentInfo);
       case SpaceVisibility.DEMO:
@@ -498,9 +491,6 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
-          account: {
-            license: true,
-          },
         },
       });
       const lowerCasedTerm = term.toLowerCase();
@@ -509,8 +499,10 @@ export class SearchService {
         return (
           subspace.nameID.toLowerCase().includes(lowerCasedTerm) ||
           subspace.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.profile.description.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.description
+            ?.toLowerCase()
+            .includes(lowerCasedTerm) ||
           subspace.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
@@ -518,17 +510,18 @@ export class SearchService {
           subspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
           subspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
           subspace.profile.location?.country
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          subspace.profile.location?.city.toLowerCase().includes(lowerCasedTerm)
+          subspace.profile.location?.city
+            ?.toLowerCase()
+            .includes(lowerCasedTerm)
         );
       });
 
       // Only show challenges that the current user has read access to
       for (const filteredSubspace of filteredChallengeMatches) {
         if (
-          filteredSubspace.account?.license?.visibility !==
-            SpaceVisibility.ARCHIVED &&
+          filteredSubspace.visibility !== SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
             filteredSubspace.authorization,
@@ -569,9 +562,6 @@ export class SearchService {
         relations: {
           context: true,
           collaboration: true,
-          account: {
-            license: true,
-          },
           profile: {
             location: true,
             tagsets: true,
@@ -587,9 +577,9 @@ export class SearchService {
           subsubspace.profile.displayName
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          subsubspace.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
           subsubspace.profile.description
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm) ||
           subsubspace.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
@@ -598,18 +588,17 @@ export class SearchService {
           subsubspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
           subsubspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
           subsubspace.profile.location?.country
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm) ||
           subsubspace.profile.location?.city
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm)
         );
       });
       // Only show challenges that the current user has read access to
       for (const filteredSubsubspace of filteredOpportunityMatches) {
         if (
-          filteredSubsubspace.account.license?.visibility !==
-            SpaceVisibility.ARCHIVED &&
+          filteredSubsubspace.visibility !== SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
             filteredSubsubspace.authorization,
@@ -901,9 +890,8 @@ export class SearchService {
         );
       const searchResultType = searchResultBase.type as SearchResultType;
       try {
-        const searchResult = await searchResultBuilder[searchResultType](
-          searchResultBase
-        );
+        const searchResult =
+          await searchResultBuilder[searchResultType](searchResultBase);
         searchResults.push(searchResult);
       } catch (error: any) {
         this.logger.error(
@@ -954,18 +942,19 @@ export class SearchService {
     let postIDsFilter: string[] | undefined = undefined;
     if (searchInSpaceID) {
       searchInSpace = await this.spaceService.getSpaceOrFail(searchInSpaceID, {
-        relations: { collaboration: true, account: true },
+        relations: { collaboration: true },
       });
       spaceIDsFilter = [searchInSpace.id];
-      const accountIDsFilter = [searchInSpace.account.id];
+      const levelZeroSpaceIDsFilter = [searchInSpace.levelZeroSpaceID];
 
-      const subspacesFilter = await this.getSubspacesInAccountFilter(
-        accountIDsFilter
+      const subspacesFilter = await this.getSubspacesInLevelZeroSpaceIDsFilter(
+        levelZeroSpaceIDsFilter
       );
       challengeIDsFilter = subspacesFilter.map(subspace => subspace.id);
-      const subsubspacesFilter = await this.getSubsubspacesInAccountFilter(
-        accountIDsFilter
-      );
+      const subsubspacesFilter =
+        await this.getSubsubspacesInLevelZeroSpaceIDsFilter(
+          levelZeroSpaceIDsFilter
+        );
       opportunityIDsFilter = subsubspacesFilter.map(opp => opp.id);
       userIDsFilter = await this.getUsersFilter(searchInSpace);
       organizationIDsFilter = await this.getOrganizationsFilter(searchInSpace);
@@ -985,38 +974,32 @@ export class SearchService {
     };
   }
 
-  private async getSubspacesInAccountFilter(
-    accountIDsFilter: string[]
+  private async getSubspacesInLevelZeroSpaceIDsFilter(
+    levelZeroSpaceIDsFilter: string[]
   ): Promise<ISpace[]> {
     const subspaces = await this.spaceRepository.find({
       where: {
-        account: {
-          id: In(accountIDsFilter),
-        },
+        levelZeroSpaceID: In(levelZeroSpaceIDsFilter),
         level: SpaceLevel.CHALLENGE,
       },
       relations: {
         collaboration: true,
-        account: true,
       },
     });
 
     return subspaces;
   }
 
-  private async getSubsubspacesInAccountFilter(
-    accountIDsFilter: string[]
+  private async getSubsubspacesInLevelZeroSpaceIDsFilter(
+    levelZeroSpaceIDsFilter: string[]
   ): Promise<ISpace[]> {
     const subsubspaces = await this.spaceRepository.find({
       where: {
-        account: {
-          id: In(accountIDsFilter),
-        },
+        levelZeroSpaceID: In(levelZeroSpaceIDsFilter),
         level: SpaceLevel.OPPORTUNITY,
       },
       relations: {
         collaboration: true,
-        account: true,
       },
     });
 

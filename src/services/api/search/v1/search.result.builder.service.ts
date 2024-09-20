@@ -60,26 +60,15 @@ export default class SearchResultBuilderService
 
   async [SearchResultType.CHALLENGE](rawSearchResult: ISearchResult) {
     const subspace = await this.spaceService.getSpaceOrFail(
-      rawSearchResult.result.id,
-      {
-        relations: {
-          account: {
-            space: true,
-          },
-        },
-      }
+      rawSearchResult.result.id
     );
-    if (!subspace.account || !subspace.account.space) {
-      throw new RelationshipNotFoundException(
-        `Unable to find account for ${subspace.nameID}`,
-        LogContext.SEARCH
-      );
-    }
-    const space = subspace.account.space;
+    const levelZeroSpace = await this.spaceService.getSpaceOrFail(
+      subspace.levelZeroSpaceID
+    );
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
       subspace: subspace,
-      space,
+      space: levelZeroSpace,
     };
     return searchResultChallenge;
   }
@@ -90,22 +79,21 @@ export default class SearchResultBuilderService
       {
         relations: {
           parentSpace: true,
-          account: {
-            space: true,
-          },
         },
       }
     );
-    if (!subsubspace.account || !subsubspace.account.space) {
+    if (!subsubspace.parentSpace) {
       throw new RelationshipNotFoundException(
-        `Unable to find account for ${subsubspace.nameID}`,
+        `Unable to find parentSpace for ${subsubspace.nameID}`,
         LogContext.SEARCH
       );
     }
-    const space = subsubspace.account.space;
+    const levelZeroSpace = await this.spaceService.getSpaceOrFail(
+      subsubspace.levelZeroSpaceID
+    );
     if (!subsubspace.parentSpace) {
       throw new RelationshipNotFoundException(
-        `Unable to find parent subspace for ${subsubspace.nameID}`,
+        `Unable to find parent subspace for ${subsubspace.id}`,
         LogContext.SEARCH
       );
     }
@@ -115,7 +103,7 @@ export default class SearchResultBuilderService
     const searchResultOpportunity: ISearchResultOpportunity = {
       ...this.searchResultBase,
       subsubspace,
-      space,
+      space: levelZeroSpace,
       subspace,
     };
     return searchResultOpportunity;
@@ -183,23 +171,22 @@ export default class SearchResultBuilderService
       },
       relations: {
         parentSpace: true,
-        account: {
-          space: true,
-        },
         collaboration: {
           callouts: true,
         },
       },
     });
 
-    if (!spaceLoaded || !spaceLoaded.account || !spaceLoaded.account.space) {
+    if (!spaceLoaded) {
       throw new EntityNotFoundException(
         `Unable to find parents for post with ID: ${postId}`,
         LogContext.SEARCH
       );
     }
 
-    const space = spaceLoaded.account.space;
+    const levelZeroSpace = await this.spaceService.getSpaceOrFail(
+      spaceLoaded.levelZeroSpaceID
+    );
     let subspace: ISpace | undefined = undefined;
     let subsubspace: ISpace | undefined = undefined;
 
@@ -215,7 +202,7 @@ export default class SearchResultBuilderService
       }
     }
 
-    return { subspace, subsubspace, callout, space };
+    return { subspace, subsubspace, callout, space: levelZeroSpace };
   }
 
   async [SearchResultType.POST](rawSearchResult: ISearchResult) {

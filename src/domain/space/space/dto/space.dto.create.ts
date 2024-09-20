@@ -1,22 +1,14 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
 import { SpaceType } from '@common/enums/space.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateContextInput } from '@domain/context/context/dto/context.dto.create';
+import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
+import { CreateCollaborationOnSpaceInput } from './space.dto.create.collaboration';
 
 @InputType()
 export class CreateSpaceInput extends CreateNameableInput {
-  // Override
-  @Field(() => NameID, {
-    nullable: true,
-    description: 'A readable identifier, unique within the containing Account.',
-  })
-  nameID!: string;
-
   @Field(() => CreateContextInput, { nullable: true })
   @IsOptional()
   @ValidateNested()
@@ -27,11 +19,10 @@ export class CreateSpaceInput extends CreateNameableInput {
   @IsOptional()
   tags?: string[];
 
-  @Field(() => CreateCollaborationInput, { nullable: true })
-  @IsOptional()
+  @Field(() => CreateCollaborationOnSpaceInput, { nullable: false })
   @ValidateNested()
-  @Type(() => CreateCollaborationInput)
-  collaborationData?: CreateCollaborationInput;
+  @Type(() => CreateCollaborationOnSpaceInput)
+  collaborationData!: CreateCollaborationOnSpaceInput;
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;

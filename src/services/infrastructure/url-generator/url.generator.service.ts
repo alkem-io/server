@@ -1,5 +1,4 @@
 import { LogContext, ProfileType } from '@common/enums';
-import { ConfigurationTypes } from '@common/enums/configuration.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -14,7 +13,6 @@ import { EntityManager } from 'typeorm';
 import { Cache, CachingConfig } from 'cache-manager';
 import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
@@ -22,6 +20,13 @@ import { CommunityContributorType } from '@common/enums/community.contributor.ty
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
+import { AlkemioConfig } from '@src/types';
+import { Template } from '@domain/template/template/template.entity';
+import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Community } from '@domain/community/community';
+import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -50,16 +55,16 @@ export class UrlGeneratorService {
   private endpoint_cluster: string;
 
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {
-    this.endpoint_cluster = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
+    this.endpoint_cluster = this.configService.get('hosting.endpoint_cluster', {
+      infer: true,
+    });
   }
 
   private getUrlIdCacheKey(entityId: string): string {
@@ -79,6 +84,7 @@ export class UrlGeneratorService {
   }
 
   public async getUrlFromCache(entityId: string): Promise<string | undefined> {
+    return undefined; //!!
     const url = await this.cacheManager.get<string>(
       this.getUrlIdCacheKey(entityId)
     );
@@ -153,6 +159,10 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/vc/${nameID}`;
   }
 
+  public generateUrlForPlatform(): string {
+    return `${this.endpoint_cluster}/home`;
+  }
+
   async createJourneyAdminCommunityURL(space: ISpace): Promise<string> {
     const spaceNameID = space.nameID;
     const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
@@ -224,7 +234,7 @@ export class UrlGeneratorService {
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        return `${this.endpoint_cluster}/${this.PATH_USER}/${userEntityInfo.entityNameID}`;
+        return this.createUrlFoUserNameID(userEntityInfo.entityNameID);
       case ProfileType.VIRTUAL_CONTRIBUTOR:
         const vcEntityInfo = await this.getNameableEntityInfoOrFail(
           'virtual_contributor',
@@ -243,6 +253,8 @@ export class UrlGeneratorService {
         );
       case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutFramingUrlPathOrFail(profile.id);
+      case ProfileType.COMMUNITY_GUIDELINES:
+        return await this.getCommunityGuidelinesUrlPathOrFail(profile.id);
       case ProfileType.POST:
         return await this.getPostUrlPathByField(
           this.FIELD_PROFILE_ID,
@@ -255,23 +267,8 @@ export class UrlGeneratorService {
         );
       case ProfileType.INNOVATION_FLOW:
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
-      case ProfileType.WHITEBOARD_TEMPLATE:
-        return await this.getTemplateUrlPathOrFail(
-          'whiteboard_template',
-          profile.id
-        );
-      case ProfileType.POST_TEMPLATE:
-        return await this.getTemplateUrlPathOrFail('post_template', profile.id);
-      case ProfileType.CALLOUT_TEMPLATE:
-        return await this.getTemplateUrlPathOrFail(
-          'callout_template',
-          profile.id
-        );
-      case ProfileType.INNOVATION_FLOW_TEMPLATE:
-        return await this.getTemplateUrlPathOrFail(
-          'innovation_flow_template',
-          profile.id
-        );
+      case ProfileType.TEMPLATE:
+        return await this.getTemplateUrlPathOrFail(profile.id);
       case ProfileType.INNOVATION_PACK:
         return await this.getInnovationPackUrlPath(profile.id);
       case ProfileType.CALENDAR_EVENT:
@@ -295,7 +292,7 @@ export class UrlGeneratorService {
         return `${this.endpoint_cluster}/admin/innovation-hubs/${innovationHubEntityInfo.entityNameID}`;
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
-        return '';
+        return `${this.endpoint_cluster}`;
     }
     return '';
   }
@@ -319,6 +316,10 @@ export class UrlGeneratorService {
 
   public createUrlForOrganizationNameID(organizationNameID: string): string {
     return `${this.endpoint_cluster}/${this.PATH_ORGANIZATION}/${organizationNameID}`;
+  }
+
+  public createUrlFoUserNameID(userNameID: string): string {
+    return `${this.endpoint_cluster}/${this.PATH_USER}/${userNameID}`;
   }
 
   private getContributorType(contributor: IContributor) {
@@ -374,42 +375,36 @@ export class UrlGeneratorService {
     return result;
   }
 
-  public async getTemplateInfo(
-    entityTableName: string,
-    profileID: string
-  ): Promise<{ entityID: string; templatesSetID: string } | null> {
-    const [result]: {
-      entityID: string;
-      templatesSetID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT \`${entityTableName}\`.\`id\` as \`entityID\`, \`${entityTableName}\`.\`templatesSetId\` as templatesSetID FROM \`${entityTableName}\`
-        WHERE \`${entityTableName}\`.\`${this.FIELD_PROFILE_ID}\` = '${profileID}'
-      `
-    );
-    if (!result) return null;
-    return result;
-  }
-
-  private async getTemplateUrlPathOrFail(
-    entityTableName: string,
-    profileID: string
-  ): Promise<string> {
-    const templateInfo = await this.getTemplateInfo(entityTableName, profileID);
-    if (!templateInfo || !templateInfo.templatesSetID) {
+  private async getTemplateUrlPathOrFail(profileID: string): Promise<string> {
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        profile: {
+          id: profileID,
+        },
+      },
+      relations: {
+        templatesSet: true,
+      },
+    });
+    if (!template || !template.templatesSet) {
       throw new EntityNotFoundException(
-        `Unable to find templatesSet for ${entityTableName} using profile: ${profileID}`,
+        `Unable to find template for profile: ${profileID}`,
         LogContext.URL_GENERATOR
       );
     }
-    const templatesSetID = templateInfo.templatesSetID;
+    const templatesSetUrl = await this.getTemplatesSetUrlPathOrFail(
+      template.templatesSet.id
+    );
+    return `${templatesSetUrl}/${template.nameID}`;
+  }
 
+  private async getTemplatesSetUrlPathOrFail(
+    templatesSetID: string
+  ): Promise<string> {
     const space = await this.entityManager.findOne(Space, {
       where: {
-        account: {
-          library: {
-            id: templatesSetID,
-          },
+        library: {
+          id: templatesSetID,
         },
       },
     });
@@ -516,41 +511,98 @@ export class UrlGeneratorService {
   private async getInnovationFlowUrlPathOrFail(
     profileID: string
   ): Promise<string> {
-    const [innovationFlowInfo]: {
-      entityID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT innovation_flow.id as entityID FROM innovation_flow
-        WHERE innovation_flow.profileId = '${profileID}'
-      `
-    );
+    const innovationFlow = await this.entityManager.findOne(InnovationFlow, {
+      where: {
+        profile: {
+          id: profileID,
+        },
+      },
+    });
 
-    if (!innovationFlowInfo) {
+    if (!innovationFlow) {
       throw new EntityNotFoundException(
         `Unable to find innovationFlow for profile: ${profileID}`,
         LogContext.URL_GENERATOR
       );
     }
 
-    const [collaborationInfo]: {
-      entityID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT collaboration.id as entityID FROM collaboration
-        WHERE collaboration.innovationFlowId = '${innovationFlowInfo.entityID}'
-      `
-    );
-
-    if (collaborationInfo) {
-      const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
-        'collaborationId',
-        collaborationInfo.entityID
-      );
-      return `${collaborationJourneyUrlPath}/innovation-flow`;
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        innovationFlow: {
+          id: innovationFlow.id,
+        },
+      },
+    });
+    if (collaboration) {
+      return await this.getJourneyUrlPath('collaborationId', collaboration.id);
     }
 
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        innovationFlow: {
+          id: innovationFlow.id,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (template) {
+      return await this.getTemplateUrlPathOrFail(template.profile.id);
+    }
     throw new EntityNotFoundException(
-      `Unable to find collaboration for journey with innovationFlow with ID: ${innovationFlowInfo.entityID}`,
+      `Unable to find innovationFlow for profile: ${profileID}`,
+      LogContext.URL_GENERATOR
+    );
+  }
+
+  private async getCommunityGuidelinesUrlPathOrFail(
+    profileID: string
+  ): Promise<string> {
+    const communityGuidelines = await this.entityManager.findOne(
+      CommunityGuidelines,
+      {
+        where: {
+          profile: {
+            id: profileID,
+          },
+        },
+      }
+    );
+
+    if (!communityGuidelines) {
+      throw new EntityNotFoundException(
+        `Unable to find community guidelines for profile: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    const community = await this.entityManager.findOne(Community, {
+      where: {
+        guidelines: {
+          id: communityGuidelines.id,
+        },
+      },
+    });
+    if (community) {
+      return await this.getJourneyUrlPath('communityId', community.id);
+    }
+
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        communityGuidelines: {
+          id: communityGuidelines.id,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (template) {
+      return await this.getTemplateUrlPathOrFail(template.profile.id);
+    }
+    throw new EntityNotFoundException(
+      `Unable to find community guidelines for profile: ${profileID}, communityguidelines: ${communityGuidelines.id}`,
       LogContext.URL_GENERATOR
     );
   }
@@ -558,83 +610,67 @@ export class UrlGeneratorService {
   private async getCalloutFramingUrlPathOrFail(
     profileID: string
   ): Promise<string> {
-    // Framing is used in both Callout and CalloutTemplate entities
-    const [calloutFraming]: {
-      id: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT callout_framing.id FROM callout_framing
-        WHERE callout_framing.profileId = '${profileID}'
-      `
-    );
-    if (!calloutFraming) {
+    const callout = await this.entityManager.findOne(Callout, {
+      where: {
+        framing: {
+          profile: {
+            id: profileID,
+          },
+        },
+      },
+    });
+    if (!callout) {
       throw new EntityNotFoundException(
-        `Unable to find CalloutFraming with profile ID: ${profileID}`,
+        `Unable to find Callout with Framing with profile ID: ${profileID}`,
         LogContext.URL_GENERATOR
       );
     }
-
-    const [callout]: {
-      id: string;
-      nameID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT callout.id, callout.nameID FROM callout
-        WHERE callout.framingId = '${calloutFraming.id}'
-      `
-    );
-    if (callout) {
-      return await this.getCalloutUrlPath(callout.id);
-    }
-
-    const [calloutTemplate]: {
-      id: string;
-      profileId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT callout_template.id, callout_template.profileId FROM callout_template
-        WHERE callout_template.framingId = '${calloutFraming.id}'
-      `
-    );
-    if (calloutTemplate) {
-      return await this.getTemplateUrlPathOrFail(
-        'callout_template',
-        calloutTemplate.profileId
-      );
-    }
-
-    throw new EntityNotFoundException(
-      `Unable to find path for CalloutFraming with ID: ${calloutFraming.id}`,
-      LogContext.URL_GENERATOR
-    );
+    return await this.getCalloutUrlPath(callout.id);
   }
 
   public async getCalloutUrlPath(calloutID: string): Promise<string> {
-    const [result]: {
-      calloutId: string;
-      calloutNameId: string;
-      collaborationId: string;
-    }[] = await this.entityManager.connection
-      .query(`SELECT callout.id AS calloutId, callout.nameID AS calloutNameId, callout.collaborationId AS collaborationId
-      FROM callout WHERE callout.id = '${calloutID}'`);
+    const callout = await this.entityManager.findOne(Callout, {
+      where: {
+        id: calloutID,
+      },
+      relations: {
+        collaboration: true,
+      },
+    });
 
-    if (!result) {
+    if (!callout) {
       throw new EntityNotFoundException(
         `Unable to find callout where id: ${calloutID}`,
         LogContext.URL_GENERATOR
       );
     }
-    if (!result.collaborationId) {
+
+    if (callout.collaboration) {
+      const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
+        'collaborationId',
+        callout.collaboration.id
+      );
+      return `${collaborationJourneyUrlPath}/${this.PATH_COLLABORATION}/${callout.nameID}`;
+    }
+
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        callout: {
+          id: callout.id,
+        },
+      },
+      relations: {
+        profile: true,
+        templatesSet: true,
+      },
+    });
+    if (!template || !template.templatesSet || !template.profile) {
       throw new EntityNotFoundException(
-        `Unable to find collaboration for callout with id: ${calloutID}`,
+        `Unable to find template info for Callout that was not in a Collaboration: ${callout.id}`,
         LogContext.URL_GENERATOR
       );
     }
-    const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
-      'collaborationId',
-      result.collaborationId
-    );
-    return `${collaborationJourneyUrlPath}/${this.PATH_COLLABORATION}/${result.calloutNameId}`;
+    return await this.getTemplateUrlPathOrFail(template.profile.id);
   }
 
   private async getJourneyUrlPath(
@@ -697,23 +733,27 @@ export class UrlGeneratorService {
       );
     }
 
-    const [contributionResult]: {
-      calloutId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT callout_contribution.calloutId as calloutId FROM callout_contribution
-        WHERE callout_contribution.postId = '${result.postId}'
-      `
-    );
-    if (!contributionResult) {
+    const contribution = await this.entityManager.findOne(CalloutContribution, {
+      where: {
+        post: {
+          id: result.postId,
+        },
+      },
+      relations: {
+        callout: true,
+        post: true,
+      },
+    });
+
+    if (!contribution || !contribution.callout) {
       throw new EntityNotFoundException(
-        `Unable to contribution for post where postID: ${result.postId}`,
+        `Unable to contribution callout for post where postID: ${result.postId}`,
         LogContext.URL_GENERATOR
       );
     }
 
     const calloutUrlPath = await this.getCalloutUrlPath(
-      contributionResult.calloutId
+      contribution.callout.id
     );
     return `${calloutUrlPath}/${this.PATH_POSTS}/${result.postNameId}`;
   }
@@ -764,26 +804,22 @@ export class UrlGeneratorService {
       });
     }
     if (!callout) {
-      const calloutTemplate = await this.entityManager.findOne(
-        CalloutTemplate,
-        {
-          where: {
+      const calloutTemplate = await this.entityManager.findOne(Template, {
+        where: {
+          callout: {
             framing: {
               whiteboard: {
                 id: whiteboard.id,
               },
             },
           },
-          relations: {
-            profile: true,
-          },
-        }
-      );
+        },
+        relations: {
+          profile: true,
+        },
+      });
       if (calloutTemplate) {
-        return await this.getTemplateUrlPathOrFail(
-          'callout_template',
-          calloutTemplate.profile.id
-        );
+        return await this.getTemplateUrlPathOrFail(calloutTemplate.profile.id);
       }
     }
     if (callout) {
@@ -858,39 +894,26 @@ export class UrlGeneratorService {
       );
     }
 
-    const [timelineInfo]: {
-      entityID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT timeline.id as entityID FROM timeline
-        WHERE timeline.calendarId = '${calendarEventInfo.calendarID}'
-      `
-    );
-    if (!timelineInfo) {
-      throw new EntityNotFoundException(
-        `Unable to find timeline with calendar: ${calendarEventInfo.calendarID}`,
-        LogContext.URL_GENERATOR
-      );
-    }
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        timeline: {
+          calendar: {
+            id: calendarEventInfo.calendarID,
+          },
+        },
+      },
+    });
 
-    const [collaborationInfo]: {
-      entityID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT collaboration.id as entityID FROM collaboration
-        WHERE collaboration.timelineId = '${timelineInfo.entityID}'
-      `
-    );
-    if (!collaborationInfo) {
+    if (!collaboration) {
       throw new EntityNotFoundException(
-        `Unable to find collaboration with timeline: ${timelineInfo.entityID}`,
+        `Unable to find collaboration timeline with calendar: ${calendarEventInfo.calendarID}`,
         LogContext.URL_GENERATOR
       );
     }
 
     const journeyUrlPath = await this.getJourneyUrlPath(
       'collaborationId',
-      collaborationInfo.entityID
+      collaboration.id
     );
     return `${journeyUrlPath}/${this.PATH_CALENDAR}/${calendarEventInfo.entityNameID}`;
   }

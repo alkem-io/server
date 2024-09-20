@@ -7,9 +7,9 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { base64ToBuffer } from '@common/utils';
 import { ExcalidrawContent } from '@common/interfaces';
 import { Whiteboard } from '@domain/common/whiteboard/types';
-import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class AdminWhiteboardService {
@@ -17,6 +17,7 @@ export class AdminWhiteboardService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @InjectEntityManager() private manager: EntityManager,
     private storageBucketService: StorageBucketService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private documentService: DocumentService,
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
@@ -43,36 +44,21 @@ export class AdminWhiteboardService {
     };
 
     const whiteboards = await this.manager.find(Whiteboard, options);
-    const whiteboardTemplates = await this.manager.find(
-      WhiteboardTemplate,
-      options
-    );
 
     const whiteboardResults = await this._uploadFilesFromContentToStorageBucket(
       whiteboards,
       agentInfo.userID
     );
-    const whiteboardTemplateResults =
-      await this._uploadFilesFromContentToStorageBucket(
-        whiteboardTemplates,
-        agentInfo.userID
-      );
 
     return {
-      results: [
-        ...whiteboardResults.results,
-        ...whiteboardTemplateResults.results,
-      ],
-      errors: [
-        ...whiteboardResults.errors,
-        ...whiteboardTemplateResults.errors,
-      ],
-      warns: [...whiteboardResults.warns, ...whiteboardTemplateResults.warns],
+      results: [...whiteboardResults.results],
+      errors: [...whiteboardResults.errors],
+      warns: [...whiteboardResults.warns],
     };
   }
 
   private async _uploadFilesFromContentToStorageBucket(
-    whiteboards: Whiteboard[] | WhiteboardTemplate[],
+    whiteboards: Whiteboard[],
     uploaderId: string
   ) {
     const results: string[] = [];
@@ -122,21 +108,24 @@ export class AdminWhiteboardService {
           }
 
           try {
-            const document =
+            let document =
               await this.storageBucketService.uploadFileAsDocumentFromBuffer(
                 storageBucketId,
                 imageBuffer,
                 `${className}-${profile.displayName}-${id}`, // we can't really infer the name
                 file.mimeType,
-                uploaderId,
-                false
+                uploaderId
               );
-            const documentAuthorized =
+            document = await this.documentService.saveDocument(document);
+            const documentAuthorizations =
               this.documentAuthorizationService.applyAuthorizationPolicy(
                 document,
                 profile.storageBucket.authorization
               );
-            await this.documentService.saveDocument(documentAuthorized);
+            await this.authorizationPolicyService.saveAll(
+              documentAuthorizations
+            );
+
             file.url = this.documentService.getPubliclyAccessibleURL(document);
             file.dataURL = '';
           } catch (e) {

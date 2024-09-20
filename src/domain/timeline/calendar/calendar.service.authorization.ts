@@ -4,7 +4,8 @@ import { CalendarService } from './calendar.service';
 import { ICalendar } from './calendar.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
-import { ICalendarEvent } from '../event/event.interface';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @Injectable()
 export class CalendarAuthorizationService {
@@ -15,9 +16,25 @@ export class CalendarAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    calendar: ICalendar,
+    calendarInput: ICalendar,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICalendar> {
+  ): Promise<IAuthorizationPolicy[]> {
+    const calendar = await this.calendarService.getCalendarOrFail(
+      calendarInput.id,
+      {
+        relations: {
+          events: true,
+        },
+      }
+    );
+    if (!calendar.events) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities for calendar auth reset: ${calendarInput.id} `,
+        LogContext.AUTH
+      );
+    }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Ensure always applying from a clean state
     calendar.authorization = this.authorizationPolicyService.reset(
       calendar.authorization
@@ -27,25 +44,17 @@ export class CalendarAuthorizationService {
         calendar.authorization,
         parentAuthorization
       );
-    // Cascade down
-    return this.propagateAuthorizationToChildEntities(calendar);
-  }
+    updatedAuthorizations.push(calendar.authorization);
 
-  private async propagateAuthorizationToChildEntities(
-    calendar: ICalendar
-  ): Promise<ICalendar> {
-    calendar.events = await this.calendarService.getCalendarEvents(calendar);
-    const updatedEvents: ICalendarEvent[] = [];
     for (const event of calendar.events) {
-      const updatedEvent =
+      const eventAuthorizations =
         await this.calendarEventAuthorizationService.applyAuthorizationPolicy(
           event,
           calendar.authorization
         );
-      updatedEvents.push(updatedEvent);
+      updatedAuthorizations.push(...eventAuthorizations);
     }
-    calendar.events = updatedEvents;
 
-    return calendar;
+    return updatedAuthorizations;
   }
 }

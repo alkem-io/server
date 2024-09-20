@@ -5,19 +5,18 @@ import { CurrentUser } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MeQueryResults } from '@services/api/me/dto';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import {
   AuthenticationException,
   ValidationException,
 } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
-import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { MeService } from './me.service';
 import { LogContext } from '@common/enums';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
+import { CommunityMembershipResult } from './dto/me.membership.result';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -106,20 +105,23 @@ export class MeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => [ISpace], {
-    description: 'The applications of the current authenticated user',
+  @ResolveField(() => [CommunityMembershipResult], {
+    description: 'The hierarchy of the Spaces the current user is a member.',
   })
-  public spaceMemberships(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({
-      name: 'visibilities',
-      nullable: true,
-      type: () => [SpaceVisibility],
-      description: 'The Space visibilities you want to filter on',
-    })
-    visibilities: SpaceVisibility[]
-  ): Promise<ISpace[]> {
-    return this.meService.getSpaceMemberships(agentInfo, visibilities);
+  public spaceMembershipsHierarchical(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
+    return this.meService.getSpaceMembershipsHierarchical(agentInfo);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => [CommunityMembershipResult], {
+    description: 'The Spaces the current user is a member of as a flat list.',
+  })
+  public spaceMembershipsFlat(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
+    return this.meService.getSpaceMembershipsFlat(agentInfo);
   }
 
   @UseGuards(GraphqlGuard)
@@ -138,33 +140,5 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(agentInfo, limit);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => [ISpace], {
-    description: 'The Spaces I have created',
-  })
-  public myCreatedSpaces(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Spaces to return; if omitted return latest 20 created spaces.',
-      nullable: true,
-    })
-    limit: number
-  ): Promise<ISpace[]> {
-    return this.meService.getMyCreatedSpaces(agentInfo, limit);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => Boolean, {
-    description: 'Can I create a free space?',
-  })
-  public canCreateFreeSpace(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<boolean> {
-    return this.meService.canCreateFreeSpace(agentInfo);
   }
 }

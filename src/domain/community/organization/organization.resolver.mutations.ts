@@ -2,11 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { OrganizationService } from './organization.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import {
-  CreateOrganizationInput,
-  UpdateOrganizationInput,
-  DeleteOrganizationInput,
-} from '@domain/community/organization/dto';
+import { UpdateOrganizationInput } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -20,8 +16,8 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { UpdateOrganizationPreferenceInput } from '@domain/community/organization/dto/organization.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { CreateUserGroupInput } from '../user-group/dto';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IOrganization } from './organization.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {
@@ -30,44 +26,15 @@ export class OrganizationResolverMutations {
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private organizationService: OrganizationService,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private preferenceService: PreferenceService,
-    private preferenceSetService: PreferenceSetService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService
+    private preferenceSetService: PreferenceSetService
   ) {}
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IOrganization, {
-    description: 'Creates a new Organization on the platform.',
-  })
-  @Profiling.api
-  async createOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('organizationData') organizationData: CreateOrganizationInput
-  ): Promise<IOrganization> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.CREATE_ORGANIZATION,
-      `create Organization: ${organizationData.nameID}`
-    );
-    const organization = await this.organizationService.createOrganization(
-      organizationData,
-      agentInfo
-    );
-
-    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
-      organization
-    );
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Creates a new User Group for the specified Organization.',
   })
-  @Profiling.api
   async createGroupOnOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('groupData') groupData: CreateUserGroupInput
@@ -79,14 +46,17 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.CREATE,
-      `orgCreateGroup: ${organization.nameID}`
+      `orgCreateGroup: ${organization.id}`
     );
 
     const group = await this.organizationService.createGroup(groupData);
-    return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
-      group,
-      organization.authorization
-    );
+    const authorizations =
+      await this.userGroupAuthorizationService.applyAuthorizationPolicy(
+        group,
+        organization.authorization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return group;
   }
 
   @UseGuards(GraphqlGuard)
@@ -105,30 +75,10 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.UPDATE,
-      `orgUpdate: ${organization.nameID}`
+      `orgUpdate: ${organization.id}`
     );
 
     return await this.organizationService.updateOrganization(organizationData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IOrganization, {
-    description: 'Deletes the specified Organization.',
-  })
-  async deleteOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteOrganizationInput
-  ): Promise<IOrganization> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      deleteData.ID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.DELETE,
-      `deleteOrg: ${organization.nameID}`
-    );
-    return await this.organizationService.deleteOrganization(deleteData);
   }
 
   @UseGuards(GraphqlGuard)
@@ -158,8 +108,13 @@ export class OrganizationResolverMutations {
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on organization: ${authorizationResetData.organizationID}`
     );
-    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
-      organization
+    const authorizations =
+      await this.organizationAuthorizationService.applyAuthorizationPolicy(
+        organization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.organizationService.getOrganizationOrFail(
+      organization.id
     );
   }
 

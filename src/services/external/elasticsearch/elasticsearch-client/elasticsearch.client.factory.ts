@@ -1,16 +1,16 @@
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from '@elastic/elasticsearch';
-import { ConfigurationTypes } from '@common/enums';
 import fs from 'fs';
+import { AlkemioConfig } from '@src/types';
 
 export const elasticSearchClientFactory = async (
   logger: LoggerService,
-  configService: ConfigService
+  configService: ConfigService<AlkemioConfig, true>
 ): Promise<Client | undefined> => {
-  const elasticsearch = configService.get(
-    ConfigurationTypes.INTEGRATIONS
-  )?.elasticsearch;
+  const elasticsearch = configService.get('integrations.elasticsearch', {
+    infer: true,
+  });
 
   const { host, retries, timeout, api_key, tls } = elasticsearch;
   const rejectUnauthorized = tls.rejectUnauthorized ?? false;

@@ -21,6 +21,8 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IAiPersona } from '../ai-persona';
+import { IContributor } from '../contributor/contributor.interface';
+import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -68,7 +70,7 @@ export class VirtualContributorResolverFields {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.READ,
-      `virtual authorization access: ${virtual.nameID}`
+      `virtual authorization access: ${virtual.id}`
     );
 
     return virtual.authorization;
@@ -97,6 +99,7 @@ export class VirtualContributorResolverFields {
     return profile;
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
@@ -121,5 +124,35 @@ export class VirtualContributorResolverFields {
     return this.virtualContributorService.getAiPersonaOrFail(
       virtualContributor
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('provider', () => IContributor, {
+    nullable: false,
+    description: 'The Virtual Contributor provider.',
+  })
+  async provider(
+    @Parent() virtualContributor: IVirtualContributor
+  ): Promise<IContributor> {
+    return await this.virtualContributorService.getProvider(virtualContributor);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('status', () => VirtualContributorStatus, {
+    nullable: false,
+    description: 'The status of the virtual contributor',
+  })
+  async status(
+    @Parent() virtualContributor: IVirtualContributor
+  ): Promise<VirtualContributorStatus> {
+    const lastUpdated =
+      await this.virtualContributorService.getBodyOfKnowledgeLastUpdated(
+        virtualContributor
+      );
+
+    if (!!lastUpdated) {
+      return VirtualContributorStatus.READY;
+    }
+    return VirtualContributorStatus.INITIALIZING;
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.84.9",
+  "version": "0.91.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -42,6 +42,7 @@
     "migration:revert": "npm run typeorm-no-entities migration:revert",
     "migration:show": "npm run typeorm migration:show",
     "migration:validate": "./.scripts/migrations/run_validate_migration.sh",
+    "circular-dependencies": "madge --circular dist",
     "db:recreate": "ts-node .scripts/tests/recreate-db.ts",
     "db:reset": "npm run db:recreate && npm run migration:run"
   },
@@ -55,7 +56,7 @@
   },
   "dependencies": {
     "@alkemio/matrix-adapter-lib": "^0.4.1",
-    "@alkemio/notifications-lib": "^0.9.6",
+    "@alkemio/notifications-lib": "^0.9.7",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
     "@golevelup/nestjs-rabbitmq": "^5.3.0",
@@ -86,7 +87,6 @@
     "cookie-parser": "^1.4.6",
     "cross-env": "^7.0.3",
     "dataloader": "^2.2.2",
-    "file-type": "^19.1.1",
     "graphql": "^16.9.0",
     "graphql-amqp-subscriptions": "^2.0.0",
     "graphql-subscriptions": "^2.0.0",

@@ -5,6 +5,7 @@ import { AiServer } from '../ai-server/ai.server.entity';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 
 @Entity()
 export class AiPersonaService
@@ -17,24 +18,21 @@ export class AiPersonaService
   @JoinColumn()
   aiServer?: AiServer;
 
-  @Column({ length: 128, nullable: false })
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   engine!: AiPersonaEngine;
 
-  @Column({
-    length: 64,
-    nullable: false,
-    default: AiPersonaDataAccessMode.SPACE_PROFILE,
-  })
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   dataAccessMode!: AiPersonaDataAccessMode;
 
   @Column('text', { nullable: false })
   prompt!: string;
 
-  @Column({ length: 64, nullable: true })
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
 
-  @Column({ length: 255, nullable: true })
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   bodyOfKnowledgeID!: string;
 
-  // TODO: last updated embeddings
+  @Column({ type: 'datetime', nullable: true })
+  bodyOfKnowledgeLastUpdated: Date | null = null;
 }

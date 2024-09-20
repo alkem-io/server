@@ -35,6 +35,7 @@ import { ICommunityGuidelines } from '../community-guidelines/community.guidelin
 import { IContributor } from '../contributor/contributor.interface';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { IUser } from '../user/user.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CommunityService {
@@ -60,9 +61,11 @@ export class CommunityService {
     storageAggregator: IStorageAggregator
   ): Promise<ICommunity> {
     const community: ICommunity = new Community();
-    community.authorization = new AuthorizationPolicy();
+    community.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COMMUNITY
+    );
     const policy = communityData.policy as ICommunityPolicyDefinition;
-    community.policy = await this.communityPolicyService.createCommunityPolicy(
+    community.policy = this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead,
       policy.admin
@@ -73,7 +76,7 @@ export class CommunityService {
         communityData.guidelines,
         storageAggregator
       );
-    community.applicationForm = await this.formService.createForm(
+    community.applicationForm = this.formService.createForm(
       communityData.applicationForm
     );
 
@@ -87,7 +90,7 @@ export class CommunityService {
         communityData.name,
         ''
       );
-    return await this.communityRepository.save(community);
+    return community;
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
@@ -281,23 +284,24 @@ export class CommunityService {
     return await this.save(community);
   }
 
-  async setParentCommunity(
+  public setParentCommunity(
     community?: ICommunity,
     parentCommunity?: ICommunity
-  ): Promise<ICommunity> {
-    if (!community || !parentCommunity)
+  ): ICommunity {
+    if (!community || !parentCommunity) {
       throw new EntityNotInitializedException(
         'Community not set',
         LogContext.COMMUNITY
       );
+    }
     community.parentCommunity = parentCommunity;
     // Also update the communityPolicy
-    community.policy =
-      await this.communityPolicyService.inheritParentCredentials(
-        this.getCommunityPolicy(parentCommunity),
-        this.getCommunityPolicy(community)
-      );
-    return await this.communityRepository.save(community);
+    community.policy = this.communityPolicyService.inheritParentCredentials(
+      this.getCommunityPolicy(parentCommunity),
+      this.getCommunityPolicy(community)
+    );
+
+    return community;
   }
 
   public async getDisplayName(community: ICommunity): Promise<string> {
@@ -416,9 +420,11 @@ export class CommunityService {
     );
   }
 
-  public async getRootSpaceID(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-      community
+  public async getLevelZeroSpaceIdForCommunity(
+    community: ICommunity
+  ): Promise<string> {
+    return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+      community.id
     );
   }
 
@@ -433,7 +439,7 @@ export class CommunityService {
   public updateCommunityPolicyResourceID(
     community: ICommunity,
     resourceID: string
-  ): Promise<ICommunityPolicy> {
+  ): ICommunityPolicy {
     const policy = this.getCommunityPolicy(community);
     return this.communityPolicyService.updateCommunityPolicyResourceID(
       policy,

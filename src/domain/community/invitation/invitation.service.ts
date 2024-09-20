@@ -18,11 +18,12 @@ import { invitationLifecycleConfig } from '@domain/community/invitation/invitati
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { asyncFilter } from '@common/utils';
-import { IUser } from '../user';
+import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
 import { LogContext } from '@common/enums/logging.context';
 import { ContributorService } from '../contributor/contributor.service';
 import { IContributor } from '../contributor/contributor.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class InvitationService {
@@ -42,9 +43,11 @@ export class InvitationService {
   ): Promise<IInvitation> {
     const invitation: IInvitation = Invitation.create(invitationData);
     invitation.contributorType =
-      await this.contributorService.getContributorType(contributor);
+      this.contributorService.getContributorType(contributor);
 
-    invitation.authorization = new AuthorizationPolicy();
+    invitation.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.INVITATION
+    );
 
     // save the user to get the id assigned
     await this.invitationRepository.save(invitation);
@@ -106,9 +109,10 @@ export class InvitationService {
   }
 
   async getInvitedContributor(invitation: IInvitation): Promise<IContributor> {
-    const contributor = await this.contributorService.getContributorOrFail(
-      invitation.invitedContributor
-    );
+    const contributor =
+      await this.contributorService.getContributorByUuidOrFail(
+        invitation.invitedContributor
+      );
     if (!contributor)
       throw new RelationshipNotFoundException(
         `Unable to load contributor for invitation ${invitation.id} `,

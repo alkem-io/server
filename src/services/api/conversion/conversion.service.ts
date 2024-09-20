@@ -13,12 +13,10 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceType } from '@common/enums/space.type';
-import { CreateAccountInput } from '@domain/space/account/dto';
 import { AccountService } from '@domain/space/account/account.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
@@ -26,6 +24,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { CommunityService } from '@domain/community/community/community.service';
+import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
 
 export class ConversionService {
   constructor(
@@ -42,12 +41,11 @@ export class ConversionService {
     conversionData: ConvertSubspaceToSpaceInput,
     agentInfo: AgentInfo
   ): Promise<ISpace> {
-    // TODO: needs to create a new ACCOUNT etc.
+    // TODO: needs to create a new ACCOUNT etc. NOT TRUE!
     const subspace = await this.spaceService.getSpaceOrFail(
       conversionData.subspaceID,
       {
         relations: {
-          account: true,
           community: true,
           context: true,
           profile: true,
@@ -66,7 +64,6 @@ export class ConversionService {
     );
     if (
       !subspace.community ||
-      !subspace.account ||
       !subspace.context ||
       !subspace.profile ||
       !subspace.collaboration ||
@@ -74,10 +71,15 @@ export class ConversionService {
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on subspace: ${subspace.nameID}`,
+        `Unable to locate all entities on on subspace: ${subspace.id}`,
         LogContext.CONVERSION
       );
     }
+
+    // Need to get the containing account for the space
+    const account =
+      await this.spaceService.getAccountForLevelZeroSpaceOrFail(subspace);
+
     // check the community is in a fit state
     const challengeCommunityLeadOrgs =
       await this.communityRoleService.getOrganizationsWithRole(
@@ -86,44 +88,33 @@ export class ConversionService {
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
-        `A Subspace must have exactly one Lead organization to be converted to a Space: ${subspace.nameID} has ${challengeCommunityLeadOrgs.length}`,
+        `A Subspace must have exactly one Lead organization to be converted to a Space: ${subspace.id} has ${challengeCommunityLeadOrgs.length}`,
         LogContext.CONVERSION
       );
     }
-    const hostOrg = challengeCommunityLeadOrgs[0];
-    const createAccountInput: CreateAccountInput = {
-      hostID: hostOrg.nameID,
-      spaceData: {
-        nameID: subspace.nameID,
-        profileData: {
-          displayName: subspace.profile.displayName,
-        },
-        level: SpaceLevel.SPACE,
-        type: SpaceType.SPACE,
-      },
-    };
-    const emptyAccount = await this.accountService.createAccount(
-      createAccountInput
-    );
 
-    if (!emptyAccount.space) {
-      throw new EntityNotInitializedException(
-        `Unable to locate space on new Account: ${emptyAccount.id}`,
-        LogContext.CONVERSION
-      );
-    }
-    const space = await this.spaceService.getSpaceOrFail(
-      emptyAccount.space.id,
-      {
-        relations: {
-          community: true,
-          context: true,
-          profile: true,
-          collaboration: true,
-          storageAggregator: true,
-        },
-      }
-    );
+    const createSpaceInput: CreateSpaceOnAccountInput = {
+      accountID: account.id,
+      nameID: subspace.nameID,
+      profileData: {
+        displayName: subspace.profile.displayName,
+      },
+      level: SpaceLevel.SPACE,
+      type: SpaceType.SPACE,
+      collaborationData: {},
+    };
+    let space =
+      await this.accountService.createSpaceOnAccount(createSpaceInput);
+
+    space = await this.spaceService.getSpaceOrFail(space.id, {
+      relations: {
+        community: true,
+        context: true,
+        profile: true,
+        collaboration: true,
+        storageAggregator: true,
+      },
+    });
     if (
       !space.community ||
       !space.context ||
@@ -132,7 +123,7 @@ export class ConversionService {
       !space.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on new Space: ${space.nameID}`,
+        `Unable to locate all entities on new Space: ${space.id}`,
         LogContext.CONVERSION
       );
     }
@@ -212,12 +203,7 @@ export class ConversionService {
     // Now migrate all the child subsubspaces...
     const subsubspaces = await this.spaceService.getSubspaces(updatedSubspace);
     for (const subsubspace of subsubspaces) {
-      await this.convertOpportunityToChallenge(
-        subsubspace.id,
-        space.id,
-        agentInfo,
-        space.storageAggregator
-      );
+      await this.convertOpportunityToChallenge(subsubspace.id, agentInfo);
     }
     // Finally delete the Challenge
     await this.spaceService.deleteSpace({
@@ -228,17 +214,18 @@ export class ConversionService {
 
   async convertOpportunityToChallenge(
     subsubspaceID: string,
-    spaceID: string,
-    agentInfo: AgentInfo,
-    spaceStorageAggregator: IStorageAggregator,
-    innovationFlowTemplateIdInput?: string
+    agentInfo: AgentInfo
   ): Promise<ISpace> {
     const subsubspace = await this.spaceService.getSpaceOrFail(subsubspaceID, {
       relations: {
+        parentSpace: {
+          storageAggregator: {
+            parentStorageAggregator: true,
+          },
+        },
         community: true,
         context: true,
         profile: true,
-        account: true,
         storageAggregator: true,
         collaboration: {
           callouts: {
@@ -252,23 +239,25 @@ export class ConversionService {
       },
     });
     if (
+      !subsubspace.parentSpace ||
+      !subsubspace.parentSpace.storageAggregator ||
+      !subsubspace.parentSpace.storageAggregator.parentStorageAggregator ||
       !subsubspace.community ||
       !subsubspace.context ||
       !subsubspace.profile ||
-      !subsubspace.account ||
       !subsubspace.collaboration ||
       !subsubspace.storageAggregator ||
       !subsubspace.collaboration.callouts
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on Opportunity: ${subsubspace.nameID}`,
+        `Unable to locate all entities on on Opportunity: ${subsubspace.id}`,
         LogContext.CONVERSION
       );
     }
 
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInAccount(
-        subsubspace.account.id
+      await this.namingService.getReservedNameIDsInLevelZeroSpace(
+        subsubspace.levelZeroSpaceID
       );
     const subspaceNameID =
       this.namingService.createNameIdAvoidingReservedNameIDs(
@@ -276,26 +265,16 @@ export class ConversionService {
         reservedNameIDs
       );
 
-    // TODO: need to check if the space has a default innovation flow template
-    const innovationFlowTemplateID = innovationFlowTemplateIdInput;
-    // if (!innovationFlowTemplateID) {
-    //   const defaultChallengeLifecycleTemplate =
-    //     await this.spaceService.getDefaultInnovationFlowTemplate(
-    //       spaceID,
-    //       InnovationFlowType.CHALLENGE
-    //     );
-    //   innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
-    // }
+    const levelZeroSpaceStorageAggregator =
+      subsubspace.parentSpace.storageAggregator.parentStorageAggregator;
     const subspaceData: CreateSubspaceInput = {
-      spaceID: spaceID,
+      spaceID: subsubspace.parentSpace.id,
       nameID: subspaceNameID,
-      collaborationData: {
-        innovationFlowTemplateID: innovationFlowTemplateID,
-      },
+      collaborationData: {},
       profileData: {
         displayName: subsubspace.profile.displayName,
       },
-      storageAggregatorParent: spaceStorageAggregator,
+      storageAggregatorParent: levelZeroSpaceStorageAggregator,
       level: SpaceLevel.CHALLENGE,
       type: SpaceType.CHALLENGE,
     };
@@ -321,7 +300,7 @@ export class ConversionService {
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on new Challenge for converting opportunity: ${subspace.nameID}`,
+        `Unable to locate all entities on new Subspace for converting subsubspace: ${subspace.id}`,
         LogContext.CONVERSION
       );
     }
@@ -400,7 +379,7 @@ export class ConversionService {
     // and set the parent storage aggregator on the new challenge
     if (subspace.storageAggregator) {
       subspace.storageAggregator.parentStorageAggregator =
-        spaceStorageAggregator;
+        levelZeroSpaceStorageAggregator;
     }
     if (subsubspace.storageAggregator) {
       subsubspace.storageAggregator.parentStorageAggregator = undefined;
@@ -421,12 +400,15 @@ export class ConversionService {
     );
 
     // Add the new challenge to the space
-    const space = await this.spaceService.getSpaceOrFail(spaceID, {
-      relations: {
-        subspaces: true,
-        community: true,
-      },
-    });
+    const space = await this.spaceService.getSpaceOrFail(
+      subsubspace.levelZeroSpaceID,
+      {
+        relations: {
+          subspaces: true,
+          community: true,
+        },
+      }
+    );
     return await this.spaceService.addSubspaceToSpace(space, subspace);
   }
 
@@ -444,7 +426,7 @@ export class ConversionService {
         !callout.framing.profile.tagsets
       ) {
         throw new EntityNotInitializedException(
-          `Unable to locate all child entities on callout: ${callout.nameID}`,
+          `Unable to locate all child entities on callout: ${callout.id}`,
           LogContext.CONVERSION
         );
       }
@@ -484,7 +466,7 @@ export class ConversionService {
         !callout.framing.profile.tagsets
       ) {
         throw new EntityNotInitializedException(
-          `Unable to locate all child entities on challenge callout: ${callout.nameID}`,
+          `Unable to locate all child entities on challenge callout: ${callout.id}`,
           LogContext.CONVERSION
         );
       }

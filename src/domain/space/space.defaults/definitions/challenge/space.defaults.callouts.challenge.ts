@@ -1,14 +1,36 @@
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
-import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { FlowState } from './space.defaults.innovation.flow.challenge';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
 export const spaceDefaultsCalloutsChallenge: CreateCalloutInput[] = [
   {
-    nameID: 'general-chat',
+    nameID: 'welcome',
+    type: CalloutType.POST,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
+    sortOrder: 1,
+    groupName: CalloutGroupName.HOME,
+    framing: {
+      profile: {
+        displayName: '👋 Welcome to your subpace!',
+        description:
+          // eslint-disable-next-line quotes
+          "Take an interactive tour below to discover how our subpaces are designed. We're excited to have you here! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/X6hQiRnkEmUSoOgRupvA?embed&show_copy_link=true'title='Welcome to your Subspace ' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n",
+        tagsets: [
+          {
+            name: TagsetReservedName.FLOW_STATE,
+            tags: [FlowState.EXPLORE],
+          },
+        ],
+      },
+    },
+  },
+  {
+    nameID: 'collaboration-tools',
     type: CalloutType.POST,
     contributionPolicy: {
       state: CalloutState.OPEN,
@@ -17,51 +39,11 @@ export const spaceDefaultsCalloutsChallenge: CreateCalloutInput[] = [
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
-        displayName: 'General chat 💬',
-        description: 'Things you would like to discuss with the community.',
-        tagsets: [
-          {
-            name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.EXPLORE],
-          },
-        ],
-      },
-    },
-  },
-  {
-    nameID: 'getting-started',
-    type: CalloutType.LINK_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.CLOSED,
-    },
-    sortOrder: 1,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: 'Getting Started',
-        description: '⬇️ Here are some quick links to help you get started',
-        tagsets: [
-          {
-            name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.EXPLORE],
-          },
-        ],
-      },
-    },
-  },
-  {
-    nameID: 'contributor-profiles',
-    type: CalloutType.POST_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 2,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: '👥 This is us!',
+        displayName:
+          '🪇 Write, draw, or link anything with the Collaboration Tools',
         description:
-          'Here you will find the profiles of all contributors to this Space. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
+          // eslint-disable-next-line quotes
+          "Collaboration tools allow you to gather existing knowledge from your community and (co-)create new insights through text and visuals. In the tour below you will learn all about the different tools and how to use them. Enjoy! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/5fvizP4ekEOya5CGHIwa?embed&show_copy_link=true'title='Subpace Collaboration Tools' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n",
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
@@ -69,112 +51,6 @@ export const spaceDefaultsCalloutsChallenge: CreateCalloutInput[] = [
           },
         ],
       },
-    },
-    contributionDefaults: {
-      postDescription:
-        'Hi! I am... <p> In daily life I... <p> And I also like to... <p> You can contact me for anything related to... <p> My wish for this Space is.. <p> <i>And of course feel invited to insert a nice picture!</i>',
-    },
-  },
-  {
-    nameID: 'news',
-    type: CalloutType.POST_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 1,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: 'Relevant news, research or use cases 📰',
-        description:
-          'Please share any relevant insights to help us better understand the Space. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
-        tagsets: [
-          {
-            name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.EXPLORE],
-          },
-        ],
-      },
-    },
-    contributionDefaults: {
-      postDescription:
-        '✍️ Please share your contribution. The more details the better!',
-    },
-  },
-  {
-    nameID: 'stakeholder-map',
-    type: CalloutType.WHITEBOARD,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 2,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: 'Who are the stakeholders?',
-        description:
-          'Choose one of the templates from the library to map your stakeholders here!',
-        tagsets: [
-          {
-            name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.EXPLORE],
-          },
-        ],
-      },
-      whiteboard: {
-        content: EMPTY_WHITEBOARD_CONTENT,
-        nameID: 'stakeholders',
-        profileData: {
-          displayName: 'stakeholder map',
-        },
-      },
-    },
-  },
-  {
-    nameID: 'documents',
-    type: CalloutType.LINK_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 3,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: 'Reference / important documents',
-        description: 'Please add links to documents with reference material.💥',
-        tagsets: [
-          {
-            name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.EXPLORE],
-          },
-        ],
-      },
-    },
-  },
-  {
-    nameID: 'proposals',
-    type: CalloutType.POST_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 1,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: 'Proposals',
-        description:
-          'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
-        tagsets: [
-          {
-            name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.EXPLORE],
-          },
-        ],
-      },
-    },
-    contributionDefaults: {
-      postDescription:
-        '💡 Title <p> 💬 Description <p> 🗣️ Who to involve <p> 🌟 Why this has great potential',
     },
   },
 ];

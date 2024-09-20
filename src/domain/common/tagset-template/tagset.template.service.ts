@@ -20,17 +20,15 @@ export class TagsetTemplateService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagsetTemplate(
+  public createTagsetTemplate(
     tagsetTemplateData: CreateTagsetTemplateInput
-  ): Promise<ITagsetTemplate> {
-    const tagsetTemplate = new TagsetTemplate(
+  ): ITagsetTemplate {
+    return new TagsetTemplate(
       tagsetTemplateData.name,
       tagsetTemplateData.type,
       tagsetTemplateData.allowedValues,
       tagsetTemplateData.defaultSelectedValue
     );
-
-    return await this.tagsetTemplateRepository.save(tagsetTemplate);
   }
 
   async getTagsetTemplateOrFail(

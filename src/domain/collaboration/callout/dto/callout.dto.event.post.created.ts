@@ -7,14 +7,25 @@ export class CalloutPostCreated {
 
   @Field(() => String, {
     nullable: false,
-    description:
-      'The identifier for the Callout on which the post was created.',
+    description: 'The identifier of the Callout on which the post was created.',
   })
   calloutID!: string;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'The identifier of the Contribution.',
+  })
+  contributionID!: string;
+
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The sorting order for this Contribution.',
+  })
+  sortOrder!: number;
+
   @Field(() => IPost, {
     nullable: false,
-    description: 'The post that has been created.',
+    description: 'The Post that has been created.',
   })
   post!: IPost;
 }

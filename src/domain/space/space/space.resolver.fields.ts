@@ -31,6 +31,12 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
+import { IAccount } from '../account/account.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { LicensePrivilege } from '@common/enums/license.privilege';
+import { ISpaceSubscription } from './space.license.subscription.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -84,6 +90,22 @@ export class SpaceResolverFields {
     return context;
   }
 
+  @ResolveField('subscriptions', () => [ISpaceSubscription], {
+    nullable: false,
+    description: 'The subscriptions active for this Space.',
+  })
+  async subscriptions(@Parent() space: ISpace) {
+    return await this.spaceService.getSubscriptions(space);
+  }
+
+  @ResolveField('activeSubscription', () => ISpaceSubscription, {
+    nullable: true,
+    description: 'The "highest" subscription active for this Space.',
+  })
+  async activeSubscription(@Parent() space: ISpace) {
+    return this.spaceService.activeSubscription(space);
+  }
+
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
@@ -96,6 +118,17 @@ export class SpaceResolverFields {
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
     return loader.load(space.id);
+  }
+
+  @ResolveField('licensePrivileges', () => [LicensePrivilege], {
+    nullable: true,
+    description:
+      'The privileges granted based on the License credentials held by this Space.',
+  })
+  async licensePrivileges(
+    @Parent() space: ISpace
+  ): Promise<LicensePrivilege[]> {
+    return this.spaceService.getLicensePrivileges(space);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -160,6 +193,16 @@ export class SpaceResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('account', () => IAccount, {
+    nullable: false,
+    description: 'The Account that this Space is part of.',
+  })
+  async account(@Parent() space: ISpace): Promise<IAccount> {
+    return await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('subspace', () => ISpace, {
     nullable: false,
     description: 'A particular subspace, either by its ID or nameID',
@@ -169,9 +212,9 @@ export class SpaceResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: ISpace
   ): Promise<ISpace> {
-    const subspace = await this.spaceService.getSubspaceInAccount(
+    const subspace = await this.spaceService.getSubspaceInLevelZeroSpace(
       id,
-      space.account.id
+      space.levelZeroSpaceID
     );
     if (!subspace) {
       throw new EntityNotFoundException(
@@ -195,6 +238,7 @@ export class SpaceResolverFields {
     nullable: true,
     description: 'The date for the creation of this Space.',
   })
+  @UseGuards(GraphqlGuard)
   async createdDate(@Parent() space: Space): Promise<Date> {
     const createdDate = (space as Space).createdDate;
     return new Date(createdDate);
@@ -204,7 +248,40 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'The settings for this Space.',
   })
-  states(@Parent() space: ISpace): ISpaceSettings {
+  @UseGuards(GraphqlGuard)
+  settings(@Parent() space: ISpace): ISpaceSettings {
     return this.spaceService.getSettings(space);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('library', () => ITemplatesSet, {
+    nullable: true,
+    description: 'The Library in use by this Space',
+  })
+  @UseGuards(GraphqlGuard)
+  async library(@Parent() space: Space): Promise<ITemplatesSet> {
+    return await this.spaceService.getLibraryOrFail(space.levelZeroSpaceID);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('defaults', () => ISpaceDefaults, {
+    nullable: true,
+    description: 'The defaults in use by this Space',
+  })
+  @UseGuards(GraphqlGuard)
+  async defaults(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() space: Space
+  ): Promise<ISpaceDefaults> {
+    return await this.spaceService.getDefaultsOrFail(space.levelZeroSpaceID);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('provider', () => IContributor, {
+    nullable: false,
+    description: 'The Space provider.',
+  })
+  async provider(@Parent() space: ISpace): Promise<IContributor> {
+    return await this.spaceService.getProvider(space);
   }
 }

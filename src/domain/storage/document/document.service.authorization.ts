@@ -18,13 +18,14 @@ export class DocumentAuthorizationService {
   applyAuthorizationPolicy(
     document: IDocument,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IDocument {
-    if (!document.tagset) {
+  ): IAuthorizationPolicy[] {
+    if (!document.tagset || !document.tagset.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to find entities required to reset auth for Document ${document.id} `,
         LogContext.STORAGE_BUCKET
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     document.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -34,14 +35,16 @@ export class DocumentAuthorizationService {
 
     // Extend to give the user creating the document more rights
     document.authorization = this.appendCredentialRules(document);
+    updatedAuthorizations.push(document.authorization);
 
     document.tagset.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         document.tagset.authorization,
         document.authorization
       );
+    updatedAuthorizations.push(document.tagset.authorization);
 
-    return document;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(document: IDocument): IAuthorizationPolicy {

@@ -22,12 +22,14 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { EntityManager } from 'typeorm/entity-manager/EntityManager';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 export class ActivityLogService {
   constructor(
     private activityService: ActivityService,
     private userService: UserService,
     private contributorLookupService: ContributorLookupService,
+    private communityResolverService: CommunityResolverService,
     private calloutService: CalloutService,
     private postService: PostService,
     private whiteboardService: WhiteboardService,
@@ -111,14 +113,15 @@ export class ActivityLogService {
         );
       }
 
-      const space = await this.spaceService.getSpaceForCollaborationOrFail(
-        rawActivity.collaborationID,
-        {
-          relations: {
-            community: true,
-          },
-        }
-      );
+      const space =
+        await this.communityResolverService.getSpaceForCollaborationOrFail(
+          rawActivity.collaborationID,
+          {
+            relations: {
+              community: true,
+            },
+          }
+        );
 
       const activityLogEntryBase: IActivityLogEntry = {
         id: rawActivity.id,
@@ -162,9 +165,10 @@ export class ActivityLogService {
   private async getParentDetailsByCollaboration(
     collaborationID: string
   ): Promise<{ nameID: string; displayName: string } | undefined> {
-    const space = await this.spaceService.getSpaceForCollaborationOrFail(
-      collaborationID
-    );
+    const space =
+      await this.communityResolverService.getSpaceForCollaborationOrFail(
+        collaborationID
+      );
 
     return {
       displayName: space.profile.displayName,

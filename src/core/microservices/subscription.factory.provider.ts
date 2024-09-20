@@ -4,6 +4,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { ConfigService } from '@nestjs/config';
 import { subscriptionFactory } from '@core/microservices/subscription.factory';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AlkemioConfig } from '@src/types';
 
 /***
  * Creates a factory provider for a subscription
@@ -21,7 +22,10 @@ export const subscriptionFactoryProvider = (
   trackingID = ''
 ): FactoryProvider<Promise<PubSubEngine | undefined>> => ({
   provide,
-  useFactory: (logger: LoggerService, configService: ConfigService) =>
+  useFactory: (
+    logger: LoggerService,
+    configService: ConfigService<AlkemioConfig, true>
+  ) =>
     subscriptionFactory(
       logger,
       configService,

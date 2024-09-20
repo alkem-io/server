@@ -12,10 +12,15 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
 import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { OrganizationRoleModule } from '@domain/community/organization-role/organization.role.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { AccountModule } from '@domain/space/account/account.module';
 
 @Module({
   imports: [
+    AccountModule,
     AuthorizationModule,
+    AuthorizationPolicyModule,
     NotificationAdapterModule,
     CommunityRoleModule,
     UserModule,
@@ -24,6 +29,7 @@ import { OrganizationRoleModule } from '@domain/community/organization-role/orga
     OrganizationRoleModule,
     InvitationModule,
     PlatformInvitationModule,
+    PlatformAuthorizationPolicyModule,
     PlatformRoleModule,
     ApplicationModule,
   ],

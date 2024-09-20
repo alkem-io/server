@@ -5,7 +5,7 @@ import { OrganizationRoleService } from './organization.role.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IOrganization, Organization } from '@domain/community/organization';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -37,7 +37,7 @@ export class OrganizationRoleResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read associates on org: ${organization.nameID}`
+      `read associates on org: ${organization.id}`
     );
 
     return await this.organizationRoleService.getAssociates(organization);
@@ -60,7 +60,7 @@ export class OrganizationRoleResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read admins on org: ${organization.nameID}`
+      `read admins on org: ${organization.id}`
     );
 
     return await this.organizationRoleService.getAdmins(organization);
@@ -83,7 +83,7 @@ export class OrganizationRoleResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read owners on org: ${organization.nameID}`
+      `read owners on org: ${organization.id}`
     );
 
     return await this.organizationRoleService.getOwners(organization);

@@ -23,6 +23,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IQuestion } from '@domain/common/question/question.interface';
 import { asyncFilter } from '@common/utils';
 import { IContributor } from '../contributor/contributor.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ApplicationService {
@@ -44,7 +45,9 @@ export class ApplicationService {
       applicationData.userID
     );
 
-    application.authorization = new AuthorizationPolicy();
+    application.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.APPLICATION
+    );
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 

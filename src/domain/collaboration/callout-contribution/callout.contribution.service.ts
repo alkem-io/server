@@ -15,10 +15,16 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IPost } from '../post';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { LinkService } from '../link/link.service';
 import { ILink } from '../link/link.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Injectable()
 export class CalloutContributionService {
@@ -41,7 +47,11 @@ export class CalloutContributionService {
       calloutContributionData
     );
 
-    contribution.authorization = new AuthorizationPolicy();
+    contribution.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALLOUT_CONTRIBUTION
+    );
+    contribution.createdBy = userID;
+    contribution.sortOrder = calloutContributionData.sortOrder ?? 0;
 
     const { post, whiteboard, link } = calloutContributionData;
 
@@ -70,8 +80,6 @@ export class CalloutContributionService {
       );
     }
 
-    contribution.createdBy = userID;
-
     if (link) {
       this.validateContributionType(
         contributionPolicy,
@@ -84,7 +92,7 @@ export class CalloutContributionService {
       );
     }
 
-    return await this.save(contribution);
+    return contribution;
   }
 
   private validateContributionType(
@@ -140,8 +148,20 @@ export class CalloutContributionService {
 
   async save(
     calloutContribution: ICalloutContribution
-  ): Promise<ICalloutContribution> {
-    return await this.contributionRepository.save(calloutContribution);
+  ): Promise<ICalloutContribution>;
+  async save(
+    calloutContribution: ICalloutContribution[]
+  ): Promise<ICalloutContribution[]>;
+  async save(
+    calloutContribution: ICalloutContribution | ICalloutContribution[]
+  ): Promise<ICalloutContribution | ICalloutContribution[]> {
+    const isParamArray = Array.isArray(calloutContribution);
+    const contributionsArray = isParamArray
+      ? calloutContribution
+      : [calloutContribution];
+    const results = await this.contributionRepository.save(contributionsArray);
+
+    return isParamArray ? results : results[0];
   }
 
   public async getCalloutContributionOrFail(
@@ -223,5 +243,60 @@ export class CalloutContributionService {
     }
 
     return calloutContribution.post;
+  }
+
+  /**
+   * Retrieves the storage bucket associated with a specific contribution.
+   * @param contributionID The ID of the contribution.
+   * @returns The storage bucket associated with the contribution.
+   * @throws RelationshipNotFoundException if no profile with a storage bucket is found for the contribution.
+   */
+  public async getStorageBucketForContribution(
+    contributionID: string
+  ): Promise<IStorageBucket> {
+    const contribution = await this.getCalloutContributionOrFail(
+      contributionID,
+      {
+        relations: {
+          post: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+          link: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+          whiteboard: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+        },
+      }
+    );
+
+    const profile = this.getProfileFromContribution(contribution);
+    if (!profile || !profile.storageBucket) {
+      throw new RelationshipNotFoundException(
+        `Unable to find profile with storage bucket for callout contribution: ${contributionID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return profile.storageBucket;
+  }
+
+  private getProfileFromContribution(
+    contribution: ICalloutContribution
+  ): IProfile | undefined {
+    if (contribution.post) {
+      return contribution.post.profile;
+    } else if (contribution.link) {
+      return contribution.link.profile;
+    } else if (contribution.whiteboard) {
+      return contribution.whiteboard.profile;
+    }
+    return undefined;
   }
 }

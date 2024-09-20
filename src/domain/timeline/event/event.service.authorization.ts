@@ -27,7 +27,7 @@ export class CalendarEventAuthorizationService {
   async applyAuthorizationPolicy(
     calendarEventInput: ICalendarEvent,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICalendarEvent> {
+  ): Promise<IAuthorizationPolicy[]> {
     const calendarEvent =
       await this.calendarEventService.getCalendarEventOrFail(
         calendarEventInput.id,
@@ -41,40 +41,48 @@ export class CalendarEventAuthorizationService {
         LogContext.CALENDAR
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     calendarEvent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         calendarEvent.authorization,
         parentAuthorization
       );
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        calendarEvent.authorization
+      );
+    // Extend to give the user creating the calendarEvent more rights
+    calendarEvent.authorization = this.appendCredentialRules(calendarEvent);
+    updatedAuthorizations.push(calendarEvent.authorization);
 
     // Inherit for comments before extending so that the creating user does not
     // have rights to delete comments
     if (calendarEvent.comments) {
-      calendarEvent.comments =
+      const commentsAuthorization =
         this.roomAuthorizationService.applyAuthorizationPolicy(
           calendarEvent.comments,
-          calendarEvent.authorization
+          clonedAuthorization
         );
       calendarEvent.comments.authorization =
         this.roomAuthorizationService.allowContributorsToCreateMessages(
-          calendarEvent.comments.authorization
+          commentsAuthorization
         );
       calendarEvent.comments.authorization =
         this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-          calendarEvent.comments.authorization
+          commentsAuthorization
         );
+      updatedAuthorizations.push(commentsAuthorization);
     }
 
-    // Extend to give the user creating the calendarEvent more rights
-    calendarEvent.authorization = this.appendCredentialRules(calendarEvent);
-
-    calendarEvent.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        calendarEvent.profile,
+        calendarEvent.profile.id,
         calendarEvent.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    return calendarEvent;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(

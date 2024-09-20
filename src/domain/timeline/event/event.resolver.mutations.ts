@@ -31,7 +31,7 @@ export class CalendarEventResolverMutations {
       agentInfo,
       calendarEvent.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete calendarEvent: ${calendarEvent.nameID}`
+      `delete calendarEvent: ${calendarEvent.id}`
     );
     return await this.calendarEventService.deleteCalendarEvent(deleteData);
   }
@@ -50,7 +50,7 @@ export class CalendarEventResolverMutations {
       agentInfo,
       calendarEvent.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update calendarEvent: ${calendarEvent.nameID}`
+      `update calendarEvent: ${calendarEvent.id}`
     );
     return await this.calendarEventService.updateCalendarEvent(eventData);
   }

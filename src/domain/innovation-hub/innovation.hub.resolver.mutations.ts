@@ -8,38 +8,14 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
 import { InnovationHubService } from './innovation.hub.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CreateInnovationHubInput } from './dto/innovation.hub.dto.create';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
 
 @Resolver()
 export class InnovationHubResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private innovationHubService: InnovationHubService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService
+    private innovationHubService: InnovationHubService
   ) {}
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationHub, {
-    description: 'Create Innovation Hub.',
-  })
-  @Profiling.api
-  async createInnovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('createData') createData: CreateInnovationHubInput
-  ): Promise<IInnovationHub> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      'create innovation space'
-    );
-
-    return await this.innovationHubService.createOrFail(createData);
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
@@ -50,13 +26,13 @@ export class InnovationHubResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubOrFail(updateData.ID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      authorizationPolicy,
+      innovationHub.authorization,
       AuthorizationPrivilege.UPDATE,
-      'update innovation space'
+      'update innovation hub'
     );
 
     return await this.innovationHubService.updateOrFail(updateData);
@@ -71,14 +47,14 @@ export class InnovationHubResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteInnovationHubInput
   ): Promise<IInnovationHub> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubOrFail(deleteData.ID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      'delete innovation space'
+      innovationHub.authorization,
+      AuthorizationPrivilege.DELETE,
+      'delete innovation hub'
     );
-    return await this.innovationHubService.deleteOrFail(deleteData.ID);
+    return await this.innovationHubService.delete(deleteData.ID);
   }
 }

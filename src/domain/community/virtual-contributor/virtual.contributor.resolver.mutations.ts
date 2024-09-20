@@ -1,9 +1,9 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IVirtualContributor } from './virtual.contributor.interface';
@@ -12,13 +12,16 @@ import {
   UpdateVirtualContributorInput,
 } from './dto';
 import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowlege';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @ObjectType('MigrateEmbeddings')
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverMutations {
   constructor(
     private virtualContributorService: VirtualContributorService,
-    private authorizationService: AuthorizationService
+    private authorizationService: AuthorizationService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -39,7 +42,7 @@ export class VirtualContributorResolverMutations {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
-      `orgUpdate: ${virtual.nameID}`
+      `virtual contribtor Update: ${virtual.id}`
     );
 
     return await this.virtualContributorService.updateVirtualContributor(
@@ -63,7 +66,7 @@ export class VirtualContributorResolverMutations {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.DELETE,
-      `deleteOrg: ${virtual.nameID}`
+      `delete virtual contributor: ${virtual.id}`
     );
     return await this.virtualContributorService.deleteVirtualContributor(
       deleteData.ID
@@ -80,6 +83,11 @@ export class VirtualContributorResolverMutations {
     @Args('refreshData')
     refreshData: RefreshVirtualContributorBodyOfKnowledgeInput
   ): Promise<boolean> {
+    this.logger.verbose?.(
+      `Refresh body of knowledge mutation invoked for VC ${refreshData.virtualContributorID}`,
+      LogContext.VIRTUAL_CONTRIBUTOR
+    );
+
     const virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
         refreshData.virtualContributorID,
@@ -89,11 +97,16 @@ export class VirtualContributorResolverMutations {
           },
         }
       );
+    this.logger.verbose?.(
+      `VC ${refreshData.virtualContributorID} found`,
+      LogContext.VIRTUAL_CONTRIBUTOR
+    );
+
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
-      `deleteOrg: ${virtual.nameID}`
+      `refresh body of knowledge: ${virtual.id}`
     );
     return await this.virtualContributorService.refershBodyOfKnowledge(
       virtual,

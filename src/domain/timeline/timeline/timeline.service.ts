@@ -10,6 +10,7 @@ import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarService } from '../calendar/calendar.service';
 import { Timeline } from './timeline.entity';
 import { ITimeline } from './timeline.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TimelineService {
@@ -21,12 +22,14 @@ export class TimelineService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createTimeline(): Promise<ITimeline> {
+  public createTimeline(): ITimeline {
     const timeline: ITimeline = new Timeline();
-    timeline.authorization = new AuthorizationPolicy();
-    timeline.calendar = await this.calendarService.createCalendar();
+    timeline.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.TIMELINE
+    );
+    timeline.calendar = this.calendarService.createCalendar();
 
-    return await this.timelineRepository.save(timeline);
+    return timeline;
   }
 
   async deleteTimeline(timelineID: string): Promise<ITimeline> {

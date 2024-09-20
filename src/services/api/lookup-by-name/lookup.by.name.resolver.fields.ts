@@ -9,13 +9,16 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { NameID } from '@domain/common/scalars';
+import { NameID, UUID } from '@domain/common/scalars';
+import { TemplateService } from '@domain/template/template/template.service';
+import { ITemplate } from '@domain/template/template/template.interface';
 
 @Resolver(() => LookupByNameQueryResults)
 export class LookupByNameResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
-    private innovationPackService: InnovationPackService
+    private innovationPackService: InnovationPackService,
+    private templateService: TemplateService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -37,5 +40,31 @@ export class LookupByNameResolverFields {
     );
 
     return innovationPack;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ITemplate, {
+    nullable: true,
+    description:
+      'Lookup the specified Template using a templatesSetId and NameID',
+  })
+  async template(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('templatesSetID', { type: () => UUID }) ID: string,
+    @Args('NAMEID', { type: () => NameID }) nameID: string
+  ): Promise<ITemplate> {
+    const template = await this.templateService.getTemplateInTemplatesSetOrFail(
+      ID,
+      nameID
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      template.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup InnovationPack by NameID: ${template.id}`
+    );
+
+    return template;
   }
 }

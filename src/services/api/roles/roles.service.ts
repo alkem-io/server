@@ -156,9 +156,10 @@ export class RolesService {
         community.id
       );
 
-    const space = await this.spaceService.getSpaceForCommunityOrFail(
-      community.id
-    );
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
 
     const applicationResult = new CommunityApplicationForRoleResult(
       community.id,
@@ -229,9 +230,10 @@ export class RolesService {
         community.id
       );
 
-    const space = await this.spaceService.getSpaceForCommunityOrFail(
-      community.id
-    );
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
 
     const invitationResult = new CommunityInvitationForRoleResult(
       community.id,
@@ -246,7 +248,7 @@ export class RolesService {
     invitationResult.contributorID = invitation.invitedContributor;
     invitationResult.contributorType = invitation.contributorType;
 
-    invitationResult.createdBy = invitation.createdBy;
+    invitationResult.createdBy = invitation.createdBy ?? '';
     invitationResult.welcomeMessage = invitation.welcomeMessage;
 
     return invitationResult;

@@ -44,7 +44,7 @@ export class OrganizationAuthorizationService {
 
   async applyAuthorizationPolicy(
     organizationInput: IOrganization
-  ): Promise<IOrganization> {
+  ): Promise<IAuthorizationPolicy[]> {
     const organization = await this.organizationService.getOrganizationOrFail(
       organizationInput.id,
       {
@@ -68,11 +68,14 @@ export class OrganizationAuthorizationService {
       !organization.verification ||
       !organization.preferenceSet ||
       !organization.preferenceSet.preferences
-    )
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for organization: ${organization.id} `,
         LogContext.COMMUNITY
       );
+    }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     organization.authorization = await this.authorizationPolicyService.reset(
       organization.authorization
     );
@@ -84,6 +87,7 @@ export class OrganizationAuthorizationService {
       organization.authorization,
       organization.id
     );
+    updatedAuthorizations.push(organization.authorization);
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
     const clonedOrganizationAuthorizationAnonymousAccess =
@@ -92,46 +96,51 @@ export class OrganizationAuthorizationService {
       );
     // To ensure that profile on an organization is always publicly visible, even for non-authenticated users
     clonedOrganizationAuthorizationAnonymousAccess.anonymousReadAccess = true;
-    organization.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        organization.profile,
+        organization.profile.id,
         clonedOrganizationAuthorizationAnonymousAccess
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    organization.storageAggregator =
+    const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         organization.storageAggregator,
         organization.authorization
       );
+    updatedAuthorizations.push(...storageAuthorizations);
 
-    organization.agent =
+    const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
         organization.agent,
         organization.authorization
       );
+    updatedAuthorizations.push(agentAuthorization);
 
     for (const group of organization.groups) {
-      const savedGroup =
+      const groupAuthorizations =
         await this.userGroupAuthorizationService.applyAuthorizationPolicy(
           group,
           organization.authorization
         );
-      group.authorization = savedGroup.authorization;
+      updatedAuthorizations.push(...groupAuthorizations);
     }
 
-    organization.verification =
+    const verificationAuthorization =
       await this.organizationVerificationAuthorizationService.applyAuthorizationPolicy(
         organization.verification,
         organization.id
       );
+    updatedAuthorizations.push(verificationAuthorization);
 
-    organization.preferenceSet =
+    const preferenceSetAuthorizations =
       this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         organization.preferenceSet,
         organization.authorization
       );
+    updatedAuthorizations.push(...preferenceSetAuthorizations);
 
-    return await this.organizationService.save(organization);
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(

@@ -7,10 +7,4 @@ export abstract class IFileStorageConfig {
     description: 'Max file size, in bytes.',
   })
   maxFileSize!: number;
-
-  @Field(() => [String], {
-    nullable: false,
-    description: 'Allowed mime types for file upload, separated by a coma.',
-  })
-  mimeTypes!: string[];
 }

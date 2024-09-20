@@ -2,7 +2,9 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('StorageAggregatorParent')
+@ObjectType('StorageAggregatorParent', {
+  description: 'Valid parent is Account, Space, User, Organization, Platform',
+})
 export abstract class IStorageAggregatorParent {
   @Field(() => UUID, {
     nullable: false,
@@ -23,8 +25,9 @@ export abstract class IStorageAggregatorParent {
   url!: string;
 
   @Field(() => SpaceLevel, {
-    nullable: false,
-    description: 'The level of the parent Entity.',
+    nullable: true,
+    description:
+      'If the parent entity is a Space, then the level of the Space.',
   })
-  level!: number;
+  level?: number;
 }

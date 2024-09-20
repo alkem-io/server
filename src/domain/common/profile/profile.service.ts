@@ -29,6 +29,7 @@ import { UpdateProfileSelectTagsetDefinitionInput } from './dto/profile.dto.upda
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.select.tagset.value';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ProfileService {
@@ -47,53 +48,41 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  async createProfile(
+  public createProfile(
     profileData: CreateProfileInput,
     profileType: ProfileType,
     storageAggregator: IStorageAggregator
-  ): Promise<IProfile> {
+  ): IProfile {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
       displayName: profileData?.displayName,
       type: profileType,
     });
-    profile.authorization = new AuthorizationPolicy();
-    profile.storageBucket = await this.storageBucketService.createStorageBucket(
-      { storageAggregator: storageAggregator }
+    profile.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.PROFILE
     );
+    // the next statement fails if it's not saved
+    profile.storageBucket = this.storageBucketService.createStorageBucket({
+      storageAggregator: storageAggregator,
+    });
 
     profile.visuals = [];
-    profile.location = await this.locationService.createLocation(
+    profile.location = this.locationService.createLocation(
       profileData?.location
     );
 
-    profile.references = [];
-    if (profileData?.referencesData) {
-      for (const referenceData of profileData.referencesData) {
-        const reference =
-          await this.referenceService.createReference(referenceData);
-        profile.references.push(reference);
-      }
-    }
-    await this.profileRepository.save(profile);
-    this.logger.verbose?.(
-      `Created new profile with id: ${profile.id}`,
-      LogContext.COMMUNITY
+    const newReferences = profileData?.referencesData?.map(
+      this.referenceService.createReference
     );
+    profile.references = newReferences ?? [];
 
-    profile.tagsets = [];
-    if (profileData?.tagsets) {
-      for (const tagsetData of profileData?.tagsets) {
-        const tagset = await this.tagsetService.createTagsetWithName(
-          profile.tagsets,
-          tagsetData
-        );
-        profile.tagsets.push(tagset);
-      }
-    }
+    const tagsetsFromInput = profileData?.tagsets?.map(tagsetData =>
+      this.tagsetService.createTagsetWithName([], tagsetData)
+    );
+    profile.tagsets = tagsetsFromInput ?? [];
 
-    return await this.save(profile);
+    return profile;
   }
 
   async updateProfile(
@@ -199,24 +188,30 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  async addVisualOnProfile(
+  public addVisualOnProfile(
     profile: IProfile,
     visualType: VisualType,
     url?: string
-  ) {
+  ): IProfile {
+    if (!profile.visuals) {
+      throw new EntityNotInitializedException(
+        `No visuals found on profile: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     let visual: IVisual;
     switch (visualType) {
       case VisualType.AVATAR:
-        visual = await this.visualService.createVisualAvatar();
+        visual = this.visualService.createVisualAvatar();
         break;
       case VisualType.BANNER:
-        visual = await this.visualService.createVisualBanner();
+        visual = this.visualService.createVisualBanner();
         break;
       case VisualType.CARD:
-        visual = await this.visualService.createVisualCard();
+        visual = this.visualService.createVisualCard();
         break;
       case VisualType.BANNER_WIDE:
-        visual = await this.visualService.createVisualBannerWide();
+        visual = this.visualService.createVisualBannerWide();
         break;
 
       default:
@@ -227,27 +222,24 @@ export class ProfileService {
     if (url) {
       visual.uri = url;
     }
-    if (!profile.visuals) {
-      throw new EntityNotInitializedException(
-        `No visuals found on profile: ${profile.id}`,
-        LogContext.COMMUNITY
-      );
-    }
+
     profile.visuals.push(visual);
+    return profile;
   }
 
   async addTagsetOnProfile(
     profile: IProfile,
     tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
-    profile.tagsets = await this.getTagsets(profile);
-    const tagset = await this.tagsetService.createTagsetWithName(
+    if (!profile.tagsets) {
+      profile.tagsets = await this.getTagsets(profile);
+    }
+
+    const tagset = this.tagsetService.createTagsetWithName(
       profile.tagsets,
       tagsetData
     );
     profile.tagsets.push(tagset);
-
-    await this.profileRepository.save(profile);
 
     return tagset;
   }
@@ -295,11 +287,6 @@ export class ProfileService {
         LogContext.COMMUNITY
       );
     return profile;
-  }
-
-  generateRandomAvatar(firstName: string, lastName: string): string {
-    const randomColor = Math.floor(Math.random() * 16777215).toString(16);
-    return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff`;
   }
 
   async getReferences(profileInput: IProfile): Promise<IReference[]> {
@@ -462,22 +449,5 @@ export class ProfileService {
       }
     }
     return result;
-  }
-
-  public createProfileInputFromProfile(profile: IProfile): CreateProfileInput {
-    return {
-      description: profile.description,
-      displayName: profile.displayName,
-      location: this.locationService.createLocationInputFromLocation(
-        profile.location
-      ),
-      referencesData: this.referenceService.createReferencesInputFromReferences(
-        profile.references
-      ),
-      tagline: profile.tagline,
-      tagsets: this.tagsetService.createTagsetsInputFromTagsets(
-        profile.tagsets
-      ),
-    };
   }
 }

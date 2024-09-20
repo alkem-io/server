@@ -6,10 +6,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RelationAuthorizationService } from '@domain/collaboration/relation/relation.service.authorization';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { CreateCalloutOnCollaborationInput } from './dto/collaboration.dto.create.callout';
 import { DeleteCollaborationInput } from './dto/collaboration.dto.delete';
 import { ICallout } from '../callout/callout.interface';
@@ -25,13 +22,13 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 import { CalloutService } from '../callout/callout.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 
 @Resolver()
 export class CollaborationResolverMutations {
   constructor(
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
-    private relationAuthorizationService: RelationAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
@@ -39,7 +36,8 @@ export class CollaborationResolverMutations {
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private calloutService: CalloutService,
-    private namingService: NamingService
+    private namingService: NamingService,
+    private temporaryStorageService: TemporaryStorageService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -63,55 +61,6 @@ export class CollaborationResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IRelation, {
-    description: 'Create a new Relation on the Collaboration.',
-  })
-  @Profiling.api
-  async createRelationOnCollaboration(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('relationData') relationData: CreateRelationOnCollaborationInput
-  ): Promise<IRelation> {
-    const collaboration =
-      await this.collaborationService.getCollaborationOrFail(
-        relationData.collaborationID
-      );
-    // Extend the authorization definition to use for creating the relation
-    const authorization =
-      this.relationAuthorizationService.localExtendAuthorizationPolicy(
-        collaboration.authorization
-      );
-    // First check if the user has read access
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      AuthorizationPrivilege.READ,
-      `read relation on collaboration: ${collaboration.id}`
-    );
-    // Then check if the user can create
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      AuthorizationPrivilege.CREATE,
-      `create relation on collaboration: ${collaboration.id}`
-    );
-    // Load the authorization policy again to avoid the temporary extension above
-    const collaborationAuthorizationPolicy =
-      await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
-        authorization.id
-      );
-    const relation =
-      await this.collaborationService.createRelationOnCollaboration(
-        relationData
-      );
-
-    return this.relationAuthorizationService.applyAuthorizationPolicy(
-      relation,
-      collaborationAuthorizationPolicy,
-      agentInfo.userID
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Create a new Callout on the Collaboration.',
   })
@@ -132,23 +81,38 @@ export class CollaborationResolverMutations {
       `create callout on collaboration: ${collaboration.id}`
     );
 
-    // This also saves the callout
-    let callout = await this.collaborationService.createCalloutOnCollaboration(
-      calloutData,
-      agentInfo.userID
-    );
+    const callout =
+      await this.collaborationService.createCalloutOnCollaboration(
+        calloutData,
+        agentInfo.userID
+      );
 
     const { communityPolicy, spaceSettings } =
       await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
         collaboration.id
       );
-    callout = await this.calloutAuthorizationService.applyAuthorizationPolicy(
-      callout,
-      collaboration.authorization,
-      communityPolicy,
-      spaceSettings
+    // callout needs to be saved to apply the authorization policy
+    await this.calloutService.save(callout);
+
+    // Now the contribution is saved, we can look to move any temporary documents
+    // to be stored in the storage bucket of the profile.
+    // Note: important to do before auth reset is done
+    const destinationStorageBucket = await this.calloutService.getStorageBucket(
+      callout.id
     );
-    callout = await this.calloutService.save(callout);
+    await this.temporaryStorageService.moveTemporaryDocuments(
+      calloutData,
+      destinationStorageBucket
+    );
+
+    const authorizations =
+      await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        callout.id,
+        collaboration.authorization,
+        communityPolicy,
+        spaceSettings
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
       if (calloutData.sendNotification) {
@@ -166,16 +130,16 @@ export class CollaborationResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    const rootSpaceID =
-      await this.communityResolverService.getRootSpaceIDFromCalloutOrFail(
-        callout.id
+    const levelZeroSpaceID =
+      await this.communityResolverService.getLevelZeroSpaceIdForCollaboration(
+        collaboration.id
       );
 
     this.contributionReporter.calloutCreated(
       {
         id: callout.id,
         name: callout.nameID,
-        space: rootSpaceID,
+        space: levelZeroSpaceID,
       },
       {
         id: agentInfo.userID,
@@ -183,7 +147,7 @@ export class CollaborationResolverMutations {
       }
     );
 
-    return callout;
+    return await this.calloutService.getCalloutOrFail(callout.id);
   }
 
   @UseGuards(GraphqlGuard)

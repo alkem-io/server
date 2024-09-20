@@ -92,6 +92,7 @@ export class ActivityAdapter {
       parentID: subspace.parentSpace.id,
       description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -119,6 +120,7 @@ export class ActivityAdapter {
       parentID: eventData.subspaceID,
       description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -142,6 +144,7 @@ export class ActivityAdapter {
       parentID: collaborationID,
       description: description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -165,6 +168,7 @@ export class ActivityAdapter {
       parentID: eventData.callout.id,
       description: description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -190,6 +194,7 @@ export class ActivityAdapter {
       parentID: eventData.callout.id,
       description: description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -206,7 +211,7 @@ export class ActivityAdapter {
     const profile = eventData.calendarEvent.profile;
     const description = `[${
       profile.displayName
-    }] - ${profile.description.substring(1, 100)}`;
+    }] - ${profile.description?.substring(1, 100) ?? ''}`;
     const collaborationID =
       await this.timelineResolverService.getCollaborationIdForCalendar(
         eventData.calendar.id
@@ -218,6 +223,7 @@ export class ActivityAdapter {
       parentID: eventData.calendar.id,
       description: description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -242,6 +248,7 @@ export class ActivityAdapter {
       description: eventData.message.message,
       type: eventType,
       messageID: eventData.message.id,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -268,6 +275,7 @@ export class ActivityAdapter {
       parentID: eventData.callout.id,
       description: description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -297,6 +305,7 @@ export class ActivityAdapter {
       parentID: parentEntities.calloutID,
       description: description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(
@@ -325,6 +334,7 @@ export class ActivityAdapter {
       description: eventData.message.message,
       type: eventType,
       messageID: eventData.message.id,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -342,7 +352,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdFromCommunity(
       community.id
     );
-    const description = `${eventData.contributor.nameID}`;
+    const description = `${eventData.contributor.id}`;
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
@@ -350,6 +360,7 @@ export class ActivityAdapter {
       parentID: community.id, // the community that was joined
       description: description,
       type: eventType,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -404,9 +415,8 @@ export class ActivityAdapter {
 
     const updates = eventData.updates;
     const communityID = await this.getCommunityIdFromUpdates(updates.id);
-    const collaborationID = await this.getCollaborationIdFromCommunity(
-      communityID
-    );
+    const collaborationID =
+      await this.getCollaborationIdFromCommunity(communityID);
 
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
@@ -416,6 +426,7 @@ export class ActivityAdapter {
       description: eventData.message.message,
       type: eventType,
       messageID: eventData.message.id,
+      visibility: true,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);

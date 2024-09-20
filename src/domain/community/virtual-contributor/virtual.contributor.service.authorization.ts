@@ -32,7 +32,7 @@ export class VirtualContributorAuthorizationService {
   async applyAuthorizationPolicy(
     virtualInput: IVirtualContributor,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IVirtualContributor> {
+  ): Promise<IAuthorizationPolicy[]> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
       virtualInput.id,
       {
@@ -48,7 +48,9 @@ export class VirtualContributorAuthorizationService {
         `Unable to load entities for virtual: ${virtual.id} `,
         LogContext.COMMUNITY
       );
-    virtual.authorization = await this.authorizationPolicyService.reset(
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
+    virtual.authorization = this.authorizationPolicyService.reset(
       virtual.authorization
     );
     virtual.authorization =
@@ -60,6 +62,7 @@ export class VirtualContributorAuthorizationService {
       virtual.authorization,
       virtual.id
     );
+    updatedAuthorizations.push(virtual.authorization);
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
     const clonedVirtualAuthorizationAnonymousAccess =
@@ -68,24 +71,28 @@ export class VirtualContributorAuthorizationService {
       );
     // To ensure that profile on an virtual is always publicly visible, even for non-authenticated users
     clonedVirtualAuthorizationAnonymousAccess.anonymousReadAccess = true;
-    virtual.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        virtual.profile,
+        virtual.profile.id,
         clonedVirtualAuthorizationAnonymousAccess
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    virtual.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
-      virtual.agent,
-      virtual.authorization
-    );
+    const agentAuthorization =
+      this.agentAuthorizationService.applyAuthorizationPolicy(
+        virtual.agent,
+        virtual.authorization
+      );
+    updatedAuthorizations.push(agentAuthorization);
 
-    virtual.aiPersona =
+    const aiPersonaAuthorization =
       this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
         virtual.aiPersona,
         virtual.authorization
       );
+    updatedAuthorizations.push(aiPersonaAuthorization);
 
-    return virtual;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(

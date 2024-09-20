@@ -16,6 +16,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CommunityGuidelinesService {
@@ -30,7 +31,9 @@ export class CommunityGuidelinesService {
     storageAggregator: IStorageAggregator
   ): Promise<ICommunityGuidelines> {
     const communityGuidelines: ICommunityGuidelines = new CommunityGuidelines();
-    communityGuidelines.authorization = new AuthorizationPolicy();
+    communityGuidelines.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COMMUNITY_GUIDELINES
+    );
 
     const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
@@ -49,12 +52,12 @@ export class CommunityGuidelinesService {
       storageAggregator
     );
 
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       communityGuidelines.profile,
       VisualType.CARD
     );
 
-    return await this.communityGuidelinesRepository.save(communityGuidelines);
+    return communityGuidelines;
   }
 
   async save(

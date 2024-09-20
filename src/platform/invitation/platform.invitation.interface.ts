@@ -11,11 +11,15 @@ export class IPlatformInvitation extends IAuthorizable {
   })
   email!: string;
 
-  @Field(() => String)
-  firstName!: string;
+  @Field(() => String, {
+    nullable: true,
+  })
+  firstName?: string;
 
-  @Field(() => String)
-  lastName!: string;
+  @Field(() => String, {
+    nullable: true,
+  })
+  lastName?: string;
 
   @Field(() => Boolean, {
     description: 'Whether a new user profile has been created.',

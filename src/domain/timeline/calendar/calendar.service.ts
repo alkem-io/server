@@ -23,6 +23,7 @@ import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.ad
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CalendarService {
@@ -40,12 +41,14 @@ export class CalendarService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createCalendar(): Promise<ICalendar> {
+  public createCalendar(): ICalendar {
     const calendar: ICalendar = new Calendar();
-    calendar.authorization = new AuthorizationPolicy();
+    calendar.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALENDAR
+    );
     calendar.events = [];
 
-    return await this.calendarRepository.save(calendar);
+    return calendar;
   }
 
   async deleteCalendar(calendarID: string): Promise<ICalendar> {

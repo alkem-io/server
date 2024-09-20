@@ -20,11 +20,10 @@ import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.pers
 import {
   IngestSpace,
   SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
+} from '@services/infrastructure/event-bus/messages';
 import { EventBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { ChromaClient } from 'chromadb';
-import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -32,34 +31,120 @@ import {
   InteractionMessage,
   MessageSenderRole,
 } from '../ai-persona-service/dto/interaction.message';
+import { AlkemioConfig } from '@src/types';
+import { AiPersonaServiceAuthorizationService } from '@services/ai-server/ai-persona-service/ai.persona.service.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Injectable()
 export class AiServerService {
   constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaServiceService: AiPersonaServiceService,
+    private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     private vcInteractionService: VcInteractionService,
     private communicationAdapter: CommunicationAdapter,
-    private config: ConfigService,
+    private subscriptionPublishService: SubscriptionPublishService,
+    private config: ConfigService<AlkemioConfig, true>,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
+    @InjectRepository(VirtualContributor)
+    private vcRespository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private eventBus: EventBus
   ) {}
 
-  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
+  async getBodyOfKnowledgeLastUpdated(
+    personaServiceId: string
+  ): Promise<Date | null> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         personaServiceId
       );
-    await this.ensureSpaceBoNIsIngested(aiPersonaService.bodyOfKnowledgeID);
+    return aiPersonaService.bodyOfKnowledgeLastUpdated;
+  }
+
+  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
+    this.logger.verbose?.(
+      `AI server ensurePersonaIsUsable for AI Persona service ${personaServiceId} invoked`,
+      LogContext.AI_SERVER
+    );
+
+    const aiPersonaService =
+      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+        personaServiceId
+      );
+    this.logger.verbose?.(
+      `AI Persona service ${personaServiceId} found for BOK refresh`,
+      LogContext.AI_SERVER
+    );
+
+    await this.ensureSpaceBoNIsIngested(aiPersonaService);
     return true;
   }
 
-  public async ensureSpaceBoNIsIngested(spaceID: string): Promise<void> {
+  public async updatePersonaBoKLastUpdated(
+    personaServiceId: string,
+    lastUpdated: Date | null
+  ) {
+    const personaService =
+      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+        personaServiceId
+      );
+
+    personaService.bodyOfKnowledgeLastUpdated = lastUpdated;
+
+    await this.aiPersonaServiceService.save(personaService);
+
+    this.logger.verbose?.(
+      `AI Persona service ${personaServiceId} bodyOfKnowledgeLastUpdated set to ${lastUpdated}`,
+      LogContext.AI_SERVER
+    );
+
+    //TODO we shouldn't use the repository here but down the road this will e graphql call
+    // from the AI to the Collaboration servers
+    const virtualContributor = await this.vcRespository.findOne({
+      where: {
+        aiPersona: {
+          aiPersonaServiceID: personaService.id,
+        },
+      },
+      relations: { aiPersona: true },
+    });
+
+    if (virtualContributor) {
+      this.logger.verbose?.(
+        `VC for Persona service ${personaServiceId} loaded. Publishing to VirtualContributorUpdated subscription.`,
+        LogContext.AI_SERVER
+      );
+
+      await this.subscriptionPublishService.publishVirtualContributorUpdated(
+        virtualContributor
+      );
+    } else {
+      this.logger.verbose?.(
+        `VC for Persona service ${personaServiceId} not found.`,
+        LogContext.AI_SERVER
+      );
+    }
+  }
+
+  public async ensureSpaceBoNIsIngested(
+    persona: IAiPersonaService
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `AI Persona service ${persona.id} found for BOK refresh`,
+      LogContext.AI_SERVER
+    );
     this.eventBus.publish(
-      new IngestSpace(spaceID, SpaceIngestionPurpose.KNOWLEDGE)
+      new IngestSpace(
+        persona.bodyOfKnowledgeID,
+        SpaceIngestionPurpose.KNOWLEDGE,
+        persona.id
+      )
     );
   }
 
@@ -80,8 +165,15 @@ export class AiServerService {
         new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
       );
     }
-    const history = await this.getInteractionMessages(
-      questionInput.interactionID
+    const historyLimit = parseInt(
+      this.config.get<number>('platform.virtual_contributors.history_length', {
+        infer: true,
+      })
+    );
+
+    const history = await this.getLastNInteractionMessages(
+      questionInput.interactionID,
+      historyLimit
     );
 
     return await this.aiPersonaServiceService.askQuestion(
@@ -89,8 +181,9 @@ export class AiServerService {
       history
     );
   }
-  async getInteractionMessages(
-    interactionID: string | undefined
+  async getLastNInteractionMessages(
+    interactionID: string | undefined,
+    limit: number = 10
   ): Promise<InteractionMessage[]> {
     if (!interactionID) {
       return [];
@@ -109,7 +202,8 @@ export class AiServerService {
     );
 
     const messages: InteractionMessage[] = [];
-    for (let i = 0; i < room.messages.length; i++) {
+
+    for (let i = room.messages.length - 1; i >= 0; i--) {
       const message = room.messages[i];
       // try to skip this check and use Matrix to filter by Room and Thread
       if (
@@ -123,10 +217,13 @@ export class AiServerService {
           role = MessageSenderRole.ASSISTANT;
         }
 
-        messages.push({
+        messages.unshift({
           content: message.message,
           role,
         });
+        if (messages.length === limit) {
+          break;
+        }
       }
     }
 
@@ -149,13 +246,13 @@ export class AiServerService {
   // }
 
   private getContextCollectionID(contextID: string): string {
-    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}-slon`;
+    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
-    const { host, port } = this.config.get(
-      ConfigurationTypes.PLATFORM
-    ).vector_db;
+    const { host, port } = this.config.get('platform.vector_db', {
+      infer: true,
+    });
     const chroma = new ChromaClient({ path: `http://${host}:${port}` });
 
     const name = this.getContextCollectionID(contextID);
@@ -178,9 +275,17 @@ export class AiServerService {
       await this.aiPersonaServiceService.createAiPersonaService(
         personaServiceData
       );
-    server.aiPersonaServices = server.aiPersonaServices ?? [];
-    server.aiPersonaServices.push(aiPersonaService);
-    await this.saveAiServer(server);
+    aiPersonaService.aiServer = server;
+
+    await this.aiPersonaServiceService.save(aiPersonaService);
+
+    const updatedAuthorizations =
+      await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
+        aiPersonaService,
+        server.authorization
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
     return aiPersonaService;
   }
 
@@ -277,9 +382,8 @@ export class AiServerService {
       engine: aiPersonaService.engine,
       userID: '',
     };
-    const result = await this.aiPersonaEngineAdapter.sendIngest(
-      ingestAdapterInput
-    );
+    const result =
+      await this.aiPersonaEngineAdapter.sendIngest(ingestAdapterInput);
     return result;
   }
 }

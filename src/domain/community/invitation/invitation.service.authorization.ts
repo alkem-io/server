@@ -23,7 +23,7 @@ export class InvitationAuthorizationService {
   async applyAuthorizationPolicy(
     invitation: IInvitation,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IInvitation> {
+  ): Promise<IAuthorizationPolicy> {
     invitation.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         invitation.authorization,
@@ -32,7 +32,7 @@ export class InvitationAuthorizationService {
 
     invitation.authorization = await this.extendAuthorizationPolicy(invitation);
 
-    return invitation;
+    return invitation.authorization;
   }
 
   private async extendAuthorizationPolicy(
@@ -41,9 +41,8 @@ export class InvitationAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // get the user
-    const contributor = await this.invitationService.getInvitedContributor(
-      invitation
-    );
+    const contributor =
+      await this.invitationService.getInvitedContributor(invitation);
 
     // also grant the user privileges to work with their own invitation
     const contributorType =

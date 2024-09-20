@@ -4,8 +4,8 @@ import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { IPlatform } from './platform.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Licensing } from '@platform/licensing/licensing.entity';
-import { Forum } from '@platform/forum';
-import { PlatformInvitation } from '@platform/invitation';
+import { Forum } from '@platform/forum/forum.entity';
+import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {

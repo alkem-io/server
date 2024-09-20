@@ -10,7 +10,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -32,7 +32,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { CommunityRoleEventsService } from './community.role.service.events';
-import { IVirtualContributor } from '../virtual-contributor';
+import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 import { AuthorizationCredential } from '@common/enums';
@@ -392,15 +392,15 @@ export class CommunityRoleService {
         );
 
         if (triggerNewMemberEvents) {
-          const rootSpaceID = await this.communityService.getRootSpaceID(
-            community
-          );
-          const displayName = await this.communityService.getDisplayName(
-            community
-          );
+          const levelZeroSpaceID =
+            await this.communityService.getLevelZeroSpaceIdForCommunity(
+              community
+            );
+          const displayName =
+            await this.communityService.getDisplayName(community);
           await this.communityRoleEventsService.processCommunityNewMemberEvents(
             community,
-            rootSpaceID,
+            levelZeroSpaceID,
             displayName,
             agentInfo,
             contributor
@@ -526,9 +526,8 @@ export class CommunityRoleService {
       validatePolicyLimits
     );
 
-    const parentCommunity = await this.communityService.getParentCommunity(
-      community
-    );
+    const parentCommunity =
+      await this.communityService.getParentCommunity(community);
     if (role === CommunityRole.ADMIN && parentCommunity) {
       // Check if an admin anywhere else in the community
       const peerCommunities = await this.communityService.getPeerCommunites(
@@ -873,9 +872,8 @@ export class CommunityRoleService {
 
     await this.validateApplicationFromUser(user, agent, community);
 
-    const application = await this.applicationService.createApplication(
-      applicationData
-    );
+    const application =
+      await this.applicationService.createApplication(applicationData);
     application.community = community;
     return await this.applicationService.save(application);
   }
@@ -888,10 +886,7 @@ export class CommunityRoleService {
         invitationData.invitedContributor
       );
     const community = await this.communityService.getCommunityOrFail(
-      invitationData.communityID,
-      {
-        relations: {},
-      }
+      invitationData.communityID
     );
 
     await this.validateInvitationToExistingContributor(
@@ -947,7 +942,7 @@ export class CommunityRoleService {
     );
     if (openApplication) {
       throw new CommunityMembershipException(
-        `An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
+        `Application not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -955,7 +950,7 @@ export class CommunityRoleService {
     const openInvitation = await this.findOpenInvitation(user.id, community.id);
     if (openInvitation) {
       throw new CommunityMembershipException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
+        `Application not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -964,7 +959,7 @@ export class CommunityRoleService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `Contributor ${user.nameID} is already a member of the Community: ${community.id}.`,
+        `Application not possible: Contributor ${user.id} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -980,7 +975,7 @@ export class CommunityRoleService {
     );
     if (openInvitation) {
       throw new CommunityMembershipException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
+        `Invitation not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -991,7 +986,7 @@ export class CommunityRoleService {
     );
     if (openApplication) {
       throw new CommunityMembershipException(
-        `An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
+        `Invitation not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1000,7 +995,7 @@ export class CommunityRoleService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `Contributor ${contributor.nameID} is already a member of the Community: ${community.id}.`,
+        `Invitation not possible: Contributor ${contributor.id} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }

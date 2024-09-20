@@ -21,6 +21,7 @@ import { CommunicationRoomResult } from '@services/adapters/communication-adapte
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
 import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 interface MessageSender {
   id: string;
@@ -40,11 +41,11 @@ export class RoomService {
 
   async createRoom(displayName: string, roomType: RoomType): Promise<IRoom> {
     const room = new Room(displayName, roomType);
-    room.authorization = new AuthorizationPolicy();
+    room.authorization = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
     room.externalRoomID = await this.initializeCommunicationRoom(room);
     room.messagesCount = 0;
     room.vcInteractions = [];
-    return await this.roomRepository.save(room);
+    return room;
   }
 
   async getRoomOrFail(

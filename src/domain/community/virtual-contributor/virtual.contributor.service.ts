@@ -5,6 +5,7 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
@@ -18,7 +19,6 @@ import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { IVirtualContributor } from './virtual.contributor.interface';
-import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
@@ -39,6 +39,10 @@ import { IContributor } from '../contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Invitation } from '../invitation';
+import { AgentType } from '@common/enums/agent.type';
+import { ContributorService } from '../contributor/contributor.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class VirtualContributorService {
@@ -46,6 +50,7 @@ export class VirtualContributorService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private profileService: ProfileService,
+    private contributorService: ContributorService,
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
@@ -61,7 +66,8 @@ export class VirtualContributorService {
 
   async createVirtualContributor(
     virtualContributorData: CreateVirtualContributorInput,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    agentInfo?: AgentInfo
   ): Promise<IVirtualContributor> {
     if (virtualContributorData.nameID) {
       // Convert nameID to lower case
@@ -73,9 +79,6 @@ export class VirtualContributorService {
         virtualContributorData.profileData?.displayName || ''
       );
     }
-    await this.checkDisplayNameOrFail(
-      virtualContributorData.profileData?.displayName
-    );
 
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
@@ -84,7 +87,9 @@ export class VirtualContributorService {
     virtualContributor.listedInStore = true;
     virtualContributor.searchVisibility = SearchVisibility.ACCOUNT;
 
-    virtualContributor.authorization = new AuthorizationPolicy();
+    virtualContributor.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
+    );
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );
@@ -113,25 +118,27 @@ export class VirtualContributorService {
       name: TagsetReservedName.CAPABILITIES,
       tags: [],
     });
-    // Set the visuals
-    let avatarURL = virtualContributorData.profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        virtualContributor.profile.displayName,
-        ''
-      );
-    }
-    await this.profileService.addVisualOnProfile(
+
+    this.contributorService.addAvatarVisualToContributorProfile(
       virtualContributor.profile,
-      VisualType.AVATAR,
-      avatarURL
+      virtualContributorData.profileData
     );
 
     virtualContributor.agent = await this.agentService.createAgent({
-      parentDisplayID: `virtual-${virtualContributor.nameID}`,
+      type: AgentType.VIRTUAL_CONTRIBUTOR,
     });
 
     virtualContributor = await this.save(virtualContributor);
+
+    const userID = agentInfo ? agentInfo.userID : '';
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      virtualContributor.profile.id,
+      userID
+    );
+    // Reload to ensure have the updated avatar URL
+    virtualContributor = await this.getVirtualContributorOrFail(
+      virtualContributor.id
+    );
     this.logger.verbose?.(
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
@@ -197,10 +204,6 @@ export class VirtualContributorService {
     }
 
     if (virtualContributorData.nameID) {
-      this.logger.verbose?.(
-        `${virtualContributorData.nameID} - ${virtual.nameID}`,
-        LogContext.COMMUNICATION
-      );
       if (
         virtualContributorData.nameID.toLowerCase() !==
         virtual.nameID.toLowerCase()
@@ -320,6 +323,29 @@ export class VirtualContributorService {
     };
   }
 
+  public async getStorageBucket(
+    virtualContributorID: string
+  ): Promise<IStorageBucket> {
+    const virtualContributor = await this.getVirtualContributorOrFail(
+      virtualContributorID,
+      {
+        relations: {
+          profile: {
+            storageBucket: true,
+          },
+        },
+      }
+    );
+    const storageBucket = virtualContributor?.profile?.storageBucket;
+    if (!storageBucket) {
+      throw new RelationshipNotFoundException(
+        `Unable to find storage bucket to use for Virtual Contributor: ${virtualContributorID}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+    return storageBucket;
+  }
+
   public async refershBodyOfKnowledge(
     virtualContributor: IVirtualContributor,
     agentInfo: AgentInfo
@@ -352,6 +378,7 @@ export class VirtualContributorService {
           authorization: true,
           aiPersona: true,
           agent: true,
+          profile: true,
         },
       }
     );
@@ -372,6 +399,8 @@ export class VirtualContributorService {
       userID: vcQuestionInput.userID,
       threadID: vcQuestionInput.threadID,
       vcInteractionID: vcQuestionInput.vcInteractionID,
+      description: virtualContributor.profile.description,
+      displayName: virtualContributor.profile.displayName,
     };
 
     return await this.aiServerAdapter.askQuestion(aiServerAdapterQuestionInput);
@@ -432,7 +461,7 @@ export class VirtualContributorService {
     return agent;
   }
 
-  public async getAccountHost(
+  public async getProvider(
     virtualContributor: IVirtualContributor
   ): Promise<IContributor> {
     const virtualContributorWithAccount =
@@ -485,7 +514,7 @@ export class VirtualContributorService {
 
     if (!aiPersona) {
       throw new EntityNotFoundException(
-        `Unable to find aiPersona for VirtualContributor: ${virtualContributor.nameID}`,
+        `Unable to find aiPersona for VirtualContributor: ${virtualContributor.id}`,
         LogContext.VIRTUAL_CONTRIBUTOR
       );
     }
@@ -550,6 +579,13 @@ export class VirtualContributorService {
         .getCount();
 
     return virtualContributorMatchesCount;
+  }
+
+  async getBodyOfKnowledgeLastUpdated(virtualContributor: IVirtualContributor) {
+    const aiPersona = await this.getAiPersonaOrFail(virtualContributor);
+    return this.aiServerAdapter.getBodyOfKnowledgeLastUpdated(
+      aiPersona.aiPersonaServiceID
+    );
   }
 
   //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation

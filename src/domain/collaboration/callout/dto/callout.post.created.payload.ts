@@ -3,5 +3,7 @@ import { BaseSubscriptionPayload } from '@src/common/interfaces/base.subscriptio
 
 export interface CalloutPostCreatedPayload extends BaseSubscriptionPayload {
   calloutID: string;
+  contributionID: string;
+  sortOrder: number;
   post: IPost;
 }

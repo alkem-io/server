@@ -1,7 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { MID_TEXT_LENGTH, NAMEID_LENGTH } from '@src/common/constants';
+import { MID_TEXT_LENGTH } from '@src/common/constants';
 import { IsDate, IsOptional, MaxLength } from 'class-validator';
-import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 
@@ -9,16 +8,7 @@ import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/n
 export class CreateCalendarEventInput extends CreateNameableInput {
   @Field(() => CalendarEventType, { nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
-  type!: string;
-
-  // Override
-  @Field(() => NameID, {
-    nullable: true,
-    description: 'A readable identifier, unique within the containing scope.',
-  })
-  @MaxLength(NAMEID_LENGTH)
-  @IsOptional()
-  nameID!: string;
+  type!: CalendarEventType;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

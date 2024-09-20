@@ -29,7 +29,7 @@ export class IAiPersonaService extends IAuthorizable {
   dataAccessMode!: AiPersonaDataAccessMode;
 
   @Field(() => AiPersonaBodyOfKnowledgeType, {
-    nullable: true,
+    nullable: false,
     description: 'The body of knowledge type used for the AI Persona Service',
   })
   bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
@@ -39,4 +39,10 @@ export class IAiPersonaService extends IAuthorizable {
     description: 'The body of knowledge ID used for the AI Persona Service',
   })
   bodyOfKnowledgeID!: string;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: 'When wat the body of knowledge of the VC last updated.',
+  })
+  bodyOfKnowledgeLastUpdated!: Date | null;
 }

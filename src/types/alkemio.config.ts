@@ -103,6 +103,9 @@ export type AlkemioConfig = {
     };
   };
   storage: {
+    file: {
+      max_file_size: number;
+    };
     database: {
       host: string;
       port: number;
@@ -130,6 +133,11 @@ export type AlkemioConfig = {
         user: string;
         password: string;
       };
+      event_bus: {
+        exchange: string;
+        ingest_space_queue: string;
+        ingest_space_result_queue: string;
+      };
     };
   };
   integrations: {
@@ -151,6 +159,7 @@ export type AlkemioConfig = {
         guidance_usage: string;
       };
       tls: {
+        ca_cert_path: string | 'none';
         rejectUnauthorized: boolean;
       };
       policies: {
@@ -182,6 +191,8 @@ export type AlkemioConfig = {
     landing: string;
     blog: string;
     impact: string;
+    inspiration: string;
+    innovationLibrary: string;
     foundation: string;
     contactsupport: string;
     switchplan: string;
@@ -197,6 +208,13 @@ export type AlkemioConfig = {
     };
     guidance_engine: {
       enabled: boolean;
+    };
+    vector_db: {
+      host: string;
+      port: number;
+    };
+    virtual_contributors: {
+      history_length: number;
     };
   };
   ssi: {

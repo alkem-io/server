@@ -11,10 +11,11 @@ export class InnovationFlow
   @OneToOne(() => Profile, {
     eager: false,
     cascade: true,
+    onDelete: 'SET NULL',
   })
   @JoinColumn()
   profile!: Profile;
 
-  @Column('text')
-  states: string = '[]';
+  @Column('simple-array', { nullable: false })
+  states!: string;
 }

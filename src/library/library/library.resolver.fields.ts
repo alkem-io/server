@@ -8,7 +8,10 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 import { LibraryService } from './library.service';
 import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ITemplateResult } from './dto/library.dto.template.result';
+import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
 
 @Resolver(() => ILibrary)
 export class LibraryResolverFields {
@@ -37,6 +40,25 @@ export class LibraryResolverFields {
     );
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('templates', () => [ITemplateResult], {
+    nullable: false,
+    description:
+      'The Templates in the Innovation Library, together with information about the InnovationPack.',
+  })
+  @UseGuards(GraphqlGuard)
+  async templates(
+    @Args('filter', {
+      nullable: true,
+      description: 'Only return Templates of particular TemplateTypes',
+    })
+    filter?: LibraryTemplatesFilterInput
+  ): Promise<ITemplateResult[]> {
+    return await this.libraryService.getTemplatesInListedInnovationPacks(
+      filter
+    );
+  }
+
   // TODO: these may want later to be on a Store entity
   @UseGuards(GraphqlGuard)
   @ResolveField(() => [IVirtualContributor], {
@@ -45,5 +67,14 @@ export class LibraryResolverFields {
   })
   async virtualContributors(): Promise<IVirtualContributor[]> {
     return await this.libraryService.getListedVirtualContributors();
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => [IInnovationHub], {
+    nullable: false,
+    description: 'The InnovationHub listed on this platform',
+  })
+  async innovationHubs(): Promise<IInnovationHub[]> {
+    return await this.libraryService.getListedInnovationHubs();
   }
 }

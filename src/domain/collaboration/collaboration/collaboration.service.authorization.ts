@@ -23,7 +23,6 @@ import {
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
-import { ICallout } from '../callout/callout.interface';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
@@ -45,11 +44,11 @@ export class CollaborationAuthorizationService {
 
   public async applyAuthorizationPolicy(
     collaborationInput: ICollaboration,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings,
-    accountAgent: IAgent
-  ): Promise<ICollaboration> {
+    parentAuthorization: IAuthorizationPolicy,
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings,
+    spaceAgent?: IAgent
+  ): Promise<IAuthorizationPolicy[]> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
         collaborationInput.id,
@@ -60,21 +59,21 @@ export class CollaborationAuthorizationService {
               profile: true,
             },
             timeline: true,
-            relations: true,
           },
         }
       );
     if (
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
-      !collaboration.timeline ||
-      !collaboration.relations
+      !collaboration.timeline
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
         LogContext.SPACES
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     collaboration.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         collaboration.authorization,
@@ -85,57 +84,62 @@ export class CollaborationAuthorizationService {
       collaboration.authorization,
       communityPolicy,
       spaceSettings,
-      accountAgent
+      spaceAgent
     );
-    collaboration.authorization = this.appendCredentialRulesForContributors(
-      collaboration.authorization,
-      communityPolicy,
-      spaceSettings
-    );
+    if (communityPolicy && spaceSettings && spaceAgent) {
+      collaboration.authorization = this.appendCredentialRulesForContributors(
+        collaboration.authorization,
+        communityPolicy,
+        spaceSettings
+      );
 
-    collaboration.authorization = await this.appendPrivilegeRules(
-      collaboration.authorization,
-      spaceSettings,
-      accountAgent
-    );
+      collaboration.authorization = await this.appendPrivilegeRules(
+        collaboration.authorization,
+        spaceSettings,
+        spaceAgent
+      );
+    }
+    updatedAuthorizations.push(collaboration.authorization);
 
-    return this.propagateAuthorizationToChildEntities(
-      collaboration,
-      communityPolicy,
-      spaceSettings
-    );
+    const childUpdatedAuthorizations =
+      await this.propagateAuthorizationToChildEntities(
+        collaboration,
+        communityPolicy,
+        spaceSettings
+      );
+    updatedAuthorizations.push(...childUpdatedAuthorizations);
+
+    return updatedAuthorizations;
   }
 
   private async propagateAuthorizationToChildEntities(
     collaboration: ICollaboration,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
-  ): Promise<ICollaboration> {
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings
+  ): Promise<IAuthorizationPolicy[]> {
     if (
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
       !collaboration.innovationFlow.profile ||
-      !collaboration.timeline ||
-      !collaboration.relations
+      !collaboration.timeline
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization children:  ${collaboration.id}`,
         LogContext.SPACES
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    const updatedCallouts: ICallout[] = [];
     for (const callout of collaboration.callouts) {
-      const updatedCallout =
+      const updatedCalloutAuthorizations =
         await this.calloutAuthorizationService.applyAuthorizationPolicy(
-          callout,
+          callout.id,
           collaboration.authorization,
           communityPolicy,
           spaceSettings
         );
-      updatedCallouts.push(updatedCallout);
+      updatedAuthorizations.push(...updatedCalloutAuthorizations);
     }
-    collaboration.callouts = updatedCallouts;
 
     // Extend with contributor rules + then send into apply
     const clonedAuthorization =
@@ -143,34 +147,29 @@ export class CollaborationAuthorizationService {
         collaboration.authorization
       );
 
-    const extendedAuthorizationContributors =
-      this.appendCredentialRulesForContributors(
-        clonedAuthorization,
-        communityPolicy,
-        spaceSettings
-      );
+    if (communityPolicy && spaceSettings) {
+      const extendedAuthorizationContributors =
+        this.appendCredentialRulesForContributors(
+          clonedAuthorization,
+          communityPolicy,
+          spaceSettings
+        );
+      const timelineAuthorizations =
+        await this.timelineAuthorizationService.applyAuthorizationPolicy(
+          collaboration.timeline,
+          extendedAuthorizationContributors
+        );
+      updatedAuthorizations.push(...timelineAuthorizations);
+    }
 
-    collaboration.innovationFlow =
+    const flowAuthorizations =
       await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
         collaboration.innovationFlow,
         collaboration.authorization
       );
+    updatedAuthorizations.push(...flowAuthorizations);
 
-    collaboration.timeline =
-      await this.timelineAuthorizationService.applyAuthorizationPolicy(
-        collaboration.timeline,
-        extendedAuthorizationContributors
-      );
-
-    for (const relation of collaboration.relations) {
-      relation.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          relation.authorization,
-          collaboration.authorization
-        );
-    }
-
-    return collaboration;
+    return updatedAuthorizations;
   }
 
   private getContributorCredentials(
@@ -203,9 +202,9 @@ export class CollaborationAuthorizationService {
 
   private async appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings,
-    accountAgent: IAgent
+    policy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings,
+    spaceAgent?: IAgent
   ): Promise<IAuthorizationPolicy> {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -217,10 +216,14 @@ export class CollaborationAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
+    // For templates these will not be available
+    if (!policy || !spaceSettings || !spaceAgent) {
+      return authorization;
+    }
     const saveAsTemplateEnabled =
       await this.licenseEngineService.isAccessGranted(
-        LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE,
-        accountAgent
+        LicensePrivilege.SPACE_SAVE_AS_TEMPLATE,
+        spaceAgent
       );
     if (saveAsTemplateEnabled) {
       const adminCriterias = this.communityPolicyService.getCredentialsForRole(
@@ -283,7 +286,7 @@ export class CollaborationAuthorizationService {
   private async appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
     spaceSettings: ISpaceSettings,
-    accountAgent: IAgent
+    spaceAgent: IAgent
   ): Promise<IAuthorizationPolicy> {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
@@ -295,8 +298,8 @@ export class CollaborationAuthorizationService {
     privilegeRules.push(createPrivilege);
 
     const whiteboardRtEnabled = await this.licenseEngineService.isAccessGranted(
-      LicensePrivilege.WHITEBOARD_MULTI_USER,
-      accountAgent
+      LicensePrivilege.SPACE_WHITEBOARD_MULTI_USER,
+      spaceAgent
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(

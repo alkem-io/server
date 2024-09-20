@@ -17,7 +17,7 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IUser, User } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { Post } from '@domain/collaboration/post';
 import { Callout } from '@domain/collaboration/callout';
@@ -32,6 +32,7 @@ import {
   ISearchResultPost,
 } from '../../dto';
 import { SearchEntityTypes } from '@services/api/search/search.entity.types';
+import { User } from '@domain/community/user/user.entity';
 
 type PostParents = {
   post: Post;
@@ -107,6 +108,7 @@ export class SearchResultService {
       'score',
       'desc'
     );
+
     return {
       contributorResults,
       contributorResultsCount: -1,
@@ -625,6 +627,8 @@ export class SearchResultService {
       select: {
         id: true,
         type: true,
+        settingsStr: true,
+        visibility: true,
         collaboration: {
           id: true,
           callouts: {

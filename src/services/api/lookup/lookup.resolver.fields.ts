@@ -14,19 +14,15 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IContext } from '@domain/context/context/context.interface';
 import { ContextService } from '@domain/context/context/context.service';
-import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/whiteboard.template.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { RoomService } from '@domain/communication/room/room.service';
-import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IProfile } from '@domain/common/profile';
 import { ICallout } from '@domain/collaboration/callout';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
-import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { ICalendarEvent } from '@domain/timeline/event';
@@ -36,8 +32,6 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { IApplication } from '@domain/community/application';
 import { IInvitation } from '@domain/community/invitation';
-import { CalloutTemplateService } from '@domain/template/callout-template/callout.template.service';
-import { ICalloutTemplate } from '@domain/template/callout-template/callout.template.interface';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -52,18 +46,25 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
-import { CommunityGuidelinesTemplateService } from '@domain/template/community-guidelines-template/community.guidelines.template.service';
-import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { AccountService } from '@domain/space/account/account.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { TemplateService } from '@domain/template/template/template.service';
+import { ITemplate } from '@domain/template/template/template.interface';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
+import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
   constructor(
+    private accountService: AccountService,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -73,8 +74,6 @@ export class LookupResolverFields {
     private collaborationService: CollaborationService,
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
-    private whiteboardTemplateService: WhiteboardTemplateService,
-    private calloutTemplateService: CalloutTemplateService,
     private innovationPackService: InnovationPackService,
     private profileService: ProfileService,
     private postService: PostService,
@@ -84,14 +83,15 @@ export class LookupResolverFields {
     private calendarEventService: CalendarEventService,
     private calendarService: CalendarService,
     private documentService: DocumentService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private templateService: TemplateService,
+    private templatesSetService: TemplatesSetService,
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
     private userService: UserService,
     private guidelinesService: CommunityGuidelinesService,
-    private guidelinesTemplateService: CommunityGuidelinesTemplateService,
-    private virtualContributorService: VirtualContributorService
+    private virtualContributorService: VirtualContributorService,
+    private innovationHubService: InnovationHubService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -99,10 +99,40 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified Space',
   })
-  async space(@Args('ID', { type: () => UUID }) id: string): Promise<ISpace> {
+  async space(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
+    // TODO: Fix this when dealing with public visibility of spaces
+    // this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   space.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `lookup Space: ${space.id}`
+    // );
 
     return space;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IAccount, {
+    nullable: true,
+    description: 'Lookup the specified Account',
+  })
+  async account(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IAccount> {
+    const account = await this.accountService.getAccountOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Account: ${account.id}`
+    );
+
+    return account;
   }
 
   @UseGuards(GraphqlGuard)
@@ -254,6 +284,27 @@ export class LookupResolverFields {
     );
 
     return document;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IInnovationHub, {
+    nullable: true,
+    description: 'Lookup the specified InnovationHub',
+  })
+  async innovationHub(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IInnovationHub> {
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationHub.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup InnovationHub: ${innovationHub.id}`
+    );
+
+    return innovationHub;
   }
 
   @UseGuards(GraphqlGuard)
@@ -411,52 +462,10 @@ export class LookupResolverFields {
       agentInfo,
       whiteboard.authorization,
       AuthorizationPrivilege.READ,
-      `lookup Whiteboard: ${whiteboard.nameID}`
+      `lookup Whiteboard: ${whiteboard.id}`
     );
 
     return whiteboard;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => IWhiteboardTemplate, {
-    nullable: true,
-    description: 'Lookup the specified Whiteboard Template',
-  })
-  async whiteboardTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IWhiteboardTemplate> {
-    const whiteboardTemplate =
-      await this.whiteboardTemplateService.getWhiteboardTemplateOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      whiteboardTemplate.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Whiteboard template: ${whiteboardTemplate.id}`
-    );
-
-    return whiteboardTemplate;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => ICalloutTemplate, {
-    nullable: true,
-    description: 'Lookup the specified Callout Template',
-  })
-  async calloutTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ICalloutTemplate> {
-    const calloutTemplate =
-      await this.calloutTemplateService.getCalloutTemplateOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      calloutTemplate.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Callout template: ${calloutTemplate.id}`
-    );
-
-    return calloutTemplate;
   }
 
   @UseGuards(GraphqlGuard)
@@ -561,26 +570,44 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => IInnovationFlowTemplate, {
+  @ResolveField(() => ITemplate, {
     nullable: true,
-    description: 'Lookup the specified InnovationFlow Template',
+    description: 'Lookup the specified Template',
   })
-  async innovationFlowTemplate(
+  async template(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IInnovationFlowTemplate> {
-    const innovationFlowTemplate =
-      await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-        id
-      );
+  ): Promise<ITemplate> {
+    const template = await this.templateService.getTemplateOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      innovationFlowTemplate.authorization,
+      template.authorization,
       AuthorizationPrivilege.READ,
-      `lookup InnovationFlow Template: ${innovationFlowTemplate.id}`
+      `lookup Template: ${template.id}`
     );
 
-    return innovationFlowTemplate;
+    return template;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ITemplatesSet, {
+    nullable: true,
+    description: 'Lookup the specified TemplatesSet',
+  })
+  async templatesSet(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ITemplatesSet> {
+    const templatesSet =
+      await this.templatesSetService.getTemplatesSetOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesSet.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup TemplatesSet: ${templatesSet.id}`
+    );
+
+    return templatesSet;
   }
 
   @UseGuards(GraphqlGuard)
@@ -602,28 +629,5 @@ export class LookupResolverFields {
     );
 
     return guidelines;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => ICommunityGuidelinesTemplate, {
-    nullable: true,
-    description: 'Lookup the specified InnovationFlow Template',
-  })
-  async communityGuidelinesTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ICommunityGuidelinesTemplate> {
-    const guidelinesTemplate =
-      await this.guidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
-        id
-      );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      guidelinesTemplate.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Community guidelines Template: ${guidelinesTemplate.id}`
-    );
-
-    return guidelinesTemplate;
   }
 }

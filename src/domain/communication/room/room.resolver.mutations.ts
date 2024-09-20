@@ -72,7 +72,7 @@ export class RoomResolverMutations {
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
 
-    const mentions = this.roomServiceMentions.getMentionsFromText(
+    const mentions = await this.roomServiceMentions.getMentionsFromText(
       messageData.message
     );
 
@@ -272,9 +272,8 @@ export class RoomResolverMutations {
     );
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
-    const mentions: Mention[] = this.roomServiceMentions.getMentionsFromText(
-      messageData.message
-    );
+    const mentions: Mention[] =
+      await this.roomServiceMentions.getMentionsFromText(messageData.message);
     const threadID = messageData.threadID;
 
     const messageOwnerId = await this.roomService.getUserIdForMessage(
@@ -316,6 +315,7 @@ export class RoomResolverMutations {
           reply,
           agentInfo
         );
+
         // TODO extact in a helper function
         if (accessVirtualContributors) {
           // Check before processing so as not to reply to same message where interaction started
@@ -323,6 +323,7 @@ export class RoomResolverMutations {
             room.id,
             threadID
           );
+
           await this.roomServiceMentions.processVirtualContributorMentions(
             mentions,
             messageData.message,

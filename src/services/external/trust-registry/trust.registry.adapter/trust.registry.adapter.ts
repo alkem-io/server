@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { TrustRegistryCredentialMetadata } from '../trust.registry.configuration/trust.registry.dto.credential.metadata';
 import { TrustRegistryConfigurationAdapter } from '../trust.registry.configuration/trust.registry.configuration.adapter';
@@ -11,11 +11,12 @@ import { SsiVcNotVerifiable } from '@common/exceptions/ssi.vc.not.verifiable';
 import { WalletManagerCredentialOfferMetadata } from '@services/adapters/wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
 import { SsiCredentialTypeNotSupported } from '@common/exceptions/ssi.credential.type.not.supported';
 import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class TrustRegistryAdapter {
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private trustRegistryConfigurationProvider: TrustRegistryConfigurationAdapter,
     private trustRegistryClaimService: TrustRegistryClaimService
   ) {}
@@ -134,11 +135,10 @@ export class TrustRegistryAdapter {
   }
 
   private generatePublicRestApiUrl() {
-    const url = `${
-      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-    }${
-      this.configService.get(ConfigurationTypes.HOSTING)?.path_api_public_rest
-    }`;
-    return url;
+    const { endpoint_cluster, path_api_public_rest } = this.configService.get(
+      'hosting',
+      { infer: true }
+    );
+    return `${endpoint_cluster}${path_api_public_rest}`;
   }
 }

@@ -16,13 +16,13 @@ import { AiPersonaEngineAdapterQueryInput } from '@services/ai-server/ai-persona
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { EventBus } from '@nestjs/cqrs';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { InteractionMessage } from './dto/interaction.message';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import {
   IngestSpace,
   SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
-import { InteractionMessage } from './dto/interaction.message';
+} from '@services/infrastructure/event-bus/messages/ingest.space.command';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -40,31 +40,33 @@ export class AiPersonaServiceService {
   ): Promise<IAiPersonaService> {
     const aiPersonaService: IAiPersonaService = new AiPersonaService();
     // TODO: map in the data   AiPersonaService.create(aiPersonaServiceData);
-    aiPersonaService.authorization = new AuthorizationPolicy();
+    aiPersonaService.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.AI_PERSONA_SERVICE
+    );
 
     aiPersonaService.bodyOfKnowledgeID = aiPersonaServiceData.bodyOfKnowledgeID;
-    aiPersonaService.engine =
-      aiPersonaServiceData.engine ?? AiPersonaEngine.EXPERT;
+    aiPersonaService.engine = aiPersonaServiceData.engine;
     aiPersonaService.bodyOfKnowledgeType =
-      aiPersonaServiceData.bodyOfKnowledgeType ??
-      AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
-    aiPersonaService.prompt = aiPersonaServiceData.prompt ?? '';
+      aiPersonaServiceData.bodyOfKnowledgeType;
+    aiPersonaService.prompt = aiPersonaServiceData.prompt;
+    aiPersonaService.dataAccessMode = aiPersonaServiceData.dataAccessMode;
 
-    const savedAiPersonaService = await this.aiPersonaServiceRepository.save(
-      aiPersonaService
-    );
+    const savedAiPersonaService =
+      await this.aiPersonaServiceRepository.save(aiPersonaService);
     this.logger.verbose?.(
       `Created new AI Persona Service with id ${aiPersonaService.id}`,
       LogContext.PLATFORM
     );
 
-    if (aiPersonaServiceData.bodyOfKnowledgeID)
+    if (aiPersonaServiceData.bodyOfKnowledgeID) {
       this.eventBus.publish(
         new IngestSpace(
-          aiPersonaServiceData.bodyOfKnowledgeID,
-          SpaceIngestionPurpose.KNOWLEDGE
+          savedAiPersonaService.bodyOfKnowledgeID,
+          SpaceIngestionPurpose.KNOWLEDGE,
+          savedAiPersonaService.id
         )
       );
+    }
 
     return savedAiPersonaService;
   }
@@ -159,6 +161,8 @@ export class AiPersonaServiceService {
       contextID: personaQuestionInput.contextID,
       history,
       interactionID: personaQuestionInput.interactionID,
+      displayName: personaQuestionInput.displayName,
+      description: personaQuestionInput.description,
     };
 
     return this.aiPersonaEngineAdapter.sendQuery(input);

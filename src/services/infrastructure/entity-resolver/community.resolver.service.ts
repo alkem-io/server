@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Community, ICommunity } from '@domain/community/community';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -8,8 +8,9 @@ import { Communication } from '@domain/communication/communication/communication
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { RoomType } from '@common/enums/room.type';
-import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IAgent } from '@domain/agent';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -22,137 +23,111 @@ export class CommunityResolverService {
     private entityManager: EntityManager
   ) {}
 
-  private async getRootSpaceFromCommunity(community: ICommunity) {
-    return this.entityManager.findOne(Space, {
-      where: {
-        community: {
-          id: community.id,
-        },
-      },
-      relations: {
-        account: {
-          space: true,
-        },
-      },
-    });
-  }
-
-  public async isCommunityAccountMatchingVcAccount(
-    communityID: string,
-    virtualContributorID: string
-  ): Promise<boolean> {
+  public async getLevelZeroSpaceIdForCommunity(
+    communityID: string
+  ): Promise<string> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         community: {
           id: communityID,
         },
       },
-      relations: {
-        account: true,
-      },
     });
-
-    if (!space || !space.account) {
+    if (!space) {
       throw new EntityNotFoundException(
         `Unable to find Space for given community id: ${communityID}`,
         LogContext.COMMUNITY
       );
     }
-    const accountID = space.account.id;
-    const virtualContributor = await this.entityManager.findOne(
-      VirtualContributor,
-      {
-        where: {
-          id: virtualContributorID,
-        },
-        relations: {
-          account: true,
-        },
-      }
-    );
-
-    if (!virtualContributor || !virtualContributor.account) {
-      throw new EntityNotFoundException(
-        `Unable to find VirtualContributor for given id: ${virtualContributorID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return virtualContributor.account.id === accountID;
+    return space.levelZeroSpaceID;
   }
 
-  public async getRootSpaceIDFromCalloutOrFail(
-    calloutID: string
+  public async getLevelZeroSpaceIdForCollaboration(
+    collaborationID: string
   ): Promise<string> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: calloutID,
-          },
-        },
-      },
-      relations: {
-        account: {
-          space: true,
+          id: collaborationID,
         },
       },
     });
     if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find space for callout: ${calloutID}`,
+        `Unable to find Space for given collaboration id: ${collaborationID}`,
         LogContext.COMMUNITY
       );
     }
-    const rootSpace = space.account.space;
-    if (!rootSpace) {
-      throw new EntityNotFoundException(
-        `Unable to find rootSpace for Callout: ${calloutID}  in space ${space.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return rootSpace.id;
+    return space.levelZeroSpaceID;
   }
 
-  public async getRootSpaceIDFromCommunityOrFail(
-    community: ICommunity
-  ): Promise<string> {
-    const space = await this.getRootSpaceFromCommunity(community);
-
-    if (space && space.account && space.account.space) {
-      return space.account.space.id;
-    }
-
-    throw new EntityNotFoundException(
-      `Unable to find Space for given community id: ${community.id}`,
-      LogContext.COLLABORATION
-    );
-  }
-
-  public async getAccountAgentFromCommunityOrFail(
-    community: ICommunity
+  public async getLevelZeroSpaceAgentForCommunityOrFail(
+    communityID: string
   ): Promise<IAgent> {
-    const space = await this.entityManager.findOne(Space, {
+    const levelZeroSpaceID =
+      await this.getLevelZeroSpaceIdForCommunity(communityID);
+    const levelZeroSpace = await this.entityManager.findOne(Space, {
       where: {
-        community: {
-          id: community.id,
-        },
+        id: levelZeroSpaceID,
       },
       relations: {
-        account: {
-          agent: {
-            credentials: true,
-          },
-        },
+        agent: true,
       },
     });
-    if (space && space.account && space.account.agent) {
-      return space.account.agent;
-    }
 
-    throw new EntityNotFoundException(
-      `Unable to find Agent for account for given community id: ${community.id}`,
-      LogContext.COLLABORATION
+    if (!levelZeroSpace || !levelZeroSpace.agent) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for given community id: ${communityID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return levelZeroSpace.agent;
+  }
+
+  private async getAccountForCommunityOrFail(
+    communityID: string
+  ): Promise<IAccount> {
+    const levelZeroSpaceID =
+      await this.getLevelZeroSpaceIdForCommunity(communityID);
+    const levelZeroSpace = await this.entityManager.findOne(Space, {
+      where: {
+        id: levelZeroSpaceID,
+      },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!levelZeroSpace || !levelZeroSpace.account) {
+      throw new EntityNotFoundException(
+        `Unable to find Account for given community id: ${communityID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return levelZeroSpace.account;
+  }
+
+  public async isCommunityAccountMatchingVcAccount(
+    communityID: string,
+    virtualContributorID: string
+  ): Promise<boolean> {
+    const account = await this.getAccountForCommunityOrFail(communityID);
+
+    const virtualContributorMatches = await this.entityManager.count(
+      VirtualContributor,
+      {
+        where: {
+          id: virtualContributorID,
+          account: {
+            id: account.id,
+          },
+        },
+      }
     );
+    if (virtualContributorMatches > 0) {
+      return true;
+    }
+    return false;
   }
 
   public async getCommunityFromUpdatesOrFail(
@@ -313,6 +288,30 @@ export class CommunityResolverService {
       throw new EntityNotFoundException(
         `Unable to find space for community: ${communityId}`,
         LogContext.URL_GENERATOR
+      );
+    }
+    return space;
+  }
+
+  public async getSpaceForCollaborationOrFail(
+    collaborationID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          id: collaborationID,
+        },
+      },
+      relations: {
+        ...options?.relations,
+        profile: true,
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for collaboration: ${collaborationID}`,
+        LogContext.SPACES
       );
     }
     return space;

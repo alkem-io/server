@@ -9,7 +9,7 @@ export abstract class ICalendarEvent extends INameable {
   @Field(() => CalendarEventType, {
     description: 'The event type, e.g. webinar, meetup etc.',
   })
-  type!: string;
+  type!: CalendarEventType;
 
   calendar?: ICalendar;
 
@@ -46,5 +46,5 @@ export abstract class ICalendarEvent extends INameable {
     nullable: true,
     description: 'The length of the event in days.',
   })
-  durationDays!: number;
+  durationDays?: number;
 }

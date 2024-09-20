@@ -32,7 +32,6 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { ContributorService } from '../contributor/contributor.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -40,8 +39,7 @@ export class OrganizationResolverFields {
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
     private groupService: UserGroupService,
-    private preferenceSetService: PreferenceSetService,
-    private contributorService: ContributorService
+    private preferenceSetService: PreferenceSetService
   ) {}
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -64,7 +62,7 @@ export class OrganizationResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read user groups on org: ${organization.nameID}`
+      `read user groups on org: ${organization.id}`
     );
 
     return await this.organizationService.getUserGroups(organization);
@@ -90,7 +88,7 @@ export class OrganizationResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read single usergroup on org: ${organization.nameID}`
+      `read single usergroup on org: ${organization.id}`
     );
 
     const userGroup = await this.groupService.getUserGroupOrFail(groupID, {
@@ -111,26 +109,23 @@ export class OrganizationResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('accounts', () => [IAccount], {
-    nullable: false,
-    description: 'The accounts hosted by this Organization.',
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The account hosted by this Organization.',
   })
-  @Profiling.api
-  async accounts(
+  async account(
     @Parent() organization: IOrganization,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IAccount[]> {
-    const accountsVisible = await this.authorizationService.isAccessGranted(
+  ): Promise<IAccount | undefined> {
+    const accountVisible = this.authorizationService.isAccessGranted(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.UPDATE
     );
-    if (accountsVisible) {
-      return await this.contributorService.getAccountsHostedByContributor(
-        organization
-      );
+    if (accountVisible) {
+      return await this.organizationService.getAccount(organization);
     }
-    return [];
+    return undefined;
   }
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
@@ -230,7 +225,7 @@ export class OrganizationResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read preferences on org: ${organization.nameID}`
+      `read preferences on org: ${organization.id}`
     );
     const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
       organization.id

@@ -10,26 +10,29 @@ import { CommunicationModule } from '@domain/communication/communication/communi
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InnovationHubModule } from '@domain/innovation-hub';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountModule } from '@domain/space/account/account.module';
-import { Account } from '@domain/space/account/account.entity';
 import { SearchIngestModule } from '@services/api/search/v2/ingest';
+import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
+import { Space } from '@domain/space/space/space.entity';
+import { ContributorModule } from '@domain/community/contributor/contributor.module';
 
 @Module({
   imports: [
+    AiServerModule,
     AgentModule,
     AuthorizationPolicyModule,
+    ContributorModule,
     SpaceModule,
+    OrganizationModule,
     AccountModule,
+    SpaceModule,
     UserModule,
     AdminAuthorizationModule,
     PlatformModule,
     PlatformAuthorizationPolicyModule,
     CommunicationModule,
-    OrganizationModule,
-    TypeOrmModule.forFeature([Account]),
-    InnovationHubModule,
+    TypeOrmModule.forFeature([Space]),
     NameReporterModule,
     SearchIngestModule,
   ],

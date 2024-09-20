@@ -17,24 +17,49 @@ import {
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IWhiteboard } from './whiteboard.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { WhiteboardService } from './whiteboard.service';
 
 @Injectable()
 export class WhiteboardAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private whiteboardService: WhiteboardService
   ) {}
 
   async applyAuthorizationPolicy(
-    whiteboard: IWhiteboard,
+    whiteboardID: string,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IWhiteboard> {
+  ): Promise<IAuthorizationPolicy[]> {
+    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
+      whiteboardID,
+      {
+        loadEagerRelations: false,
+        relations: {
+          authorization: true,
+          profile: {
+            authorization: true,
+          },
+        },
+        select: {
+          id: true,
+          createdBy: true,
+          contentUpdatePolicy: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          profile: {
+            id: true,
+          },
+        },
+      }
+    );
     if (!whiteboard.profile) {
       throw new RelationshipNotFoundException(
-        `Unable to load entities on whiteboard reset auth:  ${whiteboard.id} `,
+        `Unable to load entities on whiteboard reset auth:  ${whiteboardID} `,
         LogContext.COLLABORATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     whiteboard.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         whiteboard.authorization,
@@ -46,14 +71,16 @@ export class WhiteboardAuthorizationService {
       whiteboard.authorization,
       whiteboard
     );
+    updatedAuthorizations.push(whiteboard.authorization);
 
-    whiteboard.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        whiteboard.profile,
+        whiteboard.profile.id,
         whiteboard.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    return whiteboard;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(whiteboard: IWhiteboard): IAuthorizationPolicy {

@@ -1,9 +1,6 @@
-import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { IInnovationHub, InnovationHub } from './types';
+import { IInnovationHub } from './types';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -12,47 +9,62 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CREDENTIAL_RULE_TYPES_INNOVATION_HUBS } from '@common/constants/authorization/credential.rule.types.constants';
+import { InnovationHubService } from './innovation.hub.service';
 
 @Injectable()
 export class InnovationHubAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    @InjectRepository(InnovationHub)
-    private spaceRepository: Repository<InnovationHub>
+    private innovationHubService: InnovationHubService
   ) {}
 
-  public async applyAuthorizationPolicyAndSave(
-    hub: IInnovationHub
-  ): Promise<IInnovationHub> {
-    hub.authorization = this.authorizationPolicyService.reset(
-      hub.authorization
+  public async applyAuthorizationPolicy(
+    hubInput: IInnovationHub,
+    parentAuthorization: IAuthorizationPolicy | undefined
+  ): Promise<IAuthorizationPolicy[]> {
+    const hub = await this.innovationHubService.getInnovationHubOrFail(
+      hubInput.id,
+      {
+        relations: {
+          profile: true,
+        },
+      }
     );
+
+    if (!hub.profile) {
+      throw new EntityNotInitializedException(
+        `authorization: Unable to load InnovationHub entities for auth reset: ${hubInput.id}`,
+        LogContext.INNOVATION_HUB
+      );
+    }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
+    // Clone the authorization policy + allow anonymous read access to ensure
+    // pages are visible / loadable by all users
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        parentAuthorization
+      );
+    clonedAuthorization.anonymousReadAccess = true;
+
     hub.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+      this.authorizationPolicyService.inheritParentAuthorization(
+        hub.authorization,
+        clonedAuthorization
+      );
+
+    hub.authorization = this.extendAuthorizationPolicyRules(hub.authorization);
+    updatedAuthorizations.push(hub.authorization);
+
+    const profileAuthorizations =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        hub.profile.id,
         hub.authorization
       );
-    hub.authorization.anonymousReadAccess = true;
-    hub.authorization = this.extendAuthorizationPolicyRules(hub.authorization);
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    hub = await this.cascadeAuthorization(hub);
-
-    return this.spaceRepository.save(hub);
-  }
-
-  private async cascadeAuthorization(
-    innovationHub: IInnovationHub
-  ): Promise<IInnovationHub> {
-    if (innovationHub.profile) {
-      innovationHub.profile =
-        await this.profileAuthorizationService.applyAuthorizationPolicy(
-          innovationHub.profile,
-          innovationHub.authorization
-        );
-    }
-
-    return innovationHub;
+    return updatedAuthorizations;
   }
 
   private extendAuthorizationPolicyRules(

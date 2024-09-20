@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsSelect, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ForbiddenException,
@@ -24,6 +24,7 @@ import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/a
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -34,6 +35,14 @@ export class AuthorizationPolicyService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  public authorizationSelectOptions: FindOptionsSelect<AuthorizationPolicy> = {
+    id: true,
+    anonymousReadAccess: true,
+    credentialRules: true,
+    privilegeRules: true,
+    verifiedCredentialRules: true,
+  };
 
   createCredentialRule(
     grantedPrivileges: AuthorizationPrivilege[],
@@ -119,7 +128,9 @@ export class AuthorizationPolicyService {
     privileges: AuthorizationPrivilege[],
     name: string
   ): IAuthorizationPolicy {
-    const authorization = new AuthorizationPolicy();
+    const authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.IN_MEMORY
+    );
     const rule = this.createCredentialRuleGlobalAdmins(
       privileges,
       globalRoles,
@@ -173,7 +184,17 @@ export class AuthorizationPolicyService {
   async save(
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
-    return await this.authorizationPolicyRepository.save(authorizationPolicy);
+    return this.authorizationPolicyRepository.save(authorizationPolicy);
+  }
+
+  async saveAll(authorizationPolicies: IAuthorizationPolicy[]): Promise<void> {
+    this.logger.verbose?.(
+      `Saving ${authorizationPolicies.length} authorization policies`,
+      LogContext.AUTH
+    );
+    await this.authorizationPolicyRepository.save(authorizationPolicies, {
+      chunk: 100,
+    });
   }
 
   cloneAuthorizationPolicy(
@@ -293,7 +314,7 @@ export class AuthorizationPolicyService {
         )}`,
         LogContext.AUTH
       );
-      child = new AuthorizationPolicy();
+      child = new AuthorizationPolicy(AuthorizationPolicyType.UNKNOWN);
     }
     const parent = this.validateAuthorization(parentAuthorization);
     const resetAuthPolicy = this.reset(child);

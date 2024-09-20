@@ -23,7 +23,7 @@ export class ForumAuthorizationService {
   async applyAuthorizationPolicy(
     forumInput: IForum,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IForum> {
+  ): Promise<IAuthorizationPolicy[]> {
     const forum = await this.forumService.getForumOrFail(forumInput.id, {
       relations: {
         discussions: {
@@ -38,6 +38,7 @@ export class ForumAuthorizationService {
         LogContext.COMMUNICATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     forum.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -46,15 +47,18 @@ export class ForumAuthorizationService {
       );
 
     forum.authorization = this.appendPrivilegeRules(forum.authorization);
+    updatedAuthorizations.push(forum.authorization);
 
     for (const discussion of forum.discussions) {
-      await this.discussionAuthorizationService.applyAuthorizationPolicy(
-        discussion,
-        forum.authorization
-      );
+      const updatedDiscusionAuthorizations =
+        await this.discussionAuthorizationService.applyAuthorizationPolicy(
+          discussion,
+          forum.authorization
+        );
+      updatedAuthorizations.push(...updatedDiscusionAuthorizations);
     }
 
-    return forum;
+    return updatedAuthorizations;
   }
 
   private appendPrivilegeRules(

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { IProfile } from '@domain/common/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from './profile.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -18,25 +17,60 @@ export class ProfileAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    profileInput: IProfile,
+    profileID: string,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IProfile> {
-    const profile = await this.profileService.getProfileOrFail(
-      profileInput.id,
-      {
-        relations: {
-          references: true,
-          tagsets: true,
+  ): Promise<IAuthorizationPolicy[]> {
+    const profile = await this.profileService.getProfileOrFail(profileID, {
+      loadEagerRelations: false,
+      relations: {
+        authorization: true,
+        references: { authorization: true },
+        tagsets: { authorization: true },
+        visuals: { authorization: true },
+        storageBucket: {
           authorization: true,
-          visuals: true,
-          storageBucket: {
-            documents: {
-              tagset: true,
+          documents: {
+            authorization: true,
+            tagset: { authorization: true },
+          },
+        },
+      },
+      select: {
+        id: true,
+        authorization:
+          this.authorizationPolicyService.authorizationSelectOptions,
+        references: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        tagsets: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        visuals: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        storageBucket: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          documents: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            tagset: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
             },
           },
         },
-      }
-    );
+      },
+    });
     if (
       !profile.references ||
       !profile.tagsets ||
@@ -45,10 +79,11 @@ export class ProfileAuthorizationService {
       !profile.storageBucket
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load Profile with entities at start of auth reset: ${profileInput.id} `,
+        `Unable to load Profile with entities at start of auth reset: ${profileID} `,
         LogContext.ACCOUNT
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Inherit from the parent
     profile.authorization =
@@ -56,6 +91,7 @@ export class ProfileAuthorizationService {
         profile.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(profile.authorization);
 
     for (const reference of profile.references) {
       reference.authorization =
@@ -63,6 +99,7 @@ export class ProfileAuthorizationService {
           reference.authorization,
           profile.authorization
         );
+      updatedAuthorizations.push(reference.authorization);
     }
 
     for (const tagset of profile.tagsets) {
@@ -71,21 +108,25 @@ export class ProfileAuthorizationService {
           tagset.authorization,
           profile.authorization
         );
+      updatedAuthorizations.push(tagset.authorization);
     }
 
     for (const visual of profile.visuals) {
-      this.visualAuthorizationService.applyAuthorizationPolicy(
-        visual,
-        profile.authorization
-      );
+      visual.authorization =
+        this.visualAuthorizationService.applyAuthorizationPolicy(
+          visual,
+          profile.authorization
+        );
+      updatedAuthorizations.push(visual.authorization);
     }
 
-    profile.storageBucket =
+    const storageBucketAuthorizations =
       this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );
+    updatedAuthorizations.push(...storageBucketAuthorizations);
 
-    return profile;
+    return updatedAuthorizations;
   }
 }

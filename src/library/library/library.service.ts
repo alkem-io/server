@@ -9,12 +9,15 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
 import { InnovationPacksOrderBy } from '@common/enums/innovation.packs.orderBy';
-import {
-  IVirtualContributor,
-  VirtualContributor,
-} from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
+import { ITemplateResult } from './dto/library.dto.template.result';
+import { RelationshipNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class LibraryService {
@@ -58,6 +61,16 @@ export class LibraryService {
     return virtualContributors;
   }
 
+  public async getListedInnovationHubs(): Promise<IInnovationHub[]> {
+    const innovationHubs = await this.entityManager.find(InnovationHub, {
+      where: {
+        listedInStore: true,
+        searchVisibility: SearchVisibility.PUBLIC,
+      },
+    });
+    return innovationHubs;
+  }
+
   public async getListedInnovationPacks(
     limit?: number,
     orderBy: InnovationPacksOrderBy = InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC
@@ -93,5 +106,48 @@ export class LibraryService {
       return 0;
     });
     return limit && limit > 0 ? sortedPacks.slice(0, limit) : sortedPacks;
+  }
+
+  public async getTemplatesInListedInnovationPacks(
+    filter?: LibraryTemplatesFilterInput
+  ): Promise<ITemplateResult[]> {
+    // Note: potentially we can also make this all a lot faster with having a smart select on the included Templates that are returned
+    const innovationPacks = await this.entityManager.find(InnovationPack, {
+      where: {
+        listedInStore: true,
+        searchVisibility: SearchVisibility.PUBLIC,
+      },
+      relations: {
+        templatesSet: {
+          templates: true,
+        },
+      },
+    });
+    const templateResults: ITemplateResult[] = [];
+    for (const innovationPack of innovationPacks) {
+      if (
+        !innovationPack.templatesSet ||
+        !innovationPack.templatesSet.templates
+      ) {
+        throw new RelationshipNotFoundException(
+          `InnovationPack ${innovationPack.id} does not have a templatesSet or templates`,
+          LogContext.LIBRARY
+        );
+      }
+      let filteredTemplates = innovationPack.templatesSet.templates;
+      if (filter && filter.types) {
+        filteredTemplates = filteredTemplates.filter(template =>
+          filter.types.includes(template.type)
+        );
+      }
+      for (const template of filteredTemplates) {
+        const result: ITemplateResult = {
+          template,
+          innovationPack,
+        };
+        templateResults.push(result);
+      }
+    }
+    return templateResults;
   }
 }

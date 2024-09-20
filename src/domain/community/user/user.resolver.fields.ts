@@ -7,7 +7,7 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
-import { IUser, User } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -30,8 +30,8 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ContributorService } from '../contributor/contributor.service';
 import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -40,7 +40,6 @@ export class UserResolverFields {
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
     private messagingService: MessagingService,
-    private contributorService: ContributorService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -59,7 +58,7 @@ export class UserResolverFields {
     const profile = await loader.load(user.id);
     // Note: the user profile is public.
     // Check if the user can read the profile entity, not the actual User entity
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.READ,
@@ -163,14 +162,14 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('phone', () => String, {
-    nullable: false,
+    nullable: true,
     description: 'The phone number for this User.',
   })
   @Profiling.api
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string | 'not accessible'> {
+  ): Promise<string | null | 'not accessible'> {
     if (
       await this.isAccessGranted(
         user,
@@ -178,30 +177,31 @@ export class UserResolverFields {
         AuthorizationPrivilege.READ_USER_PII
       )
     ) {
-      return user.phone;
+      return user.phone ?? null;
     }
     return 'not accessible';
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('accounts', () => [IAccount], {
-    nullable: false,
-    description: 'The accounts hosted by this User.',
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The account hosted by this User.',
   })
-  @Profiling.api
-  async accounts(
+  async account(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IAccount[]> {
-    const accountsVisible = await this.isAccessGranted(
-      user,
-      agentInfo,
-      AuthorizationPrivilege.READ_USER_PII
-    );
-    if (accountsVisible) {
-      return await this.contributorService.getAccountsHostedByContributor(user);
+  ): Promise<IAccount | undefined> {
+    const accountVisible =
+      user.id === agentInfo.userID || // user can see their own account
+      (await this.isAccessGranted(
+        user,
+        agentInfo,
+        AuthorizationPrivilege.READ_USER_PII
+      ));
+    if (accountVisible) {
+      return await this.userService.getAccount(user);
     }
-    return [];
+    return undefined;
   }
 
   @UseGuards(GraphqlGuard)

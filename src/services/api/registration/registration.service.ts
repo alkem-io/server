@@ -10,7 +10,6 @@ import { getEmailDomain } from '@common/utils';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
@@ -22,14 +21,18 @@ import { PlatformInvitationService } from '@platform/invitation/platform.invitat
 import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AccountService } from '@domain/space/account/account.service';
+import { IOrganization } from '@domain/community/organization';
 
 export class RegistrationService {
   constructor(
+    private accountService: AccountService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private organizationService: OrganizationService,
     private organizationRoleService: OrganizationRoleService,
     private preferenceSetService: PreferenceSetService,
-    private userAuthorizationService: UserAuthorizationService,
     private communityRoleService: CommunityRoleService,
     private platformInvitationService: PlatformInvitationService,
     private platformRoleService: PlatformRoleService,
@@ -47,17 +50,13 @@ export class RegistrationService {
       );
     }
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    let user = await this.userService.createUserFromAgentInfo(agentInfo);
-    user = await this.userAuthorizationService.grantCredentials(user);
+    const user = await this.userService.createUserFromAgentInfo(agentInfo);
 
-    await this.assignUserToOrganizationByDomain(agentInfo, user);
+    await this.assignUserToOrganizationByDomain(user);
     return user;
   }
 
-  async assignUserToOrganizationByDomain(
-    agentInfo: AgentInfo,
-    user: IUser
-  ): Promise<boolean> {
+  async assignUserToOrganizationByDomain(user: IUser): Promise<boolean> {
     const userEmailDomain = getEmailDomain(user.email);
 
     const org =
@@ -81,7 +80,7 @@ export class RegistrationService {
       ).value === 'true';
     if (!orgMatchDomain) {
       this.logger.verbose?.(
-        `Organization '${org.nameID}' preference ${OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN} is disabled`,
+        `Organization '${org.id}' preference ${OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN} is disabled`,
         LogContext.COMMUNITY
       );
       return false;
@@ -93,7 +92,7 @@ export class RegistrationService {
       OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
     ) {
       this.logger.verbose?.(
-        `Organization '${org.nameID}' not verified`,
+        `Organization '${org.id}' not verified`,
         LogContext.COMMUNITY
       );
       return false;
@@ -106,7 +105,7 @@ export class RegistrationService {
     });
 
     this.logger.verbose?.(
-      `User ${user.nameID} successfully added to Organization '${org.nameID}'`,
+      `User ${user.id} successfully added to Organization '${org.id}'`,
       LogContext.COMMUNITY
     );
     return true;
@@ -136,12 +135,14 @@ export class RegistrationService {
           );
         invitation.invitedToParent =
           platformInvitation.communityInvitedToParent;
-        invitation =
+
+        invitation = await this.invitationService.save(invitation);
+        const authorization =
           await this.invitationAuthorizationService.applyAuthorizationPolicy(
             invitation,
             community.authorization
           );
-        invitation = await this.invitationService.save(invitation);
+        await this.authorizationPolicyService.save(authorization);
 
         communityInvitations.push(invitation);
       }
@@ -178,6 +179,35 @@ export class RegistrationService {
       await this.applicationService.deleteApplication({ ID: application.id });
     }
 
-    return await this.userService.deleteUser(deleteData);
+    let user = await this.userService.getUserOrFail(userID);
+    const account = await this.userService.getAccount(user);
+
+    user = await this.userService.deleteUser(deleteData);
+    await this.accountService.deleteAccount(account);
+    return user;
+  }
+
+  async deleteOrganizationWithPendingMemberships(
+    deleteData: DeleteUserInput
+  ): Promise<IOrganization> {
+    const organizationID = deleteData.ID;
+
+    const invitations =
+      await this.invitationService.findInvitationsForContributor(
+        organizationID
+      );
+    for (const invitation of invitations) {
+      await this.invitationService.deleteInvitation({ ID: invitation.id });
+    }
+
+    let organization =
+      await this.organizationService.getOrganizationOrFail(organizationID);
+    const account = await this.organizationService.getAccount(organization);
+
+    organization =
+      await this.organizationService.deleteOrganization(deleteData);
+    await this.accountService.deleteAccount(account);
+    organization.id = organizationID;
+    return organization;
   }
 }

@@ -23,16 +23,16 @@ export class RoomAuthorizationService {
   applyAuthorizationPolicy(
     room: IRoom,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IRoom {
-    room.authorization =
+  ): IAuthorizationPolicy {
+    let updatedAuthorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         room.authorization,
         parentAuthorization
       );
 
-    room.authorization = this.allowAdminsToComment(room.authorization);
+    updatedAuthorization = this.allowAdminsToComment(updatedAuthorization);
 
-    return room;
+    return updatedAuthorization;
   }
 
   public allowContributorsToCreateMessages(
