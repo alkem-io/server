@@ -103,17 +103,17 @@ export class RoleSetResolverMutations {
     await this.roleSetService.assignUserToRole(
       roleSet,
       roleData.role,
-      roleData.userID,
+      roleData.contributorID,
       agentInfo,
       true
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
-    const user = await this.userService.getUserOrFail(roleData.userID);
+    const user = await this.userService.getUserOrFail(roleData.contributorID);
     const authorizations =
       await this.userAuthorizationService.applyAuthorizationPolicy(user);
     await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.userService.getUserOrFail(roleData.userID);
+    return await this.userService.getUserOrFail(roleData.contributorID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -138,7 +138,7 @@ export class RoleSetResolverMutations {
     return await this.roleSetService.assignOrganizationToRole(
       roleSet,
       roleData.role,
-      roleData.organizationID
+      roleData.contributorID
     );
   }
 
@@ -160,7 +160,7 @@ export class RoleSetResolverMutations {
       const sameAccount =
         await this.roleSetService.isCommunityAccountMatchingVcAccount(
           roleSet.id,
-          roleData.virtualContributorID
+          roleData.contributorID
         );
       if (sameAccount) {
         requiredPrivilege =
@@ -188,13 +188,13 @@ export class RoleSetResolverMutations {
     await this.roleSetService.assignVirtualToRole(
       roleSet,
       roleData.role,
-      roleData.virtualContributorID,
+      roleData.contributorID,
       agentInfo,
       true
     );
 
     return await this.virtualContributorService.getVirtualContributorOrFail(
-      roleData.virtualContributorID
+      roleData.contributorID
     );
   }
 
@@ -219,7 +219,7 @@ export class RoleSetResolverMutations {
     const extendedAuthorization =
       this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
         community,
-        roleData.userID
+        roleData.contributorID
       );
 
     await this.authorizationService.grantAccessOrFail(
@@ -232,15 +232,15 @@ export class RoleSetResolverMutations {
     await this.roleSetService.removeUserFromRole(
       roleSet,
       roleData.role,
-      roleData.userID
+      roleData.contributorID
     );
     // reset the user authorization policy so that their profile is not visible
     // to other community members
-    const user = await this.userService.getUserOrFail(roleData.userID);
+    const user = await this.userService.getUserOrFail(roleData.contributorID);
     const authorizations =
       await this.userAuthorizationService.applyAuthorizationPolicy(user);
     await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.userService.getUserOrFail(roleData.userID);
+    return await this.userService.getUserOrFail(roleData.contributorID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -265,7 +265,7 @@ export class RoleSetResolverMutations {
     return await this.roleSetService.removeOrganizationFromRole(
       roleSet,
       roleData.role,
-      roleData.organizationID
+      roleData.contributorID
     );
   }
 
@@ -287,7 +287,7 @@ export class RoleSetResolverMutations {
     const extendedAuthorization =
       await this.roleSetAuthorizationService.extendAuthorizationPolicyForVirtualContributorRemoval(
         roleSet,
-        roleData.virtualContributorID
+        roleData.contributorID
       );
 
     await this.authorizationService.grantAccessOrFail(
@@ -300,11 +300,11 @@ export class RoleSetResolverMutations {
     await this.roleSetService.removeVirtualFromRole(
       roleSet,
       roleData.role,
-      roleData.virtualContributorID
+      roleData.contributorID
     );
 
     return await this.virtualContributorService.getVirtualContributorOrFail(
-      roleData.virtualContributorID
+      roleData.contributorID
     );
   }
 

@@ -1,5 +1,5 @@
 import { CommunityRoleType } from '@common/enums/community.role';
-import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
@@ -7,8 +7,8 @@ export class AssignRoleOnRoleSetToOrganizationInput {
   @Field(() => UUID, { nullable: false })
   roleSetID!: string;
 
-  @Field(() => UUID_NAMEID, { nullable: false })
-  organizationID!: string;
+  @Field(() => UUID, { nullable: false })
+  contributorID!: string;
 
   @Field(() => CommunityRoleType, { nullable: false })
   role!: CommunityRoleType;
