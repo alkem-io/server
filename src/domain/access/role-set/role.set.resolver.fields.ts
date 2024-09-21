@@ -1,7 +1,7 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { RoleSetService } from './role.set.service';
 import { IForm } from '@domain/common/form/form.interface';
 import { IRoleSet } from './role.set.interface';
@@ -30,48 +30,16 @@ export class RoleSetResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('memberUsers', () => [IUser], {
-    nullable: false,
-    description: 'All users that are contributing to this Community.',
-  })
-  @Profiling.api
-  async memberUsers(
-    @Parent() roleSet: IRoleSet,
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The positive number of member users to return; if omitted returns all member users.',
-      nullable: true,
-    })
-    limit?: number
-  ) {
-    if (limit && limit < 0) {
-      throw new PaginationInputOutOfBoundException(
-        `Limit expects a positive amount: ${limit} provided instead`
-      );
-    }
-
-    return await this.roleSetService.getUsersWithRole(
-      roleSet,
-      CommunityRoleType.MEMBER,
-      limit
-    );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('availableMemberUsers', () => PaginatedUsers, {
     nullable: false,
     description: 'All available users that are potential Community members.',
   })
-  @Profiling.api
-  async availableMemberUsers(
+  async availableUsersForMemberRole(
     @Parent() roleSet: IRoleSet,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ) {
-    const memberRoleCredentials =
+    const roleDefinition =
       await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
         CommunityRoleType.MEMBER
@@ -87,7 +55,7 @@ export class RoleSetResolverFields {
       : undefined;
 
     const roleSetMemberCredentials = {
-      member: memberRoleCredentials,
+      member: roleDefinition,
       parentCommunityMember: parentCommunityMemberCredentials,
     };
 
@@ -100,63 +68,15 @@ export class RoleSetResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('usersInRole', () => [IUser], {
-    nullable: false,
-    description: 'All users that have the specified Role in this Community.',
-  })
-  @Profiling.api
-  async usersInRole(
-    @Parent() roleSet: IRoleSet,
-    @Args('role', { type: () => CommunityRoleType, nullable: false })
-    role: CommunityRoleType
-  ) {
-    return await this.roleSetService.getUsersWithRole(roleSet, role);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('organizationsInRole', () => [IOrganization], {
-    nullable: false,
-    description:
-      'All Organizations that have the specified Role in this Community.',
-  })
-  @Profiling.api
-  async organizationsInRole(
-    @Parent() roleSet: IRoleSet,
-    @Args('role', { type: () => CommunityRoleType, nullable: false })
-    role: CommunityRoleType
-  ): Promise<IOrganization[]> {
-    return await this.roleSetService.getOrganizationsWithRole(roleSet, role);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
-    nullable: false,
-    description: 'All virtuals that have the specified Role in this Community.',
-  })
-  @Profiling.api
-  async virtualsInRole(
-    @Parent() roleSet: IRoleSet,
-    @Args('role', { type: () => CommunityRoleType, nullable: false })
-    role: CommunityRoleType
-  ) {
-    return await this.roleSetService.getVirtualContributorsWithRole(
-      roleSet,
-      role
-    );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('availableLeadUsers', () => PaginatedUsers, {
     nullable: false,
     description:
-      'All member users excluding the current lead users in this Community.',
+      'All  users excluding the current lead users in this Community.',
   })
-  @Profiling.api
-  async availableLeadUsers(
+  async availableUsersForLeadRole(
     @Parent() roleSet: IRoleSet,
+    @Args('role', { type: () => CommunityRoleType, nullable: false })
+    role: CommunityRoleType,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ) {
@@ -186,11 +106,71 @@ export class RoleSetResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('usersInRole', () => [IUser], {
+    nullable: false,
+    description:
+      'All users that are contributing to this Community in the specified Role.',
+  })
+  async usersInRole(
+    @Parent() roleSet: IRoleSet,
+    @Args('role', { type: () => CommunityRoleType, nullable: false })
+    role: CommunityRoleType,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The positive number of users to return; if omitted returns all users in the specified role.',
+      nullable: true,
+    })
+    limit?: number
+  ): Promise<IUser[]> {
+    if (limit && limit < 0) {
+      throw new PaginationInputOutOfBoundException(
+        `Limit expects a positive amount: ${limit} provided instead`
+      );
+    }
+
+    return await this.roleSetService.getUsersWithRole(roleSet, role, limit);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('organizationsInRole', () => [IOrganization], {
+    nullable: false,
+    description:
+      'All Organizations that have the specified Role in this Community.',
+  })
+  async organizationsInRole(
+    @Parent() roleSet: IRoleSet,
+    @Args('role', { type: () => CommunityRoleType, nullable: false })
+    role: CommunityRoleType
+  ): Promise<IOrganization[]> {
+    return await this.roleSetService.getOrganizationsWithRole(roleSet, role);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
+    nullable: false,
+    description: 'All virtuals that have the specified Role in this Community.',
+  })
+  async virtualContributorsInRole(
+    @Parent() roleSet: IRoleSet,
+    @Args('role', { type: () => CommunityRoleType, nullable: false })
+    role: CommunityRoleType
+  ) {
+    return await this.roleSetService.getVirtualContributorsWithRole(
+      roleSet,
+      role
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [IInvitation], {
     nullable: false,
     description: 'Invitations for this roleSet.',
   })
-  @Profiling.api
   async inivitations(@Parent() roleSet: IRoleSet): Promise<IInvitation[]> {
     return await this.roleSetService.getInvitations(roleSet);
   }
@@ -202,7 +182,6 @@ export class RoleSetResolverFields {
     description:
       'Invitations to join this Community for users not yet on the Alkemio platform.',
   })
-  @Profiling.api
   async platformInvitations(
     @Parent() roleSet: IRoleSet
   ): Promise<IPlatformInvitation[]> {
@@ -225,7 +204,6 @@ export class RoleSetResolverFields {
     nullable: false,
     description: 'The Form used for Applications to this roleSet.',
   })
-  @Profiling.api
   async applicationForm(@Parent() roleSet: RoleSet): Promise<IForm> {
     return await this.roleSetService.getApplicationForm(roleSet);
   }
@@ -235,7 +213,6 @@ export class RoleSetResolverFields {
     nullable: false,
     description: 'The Role Definitions included in this roleSet.',
   })
-  @Profiling.api
   async roles(@Parent() roleSet: RoleSet): Promise<IRole[]> {
     return await this.roleSetService.getRoleDefinitions(roleSet);
   }

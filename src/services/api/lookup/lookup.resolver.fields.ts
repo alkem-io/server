@@ -60,6 +60,8 @@ import { TemplateService } from '@domain/template/template/template.service';
 import { ITemplate } from '@domain/template/template/template.interface';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -91,7 +93,8 @@ export class LookupResolverFields {
     private userService: UserService,
     private guidelinesService: CommunityGuidelinesService,
     private virtualContributorService: VirtualContributorService,
-    private innovationHubService: InnovationHubService
+    private innovationHubService: InnovationHubService,
+    private roleSetService: RoleSetService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -133,6 +136,26 @@ export class LookupResolverFields {
     );
 
     return account;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IRoleSet, {
+    nullable: true,
+    description: 'Lookup the specified RoleSet',
+  })
+  async roleSet(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IRoleSet> {
+    const roleSet = await this.roleSetService.getRoleSetOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      roleSet.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup RoleSet: ${roleSet.id}`
+    );
+
+    return roleSet;
   }
 
   @UseGuards(GraphqlGuard)

@@ -71,10 +71,9 @@ import { CreateAccountInput } from '@domain/space/account/dto';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
-import { UpdateInnovationFlowEntityInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.update.entity';
-import { ApplyForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.apply';
-import { InviteContributorForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.invite.contributor';
 import { InviteNewContributorForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.platform.invitation.community';
+import { InviteForBaseRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.invite.for.base.role';
+import { ApplyForBaseRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.apply.for.base.role';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -131,8 +130,8 @@ export class BaseHandler extends AbstractHandler {
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
       VisualUploadImageInput,
-      ApplyForRoleOnRoleSetInput,
-      InviteContributorForRoleOnRoleSetInput,
+      ApplyForBaseRoleOnRoleSetInput,
+      InviteForBaseRoleOnRoleSetInput,
       InviteNewContributorForRoleOnRoleSetInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,

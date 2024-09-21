@@ -4,7 +4,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 import { MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 
 @InputType()
-export class InviteContributorForRoleOnRoleSetInput {
+export class InviteForBaseRoleOnRoleSetInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
   roleSetID!: string;

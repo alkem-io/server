@@ -30,6 +30,7 @@ import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.m
 import { AccountModule } from '@domain/space/account/account.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { TemplatesSetModule } from '@domain/template/templates-set/templates.set
     SpaceModule,
     CommunityGuidelinesModule,
     VirtualContributorModule,
+    RoleSetModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

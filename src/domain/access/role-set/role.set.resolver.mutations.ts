@@ -14,8 +14,6 @@ import { ApplicationEventInput } from '../application/dto/application.dto.event'
 import { IApplication } from '../application/application.interface';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
-import { JoinAsBaseRoleOnRoleSetInput } from './dto/role.set.dto.join';
-import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.invitation';
 import { ApplicationService } from '../application/application.service';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
@@ -41,9 +39,9 @@ import { AssignRoleOnRoleSetToVirtualContributorInput } from './dto/role.set.dto
 import { RemoveRoleOnRoleSetFromUserInput } from './dto/role.set.dto.role.remove.user';
 import { RemoveRoleOnRoleSetFromOrganizationInput } from './dto/role.set.dto.role.remove.organization';
 import { RemoveRoleOnRoleSetFromVirtualContributorInput } from './dto/role.set.dto.role.remove.virtual';
-import { ApplyForRoleOnRoleSetInput } from './dto/role.set.dto.apply';
+import { ApplyForBaseRoleOnRoleSetInput } from './dto/role.set.dto.apply.for.base.role';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { InviteContributorForRoleOnRoleSetInput } from './dto/role.set.dto.invite.contributor';
+import { InviteForBaseRoleOnRoleSetInput } from './dto/role.set.dto.invite.for.base.role';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -82,7 +80,7 @@ export class RoleSetResolverMutations {
   @Mutation(() => IUser, {
     description: 'Assigns a User to a role in the specified Community.',
   })
-  async assignCommunityRoleToUser(
+  async assignRoleToUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignRoleOnRoleSetToUserInput
   ): Promise<IUser> {
@@ -122,7 +120,7 @@ export class RoleSetResolverMutations {
   @Mutation(() => IOrganization, {
     description: 'Assigns an Organization a Role in the specified Community.',
   })
-  async assignCommunityRoleToOrganization(
+  async assignRoleToOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData')
     roleData: AssignRoleOnRoleSetToOrganizationInput
@@ -149,7 +147,7 @@ export class RoleSetResolverMutations {
     description:
       'Assigns a Virtual Contributor to a role in the specified Community.',
   })
-  async assignCommunityRoleToVirtual(
+  async assignRoleToVirtual(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignRoleOnRoleSetToVirtualContributorInput
   ): Promise<IVirtualContributor> {
@@ -204,7 +202,7 @@ export class RoleSetResolverMutations {
   @Mutation(() => IUser, {
     description: 'Removes a User from a Role in the specified Community.',
   })
-  async removeCommunityRoleFromUser(
+  async removeRoleFromUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveRoleOnRoleSetFromUserInput
   ): Promise<IUser> {
@@ -250,7 +248,7 @@ export class RoleSetResolverMutations {
     description:
       'Removes an Organization from a Role in the specified Community.',
   })
-  async removeCommunityRoleFromOrganization(
+  async removeRoleFromOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveRoleOnRoleSetFromOrganizationInput
   ): Promise<IOrganization> {
@@ -275,7 +273,7 @@ export class RoleSetResolverMutations {
   @Mutation(() => IVirtualContributor, {
     description: 'Removes a Virtual from a Role in the specified Community.',
   })
-  async removeCommunityRoleFromVirtual(
+  async removeRoleFromVirtual(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveRoleOnRoleSetFromVirtualContributorInput
   ): Promise<IVirtualContributor> {
@@ -314,9 +312,9 @@ export class RoleSetResolverMutations {
   @Mutation(() => IApplication, {
     description: 'Apply to join the specified Community as a member.',
   })
-  async applyForCommunityMembership(
+  async applyForBaseRoleOnRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('applicationData') applicationData: ApplyForRoleOnRoleSetInput
+    @Args('applicationData') applicationData: ApplyForBaseRoleOnRoleSetInput
   ): Promise<IApplication> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       applicationData.roleSetID,
@@ -387,7 +385,7 @@ export class RoleSetResolverMutations {
   async inviteContributorsForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: InviteContributorForRoleOnRoleSetInput
+    invitationData: InviteForBaseRoleOnRoleSetInput
   ): Promise<IInvitation[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,
@@ -628,47 +626,6 @@ export class RoleSetResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IRoleSet, {
-    description:
-      'Join the specified Community as a member, without going through an approval process.',
-  })
-  async joinRoleSet(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('joinCommunityData') joiningData: JoinAsBaseRoleOnRoleSetInput
-  ): Promise<IRoleSet> {
-    const roleSet = await this.roleSetService.getRoleSetOrFail(
-      joiningData.roleSetID
-    );
-    const membershipStatus = await this.roleSetService.getMembershipStatus(
-      agentInfo,
-      roleSet
-    );
-    if (membershipStatus === CommunityMembershipStatus.INVITATION_PENDING) {
-      throw new RoleSetMembershipException(
-        `Unable to join Community (${roleSet.id}): invitation to join is pending.`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_JOIN,
-      `join community: ${roleSet.id}`
-    );
-
-    await this.roleSetService.assignUserToRole(
-      roleSet,
-      CommunityRoleType.MEMBER,
-      agentInfo.userID,
-      agentInfo,
-      true
-    );
-
-    return roleSet;
-  }
-
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Trigger an event on the Application.',
   })
@@ -720,7 +677,7 @@ export class RoleSetResolverMutations {
   @Mutation(() => IRoleSet, {
     description: 'Update the Application Form used by this RoleSet.',
   })
-  async updateRoleSetApplicationForm(
+  async updateApplicationFormOnRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('applicationFormData')
     applicationFormData: UpdateApplicationFormOnRoleSetInput
