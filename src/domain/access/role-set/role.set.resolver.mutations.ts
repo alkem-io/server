@@ -147,7 +147,7 @@ export class RoleSetResolverMutations {
     description:
       'Assigns a Virtual Contributor to a role in the specified Community.',
   })
-  async assignRoleToVirtual(
+  async assignRoleToVirtualContributor(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignRoleOnRoleSetToVirtualContributorInput
   ): Promise<IVirtualContributor> {
@@ -273,7 +273,7 @@ export class RoleSetResolverMutations {
   @Mutation(() => IVirtualContributor, {
     description: 'Removes a Virtual from a Role in the specified Community.',
   })
-  async removeRoleFromVirtual(
+  async removeRoleFromVirtualContributor(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveRoleOnRoleSetFromVirtualContributorInput
   ): Promise<IVirtualContributor> {
@@ -382,7 +382,7 @@ export class RoleSetResolverMutations {
     description:
       'Invite an existing Contriburor to join the specified Community as a member.',
   })
-  async inviteContributorsForCommunityMembership(
+  async inviteContributorsForRoleSetMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: InviteForBaseRoleOnRoleSetInput
@@ -536,9 +536,9 @@ export class RoleSetResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => IPlatformInvitation, {
     description:
-      'Invite a User to join the platform and the specified Community as a member.',
+      'Invite a User to join the platform and the specified RoleSet as a member.',
   })
-  async inviteUserToPlatformAndCommunity(
+  async inviteUserToPlatformAndRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: InviteNewContributorForRoleOnRoleSetInput

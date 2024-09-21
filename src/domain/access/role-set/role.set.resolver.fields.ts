@@ -30,7 +30,7 @@ export class RoleSetResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('availableMemberUsers', () => PaginatedUsers, {
+  @ResolveField('availableUsersForMemberRole', () => PaginatedUsers, {
     nullable: false,
     description: 'All available users that are potential Community members.',
   })
@@ -68,15 +68,13 @@ export class RoleSetResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('availableLeadUsers', () => PaginatedUsers, {
+  @ResolveField('availableUsersForLeadRole', () => PaginatedUsers, {
     nullable: false,
     description:
       'All  users excluding the current lead users in this Community.',
   })
   async availableUsersForLeadRole(
     @Parent() roleSet: IRoleSet,
-    @Args('role', { type: () => CommunityRoleType, nullable: false })
-    role: CommunityRoleType,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ) {
@@ -209,11 +207,24 @@ export class RoleSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('roles', () => [IRole], {
+  @ResolveField('roleDefinitions', () => [IRole], {
     nullable: false,
     description: 'The Role Definitions included in this roleSet.',
   })
-  async roles(@Parent() roleSet: RoleSet): Promise<IRole[]> {
+  async roleDefinitions(@Parent() roleSet: RoleSet): Promise<IRole[]> {
     return await this.roleSetService.getRoleDefinitions(roleSet);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('roleDefinition', () => IRole, {
+    nullable: false,
+    description: 'The Role Definitions from this RoleSet to return.',
+  })
+  async roleDefinition(
+    @Parent() roleSet: RoleSet,
+    @Args('role', { type: () => CommunityRoleType, nullable: false })
+    role: CommunityRoleType
+  ): Promise<IRole> {
+    return await this.roleSetService.getRoleDefinition(roleSet, role);
   }
 }
