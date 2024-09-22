@@ -86,6 +86,7 @@ export class RoleSetService {
     roleSet.applications = [];
     roleSet.invitations = [];
     roleSet.platformInvitations = [];
+    roleSet.baseRoleType = roleSetData.baseRoleType;
 
     roleSet.parentRoleSet = roleSetData.parentRoleSet;
 
@@ -230,7 +231,7 @@ export class RoleSetService {
     return roleSet;
   }
 
-  public async removeAllCommunityRoles(roleSet: IRoleSet) {
+  public async removeAllRoleAssignments(roleSet: IRoleSet) {
     // Remove all issued role credentials for contributors
     for (const roleType of Object.values(CommunityRoleType)) {
       const users = await this.getUsersWithRole(roleSet, roleType);
@@ -253,7 +254,7 @@ export class RoleSetService {
     }
   }
 
-  async getCommunityRoles(
+  async getRolesForAgentInfo(
     agentInfo: AgentInfo,
     roleSet: IRoleSet
   ): Promise<CommunityRoleType[]> {

@@ -79,6 +79,7 @@ import { TemplateService } from '@domain/template/template/template.service';
 import { templatesSetDefaults } from '../space.defaults/definitions/space.defaults.templates';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @Injectable()
 export class SpaceService {
@@ -168,6 +169,7 @@ export class SpaceService {
       roleSetData: {
         roles: roleSetRolesData,
         applicationForm: applicationFormData,
+        baseRoleType: CommunityRoleType.MEMBER,
       },
       guidelines: {
         // TODO: get this from defaults service
@@ -942,15 +944,27 @@ export class SpaceService {
     subspace = await this.addSubspaceToSpace(space, subspace);
     subspace = await this.save(subspace);
 
+    subspace = await this.getSpaceOrFail(subspace.id, {
+      relations: {
+        community: {
+          roleSet: true,
+        },
+      },
+    });
+
     // Before assigning roles in the subspace check that the user is a member
     if (agentInfo) {
+      if (!subspace.community || !subspace.community.roleSet) {
+        throw new EntityNotInitializedException(
+          `unable to load community with role manager: ${subspace.id}`,
+          LogContext.SPACES
+        );
+      }
+      const roleSet = subspace.community.roleSet;
       const agent = await this.agentService.getAgentOrFail(agentInfo?.agentID);
-      const isMember = await this.roleSetService.isMember(
-        agent,
-        space.community
-      );
+      const isMember = await this.roleSetService.isMember(agent, roleSet);
       if (isMember) {
-        await this.assignUserToRoles(subspace, agentInfo);
+        await this.assignUserToRoles(roleSet, agentInfo);
       }
     }
 
@@ -994,7 +1008,7 @@ export class SpaceService {
     role: CommunityRoleType,
     type: CommunityContributorType
   ) {
-    if (!space.community) {
+    if (!space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
         `Community not initialised on Space for assigning contributor to role: ${space.id}`,
         LogContext.SPACES
@@ -1008,7 +1022,7 @@ export class SpaceService {
     }
 
     await this.roleSetService.assignContributorAgentToRole(
-      space.community,
+      space.community.roleSet,
       role,
       contributor.agent,
       type
@@ -1030,35 +1044,27 @@ export class SpaceService {
     return levelZeroSpace.agent;
   }
 
-  public async assignUserToRoles(space: ISpace, agentInfo: AgentInfo) {
-    if (!space.community) {
-      throw new EntityNotInitializedException(
-        `Community not initialised on Space: ${space.id}`,
-        LogContext.SPACES
-      );
-    }
-    if (agentInfo) {
-      await this.roleSetService.assignUserToRole(
-        space.community,
-        CommunityRoleType.MEMBER,
-        agentInfo.userID,
-        agentInfo
-      );
+  public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      CommunityRoleType.MEMBER,
+      agentInfo.userID,
+      agentInfo
+    );
 
-      await this.roleSetService.assignUserToRole(
-        space.community,
-        CommunityRoleType.LEAD,
-        agentInfo.userID,
-        agentInfo
-      );
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      CommunityRoleType.LEAD,
+      agentInfo.userID,
+      agentInfo
+    );
 
-      await this.roleSetService.assignUserToRole(
-        space.community,
-        CommunityRoleType.ADMIN,
-        agentInfo.userID,
-        agentInfo
-      );
-    }
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      CommunityRoleType.ADMIN,
+      agentInfo.userID,
+      agentInfo
+    );
   }
 
   public async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
@@ -1107,6 +1113,7 @@ export class SpaceService {
     if (
       !space.collaboration ||
       !space.community ||
+      !space.community.roleSet ||
       !space.context ||
       !space.agent ||
       !space.profile ||
@@ -1121,7 +1128,6 @@ export class SpaceService {
 
     await this.contextService.removeContext(space.context.id);
     await this.collaborationService.deleteCollaboration(space.collaboration.id);
-    await this.roleSetService.removeAllCommunityRoles(space.community);
     await this.communityService.removeCommunity(space.community.id);
     await this.profileService.deleteProfile(space.profile.id);
     await this.agentService.deleteAgent(space.agent.id);
@@ -1257,6 +1263,25 @@ export class SpaceService {
         LogContext.COMMUNITY
       );
     return community;
+  }
+
+  public async getCommunityRoleSet(spaceId: string): Promise<IRoleSet> {
+    const subspaceWithCommunityRoleSet = await this.getSpaceOrFail(spaceId, {
+      relations: {
+        community: {
+          roleSet: true,
+        },
+      },
+    });
+    const community = subspaceWithCommunityRoleSet.community;
+    if (!community || !community.roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load community with RoleSet for space ${spaceId} `,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return community.roleSet;
   }
 
   async getLibraryOrFail(rootSpaceID: string): Promise<ITemplatesSet> {
@@ -1424,11 +1449,6 @@ export class SpaceService {
     return agent;
   }
 
-  public async getMembersCount(space: ISpace): Promise<number> {
-    const community = await this.getCommunity(space.id);
-    return await this.roleSetService.getMembersCount(community);
-  }
-
   public async getPostsCount(space: ISpace): Promise<number> {
     const collaboration = await this.getCollaborationOrFail(space.id);
 
@@ -1467,10 +1487,10 @@ export class SpaceService {
     subspacesTopic.id = `subspaces-${space.id}`;
     metrics.push(subspacesTopic);
 
-    const community = await this.getCommunity(space.id);
+    const roleSet = await this.getCommunityRoleSet(space.id);
 
     // Members
-    const membersCount = await this.roleSetService.getMembersCount(community);
+    const membersCount = await this.roleSetService.getMembersCount(roleSet);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${space.id}`;
     metrics.push(membersTopic);

@@ -114,7 +114,7 @@ export class CommunityService {
 
   // Loads the group into the Community entity if not already present
   async getUserGroup(
-    community: IRoleSet,
+    community: ICommunity,
     groupID: string
   ): Promise<IUserGroup> {
     const communityWithGroups = await this.getCommunityOrFail(community.id, {
@@ -178,6 +178,8 @@ export class CommunityService {
       );
     }
 
+    await this.roleSetService.removeAllRoleAssignments(community.roleSet);
+
     // Remove all groups
     for (const group of community.groups) {
       await this.userGroupService.removeUserGroup({
@@ -202,7 +204,7 @@ export class CommunityService {
     return true;
   }
 
-  async save(community: IRoleSet): Promise<IRoleSet> {
+  async save(community: ICommunity): Promise<ICommunity> {
     return await this.communityRepository.save(community);
   }
 
@@ -343,7 +345,7 @@ export class CommunityService {
   }
 
   public async getLevelZeroSpaceIdForCommunity(
-    community: IRoleSet
+    community: ICommunity
   ): Promise<string> {
     return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
       community.id

@@ -1,11 +1,7 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver, Args } from '@nestjs/graphql';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from './community.service';
 import { IUserGroup } from '@domain/community/user-group';
@@ -14,12 +10,7 @@ import { ICommunication } from '@domain/communication/communication/communicatio
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IRoleSet } from '@domain/access/role-set';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { CommunityRoleType } from '@common/enums/community.role';
-
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(
@@ -83,43 +74,5 @@ export class CommunityResolverFields {
     @Parent() community: ICommunity
   ): Promise<ICommunityGuidelines> {
     return await this.communityService.getCommunityGuidelines(community);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('myMembershipStatus', () => CommunityMembershipStatus, {
-    nullable: true,
-    description: 'The membership status of the currently logged in user.',
-  })
-  async myMembershipStatus(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() community: ICommunity
-  ): Promise<CommunityMembershipStatus> {
-    return this.roleSetService.getMembershipStatus(agentInfo, community);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('myRoles', () => [CommunityRoleType], {
-    nullable: false,
-    description:
-      'The roles on this community for the currently logged in user.',
-  })
-  async myRoles(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() community: ICommunity
-  ): Promise<CommunityRoleType[]> {
-    return this.roleSetService.getCommunityRoles(agentInfo, community);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('myRolesImplicit', () => [CommunityRoleImplicit], {
-    nullable: false,
-    description:
-      'The implicit roles on this community for the currently logged in user.',
-  })
-  async myRolesImplicit(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() community: ICommunity
-  ): Promise<CommunityRoleImplicit[]> {
-    return this.roleSetService.getCommunityImplicitRoles(agentInfo, community);
   }
 }

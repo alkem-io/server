@@ -47,7 +47,9 @@ export class ConversionService {
       conversionData.subspaceID,
       {
         relations: {
-          community: true,
+          community: {
+            roleSet: true,
+          },
           context: true,
           profile: true,
           collaboration: {
@@ -65,6 +67,7 @@ export class ConversionService {
     );
     if (
       !subspace.community ||
+      !subspace.community.roleSet ||
       !subspace.context ||
       !subspace.profile ||
       !subspace.collaboration ||
@@ -84,7 +87,7 @@ export class ConversionService {
     // check the community is in a fit state
     const challengeCommunityLeadOrgs =
       await this.roleSetService.getOrganizationsWithRole(
-        subspace.community,
+        subspace.community.roleSet,
         CommunityRoleType.LEAD
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
@@ -196,7 +199,7 @@ export class ConversionService {
 
     // Assign users to roles in new space
     await this.assignContributors(
-      space.community,
+      spaceRoleSet,
       userMembers,
       userLeads,
       orgMembers
@@ -395,7 +398,7 @@ export class ConversionService {
 
     // Assign users to roles in new challenge
     await this.assignContributors(
-      challengeCommunityUpdated,
+      challengeCommunityUpdated.roleSet,
       userMembers,
       userLeads,
       orgMembers,

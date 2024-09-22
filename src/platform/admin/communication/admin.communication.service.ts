@@ -35,10 +35,15 @@ export class AdminCommunicationService {
       LogContext.COMMUNICATION
     );
     const community = await this.communityService.getCommunityOrFail(
-      communicationData.communityID
+      communicationData.communityID,
+      {
+        relations: {
+          roleSet: true,
+        },
+      }
     );
     const communityMembers = await this.roleSetService.getUsersWithRole(
-      community,
+      community.roleSet,
       CommunityRoleType.MEMBER
     );
     const communication = await this.communityService.getCommunication(
@@ -103,13 +108,18 @@ export class AdminCommunicationService {
       LogContext.COMMUNICATION
     );
     const community = await this.communityService.getCommunityOrFail(
-      communicationData.communityID
+      communicationData.communityID,
+      {
+        relations: {
+          roleSet: true,
+        },
+      }
     );
     const communication = await this.communityService.getCommunication(
       community.id
     );
     const communityMembers = await this.roleSetService.getUsersWithRole(
-      community,
+      community.roleSet,
       CommunityRoleType.MEMBER
     );
     for (const communityMember of communityMembers) {
