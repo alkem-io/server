@@ -37,13 +37,19 @@ export class RoleSetEventsService {
 
   public async processCommunityNewMemberEvents(
     roleSet: IRoleSet,
-    levelZeroSpaceID: string,
-    displayName: string,
     agentInfo: AgentInfo,
     newContributor: IContributor
   ) {
     const community =
       await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
+    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
+      roleSet.id
+    );
+    const levelZeroSpaceID = space.levelZeroSpaceID;
+    const communityDisplayName =
+      await this.communityResolverService.getDisplayNameForRoleSetOrFail(
+        roleSet.id
+      );
     // TODO: community just needs to know the level, not the type
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
@@ -54,15 +60,12 @@ export class RoleSetEventsService {
     await this.notificationAdapter.communityNewMember(notificationInput);
 
     // Record the contribution events
-    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
-      roleSet.id
-    );
     switch (space.type) {
       case SpaceType.SPACE:
         this.contributionReporter.spaceJoined(
           {
             id: community.parentID,
-            name: displayName,
+            name: communityDisplayName,
             space: levelZeroSpaceID,
           },
           {
@@ -75,7 +78,7 @@ export class RoleSetEventsService {
         this.contributionReporter.subspaceJoined(
           {
             id: community.parentID,
-            name: displayName,
+            name: communityDisplayName,
             space: levelZeroSpaceID,
           },
           {

@@ -551,18 +551,13 @@ export class RoleSetService {
           agentInfo
         );
 
-        // if (triggerNewMemberEvents) {
-        //   const levelZeroSpaceID =
-        //     await this.getLevelZeroSpaceIdForCommunity(roleSet);
-        //   const displayName = await this.getDisplayName(roleSet);
-        //   await this.roleSetEventsService.processCommunityNewMemberEvents(
-        //     roleSet,
-        //     levelZeroSpaceID,
-        //     displayName,
-        //     agentInfo,
-        //     contributor
-        //   );
-        // }
+        if (triggerNewMemberEvents) {
+          await this.roleSetEventsService.processCommunityNewMemberEvents(
+            roleSet,
+            agentInfo,
+            contributor
+          );
+        }
       }
     }
   }
