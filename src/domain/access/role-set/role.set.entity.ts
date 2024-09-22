@@ -1,4 +1,11 @@
-import { Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Role } from '../role/role.entity';
@@ -7,6 +14,8 @@ import { PlatformInvitation } from '@platform/invitation/platform.invitation.ent
 import { IRoleSet } from './role.set.interface';
 import { Application } from '@domain/access/application/application.entity';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
+import { CommunityRoleType } from '@common/enums/community.role';
+import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Entity()
 export class RoleSet
@@ -26,6 +35,9 @@ export class RoleSet
     cascade: true,
   })
   roles?: Role[];
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  baseRoleType!: CommunityRoleType;
 
   @OneToMany(() => Application, application => application.roleSet, {
     eager: false,

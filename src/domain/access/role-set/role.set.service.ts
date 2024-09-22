@@ -1358,4 +1358,26 @@ export class RoleSetService {
     }
     return role;
   }
+
+  public async getBaseRoleDefinition(roleSet: IRoleSet): Promise<IRole> {
+    const roleDefinitions = await this.getRoleDefinitions(roleSet);
+    const baseRole = roleDefinitions.find(
+      rd => rd.type === roleSet.baseRoleType
+    );
+    if (!baseRole) {
+      throw new RelationshipNotFoundException(
+        `Unable to find BaseRole of type ${roleSet.baseRoleType} for RoleSet: ${roleSet.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return baseRole;
+  }
+
+  public async isBaseRole(
+    roleSet: IRoleSet,
+    roleType: CommunityRoleType
+  ): Promise<boolean> {
+    const isBaseRole = roleSet.baseRoleType === roleType;
+    return isBaseRole;
+  }
 }

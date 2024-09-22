@@ -213,12 +213,9 @@ export class RoleSetResolverMutations {
     // Extend the authorization policy with a credential rule to assign the GRANT privilege
     // to the user specified in the incoming mutation. Then if it is the same user as is logged
     // in then the user will have the GRANT privilege + so can carry out the mutation
-    const community =
-      await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
-
     const extendedAuthorization =
       this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
-        community,
+        roleSet,
         roleData.contributorID
       );
 
