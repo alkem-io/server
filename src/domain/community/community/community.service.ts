@@ -22,8 +22,6 @@ import { CommunityGuidelinesService } from '../community-guidelines/community.gu
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
-import { IContributor } from '../contributor/contributor.interface';
-import { IUser } from '../user/user.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
@@ -245,42 +243,6 @@ export class CommunityService {
     return await this.communityResolverService.getDisplayNameForRoleSetOrFail(
       community.id
     );
-  }
-
-  public async addMemberToCommunication(
-    contributor: IContributor,
-    community: ICommunity
-  ): Promise<void> {
-    // register the user for the community rooms
-    const communication = await this.getCommunication(community.id);
-    this.communicationService
-      .addContributorToCommunications(
-        communication,
-        contributor.communicationID
-      )
-      .catch(error =>
-        this.logger.error(
-          `Unable to add user to community messaging (${community.id}): ${error}`,
-          error?.stack,
-          LogContext.COMMUNICATION
-        )
-      );
-  }
-
-  public async removeMemberFromCommunication(
-    community: ICommunity,
-    user: IUser
-  ): Promise<void> {
-    const communication = await this.getCommunication(community.id);
-    this.communicationService
-      .removeUserFromCommunications(communication, user)
-      .catch(error =>
-        this.logger.error(
-          `Unable remove user from community messaging (${community.id}): ${error}`,
-          error?.stack,
-          LogContext.COMMUNICATION
-        )
-      );
   }
 
   public async getRoleSet(community: ICommunity): Promise<IRoleSet> {

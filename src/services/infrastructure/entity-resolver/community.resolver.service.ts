@@ -11,6 +11,7 @@ import { RoomType } from '@common/enums/room.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IAgent } from '@domain/agent';
 import { IAccount } from '@domain/space/account/account.interface';
+import { ICommunication } from '@domain/communication/communication/communication.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -57,6 +58,26 @@ export class CommunityResolverService {
       );
     }
     return community;
+  }
+
+  async getCommunicationForRoleSet(roleSetID: string): Promise<ICommunication> {
+    const community = await this.entityManager.findOne(Community, {
+      where: {
+        roleSet: {
+          id: roleSetID,
+        },
+      },
+      relations: {
+        communication: true,
+      },
+    });
+    if (!community || !community.communication) {
+      throw new EntityNotFoundException(
+        `Unable to find Community for given RoleSet id: ${roleSetID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return community.communication;
   }
 
   public async getLevelZeroSpaceIdForCollaboration(

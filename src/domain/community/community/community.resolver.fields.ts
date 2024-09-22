@@ -10,13 +10,9 @@ import { ICommunication } from '@domain/communication/communication/communicatio
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IRoleSet } from '@domain/access/role-set';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
-  constructor(
-    private communityService: CommunityService,
-    private roleSetService: RoleSetService
-  ) {}
+  constructor(private communityService: CommunityService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -61,7 +57,7 @@ export class CommunityResolverFields {
     nullable: false,
     description: 'The RoleSet for this Community.',
   })
-  async policy(@Parent() community: Community): Promise<IRoleSet> {
+  async roleSet(@Parent() community: Community): Promise<IRoleSet> {
     return this.communityService.getRoleSet(community);
   }
 

@@ -27,6 +27,7 @@ import { RoleSetInvitationLifecycleOptionsProvider } from './role.set.lifecycle.
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
+import { CommunityCommunicationModule } from '@domain/community/community-communication/community.communication.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
     ContributionReporterModule,
     ActivityAdapterModule,
     LifecycleModule,
+    CommunityCommunicationModule,
     TypeOrmModule.forFeature([RoleSet]),
   ],
   providers: [

@@ -54,6 +54,7 @@ import { ContributorService } from '@domain/community/contributor/contributor.se
 import { RoleSetEventsService } from './role.set.service.events';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { CommunityCommunicationService } from '@domain/community/community-communication/community.communication.service';
 
 @Injectable()
 export class RoleSetService {
@@ -72,6 +73,7 @@ export class RoleSetService {
     private communityResolverService: CommunityResolverService,
     private roleSetEventsService: RoleSetEventsService,
     private aiServerAdapter: AiServerAdapter,
+    private communityCommunicationService: CommunityCommunicationService,
     @InjectRepository(RoleSet)
     private roleSetRepository: Repository<RoleSet>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -533,11 +535,14 @@ export class RoleSetService {
       LogContext.ROLES
     );
     if (role === CommunityRoleType.MEMBER) {
-      // TODO: FIX ME - need callback depending on Type of RoleSet
-
-      // const community =
-      //   await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
-      // this.addMemberToCommunication(contributor, roleSet);
+      const communication =
+        await this.communityResolverService.getCommunicationForRoleSet(
+          roleSet.id
+        );
+      this.communityCommunicationService.addMemberToCommunication(
+        communication,
+        contributor
+      );
 
       if (agentInfo) {
         await this.roleSetEventsService.registerCommunityNewMemberActivity(
@@ -688,13 +693,17 @@ export class RoleSetService {
       }
     }
 
-    // TODO: FIX ME
-    // if (roleType === CommunityRoleType.MEMBER) {
-    //   const community =
-    //     await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
+    if (roleType === CommunityRoleType.MEMBER) {
+      const communication =
+        await this.communityResolverService.getCommunicationForRoleSet(
+          roleSet.id
+        );
 
-    //   await this.removeMemberFromCommunication(community, user);
-    // }
+      await this.communityCommunicationService.removeMemberFromCommunication(
+        communication,
+        user
+      );
+    }
 
     return user;
   }
