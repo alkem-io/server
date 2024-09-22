@@ -5,7 +5,7 @@ import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -14,12 +14,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { JoinAsBaseRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.join';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
-import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { CommunityRoleType } from '@common/enums/community.role';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -28,8 +22,7 @@ export class CommunityResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
-    private agentService: AgentService,
-    private roleSetService: RoleSetService
+    private agentService: AgentService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -95,46 +88,5 @@ export class CommunityResolverMutations {
         },
       ]
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IRoleSet, {
-    description:
-      'Join the specified Community as a member, without going through an approval process.',
-  })
-  async joinCommunity(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('joinCommunityData') joiningData: JoinAsBaseRoleOnRoleSetInput
-  ): Promise<IRoleSet> {
-    const roleSet = await this.roleSetService.getRoleSetOrFail(
-      joiningData.roleSetID
-    );
-    const membershipStatus = await this.roleSetService.getMembershipStatus(
-      agentInfo,
-      roleSet
-    );
-    if (membershipStatus === CommunityMembershipStatus.INVITATION_PENDING) {
-      throw new RoleSetMembershipException(
-        `Unable to join Community (${roleSet.id}): invitation to join is pending.`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_JOIN,
-      `join community: ${roleSet.id}`
-    );
-
-    await this.roleSetService.assignUserToRole(
-      roleSet,
-      CommunityRoleType.MEMBER,
-      agentInfo.userID,
-      agentInfo,
-      true
-    );
-
-    return roleSet;
   }
 }

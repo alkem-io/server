@@ -88,7 +88,7 @@ export class RoleSetService {
     roleSet.applications = [];
     roleSet.invitations = [];
     roleSet.platformInvitations = [];
-    roleSet.baseRoleType = roleSetData.baseRoleType;
+    roleSet.entryRoleType = roleSetData.baseRoleType;
 
     roleSet.parentRoleSet = roleSetData.parentRoleSet;
 
@@ -1367,11 +1367,11 @@ export class RoleSetService {
   public async getBaseRoleDefinition(roleSet: IRoleSet): Promise<IRole> {
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
     const baseRole = roleDefinitions.find(
-      rd => rd.type === roleSet.baseRoleType
+      rd => rd.type === roleSet.entryRoleType
     );
     if (!baseRole) {
       throw new RelationshipNotFoundException(
-        `Unable to find BaseRole of type ${roleSet.baseRoleType} for RoleSet: ${roleSet.id}`,
+        `Unable to find BaseRole of type ${roleSet.entryRoleType} for RoleSet: ${roleSet.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -1382,7 +1382,7 @@ export class RoleSetService {
     roleSet: IRoleSet,
     roleType: CommunityRoleType
   ): Promise<boolean> {
-    const isBaseRole = roleSet.baseRoleType === roleType;
+    const isBaseRole = roleSet.entryRoleType === roleType;
     return isBaseRole;
   }
 }

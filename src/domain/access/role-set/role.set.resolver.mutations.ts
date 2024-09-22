@@ -39,9 +39,9 @@ import { AssignRoleOnRoleSetToVirtualContributorInput } from './dto/role.set.dto
 import { RemoveRoleOnRoleSetFromUserInput } from './dto/role.set.dto.role.remove.user';
 import { RemoveRoleOnRoleSetFromOrganizationInput } from './dto/role.set.dto.role.remove.organization';
 import { RemoveRoleOnRoleSetFromVirtualContributorInput } from './dto/role.set.dto.role.remove.virtual';
-import { ApplyForBaseRoleOnRoleSetInput } from './dto/role.set.dto.apply.for.base.role';
+import { ApplyForEntryRoleOnRoleSetInput as ApplyForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.apply';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { InviteForBaseRoleOnRoleSetInput } from './dto/role.set.dto.invite.for.base.role';
+import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.invite';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -52,6 +52,8 @@ import { IPlatformInvitation } from '@platform/invitation/platform.invitation.in
 import { InviteNewContributorForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invitation.community';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -304,14 +306,54 @@ export class RoleSetResolverMutations {
       roleData.contributorID
     );
   }
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IRoleSet, {
+    description:
+      'Join the specified RoleSet using the base role, without going through an approval process.',
+  })
+  async joinRoleSet(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('joinData') joiningData: JoinAsEntryRoleOnRoleSetInput
+  ): Promise<IRoleSet> {
+    const roleSet = await this.roleSetService.getRoleSetOrFail(
+      joiningData.roleSetID
+    );
+    const membershipStatus = await this.roleSetService.getMembershipStatus(
+      agentInfo,
+      roleSet
+    );
+    if (membershipStatus === CommunityMembershipStatus.INVITATION_PENDING) {
+      throw new RoleSetMembershipException(
+        `Unable to join RoleSet (${roleSet.id}): invitation to join is pending.`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      roleSet.authorization,
+      AuthorizationPrivilege.COMMUNITY_JOIN,
+      `join community: ${roleSet.id}`
+    );
+
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      CommunityRoleType.MEMBER,
+      agentInfo.userID,
+      agentInfo,
+      true
+    );
+
+    return roleSet;
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
-    description: 'Apply to join the specified Community as a member.',
+    description: 'Apply to join the specified RoleSet in the entry Role.',
   })
-  async applyForBaseRoleOnRoleSet(
+  async applyForEntryRoleOnRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('applicationData') applicationData: ApplyForBaseRoleOnRoleSetInput
+    @Args('applicationData') applicationData: ApplyForEntryRoleOnRoleSetInput
   ): Promise<IApplication> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       applicationData.roleSetID,
@@ -382,7 +424,7 @@ export class RoleSetResolverMutations {
   async inviteContributorsForRoleSetMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: InviteForBaseRoleOnRoleSetInput
+    invitationData: InviteForEntryRoleOnRoleSetInput
   ): Promise<IInvitation[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,

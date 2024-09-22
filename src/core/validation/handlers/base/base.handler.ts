@@ -35,7 +35,6 @@ import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/cal
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
-import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
 import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
 import { UpdateTemplateInput } from '@domain/template/template/dto/template.dto.update';
 import { CreateDocumentInput } from '@domain/storage/document/dto/document.dto.create';
@@ -72,8 +71,8 @@ import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guid
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
 import { InviteNewContributorForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.platform.invitation.community';
-import { InviteForBaseRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.invite.for.base.role';
-import { ApplyForBaseRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.apply.for.base.role';
+import { ApplyForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.apply';
+import { InviteForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.invite';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -112,7 +111,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalloutContributionDefaultsInput,
       UpdateCalloutContributionPolicyInput,
       UpdateTemplateInput,
-      UpdateCommunityApplicationFormInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,
       UpdateSpaceSettingsEntityInput,
@@ -130,8 +128,8 @@ export class BaseHandler extends AbstractHandler {
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
       VisualUploadImageInput,
-      ApplyForBaseRoleOnRoleSetInput,
-      InviteForBaseRoleOnRoleSetInput,
+      ApplyForEntryRoleOnRoleSetInput,
+      InviteForEntryRoleOnRoleSetInput,
       InviteNewContributorForRoleOnRoleSetInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,

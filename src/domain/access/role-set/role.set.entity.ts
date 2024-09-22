@@ -37,7 +37,7 @@ export class RoleSet
   roles?: Role[];
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  baseRoleType!: CommunityRoleType;
+  entryRoleType!: CommunityRoleType;
 
   @OneToMany(() => Application, application => application.roleSet, {
     eager: false,

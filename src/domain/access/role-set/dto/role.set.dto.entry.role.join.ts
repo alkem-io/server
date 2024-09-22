@@ -4,7 +4,7 @@ import { MaxLength } from 'class-validator';
 import { UUID_LENGTH } from '@common/constants';
 
 @InputType()
-export class JoinAsBaseRoleOnRoleSetInput {
+export class JoinAsEntryRoleOnRoleSetInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
   roleSetID!: string;

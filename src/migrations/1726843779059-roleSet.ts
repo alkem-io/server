@@ -49,7 +49,7 @@ export class RoleSet1726843779059 implements MigrationInterface {
                           \`authorizationId\` char(36) NULL,
                           \`applicationFormId\` char(36) NULL,
                           \`parentRoleSetId\` char(36) NULL,
-                          \`baseRoleType\` varchar(128) NOT NULL,
+                          \`entryRoleType\` varchar(128) NOT NULL,
                           UNIQUE INDEX \`REL_b038f74c8d4eadb839e78b99ce\` (\`authorizationId\`),
                           UNIQUE INDEX \`REL_00905b142498f63e76d38fb254\` (\`applicationFormId\`),
                           PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
@@ -124,7 +124,7 @@ export class RoleSet1726843779059 implements MigrationInterface {
       );
 
       await queryRunner.query(
-        `INSERT INTO role_set (id, version, authorizationId, applicationFormId, baseRoleType) VALUES ('${roleSetID}', 1, '${roleSetAuthID}', '${community.applicationFormId}', 'member')`
+        `INSERT INTO role_set (id, version, authorizationId, applicationFormId, entryRoleType) VALUES ('${roleSetID}', 1, '${roleSetAuthID}', '${community.applicationFormId}', 'member')`
       );
     }
 
