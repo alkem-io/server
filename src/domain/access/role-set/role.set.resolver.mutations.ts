@@ -309,7 +309,7 @@ export class RoleSetResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => IRoleSet, {
     description:
-      'Join the specified RoleSet using the base role, without going through an approval process.',
+      'Join the specified RoleSet using the entry Role, without going through an approval process.',
   })
   async joinRoleSet(
     @CurrentUser() agentInfo: AgentInfo,

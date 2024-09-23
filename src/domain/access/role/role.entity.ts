@@ -24,10 +24,10 @@ export class Role extends BaseAlkemioEntity implements IRole {
   parentCredentials!: string;
 
   @Column('boolean', { nullable: false })
-  requiresBaseRole!: boolean;
+  requiresEntryRole!: boolean;
 
   @Column('boolean', { nullable: false })
-  requiresParentRole!: boolean;
+  requiresSameRoleInParentRoleSet!: boolean;
 
   @Column('text', { nullable: false })
   userPolicy!: string;

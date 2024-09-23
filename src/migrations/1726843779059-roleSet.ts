@@ -33,8 +33,8 @@ export class RoleSet1726843779059 implements MigrationInterface {
                           \`version\` int NOT NULL,
                           \`type\` varchar(128) NOT NULL,
                           \`credential\` text NOT NULL, \`parentCredentials\` text NOT NULL,
-                          \`requiresBaseRole\` tinyint NOT NULL,
-                          \`requiresParentRole\` tinyint NOT NULL,
+                          \`requiresEntryRole\` tinyint NOT NULL,
+                          \`requiresSameRoleInParentRoleSet\` tinyint NOT NULL,
                           \`userPolicy\` text NOT NULL,
                           \`organizationPolicy\` text NOT NULL,
                           \`virtualContributorPolicy\` text NOT NULL,
@@ -294,8 +294,8 @@ export class RoleSet1726843779059 implements MigrationInterface {
     roleSetID: string,
     vcMin: number,
     vcMax: number,
-    requiresBaseRole: boolean,
-    requiresParentRole: boolean
+    requiresEntryRole: boolean,
+    requiresSameRoleInParentRoleSet: boolean
   ) {
     const roleID = randomUUID();
     const communityRolePolicy: CommunityPolicy = JSON.parse(communityPolicyStr);
@@ -314,13 +314,13 @@ export class RoleSet1726843779059 implements MigrationInterface {
 
     // Create the role for the member role
     await queryRunner.query(`
-        INSERT INTO role (id, version, type, credential, parentCredentials, requiresBaseRole, requiresParentRole, userPolicy, organizationPolicy, virtualContributorPolicy, roleSetId) VALUES
+        INSERT INTO role (id, version, type, credential, parentCredentials, requiresEntryRole, requiresSameRoleInParentRoleSet, userPolicy, organizationPolicy, virtualContributorPolicy, roleSetId) VALUES
                   ('${roleID}', 1,
                         '${type}',
                         '${JSON.stringify(communityRolePolicy.credential)}',
                         '${JSON.stringify(communityRolePolicy.parentCredentials)}',
-                        ${requiresBaseRole},
-                        ${requiresParentRole},
+                        ${requiresEntryRole},
+                        ${requiresSameRoleInParentRoleSet},
                         '${JSON.stringify(userPolicy)}',
                         '${JSON.stringify(organizationPolicy)}',
                         '${JSON.stringify(vcPolicy)}',

@@ -169,7 +169,7 @@ export class SpaceService {
       roleSetData: {
         roles: roleSetRolesData,
         applicationForm: applicationFormData,
-        baseRoleType: CommunityRoleType.MEMBER,
+        entryRoleType: CommunityRoleType.MEMBER,
       },
       guidelines: {
         // TODO: get this from defaults service

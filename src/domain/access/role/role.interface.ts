@@ -13,16 +13,16 @@ export abstract class IRole extends IBaseAlkemio {
   @Field(() => Boolean, {
     nullable: false,
     description:
-      'Flag to indicate if this Role requires the Base role to be held.',
+      'Flag to indicate if this Role requires the entry level role to be held.',
   })
-  requiresBaseRole!: boolean;
+  requiresEntryRole!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description:
       'Flag to indicate if this Role requires having the same role in the Parent RoleSet.',
   })
-  requiresParentRole!: boolean;
+  requiresSameRoleInParentRoleSet!: boolean;
 
   credential!: string;
 
