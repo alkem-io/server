@@ -4,7 +4,6 @@ import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-  SUBSCRIPTION_WHITEBOARD_SAVED,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 
@@ -15,8 +14,6 @@ export class SubscriptionReadService {
     private activityCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private roomEventsSubscription: PubSubEngine,
-    @Inject(SUBSCRIPTION_WHITEBOARD_SAVED)
-    private whiteboardSavedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
     private subscriptionVirtualContributorUpdated: PubSubEngine
   ) {}
@@ -30,12 +27,6 @@ export class SubscriptionReadService {
   public subscribeToRoomEvents() {
     return this.roomEventsSubscription.asyncIterator(
       SubscriptionType.ROOM_EVENTS
-    );
-  }
-
-  public subscribeToWhiteboardSavedEvents() {
-    return this.whiteboardSavedSubscription.asyncIterator(
-      SubscriptionType.WHITEBOARD_SAVED
     );
   }
 
