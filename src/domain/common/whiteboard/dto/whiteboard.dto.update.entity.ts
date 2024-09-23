@@ -1,9 +1,13 @@
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, OmitType } from '@nestjs/graphql';
 import { UpdateWhiteboardInput } from './whiteboard.dto.update';
 
 @InputType()
-export class UpdateWhiteboardEntityInput extends UpdateWhiteboardInput {
+// omit the content from this input type
+export class UpdateWhiteboardEntityInput extends OmitType(
+  UpdateWhiteboardInput,
+  ['content']
+) {
   @Field(() => UUID, { nullable: false })
   ID!: string;
 }

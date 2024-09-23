@@ -51,6 +51,7 @@ export enum LogContext {
   CHAT_GUIDANCE_REPORTER = 'chat-guidance-reporter',
   TAGSET = 'tagset',
   EXCALIDRAW_SERVER = 'excalidraw-server',
+  WHITEBOARD_INTEGRATION = 'whiteboard-integration',
   RESOLVER_FIELD = 'resolver-field',
   RESOLVER_QUERY = 'resolver-query',
   MUTATION = 'mutation',

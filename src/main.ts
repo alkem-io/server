@@ -81,7 +81,7 @@ const bootstrap = async () => {
   const heartbeat = process.env.NODE_ENV === 'production' ? 30 : 120;
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;
   connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
-  connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH);
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
   await app.startAllMicroservices();
 };
