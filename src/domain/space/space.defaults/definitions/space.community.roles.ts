@@ -5,7 +5,7 @@ import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 export const spaceCommunityRoles: CreateRoleInput[] = [
   {
     type: CommunityRoleType.MEMBER,
-    requireEntryRole: false,
+    requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: true,
     credentialData: {
       type: AuthorizationCredential.SPACE_MEMBER,
@@ -30,7 +30,7 @@ export const spaceCommunityRoles: CreateRoleInput[] = [
   },
   {
     type: CommunityRoleType.LEAD,
-    requireEntryRole: true,
+    requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
       type: AuthorizationCredential.SPACE_LEAD,
@@ -55,7 +55,7 @@ export const spaceCommunityRoles: CreateRoleInput[] = [
   },
   {
     type: CommunityRoleType.ADMIN,
-    requireEntryRole: true,
+    requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
       type: AuthorizationCredential.SPACE_ADMIN,

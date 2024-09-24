@@ -4,7 +4,7 @@ import { IContributorRolePolicy } from '../contributor.role.policy.interface';
 
 export class CreateRoleInput {
   type!: CommunityRoleType;
-  requireEntryRole!: boolean;
+  requiresEntryRole!: boolean;
   requiresSameRoleInParentRoleSet!: boolean;
   credentialData!: ICredentialDefinition;
   parentCredentialsData!: ICredentialDefinition[];

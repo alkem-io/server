@@ -324,7 +324,29 @@ export class CommunityResolverService {
     });
     if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find space for community: ${roleSetID}`,
+        `Unable to find space for roleSet: ${roleSetID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return space;
+  }
+
+  public async getSpaceForCommunityOrFail(
+    communityID: string
+  ): Promise<ISpace> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          id: communityID,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for Community: ${communityID}`,
         LogContext.URL_GENERATOR
       );
     }
