@@ -126,6 +126,10 @@ export class RoleSet1726843779059 implements MigrationInterface {
       await queryRunner.query(
         `INSERT INTO role_set (id, version, authorizationId, applicationFormId, entryRoleType) VALUES ('${roleSetID}', 1, '${roleSetAuthID}', '${community.applicationFormId}', 'member')`
       );
+
+      await queryRunner.query(
+        `UPDATE community SET roleSetId = '${roleSetID}' WHERE id = '${community.id}'`
+      );
     }
 
     // Second loop makes the hierarchy linked
@@ -160,10 +164,19 @@ export class RoleSet1726843779059 implements MigrationInterface {
       `ALTER TABLE \`platform_invitation\` CHANGE \`communityId\` \`roleSetId\` char(36) NULL`
     );
     await queryRunner.query(
+      `UPDATE platform_invitation SET roleSetId = (SELECT roleSetId FROM community WHERE id = platform_invitation.roleSetId)`
+    );
+    await queryRunner.query(
       `ALTER TABLE \`application\` CHANGE \`communityId\` \`roleSetId\` char(36) NULL`
     );
     await queryRunner.query(
+      `UPDATE application SET roleSetId = (SELECT roleSetId FROM community WHERE id = application.roleSetId)`
+    );
+    await queryRunner.query(
       `ALTER TABLE \`invitation\` CHANGE \`communityId\` \`roleSetId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `UPDATE invitation SET roleSetId = (SELECT roleSetId FROM community WHERE id = invitation.roleSetId)`
     );
 
     await queryRunner.query(
@@ -179,6 +192,7 @@ export class RoleSet1726843779059 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`role\` ADD CONSTRAINT \`FK_66d695b73839e9b66ff1350d34f\` FOREIGN KEY (\`roleSetId\`) REFERENCES \`role_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
+
     await queryRunner.query(
       `ALTER TABLE \`platform_invitation\` ADD CONSTRAINT \`FK_562dce4a08bb214f08107b3631e\` FOREIGN KEY (\`roleSetId\`) REFERENCES \`role_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
