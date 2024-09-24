@@ -224,9 +224,14 @@ export class CommunityService {
     community?: ICommunity,
     parentCommunity?: ICommunity
   ): Promise<ICommunity> {
-    if (!community || !parentCommunity) {
+    if (
+      !community ||
+      !community.roleSet ||
+      !parentCommunity ||
+      !parentCommunity.roleSet
+    ) {
       throw new EntityNotInitializedException(
-        'Community not set',
+        `Unable to set the parent relationship for community with rolesets: ${community?.id} and ${parentCommunity?.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -235,6 +240,7 @@ export class CommunityService {
     community.roleSet = await this.roleSetService.inheritParentCredentials(
       community.roleSet
     );
+    community.parentCommunity.roleSet.parentRoleSet = parentCommunity.roleSet;
 
     return community;
   }

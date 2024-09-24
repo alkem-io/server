@@ -1201,7 +1201,7 @@ export class SpaceService {
     return this.spaceSettingsService.getSettings(space.settingsStr);
   }
 
-  public async setCommunityHierarchyForSubspace(
+  private async setCommunityHierarchyForSubspace(
     parentCommunity: ICommunity,
     childCommunity: ICommunity | undefined
   ): Promise<ICommunity> {
