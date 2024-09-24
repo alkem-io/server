@@ -437,23 +437,4 @@ export class CommunityResolverService {
       }
     }
   }
-
-  public async getCommunityWithParentOrFail(
-    communityID: string
-  ): Promise<ICommunity> {
-    const community = await this.communityRepository
-      .createQueryBuilder('community')
-      .leftJoinAndSelect('community.parentCommunity', 'parentCommunity')
-      .where('community.id = :id')
-      .setParameters({ id: `${communityID}` })
-      .getOne();
-
-    if (!community) {
-      throw new EntityNotFoundException(
-        `Unable to find Community with parent: ${communityID}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
-    return community;
-  }
 }

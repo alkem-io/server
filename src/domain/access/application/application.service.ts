@@ -131,19 +131,18 @@ export class ApplicationService {
 
   async findExistingApplications(
     userID: string,
-    communityID: string
+    roleSetID: string
   ): Promise<IApplication[]> {
-    const existingApplications = await this.applicationRepository
-      .createQueryBuilder('application')
-      .leftJoinAndSelect('application.user', 'user')
-      .leftJoinAndSelect('application.community', 'community')
-      .where('user.id = :userID')
-      .andWhere('community.id = :communityID')
-      .setParameters({
-        userID: `${userID}`,
-        communityID: communityID,
-      })
-      .getMany();
+    const existingApplications = await this.applicationRepository.find({
+      where: {
+        user: { id: userID },
+        roleSet: { id: roleSetID },
+      },
+      relations: {
+        roleSet: true,
+        user: true,
+      },
+    });
     if (existingApplications.length > 0) return existingApplications;
     return [];
   }
