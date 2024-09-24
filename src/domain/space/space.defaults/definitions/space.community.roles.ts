@@ -6,7 +6,7 @@ export const spaceCommunityRoles: CreateRoleInput[] = [
   {
     type: CommunityRoleType.MEMBER,
     requiresEntryRole: false,
-    requiresSameRoleInParentRoleSet: true,
+    requiresSameRoleInParentRoleSet: false, // not required at Space level
     credentialData: {
       type: AuthorizationCredential.SPACE_MEMBER,
       resourceID: '',
