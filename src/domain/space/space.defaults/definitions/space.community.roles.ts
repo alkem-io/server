@@ -13,17 +13,14 @@ export const spaceCommunityRoles: CreateRoleInput[] = [
     },
     parentCredentialsData: [],
     userPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: -1,
     },
     organizationPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: -1,
     },
     virtualContributorPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: -1,
     },
@@ -38,17 +35,14 @@ export const spaceCommunityRoles: CreateRoleInput[] = [
     },
     parentCredentialsData: [],
     userPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: 2,
     },
     organizationPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: 2,
     },
     virtualContributorPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: 1,
     },
@@ -63,17 +57,14 @@ export const spaceCommunityRoles: CreateRoleInput[] = [
     },
     parentCredentialsData: [],
     userPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: -1,
     },
     organizationPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: 0,
     },
     virtualContributorPolicyData: {
-      enabled: true,
       minimum: 0,
       maximum: 0,
     },
