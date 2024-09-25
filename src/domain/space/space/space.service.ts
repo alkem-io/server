@@ -206,6 +206,7 @@ export class SpaceService {
     space.levelZeroSpaceID = '';
     // save the collaboration and all it's template sets
     await this.save(space);
+
     if (spaceData.level === SpaceLevel.SPACE) {
       space.levelZeroSpaceID = space.id;
     }
@@ -239,16 +240,9 @@ export class SpaceService {
       agentInfo
     );
 
-    // save the collaboration and all it's template sets
-    await this.save(space);
-
-    /////////// Agents
-
     space.agent = await this.agentService.createAgent({
       type: AgentType.SPACE,
     });
-
-    await this.save(space);
 
     if (space.level === SpaceLevel.SPACE) {
       await this.addLevelZeroSpaceEntities(space);
@@ -268,7 +262,7 @@ export class SpaceService {
       space.id
     );
 
-    return space;
+    return await this.save(space);
   }
 
   private async addDefaultTemplatesToSpaceLibrary(

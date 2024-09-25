@@ -57,6 +57,16 @@ export class RoleService {
     return result;
   }
 
+  public convertCredentialToString(credential: ICredentialDefinition): string {
+    return JSON.stringify(credential);
+  }
+
+  public convertParentCredentialsToString(
+    parentCredentials: ICredentialDefinition[]
+  ): string {
+    return JSON.stringify(parentCredentials);
+  }
+
   public getUserPolicy(role: IRole): IContributorRolePolicy {
     const result: IContributorRolePolicy = JSON.parse(role.userPolicy);
     return result;

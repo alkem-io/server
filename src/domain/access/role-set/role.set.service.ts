@@ -228,6 +228,8 @@ export class RoleSetService {
     for (const roleDefinition of roleDefinitions) {
       const credential = this.roleService.getCredentialForRole(roleDefinition);
       credential.resourceID = resourceID;
+      roleDefinition.credential =
+        this.roleService.convertCredentialToString(credential);
     }
 
     return roleSet;
