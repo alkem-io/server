@@ -310,24 +310,60 @@ export class SpaceService {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {
         subspaces: true,
+        collaboration: true,
+        community: true,
+        context: true,
+        agent: true,
+        profile: true,
+        storageAggregator: true,
+        library: true,
+        defaults: true,
       },
     });
 
-    if (!space.subspaces) {
+    if (
+      !space.subspaces ||
+      !space.collaboration ||
+      !space.community ||
+      !space.context ||
+      !space.agent ||
+      !space.profile ||
+      !space.storageAggregator ||
+      !space.authorization
+    ) {
       throw new RelationshipNotFoundException(
-        `Unable to load all entities for deletion of space ${space.id} `,
+        `Unable to load entities to delete Space: ${space.id} `,
         LogContext.SPACES
       );
     }
 
     // Do not remove a space that has subspaces, require these to be individually first removed
-    if (space.subspaces.length > 0)
+    if (space.subspaces.length > 0) {
       throw new OperationNotAllowedException(
         `Unable to remove Space (${space.id}) as it contains ${space.subspaces.length} subspaces`,
         LogContext.SPACES
       );
+    }
 
-    await this.deleteEntities(space.id);
+    await this.contextService.removeContext(space.context.id);
+    await this.collaborationService.deleteCollaboration(space.collaboration.id);
+    await this.communityService.removeCommunity(space.community.id);
+    await this.profileService.deleteProfile(space.profile.id);
+    await this.agentService.deleteAgent(space.agent.id);
+    await this.authorizationPolicyService.delete(space.authorization);
+
+    if (space.level === SpaceLevel.SPACE) {
+      if (!space.library || !space.defaults) {
+        throw new RelationshipNotFoundException(
+          `Unable to load entities to delete base subspace: ${space.id} `,
+          LogContext.SPACES
+        );
+      }
+      await this.templatesSetService.deleteTemplatesSet(space.library.id);
+      await this.spaceDefaultsService.deleteSpaceDefaults(space.defaults.id);
+    }
+
+    await this.storageAggregatorService.delete(space.storageAggregator.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
@@ -1097,57 +1133,6 @@ export class SpaceService {
     }
 
     return await this.save(space);
-  }
-
-  private async deleteEntities(spaceID: string) {
-    const space = await this.getSpaceOrFail(spaceID, {
-      relations: {
-        collaboration: true,
-        community: true,
-        context: true,
-        agent: true,
-        profile: true,
-        storageAggregator: true,
-        library: true,
-        defaults: true,
-      },
-    });
-
-    if (
-      !space.collaboration ||
-      !space.community ||
-      !space.community.roleSet ||
-      !space.context ||
-      !space.agent ||
-      !space.profile ||
-      !space.storageAggregator ||
-      !space.authorization
-    ) {
-      throw new RelationshipNotFoundException(
-        `Unable to load entities to delete base subspace: ${space.id} `,
-        LogContext.SPACES
-      );
-    }
-
-    await this.contextService.removeContext(space.context.id);
-    await this.collaborationService.deleteCollaboration(space.collaboration.id);
-    await this.communityService.removeCommunity(space.community.id);
-    await this.profileService.deleteProfile(space.profile.id);
-    await this.agentService.deleteAgent(space.agent.id);
-    await this.authorizationPolicyService.delete(space.authorization);
-
-    if (space.level === SpaceLevel.SPACE) {
-      if (!space.library || !space.defaults) {
-        throw new RelationshipNotFoundException(
-          `Unable to load entities to delete base subspace: ${space.id} `,
-          LogContext.SPACES
-        );
-      }
-      await this.templatesSetService.deleteTemplatesSet(space.library.id);
-      await this.spaceDefaultsService.deleteSpaceDefaults(space.defaults.id);
-    }
-
-    await this.storageAggregatorService.delete(space.storageAggregator.id);
   }
 
   async getSubspaceInLevelZeroSpace(
