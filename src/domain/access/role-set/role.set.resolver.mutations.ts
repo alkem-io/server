@@ -467,10 +467,10 @@ export class RoleSetResolverMutations {
     // Logic is that the ability to invite to a subspace requires the ability to invite to the
     // parent community if the user is not a member there
     if (roleSet.parentRoleSet) {
-      const parentCommunityAuthorization = roleSet.parentRoleSet.authorization;
+      const parentRoleSetAuthorization = roleSet.parentRoleSet.authorization;
       const canInviteToParent = this.authorizationService.isAccessGranted(
         agentInfo,
-        parentCommunityAuthorization,
+        parentRoleSetAuthorization,
         AuthorizationPrivilege.COMMUNITY_INVITE
       );
 
@@ -619,10 +619,10 @@ export class RoleSetResolverMutations {
     // Logic is that the ability to invite to a subspace requires the ability to invite to the
     // parent community if the user is not a member there
     if (roleSet.parentRoleSet) {
-      const parentCommunityAuthorization = roleSet.parentRoleSet.authorization;
+      const parentRoleSetAuthorization = roleSet.parentRoleSet.authorization;
       const canInviteToParent = this.authorizationService.isAccessGranted(
         agentInfo,
-        parentCommunityAuthorization,
+        parentRoleSetAuthorization,
         AuthorizationPrivilege.COMMUNITY_INVITE
       );
 

@@ -1236,19 +1236,17 @@ export class RoleSetService {
     return result;
   }
 
-  public async inheritParentCredentials(roleSet: IRoleSet): Promise<IRoleSet> {
-    const roleSetParent = roleSet.parentRoleSet;
-    if (!roleSetParent) {
-      throw new RelationshipNotFoundException(
-        `Unable to inherit parent credentials for role Manager ${roleSet.id}`,
-        LogContext.ROLES
-      );
-    }
-    const roleDefinitions = await this.getRoleDefinitions(roleSet);
+  public async setParentRoleSetAndCredentials(
+    childRoleSet: IRoleSet,
+    parentRoleSet: IRoleSet
+  ): Promise<IRoleSet> {
+    childRoleSet.parentRoleSet = parentRoleSet;
+
+    const roleDefinitions = await this.getRoleDefinitions(childRoleSet);
 
     for (const roleDefinition of roleDefinitions) {
       const parentRoleDefinition = await this.getRoleDefinition(
-        roleSetParent,
+        parentRoleSet,
         roleDefinition.type
       );
       const parentCredentials: ICredentialDefinition[] = [];
@@ -1260,10 +1258,11 @@ export class RoleSetService {
       parentCredentials.push(parentDirectCredential);
       parentParentCredentials.forEach(c => parentCredentials?.push(c));
 
-      roleDefinition.parentCredentials = JSON.stringify(parentCredentials);
+      roleDefinition.parentCredentials =
+        this.roleService.convertParentCredentialsToString(parentCredentials);
     }
 
-    return roleSet;
+    return childRoleSet;
   }
 
   public async getDirectParentCredentialForRole(

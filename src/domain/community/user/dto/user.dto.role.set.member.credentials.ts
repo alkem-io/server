@@ -2,10 +2,10 @@ import { Field, InputType } from '@nestjs/graphql';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @InputType()
-export class CommunityCredentials {
+export class RoleSetMemberCredentials {
   @Field()
   member!: CredentialDefinition;
 
-  @Field()
-  lead!: CredentialDefinition;
+  @Field({ nullable: true })
+  parentRoleSetMember?: CredentialDefinition;
 }

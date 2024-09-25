@@ -340,21 +340,21 @@ export class CommunityAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const parentCommunityCredential =
+    const parentRoleSetMemberCredential =
       await this.roleSetService.getDirectParentCredentialForRole(
         roleSet,
         CommunityRoleType.MEMBER
       );
 
     // Allow member of the parent community to Apply
-    if (parentCommunityCredential) {
+    if (parentRoleSetMemberCredential) {
       const membershipSettings = spaceSettings.membership;
       switch (membershipSettings.policy) {
         case CommunityMembershipPolicy.APPLICATIONS:
           const spaceMemberCanApply =
             this.authorizationPolicyService.createCredentialRule(
               [AuthorizationPrivilege.COMMUNITY_APPLY],
-              [parentCommunityCredential],
+              [parentRoleSetMemberCredential],
               CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY
             );
           spaceMemberCanApply.cascade = false;
@@ -364,7 +364,7 @@ export class CommunityAuthorizationService {
           const spaceMemberCanJoin =
             this.authorizationPolicyService.createCredentialRule(
               [AuthorizationPrivilege.COMMUNITY_JOIN],
-              [parentCommunityCredential],
+              [parentRoleSetMemberCredential],
               CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN
             );
           spaceMemberCanJoin.cascade = false;

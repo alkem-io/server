@@ -219,6 +219,10 @@ export class RoleSet1726843779059 implements MigrationInterface {
     );
 
     await queryRunner.query(`DROP TABLE \`community_policy\``);
+
+    await queryRunner.query(
+      `ALTER TABLE \`community\` DROP COLUMN \`parentCommunityId\``
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

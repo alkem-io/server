@@ -206,45 +206,6 @@ export class CommunityService {
     return await this.communityRepository.save(community);
   }
 
-  async getParentCommunity(
-    community: ICommunity
-  ): Promise<ICommunity | undefined> {
-    const communityWithParent = await this.getCommunityOrFail(community.id, {
-      relations: { parentCommunity: true },
-    });
-
-    const parentCommunity = communityWithParent?.parentCommunity;
-    if (parentCommunity) {
-      return await this.getCommunityOrFail(parentCommunity.id);
-    }
-    return undefined;
-  }
-
-  public async setParentCommunity(
-    community?: ICommunity,
-    parentCommunity?: ICommunity
-  ): Promise<ICommunity> {
-    if (
-      !community ||
-      !community.roleSet ||
-      !parentCommunity ||
-      !parentCommunity.roleSet
-    ) {
-      throw new EntityNotInitializedException(
-        `Unable to set the parent relationship for community with rolesets: ${community?.id} and ${parentCommunity?.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    community.parentCommunity = parentCommunity;
-    // Also update the communityPolicy
-    community.roleSet = await this.roleSetService.inheritParentCredentials(
-      community.roleSet
-    );
-    community.parentCommunity.roleSet.parentRoleSet = parentCommunity.roleSet;
-
-    return community;
-  }
-
   public async getDisplayName(community: ICommunity): Promise<string> {
     return await this.communityResolverService.getDisplayNameForRoleSetOrFail(
       community.id
@@ -318,11 +279,5 @@ export class CommunityService {
     return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
       community.id
     );
-  }
-
-  async isSpaceCommunity(community: ICommunity): Promise<boolean> {
-    const parentCommunity = await this.getParentCommunity(community);
-
-    return parentCommunity === undefined;
   }
 }

@@ -5,7 +5,5 @@ import { PublicPart } from '../utils/public-part';
 export const MockCommunityService: ValueProvider<PublicPart<CommunityService>> =
   {
     provide: CommunityService,
-    useValue: {
-      isSpaceCommunity: jest.fn(),
-    },
+    useValue: {},
   };

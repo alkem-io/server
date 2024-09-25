@@ -12,8 +12,6 @@ import { IRoleSet } from '@domain/access/role-set';
 export abstract class ICommunity extends IAuthorizable {
   groups?: IUserGroup[];
 
-  parentCommunity?: ICommunity;
-
   roleSet!: IRoleSet;
 
   guidelines?: ICommunityGuidelines;

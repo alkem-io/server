@@ -895,7 +895,9 @@ export class SpaceService {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {
       relations: {
         storageAggregator: true,
-        community: true,
+        community: {
+          roleSet: true,
+        },
       },
     });
 
@@ -940,6 +942,7 @@ export class SpaceService {
 
     subspace = await this.getSpaceOrFail(subspace.id, {
       relations: {
+        profile: true,
         community: {
           roleSet: true,
         },
@@ -950,13 +953,14 @@ export class SpaceService {
     if (agentInfo) {
       if (!subspace.community || !subspace.community.roleSet) {
         throw new EntityNotInitializedException(
-          `unable to load community with role manager: ${subspace.id}`,
+          `unable to load community with role set: ${subspace.id}`,
           LogContext.SPACES
         );
       }
       const roleSet = subspace.community.roleSet;
+      const parentRoleSet = space.community.roleSet;
       const agent = await this.agentService.getAgentOrFail(agentInfo?.agentID);
-      const isMember = await this.roleSetService.isMember(agent, roleSet);
+      const isMember = await this.roleSetService.isMember(agent, parentRoleSet);
       if (isMember) {
         await this.assignUserToRoles(roleSet, agentInfo);
       }
@@ -969,9 +973,14 @@ export class SpaceService {
     space: ISpace,
     subspace: ISpace
   ): Promise<ISpace> {
-    if (!space.community) {
+    if (
+      !space.community ||
+      !subspace.community ||
+      !space.community.roleSet ||
+      !subspace.community.roleSet
+    ) {
       throw new ValidationException(
-        `Unable to add Subspace to space, missing relations: ${space.id}`,
+        `Unable to add Subspace to space, missing community or roleset relations: ${space.id}`,
         LogContext.SPACES
       );
     }
@@ -981,7 +990,7 @@ export class SpaceService {
     subspace.levelZeroSpaceID = space.levelZeroSpaceID;
 
     // Finally set the community relationship
-    subspace.community = await this.setCommunityHierarchyForSubspace(
+    subspace.community = await this.setRoleSetHierarchyForSubspace(
       space.community,
       subspace.community
     );
@@ -1195,21 +1204,28 @@ export class SpaceService {
     return this.spaceSettingsService.getSettings(space.settingsStr);
   }
 
-  private async setCommunityHierarchyForSubspace(
+  private async setRoleSetHierarchyForSubspace(
     parentCommunity: ICommunity,
     childCommunity: ICommunity | undefined
   ): Promise<ICommunity> {
-    if (!childCommunity) {
-      throw new RelationshipNotFoundException(
-        `Unable to set subspace community relationship, child community not provied: ${parentCommunity.id}`,
-        LogContext.SPACES
+    if (
+      !childCommunity ||
+      !childCommunity.roleSet ||
+      !parentCommunity ||
+      !parentCommunity.roleSet
+    ) {
+      throw new EntityNotInitializedException(
+        `Unable to set the parent relationship for rolesets: ${childCommunity?.id} and ${parentCommunity?.id}`,
+        LogContext.COMMUNITY
       );
     }
-    // Finally set the community relationship
-    return await this.communityService.setParentCommunity(
-      childCommunity,
-      parentCommunity
-    );
+
+    childCommunity.roleSet =
+      await this.roleSetService.setParentRoleSetAndCredentials(
+        childCommunity.roleSet,
+        parentCommunity.roleSet
+      );
+    return childCommunity;
   }
 
   public async updateSettings(

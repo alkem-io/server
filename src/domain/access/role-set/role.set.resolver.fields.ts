@@ -26,6 +26,7 @@ import { IRole } from '../role/role.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+import { RoleSetMemberCredentials } from '@domain/community/user/dto/user.dto.role.set.member.credentials';
 
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFields {
@@ -51,22 +52,22 @@ export class RoleSetResolverFields {
         CommunityRoleType.MEMBER
       );
 
-    const parentCommunity = await this.roleSetService.getParentRoleSet(roleSet);
+    const parentRoleSet = await this.roleSetService.getParentRoleSet(roleSet);
 
-    const parentCommunityMemberCredentials = parentCommunity
+    const parentRoleSetMemberCredential = parentRoleSet
       ? await this.roleSetService.getCredentialDefinitionForRole(
-          parentCommunity,
+          parentRoleSet,
           CommunityRoleType.MEMBER
         )
       : undefined;
 
-    const roleSetMemberCredentials = {
+    const roleSetMemberCredential: RoleSetMemberCredentials = {
       member: roleDefinition,
-      parentCommunityMember: parentCommunityMemberCredentials,
+      parentRoleSetMember: parentRoleSetMemberCredential,
     };
 
     return this.userService.getPaginatedAvailableMemberUsers(
-      roleSetMemberCredentials,
+      roleSetMemberCredential,
       pagination,
       filter
     );

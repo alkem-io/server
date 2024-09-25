@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -49,14 +42,6 @@ export class Community
   })
   @JoinColumn()
   roleSet!: RoleSet;
-
-  // The parent community can have many child communities; the relationship is controlled by the child.
-  @ManyToOne(() => Community, {
-    eager: false,
-    cascade: false,
-    onDelete: 'SET NULL',
-  })
-  parentCommunity?: Community;
 
   @Column({
     length: UUID_LENGTH,
