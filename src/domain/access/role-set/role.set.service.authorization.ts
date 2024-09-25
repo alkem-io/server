@@ -10,9 +10,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
-  CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
   POLICY_RULE_COMMUNITY_ADD_VC,
@@ -27,10 +25,7 @@ import {
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { IAgent } from '@domain/agent';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -40,11 +35,11 @@ import { VirtualContributorService } from '@domain/community/virtual-contributor
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { IRoleSet } from './role.set.interface';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @Injectable()
 export class RoleSetAuthorizationService {
   constructor(
-    private licenseEngineService: LicenseEngineService,
     private roleSetService: RoleSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
@@ -56,7 +51,6 @@ export class RoleSetAuthorizationService {
   async applyAuthorizationPolicy(
     roleSetID: string,
     parentAuthorization: IAuthorizationPolicy,
-    levelZeroSpaceAgent: IAgent,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean,
     isSubspace: boolean
@@ -93,8 +87,6 @@ export class RoleSetAuthorizationService {
     roleSet.authorization = await this.extendAuthorizationPolicy(
       roleSet,
       roleSet.authorization,
-      parentAuthorization?.anonymousReadAccess,
-      levelZeroSpaceAgent,
       spaceSettings
     );
     roleSet.authorization = this.appendVerifiedCredentialRules(
@@ -188,7 +180,8 @@ export class RoleSetAuthorizationService {
     }
 
     // Associates of trusted organizations can join
-    const trustedOrganizationIDs: string[] = [];
+    const trustedOrganizationIDs: UUID[] =
+      spaceSettings.membership.trustedOrganizations;
     for (const trustedOrganizationID of trustedOrganizationIDs) {
       const hostOrgMembersCanJoin =
         this.authorizationPolicyService.createCredentialRule(
@@ -196,7 +189,7 @@ export class RoleSetAuthorizationService {
           [
             {
               type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-              resourceID: trustedOrganizationID,
+              resourceID: JSON.stringify(trustedOrganizationID),
             },
           ],
           CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN
@@ -214,8 +207,6 @@ export class RoleSetAuthorizationService {
   private async extendAuthorizationPolicy(
     roleSet: IRoleSet,
     authorization: IAuthorizationPolicy | undefined,
-    allowGlobalRegisteredReadAccess: boolean | undefined,
-    levelZeroSpaceAgent: IAgent,
     spaceSettings: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -259,42 +250,6 @@ export class RoleSetAuthorizationService {
       );
     spaceAdminsInvite.cascade = false;
     newRules.push(spaceAdminsInvite);
-
-    if (allowGlobalRegisteredReadAccess) {
-      const globalRegistered =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          [AuthorizationPrivilege.READ],
-          [AuthorizationCredential.GLOBAL_REGISTERED],
-          CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED
-        );
-      newRules.push(globalRegistered);
-    }
-
-    const accessVirtualContributors =
-      await this.licenseEngineService.isAccessGranted(
-        LicensePrivilege.SPACE_VIRTUAL_CONTRIBUTOR_ACCESS,
-        levelZeroSpaceAgent
-      );
-    if (accessVirtualContributors) {
-      const criterias: ICredentialDefinition[] =
-        await this.roleSetService.getCredentialsForRoleWithParents(
-          roleSet,
-          CommunityRoleType.ADMIN,
-          spaceSettings
-        );
-      criterias.push({
-        type: AuthorizationCredential.GLOBAL_ADMIN,
-        resourceID: '',
-      });
-      const accessVCsRule =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR],
-          criterias,
-          CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS
-        );
-      accessVCsRule.cascade = true; // TODO: ideally make this not cascade so it is more specific
-      newRules.push(accessVCsRule);
-    }
 
     //
     const updatedAuthorization =
