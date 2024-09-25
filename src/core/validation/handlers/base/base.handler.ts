@@ -73,6 +73,14 @@ import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.d
 import { InviteNewContributorForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.platform.invitation.community';
 import { ApplyForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.apply';
 import { InviteForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.invite';
+import { AssignRoleOnRoleSetToUserInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.user';
+import { AssignRoleOnRoleSetToOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.organization';
+import { AssignRoleOnRoleSetToVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.virtual';
+import { RemoveRoleOnRoleSetFromUserInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.user';
+import { RemoveRoleOnRoleSetFromOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.organization';
+import { RemoveRoleOnRoleSetFromVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.virtual';
+import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.update.application.form';
+import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -80,6 +88,17 @@ export class BaseHandler extends AbstractHandler {
     metatype: Function
   ): Promise<ValidationError[]> {
     const types: Function[] = [
+      AssignRoleOnRoleSetToUserInput,
+      AssignRoleOnRoleSetToOrganizationInput,
+      AssignRoleOnRoleSetToVirtualContributorInput,
+      RemoveRoleOnRoleSetFromUserInput,
+      RemoveRoleOnRoleSetFromOrganizationInput,
+      RemoveRoleOnRoleSetFromVirtualContributorInput,
+      UpdateApplicationFormOnRoleSetInput,
+      JoinAsEntryRoleOnRoleSetInput,
+      ApplyForEntryRoleOnRoleSetInput,
+      InviteForEntryRoleOnRoleSetInput,
+      InviteNewContributorForRoleOnRoleSetInput,
       ApplicationEventInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
@@ -128,9 +147,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
       VisualUploadImageInput,
-      ApplyForEntryRoleOnRoleSetInput,
-      InviteForEntryRoleOnRoleSetInput,
-      InviteNewContributorForRoleOnRoleSetInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
       CreateCalloutOnCollaborationInput,
