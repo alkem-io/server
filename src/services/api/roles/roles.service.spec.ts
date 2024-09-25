@@ -14,7 +14,6 @@ import { RolesService } from './roles.service';
 import { UserService } from '@domain/community/user/user.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { CommunityService } from '@domain/community/community/community.service';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { testData } from '@test/utils';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -67,7 +66,6 @@ describe('RolesService', () => {
     userService = moduleRef.get(UserService);
     applicationService = moduleRef.get(ApplicationService);
     organizationService = moduleRef.get(OrganizationService);
-    communityService = moduleRef.get(CommunityService);
     communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
   });
