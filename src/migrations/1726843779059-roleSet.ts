@@ -221,6 +221,9 @@ export class RoleSet1726843779059 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE \`community_policy\``);
 
     await queryRunner.query(
+      `ALTER TABLE \`community\` DROP FOREIGN KEY \`FK_8e8283bdacc9e770918fe689333\``
+    );
+    await queryRunner.query(
       `ALTER TABLE \`community\` DROP COLUMN \`parentCommunityId\``
     );
   }
