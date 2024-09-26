@@ -458,8 +458,8 @@ platform:
   # Acceptable Usage Policy
   aup: ${PLATFORM_AUP}:https://www.alkemio.org/legal/hub/#aup
 
-   # Documentation site
-  documentation: ${PLATFORM_DOCUMENTATION}:https://alkem.io/documentation
+   # Documentation site path, endpoint is endpoint_cluster + documentation_path
+  documentation_path: ${PLATFORM_DOCUMENTATION_PATH}:/documentation
 
   # Client can optionally work with a landing page, to give additional information
   landing_page:

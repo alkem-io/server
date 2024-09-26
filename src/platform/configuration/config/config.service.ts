@@ -15,6 +15,13 @@ export class KonfigService {
       this.configService.get('hosting.endpoint_cluster', { infer: true })
     ).hostname;
 
+    const platform = this.configService.get('platform', { infer: true });
+
+    const fullDocumentationUrl = new URL(
+      platform.documentation_path,
+      `https://${domain}`
+    ).toString();
+
     const { sentry, apm } = this.configService.get('monitoring', {
       infer: true,
     });
@@ -24,7 +31,6 @@ export class KonfigService {
     const fileConfig = this.configService.get('storage.file', {
       infer: true,
     });
-    const platform = this.configService.get('platform', { infer: true });
     return {
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
@@ -105,7 +111,7 @@ export class KonfigService {
         newuser: platform.newuser,
         tips: platform.tips,
         aup: platform.aup,
-        documentation: platform.documentation,
+        documentation: fullDocumentationUrl,
       },
       sentry: {
         enabled: sentry?.enabled,
