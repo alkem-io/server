@@ -28,6 +28,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityCommunicationModule } from '@domain/community/community-communication/community.communication.module';
+import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields public';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { CommunityCommunicationModule } from '@domain/community/community-commun
     RoleSetAuthorizationService,
     RoleSetResolverMutations,
     RoleSetResolverFields,
+    RoleSetResolverFieldsPublic,
     RoleSetEventsService,
     RoleSetApplicationLifecycleOptionsProvider,
     RoleSetInvitationLifecycleOptionsProvider,

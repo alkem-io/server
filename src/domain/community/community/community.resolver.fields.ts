@@ -51,7 +51,7 @@ export class CommunityResolverFields {
     });
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  // Note: do not check for READ so that it is accessible to check for authorization
   @UseGuards(GraphqlGuard)
   @ResolveField('roleSet', () => IRoleSet, {
     nullable: false,

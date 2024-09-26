@@ -148,12 +148,13 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IRoleSet> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      roleSet.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup RoleSet: ${roleSet.id}`
-    );
+    // Note: RoleSet is publicly accessible for information such as RoleDefinitions, so do not check for READ access here
+    // this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   roleSet.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `lookup RoleSet: ${roleSet.id}`
+    // );
 
     return roleSet;
   }
@@ -184,9 +185,18 @@ export class LookupResolverFields {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
-    return await this.virtualContributorService.getVirtualContributorOrFail(id);
+    const virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup VirtualContributor: ${virtualContributor.id}`
+    );
+    return virtualContributor;
   }
 
   @UseGuards(GraphqlGuard)

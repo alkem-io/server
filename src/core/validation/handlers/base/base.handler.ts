@@ -81,6 +81,7 @@ import { RemoveRoleOnRoleSetFromOrganizationInput } from '@domain/access/role-se
 import { RemoveRoleOnRoleSetFromVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.virtual';
 import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.update.application.form';
 import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
+import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -97,6 +98,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateApplicationFormOnRoleSetInput,
       JoinAsEntryRoleOnRoleSetInput,
       ApplyForEntryRoleOnRoleSetInput,
+      RolesUserInput,
       InviteForEntryRoleOnRoleSetInput,
       InviteNewContributorForRoleOnRoleSetInput,
       ApplicationEventInput,
