@@ -105,6 +105,7 @@ export class KonfigService {
         newuser: platform.newuser,
         tips: platform.tips,
         aup: platform.aup,
+        documentation: platform.documentation,
       },
       sentry: {
         enabled: sentry?.enabled,

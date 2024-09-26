@@ -197,6 +197,7 @@ export type AlkemioConfig = {
     newuser: string;
     tips: string;
     aup: string;
+    documentation: string;
     landing_page: {
       enabled: boolean;
     };

@@ -458,6 +458,9 @@ platform:
   # Acceptable Usage Policy
   aup: ${PLATFORM_AUP}:https://www.alkemio.org/legal/hub/#aup
 
+   # Documentation site
+  documentation: ${PLATFORM_DOCUMENTATION}:https://alkem.io/documentation
+
   # Client can optionally work with a landing page, to give additional information
   landing_page:
     enabled: ${LANDING_PAGE_ENABLED}:false
