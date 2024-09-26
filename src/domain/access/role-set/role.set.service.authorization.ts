@@ -113,21 +113,21 @@ export class RoleSetAuthorizationService {
     updatedAuthorizations.push(roleSet.authorization);
 
     for (const application of roleSet.applications) {
-      const applicationAuthReset =
+      const applicationAuth =
         await this.applicationAuthorizationService.applyAuthorizationPolicy(
           application,
           roleSet.authorization
         );
-      application.authorization = applicationAuthReset;
+      updatedAuthorizations.push(applicationAuth);
     }
 
     for (const invitation of roleSet.invitations) {
-      const invitationReset =
+      const invitationAuth =
         await this.invitationAuthorizationService.applyAuthorizationPolicy(
           invitation,
           roleSet.authorization
         );
-      invitation.authorization = invitationReset;
+      updatedAuthorizations.push(invitationAuth);
     }
 
     for (const externalInvitation of roleSet.platformInvitations) {
