@@ -135,7 +135,7 @@ export class RoleSetResolverMutations {
       agentInfo,
       roleSet.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign organization community role: ${roleSet.id}`
+      `assign organization RoleSet role: ${roleSet.id}`
     );
     return await this.roleSetService.assignOrganizationToRole(
       roleSet,
@@ -368,7 +368,7 @@ export class RoleSetResolverMutations {
       agentInfo,
       roleSet.authorization,
       AuthorizationPrivilege.COMMUNITY_APPLY,
-      `create application community: ${roleSet.id}`
+      `create application RoleSet: ${roleSet.id}`
     );
 
     if (roleSet.parentRoleSet) {
@@ -447,7 +447,7 @@ export class RoleSetResolverMutations {
       agentInfo,
       roleSet.authorization,
       AuthorizationPrivilege.COMMUNITY_INVITE,
-      `create invitation community: ${roleSet.id}`
+      `create invitation RoleSet: ${roleSet.id}`
     );
 
     const contributors: IContributor[] = [];

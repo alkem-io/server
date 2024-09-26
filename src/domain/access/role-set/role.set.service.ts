@@ -219,7 +219,7 @@ export class RoleSetService {
     return applicationForm;
   }
 
-  // Update the Community policy to have the right resource ID
+  // Update the RoleSet policy to have the right resource ID
   public async updateRoleResourceID(
     roleSet: IRoleSet,
     resourceID: string
@@ -1071,7 +1071,7 @@ export class RoleSetService {
     const openApplication = await this.findOpenApplication(user.id, roleSet.id);
     if (openApplication) {
       throw new RoleSetMembershipException(
-        `Application not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${roleSet.id}.`,
+        `Application not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1079,7 +1079,7 @@ export class RoleSetService {
     const openInvitation = await this.findOpenInvitation(user.id, roleSet.id);
     if (openInvitation) {
       throw new RoleSetMembershipException(
-        `Application not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${roleSet.id}.`,
+        `Application not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1088,7 +1088,7 @@ export class RoleSetService {
     const isExistingMember = await this.isMember(agent, roleSet);
     if (isExistingMember)
       throw new RoleSetMembershipException(
-        `Application not possible: Contributor ${user.id} is already a member of the Community: ${roleSet.id}.`,
+        `Application not possible: Contributor ${user.id} is already a member of the RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -1104,7 +1104,7 @@ export class RoleSetService {
     );
     if (openInvitation) {
       throw new RoleSetMembershipException(
-        `Invitation not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${roleSet.id}.`,
+        `Invitation not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1115,7 +1115,7 @@ export class RoleSetService {
     );
     if (openApplication) {
       throw new RoleSetMembershipException(
-        `Invitation not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${roleSet.id}.`,
+        `Invitation not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1124,7 +1124,7 @@ export class RoleSetService {
     const isExistingMember = await this.isMember(agent, roleSet);
     if (isExistingMember)
       throw new RoleSetMembershipException(
-        `Invitation not possible: Contributor ${contributor.id} is already a member of the Community: ${roleSet.id}.`,
+        `Invitation not possible: Contributor ${contributor.id} is already a member of the RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
   }

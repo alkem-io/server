@@ -31,7 +31,7 @@ export class ApplicationResolverMutations {
       agentInfo,
       application.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete application community: ${application.id}`
+      `delete application on RoleSet: ${application.id}`
     );
     return await this.applicationService.deleteApplication(deleteData);
   }
