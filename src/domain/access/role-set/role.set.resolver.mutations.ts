@@ -399,12 +399,12 @@ export class RoleSetResolverMutations {
     const community =
       await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
 
-    const authorization =
+    application.authorization =
       await this.applicationAuthorizationService.applyAuthorizationPolicy(
         application,
         roleSet.authorization
       );
-    await this.authorizationPolicyService.save(authorization);
+    await this.authorizationPolicyService.save(application.authorization);
 
     // Send the notification
     const notificationInput: NotificationInputCommunityApplication = {

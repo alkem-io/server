@@ -219,7 +219,7 @@ export class CommunityService {
 
     if (!communityWithRoleSet.roleSet) {
       throw new EntityNotInitializedException(
-        `Unable to locate Role Manager for community: ${community.id}`,
+        `Unable to locate RoleSet for community: ${community.id}`,
         LogContext.COMMUNITY
       );
     }

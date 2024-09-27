@@ -252,7 +252,7 @@ export class SpaceService {
     // set immediate community parent + resourceID
     if (!space.community || !space.community.roleSet) {
       throw new RelationshipNotFoundException(
-        `Unable to load community with role manager: ${space.id}`,
+        `Unable to load Community with RoleSet: ${space.id}`,
         LogContext.SPACES
       );
     }
