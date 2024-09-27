@@ -13,4 +13,6 @@ export enum SpaceReservedName {
   ABOUT = 'about',
   PROFILE = 'profile',
   RESTRICTED = 'restricted',
+  DOCS = 'docs',
+  DOCUMENTATION = 'documentation',
 }
