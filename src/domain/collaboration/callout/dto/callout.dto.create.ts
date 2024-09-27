@@ -68,4 +68,6 @@ export class CreateCalloutInput {
       'Controls if the comments are enabled for this Callout. Defaults to false.',
   })
   enableComments?: boolean;
+
+  isTemplate?: boolean;
 }
