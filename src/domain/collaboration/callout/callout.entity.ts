@@ -30,6 +30,9 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column('text', { nullable: false })
   type!: CalloutType;
 
+  @Column({ type: 'boolean', nullable: false })
+  isTemplate!: boolean;
+
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy?: string;
 
