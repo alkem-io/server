@@ -82,7 +82,7 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
-import { TemplateApplierModule } from '@domain/template/template.applier/template.applier.module';
+import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
 
 @Module({
   imports: [
