@@ -58,9 +58,6 @@ import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AccountHostService } from '../account.host/account.host.service';
@@ -75,11 +72,13 @@ import { LicensePlanType } from '@common/enums/license.plan.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
-import { TemplateService } from '@domain/template/template/template.service';
-import { templatesSetDefaults } from '../space.defaults/definitions/space.defaults.templates';
-import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create.';
+import { ITemplatesManager } from '@domain/template/templates-manager';
 
 @Injectable()
 export class SpaceService {
@@ -96,12 +95,10 @@ export class SpaceService {
     private spaceSettingsService: SpaceSettingsService,
     private spaceDefaultsService: SpaceDefaultsService,
     private storageAggregatorService: StorageAggregatorService,
-    private templatesSetService: TemplatesSetService,
+    private templatesManagerService: TemplatesManagerService,
     private collaborationService: CollaborationService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
-    private templateService: TemplateService,
-    private inputCreatorService: InputCreatorService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -109,7 +106,6 @@ export class SpaceService {
 
   public async createSpace(
     spaceData: CreateSpaceInput,
-    spaceDefaults?: ISpaceDefaults,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
     if (!spaceData.type) {
@@ -217,7 +213,7 @@ export class SpaceService {
     if (!collaborationData.innovationFlowData) {
       // TODO: need to pick up the default template + innovation flow properly
       collaborationData.innovationFlowData =
-        await this.getDefaultInnovationStates(space.type, spaceDefaults);
+        await this.getDefaultInnovationStates(space.type);
     }
     if (!collaborationData.calloutsData) {
       collaborationData.calloutsData = [];
@@ -245,7 +241,7 @@ export class SpaceService {
     });
 
     if (space.level === SpaceLevel.SPACE) {
-      await this.addLevelZeroSpaceEntities(space);
+      space.templatesManager = await this.createTemplatesManager();
     }
 
     ////// Community
@@ -265,41 +261,20 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  private async addDefaultTemplatesToSpaceLibrary(
-    templatesSet: ITemplatesSet,
-    storageAggregator: IStorageAggregator
-  ): Promise<ITemplatesSet> {
-    return await this.templatesSetService.addTemplates(
-      templatesSet,
-      templatesSetDefaults.posts,
-      templatesSetDefaults.innovationFlows,
-      storageAggregator
-    );
-  }
+  private async createTemplatesManager(): Promise<ITemplatesManager> {
+    const templateDefaultData: CreateTemplateDefaultInput = {
+      type: TemplateDefaultType.SUBSPACE,
+      allowedTemplateType: TemplateType.INNOVATION_FLOW,
+    };
+    const templatesManagerData: CreateTemplatesManagerInput = {
+      templateDefaultsData: [templateDefaultData],
+    };
 
-  private async addLevelZeroSpaceEntities(space: ISpace) {
-    if (!space.storageAggregator) {
-      throw new EntityNotInitializedException(
-        `'storage aggregator not set on level zero space '${space.id}'`,
-        LogContext.SPACES
+    const templatesManager =
+      await this.templatesManagerService.createTemplatesManager(
+        templatesManagerData
       );
-    }
-    space.library = await this.templatesSetService.createTemplatesSet();
-    space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
-
-    // And set the defaults
-    space.library = await this.addDefaultTemplatesToSpaceLibrary(
-      space.library,
-      space.storageAggregator
-    );
-    if (space.defaults && space.library && space.library.templates) {
-      const innovationFlowTemplates = space.library.templates.filter(
-        template => template.type === TemplateType.INNOVATION_FLOW
-      );
-      if (innovationFlowTemplates.length > 0) {
-        space.defaults.innovationFlowTemplate = innovationFlowTemplates[0];
-      }
-    }
+    return templatesManager;
   }
 
   async save(space: ISpace): Promise<ISpace> {
@@ -316,8 +291,7 @@ export class SpaceService {
         agent: true,
         profile: true,
         storageAggregator: true,
-        library: true,
-        defaults: true,
+        templatesManager: true,
       },
     });
 
@@ -353,14 +327,15 @@ export class SpaceService {
     await this.authorizationPolicyService.delete(space.authorization);
 
     if (space.level === SpaceLevel.SPACE) {
-      if (!space.library || !space.defaults) {
+      if (!space.templatesManager || !space.templatesManager) {
         throw new RelationshipNotFoundException(
           `Unable to load entities to delete base subspace: ${space.id} `,
           LogContext.SPACES
         );
       }
-      await this.templatesSetService.deleteTemplatesSet(space.library.id);
-      await this.spaceDefaultsService.deleteSpaceDefaults(space.defaults.id);
+      await this.templatesManagerService.deleteTemplatesManager(
+        space.templatesManager.id
+      );
     }
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
@@ -371,40 +346,8 @@ export class SpaceService {
   }
 
   private async getDefaultInnovationStates(
-    spaceType: SpaceType,
-    spaceDefaults?: ISpaceDefaults
+    spaceType: SpaceType
   ): Promise<CreateInnovationFlowInput> {
-    if (
-      spaceDefaults &&
-      (spaceType === SpaceType.CHALLENGE || spaceType === SpaceType.OPPORTUNITY)
-    ) {
-      // If no argument is provided, then use the default template for the space, if set
-      // for spaces of type challenge or opportunity
-      const innovationFlowTemplateID = spaceDefaults.innovationFlowTemplate?.id;
-      if (innovationFlowTemplateID) {
-        const template = await this.templateService.getTemplateOrFail(
-          innovationFlowTemplateID,
-          {
-            relations: {
-              innovationFlow: {
-                profile: true,
-              },
-            },
-          }
-        );
-        const innovationFlow = template.innovationFlow;
-        if (!innovationFlow) {
-          throw new RelationshipNotFoundException(
-            `unable to get innovation flow for template ${template.id}`,
-            LogContext.SPACES
-          );
-        }
-        return await this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
-          innovationFlow
-        );
-      }
-    }
-
     // If no default template is set, then pick up the default based on the specified type
     const innovationFlowStatesDefault =
       this.spaceDefaultsService.getDefaultInnovationFlowStates(spaceType);
@@ -961,17 +904,11 @@ export class SpaceService {
         );
       }
     }
-    // Get the defaults to use
-    const spaceDefaults = await this.getDefaultsOrFail(space.levelZeroSpaceID);
 
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
     subspaceData.level = space.level + 1;
-    let subspace = await this.createSpace(
-      subspaceData,
-      spaceDefaults,
-      agentInfo
-    );
+    let subspace = await this.createSpace(subspaceData, agentInfo);
 
     subspace = await this.addSubspaceToSpace(space, subspace);
     subspace = await this.save(subspace);
@@ -1279,22 +1216,23 @@ export class SpaceService {
     return community.roleSet;
   }
 
-  async getLibraryOrFail(rootSpaceID: string): Promise<ITemplatesSet> {
-    const levelZeroSpaceWithLibrary = await this.getSpaceOrFail(rootSpaceID, {
+  async getTemplatesManagerOrFail(
+    rootSpaceID: string
+  ): Promise<ITemplatesManager> {
+    const levelZeroSpace = await this.getSpaceOrFail(rootSpaceID, {
       relations: {
-        library: true,
+        templatesManager: true,
       },
     });
-    const templatesSet = levelZeroSpaceWithLibrary.library;
 
-    if (!templatesSet) {
+    if (!levelZeroSpace || !levelZeroSpace.templatesManager) {
       throw new EntityNotFoundException(
-        `Unable to find templatesSet for level zero space with id: ${rootSpaceID}`,
+        `Unable to find templatesManager for level zero space with id: ${rootSpaceID}`,
         LogContext.ACCOUNT
       );
     }
 
-    return templatesSet;
+    return levelZeroSpace.templatesManager;
   }
 
   public async activeSubscription(
@@ -1322,28 +1260,6 @@ export class SpaceService {
       })
       .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0]?.subscription;
-  }
-
-  async getDefaultsOrFail(rootSpaceID: string): Promise<ISpaceDefaults> {
-    const levelZeroSpaceWithDefaults = await this.getSpaceOrFail(rootSpaceID, {
-      relations: {
-        defaults: {
-          innovationFlowTemplate: {
-            profile: true,
-          },
-        },
-      },
-    });
-    const defaults = levelZeroSpaceWithDefaults.defaults;
-
-    if (!defaults) {
-      throw new EntityNotFoundException(
-        `Unable to find Defaults for level zero space with id: ${rootSpaceID}`,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return defaults;
   }
 
   public async getProvider(spaceInput: ISpace): Promise<IContributor> {

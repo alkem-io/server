@@ -1,13 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ISpaceDefaults } from './space.defaults.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { SpaceDefaults } from './space.defaults.entity';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
@@ -42,79 +34,11 @@ import { spaceDefaultsCalloutGroupsBlankSlate } from './definitions/blank-slate/
 import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space.defaults.callouts.blank.slate';
 import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
 import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ITemplate } from '@domain/template/template/template.interface';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 
 @Injectable()
 export class SpaceDefaultsService {
-  constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(SpaceDefaults)
-    private spaceDefaultsRepository: Repository<SpaceDefaults>
-  ) {}
-
-  public async createSpaceDefaults(): Promise<ISpaceDefaults> {
-    const spaceDefaults: ISpaceDefaults = new SpaceDefaults();
-    spaceDefaults.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.SPACE_DEFAULTS
-    );
-
-    return spaceDefaults;
-  }
-
-  public async updateSpaceDefaults(
-    spaceDefaults: ISpaceDefaults,
-    innovationFlowTemplate: ITemplate
-  ): Promise<ISpaceDefaults> {
-    spaceDefaults.innovationFlowTemplate = innovationFlowTemplate;
-
-    return await this.save(spaceDefaults);
-  }
-
-  async deleteSpaceDefaults(spaceDefaultsId: string): Promise<ISpaceDefaults> {
-    const spaceDefaults = await this.getSpaceDefaultsOrFail(spaceDefaultsId, {
-      relations: {
-        authorization: true,
-      },
-    });
-
-    if (spaceDefaults.authorization) {
-      await this.authorizationPolicyService.delete(spaceDefaults.authorization);
-    }
-
-    // Note: do not remove the innovation flow template here, as that is the responsibility of the Space Library
-
-    const result = await this.spaceDefaultsRepository.remove(
-      spaceDefaults as SpaceDefaults
-    );
-    result.id = spaceDefaultsId;
-    return result;
-  }
-
-  async save(spaceDefaults: ISpaceDefaults): Promise<ISpaceDefaults> {
-    return await this.spaceDefaultsRepository.save(spaceDefaults);
-  }
-
-  public async getSpaceDefaultsOrFail(
-    spaceDefaultsID: string,
-    options?: FindOneOptions<SpaceDefaults>
-  ): Promise<ISpaceDefaults | never> {
-    let spaceDefaults: ISpaceDefaults | null = null;
-    if (spaceDefaultsID.length === UUID_LENGTH) {
-      spaceDefaults = await this.spaceDefaultsRepository.findOne({
-        where: { id: spaceDefaultsID },
-        ...options,
-      });
-    }
-
-    if (!spaceDefaults)
-      throw new EntityNotFoundException(
-        `No SpaceDefaults found with the given id: ${spaceDefaultsID}`,
-        LogContext.COLLABORATION
-      );
-    return spaceDefaults;
-  }
+  constructor() {}
 
   public getCalloutGroups(spaceType: SpaceType): ICalloutGroup[] {
     switch (spaceType) {
@@ -209,12 +133,6 @@ export class SpaceDefaultsService {
           LogContext.ROLES
         );
     }
-  }
-
-  public getDefaultInnovationFlowTemplate(
-    spaceDefaults: ISpaceDefaults
-  ): ITemplate | undefined {
-    return spaceDefaults.innovationFlowTemplate;
   }
 
   public getDefaultSpaceSettings(spaceType: SpaceType): ISpaceSettings {

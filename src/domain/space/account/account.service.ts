@@ -93,11 +93,7 @@ export class AccountService {
     spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
-    let space = await this.spaceService.createSpace(
-      spaceData,
-      undefined,
-      agentInfo
-    );
+    let space = await this.spaceService.createSpace(spaceData, agentInfo);
     space.account = account;
 
     space = await this.spaceService.save(space);

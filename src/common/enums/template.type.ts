@@ -7,6 +7,7 @@ export enum TemplateType {
   COMMUNITY_GUIDELINES = 'community-guidelines',
   INNOVATION_FLOW = 'innovation-flow',
   COLLABORATION = 'collaboration',
+  SPACE = 'space',
 }
 
 registerEnumType(TemplateType, {

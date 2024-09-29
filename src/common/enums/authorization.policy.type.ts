@@ -39,7 +39,6 @@ export enum AuthorizationPolicyType {
   ECOSYSTEM_MODEL = 'ecosystem-model',
   VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   SPACE = 'space',
-  SPACE_DEFAULTS = 'space-defaults',
   ACCOUNT = 'account',
   DOCUMENT = 'document',
   STORAGE_AGGREGATOR = 'storage-aggregator',

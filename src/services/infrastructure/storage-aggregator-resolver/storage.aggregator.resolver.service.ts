@@ -166,7 +166,7 @@ export class StorageAggregatorResolverService {
     // First try on Space
     const space = await this.entityManager.findOne(Space, {
       where: {
-        library: {
+        templatesManager: {
           id: templatesSetId,
         },
       },

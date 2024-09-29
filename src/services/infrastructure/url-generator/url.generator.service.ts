@@ -403,7 +403,7 @@ export class UrlGeneratorService {
   ): Promise<string> {
     const space = await this.entityManager.findOne(Space, {
       where: {
-        library: {
+        templatesManager: {
           id: templatesSetID,
         },
       },
