@@ -258,7 +258,7 @@ export class SpaceResolverFields {
     description: 'The TemplatesManager in use by this Space',
   })
   @UseGuards(GraphqlGuard)
-  async templatesManager(@Parent() space: Space): Promise<ITemplatesManager> {
+  async templatesManager(@Parent() space: ISpace): Promise<ITemplatesManager> {
     return await this.spaceService.getTemplatesManagerOrFail(
       space.levelZeroSpaceID
     );

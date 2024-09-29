@@ -1,6 +1,6 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
-import { Profiling } from '@src/common/decorators';
+import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
 import { IConfig } from '@platform/configuration/config/config.interface';
@@ -14,6 +14,8 @@ import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { ILicensing } from '@platform/licensing/licensing.interface';
 import { IForum } from '@platform/forum';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -90,10 +92,19 @@ export class PlatformResolverFields {
     nullable: true,
     description: 'The latest release discussion.',
   })
-  @Profiling.api
   async latestReleaseDiscussion(): Promise<
     ReleaseDiscussionOutput | undefined
   > {
     return this.platformService.getLatestReleaseDiscussion();
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('templatesManager', () => ITemplatesManager, {
+    nullable: true,
+    description: 'The TemplatesManager in use by the Platform',
+  })
+  @UseGuards(GraphqlGuard)
+  async templatesManager(): Promise<ITemplatesManager> {
+    return await this.platformService.getTemplatesManagerOrFail();
   }
 }

@@ -1228,7 +1228,7 @@ export class SpaceService {
     if (!levelZeroSpace || !levelZeroSpace.templatesManager) {
       throw new EntityNotFoundException(
         `Unable to find templatesManager for level zero space with id: ${rootSpaceID}`,
-        LogContext.ACCOUNT
+        LogContext.SPACES
       );
     }
 

@@ -204,7 +204,6 @@ export class SpaceAuthorizationService {
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
       levelZeroSpaceAgent,
-      space.community.roleSet,
       spaceSettings,
       spaceMembershipAllowed
     );
@@ -238,7 +237,6 @@ export class SpaceAuthorizationService {
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
     levelZeroSpaceAgent: IAgent,
-    roleSet: IRoleSet,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicy[]> {
