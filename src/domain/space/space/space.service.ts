@@ -207,30 +207,14 @@ export class SpaceService {
     }
 
     //// Collaboration
-    const collaborationData: CreateCollaborationInput =
+    let collaborationData: CreateCollaborationInput =
       spaceData.collaborationData;
-    if (!collaborationData.innovationFlowData) {
-      // TODO: need to pick up the default template + innovation flow properly
-      collaborationData.innovationFlowData =
-        await this.spaceDefaultsService.getDefaultInnovationFlowInput(
-          space.type
-        );
-    }
-    if (!collaborationData.calloutsData) {
-      collaborationData.calloutsData = [];
-    }
-    const addDefaultCallouts = spaceData.collaborationData.addDefaultCallouts;
-    if (addDefaultCallouts === undefined || addDefaultCallouts) {
-      const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
+    // Pick up the default template that is applicable
+    collaborationData =
+      await this.spaceDefaultsService.createCollaborationInput(
+        collaborationData,
         space.type
       );
-      collaborationData.calloutsData.push(...defaultCallouts);
-    }
-
-    collaborationData.calloutGroups =
-      this.spaceDefaultsService.getCalloutGroups(space.type);
-    collaborationData.defaultCalloutGroupName =
-      this.spaceDefaultsService.getCalloutGroupDefault(space.type);
     space.collaboration = await this.collaborationService.createCollaboration(
       collaborationData,
       space.storageAggregator,

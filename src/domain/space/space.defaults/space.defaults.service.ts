@@ -36,10 +36,36 @@ import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space
 import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
+import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.collaboration';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 
 @Injectable()
 export class SpaceDefaultsService {
   constructor() {}
+
+  public async createCollaborationInput(
+    collaborationData: CreateCollaborationOnSpaceInput,
+    spaceType: SpaceType
+  ): Promise<CreateCollaborationInput> {
+    if (!collaborationData.innovationFlowData) {
+      // TODO: need to pick up the default template + innovation flow properly
+      collaborationData.innovationFlowData =
+        await this.getDefaultInnovationFlowInput(spaceType);
+    }
+    if (!collaborationData.calloutsData) {
+      collaborationData.calloutsData = [];
+    }
+    const addDefaultCallouts = collaborationData.addDefaultCallouts;
+    if (addDefaultCallouts === undefined || addDefaultCallouts) {
+      const defaultCallouts = this.getDefaultCallouts(spaceType);
+      collaborationData.calloutsData.push(...defaultCallouts);
+    }
+
+    collaborationData.calloutGroups = this.getCalloutGroups(spaceType);
+    collaborationData.defaultCalloutGroupName =
+      this.getCalloutGroupDefault(spaceType);
+    return collaborationData;
+  }
 
   public getCalloutGroups(spaceType: SpaceType): ICalloutGroup[] {
     switch (spaceType) {
