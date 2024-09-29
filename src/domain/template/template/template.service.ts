@@ -31,6 +31,7 @@ import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovatio
 import { randomUUID } from 'crypto';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Injectable()
 export class TemplateService {
@@ -112,21 +113,18 @@ export class TemplateService {
             storageAggregator
           );
         break;
-      case TemplateType.CALLOUT:
-        if (!templateData.calloutData) {
+      case TemplateType.COLLABORATION:
+        if (!templateData.collaborationData) {
           throw new ValidationException(
-            `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
+            `Collaboration Template requires collaboration input: ${JSON.stringify(templateData)}`,
             LogContext.TEMPLATES
           );
         }
-        // Ensure no comments are created on the callout
-        templateData.calloutData.enableComments = false;
-        templateData.calloutData.nameID = randomUUID().slice(0, 8);
-        template.callout = await this.calloutService.createCallout(
-          templateData.calloutData!,
-          [],
-          storageAggregator
-        );
+        template.collaboration =
+          await this.collaborationServerice.createCollaboration(
+            templateData.collaborationData!,
+            storageAggregator
+          );
         break;
       case TemplateType.WHITEBOARD:
         if (!templateData.whiteboard) {
@@ -146,6 +144,23 @@ export class TemplateService {
           storageAggregator
         );
         break;
+      case TemplateType.CALLOUT:
+        if (!templateData.calloutData) {
+          throw new ValidationException(
+            `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
+            LogContext.TEMPLATES
+          );
+        }
+        // Ensure no comments are created on the callout
+        templateData.calloutData.enableComments = false;
+        templateData.calloutData.visibility = CalloutVisibility.DRAFT;
+        templateData.calloutData.isTemplate = true;
+        templateData.calloutData.nameID = `template-${randomUUID().slice(0, 8)}`;
+        template.callout = await this.calloutService.createCallout(
+          templateData.calloutData!,
+          [],
+          storageAggregator
+        );
       default:
         throw new ValidationException(
           `unknown template type: ${template.type}`,

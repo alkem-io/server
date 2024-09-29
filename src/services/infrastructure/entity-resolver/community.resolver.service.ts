@@ -398,7 +398,9 @@ export class CommunityResolverService {
         },
       },
       relations: {
-        community: true,
+        community: {
+          roleSet: true,
+        },
       },
     });
     if (!space || !space.community) {
@@ -428,7 +430,9 @@ export class CommunityResolverService {
         },
       },
       relations: {
-        community: true,
+        community: {
+          roleSet: true,
+        },
       },
     });
     if (!space || !space.community) {
