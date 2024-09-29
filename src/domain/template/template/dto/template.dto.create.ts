@@ -10,6 +10,7 @@ import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
+import { CreateSpaceInput } from '@domain/space/space/dto/space.dto.create';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
@@ -80,4 +81,13 @@ export class CreateTemplateInput extends CreateNameableInput {
   @ValidateNested()
   @Type(() => CreateCollaborationInput)
   collaborationData?: CreateCollaborationInput;
+
+  @Field(() => CreateSpaceInput, {
+    nullable: true,
+    description: 'The Space to associate with this template.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateSpaceInput)
+  spaceData?: CreateSpaceInput;
 }

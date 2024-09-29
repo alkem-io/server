@@ -31,6 +31,7 @@ import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovatio
 import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
 import { randomUUID } from 'crypto';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Injectable()
 export class TemplateService {
@@ -40,6 +41,7 @@ export class TemplateService {
     private communityGuidelinesService: CommunityGuidelinesService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
+    private collaborationServerice: CollaborationService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -70,75 +72,86 @@ export class TemplateService {
       templateData.visualUri
     );
 
-    if (template.type === TemplateType.POST) {
-      if (!templateData.postDefaultDescription) {
-        throw new ValidationException(
-          `Post Template requires default description input: ${JSON.stringify(templateData)}`,
-          LogContext.TEMPLATES
-        );
-      }
-      template.postDefaultDescription = templateData.postDefaultDescription;
-    } else if (template.type === TemplateType.INNOVATION_FLOW) {
-      if (!templateData.innovationFlowData) {
-        throw new ValidationException(
-          `InnovationFlow Template requires create innovation flow input: ${JSON.stringify(templateData)}`,
-          LogContext.TEMPLATES
-        );
-      }
-      template.innovationFlow =
-        await this.innovationFlowService.createInnovationFlow(
-          templateData.innovationFlowData,
-          [],
-          storageAggregator,
-          true
-        );
-    } else if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
-      if (!templateData.communityGuidelinesData) {
-        throw new ValidationException(
-          `Community Guidelines Template requiresthe community guidelines input: ${JSON.stringify(templateData)}`,
-          LogContext.TEMPLATES
-        );
-      }
-      const guidelinesInput: CreateCommunityGuidelinesInput =
-        templateData.communityGuidelinesData!;
+    switch (template.type) {
+      case TemplateType.POST:
+        if (!templateData.postDefaultDescription) {
+          throw new ValidationException(
+            `Post Template requires default description input: ${JSON.stringify(templateData)}`,
+            LogContext.TEMPLATES
+          );
+        }
+        template.postDefaultDescription = templateData.postDefaultDescription;
+        break;
+      case TemplateType.INNOVATION_FLOW:
+        if (!templateData.innovationFlowData) {
+          throw new ValidationException(
+            `InnovationFlow Template requires create innovation flow input: ${JSON.stringify(templateData)}`,
+            LogContext.TEMPLATES
+          );
+        }
+        template.innovationFlow =
+          await this.innovationFlowService.createInnovationFlow(
+            templateData.innovationFlowData,
+            [],
+            storageAggregator,
+            true
+          );
+        break;
+      case TemplateType.COMMUNITY_GUIDELINES:
+        if (!templateData.communityGuidelinesData) {
+          throw new ValidationException(
+            `Community Guidelines Template requiresthe community guidelines input: ${JSON.stringify(templateData)}`,
+            LogContext.TEMPLATES
+          );
+        }
+        const guidelinesInput: CreateCommunityGuidelinesInput =
+          templateData.communityGuidelinesData!;
 
-      template.communityGuidelines =
-        await this.communityGuidelinesService.createCommunityGuidelines(
-          guidelinesInput,
+        template.communityGuidelines =
+          await this.communityGuidelinesService.createCommunityGuidelines(
+            guidelinesInput,
+            storageAggregator
+          );
+        break;
+      case TemplateType.CALLOUT:
+        if (!templateData.calloutData) {
+          throw new ValidationException(
+            `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
+            LogContext.TEMPLATES
+          );
+        }
+        // Ensure no comments are created on the callout
+        templateData.calloutData.enableComments = false;
+        templateData.calloutData.nameID = randomUUID().slice(0, 8);
+        template.callout = await this.calloutService.createCallout(
+          templateData.calloutData!,
+          [],
           storageAggregator
         );
-    } else if (template.type === TemplateType.CALLOUT) {
-      if (!templateData.calloutData) {
-        throw new ValidationException(
-          `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
-          LogContext.TEMPLATES
-        );
-      }
-      // Ensure no comments are created on the callout
-      templateData.calloutData.enableComments = false;
-      templateData.calloutData.nameID = randomUUID().slice(0, 8);
-      template.callout = await this.calloutService.createCallout(
-        templateData.calloutData!,
-        [],
-        storageAggregator
-      );
-    } else if (template.type === TemplateType.WHITEBOARD) {
-      if (!templateData.whiteboard) {
-        throw new ValidationException(
-          `Whiteboard Template requires whitebboard input: ${JSON.stringify(templateData)}`,
-          LogContext.TEMPLATES
-        );
-      }
-      template.whiteboard = await this.whiteboardService.createWhiteboard(
-        {
-          profileData: {
-            displayName: 'Whiteboard Template',
+        break;
+      case TemplateType.WHITEBOARD:
+        if (!templateData.whiteboard) {
+          throw new ValidationException(
+            `Whiteboard Template requires whitebboard input: ${JSON.stringify(templateData)}`,
+            LogContext.TEMPLATES
+          );
+        }
+        template.whiteboard = await this.whiteboardService.createWhiteboard(
+          {
+            profileData: {
+              displayName: 'Whiteboard Template',
+            },
+            nameID: randomUUID().slice(0, 8),
+            content: templateData.whiteboard.content,
           },
-          nameID: randomUUID().slice(0, 8),
-          content: templateData.whiteboard.content,
-        },
-        storageAggregator
-      );
+          storageAggregator
+        );
+        break;
+      default:
+        throw new ValidationException(
+          `unknown template type: ${template.type}`,
+          LogContext.TEMPLATES
+        );
     }
 
     return await this.templateRepository.save(template);
@@ -163,6 +176,8 @@ export class TemplateService {
     return template;
   }
 
+  // Only support updating the profile part of the template; not the contained entity. That should
+  // be done directly using the updateXXX mutation.
   async updateTemplate(
     templateInput: ITemplate,
     templateData: UpdateTemplateInput
@@ -170,10 +185,6 @@ export class TemplateService {
     const template = await this.getTemplateOrFail(templateInput.id, {
       relations: {
         profile: true,
-        communityGuidelines: true,
-        callout: true,
-        whiteboard: true,
-        innovationFlow: true,
       },
     });
 
@@ -188,65 +199,6 @@ export class TemplateService {
       templateData.postDefaultDescription
     ) {
       template.postDefaultDescription = templateData.postDefaultDescription;
-    }
-
-    if (
-      template.type === TemplateType.INNOVATION_FLOW &&
-      template.innovationFlow &&
-      templateData.innovationFlow.states
-    ) {
-      this.innovationFlowService.updateInnovationFlow(
-        {
-          innovationFlowID: template.innovationFlow.id,
-          states: templateData.innovationFlow.states,
-        },
-        true // isTemplate
-      );
-    }
-
-    if (
-      template.type === TemplateType.COMMUNITY_GUIDELINES &&
-      templateData.communityGuidelines
-    ) {
-      if (!template.communityGuidelines) {
-        throw new RelationshipNotFoundException(
-          `Unable to load Guidelines on Template: ${templateInput.id} `,
-          LogContext.TEMPLATES
-        );
-      }
-
-      const guidelinesInput = templateData.communityGuidelines;
-      template.communityGuidelines =
-        await this.communityGuidelinesService.update(
-          template.communityGuidelines,
-          guidelinesInput
-        );
-    }
-
-    if (template.type === TemplateType.CALLOUT && templateData.callout) {
-      if (!template.callout) {
-        throw new RelationshipNotFoundException(
-          `Unable to load Callout on Template: ${templateInput.id} `,
-          LogContext.TEMPLATES
-        );
-      }
-      template.callout = await this.calloutService.updateCallout(
-        template.callout,
-        templateData.callout
-      );
-    }
-
-    if (template.type === TemplateType.WHITEBOARD && templateData.whiteboard) {
-      if (!template.whiteboard) {
-        throw new RelationshipNotFoundException(
-          `Unable to load Whiteboard on Template: ${templateInput.id} `,
-          LogContext.TEMPLATES
-        );
-      }
-      template.whiteboard = await this.whiteboardService.updateWhiteboard(
-        template.whiteboard,
-        templateData.whiteboard
-      );
     }
 
     return await this.templateRepository.save(template);
@@ -269,36 +221,63 @@ export class TemplateService {
         LogContext.SPACES
       );
     }
-    if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
-      if (!template.communityGuidelines) {
-        throw new RelationshipNotFoundException(
-          `Unable to load Guidelines on Template: ${templateInput.id} `,
+    switch (template.type) {
+      case TemplateType.COMMUNITY_GUIDELINES:
+        if (!template.communityGuidelines) {
+          throw new RelationshipNotFoundException(
+            `Unable to load Guidelines on Template: ${templateInput.id} `,
+            LogContext.TEMPLATES
+          );
+        }
+        await this.communityGuidelinesService.deleteCommunityGuidelines(
+          template.communityGuidelines.id
+        );
+        break;
+      case TemplateType.CALLOUT:
+        if (!template.callout) {
+          throw new RelationshipNotFoundException(
+            `Unable to load Callout on Template: ${templateInput.id} `,
+            LogContext.TEMPLATES
+          );
+        }
+        await this.calloutService.deleteCallout(template.callout.id);
+        break;
+      case TemplateType.WHITEBOARD:
+        if (!template.whiteboard) {
+          throw new RelationshipNotFoundException(
+            `Unable to load Whiteboard on Template: ${templateInput.id} `,
+            LogContext.TEMPLATES
+          );
+        }
+        await this.whiteboardService.deleteWhiteboard(template.whiteboard.id);
+        break;
+      case TemplateType.COLLABORATION:
+        if (!template.collaboration) {
+          throw new RelationshipNotFoundException(
+            `Unable to load Collaboration on Template: ${templateInput.id} `,
+            LogContext.TEMPLATES
+          );
+        }
+        await this.collaborationServerice.deleteCollaboration(
+          template.collaboration.id
+        );
+        break;
+      case TemplateType.INNOVATION_FLOW:
+        if (!template.innovationFlow) {
+          throw new RelationshipNotFoundException(
+            `Unable to load InnovationFlow on Template: ${templateInput.id} `,
+            LogContext.TEMPLATES
+          );
+        }
+        await this.innovationFlowService.deleteInnovationFlow(
+          template.innovationFlow.id
+        );
+        break;
+      default:
+        throw new EntityNotFoundException(
+          `Unable to delete template of type: ${template.type}`,
           LogContext.TEMPLATES
         );
-      }
-      await this.communityGuidelinesService.deleteCommunityGuidelines(
-        template.communityGuidelines.id
-      );
-    }
-
-    if (template.type === TemplateType.CALLOUT) {
-      if (!template.callout) {
-        throw new RelationshipNotFoundException(
-          `Unable to load Callout on Template: ${templateInput.id} `,
-          LogContext.TEMPLATES
-        );
-      }
-      await this.calloutService.deleteCallout(template.callout.id);
-    }
-
-    if (template.type === TemplateType.WHITEBOARD) {
-      if (!template.whiteboard) {
-        throw new RelationshipNotFoundException(
-          `Unable to load Callout on Template: ${templateInput.id} `,
-          LogContext.TEMPLATES
-        );
-      }
-      await this.whiteboardService.deleteWhiteboard(template.whiteboard.id);
     }
 
     const templateId: string = template.id;
