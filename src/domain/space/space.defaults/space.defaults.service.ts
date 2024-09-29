@@ -35,6 +35,7 @@ import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space
 import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
 import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -90,6 +91,22 @@ export class SpaceDefaultsService {
           LogContext.ROLES
         );
     }
+  }
+
+  public async getDefaultInnovationFlowInput(
+    spaceType: SpaceType
+  ): Promise<CreateInnovationFlowInput> {
+    // If no default template is set, then pick up the default based on the specified type
+    const innovationFlowStatesDefault =
+      this.getDefaultInnovationFlowStates(spaceType);
+    const result: CreateInnovationFlowInput = {
+      profile: {
+        displayName: 'default',
+        description: 'default flow',
+      },
+      states: innovationFlowStatesDefault,
+    };
+    return result;
   }
 
   public getProfileType(spaceLevel: SpaceLevel): ProfileType {
@@ -155,7 +172,7 @@ export class SpaceDefaultsService {
     }
   }
 
-  public getDefaultInnovationFlowStates(
+  private getDefaultInnovationFlowStates(
     spaceType: SpaceType
   ): IInnovationFlowState[] {
     switch (spaceType) {

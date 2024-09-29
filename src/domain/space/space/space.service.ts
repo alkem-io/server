@@ -71,7 +71,6 @@ import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
@@ -213,7 +212,9 @@ export class SpaceService {
     if (!collaborationData.innovationFlowData) {
       // TODO: need to pick up the default template + innovation flow properly
       collaborationData.innovationFlowData =
-        await this.getDefaultInnovationStates(space.type);
+        await this.spaceDefaultsService.getDefaultInnovationFlowInput(
+          space.type
+        );
     }
     if (!collaborationData.calloutsData) {
       collaborationData.calloutsData = [];
@@ -342,22 +343,6 @@ export class SpaceService {
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
-    return result;
-  }
-
-  private async getDefaultInnovationStates(
-    spaceType: SpaceType
-  ): Promise<CreateInnovationFlowInput> {
-    // If no default template is set, then pick up the default based on the specified type
-    const innovationFlowStatesDefault =
-      this.spaceDefaultsService.getDefaultInnovationFlowStates(spaceType);
-    const result: CreateInnovationFlowInput = {
-      profile: {
-        displayName: 'default',
-        description: 'default flow',
-      },
-      states: innovationFlowStatesDefault,
-    };
     return result;
   }
 
