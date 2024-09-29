@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
+import { UpdateInnovationFlowFromTemplateInput } from './dto/template.applier.dto.update.innovation.flow';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { TemplateService } from '../template/template.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';

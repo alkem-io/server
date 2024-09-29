@@ -8,7 +8,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
-import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
+import { UpdateInnovationFlowFromTemplateInput } from './dto/template.applier.dto.update.innovation.flow';
 import { TemplateApplierService } from './template.applier.service';
 
 @Resolver()
