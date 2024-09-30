@@ -5,7 +5,6 @@ import { randomUUID } from 'crypto';
 import {
   NOTIFICATIONS_SERVICE,
   MATRIX_ADAPTER_SERVICE,
-  SUBSCRIPTION_WHITEBOARD_CONTENT,
   SUBSCRIPTION_CALLOUT_POST_CREATED,
   WALLET_MANAGEMENT_SERVICE,
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
@@ -17,7 +16,6 @@ import {
   VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
   VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
   VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
-  SUBSCRIPTION_WHITEBOARD_SAVED,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
@@ -40,10 +38,6 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
     queueName: MessagingQueue.SUBSCRIPTION_DISCUSSION_UPDATED,
   },
   {
-    provide: SUBSCRIPTION_WHITEBOARD_CONTENT,
-    queueName: MessagingQueue.SUBSCRIPTION_WHITEBOARD_CONTENT,
-  },
-  {
     provide: SUBSCRIPTION_CALLOUT_POST_CREATED,
     queueName: MessagingQueue.SUBSCRIPTION_CALLOUT_POST_CREATED,
   },
@@ -58,10 +52,6 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_ROOM_EVENT,
     queueName: MessagingQueue.SUBSCRIPTION_ROOM_EVENT,
-  },
-  {
-    provide: SUBSCRIPTION_WHITEBOARD_SAVED,
-    queueName: MessagingQueue.SUBSCRIPTION_WHITEBOARD_SAVED,
   },
   {
     provide: SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,

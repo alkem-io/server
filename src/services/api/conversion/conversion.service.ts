@@ -101,6 +101,7 @@ export class ConversionService {
       },
       level: SpaceLevel.SPACE,
       type: SpaceType.SPACE,
+      collaborationData: {},
     };
     let space =
       await this.accountService.createSpaceOnAccount(createSpaceInput);
@@ -213,8 +214,7 @@ export class ConversionService {
 
   async convertOpportunityToChallenge(
     subsubspaceID: string,
-    agentInfo: AgentInfo,
-    innovationFlowTemplateIdInput?: string
+    agentInfo: AgentInfo
   ): Promise<ISpace> {
     const subsubspace = await this.spaceService.getSpaceOrFail(subsubspaceID, {
       relations: {
@@ -265,24 +265,12 @@ export class ConversionService {
         reservedNameIDs
       );
 
-    // TODO: need to check if the space has a default innovation flow template
-    const innovationFlowTemplateID = innovationFlowTemplateIdInput;
-    // if (!innovationFlowTemplateID) {
-    //   const defaultChallengeLifecycleTemplate =
-    //     await this.spaceService.getDefaultInnovationFlowTemplate(
-    //       spaceID,
-    //       InnovationFlowType.CHALLENGE
-    //     );
-    //   innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
-    // }
     const levelZeroSpaceStorageAggregator =
       subsubspace.parentSpace.storageAggregator.parentStorageAggregator;
     const subspaceData: CreateSubspaceInput = {
       spaceID: subsubspace.parentSpace.id,
       nameID: subspaceNameID,
-      collaborationData: {
-        innovationFlowTemplateID: innovationFlowTemplateID,
-      },
+      collaborationData: {},
       profileData: {
         displayName: subsubspace.profile.displayName,
       },

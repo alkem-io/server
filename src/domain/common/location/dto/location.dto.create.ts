@@ -1,8 +1,9 @@
 import { SMALL_TEXT_LENGTH } from '@common/constants';
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
+@ObjectType('CreateLocationData')
 export class CreateLocationInput {
   @Field({ nullable: true })
   @IsOptional()

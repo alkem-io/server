@@ -45,9 +45,9 @@ export class CollaborationAuthorizationService {
   public async applyAuthorizationPolicy(
     collaborationInput: ICollaboration,
     parentAuthorization: IAuthorizationPolicy,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings,
-    spaceAgent: IAgent
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings,
+    spaceAgent?: IAgent
   ): Promise<IAuthorizationPolicy[]> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
@@ -86,17 +86,19 @@ export class CollaborationAuthorizationService {
       spaceSettings,
       spaceAgent
     );
-    collaboration.authorization = this.appendCredentialRulesForContributors(
-      collaboration.authorization,
-      communityPolicy,
-      spaceSettings
-    );
+    if (communityPolicy && spaceSettings && spaceAgent) {
+      collaboration.authorization = this.appendCredentialRulesForContributors(
+        collaboration.authorization,
+        communityPolicy,
+        spaceSettings
+      );
 
-    collaboration.authorization = await this.appendPrivilegeRules(
-      collaboration.authorization,
-      spaceSettings,
-      spaceAgent
-    );
+      collaboration.authorization = await this.appendPrivilegeRules(
+        collaboration.authorization,
+        spaceSettings,
+        spaceAgent
+      );
+    }
     updatedAuthorizations.push(collaboration.authorization);
 
     const childUpdatedAuthorizations =
@@ -112,8 +114,8 @@ export class CollaborationAuthorizationService {
 
   private async propagateAuthorizationToChildEntities(
     collaboration: ICollaboration,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     if (
       !collaboration.callouts ||
@@ -131,7 +133,7 @@ export class CollaborationAuthorizationService {
     for (const callout of collaboration.callouts) {
       const updatedCalloutAuthorizations =
         await this.calloutAuthorizationService.applyAuthorizationPolicy(
-          callout,
+          callout.id,
           collaboration.authorization,
           communityPolicy,
           spaceSettings
@@ -145,12 +147,20 @@ export class CollaborationAuthorizationService {
         collaboration.authorization
       );
 
-    const extendedAuthorizationContributors =
-      this.appendCredentialRulesForContributors(
-        clonedAuthorization,
-        communityPolicy,
-        spaceSettings
-      );
+    if (communityPolicy && spaceSettings) {
+      const extendedAuthorizationContributors =
+        this.appendCredentialRulesForContributors(
+          clonedAuthorization,
+          communityPolicy,
+          spaceSettings
+        );
+      const timelineAuthorizations =
+        await this.timelineAuthorizationService.applyAuthorizationPolicy(
+          collaboration.timeline,
+          extendedAuthorizationContributors
+        );
+      updatedAuthorizations.push(...timelineAuthorizations);
+    }
 
     const flowAuthorizations =
       await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
@@ -158,13 +168,6 @@ export class CollaborationAuthorizationService {
         collaboration.authorization
       );
     updatedAuthorizations.push(...flowAuthorizations);
-
-    const timelineAuthorizations =
-      await this.timelineAuthorizationService.applyAuthorizationPolicy(
-        collaboration.timeline,
-        extendedAuthorizationContributors
-      );
-    updatedAuthorizations.push(...timelineAuthorizations);
 
     return updatedAuthorizations;
   }
@@ -199,9 +202,9 @@ export class CollaborationAuthorizationService {
 
   private async appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings,
-    spaceAgent: IAgent
+    policy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings,
+    spaceAgent?: IAgent
   ): Promise<IAuthorizationPolicy> {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -213,6 +216,10 @@ export class CollaborationAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
+    // For templates these will not be available
+    if (!policy || !spaceSettings || !spaceAgent) {
+      return authorization;
+    }
     const saveAsTemplateEnabled =
       await this.licenseEngineService.isAccessGranted(
         LicensePrivilege.SPACE_SAVE_AS_TEMPLATE,

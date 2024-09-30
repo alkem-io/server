@@ -6,8 +6,8 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ICommunityGuidelines } from './community.guidelines.interface';
-import { UpdateCommunityGuidelinesInput } from './dto/community.guidelines.dto.update';
 import { CommunityGuidelinesService } from './community.guidelines.service';
+import { UpdateCommunityGuidelinesEntityInput } from './dto/community.guidelines.dto.update.entity';
 
 @Resolver()
 export class CommunityGuidelinesResolverMutations {
@@ -24,7 +24,7 @@ export class CommunityGuidelinesResolverMutations {
   async updateCommunityGuidelines(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('communityGuidelinesData')
-    communityGuidelinesData: UpdateCommunityGuidelinesInput
+    communityGuidelinesData: UpdateCommunityGuidelinesEntityInput
   ): Promise<ICommunityGuidelines> {
     const communityGuidelines =
       await this.communityGuidelinesService.getCommunityGuidelinesOrFail(

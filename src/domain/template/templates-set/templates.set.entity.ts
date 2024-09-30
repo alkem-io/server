@@ -1,57 +1,13 @@
 import { Entity, OneToMany } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ITemplatesSet } from './templates.set.interface';
-import { PostTemplate } from '../post-template/post.template.entity';
-import { WhiteboardTemplate } from '../whiteboard-template/whiteboard.template.entity';
-import { InnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.entity';
-import { CalloutTemplate } from '../callout-template/callout.template.entity';
-import { CommunityGuidelinesTemplate } from '../community-guidelines-template/community.guidelines.template.entity';
+import { Template } from '../template/template.entity';
 
 @Entity()
 export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
-  @OneToMany(
-    () => CalloutTemplate,
-    calloutTemplate => calloutTemplate.templatesSet,
-    {
-      eager: false,
-      cascade: true,
-    }
-  )
-  calloutTemplates!: CalloutTemplate[];
-
-  @OneToMany(() => PostTemplate, postTemplate => postTemplate.templatesSet, {
+  @OneToMany(() => Template, template => template.templatesSet, {
     eager: false,
     cascade: true,
   })
-  postTemplates!: PostTemplate[];
-
-  @OneToMany(
-    () => WhiteboardTemplate,
-    whiteboardTemplate => whiteboardTemplate.templatesSet,
-    {
-      eager: false,
-      cascade: true,
-    }
-  )
-  whiteboardTemplates!: WhiteboardTemplate[];
-
-  @OneToMany(
-    () => InnovationFlowTemplate,
-    innovationFlowTemplate => innovationFlowTemplate.templatesSet,
-    {
-      eager: false,
-      cascade: true,
-    }
-  )
-  innovationFlowTemplates!: InnovationFlowTemplate[];
-
-  @OneToMany(
-    () => CommunityGuidelinesTemplate,
-    communityGuidelinesTemplate => communityGuidelinesTemplate.templatesSet,
-    {
-      eager: false,
-      cascade: true,
-    }
-  )
-  communityGuidelinesTemplates!: CommunityGuidelinesTemplate[];
+  templates!: Template[];
 }

@@ -15,7 +15,6 @@ import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
-import { WHITEBOARD_CONTENT_UPDATE } from '@domain/common/whiteboard/events/event.names';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -39,7 +38,6 @@ import {
   SERVER_VOLATILE_BROADCAST,
   SERVER_SAVE_REQUEST,
   SERVER_SIDE_ROOM_DELETED,
-  SAVED,
   IDLE_STATE,
   COLLABORATOR_MODE,
   SCENE_INIT,
@@ -317,17 +315,6 @@ export class ExcalidrawServer {
         this.deleteCollaboratorModeTimerForSocket(socket.id);
       });
     });
-
-    this.whiteboardService.eventEmitter.on(
-      WHITEBOARD_CONTENT_UPDATE,
-      (roomID: string) => {
-        this.logger.verbose?.(
-          `Whiteboard '${roomID}' saved`,
-          LogContext.EXCALIDRAW_SERVER
-        );
-        this.wsServer.to(roomID).emit(SAVED);
-      }
-    );
   }
 
   private startContributionEventTimer(roomId: string) {

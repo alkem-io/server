@@ -8,7 +8,7 @@ import { IWhiteboard } from './whiteboard.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UpdateWhiteboardContentInput, UpdateWhiteboardInput } from './types';
+import { UpdateWhiteboardEntityInput } from './types';
 import { DeleteWhiteboardInput } from './dto/whiteboard.dto.delete';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
@@ -34,7 +34,7 @@ export class WhiteboardResolverMutations {
   })
   async updateWhiteboard(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('whiteboardData') whiteboardData: UpdateWhiteboardInput
+    @Args('whiteboardData') whiteboardData: UpdateWhiteboardEntityInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
       whiteboardData.ID
@@ -96,29 +96,6 @@ export class WhiteboardResolverMutations {
     }
     return await this.whiteboardService.getWhiteboardOrFail(
       updatedWhiteboard.id
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IWhiteboard, {
-    description: 'Updates the specified Whiteboard content.',
-  })
-  async updateWhiteboardContent(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('whiteboardData') whiteboardData: UpdateWhiteboardContentInput
-  ): Promise<IWhiteboard> {
-    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
-      whiteboardData.ID
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      whiteboard.authorization,
-      AuthorizationPrivilege.UPDATE_CONTENT,
-      `update content of Whiteboard: ${whiteboard.id}`
-    );
-    return this.whiteboardService.updateWhiteboardContent(
-      whiteboard,
-      whiteboardData
     );
   }
 
