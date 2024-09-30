@@ -24,7 +24,13 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @BeforeUpdate()
   async compressValue() {
     if (this.content !== '') {
-      this.content = await compressText(this.content);
+      try {
+        this.content = await compressText(this.content);
+      } catch (e) {
+        this.content = '';
+        // rethrow to be caught higher, does not crash the server
+        throw new Error('Failed to compress content');
+      }
     }
   }
   @AfterInsert()
@@ -32,7 +38,13 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @AfterLoad()
   async decompressValue() {
     if (this.content !== '') {
-      this.content = await decompressText(this.content);
+      try {
+        this.content = await decompressText(this.content);
+      } catch (e: any) {
+        this.content = '';
+        // rethrow to be caught higher, does not crash the server
+        throw new Error(`Failed to decompress content: ${e?.message}`);
+      }
     }
   }
 

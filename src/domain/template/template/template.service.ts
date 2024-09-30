@@ -31,6 +31,7 @@ import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovatio
 import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
 import { randomUUID } from 'crypto';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Injectable()
 export class TemplateService {
@@ -116,7 +117,9 @@ export class TemplateService {
       }
       // Ensure no comments are created on the callout
       templateData.calloutData.enableComments = false;
-      templateData.calloutData.nameID = randomUUID().slice(0, 8);
+      templateData.calloutData.visibility = CalloutVisibility.DRAFT;
+      templateData.calloutData.isTemplate = true;
+      templateData.calloutData.nameID = `template-${randomUUID().slice(0, 8)}`;
       template.callout = await this.calloutService.createCallout(
         templateData.calloutData!,
         [],
