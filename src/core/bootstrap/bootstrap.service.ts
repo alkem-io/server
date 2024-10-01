@@ -35,6 +35,10 @@ import { AiServerService } from '@services/ai-server/ai-server/ai.server.service
 import { Space } from '@domain/space/space/space.entity';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IUser } from '@domain/community/user/user.interface';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { TemplateDefaultService } from '@domain/template/template-default/template.default.service';
 
 @Injectable()
 export class BootstrapService {
@@ -55,6 +59,9 @@ export class BootstrapService {
     private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private templatesManagerService: TemplatesManagerService,
+    private templatesSetService: TemplatesSetService,
+    private templateDefaultService: TemplateDefaultService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -78,6 +85,7 @@ export class BootstrapService {
       }
 
       await this.bootstrapUserProfiles();
+      await this.ensurePlatformTemplatesArePresent();
       await this.ensureOrganizationSingleton();
       await this.ensureSpaceSingleton();
       await this.ensureSsiPopulated();
@@ -92,6 +100,37 @@ export class BootstrapService {
         LogContext.BOOTSTRAP
       );
       throw new BootstrapException(error.message, { originalException: error });
+    }
+  }
+
+  private async ensurePlatformTemplatesArePresent() {
+    const templatesManager =
+      await this.platformService.getTemplatesManagerOrFail();
+    const templateDefaults =
+      await this.templatesManagerService.getTemplateDefaults(
+        templatesManager.id
+      );
+    const templatesSet =
+      await this.templatesManagerService.getTemplatesSetOrFail(
+        templatesManager.id
+      );
+
+    const knowledgeTemmplate = templateDefaults.find(
+      td => td.type === TemplateDefaultType.COLLABORATION_KNOWLEDGE
+    );
+    if (!knowledgeTemmplate) {
+      throw new BootstrapException(
+        `Unable to load Template Default for ${TemplateDefaultType.COLLABORATION_KNOWLEDGE}`
+      );
+    }
+    if (!knowledgeTemmplate.template) {
+      // No template set, so create one and then set it
+      const template = await this.templatesSetService.createTemplate(
+        templatesSet,
+        {}
+      );
+      knowledgeTemmplate.template = template;
+      await this.templateDefaultService.save(knowledgeTemmplate);
     }
   }
 
