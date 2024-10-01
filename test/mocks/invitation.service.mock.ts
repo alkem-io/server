@@ -1,6 +1,6 @@
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
-import { InvitationService } from '@domain/community/invitation/invitation.service';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
 
 export const MockInvitationService: ValueProvider<
   PublicPart<InvitationService>

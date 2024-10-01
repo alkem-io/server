@@ -33,7 +33,7 @@ export class AuthorizationService {
 
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
-    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${agentInfo.userID} on authorization of type '${auth.type}'`;
+    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${agentInfo.userID} on authorization ${auth.id} of type '${auth.type}'`;
     this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
     // If you get to here then no match was found
     throw new ForbiddenAuthorizationPolicyException(
@@ -130,7 +130,7 @@ export class AuthorizationService {
           for (const privilege of rule.grantedPrivileges) {
             if (privilege === privilegeRequired) {
               this.logger.verbose?.(
-                `[CredentialRule] Granted privilege '${privilegeRequired}' using rule '${rule.name}'`,
+                `[CredentialRule] Granted privilege '${privilegeRequired}' using rule '${rule.name}' on authorization ${authorization.id}`,
                 LogContext.AUTH_POLICY
               );
               return true;
@@ -172,7 +172,7 @@ export class AuthorizationService {
       if (grantedPrivileges.includes(rule.sourcePrivilege)) {
         if (rule.grantedPrivileges.includes(privilegeRequired)) {
           this.logger.verbose?.(
-            `[PrivilegeRule] Granted privilege '${privilegeRequired}' using privilege rule '${rule.name}'`,
+            `[PrivilegeRule] Granted privilege '${privilegeRequired}' using privilege rule '${rule.name}' on authorization ${authorization.id}`,
             LogContext.AUTH_POLICY
           );
           return true;

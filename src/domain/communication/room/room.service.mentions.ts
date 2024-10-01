@@ -50,10 +50,9 @@ export class RoomServiceMentions {
     );
 
     // The ID of the actual community where the question is being asked
-    const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
-        community.id
-      );
+    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
+      community.roleSet.id
+    );
     return space.id;
   }
 

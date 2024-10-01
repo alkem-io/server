@@ -1,7 +1,7 @@
 import { ObjectType } from '@nestjs/graphql';
 import { IUser } from '@domain/community/user/user.interface';
-import { IInvitation } from '@domain/community/invitation';
-import { IApplication } from '@domain/community/application';
+import { IInvitation } from '@domain/access/invitation';
+import { IApplication } from '@domain/access/application';
 import { CommunityMembershipResult } from './me.membership.result';
 
 @ObjectType()

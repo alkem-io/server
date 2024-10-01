@@ -23,8 +23,8 @@ import { LicensingService } from '@platform/licensing/licensing.service';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ISpace } from '../space/space.interface';
 import { AccountType } from '@common/enums/account.type';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Injectable()
 export class AccountHostService {
@@ -82,16 +82,11 @@ export class AccountHostService {
   }
 
   public async assignLicensePlansToSpace(
-    space: ISpace,
+    spaceAgent: IAgent,
+    spaceID: string,
     type: AccountType,
     licensePlanID?: string
-  ): Promise<void> {
-    if (!space.agent) {
-      throw new RelationshipNotFoundException(
-        `Space ${space.id} has no agent`,
-        LogContext.ACCOUNT
-      );
-    }
+  ): Promise<IAgent> {
     const licensingFramework =
       await this.licensingService.getDefaultLicensingOrFail();
     const licensePlansToAssign: ILicensePlan[] = [];
@@ -122,14 +117,14 @@ export class AccountHostService {
       }
     }
 
-    const spaceAgent = space.agent;
     for (const licensePlan of licensePlansToAssign) {
-      space.agent = await this.licenseIssuerService.assignLicensePlan(
+      await this.licenseIssuerService.assignLicensePlan(
         spaceAgent,
         licensePlan,
-        space.id
+        spaceID
       );
     }
+    return await this.agentService.getAgentOrFail(spaceAgent.id);
   }
 
   public async getHost(account: IAccount): Promise<IContributor | null> {

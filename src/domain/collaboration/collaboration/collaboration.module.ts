@@ -13,7 +13,6 @@ import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { PostModule } from '../post/post.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
@@ -23,6 +22,7 @@ import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module'
 import { SpaceDefaultsModule } from '@domain/space/space.defaults/space.defaults.module';
 import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
@@ -33,7 +33,7 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     AuthorizationPolicyModule,
     AuthorizationModule,
     CalloutModule,
-    CommunityPolicyModule,
+    RoleSetModule,
     NamingModule,
     EntityResolverModule,
     StorageAggregatorResolverModule,

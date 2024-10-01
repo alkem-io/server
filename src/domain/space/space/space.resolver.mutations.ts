@@ -187,13 +187,12 @@ export class SpaceResolverMutations {
       `subspace create in: ${space.id}`
     );
 
-    let subspace = await this.spaceService.createSubspace(
+    const subspace = await this.spaceService.createSubspace(
       subspaceData,
       agentInfo
     );
     // Save here so can reuse it later without another load
     const displayName = subspace.profile.displayName;
-    subspace = await this.spaceService.save(subspace);
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
 
