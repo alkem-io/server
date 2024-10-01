@@ -8,6 +8,7 @@ import { TemplatesManagerService } from './templates.manager.service';
 import { TemplatesManagerAuthorizationService } from './templates.manager.service.authorization';
 import { TemplatesSetModule } from '../templates-set/templates.set.module';
 import { TemplateDefaultModule } from '../template-default/template.default.module';
+import { TemplatesManagerResolverMutations } from './templates.manager.resolver.mutations';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TemplateDefaultModule } from '../template-default/template.default.modu
     TemplatesManagerService,
     TemplatesManagerAuthorizationService,
     TemplatesManagerResolverFields,
+    TemplatesManagerResolverMutations,
   ],
   exports: [
     TemplatesManagerService,

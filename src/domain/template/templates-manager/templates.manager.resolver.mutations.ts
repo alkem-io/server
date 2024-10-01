@@ -4,14 +4,14 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UpdateTemplateDefaultTemplateInput } from './dto/template.default.dto.update';
-import { ITemplateDefault } from './template.default.interface';
+import { UpdateTemplateDefaultTemplateInput } from '../template-default/dto/template.default.dto.update';
+import { ITemplateDefault } from '../template-default/template.default.interface';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { TemplateDefaultService } from './template.default.service';
+import { TemplateDefaultService } from '../template-default/template.default.service';
 
 @Resolver()
-export class TemplatesDefaultResolverMutations {
+export class TemplatesManagerResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private templatesDefaultService: TemplateDefaultService,

@@ -41,6 +41,7 @@ export class TemplatesSetResolverFields {
       TemplateType.CALLOUT
     );
   }
+
   @UseGuards(GraphqlGuard)
   @ResolveField('calloutTemplatesCount', () => Float, {
     nullable: false,
@@ -52,6 +53,35 @@ export class TemplatesSetResolverFields {
     return this.templatesSetService.getTemplatesCountForType(
       templatesSet.id,
       TemplateType.CALLOUT
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('collaborationTemplates', () => [ITemplate], {
+    nullable: false,
+    description: 'The CollaborationTemplates in this TemplatesSet.',
+  })
+  async collaborationTemplates(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<ITemplate[]> {
+    return this.templatesSetService.getTemplatesOfType(
+      templatesSet,
+      TemplateType.COLLABORATION
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('collaborationTemplatesCount', () => Float, {
+    nullable: false,
+    description:
+      'The total number of CollaborationTemplates in this TemplatesSet.',
+  })
+  collaborationTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getTemplatesCountForType(
+      templatesSet.id,
+      TemplateType.COLLABORATION
     );
   }
 
