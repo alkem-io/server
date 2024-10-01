@@ -751,8 +751,11 @@ export class RoleSetService {
     roleSetID: string,
     virtualContributorID: string
   ): Promise<boolean> {
-    return await this.isCommunityAccountMatchingVcAccount(
-      roleSetID,
+    const community =
+      await this.communityResolverService.getCommunityForRoleSet(roleSetID);
+
+    return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
+      community.id,
       virtualContributorID
     );
   }
