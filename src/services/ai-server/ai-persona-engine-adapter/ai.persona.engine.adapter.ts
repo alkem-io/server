@@ -73,12 +73,12 @@ export class AiPersonaEngineAdapter {
           responseData = await firstValueFrom(responseGeneric);
           break;
         case AiPersonaEngine.OPENAI_ASSISTANT:
-          const repsonseOpenaiAssistant =
+          const responseOpenaiAssistant =
             this.virtualContributorEngineOpenaiAssistant.send<
               AiPersonaEngineAdapterQueryResponse,
               AiPersonaEngineAdapterQueryInput
             >({ cmd: AiPersonaEngineEventType.QUERY }, eventData);
-          responseData = await firstValueFrom(repsonseOpenaiAssistant);
+          responseData = await firstValueFrom(responseOpenaiAssistant);
           break;
         case AiPersonaEngine.EXPERT:
           if (!eventData.contextID || !eventData.bodyOfKnowledgeID)

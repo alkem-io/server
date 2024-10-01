@@ -55,5 +55,7 @@ export class AiPersonaServiceQuestionInput {
   })
   displayName!: string;
 
+  // intentially skippuing the Field decorator as we are not sure we want to expose this data
+  // through the API
   externalMetadata: ExternalMetadata = {};
 }

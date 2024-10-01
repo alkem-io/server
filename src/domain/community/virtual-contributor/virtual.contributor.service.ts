@@ -416,7 +416,7 @@ export class VirtualContributorService {
       aiServerAdapterQuestionInput
     );
 
-    if (!vcInteraction.externalMetadata.threadId) {
+    if (!vcInteraction.externalMetadata.threadId && response.threadId) {
       vcInteraction.externalMetadata.threadId = response.threadId;
       await this.vcInteractionService.save(vcInteraction);
     }

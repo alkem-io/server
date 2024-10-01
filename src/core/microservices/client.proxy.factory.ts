@@ -38,10 +38,7 @@ export const clientProxyFactory = (queue: MessagingQueue, durable = true) => {
       };
       return ClientProxyFactory.create({ transport: Transport.RMQ, options });
     } catch (err) {
-      logger.error(
-        `Could not connect to RabbitMQ: ${err}, logging in...`,
-        context
-      );
+      logger.error(`Could not connect to RabbitMQ: ${err}`, context);
       return undefined;
     }
   };

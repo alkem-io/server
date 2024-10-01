@@ -93,11 +93,10 @@ export class AiPersonaServiceService {
     if (aiPersonaServiceData.engine) {
       aiPersonaService.engine = aiPersonaServiceData.engine;
     }
-
-    aiPersonaService.externalConfig = {
-      ...aiPersonaService.externalConfig,
-      ...this.encryptExternalConfig(aiPersonaServiceData.externalConfig),
-    };
+    aiPersonaService.externalConfig = this.encryptExternalConfig({
+      ...this.decryptExternalConfig(aiPersonaService.externalConfig || {}),
+      ...(aiPersonaServiceData.externalConfig || {}),
+    });
 
     return await this.aiPersonaServiceRepository.save(aiPersonaService);
   }

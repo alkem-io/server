@@ -172,11 +172,10 @@ export class AiServerService {
         questionInput.aiPersonaServiceID
       );
 
-    const HISTORY_ENABLED_ENGINES: { [key in AiPersonaEngine]?: boolean } = {
-      [AiPersonaEngine.EXPERT]: true,
-    };
-
-    const loadHistory = HISTORY_ENABLED_ENGINES[personaService.engine];
+    const HISTORY_ENABLED_ENGINES = new Set<AiPersonaEngine>([
+      AiPersonaEngine.EXPERT,
+    ]);
+    const loadHistory = HISTORY_ENABLED_ENGINES.has(personaService.engine);
 
     // history should be loaded trough the GQL API of the collaboration server
     let history: InteractionMessage[] = [];
@@ -281,6 +280,10 @@ export class AiServerService {
       await chroma.getCollection({ name });
       return true;
     } catch (err) {
+      this.logger.error(
+        `Error checking if context is loaded for contextID ${contextID}: ${err}`,
+        LogContext.AI_SERVER
+      );
       return false;
     }
   }

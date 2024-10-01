@@ -14,7 +14,7 @@ export class VcInteractionService {
     private interactionRepository: Repository<VcInteraction>
   ) {}
 
-  public createVcInteraction(
+  public buildVcInteraction(
     interactionData: CreateVcInteractionInput
   ): VcInteraction {
     const interaction = new VcInteraction();
