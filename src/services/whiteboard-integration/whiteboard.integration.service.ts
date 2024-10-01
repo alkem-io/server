@@ -16,12 +16,22 @@ import {
   ContentModifiedInputData,
   ContributionInputData,
   InfoInputData,
+  SaveInputData,
   WhoInputData,
 } from './inputs';
 import { ContributionReporterService } from '../external/elasticsearch/contribution-reporter';
 import { minCollaboratorsInRoom } from '../external/excalidraw-backend/types/defaults';
 import { InfoOutputData } from './outputs/info.output.data';
 import { AlkemioConfig } from '@src/types';
+import {
+  FetchContentData,
+  FetchErrorData,
+  FetchOutputData,
+  SaveContentData,
+  SaveErrorData,
+  SaveOutputData,
+} from './outputs';
+import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
 
 @Injectable()
 export class WhiteboardIntegrationService {
@@ -56,7 +66,11 @@ export class WhiteboardIntegrationService {
         data.privilege
       );
     } catch (e: any) {
-      this.logger.error(e?.message, e?.stack, LogContext.AUTH);
+      this.logger.error(
+        e?.message,
+        e?.stack,
+        LogContext.WHITEBOARD_INTEGRATION
+      );
       return false;
     }
   }
@@ -98,6 +112,55 @@ export class WhiteboardIntegrationService {
     return this.authenticationService.getAgentInfo(data.auth);
   }
 
+  public async save({
+    whiteboardId,
+    content,
+  }: SaveInputData): Promise<SaveOutputData> {
+    // try saving
+    try {
+      await this.whiteboardService.updateWhiteboardContent(
+        whiteboardId,
+        content
+      );
+    } catch (e: any) {
+      this.logger.error(
+        e?.message,
+        e?.stack,
+        LogContext.WHITEBOARD_INTEGRATION
+      );
+      return new SaveOutputData(
+        new SaveErrorData(
+          'An error occurred while saving the whiteboard content.'
+        )
+      );
+    }
+    // return success on successful save
+    return new SaveOutputData(new SaveContentData());
+  }
+  public async fetch(data: FetchInputData): Promise<FetchOutputData> {
+    try {
+      const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
+        data.whiteboardId,
+        {
+          loadEagerRelations: false,
+          select: { id: true, content: true },
+        }
+      );
+      return new FetchOutputData(new FetchContentData(whiteboard.content));
+    } catch (e: any) {
+      this.logger.error(
+        e?.message,
+        e?.stack,
+        LogContext.WHITEBOARD_INTEGRATION
+      );
+      return new FetchOutputData(
+        new FetchErrorData(
+          'An error occurred while fetching the whiteboard content.'
+        )
+      );
+    }
+  }
+
   public async contribution({
     whiteboardId,
     users,
@@ -134,7 +197,11 @@ export class WhiteboardIntegrationService {
         whiteboardId,
       })
       .catch(err => {
-        this.logger.error(err?.message, err?.stack, LogContext.ACTIVITY);
+        this.logger.error(
+          err?.message,
+          err?.stack,
+          LogContext.WHITEBOARD_INTEGRATION
+        );
       });
   }
 
@@ -146,7 +213,7 @@ export class WhiteboardIntegrationService {
     if (!user.agent) {
       throw new EntityNotInitializedException(
         `Agent not loaded for User: ${user.id}`,
-        LogContext.AUTH,
+        LogContext.WHITEBOARD_INTEGRATION,
         { userId }
       );
     }
