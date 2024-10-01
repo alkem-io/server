@@ -82,21 +82,6 @@ export class TemplateService {
         }
         template.postDefaultDescription = templateData.postDefaultDescription;
         break;
-      case TemplateType.INNOVATION_FLOW:
-        if (!templateData.innovationFlowData) {
-          throw new ValidationException(
-            `InnovationFlow Template requires create innovation flow input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
-          );
-        }
-        template.innovationFlow =
-          await this.innovationFlowService.createInnovationFlow(
-            templateData.innovationFlowData,
-            [],
-            storageAggregator,
-            true
-          );
-        break;
       case TemplateType.COMMUNITY_GUIDELINES:
         if (!templateData.communityGuidelinesData) {
           throw new ValidationException(
