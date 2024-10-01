@@ -12,7 +12,6 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { RoomModule } from '@domain/communication/room/room.module';
@@ -24,6 +23,7 @@ import { CalloutContributionDefaultsModule } from '../callout-contribution-defau
 import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 import { PostModule } from '../post/post.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
@@ -35,7 +35,7 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoomModule,
-    CommunityPolicyModule,
+    RoleSetModule,
     EntityResolverModule,
     ContributorLookupModule,
     NamingModule,

@@ -38,10 +38,11 @@ import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { Invitation } from '../invitation';
+
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 

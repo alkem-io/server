@@ -28,10 +28,10 @@ import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { ICalendarEvent } from '@domain/timeline/event';
 import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
-import { ApplicationService } from '@domain/community/application/application.service';
-import { InvitationService } from '@domain/community/invitation/invitation.service';
-import { IApplication } from '@domain/community/application';
-import { IInvitation } from '@domain/community/invitation';
+import { ApplicationService } from '@domain/access/application/application.service';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { IApplication } from '@domain/access/application';
+import { IInvitation } from '@domain/access/invitation';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -60,6 +60,8 @@ import { TemplateService } from '@domain/template/template/template.service';
 import { ITemplate } from '@domain/template/template/template.interface';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -91,7 +93,8 @@ export class LookupResolverFields {
     private userService: UserService,
     private guidelinesService: CommunityGuidelinesService,
     private virtualContributorService: VirtualContributorService,
-    private innovationHubService: InnovationHubService
+    private innovationHubService: InnovationHubService,
+    private roleSetService: RoleSetService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -136,6 +139,27 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField(() => IRoleSet, {
+    nullable: true,
+    description: 'Lookup the specified RoleSet',
+  })
+  async roleSet(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IRoleSet> {
+    const roleSet = await this.roleSetService.getRoleSetOrFail(id);
+    // Note: RoleSet is publicly accessible for information such as RoleDefinitions, so do not check for READ access here
+    // this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   roleSet.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `lookup RoleSet: ${roleSet.id}`
+    // );
+
+    return roleSet;
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => IDocument, {
     nullable: true,
     description: 'Lookup the specified Document',
@@ -161,9 +185,18 @@ export class LookupResolverFields {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
-    return await this.virtualContributorService.getVirtualContributorOrFail(id);
+    const virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup VirtualContributor: ${virtualContributor.id}`
+    );
+    return virtualContributor;
   }
 
   @UseGuards(GraphqlGuard)

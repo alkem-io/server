@@ -15,9 +15,16 @@ import {
   ContentModifiedInputData,
   ContributionInputData,
   InfoInputData,
+  SaveInputData,
   WhoInputData,
+  FetchInputData,
 } from './inputs';
-import { InfoOutputData, HealthCheckOutputData } from './outputs';
+import {
+  InfoOutputData,
+  HealthCheckOutputData,
+  SaveOutputData,
+  FetchOutputData,
+} from './outputs';
 
 /**
  * Controller exposing the Whiteboard Integration service via message queue.
@@ -76,5 +83,23 @@ export class WhiteboardIntegrationController {
     // can be tight to more complex health check in the future
     // for now just return true
     return new HealthCheckOutputData(true);
+  }
+
+  @MessagePattern(WhiteboardIntegrationMessagePattern.SAVE, Transport.RMQ)
+  public save(
+    @Payload() data: SaveInputData,
+    @Ctx() context: RmqContext
+  ): Promise<SaveOutputData> {
+    ack(context);
+    return this.integrationService.save(data);
+  }
+
+  @MessagePattern(WhiteboardIntegrationMessagePattern.FETCH, Transport.RMQ)
+  public fetch(
+    @Payload() data: FetchInputData,
+    @Ctx() context: RmqContext
+  ): Promise<FetchOutputData> {
+    ack(context);
+    return this.integrationService.fetch(data);
   }
 }
