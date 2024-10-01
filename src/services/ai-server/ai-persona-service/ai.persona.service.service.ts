@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -24,9 +23,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/messages/ingest.space.command';
-import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
 import { IExternalConfig } from './dto/external.config';
+import { EncryptionService } from '@hedger/nestjs-encryption';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -36,7 +34,7 @@ export class AiPersonaServiceService {
     private eventBus: EventBus,
     @InjectRepository(AiPersonaService)
     private aiPersonaServiceRepository: Repository<AiPersonaService>,
-    private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly crypto: EncryptionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -203,10 +201,10 @@ export class AiPersonaServiceService {
     }
     const result: IExternalConfig = {};
     if (config.apiKey) {
-      result.apiKey = this.encrypt(config.apiKey);
+      result.apiKey = this.crypto.encrypt(config.apiKey);
     }
     if (config.assistantId) {
-      result.assistantId = this.encrypt(config.assistantId);
+      result.assistantId = this.crypto.encrypt(config.assistantId);
     }
     return result;
   }
@@ -219,55 +217,11 @@ export class AiPersonaServiceService {
     }
     const result: IExternalConfig = {};
     if (config.apiKey) {
-      result.apiKey = this.decrypt(config.apiKey);
+      result.apiKey = this.crypto.decrypt(config.apiKey);
     }
     if (config.assistantId) {
-      result.assistantId = this.decrypt(config.assistantId);
+      result.assistantId = this.crypto.decrypt(config.assistantId);
     }
     return result;
-  }
-
-  private encrypt(key: string): string {
-    const iv = crypto.randomBytes(16);
-    const encryptionKey = this.configService.get('security.encryption_key', {
-      infer: true,
-    });
-    const cipher = crypto.createCipheriv(
-      'aes-256-gcm',
-      Buffer.from(encryptionKey),
-      iv
-    );
-
-    let encrypted = cipher.update(key);
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-    return Buffer.from(
-      JSON.stringify({
-        iv: iv.toString('hex'),
-        encryptedData: encrypted.toString('hex'),
-        auth: cipher.getAuthTag().toString('hex'),
-      })
-    ).toString('base64');
-  }
-
-  private decrypt(encrypted: string) {
-    const encryptionKey = this.configService.get('security.encryption_key', {
-      infer: true,
-    });
-
-    const forDecryption = JSON.parse(
-      Buffer.from(encrypted, 'base64').toString('ascii')
-    );
-    const iv = Buffer.from(forDecryption.iv, 'hex');
-    const encryptedData = Buffer.from(forDecryption.encryptedData, 'hex');
-    const auth = Buffer.from(forDecryption.auth, 'hex');
-    const decipher = crypto.createDecipheriv(
-      'aes-256-gcm',
-      Buffer.from(encryptionKey),
-      iv
-    );
-    decipher.setAuthTag(auth);
-    let decrypted = decipher.update(encryptedData);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString();
   }
 }

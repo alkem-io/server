@@ -1,11 +1,15 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddExternalConfigToAiPersonaService1726736879872
+export class ExtendAiPersonaServiceAndVcInteractionForGenericEngines1727787748227
   implements MigrationInterface
 {
-  name = 'AddExternalConfigToAiPersonaService1726736879872';
+  name = 'ExtendAiPersonaServiceAndVcInteractionForGenericEngines1727787748227';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`vc_interaction\` ADD \`externalMetadata\` text NOT NULL`
+    );
+
     await queryRunner.query(
       `ALTER TABLE \`ai_persona_service\` ADD \`externalConfig\` text NULL`
     );
@@ -14,6 +18,9 @@ export class AddExternalConfigToAiPersonaService1726736879872
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE \`ai_persona_service\` DROP COLUMN \`externalConfig\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`vc_interaction\` DROP COLUMN \`externalMetadata\``
     );
   }
 }

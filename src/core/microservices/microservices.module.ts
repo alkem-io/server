@@ -28,15 +28,8 @@ import {
   RABBITMQ_EXCHANGE_NAME_DIRECT,
 } from '@src/common/constants';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
-import { notificationsServiceFactory } from './notifications.service.factory';
-import { walletManagerServiceFactory } from './wallet-manager.service.factory';
-import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
-import { authResetServiceFactory } from './auth.reset.service.factory';
-import { virtualContributorEngineGuidanceServiceFactory } from './virtual.contributor.engine.guidance.service.factory';
-import { virtualContributorEngineCommunityManagerServiceFactory } from './virtual.contributor.engine.community.manager.service.factory';
-import { virtualContributorEngineExpertServiceFactory } from './virtual.contributor.engine.expert.service.factory';
-import { virtualContributorEngineGenericServiceFactory } from './virtual.contributor.engine.generic.service.factory';
-import { virtualContributorEngineOpenaiAssistantServiceFactory } from './virtual.contributor.engine.openai.assistant.service.factory';
+
+import { clientProxyFactory } from './client.proxy.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -98,47 +91,61 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
     ...subscriptionFactoryProviders,
     {
       provide: NOTIFICATIONS_SERVICE,
-      useFactory: notificationsServiceFactory,
+      useFactory: clientProxyFactory(MessagingQueue.NOTIFICATIONS),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: MATRIX_ADAPTER_SERVICE,
-      useFactory: matrixAdapterServiceFactory,
+      useFactory: clientProxyFactory(MessagingQueue.MATRIX_ADAPTER),
+
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: WALLET_MANAGEMENT_SERVICE,
-      useFactory: walletManagerServiceFactory,
+      useFactory: clientProxyFactory(MessagingQueue.WALLET_MANAGER),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
-      useFactory: virtualContributorEngineGuidanceServiceFactory,
+      useFactory: clientProxyFactory(
+        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
+        false
+      ),
+
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
-      useFactory: virtualContributorEngineCommunityManagerServiceFactory,
+      useFactory: clientProxyFactory(
+        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
+        false
+      ),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
-      useFactory: virtualContributorEngineExpertServiceFactory,
+      useFactory: clientProxyFactory(
+        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT
+      ),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
-      useFactory: virtualContributorEngineGenericServiceFactory,
+      useFactory: clientProxyFactory(
+        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC
+      ),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
-      useFactory: virtualContributorEngineOpenaiAssistantServiceFactory,
+      useFactory: clientProxyFactory(
+        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT
+      ),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: AUTH_RESET_SERVICE,
-      useFactory: authResetServiceFactory,
+      useFactory: clientProxyFactory(MessagingQueue.AUTH_RESET),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     excalidrawPubSubFactoryProvider,
