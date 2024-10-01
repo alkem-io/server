@@ -5,7 +5,8 @@ export const MockCommunityResolverService: MockValueProvider<CommunityResolverSe
   {
     provide: CommunityResolverService,
     useValue: {
-      getDisplayNameForRoleManagerOrFail: jest.fn(),
-      getSpaceForRoleManagerOrFail: jest.fn(),
+      getSpaceForCommunityOrFail: jest.fn(),
+      getDisplayNameForRoleSetOrFail: jest.fn(),
+      getSpaceForRoleSetOrFail: jest.fn(),
     },
   };
