@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IInvitation } from '@domain/community/invitation/invitation.interface';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { CommunityPendingMembershipResult } from './me.pending.membership.result';
 
 @ObjectType()

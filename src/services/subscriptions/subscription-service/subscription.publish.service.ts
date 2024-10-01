@@ -4,7 +4,6 @@ import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-  SUBSCRIPTION_WHITEBOARD_SAVED,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
@@ -14,7 +13,6 @@ import { IMessageReaction } from '@domain/communication/message.reaction/message
 import {
   ActivityCreatedSubscriptionPayload,
   RoomEventSubscriptionPayload,
-  WhiteboardSavedSubscriptionPayload,
   VirtualContributorUpdatedSubscriptionPayload,
 } from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -29,8 +27,6 @@ export class SubscriptionPublishService {
     private activityCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private roomEventsSubscription: PubSubEngine,
-    @Inject(SUBSCRIPTION_WHITEBOARD_SAVED)
-    private whiteboardSavedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
     private virtualContributorUpdatedSubscription: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -80,22 +76,6 @@ export class SubscriptionPublishService {
 
     return this.roomEventsSubscription.publish(
       SubscriptionType.ROOM_EVENTS,
-      payload
-    );
-  }
-
-  public publishWhiteboardSaved(
-    whiteboardId: string,
-    updatedDate: Date
-  ): Promise<void> {
-    const payload: WhiteboardSavedSubscriptionPayload = {
-      eventID: `whiteboard-saved-${randomInt()}`,
-      whiteboardID: whiteboardId,
-      updatedDate,
-    };
-
-    return this.whiteboardSavedSubscription.publish(
-      SubscriptionType.WHITEBOARD_SAVED,
       payload
     );
   }

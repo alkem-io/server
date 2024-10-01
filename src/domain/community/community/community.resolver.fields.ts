@@ -7,11 +7,9 @@ import { CommunityService } from './community.service';
 import { IUserGroup } from '@domain/community/user-group';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { IForm } from '@domain/common/form/form.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
-
+import { IRoleSet } from '@domain/access/role-set';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
@@ -40,16 +38,6 @@ export class CommunityResolverFields {
     return await this.communityService.getUserGroup(community, groupID);
   }
 
-  @UseGuards(GraphqlGuard)
-  @ResolveField('applicationForm', () => IForm, {
-    nullable: false,
-    description: 'The Form used for Applications to this community.',
-  })
-  @Profiling.api
-  async applicationForm(@Parent() community: Community): Promise<IForm> {
-    return await this.communityService.getApplicationForm(community);
-  }
-
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('communication', () => ICommunication, {
@@ -63,14 +51,14 @@ export class CommunityResolverFields {
     });
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  // Note: do not check for READ so that it is accessible to check for authorization
   @UseGuards(GraphqlGuard)
-  @ResolveField('policy', () => ICommunityPolicy, {
+  @ResolveField('roleSet', () => IRoleSet, {
     nullable: false,
-    description: 'The policy that defines the roles for this Community.',
+    description: 'The RoleSet for this Community.',
   })
-  async policy(@Parent() community: Community): Promise<ICommunityPolicy> {
-    return this.communityService.getCommunityPolicy(community);
+  async roleSet(@Parent() community: Community): Promise<IRoleSet> {
+    return this.communityService.getRoleSet(community);
   }
 
   @UseGuards(GraphqlGuard)

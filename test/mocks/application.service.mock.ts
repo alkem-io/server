@@ -1,4 +1,4 @@
-import { ApplicationService } from '@domain/community/application/application.service';
+import { ApplicationService } from '@domain/access/application/application.service';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
 

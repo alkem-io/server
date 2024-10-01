@@ -8,7 +8,7 @@ import {
   Generated,
 } from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
-import { Application } from '@domain/community/application/application.entity';
+import { Application } from '@domain/access/application/application.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';

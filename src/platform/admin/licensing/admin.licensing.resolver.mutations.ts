@@ -91,16 +91,16 @@ export class AdminLicensingResolverMutations {
       `assign licensePlan (${planData.licensePlanID}) on account (${planData.spaceID})`
     );
 
-    const account = await this.adminLicensingService.assignLicensePlanToSpace(
+    const space = await this.adminLicensingService.assignLicensePlanToSpace(
       planData,
       licensing.id
     );
     // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
     const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(account);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return account;
+    return space;
   }
 
   @UseGuards(GraphqlGuard)
@@ -128,10 +128,16 @@ export class AdminLicensingResolverMutations {
       `revoke licensePlan (${planData.licensePlanID}) on account (${planData.accountID})`
     );
 
-    return await this.adminLicensingService.revokeLicensePlanFromAccount(
-      planData,
-      licensing.id
-    );
+    const account =
+      await this.adminLicensingService.revokeLicensePlanFromAccount(
+        planData,
+        licensing.id
+      );
+    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
+    const updatedAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return account;
   }
 
   @UseGuards(GraphqlGuard)
@@ -159,9 +165,13 @@ export class AdminLicensingResolverMutations {
       `revoke licensePlan (${planData.licensePlanID}) on account (${planData.spaceID})`
     );
 
-    return await this.adminLicensingService.revokeLicensePlanFromSpace(
+    const space = await this.adminLicensingService.revokeLicensePlanFromSpace(
       planData,
       licensing.id
     );
+    const updatedAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return space;
   }
 }

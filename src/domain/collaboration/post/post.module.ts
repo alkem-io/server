@@ -8,17 +8,17 @@ import { PostResolverMutations } from './post.resolver.mutations';
 import { PostService } from './post.service';
 import { PostResolverFields } from './post.resolver.fields';
 import { PostAuthorizationService } from './post.service.authorization';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoomModule,
-    CommunityPolicyModule,
+    RoleSetModule,
     VisualModule,
     ContributorLookupModule,
     ProfileModule,
