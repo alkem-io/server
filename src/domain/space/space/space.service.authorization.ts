@@ -218,7 +218,7 @@ export class SpaceAuthorizationService {
     for (const subspace of space.subspaces) {
       const updatedSubspaceAuthorizations =
         await this.applyAuthorizationPolicy(subspace);
-      updatedSubspaceAuthorizations.push(...updatedSubspaceAuthorizations);
+      updatedAuthorizations.push(...updatedSubspaceAuthorizations);
     }
 
     return updatedAuthorizations;
