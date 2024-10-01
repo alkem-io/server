@@ -3,10 +3,10 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { FlowState } from './space.defaults.innovation.flow.level.zero.space';
+import { FlowState } from './bootstrap.space.tutorials.innovation.flow.states';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
-export const spaceDefaultsCalloutsLevelZeroSpace: CreateCalloutInput[] = [
+export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
   {
     nameID: 'welcome',
     type: CalloutType.POST,
@@ -23,7 +23,7 @@ export const spaceDefaultsCalloutsLevelZeroSpace: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.NOT_USED],
+            tags: [FlowState.HOME],
           },
         ],
       },
@@ -45,7 +45,7 @@ export const spaceDefaultsCalloutsLevelZeroSpace: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.NOT_USED],
+            tags: [FlowState.HOME],
           },
         ],
       },
@@ -67,7 +67,7 @@ export const spaceDefaultsCalloutsLevelZeroSpace: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.NOT_USED],
+            tags: [FlowState.HOME],
           },
         ],
       },
@@ -89,7 +89,7 @@ export const spaceDefaultsCalloutsLevelZeroSpace: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.NOT_USED],
+            tags: [FlowState.HOME],
           },
         ],
       },
@@ -111,7 +111,7 @@ export const spaceDefaultsCalloutsLevelZeroSpace: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.NOT_USED],
+            tags: [FlowState.HOME],
           },
         ],
       },
@@ -133,7 +133,7 @@ export const spaceDefaultsCalloutsLevelZeroSpace: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.NOT_USED],
+            tags: [FlowState.HOME],
           },
         ],
       },
@@ -155,7 +155,7 @@ export const spaceDefaultsCalloutsLevelZeroSpace: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.NOT_USED],
+            tags: [FlowState.HOME],
           },
         ],
       },

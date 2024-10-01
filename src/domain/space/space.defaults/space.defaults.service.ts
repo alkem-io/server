@@ -44,26 +44,19 @@ export class SpaceDefaultsService {
     if (!templateID) {
       switch (spaceType) {
         case SpaceType.CHALLENGE:
-          const challengeTemplate =
-            await this.templatesManagerService.getTemplateDefault(
-              platformTemplatesManager.id,
-              TemplateDefaultType.COLLABORATION_CHALLENGE
-            );
-          templateID = challengeTemplate.id;
-          break;
         case SpaceType.OPPORTUNITY:
-          const opportunityTemplate =
+          const subspaceTemplate =
             await this.templatesManagerService.getTemplateDefault(
               platformTemplatesManager.id,
-              TemplateDefaultType.COLLABORATION_OPPORTUNITY
+              TemplateDefaultType.PLATFORM_SUBSPACE
             );
-          templateID = opportunityTemplate.id;
+          templateID = subspaceTemplate.id;
           break;
         case SpaceType.SPACE:
           const levelZeroTemplate =
             await this.templatesManagerService.getTemplateDefault(
               platformTemplatesManager.id,
-              TemplateDefaultType.COLLABORATION_LEVEL_ZERO_SPACE
+              TemplateDefaultType.PLATFORM_SPACE
             );
           templateID = levelZeroTemplate.id;
           break;
@@ -71,7 +64,7 @@ export class SpaceDefaultsService {
           const knowledgeTemplate =
             await this.templatesManagerService.getTemplateDefault(
               platformTemplatesManager.id,
-              TemplateDefaultType.COLLABORATION_KNOWLEDGE
+              TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE
             );
           templateID = knowledgeTemplate.id;
           break;
@@ -111,7 +104,7 @@ export class SpaceDefaultsService {
       const tutorialsTemplate =
         await this.templatesManagerService.getTemplateDefault(
           platformTemplatesManager.id,
-          TemplateDefaultType.COLLABORATION_TUTORIALS
+          TemplateDefaultType.PLATFORM_SPACE_TUTORIALS
         );
       if (tutorialsTemplate) {
         const tutorialsCollaborationTemplate =

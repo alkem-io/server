@@ -2,10 +2,10 @@ import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { FlowState } from './space.defaults.innovation.flow.knowledge';
+import { FlowState } from './bootstrap.subspace.knowledge.innovation.flow.states';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
-export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
+export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
   {
     nameID: 'summary',
     type: CalloutType.POST,

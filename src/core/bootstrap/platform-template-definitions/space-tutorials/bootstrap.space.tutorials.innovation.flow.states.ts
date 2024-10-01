@@ -1,13 +1,16 @@
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 
 export enum FlowState {
-  NOT_USED = 'Not used',
+  HOME = 'Home',
+  COMMUNITY = 'Community',
+  SUBSPACES = 'Subspaces',
+  KNOWLEDGE = 'Knowledge',
 }
 
-export const spaceDefaultsInnovationFlowStatesLevelZeroSpace: IInnovationFlowState[] =
+export const bootstrapSpaceTutorialsInnovationFlowStates: IInnovationFlowState[] =
   [
     {
-      displayName: FlowState.NOT_USED,
+      displayName: FlowState.HOME,
       description:
         '🔍 A journey of discovery! Gather insights through research and observation.',
     },

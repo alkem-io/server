@@ -3,10 +3,10 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { FlowState } from './space.defaults.innovation.flow.blank.slate';
+import { FlowState } from './bootstrap.space.innovation.flow';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
-export const spaceDefaultsCalloutsBlankSlate: CreateCalloutInput[] = [
+export const bootstrapSpaceCallouts: CreateCalloutInput[] = [
   {
     nameID: 'welcome',
     type: CalloutType.POST,
@@ -22,7 +22,7 @@ export const spaceDefaultsCalloutsBlankSlate: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.PHASE_1],
+            tags: [FlowState.HOME],
           },
         ],
       },

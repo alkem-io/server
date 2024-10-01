@@ -1,13 +1,11 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum TemplateDefaultType {
-  COLLABORATION_LEVEL_ZERO_SPACE = 'collaboration-level-zero-space',
-  COLLABORATION_SUBSPACE = 'collaboration-subspace',
-  COLLABORATION_EMPTY = 'collaboration-empty',
-  COLLABORATION_CHALLENGE = 'collaboration-challenge',
-  COLLABORATION_OPPORTUNITY = 'collaboration-opportunity',
-  COLLABORATION_KNOWLEDGE = 'collaboration-knowledge',
-  COLLABORATION_TUTORIALS = 'collaboration-tutorials',
+  PLATFORM_SPACE = 'platform-space',
+  PLATFORM_SPACE_TUTORIALS = 'platform-space-tutorials',
+  PLATFORM_SUBSPACE = 'platform-subspace',
+  PLATFORM_SUBSPACE_KNOWLEDGE = 'platform-subspace-knowledge',
+  SPACE_SUBSPACE = 'space-subspace',
 }
 
 registerEnumType(TemplateDefaultType, {
