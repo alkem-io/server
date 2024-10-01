@@ -101,13 +101,13 @@ export class BootstrapService {
       }
 
       await this.bootstrapUserProfiles();
+      await this.ensureAuthorizationsPopulated();
       await this.ensurePlatformTemplatesArePresent();
       await this.ensureOrganizationSingleton();
       await this.ensureSpaceSingleton();
       await this.ensureSsiPopulated();
       await this.platformService.ensureForumCreated();
       // reset auth as last in the actions
-      await this.ensureAuthorizationsPopulated();
       // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
       this.logger.error(
@@ -130,7 +130,7 @@ export class BootstrapService {
       await this.templatesManagerService.getTemplatesSetOrFail(
         templatesManager.id
       );
-    await this.ensureSubspaceKnowledgeTemplatesArePresent(
+    let authResetNeeded = await this.ensureSubspaceKnowledgeTemplatesArePresent(
       templateDefaults,
       TemplateDefaultType.PLATFORM_SPACE,
       templatesSet,
@@ -139,33 +139,48 @@ export class BootstrapService {
       bootstrapSpaceCalloutGroups,
       bootstrapSpaceCallouts
     );
-    await this.ensureSubspaceKnowledgeTemplatesArePresent(
-      templateDefaults,
-      TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
-      templatesSet,
-      'space',
-      bootstrapSpaceTutorialsInnovationFlowStates,
-      bootstrapSpaceTutorialsCalloutGroups,
-      bootstrapSpaceTutorialsCallouts
-    );
-    await this.ensureSubspaceKnowledgeTemplatesArePresent(
-      templateDefaults,
-      TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
-      templatesSet,
-      'knowledge',
-      bootstrapSubspaceKnowledgeInnovationFlowStates,
-      bootstrapSubspaceKnowledgeCalloutGroups,
-      bootstrapSubspaceKnowledgeCallouts
-    );
-    await this.ensureSubspaceKnowledgeTemplatesArePresent(
-      templateDefaults,
-      TemplateDefaultType.PLATFORM_SUBSPACE,
-      templatesSet,
-      'challenge',
-      bootstrapSubspaceInnovationFlowStates,
-      bootstrapSubspaceCalloutGroups,
-      bootstrapSubspaceCallouts
-    );
+    authResetNeeded =
+      authResetNeeded ||
+      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+        templateDefaults,
+        TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
+        templatesSet,
+        'space',
+        bootstrapSpaceTutorialsInnovationFlowStates,
+        bootstrapSpaceTutorialsCalloutGroups,
+        bootstrapSpaceTutorialsCallouts
+      ));
+    authResetNeeded =
+      authResetNeeded ||
+      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+        templateDefaults,
+        TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
+        templatesSet,
+        'knowledge',
+        bootstrapSubspaceKnowledgeInnovationFlowStates,
+        bootstrapSubspaceKnowledgeCalloutGroups,
+        bootstrapSubspaceKnowledgeCallouts
+      ));
+    authResetNeeded =
+      authResetNeeded ||
+      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+        templateDefaults,
+        TemplateDefaultType.PLATFORM_SUBSPACE,
+        templatesSet,
+        'challenge',
+        bootstrapSubspaceInnovationFlowStates,
+        bootstrapSubspaceCalloutGroups,
+        bootstrapSubspaceCallouts
+      ));
+    if (authResetNeeded) {
+      this.logger.verbose?.(
+        '=== Identified that template defaults had not been reset; resetting auth now ===',
+        LogContext.BOOTSTRAP
+      );
+      const updatedAuthorizations =
+        await this.platformAuthorizationService.applyAuthorizationPolicy();
+      await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    }
   }
 
   private async ensureSubspaceKnowledgeTemplatesArePresent(
@@ -176,7 +191,7 @@ export class BootstrapService {
     flowStates: IInnovationFlowState[],
     calloutGroups: any[],
     callouts: any[]
-  ) {
+  ): Promise<boolean> {
     const knowledgeTemplateDefault = templateDefaults.find(
       td => td.type === templateDefaultType
     );
@@ -190,7 +205,6 @@ export class BootstrapService {
       const template = await this.templatesSetService.createTemplate(
         templatesSet,
         {
-          nameID: nameID,
           profileData: {
             displayName: `${nameID} Template`,
           },
@@ -204,13 +218,16 @@ export class BootstrapService {
             },
             calloutGroups: calloutGroups,
             calloutsData: callouts,
+            defaultCalloutGroupName: calloutGroups[0].displayName,
           },
         }
       );
       // Set the default template
       knowledgeTemplateDefault.template = template;
       await this.templateDefaultService.save(knowledgeTemplateDefault);
+      return true;
     }
+    return false;
   }
 
   async bootstrapUserProfiles() {
@@ -353,7 +370,7 @@ export class BootstrapService {
     }
   }
 
-  async ensureAuthorizationsPopulated() {
+  private async ensureAuthorizationsPopulated() {
     // For platform
     const platform = await this.platformService.getPlatformOrFail();
     const platformAuthorization =

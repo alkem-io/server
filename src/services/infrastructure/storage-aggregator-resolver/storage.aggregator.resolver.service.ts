@@ -22,6 +22,8 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Account } from '@domain/space/account/account.entity';
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from '@domain/community/user/user.entity';
+import { Platform } from '@platform/platfrom/platform.entity';
+import { TemplatesManager } from '@domain/template/templates-manager';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -152,6 +154,51 @@ export class StorageAggregatorResolverService {
     return user;
   }
 
+  public async getStorageAggregatorForTemplatesManager(
+    templatesManagerId: string
+  ): Promise<IStorageAggregator> {
+    if (!isUUID(templatesManagerId)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided to find the StorageAggregator of a templatesManager',
+        LogContext.COMMUNITY,
+        { provided: templatesManagerId }
+      );
+    }
+
+    // First try on Space
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        templatesManager: {
+          id: templatesManagerId,
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    if (space && space.storageAggregator) {
+      return this.getStorageAggregatorOrFail(space.storageAggregator.id);
+    }
+
+    const platform = await this.entityManager.findOne(Platform, {
+      where: {
+        templatesManager: {
+          id: templatesManagerId,
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    if (platform && platform.storageAggregator) {
+      return this.getStorageAggregatorOrFail(platform.storageAggregator.id);
+    }
+    throw new NotImplementedException(
+      `Unable to retrieve storage aggregator to use for TemplatesManager ${templatesManagerId}`,
+      LogContext.STORAGE_AGGREGATOR
+    );
+  }
+
   public async getStorageAggregatorForTemplatesSet(
     templatesSetId: string
   ): Promise<IStorageAggregator> {
@@ -164,18 +211,18 @@ export class StorageAggregatorResolverService {
     }
 
     // First try on Space
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        templatesManager: {
-          id: templatesSetId,
+    const templatesManager = await this.entityManager.findOne(
+      TemplatesManager,
+      {
+        where: {
+          templatesSet: {
+            id: templatesSetId,
+          },
         },
-      },
-      relations: {
-        storageAggregator: true,
-      },
-    });
-    if (space && space.storageAggregator) {
-      return this.getStorageAggregatorOrFail(space.storageAggregator.id);
+      }
+    );
+    if (templatesManager) {
+      return this.getStorageAggregatorForTemplatesManager(templatesManager.id);
     }
 
     // Then on InnovationPack

@@ -1,3 +1,4 @@
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -8,6 +9,7 @@ import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/call
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
+import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -98,11 +100,14 @@ export class InputCreatorService {
       calloutInputs.push(this.buildCreateCalloutInputFromCallout(callout));
     }
 
+    const calloutGroups: ICalloutGroup[] = JSON.parse(collaboration.groupsStr);
     const result: CreateCollaborationInput = {
       calloutsData: calloutInputs,
       innovationFlowData: this.buildCreateInnovationFlowInputFromInnovationFlow(
         collaboration.innovationFlow
       ),
+      calloutGroups,
+      defaultCalloutGroupName: calloutGroups[0].displayName as CalloutGroupName,
     };
 
     return result;
