@@ -147,7 +147,7 @@ export class TemplateAuthorizationService {
     if (template.type == TemplateType.INNOVATION_FLOW) {
       if (!template.innovationFlow) {
         throw new RelationshipNotFoundException(
-          `Unable to load Collaboration on Template of that type: ${template.id} `,
+          `Unable to load InnovationFlow on Template of that type: ${template.id} `,
           LogContext.TEMPLATES
         );
       }
