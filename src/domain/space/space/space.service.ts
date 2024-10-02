@@ -80,6 +80,7 @@ import { templatesSetDefaults } from '../space.defaults/definitions/space.defaul
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { Activity } from '@platform/activity';
 
 @Injectable()
 export class SpaceService {
@@ -724,6 +725,32 @@ export class SpaceService {
         LogContext.SPACES
       );
     return space;
+  }
+
+  public getExploreSpaces(limit = 30, daysOld = 30) {
+    return (
+      this.spaceRepository
+        .createQueryBuilder('s')
+        .leftJoinAndSelect('s.authorization', 'authorization') // eager load the authorization
+        .select()
+        // .loadAllRelationIds()
+        .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
+        .where({
+          level: SpaceLevel.SPACE,
+          visibility: SpaceVisibility.ACTIVE,
+        })
+        // activities in the past "daysOld" days
+        .andWhere(
+          'a.createdDate >= DATE_SUB(CURDATE(), INTERVAL :daysOld DAY)',
+          {
+            daysOld,
+          }
+        )
+        .groupBy('s.id')
+        .orderBy('COUNT(a.id)', 'DESC')
+        .limit(limit)
+        .getMany()
+    );
   }
 
   async getSpace(
