@@ -52,6 +52,10 @@ export class TemplateAuthorizationService {
           collaboration: {
             authorization: true,
           },
+          innovationFlow: {
+            profile: true,
+            authorization: true,
+          },
         },
       }
     );
