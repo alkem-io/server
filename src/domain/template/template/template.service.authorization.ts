@@ -11,6 +11,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
+import { InnovationFlowAuthorizationService } from '@domain/collaboration/innovation-flow/innovation.flow.service.authorization';
 
 @Injectable()
 export class TemplateAuthorizationService {
@@ -21,7 +22,8 @@ export class TemplateAuthorizationService {
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private collaborationAuthorizationService: CollaborationAuthorizationService
+    private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -48,6 +50,10 @@ export class TemplateAuthorizationService {
           },
           whiteboard: true,
           collaboration: {
+            authorization: true,
+          },
+          innovationFlow: {
+            profile: true,
             authorization: true,
           },
         },
@@ -140,6 +146,22 @@ export class TemplateAuthorizationService {
           template.authorization
         );
       updatedAuthorizations.push(...collaborationAuthorizations);
+    }
+
+    if (template.type == TemplateType.INNOVATION_FLOW) {
+      if (!template.innovationFlow) {
+        throw new RelationshipNotFoundException(
+          `Unable to load InnovationFlow on Template of that type: ${template.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      // Cascade
+      const innovationFlowAuthorizations =
+        await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+          template.innovationFlow,
+          template.authorization
+        );
+      updatedAuthorizations.push(...innovationFlowAuthorizations);
     }
 
     return updatedAuthorizations;
