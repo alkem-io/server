@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -101,16 +102,30 @@ export class AccountService {
 
     space = await this.spaceService.save(space);
 
-    if (agentInfo) {
-      await this.spaceService.assignUserToRoles(space, agentInfo);
-    }
-    const spaceWithAgent = await this.spaceService.getSpaceOrFail(space.id, {
+    space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
+        community: {
+          roleSet: true,
+        },
         agent: true,
       },
     });
-    await this.accountHostService.assignLicensePlansToSpace(
-      spaceWithAgent,
+    if (!space.agent || !space.community || !space.community.roleSet) {
+      throw new EntityNotInitializedException(
+        `Unable to load space ${space.id} with required entities for creating space`,
+        LogContext.SPACES
+      );
+    }
+    const spaceAgent = space.agent;
+    const roleSet = space.community.roleSet;
+
+    if (agentInfo) {
+      await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+    }
+
+    space.agent = await this.accountHostService.assignLicensePlansToSpace(
+      spaceAgent,
+      space.id,
       account.type,
       spaceData.licensePlanID
     );

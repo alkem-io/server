@@ -24,7 +24,7 @@ import {
   CreateTagsetOnProfileInput,
   UpdateProfileInput,
 } from '@domain/common/profile/dto';
-import { ApplicationEventInput } from '@domain/community/application/dto/application.dto.event';
+import { ApplicationEventInput } from '@domain/access/application/dto/application.dto.event';
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
@@ -35,7 +35,6 @@ import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/cal
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
-import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
 import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
 import { UpdateTemplateInput } from '@domain/template/template/dto/template.dto.update';
 import { CreateDocumentInput } from '@domain/storage/document/dto/document.dto.create';
@@ -70,11 +69,19 @@ import { UpdateSpaceSettingsInput } from '@domain/space/space/dto/space.dto.upda
 import { CreateAccountInput } from '@domain/space/account/dto';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
-import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/community.role.dto.apply';
-import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.invite.contributor';
-import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.platform.invitation.community';
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
-import { UpdateInnovationFlowEntityInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.update.entity';
+import { InviteNewContributorForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.platform.invitation.community';
+import { ApplyForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.apply';
+import { InviteForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.invite';
+import { AssignRoleOnRoleSetToUserInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.user';
+import { AssignRoleOnRoleSetToOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.organization';
+import { AssignRoleOnRoleSetToVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.virtual';
+import { RemoveRoleOnRoleSetFromUserInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.user';
+import { RemoveRoleOnRoleSetFromOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.organization';
+import { RemoveRoleOnRoleSetFromVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.virtual';
+import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.update.application.form';
+import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
+import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -82,6 +89,18 @@ export class BaseHandler extends AbstractHandler {
     metatype: Function
   ): Promise<ValidationError[]> {
     const types: Function[] = [
+      AssignRoleOnRoleSetToUserInput,
+      AssignRoleOnRoleSetToOrganizationInput,
+      AssignRoleOnRoleSetToVirtualContributorInput,
+      RemoveRoleOnRoleSetFromUserInput,
+      RemoveRoleOnRoleSetFromOrganizationInput,
+      RemoveRoleOnRoleSetFromVirtualContributorInput,
+      UpdateApplicationFormOnRoleSetInput,
+      JoinAsEntryRoleOnRoleSetInput,
+      ApplyForEntryRoleOnRoleSetInput,
+      RolesUserInput,
+      InviteForEntryRoleOnRoleSetInput,
+      InviteNewContributorForRoleOnRoleSetInput,
       ApplicationEventInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
@@ -113,7 +132,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalloutContributionDefaultsInput,
       UpdateCalloutContributionPolicyInput,
       UpdateTemplateInput,
-      UpdateCommunityApplicationFormInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,
       UpdateSpaceSettingsEntityInput,
@@ -131,9 +149,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
       VisualUploadImageInput,
-      CommunityRoleApplyInput,
-      CreateInvitationForContributorsOnCommunityInput,
-      CreatePlatformInvitationOnCommunityInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
       CreateCalloutOnCollaborationInput,

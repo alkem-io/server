@@ -13,8 +13,8 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
-import { ApplicationModule } from '@domain/community/application/application.module';
-import { InvitationModule } from '@domain/community/invitation/invitation.module';
+import { ApplicationModule } from '@domain/access/application/application.module';
+import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
@@ -30,6 +30,7 @@ import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.m
 import { AccountModule } from '@domain/space/account/account.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { TemplatesSetModule } from '@domain/template/templates-set/templates.set
     SpaceModule,
     CommunityGuidelinesModule,
     VirtualContributorModule,
+    RoleSetModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],
