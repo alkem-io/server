@@ -3,6 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplate } from '../template/template.interface';
 import { TemplateType } from '@common/enums/template.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { ITemplatesManager } from '../templates-manager';
 
 @ObjectType('TemplateDefault')
 export abstract class ITemplateDefault extends IAuthorizable {
@@ -23,4 +24,6 @@ export abstract class ITemplateDefault extends IAuthorizable {
     description: 'The type of any Template stored here.',
   })
   allowedTemplateType!: TemplateType;
+
+  templatesManager?: ITemplatesManager;
 }

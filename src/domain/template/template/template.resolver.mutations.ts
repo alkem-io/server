@@ -10,6 +10,8 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UpdateTemplateInput } from './dto/template.dto.update';
 import { DeleteTemplateInput } from './dto/template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
+import { ValidationException } from '@common/exceptions/validation.exception';
 
 @Resolver()
 export class TemplateResolverMutations {
@@ -63,6 +65,15 @@ export class TemplateResolverMutations {
       AuthorizationPrivilege.DELETE,
       `template delete: ${template.id}`
     );
+    const usedInTemplateDefault =
+      await this.templateService.isTemplateInUseInTemplateDefault(template.id);
+    if (usedInTemplateDefault) {
+      throw new ValidationException(
+        `Template is in use in TemplateDefault: ${template.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+
     return await this.templateService.delete(template);
   }
 }

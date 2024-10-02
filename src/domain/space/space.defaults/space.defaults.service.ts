@@ -16,7 +16,6 @@ import { spaceDefaultsSettingsChallenge } from './definitions/challenge/space.de
 import { spaceDefaultsSettingsKnowledge } from './definitions/knowledge/space.defaults.settings.knowledge';
 import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
-import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.collaboration';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { TemplateService } from '@domain/template/template/template.service';
@@ -24,6 +23,7 @@ import { InputCreatorService } from '@services/api/input-creator/input.creator.s
 import { PlatformService } from '@platform/platfrom/platform.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { ValidationException } from '@common/exceptions';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -86,8 +86,10 @@ export class SpaceDefaultsService {
         collaborationData.innovationFlowData =
           collaborationTemplateInput.innovationFlowData;
       } else {
-        collaborationData.innovationFlowData =
-          await this.getDefaultInnovationFlowInput();
+        throw new ValidationException(
+          'No innovation flow data provided',
+          LogContext.SPACES
+        );
       }
     }
     if (!collaborationData.calloutsData && collaborationTemplateInput) {
@@ -141,22 +143,6 @@ export class SpaceDefaultsService {
           LogContext.ROLES
         );
     }
-  }
-
-  private async getDefaultInnovationFlowInput(): Promise<CreateInnovationFlowInput> {
-    const result: CreateInnovationFlowInput = {
-      profile: {
-        displayName: 'default',
-        description: 'default flow',
-      },
-      states: [
-        {
-          displayName: 'First State',
-          description: '🔍 A single state flow.',
-        },
-      ],
-    };
-    return result;
   }
 
   public getProfileType(spaceLevel: SpaceLevel): ProfileType {

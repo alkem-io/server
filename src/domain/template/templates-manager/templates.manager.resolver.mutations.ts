@@ -9,6 +9,11 @@ import { ITemplateDefault } from '../template-default/template.default.interface
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TemplateDefaultService } from '../template-default/template.default.service';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Resolver()
 export class TemplatesManagerResolverMutations {
@@ -29,8 +34,29 @@ export class TemplatesManagerResolverMutations {
   ): Promise<ITemplateDefault> {
     const templateDefault =
       await this.templatesDefaultService.getTemplateDefaultOrFail(
-        templateDefaultData.templateDefaultID
+        templateDefaultData.templateDefaultID,
+        {
+          relations: {
+            templatesManager: {
+              templatesSet: {
+                templates: true,
+              },
+            },
+          },
+        }
       );
+
+    const templatesManager = templateDefault.templatesManager;
+    if (
+      !templatesManager ||
+      !templatesManager.templatesSet ||
+      !templatesManager.templatesSet.templates
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load all entities on TemplatesManager for templateDefault: ${templateDefault.id}`,
+        LogContext.TEMPLATES
+      );
+    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -38,6 +64,17 @@ export class TemplatesManagerResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update templateDefault of type ${templateDefault.type}: ${templateDefault.id}`
     );
+
+    const templatesSet = templatesManager.templatesSet.templates;
+    const template = templatesSet.find(
+      t => t.id === templateDefaultData.templateID
+    );
+    if (!template) {
+      throw new ValidationException(
+        `Updating TemplateDefault (${templateDefault.id}) with templateID (${templateDefaultData.templateID}) that is not in set of Templates in associated TemplateSet`,
+        LogContext.TEMPLATES
+      );
+    }
 
     return this.templatesDefaultService.updateTemplateDefaultTemplate(
       templateDefault,

@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -32,6 +32,7 @@ import { randomUUID } from 'crypto';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { TemplateDefault } from '../template-default/template.default.entity';
 
 @Injectable()
 export class TemplateService {
@@ -44,6 +45,8 @@ export class TemplateService {
     private collaborationServerice: CollaborationService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -440,5 +443,20 @@ export class TemplateService {
       );
     }
     return template.innovationFlow;
+  }
+  public async isTemplateInUseInTemplateDefault(
+    templateID: string
+  ): Promise<boolean> {
+    const templateDefaults = await this.entityManager.find(TemplateDefault, {
+      where: {
+        template: {
+          id: templateID,
+        },
+      },
+    });
+    if (templateDefaults.length > 0) {
+      return true;
+    }
+    return false;
   }
 }

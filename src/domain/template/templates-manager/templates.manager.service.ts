@@ -75,11 +75,16 @@ export class TemplatesManagerService {
         relations: {
           authorization: true,
           templateDefaults: true,
+          templatesSet: true,
         },
       }
     );
 
-    if (!templatesManager.authorization || !templatesManager.templateDefaults) {
+    if (
+      !templatesManager.authorization ||
+      !templatesManager.templateDefaults ||
+      !templatesManager.templatesSet
+    ) {
       throw new EntityNotFoundException(
         `Unable to find authorization on TemplatesManager with id: ${templatesManagerID}`,
         LogContext.TEMPLATES
@@ -90,9 +95,12 @@ export class TemplatesManagerService {
       templatesManager.authorization
     );
 
-    for (const template of templatesManager.templateDefaults) {
-      await this.templateDefaultService.removeTemplateDefault(template);
+    for (const templateDefault of templatesManager.templateDefaults) {
+      await this.templateDefaultService.removeTemplateDefault(templateDefault);
     }
+    await this.templatesSetService.deleteTemplatesSet(
+      templatesManager.templatesSet.id
+    );
 
     const result = await this.templatesManagerRepository.remove(
       templatesManager as TemplatesManager

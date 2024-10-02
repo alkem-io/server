@@ -19,6 +19,9 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateType } from '@common/enums/template.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { CreateTemplateFromCollaborationOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.collaboration';
+import { ICollaboration } from '@domain/collaboration/collaboration';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 
 @Injectable()
 export class TemplatesSetService {
@@ -29,6 +32,7 @@ export class TemplatesSetService {
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private templateService: TemplateService,
     private namingService: NamingService,
+    private inputCreatorService: InputCreatorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -137,6 +141,22 @@ export class TemplatesSetService {
     );
     template.templatesSet = templatesSet;
     return await this.templateService.save(template);
+  }
+
+  async createTemplateFromCollaboration(
+    templatesSet: ITemplatesSet,
+    templateCollaborationInput: CreateTemplateFromCollaborationOnTemplatesSetInput,
+    collaboration: ICollaboration
+  ): Promise<ITemplate> {
+    const collaborationInput =
+      await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
+        collaboration
+      );
+    const templateInput: CreateTemplateInput = {
+      ...templateCollaborationInput,
+      collaborationData: collaborationInput,
+    };
+    return await this.createTemplate(templatesSet, templateInput);
   }
 
   async addTemplates(
