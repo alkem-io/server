@@ -144,7 +144,7 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiServer.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.GRANT, // To be authorizatin  reset
       `create Virtual persona: ${aiPersonaServiceData.engine}`
     );
     let aiPersonaService =
