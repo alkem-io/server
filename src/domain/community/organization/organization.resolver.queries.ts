@@ -9,6 +9,7 @@ import { OrganizationFilterInput } from '@core/filtering';
 import { UseGuards } from '@nestjs/common';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
 @Resolver()
 export class OrganizationResolverQueries {
@@ -44,11 +45,17 @@ export class OrganizationResolverQueries {
   @Profiling.api
   async organizationsPaginated(
     @Args() pagination: PaginationArgs,
+    @Args('status', {
+      nullable: true,
+      type: () => OrganizationVerificationEnum,
+    })
+    status?: OrganizationVerificationEnum,
     @Args('filter', { nullable: true }) filter?: OrganizationFilterInput
   ): Promise<PaginatedOrganization> {
     return this.organizationService.getPaginatedOrganizations(
       pagination,
-      filter
+      filter,
+      status
     );
   }
 }

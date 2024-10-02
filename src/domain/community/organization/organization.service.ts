@@ -55,6 +55,7 @@ import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
 @Injectable()
 export class OrganizationService {
@@ -401,10 +402,15 @@ export class OrganizationService {
 
   async getPaginatedOrganizations(
     paginationArgs: PaginationArgs,
-    filter?: OrganizationFilterInput
+    filter?: OrganizationFilterInput,
+    status?: OrganizationVerificationEnum
   ): Promise<IPaginatedType<IOrganization>> {
     const qb = this.organizationRepository.createQueryBuilder('organization');
     qb.leftJoinAndSelect('organization.authorization', 'authorization_policy');
+
+    if (status) {
+      // ... what to do here?
+    }
 
     if (filter) {
       applyOrganizationFilter(qb, filter);
