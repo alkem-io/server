@@ -122,7 +122,7 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiServer.authorization,
-      AuthorizationPrivilege.AUTHORIZATION_RESET,
+      AuthorizationPrivilege.GRANT, // to be auth reset
       `reset authorization on aiServer: ${agentInfo.email}`
     );
     const authorizations =
@@ -144,7 +144,7 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiServer.authorization,
-      AuthorizationPrivilege.GRANT, // To be authorizatin  reset
+      AuthorizationPrivilege.CREATE,
       `create Virtual persona: ${aiPersonaServiceData.engine}`
     );
     let aiPersonaService =
