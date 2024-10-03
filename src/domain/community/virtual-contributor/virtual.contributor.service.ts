@@ -592,7 +592,7 @@ export class VirtualContributorService {
   //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation
   private async deleteVCInvitations(contributorID: string) {
     const invitations = await this.entityManager.find(Invitation, {
-      where: { invitedContributor: contributorID },
+      where: { invitedContributorID: contributorID },
     });
     for (const invitation of invitations) {
       if (invitation.authorization) {
