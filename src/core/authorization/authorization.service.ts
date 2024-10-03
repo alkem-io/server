@@ -89,7 +89,7 @@ export class AuthorizationService {
       );
     if (authorization.credentialRules === '') {
       throw new AuthorizationInvalidPolicyException(
-        `AuthorizationPolicy without credential rules provided: ${authorization.id}`,
+        `AuthorizationPolicy without credential rules provided: ${authorization.id}, type: ${authorization.type}`,
         LogContext.AUTH
       );
     }
@@ -130,7 +130,7 @@ export class AuthorizationService {
           for (const privilege of rule.grantedPrivileges) {
             if (privilege === privilegeRequired) {
               this.logger.verbose?.(
-                `[CredentialRule] Granted privilege '${privilegeRequired}' using rule '${rule.name}' on authorization ${authorization.id}`,
+                `[CredentialRule] Granted privilege '${privilegeRequired}' using rule '${rule.name}' on authorization ${authorization.id} on type: ${authorization.type}`,
                 LogContext.AUTH_POLICY
               );
               return true;

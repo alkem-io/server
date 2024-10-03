@@ -80,6 +80,7 @@ export class AiServerAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS
