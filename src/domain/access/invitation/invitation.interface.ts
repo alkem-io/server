@@ -7,7 +7,7 @@ import { CommunityRoleType } from '@common/enums/community.role';
 
 @ObjectType('Invitation')
 export class IInvitation extends IAuthorizable {
-  invitedContributor!: string;
+  invitedContributorID!: string;
   createdBy!: string;
 
   roleSet?: IRoleSet;

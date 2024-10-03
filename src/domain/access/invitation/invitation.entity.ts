@@ -18,7 +18,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   lifecycle!: Lifecycle;
 
   @Column('char', { length: UUID_LENGTH, nullable: false })
-  invitedContributor!: string;
+  invitedContributorID!: string;
 
   @Column('char', { length: UUID_LENGTH, nullable: false })
   createdBy!: string;

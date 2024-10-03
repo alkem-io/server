@@ -94,7 +94,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
                 },
               }
             );
-            const contributorID = invitation.invitedContributor;
+            const contributorID = invitation.invitedContributorID;
             const roleSet = invitation.roleSet;
             if (!contributorID || !roleSet) {
               throw new EntityNotInitializedException(
