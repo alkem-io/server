@@ -507,6 +507,7 @@ export class RoleSetResolverMutations {
           invitedContributor,
           agentInfo,
           invitationData.invitedToParent,
+          invitationData.extraRole,
           invitationData.welcomeMessage
         );
       })
@@ -518,6 +519,7 @@ export class RoleSetResolverMutations {
     invitedContributor: IContributor,
     agentInfo: AgentInfo,
     invitedToParent: boolean,
+    extraRole?: CommunityRoleType,
     welcomeMessage?: string
   ): Promise<IInvitation> {
     const input: CreateInvitationInput = {
@@ -525,6 +527,7 @@ export class RoleSetResolverMutations {
       invitedContributorID: invitedContributor.id,
       createdBy: agentInfo.userID,
       invitedToParent,
+      extraRole,
       welcomeMessage,
     };
 
