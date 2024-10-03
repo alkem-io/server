@@ -80,6 +80,10 @@ import { templatesSetDefaults } from '../space.defaults/definitions/space.defaul
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { Activity } from '@platform/activity';
+
+const EXPLORE_SPACES_LIMIT = 30;
+const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
 
 @Injectable()
 export class SpaceService {
@@ -724,6 +728,31 @@ export class SpaceService {
         LogContext.SPACES
       );
     return space;
+  }
+
+  public getExploreSpaces(
+    limit = EXPLORE_SPACES_LIMIT,
+    daysOld = EXPLORE_SPACES_ACTIVITY_DAYS_OLD
+  ): Promise<ISpace[]> {
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - daysOld);
+
+    return (
+      this.spaceRepository
+        .createQueryBuilder('s')
+        .leftJoinAndSelect('s.authorization', 'authorization') // eager load the authorization
+        .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
+        .where({
+          level: SpaceLevel.SPACE,
+          visibility: SpaceVisibility.ACTIVE,
+        })
+        // activities in the past "daysOld" days
+        .andWhere('a.createdDate >= :daysAgo', { daysAgo })
+        .groupBy('s.id')
+        .orderBy('COUNT(a.id)', 'DESC')
+        .limit(limit)
+        .getMany()
+    );
   }
 
   async getSpace(
