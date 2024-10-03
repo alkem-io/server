@@ -306,6 +306,7 @@ export class RoleSetResolverMutations {
       roleData.contributorID
     );
   }
+
   @UseGuards(GraphqlGuard)
   @Mutation(() => IRoleSet, {
     description:
@@ -521,7 +522,7 @@ export class RoleSetResolverMutations {
   ): Promise<IInvitation> {
     const input: CreateInvitationInput = {
       roleSetID: roleSet.id,
-      invitedContributor: invitedContributor.id,
+      invitedContributorID: invitedContributor.id,
       createdBy: agentInfo.userID,
       invitedToParent,
       welcomeMessage,

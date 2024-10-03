@@ -124,7 +124,7 @@ export class RegistrationService {
       // Process community invitations
       if (roleSet) {
         const invitationInput: CreateInvitationInput = {
-          invitedContributor: user.id,
+          invitedContributorID: user.id,
           roleSetID: roleSet.id,
           createdBy: platformInvitation.createdBy,
           invitedToParent: platformInvitation.communityInvitedToParent,

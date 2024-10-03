@@ -1023,7 +1023,7 @@ export class RoleSetService {
   ): Promise<IInvitation> {
     const { contributor: contributor, agent } =
       await this.contributorService.getContributorAndAgent(
-        invitationData.invitedContributor
+        invitationData.invitedContributorID
       );
     const roleSet = await this.getRoleSetOrFail(invitationData.roleSetID);
 

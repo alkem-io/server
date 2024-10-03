@@ -127,6 +127,16 @@ export class RoleSetInvitationLifecycleOptionsProvider {
               event.agentInfo,
               true
             );
+            if (invitation.extraRole) {
+              await this.roleSetService.assignContributorToRole(
+                roleSet,
+                invitation.extraRole,
+                contributorID,
+                invitation.contributorType,
+                event.agentInfo,
+                false
+              );
+            }
           } finally {
             resolve();
           }
