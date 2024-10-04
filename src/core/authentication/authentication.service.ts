@@ -93,6 +93,23 @@ export class AuthenticationService {
     return this.createAgentInfo(oryIdentity);
   }
 
+  /**
+   * Creates and returns an `AgentInfo` object based on the provided Ory identity and session.
+   *
+   * @param oryIdentity - Optional Ory identity schema containing user traits.
+   * @param session - Optional session information.
+   * @returns A promise that resolves to an `AgentInfo` object.
+   *
+   * This method performs the following steps:
+   * 1. Validates the provided Ory identity.
+   * 2. Checks for cached agent information based on the email from the Ory identity.
+   * 3. Builds basic agent information if no cached information is found.
+   * 4. Maps the authentication type from the session.
+   * 5. Retrieves additional metadata for the agent.
+   * 6. Populates the agent information with the retrieved metadata.
+   * 7. Adds verified credentials if enabled.
+   * 8. Caches the agent information.
+   */
   async createAgentInfo(
     oryIdentity?: OryDefaultIdentitySchema,
     session?: Session
@@ -120,7 +137,13 @@ export class AuthenticationService {
     return agentInfo;
   }
 
-  // Helper to validate the existence of email and return traits
+  /**
+   * Validates the email trait of the provided Ory identity.
+   *
+   * @param oryIdentity - The Ory identity schema containing traits to be validated.
+   * @returns The validated Ory traits.
+   * @throws NotSupportedException - If the email trait is missing or empty.
+   */
   private validateEmail(oryIdentity: OryDefaultIdentitySchema): OryTraits {
     const oryTraits = oryIdentity.traits;
     if (!oryTraits.email || oryTraits.email.length === 0) {
@@ -132,14 +155,25 @@ export class AuthenticationService {
     return oryTraits;
   }
 
-  // Helper to retrieve agent info from cache
+  /**
+   * Retrieves the cached agent information for a given email.
+   *
+   * @param email - The email address of the agent.
+   * @returns A promise that resolves to the agent information if found in the cache, or undefined if not found.
+   */
   private async getCachedAgentInfo(
     email: string
   ): Promise<AgentInfo | undefined> {
     return await this.agentCacheService.getAgentInfoFromCache(email);
   }
 
-  // Helper to build basic agent info from identity and session
+  /**
+   * Builds and returns an `AgentInfo` object based on the provided Ory identity schema and session.
+   *
+   * @param oryIdentity - The Ory identity schema containing user traits and verifiable addresses.
+   * @param session - Optional session object containing session details like expiration time.
+   * @returns An `AgentInfo` object populated with the user's email, name, avatar URL, and session expiry.
+   */
   private buildBasicAgentInfo(
     oryIdentity: OryDefaultIdentitySchema,
     session?: Session
@@ -162,7 +196,17 @@ export class AuthenticationService {
     return agentInfo;
   }
 
-  // Helper to map authentication type from session
+  /**
+   * Maps the authentication type based on the provided session information.
+   *
+   * @param session - The session object containing authentication methods.
+   * @returns The corresponding `AuthenticationType` based on the provider and method.
+   *
+   * - If the provider is 'microsoft', returns `AuthenticationType.MICROSOFT`.
+   * - If the provider is 'linkedin', returns `AuthenticationType.LINKEDIN`.
+   * - If the method is 'password', returns `AuthenticationType.EMAIL`.
+   * - Otherwise, returns `AuthenticationType.UNKNOWN`.
+   */
   private mapAuthenticationType(session?: Session): AuthenticationType {
     const authenticationMethod = session?.authentication_methods?.[0];
     const provider = authenticationMethod?.provider;
@@ -175,7 +219,13 @@ export class AuthenticationService {
     return AuthenticationType.UNKNOWN;
   }
 
-  // Helper to retrieve agent info metadata and handle logging
+  /**
+   * Retrieves the agent information metadata for a given email.
+   *
+   * @param email - The email address of the user whose agent information metadata is to be retrieved.
+   * @returns A promise that resolves to the agent information metadata if found, or undefined if the user is not registered.
+   * @throws Will log an error message if the user is not registered.
+   */
   private async getAgentInfoMetadata(
     email: string
   ): Promise<AgentInfoMetadata | undefined> {
@@ -190,7 +240,17 @@ export class AuthenticationService {
     }
   }
 
-  // Helper to populate agent info with metadata
+  /**
+   * Populates the given `agentInfo` object with metadata from `agentInfoMetadata`.
+   *
+   * @param agentInfo - The agent information object to be populated.
+   * @param agentInfoMetadata - The metadata containing information to populate the agent info.
+   *
+   * @remarks
+   * This method assigns the `agentID`, `userID`, and `communicationID` from `agentInfoMetadata` to `agentInfo`.
+   * If `agentInfoMetadata` contains credentials, they are also assigned to `agentInfo`.
+   * If credentials are not available, a warning is logged.
+   */
   private populateAgentInfoWithMetadata(
     agentInfo: AgentInfo,
     agentInfoMetadata: AgentInfoMetadata
@@ -209,7 +269,13 @@ export class AuthenticationService {
     }
   }
 
-  // Helper to add verified credentials if SSI is enabled
+  /**
+   * Adds verified credentials to the agent information if SSI (Self-Sovereign Identity) is enabled.
+   *
+   * @param agentInfo - The information of the agent to which verified credentials will be added.
+   * @param agentID - The unique identifier of the agent.
+   * @returns A promise that resolves when the operation is complete.
+   */
   private async addVerifiedCredentialsIfEnabled(
     agentInfo: AgentInfo,
     agentID: string
