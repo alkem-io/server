@@ -253,10 +253,10 @@ export class UserResolverFields {
       'The Authentication Method used for this User. One of email, linkedin, microsoft, or unknown',
   })
   @UseGuards(GraphqlGuard)
-  authenticationMethod(
-    @CurrentUser() agentInfo: AgentInfo
-  ): AuthenticationType {
-    return agentInfo.authenticationType ?? AuthenticationType.UNKNOWN;
+  async authenticationMethod(
+    @Parent() user: IUser
+  ): Promise<AuthenticationType> {
+    return this.userService.getAuthenticationTypeByEmail(user.email);
   }
 
   private async isAccessGranted(

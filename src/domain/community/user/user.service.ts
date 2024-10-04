@@ -63,10 +63,15 @@ import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
+import { IdentityApi, Configuration, Identity } from '@ory/kratos-client';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
+import { AuthenticationType } from '@common/enums/authentication.type';
 
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
+  private readonly kratosIdentityClient: IdentityApi;
 
   constructor(
     private profileService: ProfileService,
@@ -79,12 +84,116 @@ export class UserService {
     private storageAggregatorService: StorageAggregatorService,
     private accountHostService: AccountHostService,
     private contributorService: ContributorService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
-  ) {}
+  ) {
+    const { kratos_admin_base_url_server } = this.configService.get(
+      'identity.authentication.providers.ory',
+      {
+        infer: true,
+      }
+    );
+    const kratosAdminUrlServer = kratos_admin_base_url_server;
+    this.kratosIdentityClient = new IdentityApi(
+      new Configuration({
+        basePath: kratosAdminUrlServer,
+      })
+    );
+  }
+
+  /**
+   * Retrieves the authentication type associated with a given email.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  public async getAuthenticationTypeByEmail(
+    email: string
+  ): Promise<AuthenticationType> {
+    const identity = await this.getIdentityByEmail(email);
+    if (!identity) return AuthenticationType.UNKNOWN;
+    return this.mapAuthenticationType(identity);
+  }
+
+  /**
+   * Retrieves an identity by email.
+   *
+   * @param email - The email address to search for the identity.
+   * @returns A promise that resolves to the identity if found, or undefined if not found.
+   *
+   * @remarks
+   * This method uses the `kratosIdentityClient` to list identities with the specified email.
+   * If no identity is found, a warning is logged.
+   *
+   * @example
+   * ```typescript
+   * const identity = await getIdentityByEmail('example@example.com');
+   * if (identity) {
+   *   console.log('Identity found:', identity);
+   * } else {
+   *   console.log('Identity not found.');
+   * }
+   * ```
+   */
+  private async getIdentityByEmail(
+    email: string
+  ): Promise<Identity | undefined> {
+    const { data: identity } = await this.kratosIdentityClient.listIdentities({
+      credentialsIdentifier: email,
+      includeCredential: ['password', 'oidc'],
+    });
+    if (!identity) {
+      this.logger.warn(
+        `Identity with email ${email} not found.`,
+        LogContext.USER
+      );
+      return undefined;
+    }
+    if (identity.length === 0) {
+      this.logger.warn(
+        `Identity with email ${email} not found.`,
+        LogContext.USER
+      );
+      return undefined;
+    }
+    return identity[0];
+  }
+
+  /**
+   * Maps the provided identity to an authentication type.
+   *
+   * @param identity - The identity object containing credentials.
+   * @returns The corresponding authentication type based on the identity's credentials.
+   *
+   * The function checks the following conditions in order:
+   * - If the identity has OIDC credentials, it examines the identifiers:
+   *   - If the identifier starts with 'microsoft', it returns `AuthenticationType.MICROSOFT`.
+   *   - If the identifier starts with 'linkedin', it returns `AuthenticationType.LINKEDIN`.
+   * - If the identity has password credentials, it returns `AuthenticationType.EMAIL`.
+   * - If none of the above conditions are met, it returns `AuthenticationType.UNKNOWN`.
+   */
+  private mapAuthenticationType(identity: Identity): AuthenticationType {
+    if (identity.credentials) {
+      if (identity.credentials.oidc) {
+        const identifiers = identity.credentials.oidc.identifiers;
+        if (!identifiers) return AuthenticationType.UNKNOWN;
+        const identifier = identifiers[0];
+        if (!identifier) return AuthenticationType.UNKNOWN;
+        if (identifier.startsWith('microsoft'))
+          return AuthenticationType.MICROSOFT;
+        if (identifier.startsWith('linkedin'))
+          return AuthenticationType.LINKEDIN;
+      } else {
+        if (identity.credentials.password) return AuthenticationType.EMAIL;
+      }
+    }
+
+    return AuthenticationType.UNKNOWN;
+  }
 
   private getUserCommunicationIdCacheKey(communicationId: string): string {
     return `@user:communicationId:${communicationId}`;

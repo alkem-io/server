@@ -23,7 +23,6 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { getSession } from '@common/utils';
 import ConfigUtils from '@config/config.utils';
 import { AlkemioConfig } from '@src/types';
-import { AuthenticationType } from '@common/enums/authentication.type';
 import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 
 @Injectable()
@@ -122,7 +121,6 @@ export class AuthenticationService {
     if (cachedAgentInfo) return cachedAgentInfo;
 
     const agentInfo = this.buildBasicAgentInfo(oryIdentity, session);
-    agentInfo.authenticationType = this.mapAuthenticationType(session);
 
     const agentInfoMetadata = await this.getAgentInfoMetadata(agentInfo.email);
     if (!agentInfoMetadata) return agentInfo;
@@ -194,29 +192,6 @@ export class AuthenticationService {
       : undefined;
 
     return agentInfo;
-  }
-
-  /**
-   * Maps the authentication type based on the provided session information.
-   *
-   * @param session - The session object containing authentication methods.
-   * @returns The corresponding `AuthenticationType` based on the provider and method.
-   *
-   * - If the provider is 'microsoft', returns `AuthenticationType.MICROSOFT`.
-   * - If the provider is 'linkedin', returns `AuthenticationType.LINKEDIN`.
-   * - If the method is 'password', returns `AuthenticationType.EMAIL`.
-   * - Otherwise, returns `AuthenticationType.UNKNOWN`.
-   */
-  private mapAuthenticationType(session?: Session): AuthenticationType {
-    const authenticationMethod = session?.authentication_methods?.[0];
-    const provider = authenticationMethod?.provider;
-    const method = authenticationMethod?.method;
-
-    if (provider === 'microsoft') return AuthenticationType.MICROSOFT;
-    if (provider === 'linkedin') return AuthenticationType.LINKEDIN;
-    if (method === 'password') return AuthenticationType.EMAIL;
-
-    return AuthenticationType.UNKNOWN;
   }
 
   /**
