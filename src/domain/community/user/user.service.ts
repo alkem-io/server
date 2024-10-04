@@ -589,7 +589,7 @@ export class UserService {
         .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
         // cannot use object or operators here
         // because typeorm cannot construct the query properly
-        .where(`tagset.tags ${withTags ? '=' : '!='} ''`);
+        .where(`tagset.tags ${withTags ? '!=' : '='} ''`);
     }
 
     if (filter) {
