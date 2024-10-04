@@ -1023,7 +1023,7 @@ export class RoleSetService {
   ): Promise<IInvitation> {
     const { contributor: contributor, agent } =
       await this.contributorService.getContributorAndAgent(
-        invitationData.invitedContributor
+        invitationData.invitedContributorID
       );
     const roleSet = await this.getRoleSetOrFail(invitationData.roleSetID);
 
@@ -1082,7 +1082,7 @@ export class RoleSetService {
     const openInvitation = await this.findOpenInvitation(user.id, roleSet.id);
     if (openInvitation) {
       throw new RoleSetMembershipException(
-        `Application not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
+        `Application not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributorID} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1107,7 +1107,7 @@ export class RoleSetService {
     );
     if (openInvitation) {
       throw new RoleSetMembershipException(
-        `Invitation not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
+        `Invitation not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributorID} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
       );
     }
