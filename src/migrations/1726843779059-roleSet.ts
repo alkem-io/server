@@ -115,7 +115,7 @@ export class RoleSet1726843779059 implements MigrationInterface {
       await this.createRole(
         queryRunner,
         'admin',
-        policy.member,
+        policy.admin,
         roleSetID,
         0,
         0,
