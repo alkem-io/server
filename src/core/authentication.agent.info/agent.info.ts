@@ -1,6 +1,6 @@
+import { AuthenticationType } from '@common/enums/authentication.type';
 import { ICredential } from '@domain/agent/credential';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
-
 export class AgentInfo {
   userID = '';
   email = '';
@@ -13,4 +13,5 @@ export class AgentInfo {
   agentID = '';
   avatarURL = '';
   expiry?: number = undefined;
+  authenticationType?: AuthenticationType;
 }

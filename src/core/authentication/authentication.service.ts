@@ -5,6 +5,8 @@ import {
   FrontendApi,
   IdentityApi,
   Session,
+  SessionAuthenticationMethod,
+  SessionAuthenticationMethodMethodEnum,
 } from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -20,6 +22,7 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { getSession } from '@common/utils';
 import ConfigUtils from '@config/config.utils';
 import { AlkemioConfig } from '@src/types';
+import { AuthenticationType } from '@common/enums/authentication.type';
 
 @Injectable()
 export class AuthenticationService {
@@ -122,6 +125,21 @@ export class AuthenticationService {
     agentInfo.expiry = session?.expires_at
       ? new Date(session.expires_at).getTime()
       : undefined;
+    const authenticationMethod: SessionAuthenticationMethod | undefined =
+      session?.authentication_methods?.[0];
+    const provider: string | undefined = authenticationMethod?.provider;
+    const method: SessionAuthenticationMethodMethodEnum | undefined =
+      authenticationMethod?.method;
+
+    agentInfo.authenticationType =
+      provider === 'microsoft'
+        ? AuthenticationType.MICROSOFT
+        : provider === 'linkedin'
+          ? AuthenticationType.LINKEDIN
+          : method === 'password'
+            ? AuthenticationType.EMAIL
+            : AuthenticationType.UNKNOWN;
+
     let agentInfoMetadata;
 
     try {

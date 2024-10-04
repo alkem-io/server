@@ -32,6 +32,7 @@ import { Loader } from '@core/dataloader/decorators';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from './user.entity';
+import { AuthenticationType } from '@common/enums/authentication.type';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -243,6 +244,19 @@ export class UserResolverFields {
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(user.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('authenticationMethod', () => AuthenticationType, {
+    nullable: true,
+    description:
+      'The Authentication Method used for this User. One of email, linkedin, microsoft, or unknown',
+  })
+  @UseGuards(GraphqlGuard)
+  authenticationMethod(
+    @CurrentUser() agentInfo: AgentInfo
+  ): AuthenticationType {
+    return agentInfo.authenticationType ?? AuthenticationType.UNKNOWN;
   }
 
   private async isAccessGranted(
