@@ -5,14 +5,15 @@ import {
   FrontendApi,
   IdentityApi,
   Session,
-  SessionAuthenticationMethod,
-  SessionAuthenticationMethodMethodEnum,
 } from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
-import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
+import {
+  OryDefaultIdentitySchema,
+  OryTraits,
+} from './ory.default.identity.schema';
 import { NotSupportedException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { getBearerToken } from './get.bearer.token';
@@ -23,6 +24,7 @@ import { getSession } from '@common/utils';
 import ConfigUtils from '@config/config.utils';
 import { AlkemioConfig } from '@src/types';
 import { AuthenticationType } from '@common/enums/authentication.type';
+import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 
 @Injectable()
 export class AuthenticationService {
@@ -95,11 +97,31 @@ export class AuthenticationService {
     oryIdentity?: OryDefaultIdentitySchema,
     session?: Session
   ): Promise<AgentInfo> {
-    const agentInfo = new AgentInfo();
-    if (!oryIdentity) {
-      return agentInfo;
-    }
+    if (!oryIdentity) return new AgentInfo();
 
+    const oryTraits = this.validateEmail(oryIdentity);
+
+    const cachedAgentInfo = await this.getCachedAgentInfo(oryTraits.email);
+    if (cachedAgentInfo) return cachedAgentInfo;
+
+    const agentInfo = this.buildBasicAgentInfo(oryIdentity, session);
+    agentInfo.authenticationType = this.mapAuthenticationType(session);
+
+    const agentInfoMetadata = await this.getAgentInfoMetadata(agentInfo.email);
+    if (!agentInfoMetadata) return agentInfo;
+
+    this.populateAgentInfoWithMetadata(agentInfo, agentInfoMetadata);
+    await this.addVerifiedCredentialsIfEnabled(
+      agentInfo,
+      agentInfoMetadata.agentID
+    );
+
+    await this.agentCacheService.setAgentInfoCache(agentInfo);
+    return agentInfo;
+  }
+
+  // Helper to validate the existence of email and return traits
+  private validateEmail(oryIdentity: OryDefaultIdentitySchema): OryTraits {
     const oryTraits = oryIdentity.traits;
     if (!oryTraits.email || oryTraits.email.length === 0) {
       throw new NotSupportedException(
@@ -107,16 +129,27 @@ export class AuthenticationService {
         LogContext.AUTH
       );
     }
+    return oryTraits;
+  }
 
-    const cachedAgentInfo = await this.agentCacheService.getAgentInfoFromCache(
-      oryTraits.email
-    );
-    if (cachedAgentInfo) return cachedAgentInfo;
+  // Helper to retrieve agent info from cache
+  private async getCachedAgentInfo(
+    email: string
+  ): Promise<AgentInfo | undefined> {
+    return await this.agentCacheService.getAgentInfoFromCache(email);
+  }
 
+  // Helper to build basic agent info from identity and session
+  private buildBasicAgentInfo(
+    oryIdentity: OryDefaultIdentitySchema,
+    session?: Session
+  ): AgentInfo {
+    const agentInfo = new AgentInfo();
+    const oryTraits = oryIdentity.traits;
     const isEmailVerified =
       oryIdentity.verifiable_addresses.find(x => x.via === 'email')?.verified ??
       false;
-    // Have a valid identity, get the information from Ory
+
     agentInfo.email = oryTraits.email;
     agentInfo.emailVerified = isEmailVerified;
     agentInfo.firstName = oryTraits.name.first;
@@ -125,73 +158,68 @@ export class AuthenticationService {
     agentInfo.expiry = session?.expires_at
       ? new Date(session.expires_at).getTime()
       : undefined;
-    const authenticationMethod: SessionAuthenticationMethod | undefined =
-      session?.authentication_methods?.[0];
-    const provider: string | undefined = authenticationMethod?.provider;
-    const method: SessionAuthenticationMethodMethodEnum | undefined =
-      authenticationMethod?.method;
 
-    agentInfo.authenticationType =
-      provider === 'microsoft'
-        ? AuthenticationType.MICROSOFT
-        : provider === 'linkedin'
-          ? AuthenticationType.LINKEDIN
-          : method === 'password'
-            ? AuthenticationType.EMAIL
-            : AuthenticationType.UNKNOWN;
+    return agentInfo;
+  }
 
-    let agentInfoMetadata;
+  // Helper to map authentication type from session
+  private mapAuthenticationType(session?: Session): AuthenticationType {
+    const authenticationMethod = session?.authentication_methods?.[0];
+    const provider = authenticationMethod?.provider;
+    const method = authenticationMethod?.method;
 
+    if (provider === 'microsoft') return AuthenticationType.MICROSOFT;
+    if (provider === 'linkedin') return AuthenticationType.LINKEDIN;
+    if (method === 'password') return AuthenticationType.EMAIL;
+
+    return AuthenticationType.UNKNOWN;
+  }
+
+  // Helper to retrieve agent info metadata and handle logging
+  private async getAgentInfoMetadata(
+    email: string
+  ): Promise<AgentInfoMetadata | undefined> {
     try {
-      agentInfoMetadata = await this.userService.getAgentInfoMetadata(
-        agentInfo.email
-      );
+      return await this.userService.getAgentInfoMetadata(email);
     } catch (error) {
       this.logger.verbose?.(
-        `User not registered: ${agentInfo.email}, ${error}`,
+        `User not registered: ${email}, ${error}`,
         LogContext.AUTH
       );
+      return undefined;
     }
+  }
 
-    if (!agentInfoMetadata) {
-      this.logger.verbose?.(
-        `User: no profile: ${agentInfo.email}`,
-        LogContext.AUTH
-      );
-      // No credentials to obtain, pass on what is there
-      return agentInfo;
-    }
-    this.logger.verbose?.(
-      `Use: registered: ${agentInfo.email}`,
-      LogContext.AUTH
-    );
-
-    if (!agentInfoMetadata.credentials) {
-      this.logger.warn?.(
-        `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
-        LogContext.AUTH
-      );
-    } else {
-      agentInfo.credentials = agentInfoMetadata.credentials;
-    }
+  // Helper to populate agent info with metadata
+  private populateAgentInfoWithMetadata(
+    agentInfo: AgentInfo,
+    agentInfoMetadata: AgentInfoMetadata
+  ): void {
     agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
     agentInfo.communicationID = agentInfoMetadata.communicationID;
 
-    // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
-    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
-
-    if (ssiEnabled) {
-      const VCs = await this.agentService.getVerifiedCredentials(
-        agentInfoMetadata.agentID
+    if (agentInfoMetadata.credentials) {
+      agentInfo.credentials = agentInfoMetadata.credentials;
+    } else {
+      this.logger.warn?.(
+        `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
+        LogContext.AUTH
       );
-
-      agentInfo.verifiedCredentials = VCs;
     }
+  }
 
-    await this.agentCacheService.setAgentInfoCache(agentInfo);
-
-    return agentInfo;
+  // Helper to add verified credentials if SSI is enabled
+  private async addVerifiedCredentialsIfEnabled(
+    agentInfo: AgentInfo,
+    agentID: string
+  ): Promise<void> {
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
+    if (ssiEnabled) {
+      const verifiedCredentials =
+        await this.agentService.getVerifiedCredentials(agentID);
+      agentInfo.verifiedCredentials = verifiedCredentials;
+    }
   }
 
   public async extendSession(sessionToBeExtended: Session): Promise<void> {
