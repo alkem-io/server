@@ -409,7 +409,10 @@ export class OrganizationService {
     qb.leftJoinAndSelect('organization.authorization', 'authorization_policy');
 
     if (status) {
-      // ... what to do here?
+      qb.leftJoin('organization.verification', 'verification').where(
+        'verification.status = :status',
+        { status: status }
+      );
     }
 
     if (filter) {

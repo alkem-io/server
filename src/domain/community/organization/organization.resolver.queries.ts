@@ -47,6 +47,7 @@ export class OrganizationResolverQueries {
     @Args() pagination: PaginationArgs,
     @Args('status', {
       nullable: true,
+      description: 'Return only Organizations with this verification status',
       type: () => OrganizationVerificationEnum,
     })
     status?: OrganizationVerificationEnum,
