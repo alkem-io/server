@@ -1,5 +1,4 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
 import { AdminLicensingResolverMutations } from './admin.licensing.resolver.mutations';
 import { AdminLicensingService } from './admin.licensing.service';
@@ -19,7 +18,6 @@ import { LicenseModule } from '@domain/common/license/license.module';
     LicenseModule,
     LicenseIssuerModule,
     AuthorizationModule,
-    AuthorizationPolicyModule,
   ],
   providers: [AdminLicensingResolverMutations, AdminLicensingService],
   exports: [],

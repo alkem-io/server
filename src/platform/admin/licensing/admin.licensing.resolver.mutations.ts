@@ -8,12 +8,9 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
 import { AdminLicensingService } from './admin.licensing.service';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
-import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -27,12 +24,9 @@ import { AccountService } from '@domain/space/account/account.service';
 export class AdminLicensingResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
-    private spaceAuthorizationService: SpaceAuthorizationService,
     private spaceLicenseService: SpaceLicenseService,
     private accountService: AccountService,
-    private accountAuthorizationService: AccountAuthorizationService,
     private accountLicenseService: AccountLicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
@@ -69,11 +63,6 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
-    // TODO: Need to trigger for now both an auth reset and a license reset as Spaces are not yet setup to work with Licenses
-    // In principle only a license reset should be needed as not changing any authorizations
-    const updatedAuthorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
       account.id
@@ -113,11 +102,6 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
-    // TODO: Need to trigger for now both an auth reset and a license reset as Spaces are not yet setup to work with Licenses
-    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
-    const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
       space.id
@@ -158,11 +142,6 @@ export class AdminLicensingResolverMutations {
         planData,
         licensing.id
       );
-    // TODO: Need to trigger for now both an auth reset and a license reset as Spaces are not yet setup to work with Licenses
-    // In principle only a license reset should be needed as not changing any authorizations
-    const updatedAuthorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
       account.id
@@ -202,10 +181,6 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
-    // TODO: Need to trigger for now both an auth reset and a license reset as Spaces are not yet setup to work with Licenses
-    const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
       space.id
