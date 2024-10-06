@@ -79,6 +79,10 @@ import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
 import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -102,6 +106,7 @@ export class SpaceService {
     private collaborationService: CollaborationService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseEngineService: LicenseEngineService,
+    private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -156,6 +161,30 @@ export class SpaceService {
         spaceData.storageAggregatorParent
       );
     space.storageAggregator = storageAggregator;
+
+    space.license = await this.licenseService.createLicense({
+      type: LicenseType.SPACE,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+          dataTtype: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+          dataTtype: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataTtype: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: true,
+        },
+      ],
+    });
 
     const roleSetRolesData = this.spaceDefaultsService.getRoleSetCommunityRoles(
       space.level
@@ -281,6 +310,7 @@ export class SpaceService {
         profile: true,
         storageAggregator: true,
         templatesManager: true,
+        license: true,
       },
     });
 
@@ -292,7 +322,8 @@ export class SpaceService {
       !space.agent ||
       !space.profile ||
       !space.storageAggregator ||
-      !space.authorization
+      !space.authorization ||
+      !space.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to delete Space: ${space.id} `,
@@ -313,6 +344,7 @@ export class SpaceService {
     await this.communityService.removeCommunity(space.community.id);
     await this.profileService.deleteProfile(space.profile.id);
     await this.agentService.deleteAgent(space.agent.id);
+    await this.licenseService.removeLicense(space.license.id);
     await this.authorizationPolicyService.delete(space.authorization);
 
     if (space.level === SpaceLevel.SPACE) {

@@ -140,6 +140,18 @@ export class LicenseService {
     return entitlementsUsed < entitlementLimit;
   }
 
+  public isEntitlementEnabled(
+    license: ILicense | undefined,
+    entitlementType: LicenseEntitlementType
+  ): boolean {
+    const entitlements = this.getEntitlementsFromLicenseOrFail(license);
+    const entitlement = this.getEntitlementFromEntitlementsOrFail(
+      entitlements,
+      entitlementType
+    );
+    return entitlement.enabled;
+  }
+
   private getEntitlementsFromLicenseOrFail(
     license: ILicense | undefined
   ): IEntitlement[] {

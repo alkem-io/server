@@ -13,10 +13,10 @@ import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
-import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { LicenseModule } from '@domain/common/license/license.module';
 
 @Module({
   imports: [
@@ -28,7 +28,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     RoleSetModule,
     CommunicationModule,
     CommunityGuidelinesModule,
-    LicenseEngineModule,
+    LicenseModule,
     AgentModule,
     StorageAggregatorResolverModule,
     VirtualContributorModule,

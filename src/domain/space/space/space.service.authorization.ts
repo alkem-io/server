@@ -38,6 +38,7 @@ import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
+import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -52,7 +53,8 @@ export class SpaceAuthorizationService {
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceService: SpaceService,
-    private spaceSettingsService: SpaceSettingsService
+    private spaceSettingsService: SpaceSettingsService,
+    private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -77,13 +79,15 @@ export class SpaceAuthorizationService {
         storageAggregator: true,
         subspaces: true,
         templatesManager: true,
+        license: true,
       },
     });
     if (
       !space.authorization ||
       !space.community ||
       !space.community.roleSet ||
-      !space.subspaces
+      !space.subspaces ||
+      !space.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
@@ -248,7 +252,8 @@ export class SpaceAuthorizationService {
       !space.community.roleSet ||
       !space.context ||
       !space.profile ||
-      !space.storageAggregator
+      !space.storageAggregator ||
+      !space.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for space base ${space.id} `,
@@ -264,7 +269,7 @@ export class SpaceAuthorizationService {
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community.id,
         space.authorization,
-        levelZeroSpaceAgent,
+        space.license,
         spaceSettings,
         spaceMembershipAllowed,
         isSubspaceCommunity
@@ -276,8 +281,7 @@ export class SpaceAuthorizationService {
         space.collaboration,
         space.authorization,
         space.community.roleSet,
-        spaceSettings,
-        levelZeroSpaceAgent
+        spaceSettings
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
@@ -294,6 +298,13 @@ export class SpaceAuthorizationService {
         space.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
+
+    const licenseAuthorizations =
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
+        space.license,
+        space.authorization
+      );
+    updatedAuthorizations.push(...licenseAuthorizations);
 
     // Level zero space only entities
     if (space.level === SpaceLevel.SPACE) {

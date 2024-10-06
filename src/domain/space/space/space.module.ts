@@ -31,6 +31,8 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
+import { LicenseModule } from '@domain/common/license/license.module';
+import { SpaceLicenseService } from './space.service.license';
 
 @Module({
   imports: [
@@ -58,16 +60,18 @@ import { LicensingFrameworkModule } from '@platform/licensing-framework/licensin
     RoleSetModule,
     NameReporterModule,
     SpaceDefaultsModule,
+    LicenseModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [
     SpaceService,
     SpaceAuthorizationService,
+    SpaceLicenseService,
     SpaceResolverFields,
     SpaceResolverQueries,
     SpaceResolverMutations,
     SpaceResolverSubscriptions,
   ],
-  exports: [SpaceService, SpaceAuthorizationService],
+  exports: [SpaceService, SpaceAuthorizationService, SpaceLicenseService],
 })
 export class SpaceModule {}

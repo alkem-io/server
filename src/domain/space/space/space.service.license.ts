@@ -1,6 +1,5 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { AccountService } from './account.service';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
@@ -11,50 +10,46 @@ import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicensePrivilege } from '@common/enums/license.privilege';
-import { IAccount } from './account.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SpaceService } from './space.service';
 
 @Injectable()
-export class AccountLicenseService {
+export class SpaceLicenseService {
   constructor(
     private licenseService: LicenseService,
-    private accountService: AccountService,
+    private spaceService: SpaceService,
     private licenseEngineService: LicenseEngineService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async applyLicensePolicy(accountID: string): Promise<ILicense[]> {
-    const account = await this.accountService.getAccountOrFail(accountID, {
+  async applyLicensePolicy(spaceID: string): Promise<ILicense[]> {
+    const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
         agent: {
           credentials: true,
         },
-        spaces: true,
+        subspaces: true,
         license: true,
       },
     });
-    if (!account.spaces || !account.agent || !account.license) {
+    if (!space.subspaces || !space.agent || !space.license) {
       throw new RelationshipNotFoundException(
-        `Unable to load Account with entities at start of license reset: ${account.id} `,
+        `Unable to load Space with entities at start of license reset: ${space.id} `,
         LogContext.ACCOUNT
       );
     }
     const updatedLicenses: ILicense[] = [];
 
     // Ensure always applying from a clean state
-    account.license = this.licenseService.reset(account.license);
+    space.license = this.licenseService.reset(space.license);
 
-    account.license = await this.extendLicensePolicy(
-      account.license,
-      account.agent,
-      account
-    );
+    space.license = await this.extendLicensePolicy(space.license, space.agent);
 
-    updatedLicenses.push(account.license);
+    updatedLicenses.push(space.license);
 
-    for (const space of account.spaces) {
-      const spaceLicenses = await this.applyLicensePolicy(space.id);
-      updatedLicenses.push(...spaceLicenses);
+    for (const subspace of space.subspaces) {
+      const subspaceLicenses = await this.applyLicensePolicy(subspace.id);
+      updatedLicenses.push(...subspaceLicenses);
     }
 
     return updatedLicenses;
@@ -62,74 +57,55 @@ export class AccountLicenseService {
 
   private async extendLicensePolicy(
     license: ILicense | undefined,
-    accountAgent: IAgent,
-    account: IAccount
+    levelZeroSpaceAgent: IAgent
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
-        `License with entitielements not found for account with agent ${accountAgent.id}`,
+        `License with entitlements not found for Space with agent ${levelZeroSpaceAgent.id}`,
         LogContext.LICENSE
       );
     }
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
-        case LicenseEntitlementType.ACCOUNT_SPACE:
+        case LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE:
           const createSpace = await this.licenseEngineService.isAccessGranted(
-            LicensePrivilege.ACCOUNT_CREATE_SPACE,
-            accountAgent
+            LicensePrivilege.SPACE_SAVE_AS_TEMPLATE,
+            levelZeroSpaceAgent
           );
           if (createSpace) {
-            entitlement.limit = 3;
+            entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
-        case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
+        case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS:
           const createVirtualContributor =
             await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR,
-              accountAgent
+              LicensePrivilege.SPACE_VIRTUAL_CONTRIBUTOR_ACCESS,
+              levelZeroSpaceAgent
             );
           if (createVirtualContributor) {
-            entitlement.limit = 3;
+            entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
-        case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
+        case LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER:
           const createInnovationHub =
             await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.ACCOUNT_CREATE_INNOVATION_HUB,
-              accountAgent
+              LicensePrivilege.SPACE_WHITEBOARD_MULTI_USER,
+              levelZeroSpaceAgent
             );
           if (createInnovationHub) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
-        case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
-          const createInnovationPack =
-            await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.ACCOUNT_CREATE_INNOVATION_PACK,
-              accountAgent
-            );
-          if (createInnovationPack) {
-            entitlement.limit = 3;
-            entitlement.enabled = true;
-          }
-          break;
+
         default:
           throw new EntityNotInitializedException(
-            `Unknown entitlement type for license: ${entitlement.type}`,
+            `Unknown entitlement type for Space: ${entitlement.type}`,
             LogContext.LICENSE
           );
       }
-    }
-
-    if (account.externalSubscriptionID) {
-      // TODO: get subscription details from the WingBack api + set the entitlements accordingly
-      this.logger.verbose?.(
-        `Invoking external subscription service for account ${account.id}`,
-        LogContext.ACCOUNT
-      );
     }
 
     return license;

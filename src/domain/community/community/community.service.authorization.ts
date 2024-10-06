@@ -18,18 +18,18 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CommunityRoleType } from '@common/enums/community.role';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
-import { LicensePrivilege } from '@common/enums/license.privilege';
-import { IAgent } from '@domain/agent';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
+import { LicenseService } from '@domain/common/license/license.service';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
 export class CommunityAuthorizationService {
   constructor(
-    private licenseEngineService: LicenseEngineService,
+    private licenseService: LicenseService,
     private communityService: CommunityService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
@@ -42,7 +42,7 @@ export class CommunityAuthorizationService {
   async applyAuthorizationPolicy(
     communityID: string,
     parentAuthorization: IAuthorizationPolicy,
-    levelZeroSpaceAgent: IAgent,
+    spaceLicense: ILicense,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean,
     isSubspace: boolean
@@ -84,7 +84,7 @@ export class CommunityAuthorizationService {
     community.authorization = await this.extendAuthorizationPolicy(
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
-      levelZeroSpaceAgent,
+      spaceLicense,
       community.roleSet,
       spaceSettings
     );
@@ -136,7 +136,7 @@ export class CommunityAuthorizationService {
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
-    levelZeroSpaceAgent: IAgent,
+    spaceLicense: ILicense,
     roleSet: IRoleSet,
     spaceSettings: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
@@ -153,11 +153,10 @@ export class CommunityAuthorizationService {
       newRules.push(globalRegistered);
     }
 
-    const accessVirtualContributors =
-      await this.licenseEngineService.isAccessGranted(
-        LicensePrivilege.SPACE_VIRTUAL_CONTRIBUTOR_ACCESS,
-        levelZeroSpaceAgent
-      );
+    const accessVirtualContributors = this.licenseService.isEntitlementEnabled(
+      spaceLicense,
+      LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+    );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =
         await this.roleSetService.getCredentialsForRoleWithParents(

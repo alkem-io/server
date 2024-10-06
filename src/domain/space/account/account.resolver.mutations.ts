@@ -91,7 +91,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_SPACE,
-      LicenseEntitlementType.SPACE,
+      LicenseEntitlementType.ACCOUNT_SPACE,
       account.spaces
     );
 
@@ -157,7 +157,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_INNOVATION_HUB,
-      LicenseEntitlementType.INNOVATION_HUB,
+      LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
       account.innovationHubs
     );
 
@@ -202,7 +202,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      LicenseEntitlementType.VIRTUAL_CONTRIBUTOR,
+      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
       account.virtualContributors
     );
 
@@ -264,7 +264,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_INNOVATION_PACK,
-      LicenseEntitlementType.INNOVATION_PACK,
+      LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
       account.innovationPacks
     );
 
@@ -586,7 +586,7 @@ export class AccountResolverMutations {
     );
     const isEntitleMentEnabled = this.licenseService.isEntitlementAvailable(
       license,
-      LicenseEntitlementType.SPACE,
+      LicenseEntitlementType.ACCOUNT_SPACE,
       licensedNameableResouces.length
     );
     const isPlatformAdmin = this.authorizationService.isAccessGranted(
@@ -597,10 +597,10 @@ export class AccountResolverMutations {
     if (!isPlatformAdmin && !isEntitleMentEnabled) {
       const entitlementLimit = this.licenseService.getEntitlementLimit(
         license,
-        LicenseEntitlementType.SPACE
+        LicenseEntitlementType.ACCOUNT_SPACE
       );
       throw new ValidationException(
-        `Unable to create ${licenseType} on account: ${account.id}. Entitlement limit of ${entitlementLimit} of type ${LicenseEntitlementType.SPACE} reached`,
+        `Unable to create ${licenseType} on account: ${account.id}. Entitlement limit of ${entitlementLimit} of type ${LicenseEntitlementType.ACCOUNT_SPACE} reached`,
         LogContext.ACCOUNT
       );
     }

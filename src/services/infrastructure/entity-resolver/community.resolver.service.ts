@@ -9,9 +9,9 @@ import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { RoomType } from '@common/enums/room.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { IAgent } from '@domain/agent';
 import { IAccount } from '@domain/space/account/account.interface';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
+import { ILicense } from '@domain/common/license/license.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -99,27 +99,29 @@ export class CommunityResolverService {
     return space.levelZeroSpaceID;
   }
 
-  public async getLevelZeroSpaceAgentForCommunityOrFail(
+  public async getLicenseForCommunityOrFail(
     communityID: string
-  ): Promise<IAgent> {
-    const levelZeroSpaceID =
-      await this.getLevelZeroSpaceIdForCommunity(communityID);
-    const levelZeroSpace = await this.entityManager.findOne(Space, {
+  ): Promise<ILicense> {
+    const space = await this.entityManager.findOne(Space, {
       where: {
-        id: levelZeroSpaceID,
+        community: {
+          id: communityID,
+        },
       },
       relations: {
-        agent: true,
+        license: {
+          entitlements: true,
+        },
       },
     });
 
-    if (!levelZeroSpace || !levelZeroSpace.agent) {
+    if (!space || !space.license) {
       throw new EntityNotFoundException(
-        `Unable to find Space for given community id: ${communityID}`,
+        `Unable to find Space with License for given community id: ${communityID}`,
         LogContext.COMMUNITY
       );
     }
-    return levelZeroSpace.agent;
+    return space.license;
   }
 
   private async getAccountForCommunityOrFail(
