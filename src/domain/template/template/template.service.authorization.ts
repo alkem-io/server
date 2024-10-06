@@ -156,6 +156,8 @@ export class TemplateAuthorizationService {
           );
         updatedAuthorizations.push(...innovationFlowAuthorizations);
         break;
+      case TemplateType.POST:
+        break;
       default:
         throw new EntityNotFoundException(
           `Unable to reset auth on template of type: ${template.type}`,
