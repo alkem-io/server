@@ -3,33 +3,35 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateEntitlementInput } from './dto/entitlement.dto.create';
-import { Entitlement } from './entitlement.entity';
-import { IEntitlement } from './entitlement.interface';
+import { CreateLicenseEntitlementInput } from './dto/license.entitlement.dto.create';
+import { LicenseEntitlement } from './license.entitlement.entity';
+import { ILicenseEntitlement } from './license.entitlement.interface';
 
 @Injectable()
-export class EntitlementService {
+export class LicenseEntitlementService {
   constructor(
-    @InjectRepository(Entitlement)
-    private entitlementRepository: Repository<Entitlement>
+    @InjectRepository(LicenseEntitlement)
+    private entitlementRepository: Repository<LicenseEntitlement>
   ) {}
 
   public createEntitlement(
-    entitlementInput: CreateEntitlementInput
-  ): IEntitlement {
-    const entitlement = Entitlement.create(entitlementInput);
+    entitlementInput: CreateLicenseEntitlementInput
+  ): ILicenseEntitlement {
+    const entitlement = LicenseEntitlement.create(entitlementInput);
 
     return entitlement;
   }
 
-  public async save(entitlement: IEntitlement): Promise<IEntitlement> {
+  public async save(
+    entitlement: ILicenseEntitlement
+  ): Promise<ILicenseEntitlement> {
     return await this.entitlementRepository.save(entitlement);
   }
 
   async getEntitlementOrFail(
     entitlementID: string,
-    options?: FindOneOptions<Entitlement>
-  ): Promise<IEntitlement | never> {
+    options?: FindOneOptions<LicenseEntitlement>
+  ): Promise<ILicenseEntitlement | never> {
     const entitlement = await this.entitlementRepository.findOne({
       where: { id: entitlementID },
       ...options,
@@ -42,12 +44,12 @@ export class EntitlementService {
     return entitlement;
   }
 
-  async deleteEntitlement(entitlementID: string): Promise<IEntitlement> {
+  async deleteEntitlement(entitlementID: string): Promise<ILicenseEntitlement> {
     const entitlement = await this.getEntitlementOrFail(entitlementID);
 
     const { id } = entitlement;
     const result = await this.entitlementRepository.remove(
-      entitlement as Entitlement
+      entitlement as LicenseEntitlement
     );
     return {
       ...result,
@@ -55,11 +57,13 @@ export class EntitlementService {
     };
   }
 
-  async saveEntitlement(entitlement: IEntitlement): Promise<IEntitlement> {
+  async saveEntitlement(
+    entitlement: ILicenseEntitlement
+  ): Promise<ILicenseEntitlement> {
     return await this.entitlementRepository.save(entitlement);
   }
 
-  public reset(entitlement: IEntitlement): IEntitlement {
+  public reset(entitlement: ILicenseEntitlement): ILicenseEntitlement {
     entitlement.limit = 0;
     entitlement.enabled = false;
     return entitlement;

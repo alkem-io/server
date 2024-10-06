@@ -1,11 +1,14 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { IEntitlement } from './entitlement.interface';
+import { ILicenseEntitlement } from './license.entitlement.interface';
 import { BaseAlkemioEntity } from '../entity/base-entity';
 import { License } from '../license/license.entity';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Entity()
-export class Entitlement extends BaseAlkemioEntity implements IEntitlement {
+export class LicenseEntitlement
+  extends BaseAlkemioEntity
+  implements ILicenseEntitlement
+{
   @ManyToOne(() => License, license => license.entitlements, {
     eager: false,
     cascade: false,

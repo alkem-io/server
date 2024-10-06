@@ -3,8 +3,8 @@ import { IBaseAlkemio } from '../entity/base-entity';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 
-@ObjectType('Entitlement')
-export abstract class IEntitlement extends IBaseAlkemio {
+@ObjectType('LicenseEntitlement')
+export abstract class ILicenseEntitlement extends IBaseAlkemio {
   @Field(() => LicenseEntitlementType, {
     nullable: false,
     description:

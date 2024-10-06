@@ -1,7 +1,7 @@
 import { LicenseType } from '@common/enums/license.type';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '../entity/authorizable-entity';
-import { IEntitlement } from '../license-entitlement/entitlement.interface';
+import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
 
 @ObjectType('Authorization')
 export abstract class ILicense extends IAuthorizable {
@@ -11,5 +11,5 @@ export abstract class ILicense extends IAuthorizable {
   })
   type!: LicenseType;
 
-  entitlements?: IEntitlement[];
+  entitlements?: ILicenseEntitlement[];
 }

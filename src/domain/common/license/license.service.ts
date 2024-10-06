@@ -7,18 +7,18 @@ import { License } from './license.entity';
 import { CreateLicenseInput } from './dto/license.dto.create';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { EntitlementService } from '../license-entitlement/entitlement.service';
+import { LicenseEntitlementService } from '../license-entitlement/license.entitlement.service';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { IEntitlement } from '../license-entitlement/entitlement.interface';
+import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
 export class LicenseService {
   constructor(
-    private entitlementService: EntitlementService,
+    private entitlementService: LicenseEntitlementService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(License)
     private licenseRepository: Repository<License>,
@@ -95,7 +95,9 @@ export class LicenseService {
     });
   }
 
-  public async getEntitlements(license: ILicense): Promise<IEntitlement[]> {
+  public async getEntitlements(
+    license: ILicense
+  ): Promise<ILicenseEntitlement[]> {
     let entitlements = license.entitlements;
     if (!entitlements) {
       const licenseWithEntitlements = await this.getLicenseOrFail(license.id, {
@@ -154,7 +156,7 @@ export class LicenseService {
 
   private getEntitlementsFromLicenseOrFail(
     license: ILicense | undefined
-  ): IEntitlement[] {
+  ): ILicenseEntitlement[] {
     if (!license) {
       throw new RelationshipNotFoundException(
         'Unable to load Entitlements for License',
@@ -171,9 +173,9 @@ export class LicenseService {
   }
 
   private getEntitlementFromEntitlementsOrFail(
-    entitlements: IEntitlement[],
+    entitlements: ILicenseEntitlement[],
     type: LicenseEntitlementType
-  ): IEntitlement {
+  ): ILicenseEntitlement {
     const entitlement = entitlements.find(
       entitlement => entitlement.type === type
     );
