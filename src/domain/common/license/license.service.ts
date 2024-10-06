@@ -13,6 +13,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { IEntitlement } from '../license-entitlement/entitlement.interface';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
 export class LicenseService {
@@ -64,14 +65,9 @@ export class LicenseService {
         entitlements: true,
       },
     });
-    if (!license.entitlements) {
-      throw new RelationshipNotFoundException(
-        `Unable to load child entities for license for deletion: ${license.id} `,
-        LogContext.LICENSE
-      );
-    }
+    const entitlements = this.getEntitlementsFromLicenseOrFail(license);
 
-    for (const entitlement of license.entitlements) {
+    for (const entitlement of entitlements) {
       await this.entitlementService.deleteEntitlement(entitlement.id);
     }
 
@@ -97,12 +93,74 @@ export class LicenseService {
       });
       entitlements = licenseWithEntitlements.entitlements;
     }
-    if (!entitlements) {
+    return this.getEntitlementsFromLicenseOrFail(license);
+  }
+
+  public reset(license: ILicense): ILicense {
+    const entitlements = this.getEntitlementsFromLicenseOrFail(license);
+    for (const entitlement of entitlements) {
+      this.entitlementService.reset(entitlement);
+    }
+    return license;
+  }
+
+  public getEntitlementLimit(
+    license: ILicense | undefined,
+    entitlementType: LicenseEntitlementType
+  ): number {
+    const entitlements = this.getEntitlementsFromLicenseOrFail(license);
+    const entitlement = this.getEntitlementFromEntitlementsOrFail(
+      entitlements,
+      entitlementType
+    );
+    return entitlement.limit;
+  }
+
+  public isEntitlementAvailable(
+    license: ILicense | undefined,
+    entitlementType: LicenseEntitlementType,
+    entitlementsUsed: number
+  ): boolean {
+    const entitlements = this.getEntitlementsFromLicenseOrFail(license);
+    const entitlement = this.getEntitlementFromEntitlementsOrFail(
+      entitlements,
+      entitlementType
+    );
+    const entitlementLimit = entitlement.limit;
+    return entitlementsUsed < entitlementLimit;
+  }
+
+  private getEntitlementsFromLicenseOrFail(
+    license: ILicense | undefined
+  ): IEntitlement[] {
+    if (!license) {
+      throw new RelationshipNotFoundException(
+        'Unable to load Entitlements for License',
+        LogContext.LICENSE
+      );
+    }
+    if (!license.entitlements) {
       throw new RelationshipNotFoundException(
         `Unable to load Entitlements for License: ${license.id}`,
         LogContext.LICENSE
       );
     }
-    return entitlements;
+    return license.entitlements;
+  }
+
+  private getEntitlementFromEntitlementsOrFail(
+    entitlements: IEntitlement[],
+    type: LicenseEntitlementType
+  ): IEntitlement {
+    const entitlement = entitlements.find(
+      entitlement => entitlement.type === type
+    );
+    if (!entitlement) {
+      throw new RelationshipNotFoundException(
+        `Unable to find entitlement of type ${type} in Entitlements for License: ${JSON.stringify(entitlements)}`,
+        LogContext.LICENSE
+      );
+    }
+    return entitlement;
   }
 }

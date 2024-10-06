@@ -25,6 +25,7 @@ import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.m
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { AccountLicenseService } from './account.service.license';
 
 @Module({
   imports: [
@@ -55,7 +56,8 @@ import { LicenseModule } from '@domain/common/license/license.module';
     AccountResolverFields,
     AccountResolverMutations,
     AccountResolverQueries,
+    AccountLicenseService,
   ],
-  exports: [AccountService, AccountAuthorizationService],
+  exports: [AccountService, AccountAuthorizationService, AccountLicenseService],
 })
 export class AccountModule {}

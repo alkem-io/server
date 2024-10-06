@@ -38,9 +38,10 @@ import { TransferAccountInnovationHubInput } from './dto/account.dto.transfer.in
 import { TransferAccountInnovationPackInput } from './dto/account.dto.transfer.innovation.pack';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -59,13 +60,9 @@ export class AccountResolverMutations {
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private notificationAdapter: NotificationAdapter,
-    private temporaryStorageService: TemporaryStorageService
+    private temporaryStorageService: TemporaryStorageService,
+    private licenseService: LicenseService
   ) {}
-
-  SOFT_LIMIT_SPACE = 3;
-  SOFT_LIMIT_INNOVATION_HUB = 0;
-  SOFT_LIMIT_INNOVATION_PACK = 3;
-  SOFT_LIMIT_VIRTUAL_CONTRIBUTOR = 3;
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
@@ -80,18 +77,18 @@ export class AccountResolverMutations {
       {
         relations: {
           spaces: true,
+          license: {
+            entitlements: true,
+          },
         },
       }
     );
 
     this.validateSoftLicenseLimitOrFail(
+      account,
       agentInfo,
-      account.authorization,
-      'Space',
-      account.id,
       AuthorizationPrivilege.CREATE_SPACE,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      this.SOFT_LIMIT_SPACE,
+      LicenseEntitlementType.SPACE,
       account.spaces
     );
 
@@ -132,38 +129,6 @@ export class AccountResolverMutations {
     return space;
   }
 
-  private validateSoftLicenseLimitOrFail(
-    agentInfo: AgentInfo,
-    authorization: IAuthorizationPolicy | undefined,
-    resourceType: string,
-    accountID: string,
-    hardPrivilege: AuthorizationPrivilege,
-    softPrivilege: AuthorizationPrivilege,
-    softLimit: number,
-    nameableResouces: INameable[]
-  ) {
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      hardPrivilege,
-      `create ${resourceType} on account: ${accountID}`
-    );
-    const isPlatformAdmin = this.authorizationService.isAccessGranted(
-      agentInfo,
-      authorization,
-      softPrivilege
-    );
-    if (!isPlatformAdmin) {
-      const resourceCount = nameableResouces.length;
-      if (resourceCount >= softLimit) {
-        throw new ValidationException(
-          `Unable to create ${resourceType} on account: ${accountID}. Soft limit of ${softLimit} reached`,
-          LogContext.ACCOUNT
-        );
-      }
-    }
-  }
-
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
     description: 'Create an Innovation Hub on the specified account',
@@ -183,13 +148,10 @@ export class AccountResolverMutations {
     );
 
     this.validateSoftLicenseLimitOrFail(
+      account,
       agentInfo,
-      account.authorization,
-      'Innovation Hub',
-      account.id,
-      AuthorizationPrivilege.PLATFORM_ADMIN, // Hard requirement for now
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      this.SOFT_LIMIT_INNOVATION_HUB,
+      AuthorizationPrivilege.CREATE_INNOVATION_HUB,
+      LicenseEntitlementType.INNOVATION_HUB,
       account.innovationHubs
     );
 
@@ -228,13 +190,10 @@ export class AccountResolverMutations {
     );
 
     this.validateSoftLicenseLimitOrFail(
+      account,
       agentInfo,
-      account.authorization,
-      'Virtual Contributor',
-      account.id,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      this.SOFT_LIMIT_VIRTUAL_CONTRIBUTOR,
+      LicenseEntitlementType.VIRTUAL_CONTRIBUTOR,
       account.virtualContributors
     );
 
@@ -290,13 +249,10 @@ export class AccountResolverMutations {
     );
 
     this.validateSoftLicenseLimitOrFail(
+      account,
       agentInfo,
-      account.authorization,
-      'Innovation Pack',
-      account.id,
       AuthorizationPrivilege.CREATE_INNOVATION_PACK,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      this.SOFT_LIMIT_INNOVATION_PACK,
+      LicenseEntitlementType.INNOVATION_PACK,
       account.innovationPacks
     );
 
@@ -567,5 +523,48 @@ export class AccountResolverMutations {
       AuthorizationPrivilege.CREATE,
       `transfer ${resourceName} to target Account: ${agentInfo.email}`
     );
+  }
+
+  private validateSoftLicenseLimitOrFail(
+    account: IAccount,
+    agentInfo: AgentInfo,
+    authorizationPrivilege: AuthorizationPrivilege,
+    licenseType: LicenseEntitlementType,
+    licensedNameableResouces: INameable[]
+  ) {
+    if (!account.agent || !account.authorization || !account.license) {
+      throw new RelationshipNotFoundException(
+        `Unable to load relations on account for checking auth + license: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    const license = account.license;
+    const authorization = account.authorization;
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      authorizationPrivilege,
+      `create ${licenseType} on account: ${account.id}`
+    );
+    const isEntitleMentEnabled = this.licenseService.isEntitlementAvailable(
+      license,
+      LicenseEntitlementType.SPACE,
+      licensedNameableResouces.length
+    );
+    const isPlatformAdmin = this.authorizationService.isAccessGranted(
+      agentInfo,
+      authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN
+    );
+    if (!isPlatformAdmin && !isEntitleMentEnabled) {
+      const entitlementLimit = this.licenseService.getEntitlementLimit(
+        license,
+        LicenseEntitlementType.SPACE
+      );
+      throw new ValidationException(
+        `Unable to create ${licenseType} on account: ${account.id}. Entitlement limit of ${entitlementLimit} of type ${LicenseEntitlementType.SPACE} reached`,
+        LogContext.ACCOUNT
+      );
+    }
   }
 }

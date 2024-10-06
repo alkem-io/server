@@ -58,4 +58,10 @@ export class EntitlementService {
   async saveEntitlement(entitlement: IEntitlement): Promise<IEntitlement> {
     return await this.entitlementRepository.save(entitlement);
   }
+
+  public reset(entitlement: IEntitlement): IEntitlement {
+    entitlement.limit = 0;
+    entitlement.enabled = false;
+    return entitlement;
+  }
 }

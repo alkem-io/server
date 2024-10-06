@@ -18,10 +18,13 @@ export class IAccount extends IAuthorizable {
   type!: AccountType;
 
   agent?: IAgent;
-  license?: ILicense;
+
   spaces!: ISpace[];
   virtualContributors!: IVirtualContributor[];
   innovationHubs!: IInnovationHub[];
   innovationPacks!: IInnovationPack[];
   storageAggregator?: IStorageAggregator;
+
+  license?: ILicense;
+  externalSubscriptionID!: string;
 }
