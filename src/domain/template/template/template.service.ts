@@ -337,31 +337,22 @@ export class TemplateService {
     });
   }
 
-  async getTemplateInTemplatesSetOrFail(
+  async getTemplateByNameIDInTemplatesSetOrFail(
     templatesSetID: string,
-    templateIdOrNameId: string
+    templateNameId: string
   ): Promise<ITemplate> {
-    let template = await this.templateRepository.findOne({
+    const template = await this.templateRepository.findOne({
       where: {
         templatesSet: {
           id: templatesSetID,
         },
-        nameID: templateIdOrNameId,
+        nameID: templateNameId,
       },
     });
-    if (!template) {
-      template = await this.templateRepository.findOne({
-        where: {
-          templatesSet: {
-            id: templatesSetID,
-          },
-          id: templateIdOrNameId,
-        },
-      });
-    }
+
     if (!template) {
       throw new EntityNotFoundException(
-        `Templates with ID/NameId(${templatesSetID}) not found!`,
+        `Templates with NameID (${templateNameId}) not found in templatesSet with ID: ${templatesSetID}!`,
         LogContext.TEMPLATES
       );
     }

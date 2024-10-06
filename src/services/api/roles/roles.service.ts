@@ -241,7 +241,7 @@ export class RolesService {
       invitation.createdDate,
       invitation.updatedDate
     );
-    invitationResult.contributorID = invitation.invitedContributor;
+    invitationResult.contributorID = invitation.invitedContributorID;
     invitationResult.contributorType = invitation.contributorType;
 
     invitationResult.createdBy = invitation.createdBy ?? '';

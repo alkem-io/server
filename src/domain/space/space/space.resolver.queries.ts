@@ -5,6 +5,7 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { SpaceService } from './space.service';
 import { ISpace } from './space.interface';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
+import { ExploreSpacesInput } from './dto/explore.spaces.dto.input';
 import { InnovationHub } from '@domain/innovation-hub/types';
 import { GraphqlGuard } from '@core/authorization';
 import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
@@ -63,5 +64,16 @@ export class SpaceResolverQueries {
       },
     });
     return space;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Query(() => [ISpace], {
+    nullable: false,
+    description: 'Active Spaces only, order by most active in the past X days.',
+  })
+  public exploreSpaces(
+    @Args('options', { nullable: true }) options?: ExploreSpacesInput
+  ): Promise<ISpace[]> {
+    return this.spaceService.getExploreSpaces(options?.limit, options?.daysOld);
   }
 }

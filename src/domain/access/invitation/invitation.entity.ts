@@ -5,6 +5,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ENUM_LENGTH, MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { CommunityRoleType } from '@common/enums/community.role';
 @Entity()
 export class Invitation extends AuthorizableEntity implements IInvitation {
   // todo ID in migration is varchar - must be char(36)
@@ -17,7 +18,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   lifecycle!: Lifecycle;
 
   @Column('char', { length: UUID_LENGTH, nullable: false })
-  invitedContributor!: string;
+  invitedContributorID!: string;
 
   @Column('char', { length: UUID_LENGTH, nullable: false })
   createdBy!: string;
@@ -37,4 +38,10 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
     onDelete: 'CASCADE',
   })
   roleSet?: RoleSet;
+
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: true,
+  })
+  extraRole?: CommunityRoleType;
 }

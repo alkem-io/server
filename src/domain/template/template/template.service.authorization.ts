@@ -53,6 +53,10 @@ export class TemplateAuthorizationService {
           collaboration: {
             authorization: true,
           },
+          innovationFlow: {
+            profile: true,
+            authorization: true,
+          },
         },
       }
     );
@@ -157,6 +161,22 @@ export class TemplateAuthorizationService {
           `Unable to reset auth on template of type: ${template.type}`,
           LogContext.TEMPLATES
         );
+    }
+
+    if (template.type == TemplateType.INNOVATION_FLOW) {
+      if (!template.innovationFlow) {
+        throw new RelationshipNotFoundException(
+          `Unable to load InnovationFlow on Template of that type: ${template.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      // Cascade
+      const innovationFlowAuthorizations =
+        await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+          template.innovationFlow,
+          template.authorization
+        );
+      updatedAuthorizations.push(...innovationFlowAuthorizations);
     }
 
     return updatedAuthorizations;

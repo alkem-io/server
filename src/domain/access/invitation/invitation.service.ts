@@ -111,7 +111,7 @@ export class InvitationService {
   async getInvitedContributor(invitation: IInvitation): Promise<IContributor> {
     const contributor =
       await this.contributorService.getContributorByUuidOrFail(
-        invitation.invitedContributor
+        invitation.invitedContributorID
       );
     if (!contributor)
       throw new RelationshipNotFoundException(
@@ -137,7 +137,7 @@ export class InvitationService {
   ): Promise<IInvitation[]> {
     const existingInvitations = await this.invitationRepository.find({
       where: {
-        invitedContributor: contributorID,
+        invitedContributorID: contributorID,
         roleSet: { id: roleSetID },
       },
       relations: { roleSet: true },
@@ -153,7 +153,7 @@ export class InvitationService {
   ): Promise<IInvitation[]> {
     const findOpts: FindManyOptions<Invitation> = {
       relations: { roleSet: true },
-      where: { invitedContributor: contributorID },
+      where: { invitedContributorID: contributorID },
     };
 
     if (states.length) {
