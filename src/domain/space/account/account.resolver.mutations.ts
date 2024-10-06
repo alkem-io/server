@@ -142,6 +142,9 @@ export class AccountResolverMutations {
       {
         relations: {
           storageAggregator: true,
+          license: {
+            entitlements: true,
+          },
           innovationHubs: true,
         },
       }
@@ -185,6 +188,9 @@ export class AccountResolverMutations {
       {
         relations: {
           virtualContributors: true,
+          license: {
+            entitlements: true,
+          },
         },
       }
     );
@@ -244,6 +250,9 @@ export class AccountResolverMutations {
       {
         relations: {
           innovationPacks: true,
+          license: {
+            entitlements: true,
+          },
         },
       }
     );
