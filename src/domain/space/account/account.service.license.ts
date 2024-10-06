@@ -13,6 +13,7 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { IAccount } from './account.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SpaceLicenseService } from '../space/space.service.license';
 
 @Injectable()
 export class AccountLicenseService {
@@ -20,6 +21,7 @@ export class AccountLicenseService {
     private licenseService: LicenseService,
     private accountService: AccountService,
     private licenseEngineService: LicenseEngineService,
+    private spaceLicenseService: SpaceLicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -30,10 +32,17 @@ export class AccountLicenseService {
           credentials: true,
         },
         spaces: true,
-        license: true,
+        license: {
+          entitlements: true,
+        },
       },
     });
-    if (!account.spaces || !account.agent || !account.license) {
+    if (
+      !account.spaces ||
+      !account.agent ||
+      !account.license ||
+      !account.license.entitlements
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of license reset: ${account.id} `,
         LogContext.ACCOUNT
@@ -53,7 +62,9 @@ export class AccountLicenseService {
     updatedLicenses.push(account.license);
 
     for (const space of account.spaces) {
-      const spaceLicenses = await this.applyLicensePolicy(space.id);
+      const spaceLicenses = await this.spaceLicenseService.applyLicensePolicy(
+        space.id
+      );
       updatedLicenses.push(...spaceLicenses);
     }
 

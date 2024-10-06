@@ -1035,21 +1035,6 @@ export class SpaceService {
     );
   }
 
-  public async getLevelZeroSpaceAgent(space: ISpace): Promise<IAgent> {
-    const levelZeroSpace = await this.getSpaceOrFail(space.levelZeroSpaceID, {
-      relations: {
-        agent: true,
-      },
-    });
-    if (!levelZeroSpace.agent) {
-      throw new RelationshipNotFoundException(
-        `Agent not initialised on Level Zero Space: ${levelZeroSpace.id}`,
-        LogContext.SPACES
-      );
-    }
-    return levelZeroSpace.agent;
-  }
-
   public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
     await this.roleSetService.assignUserToRole(
       roleSet,

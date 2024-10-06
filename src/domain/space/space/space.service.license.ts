@@ -29,10 +29,17 @@ export class SpaceLicenseService {
           credentials: true,
         },
         subspaces: true,
-        license: true,
+        license: {
+          entitlements: true,
+        },
       },
     });
-    if (!space.subspaces || !space.agent || !space.license) {
+    if (
+      !space.subspaces ||
+      !space.agent ||
+      !space.license ||
+      !space.license.entitlements
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of license reset: ${space.id} `,
         LogContext.ACCOUNT

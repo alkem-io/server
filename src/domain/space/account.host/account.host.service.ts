@@ -100,7 +100,7 @@ export class AccountHostService {
     const account = await this.getAccount(accountID, options);
     if (!account)
       throw new EntityNotFoundException(
-        `Unable to find Account with ID: ${accountID}`,
+        `Unable to find Account on Host with ID: ${accountID}`,
         LogContext.ACCOUNT
       );
     return account;
