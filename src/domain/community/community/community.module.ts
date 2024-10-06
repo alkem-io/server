@@ -16,7 +16,6 @@ import { CommunityGuidelinesModule } from '../community-guidelines/community.gui
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
-import { LicenseModule } from '@domain/common/license/license.module';
 
 @Module({
   imports: [
@@ -28,7 +27,6 @@ import { LicenseModule } from '@domain/common/license/license.module';
     RoleSetModule,
     CommunicationModule,
     CommunityGuidelinesModule,
-    LicenseModule,
     AgentModule,
     StorageAggregatorResolverModule,
     VirtualContributorModule,

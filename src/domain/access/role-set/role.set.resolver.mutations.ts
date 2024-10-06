@@ -54,6 +54,8 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -75,7 +77,8 @@ export class RoleSetResolverMutations {
     private invitationAuthorizationService: InvitationAuthorizationService,
     private contributorService: ContributorService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
-    private platformInvitationService: PlatformInvitationService
+    private platformInvitationService: PlatformInvitationService,
+    private licenseService: LicenseService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -179,12 +182,14 @@ export class RoleSetResolverMutations {
       `assign virtual community role: ${roleSet.id}`
     );
 
-    // Also require ACCESS_VIRTUAL_CONTRIBUTORS to assign a virtual contributor
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      roleSet.authorization,
-      AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR,
-      `assign virtual community role VC privilege: ${roleSet.id}`
+    // Also require ACCESS_VIRTUAL_CONTRIBUTORS entitlement for the RoleSet
+    const license =
+      await this.communityResolverService.getLicenseForRoleSetOrFail(
+        roleSet.id
+      );
+    this.licenseService.isEntitlementEnabledOrFail(
+      license,
+      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
     );
 
     await this.roleSetService.assignVirtualToRole(

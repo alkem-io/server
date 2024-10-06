@@ -99,6 +99,33 @@ export class CommunityResolverService {
     return space.levelZeroSpaceID;
   }
 
+  public async getLicenseForRoleSetOrFail(
+    roleSetID: string
+  ): Promise<ILicense> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          roleSet: {
+            id: roleSetID,
+          },
+        },
+      },
+      relations: {
+        license: {
+          entitlements: true,
+        },
+      },
+    });
+
+    if (!space || !space.license) {
+      throw new EntityNotFoundException(
+        `Unable to find Space with License for given roleSet id: ${roleSetID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return space.license;
+  }
+
   public async getLicenseForCommunityOrFail(
     communityID: string
   ): Promise<ILicense> {

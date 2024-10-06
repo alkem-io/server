@@ -14,6 +14,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
 
 @Injectable()
 export class LicenseService {
@@ -153,6 +154,19 @@ export class LicenseService {
       entitlementType
     );
     return entitlement.enabled;
+  }
+
+  public isEntitlementEnabledOrFail(
+    license: ILicense | undefined,
+    entitlementType: LicenseEntitlementType
+  ): void {
+    const enabled = this.isEntitlementEnabled(license, entitlementType);
+    if (!enabled) {
+      throw new LicenseEntitlementNotAvailableException(
+        `Entitlement ${entitlementType} is not available for License: ${license?.id}`,
+        LogContext.LICENSE
+      );
+    }
   }
 
   private getEntitlementsFromLicenseOrFail(

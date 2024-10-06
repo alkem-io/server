@@ -8,7 +8,6 @@ import { RoleSetResolverMutations } from './role.set.resolver.mutations';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
-import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
@@ -29,12 +28,13 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityCommunicationModule } from '@domain/community/community-communication/community.communication.module';
 import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields public';
+import { LicenseModule } from '@domain/common/license/license.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    LicenseEngineModule,
+    LicenseModule,
     FormModule,
     AgentModule,
     UserModule,

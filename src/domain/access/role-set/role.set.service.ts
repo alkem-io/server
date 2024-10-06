@@ -55,6 +55,7 @@ import { RoleSetEventsService } from './role.set.service.events';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { CommunityCommunicationService } from '@domain/community/community-communication/community.communication.service';
+import { ILicense } from '@domain/common/license/license.interface';
 
 @Injectable()
 export class RoleSetService {
@@ -757,6 +758,12 @@ export class RoleSetService {
     return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
       community.id,
       virtualContributorID
+    );
+  }
+
+  public async getLicenseForRoleSet(roleSetID: string): Promise<ILicense> {
+    return await this.communityResolverService.getLicenseForRoleSetOrFail(
+      roleSetID
     );
   }
 
