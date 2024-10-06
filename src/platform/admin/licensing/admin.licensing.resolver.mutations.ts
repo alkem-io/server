@@ -19,13 +19,19 @@ import { AccountLicenseService } from '@domain/space/account/account.service.lic
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
 import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
+import { SpaceLicenseService } from '@domain/space/space/space.service.license';
+import { SpaceService } from '@domain/space/space/space.service';
+import { AccountService } from '@domain/space/account/account.service';
 
 @Resolver()
 export class AdminLicensingResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
+    private spaceLicenseService: SpaceLicenseService,
+    private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
     private accountLicenseService: AccountLicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
@@ -74,7 +80,7 @@ export class AdminLicensingResolverMutations {
     );
     await this.licenseService.saveAll(updatedLicenses);
 
-    return account;
+    return this.accountService.getAccountOrFail(account.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -107,12 +113,18 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
+    // TODO: Need to trigger for now both an auth reset and a license reset as Spaces are not yet setup to work with Licenses
     // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return space;
+    const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
+      space.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
+
+    return this.spaceService.getSpaceOrFail(space.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -157,7 +169,7 @@ export class AdminLicensingResolverMutations {
     );
     await this.licenseService.saveAll(updatedLicenses);
 
-    return account;
+    return this.accountService.getAccountOrFail(account.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -190,9 +202,15 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
+    // TODO: Need to trigger for now both an auth reset and a license reset as Spaces are not yet setup to work with Licenses
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    return space;
+
+    const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
+      space.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
+    return this.spaceService.getSpaceOrFail(space.id);
   }
 }
