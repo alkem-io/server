@@ -343,7 +343,7 @@ export class TemplateService {
         templatesSet: {
           id: templatesSetID,
         },
-        id: templateNameId,
+        nameID: templateNameId,
       },
     });
 

@@ -1,8 +1,4 @@
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@common/decorators';
+import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
@@ -32,6 +28,7 @@ import { Loader } from '@core/dataloader/decorators';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from './user.entity';
+import { AuthenticationType } from '@common/enums/authentication.type';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -71,7 +68,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The Agent representing this User.',
   })
-  @Profiling.api
   async agent(
     @Parent() user: User,
     @Loader(AgentLoaderCreator, { parentClassRef: User })
@@ -85,7 +81,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The Authorization for this User.',
   })
-  @Profiling.api
   async authorization(
     @Parent() user: User,
     @Loader(AuthorizationLoaderCreator, { parentClassRef: User })
@@ -133,7 +128,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'The direct rooms this user is a member of',
   })
-  @Profiling.api
   async directRooms(@Parent() user: User): Promise<DirectRoomResult[]> {
     return this.userService.getDirectRooms(user);
   }
@@ -143,7 +137,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The email address for this User.',
   })
-  @Profiling.api
   async email(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -165,7 +158,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'The phone number for this User.',
   })
-  @Profiling.api
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -209,7 +201,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'Can a message be sent to this User.',
   })
-  @Profiling.api
   async isContactable(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -243,6 +234,28 @@ export class UserResolverFields {
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(user.id);
+  }
+
+  @ResolveField('authenticationMethod', () => AuthenticationType, {
+    nullable: true,
+    description:
+      'The Authentication Method used for this User. One of email, linkedin, microsoft, or unknown',
+  })
+  @UseGuards(GraphqlGuard)
+  async authenticationMethod(
+    @Parent() user: IUser,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<AuthenticationType> {
+    const isCurrentUser = user.id === agentInfo.userID;
+    const platformAccessGranted = this.authorizationService.isAccessGranted(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_ADMIN
+    );
+    if (isCurrentUser || platformAccessGranted) {
+      return this.userService.getAuthenticationTypeByEmail(user.email);
+    }
+    return AuthenticationType.UNKNOWN;
   }
 
   private async isAccessGranted(

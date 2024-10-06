@@ -10,21 +10,13 @@ export interface OryDefaultIdentitySchema extends Identity {
       updated_at: string; //UTC Zulu time
       value: string;
       via: 'email';
-    }
+    },
   ];
   schema_id: 'default' | 'customer' | 'employee';
   schema_url: string;
   state: 'active';
   state_changed_at: string;
-  traits: {
-    accepted_terms: boolean;
-    picture: string;
-    email: string;
-    name: {
-      first: string;
-      last: string;
-    };
-  };
+  traits: OryTraits;
   updated_at: string; //UTC Zulu time
   verifiable_addresses: [
     {
@@ -36,6 +28,16 @@ export interface OryDefaultIdentitySchema extends Identity {
       verified: boolean;
       verified_at: string; //UTC Zulu time
       via: 'email';
-    }
+    },
   ];
+}
+
+export interface OryTraits {
+  accepted_terms: boolean;
+  picture: string;
+  email: string;
+  name: {
+    first: string;
+    last: string;
+  };
 }
