@@ -12,7 +12,6 @@ import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.f
 import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
@@ -56,7 +55,6 @@ import { SpaceLicenseService } from './space.service.license';
     InputCreatorModule,
     SpaceFilterModule,
     ActivityAdapterModule,
-    LoaderCreatorModule,
     RoleSetModule,
     NameReporterModule,
     SpaceDefaultsModule,

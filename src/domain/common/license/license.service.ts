@@ -96,14 +96,15 @@ export class LicenseService {
   }
 
   public async getEntitlements(
-    license: ILicense
+    licenseInput: ILicense
   ): Promise<ILicenseEntitlement[]> {
-    let entitlements = license.entitlements;
-    if (!entitlements) {
-      const licenseWithEntitlements = await this.getLicenseOrFail(license.id, {
-        relations: { entitlements: true },
+    let license = licenseInput;
+    if (!license.entitlements) {
+      license = await this.getLicenseOrFail(licenseInput.id, {
+        relations: {
+          entitlements: true,
+        },
       });
-      entitlements = licenseWithEntitlements.entitlements;
     }
     return this.getEntitlementsFromLicenseOrFail(license);
   }

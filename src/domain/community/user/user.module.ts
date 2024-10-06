@@ -20,12 +20,7 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
-import {
-  AgentLoaderCreator,
-  ProfileLoaderCreator,
-} from '@core/dataloader/creators/loader.creators';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ContributorModule } from '../contributor/contributor.module';
@@ -62,9 +57,6 @@ import { KratosAdapterModule } from '@services/adapters/kratos-adapter/kratos.ad
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
-    AgentLoaderCreator,
-    ProfileLoaderCreator,
-    UserStorageAggregatorLoaderCreator,
   ],
   exports: [UserService, UserAuthorizationService],
 })

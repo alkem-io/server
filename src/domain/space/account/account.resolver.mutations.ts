@@ -320,7 +320,7 @@ export class AccountResolverMutations {
   })
   async licenseResetOnAccount(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('authorizationResetData')
+    @Args('resetData')
     licenseResetData: AccountLicenseResetInput
   ): Promise<IAccount> {
     const account = await this.accountService.getAccountOrFail(

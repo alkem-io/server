@@ -33,12 +33,12 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { ILicense } from '@domain/common/license/license.interface';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -79,7 +79,9 @@ export class SpaceAuthorizationService {
         storageAggregator: true,
         subspaces: true,
         templatesManager: true,
-        license: true,
+        license: {
+          entitlements: true,
+        },
       },
     });
     if (
@@ -87,7 +89,8 @@ export class SpaceAuthorizationService {
       !space.community ||
       !space.community.roleSet ||
       !space.subspaces ||
-      !space.license
+      !space.license ||
+      !space.license.entitlements
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
@@ -96,8 +99,7 @@ export class SpaceAuthorizationService {
     }
 
     // Get the root space agent for licensing related logic
-    const levelZeroSpaceAgent =
-      await this.spaceService.getLevelZeroSpaceAgent(space);
+    const spaceLicense = space.license;
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
@@ -207,7 +209,7 @@ export class SpaceAuthorizationService {
     // propagate authorization rules for child entities
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
-      levelZeroSpaceAgent,
+      spaceLicense,
       spaceSettings,
       spaceMembershipAllowed
     );
@@ -240,7 +242,7 @@ export class SpaceAuthorizationService {
 
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
-    levelZeroSpaceAgent: IAgent,
+    spaceLicense: ILicense,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicy[]> {
@@ -269,7 +271,7 @@ export class SpaceAuthorizationService {
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community.id,
         space.authorization,
-        space.license,
+        spaceLicense,
         spaceSettings,
         spaceMembershipAllowed,
         isSubspaceCommunity
@@ -300,7 +302,7 @@ export class SpaceAuthorizationService {
     updatedAuthorizations.push(...storageAuthorizations);
 
     const licenseAuthorizations =
-      await this.licenseAuthorizationService.applyAuthorizationPolicy(
+      this.licenseAuthorizationService.applyAuthorizationPolicy(
         space.license,
         space.authorization
       );
