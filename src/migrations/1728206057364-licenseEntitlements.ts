@@ -31,7 +31,7 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
       'licensingId',
       'licensingFrameworkId'
     );
-    // Rename the licensing table to licensing_framework
+
     await queryRunner.renameTable('licensing', 'licensing_framework');
 
     await queryRunner.query(`CREATE TABLE \`license_entitlement\` (\`id\` char(36) NOT NULL,
@@ -134,25 +134,10 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
     }
 
     await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_36d8347a558f81ced8a621fe50\` ON \`platform\` (\`licensingFrameworkId\`)`
-    );
-    await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_3ef80ef55ba1a1d45e625ea838\` ON \`space\` (\`licenseId\`)`
     );
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_8339e62882f239dc00ff5866f8\` ON \`account\` (\`licenseId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`license_plan\` ADD CONSTRAINT \`FK_9f99adf29316d6aa1d0e8ecae54\` FOREIGN KEY (\`licensingFrameworkId\`) REFERENCES \`licensing_framework\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`licensing_framework\` ADD CONSTRAINT \`FK_29b5cd2c555b47f80942dfa4aa7\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`licensing_framework\` ADD CONSTRAINT \`FK_427ff5dfcabbc692ed6d71acaea\` FOREIGN KEY (\`licensePolicyId\`) REFERENCES \`license_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_36d8347a558f81ced8a621fe509\` FOREIGN KEY (\`licensingFrameworkId\`) REFERENCES \`licensing_framework\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`license_entitlement\` ADD CONSTRAINT \`FK_44e464f560f510b9fc5fa073397\` FOREIGN KEY (\`licenseId\`) REFERENCES \`license\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
@@ -183,12 +168,6 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_36d8347a558f81ced8a621fe509\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`licensing_framework\` DROP FOREIGN KEY \`FK_427ff5dfcabbc692ed6d71acaea\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`licensing_framework\` DROP FOREIGN KEY \`FK_29b5cd2c555b47f80942dfa4aa7\``
     );
     await queryRunner.query(
       `ALTER TABLE \`license_plan\` DROP FOREIGN KEY \`FK_9f99adf29316d6aa1d0e8ecae54\``
@@ -223,13 +202,7 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
     );
     await queryRunner.query(`DROP TABLE \`license\``);
     await queryRunner.query(`DROP TABLE \`license_entitlement\``);
-    await queryRunner.query(
-      `DROP INDEX \`REL_427ff5dfcabbc692ed6d71acae\` ON \`licensing_framework\``
-    );
-    await queryRunner.query(
-      `DROP INDEX \`REL_29b5cd2c555b47f80942dfa4aa\` ON \`licensing_framework\``
-    );
-    await queryRunner.query(`DROP TABLE \`licensing_framework\``);
+
     await queryRunner.query(
       `ALTER TABLE \`platform\` CHANGE \`licensingFrameworkId\` \`licensingId\` char(36) NULL`
     );
@@ -295,13 +268,16 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
     const licenseEntitlementID = randomUUID();
 
     await queryRunner.query(
-      `INSERT INTO license_entitlement (id, version, type, dataType, licenseId) VALUES
+      `INSERT INTO license_entitlement (id, version, type, dataType, license_entitlement.limit, enabled, licenseId) VALUES
                 (
                 '${licenseEntitlementID}',
                 1,
                 '${entitlementType}',
                 '${entitlementDataType}',
-                '${licenseID}')`
+                0,
+                0,
+                '${licenseID}'
+                )`
     );
     return licenseEntitlementID;
   }
