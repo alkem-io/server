@@ -7,6 +7,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { AccountType } from '@common/enums/account.type';
+import { ILicense } from '@domain/common/license/license.interface';
 
 @ObjectType('Account')
 export class IAccount extends IAuthorizable {
@@ -17,6 +18,7 @@ export class IAccount extends IAuthorizable {
   type!: AccountType;
 
   agent?: IAgent;
+  license?: ILicense;
   spaces!: ISpace[];
   virtualContributors!: IVirtualContributor[];
   innovationHubs!: IInnovationHub[];

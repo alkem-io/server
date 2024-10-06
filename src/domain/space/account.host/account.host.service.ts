@@ -25,6 +25,10 @@ import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 
 @Injectable()
 export class AccountHostService {
@@ -32,6 +36,7 @@ export class AccountHostService {
     private agentService: AgentService,
     private licenseIssuerService: LicenseIssuerService,
     private licensingService: LicensingService,
+    private licenseService: LicenseService,
     private storageAggregatorService: StorageAggregatorService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
@@ -53,6 +58,36 @@ export class AccountHostService {
 
     account.agent = await this.agentService.createAgent({
       type: AgentType.ACCOUNT,
+    });
+
+    account.license = await this.licenseService.createLicense({
+      type: LicenseType.ACCOUNT,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE,
+          dataTtype: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: true,
+        },
+        {
+          type: LicenseEntitlementType.VIRTUAL_CONTRIBUTOR,
+          dataTtype: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: true,
+        },
+        {
+          type: LicenseEntitlementType.INNOVATION_HUB,
+          dataTtype: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: true,
+        },
+        {
+          type: LicenseEntitlementType.INNOVATION_PACK,
+          dataTtype: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: true,
+        },
+      ],
     });
 
     return await this.accountRepository.save(account);

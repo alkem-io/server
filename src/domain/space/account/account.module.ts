@@ -24,6 +24,7 @@ import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.modul
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
+import { LicenseModule } from '@domain/common/license/license.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     LicensingModule,
     LicenseIssuerModule,
     LicenseEngineModule,
+    LicenseModule,
     SpaceModule,
     InnovationHubModule,
     InnovationPackModule,

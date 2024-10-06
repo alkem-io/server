@@ -35,6 +35,7 @@ import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innova
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -49,7 +50,8 @@ export class AccountAuthorizationService {
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
-    private accountHostService: AccountHostService
+    private accountHostService: AccountHostService,
+    private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -65,10 +67,11 @@ export class AccountAuthorizationService {
           innovationPacks: true,
           innovationHubs: true,
           storageAggregator: true,
+          license: true,
         },
       }
     );
-    if (!account.storageAggregator || !account.agent) {
+    if (!account.storageAggregator || !account.agent || !account.license) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
@@ -135,7 +138,8 @@ export class AccountAuthorizationService {
       !account.virtualContributors ||
       !account.innovationPacks ||
       !account.storageAggregator ||
-      !account.innovationHubs
+      !account.innovationHubs ||
+      !account.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -159,6 +163,13 @@ export class AccountAuthorizationService {
         account.authorization
       );
     updatedAuthorizations.push(agentAuthorization);
+
+    const licenseAuthorizations =
+      this.licenseAuthorizationService.applyAuthorizationPolicy(
+        account.license,
+        account.authorization
+      );
+    updatedAuthorizations.push(...licenseAuthorizations);
 
     const storageAggregatorAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(

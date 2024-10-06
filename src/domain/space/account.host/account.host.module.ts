@@ -6,12 +6,14 @@ import { LicensingModule } from '@platform/licensing/licensing.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Account } from '../account/account.entity';
+import { LicenseModule } from '@domain/common/license/license.module';
 
 @Module({
   imports: [
     AgentModule,
     LicenseIssuerModule,
     LicensingModule,
+    LicenseModule,
     StorageAggregatorModule,
     TypeOrmModule.forFeature([Account]),
   ],
