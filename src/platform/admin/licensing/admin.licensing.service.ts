@@ -3,7 +3,6 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
-import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -14,12 +13,13 @@ import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.l
 import { IAccount } from '@domain/space/account/account.interface';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { ValidationException } from '@common/exceptions';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
 
 @Injectable()
 export class AdminLicensingService {
   constructor(
     private accountHostService: AccountHostService,
-    private licensingService: LicensingService,
+    private licensingFrameworkService: LicensingFrameworkService,
     private licenseIssuerService: LicenseIssuerService,
     private spaceService: SpaceService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -29,10 +29,11 @@ export class AdminLicensingService {
     licensePlanData: AssignLicensePlanToSpace,
     licensingID: string
   ): Promise<ISpace> {
-    const licensePlan = await this.licensingService.getLicensePlanOrFail(
-      licensingID,
-      licensePlanData.licensePlanID
-    );
+    const licensePlan =
+      await this.licensingFrameworkService.getLicensePlanOrFail(
+        licensingID,
+        licensePlanData.licensePlanID
+      );
     const isLicensePlanTypeForSpaces =
       licensePlan.type === LicensePlanType.SPACE_FEATURE_FLAG ||
       licensePlan.type === LicensePlanType.SPACE_PLAN;
@@ -71,10 +72,11 @@ export class AdminLicensingService {
     licensePlanData: RevokeLicensePlanFromSpace,
     licensingID: string
   ): Promise<ISpace> {
-    const licensePlan = await this.licensingService.getLicensePlanOrFail(
-      licensingID,
-      licensePlanData.licensePlanID
-    );
+    const licensePlan =
+      await this.licensingFrameworkService.getLicensePlanOrFail(
+        licensingID,
+        licensePlanData.licensePlanID
+      );
     const isLicensePlanTypeForSpaces =
       licensePlan.type === LicensePlanType.SPACE_FEATURE_FLAG ||
       licensePlan.type === LicensePlanType.SPACE_PLAN;
@@ -113,10 +115,11 @@ export class AdminLicensingService {
     licensePlanData: AssignLicensePlanToAccount,
     licensingID: string
   ): Promise<IAccount> {
-    const licensePlan = await this.licensingService.getLicensePlanOrFail(
-      licensingID,
-      licensePlanData.licensePlanID
-    );
+    const licensePlan =
+      await this.licensingFrameworkService.getLicensePlanOrFail(
+        licensingID,
+        licensePlanData.licensePlanID
+      );
     const isLicensePlanTypeForAccounts =
       licensePlan.type === LicensePlanType.ACCOUNT_PLAN ||
       licensePlan.type === LicensePlanType.ACCOUNT_FEATURE_FLAG;
@@ -154,10 +157,11 @@ export class AdminLicensingService {
     licensePlanData: RevokeLicensePlanFromAccount,
     licensingID: string
   ): Promise<IAccount> {
-    const licensePlan = await this.licensingService.getLicensePlanOrFail(
-      licensingID,
-      licensePlanData.licensePlanID
-    );
+    const licensePlan =
+      await this.licensingFrameworkService.getLicensePlanOrFail(
+        licensingID,
+        licensePlanData.licensePlanID
+      );
     const isLicensePlanTypeForAccounts =
       licensePlan.type === LicensePlanType.ACCOUNT_PLAN ||
       licensePlan.type === LicensePlanType.ACCOUNT_FEATURE_FLAG;

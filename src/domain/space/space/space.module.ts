@@ -24,13 +24,13 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 import { AccountHostModule } from '../account.host/account.host.module';
-import { LicensingModule } from '@platform/licensing/licensing.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
+import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
 
 @Module({
   imports: [
@@ -41,7 +41,7 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     ContextModule,
     CommunityModule,
     ProfileModule,
-    LicensingModule,
+    LicensingFrameworkModule,
     LicenseIssuerModule,
     LicenseEngineModule,
     NamingModule,

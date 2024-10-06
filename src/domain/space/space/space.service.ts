@@ -67,7 +67,6 @@ import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { IAccount } from '../account/account.interface';
-import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
@@ -79,6 +78,7 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create.';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -100,7 +100,7 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private templatesManagerService: TemplatesManagerService,
     private collaborationService: CollaborationService,
-    private licensingService: LicensingService,
+    private licensingFrameworkService: LicensingFrameworkService,
     private licenseEngineService: LicenseEngineService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -1237,10 +1237,10 @@ export class SpaceService {
     space: ISpace
   ): Promise<ISpaceSubscription | undefined> {
     const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
+      await this.licensingFrameworkService.getDefaultLicensingOrFail();
 
     const today = new Date();
-    const plans = await this.licensingService.getLicensePlans(
+    const plans = await this.licensingFrameworkService.getLicensePlans(
       licensingFramework.id
     );
 

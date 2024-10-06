@@ -19,7 +19,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
-import { LicensingService } from '@platform/licensing/licensing.service';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -29,13 +28,14 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
 
 @Injectable()
 export class AccountHostService {
   constructor(
     private agentService: AgentService,
     private licenseIssuerService: LicenseIssuerService,
-    private licensingService: LicensingService,
+    private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
     private storageAggregatorService: StorageAggregatorService,
     @InjectEntityManager('default')
@@ -123,9 +123,9 @@ export class AccountHostService {
     licensePlanID?: string
   ): Promise<IAgent> {
     const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
+      await this.licensingFrameworkService.getDefaultLicensingOrFail();
     const licensePlansToAssign: ILicensePlan[] = [];
-    const licensePlans = await this.licensingService.getLicensePlans(
+    const licensePlans = await this.licensingFrameworkService.getLicensePlans(
       licensingFramework.id
     );
     for (const plan of licensePlans) {
@@ -143,10 +143,11 @@ export class AccountHostService {
         plan => plan.id === licensePlanID
       );
       if (!licensePlanAlreadyAssigned) {
-        const additionalPlan = await this.licensingService.getLicensePlanOrFail(
-          licensingFramework.id,
-          licensePlanID
-        );
+        const additionalPlan =
+          await this.licensingFrameworkService.getLicensePlanOrFail(
+            licensingFramework.id,
+            licensePlanID
+          );
 
         licensePlansToAssign.push(additionalPlan);
       }

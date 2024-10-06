@@ -6,8 +6,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
-import { LicensingService } from '@platform/licensing/licensing.service';
-import { ILicensing } from '@platform/licensing/licensing.interface';
 import { AdminLicensingService } from './admin.licensing.service';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -17,6 +15,10 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
+import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
 
 @Resolver()
 export class AdminLicensingResolverMutations {
@@ -25,7 +27,9 @@ export class AdminLicensingResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private accountAuthorizationService: AccountAuthorizationService,
-    private licensingService: LicensingService,
+    private accountLicenseService: AccountLicenseService,
+    private licensingFrameworkService: LicensingFrameworkService,
+    private licenseService: LicenseService,
     private adminLicensingService: AdminLicensingService
   ) {}
 
@@ -38,13 +42,14 @@ export class AdminLicensingResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: AssignLicensePlanToAccount
   ): Promise<IAccount> {
-    let licensing: ILicensing | undefined;
+    let licensing: ILicensingFramework | undefined;
     if (planData.licensingID) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         planData.licensingID
       );
     } else {
-      licensing = await this.licensingService.getDefaultLicensingOrFail();
+      licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
     }
 
     this.authorizationService.grantAccessOrFail(
@@ -58,10 +63,16 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
-    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
+    // TODO: Need to trigger for now both an auth reset and a license reset as Spaces are not yet setup to work with Licenses
+    // In principle only a license reset should be needed as not changing any authorizations
     const updatedAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
 
     return account;
   }
@@ -75,13 +86,14 @@ export class AdminLicensingResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: AssignLicensePlanToSpace
   ): Promise<ISpace> {
-    let licensing: ILicensing | undefined;
+    let licensing: ILicensingFramework | undefined;
     if (planData.licensingID) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         planData.licensingID
       );
     } else {
-      licensing = await this.licensingService.getDefaultLicensingOrFail();
+      licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
     }
 
     this.authorizationService.grantAccessOrFail(
@@ -112,13 +124,14 @@ export class AdminLicensingResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: RevokeLicensePlanFromAccount
   ): Promise<IAccount> {
-    let licensing: ILicensing | undefined;
+    let licensing: ILicensingFramework | undefined;
     if (planData.licensingID) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         planData.licensingID
       );
     } else {
-      licensing = await this.licensingService.getDefaultLicensingOrFail();
+      licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
     }
 
     this.authorizationService.grantAccessOrFail(
@@ -133,10 +146,17 @@ export class AdminLicensingResolverMutations {
         planData,
         licensing.id
       );
-    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
+    // TODO: Need to trigger for now both an auth reset and a license reset as Spaces are not yet setup to work with Licenses
+    // In principle only a license reset should be needed as not changing any authorizations
     const updatedAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
+
     return account;
   }
 
@@ -149,13 +169,14 @@ export class AdminLicensingResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: RevokeLicensePlanFromSpace
   ): Promise<ISpace> {
-    let licensing: ILicensing | undefined;
+    let licensing: ILicensingFramework | undefined;
     if (planData.licensingID) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         planData.licensingID
       );
     } else {
-      licensing = await this.licensingService.getDefaultLicensingOrFail();
+      licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
     }
 
     this.authorizationService.grantAccessOrFail(
