@@ -42,12 +42,15 @@ import { INameable } from '@domain/common/entity/nameable-entity';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { AccountLicenseResetInput } from './dto/account.dto.reset.license';
+import { AccountLicenseService } from './account.service.license';
 
 @Resolver()
 export class AccountResolverMutations {
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
+    private accountLicenseService: AccountLicenseService,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private virtualContributorService: VirtualContributorService,
@@ -307,6 +310,32 @@ export class AccountResolverMutations {
     const accountAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     await this.authorizationPolicyService.saveAll(accountAuthorizations);
+    return await this.accountService.getAccountOrFail(account.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAccount, {
+    description:
+      'Reset the License with Entitlements on the specified Account.',
+  })
+  async licenseResetOnAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('authorizationResetData')
+    licenseResetData: AccountLicenseResetInput
+  ): Promise<IAccount> {
+    const account = await this.accountService.getAccountOrFail(
+      licenseResetData.accountID
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.LICENSE_RESET,
+      `reset license definition on Space: ${agentInfo.email}`
+    );
+    const accountLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(accountLicenses);
     return await this.accountService.getAccountOrFail(account.id);
   }
 

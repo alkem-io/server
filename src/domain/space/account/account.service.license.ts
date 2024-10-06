@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { AccountService } from './account.service';
 import {
@@ -11,13 +11,16 @@ import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { IAccount } from './account.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class AccountLicenseService {
   constructor(
     private licenseService: LicenseService,
     private accountService: AccountService,
-    private licenseEngineService: LicenseEngineService
+    private licenseEngineService: LicenseEngineService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async applyLicensePolicy(accountID: string): Promise<ILicense[]> {
@@ -43,7 +46,8 @@ export class AccountLicenseService {
 
     account.license = await this.extendLicensePolicy(
       account.license,
-      account.agent
+      account.agent,
+      account
     );
 
     updatedLicenses.push(account.license);
@@ -53,7 +57,8 @@ export class AccountLicenseService {
 
   private async extendLicensePolicy(
     license: ILicense | undefined,
-    accountAgent: IAgent
+    accountAgent: IAgent,
+    account: IAccount
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
@@ -112,6 +117,14 @@ export class AccountLicenseService {
             LogContext.LICENSE
           );
       }
+    }
+
+    if (account.externalSubscriptionID) {
+      // TODO: get subscription details from the WingBack api + set the entitlements accordingly
+      this.logger.verbose?.(
+        `Invoking external subscription service for account ${account.id}`,
+        LogContext.ACCOUNT
+      );
     }
 
     return license;

@@ -32,7 +32,6 @@ import { AccountHostService } from '../account.host/account.host.service';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 
 @Injectable()
@@ -92,7 +91,6 @@ export class AccountAuthorizationService {
 
     account.authorization = await this.extendAuthorizationPolicy(
       account.authorization,
-      account.agent,
       hostCredentials
     );
 
@@ -207,7 +205,6 @@ export class AccountAuthorizationService {
 
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    accountAgent: IAgent,
     hostCredentials: ICredentialDefinition[]
   ): Promise<IAuthorizationPolicy> {
     if (!authorization) {
@@ -227,6 +224,7 @@ export class AccountAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
           AuthorizationPrivilege.AUTHORIZATION_RESET,
+          AuthorizationPrivilege.LICENSE_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
           AuthorizationPrivilege.TRANSFER_RESOURCE,
           AuthorizationPrivilege.CREATE_SPACE,

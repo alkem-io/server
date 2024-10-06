@@ -85,6 +85,16 @@ export class LicenseService {
     return this.licenseRepository.save(license);
   }
 
+  async saveAll(licenses: ILicense[]): Promise<void> {
+    this.logger.verbose?.(
+      `Saving ${licenses.length} licenses`,
+      LogContext.AUTH
+    );
+    await this.licenseRepository.save(licenses, {
+      chunk: 100,
+    });
+  }
+
   public async getEntitlements(license: ILicense): Promise<IEntitlement[]> {
     let entitlements = license.entitlements;
     if (!entitlements) {
