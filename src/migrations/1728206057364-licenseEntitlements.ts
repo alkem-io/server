@@ -67,7 +67,10 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
       `ALTER TABLE \`account\` ADD UNIQUE INDEX \`IDX_8339e62882f239dc00ff5866f8\` (\`licenseId\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_36d8347a558f81ced8a621fe50\` (\`licensingFrameworkId\`)`
+      `ALTER TABLE \`role_set\` ADD \`licenseId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`role_set\` ADD UNIQUE INDEX \`IDX_77f80ef55ba1a1d45e625ea838\` (\`licenseId\`)`
     );
 
     // Create the license entries with default values
@@ -129,6 +132,22 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
         queryRunner,
         licenseID,
         LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+        LicenseEntitlementDataType.FLAG
+      );
+    }
+
+    const roleSets: {
+      id: string;
+    }[] = await queryRunner.query(`SELECT id FROM \`role_set\``);
+    for (const roleSet of roleSets) {
+      const licenseID = await this.createLicense(queryRunner, 'roleset');
+      await queryRunner.query(
+        `UPDATE role_set SET licenseId = '${licenseID}' WHERE id = '${roleSet.id}'`
+      );
+      await this.createLicenseEntitlement(
+        queryRunner,
+        licenseID,
+        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
         LicenseEntitlementDataType.FLAG
       );
     }

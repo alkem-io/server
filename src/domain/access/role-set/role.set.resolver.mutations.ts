@@ -157,7 +157,14 @@ export class RoleSetResolverMutations {
     @Args('roleData') roleData: AssignRoleOnRoleSetToVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
-      roleData.roleSetID
+      roleData.roleSetID,
+      {
+        relations: {
+          license: {
+            entitlements: true,
+          },
+        },
+      }
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
@@ -183,12 +190,8 @@ export class RoleSetResolverMutations {
     );
 
     // Also require ACCESS_VIRTUAL_CONTRIBUTORS entitlement for the RoleSet
-    const license =
-      await this.communityResolverService.getLicenseForRoleSetOrFail(
-        roleSet.id
-      );
     this.licenseService.isEntitlementEnabledOrFail(
-      license,
+      roleSet.license,
       LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
     );
 

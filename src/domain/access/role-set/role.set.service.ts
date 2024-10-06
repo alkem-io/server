@@ -55,7 +55,10 @@ import { RoleSetEventsService } from './role.set.service.events';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { CommunityCommunicationService } from '@domain/community/community-communication/community.communication.service';
-import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 
 @Injectable()
 export class RoleSetService {
@@ -75,6 +78,7 @@ export class RoleSetService {
     private roleSetEventsService: RoleSetEventsService,
     private aiServerAdapter: AiServerAdapter,
     private communityCommunicationService: CommunityCommunicationService,
+    private licenseService: LicenseService,
     @InjectRepository(RoleSet)
     private roleSetRepository: Repository<RoleSet>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -101,6 +105,18 @@ export class RoleSetService {
     roleSet.applicationForm = this.formService.createForm(
       roleSetData.applicationForm
     );
+
+    roleSet.license = await this.licenseService.createLicense({
+      type: LicenseType.ROLESET,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+          dataTtype: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+      ],
+    });
 
     return roleSet;
   }
@@ -130,6 +146,7 @@ export class RoleSetService {
         invitations: true,
         platformInvitations: true,
         applicationForm: true,
+        license: true,
       },
     });
     if (
@@ -137,7 +154,8 @@ export class RoleSetService {
       !roleSet.applications ||
       !roleSet.invitations ||
       !roleSet.platformInvitations ||
-      !roleSet.applicationForm
+      !roleSet.applicationForm ||
+      !roleSet.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for roleSet for deletion: ${roleSet.id} `,
@@ -173,6 +191,7 @@ export class RoleSetService {
     }
 
     await this.formService.removeForm(roleSet.applicationForm);
+    await this.licenseService.removeLicense(roleSet.license.id);
 
     await this.roleSetRepository.remove(roleSet as RoleSet);
     return true;
@@ -758,12 +777,6 @@ export class RoleSetService {
     return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
       community.id,
       virtualContributorID
-    );
-  }
-
-  public async getLicenseForRoleSet(roleSetID: string): Promise<ILicense> {
-    return await this.communityResolverService.getLicenseForRoleSetOrFail(
-      roleSetID
     );
   }
 
