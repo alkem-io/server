@@ -1,3 +1,4 @@
+import fetch from 'node-fetch';
 import { Injectable } from '@nestjs/common';
 import { BaseException } from '@common/exceptions/base.exception';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
@@ -7,6 +8,8 @@ import { DocumentAuthorizationService } from '@domain/storage/document/document.
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { bufferFromUrl } from '@common/utils';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ProfileDocumentsService {
@@ -21,18 +24,10 @@ export class ProfileDocumentsService {
    * Checks if a document is living under the storage bucket
    * of a profile and adds it if not there
    */
-  public async reuploadDocumentToProfile(
+  public async reuploadDocumentToProfileOrFail(
     fileUrl: string,
     profile: IProfile
-  ): Promise<string | undefined> {
-    if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
-      throw new BaseException(
-        'File URL not inside Alkemio',
-        LogContext.COLLABORATION,
-        AlkemioErrorStatus.UNSPECIFIED
-      );
-    }
-
+  ): Promise<string | undefined | never> {
     const storageBucketToCheck = profile.storageBucket;
 
     if (!storageBucketToCheck) {
@@ -40,6 +35,29 @@ export class ProfileDocumentsService {
         `Storage bucket not initialized on Profile: '${profile.id}'`,
         LogContext.PROFILE
       );
+    }
+
+    if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
+      let imageBuffer: Buffer | undefined;
+      try {
+        imageBuffer = await bufferFromUrl(fileUrl);
+      } catch (e) {
+        throw new BaseException(
+          'Unable to download image from URL',
+          LogContext.COLLABORATION,
+          AlkemioErrorStatus.UNSPECIFIED,
+          { url: fileUrl }
+        );
+      }
+
+      // this.storageBucketService.uploadFileAsDocumentFromBuffer(
+      //   storageBucketToCheck.id,
+      //   imageBuffer,
+      //   randomUUID(),
+      //   '',
+      //   '',
+      //   false
+      // );
     }
 
     if (!storageBucketToCheck.documents) {

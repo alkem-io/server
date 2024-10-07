@@ -13,3 +13,4 @@ export * from './get.session';
 export * from './calculate.buffer.hash';
 export * from './untildify';
 export * from './path.resolve';
+export * from './buffer.from.url';

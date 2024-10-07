@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
@@ -25,10 +25,13 @@ import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class WhiteboardService {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -167,12 +170,16 @@ export class WhiteboardService {
 
     // TODO: is this still needed? It is a lot of work to be doing on every
     // whiteboard content save. Plus I think it is an inherent risk.
-    const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
-      newWhiteboardContent,
-      whiteboard?.profile.id
-    );
+    try {
+      const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
+        newWhiteboardContent,
+        whiteboard?.profile.id
+      );
 
-    whiteboard.content = JSON.stringify(newContentWithFiles);
+      whiteboard.content = JSON.stringify(newContentWithFiles);
+    } catch (e: any) {
+      this.logger.error(e?.message, e?.stack, LogContext.WHITEBOARD);
+    }
 
     return this.save(whiteboard);
   }
@@ -251,16 +258,32 @@ export class WhiteboardService {
         continue;
       }
 
-      const newDocUrl =
-        await this.profileDocumentsService.reuploadDocumentToProfile(
-          file.url,
-          profile
+      let newDocUrl: string | undefined;
+      try {
+        newDocUrl =
+          await this.profileDocumentsService.reuploadDocumentToProfileOrFail(
+            file.url,
+            profile
+          );
+      } catch (e: any) {
+        this.logger.error(
+          {
+            message: `Skipping failed to upload document to profile: ${e?.message}`,
+            fileUrl: file.url,
+            profileId: profile.id,
+          },
+          e?.stack,
+          LogContext.WHITEBOARD
         );
-
+        // delete the file from the content
+        delete whiteboardContent.files[file.id];
+        // skip this file
+        continue;
+      }
+      // skip; file already in the bucket
       if (!newDocUrl) {
         continue;
       }
-
       // change the url to the new document
       whiteboardContent.files[file.id] = {
         ...file,
