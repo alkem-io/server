@@ -29,6 +29,7 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityCommunicationModule } from '@domain/community/community-communication/community.communication.module';
 import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields public';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { RoleSetLicenseService } from './role.set.service.license';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { LicenseModule } from '@domain/common/license/license.module';
   providers: [
     RoleSetService,
     RoleSetAuthorizationService,
+    RoleSetLicenseService,
     RoleSetResolverMutations,
     RoleSetResolverFields,
     RoleSetResolverFieldsPublic,
@@ -64,6 +66,6 @@ import { LicenseModule } from '@domain/common/license/license.module';
     RoleSetApplicationLifecycleOptionsProvider,
     RoleSetInvitationLifecycleOptionsProvider,
   ],
-  exports: [RoleSetService, RoleSetAuthorizationService],
+  exports: [RoleSetService, RoleSetAuthorizationService, RoleSetLicenseService],
 })
 export class RoleSetModule {}

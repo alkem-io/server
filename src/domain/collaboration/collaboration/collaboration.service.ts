@@ -54,6 +54,10 @@ import { Callout } from '@domain/collaboration/callout';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
 import { IRoleSet } from '@domain/access/role-set';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 
 @Injectable()
 export class CollaborationService {
@@ -70,7 +74,8 @@ export class CollaborationService {
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private timelineService: TimelineService,
-    private calloutGroupsService: CalloutGroupsService
+    private calloutGroupsService: CalloutGroupsService,
+    private licenseService: LicenseService
   ) {}
 
   async createCollaboration(
@@ -121,6 +126,24 @@ export class CollaborationService {
         collaboration.tagsetTemplateSet,
         groupTagsetTemplateInput
       );
+
+    collaboration.license = await this.licenseService.createLicense({
+      type: LicenseType.COLLABORATION,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+          dataTtype: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataTtype: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+      ],
+    });
 
     // save the tagset template so can use it in the innovation flow as a template for it's tags
     await this.tagsetTemplateSetService.save(collaboration.tagsetTemplateSet);
@@ -313,6 +336,7 @@ export class CollaborationService {
         timeline: true,
         innovationFlow: true,
         authorization: true,
+        license: true,
       },
     });
 
@@ -320,7 +344,8 @@ export class CollaborationService {
       !collaboration.callouts ||
       !collaboration.timeline ||
       !collaboration.innovationFlow ||
-      !collaboration.authorization
+      !collaboration.authorization ||
+      !collaboration.license
     )
       throw new RelationshipNotFoundException(
         `Unable to remove Collaboration: missing child entities ${collaboration.id} `,
@@ -338,6 +363,7 @@ export class CollaborationService {
     await this.innovationFlowService.deleteInnovationFlow(
       collaboration.innovationFlow.id
     );
+    await this.licenseService.removeLicense(collaboration.license.id);
 
     return await this.collaborationRepository.remove(
       collaboration as Collaboration

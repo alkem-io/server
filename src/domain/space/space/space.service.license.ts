@@ -13,6 +13,7 @@ import { LicensePrivilege } from '@common/enums/license.privilege';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceService } from './space.service';
 import { RoleSetLicenseService } from '@domain/access/role-set/role.set.service.license';
+import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 
 @Injectable()
 export class SpaceLicenseService {
@@ -21,6 +22,7 @@ export class SpaceLicenseService {
     private spaceService: SpaceService,
     private licenseEngineService: LicenseEngineService,
     private roleSetLicenseService: RoleSetLicenseService,
+    private collaborationLicenseService: CollaborationLicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -37,6 +39,7 @@ export class SpaceLicenseService {
         community: {
           roleSet: true,
         },
+        collaboration: true,
       },
     });
     if (
@@ -45,7 +48,8 @@ export class SpaceLicenseService {
       !space.license ||
       !space.license.entitlements ||
       !space.community ||
-      !space.community.roleSet
+      !space.community.roleSet ||
+      !space.collaboration
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of license reset: ${space.id} `,
@@ -60,11 +64,19 @@ export class SpaceLicenseService {
     space.license = await this.extendLicensePolicy(space.license, space.agent);
 
     updatedLicenses.push(space.license);
+
     const roleSetLicenses = await this.roleSetLicenseService.applyLicensePolicy(
       space.community.roleSet.id,
       space.license
     );
     updatedLicenses.push(...roleSetLicenses);
+
+    const collaborationLicenses =
+      await this.collaborationLicenseService.applyLicensePolicy(
+        space.collaboration.id,
+        space.license
+      );
+    updatedLicenses.push(...collaborationLicenses);
 
     for (const subspace of space.subspaces) {
       const subspaceLicenses = await this.applyLicensePolicy(subspace.id);

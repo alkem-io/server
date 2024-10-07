@@ -152,6 +152,28 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
       );
     }
 
+    const collaborations: {
+      id: string;
+    }[] = await queryRunner.query(`SELECT id FROM \`collaboration\``);
+    for (const collaboration of collaborations) {
+      const licenseID = await this.createLicense(queryRunner, 'collaboration');
+      await queryRunner.query(
+        `UPDATE collaboration SET licenseId = '${licenseID}' WHERE id = '${collaboration.id}'`
+      );
+      await this.createLicenseEntitlement(
+        queryRunner,
+        licenseID,
+        LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+        LicenseEntitlementDataType.FLAG
+      );
+      await this.createLicenseEntitlement(
+        queryRunner,
+        licenseID,
+        LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+        LicenseEntitlementDataType.FLAG
+      );
+    }
+
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_3ef80ef55ba1a1d45e625ea838\` ON \`space\` (\`licenseId\`)`
     );

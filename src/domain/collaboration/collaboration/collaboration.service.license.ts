@@ -8,44 +8,45 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoleSetService } from './role.set.service';
+import { CollaborationService } from './collaboration.service';
 
 @Injectable()
-export class RoleSetLicenseService {
+export class CollaborationLicenseService {
   constructor(
     private licenseService: LicenseService,
-    private roleSetService: RoleSetService,
+    private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async applyLicensePolicy(
-    roleSetID: string,
+    collaborationID: string,
     parentLicense: ILicense
   ): Promise<ILicense[]> {
-    const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
-      relations: {
-        license: {
-          entitlements: true,
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(collaborationID, {
+        relations: {
+          license: {
+            entitlements: true,
+          },
         },
-      },
-    });
-    if (!roleSet.license || !roleSet.license.entitlements) {
+      });
+    if (!collaboration.license || !collaboration.license.entitlements) {
       throw new RelationshipNotFoundException(
-        `Unable to load RoleSet with entities at start of license reset: ${roleSet.id} `,
+        `Unable to load Collaboration with entities at start of license reset: ${collaboration.id} `,
         LogContext.LICENSE
       );
     }
     const updatedLicenses: ILicense[] = [];
 
     // Ensure always applying from a clean state
-    roleSet.license = this.licenseService.reset(roleSet.license);
+    collaboration.license = this.licenseService.reset(collaboration.license);
 
-    roleSet.license = await this.extendLicensePolicy(
-      roleSet.license,
+    collaboration.license = await this.extendLicensePolicy(
+      collaboration.license,
       parentLicense
     );
 
-    updatedLicenses.push(roleSet.license);
+    updatedLicenses.push(collaboration.license);
 
     return updatedLicenses;
   }
@@ -68,7 +69,14 @@ export class RoleSetLicenseService {
     const parentEntitlements = parentLicense.entitlements;
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
-        case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS:
+        case LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE:
+          this.licenseService.findAndCopyParentEntitlement(
+            entitlement,
+            parentEntitlements
+          );
+          break;
+
+        case LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER:
           this.licenseService.findAndCopyParentEntitlement(
             entitlement,
             parentEntitlements
@@ -77,7 +85,7 @@ export class RoleSetLicenseService {
 
         default:
           throw new EntityNotInitializedException(
-            `Unknown entitlement type for RoleSet: ${entitlement.type}`,
+            `Unknown entitlement type for Collaboration: ${entitlement.type}`,
             LogContext.LICENSE
           );
       }

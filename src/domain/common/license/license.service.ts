@@ -169,6 +169,23 @@ export class LicenseService {
     }
   }
 
+  public findAndCopyParentEntitlement(
+    childEntitlement: ILicenseEntitlement,
+    parentEntitlements: ILicenseEntitlement[]
+  ): void {
+    const parentEntitlement = parentEntitlements.find(
+      e => e.type === childEntitlement.type
+    );
+    if (!parentEntitlement) {
+      throw new RelationshipNotFoundException(
+        `Parent entitlement not found: ${childEntitlement.type}`,
+        LogContext.LICENSE
+      );
+    }
+    childEntitlement.limit = parentEntitlement.limit;
+    childEntitlement.enabled = parentEntitlement.enabled;
+  }
+
   private getEntitlementsFromLicenseOrFail(
     license: ILicense | undefined
   ): ILicenseEntitlement[] {

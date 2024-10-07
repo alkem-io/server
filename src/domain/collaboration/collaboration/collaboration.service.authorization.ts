@@ -26,6 +26,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -35,7 +36,8 @@ export class CollaborationAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private timelineAuthorizationService: TimelineAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
-    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
+    private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -54,6 +56,9 @@ export class CollaborationAuthorizationService {
               profile: true,
             },
             timeline: true,
+            license: {
+              entitlements: true,
+            },
           },
         }
       );
@@ -115,7 +120,9 @@ export class CollaborationAuthorizationService {
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
       !collaboration.innovationFlow.profile ||
-      !collaboration.timeline
+      !collaboration.timeline ||
+      !collaboration.license ||
+      !collaboration.license.entitlements
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization children:  ${collaboration.id}`,
@@ -134,6 +141,13 @@ export class CollaborationAuthorizationService {
         );
       updatedAuthorizations.push(...updatedCalloutAuthorizations);
     }
+
+    const licenseAuthorization =
+      this.licenseAuthorizationService.applyAuthorizationPolicy(
+        collaboration.license,
+        collaboration.authorization
+      );
+    updatedAuthorizations.push(...licenseAuthorization);
 
     // Extend with contributor rules + then send into apply
     const clonedAuthorization =

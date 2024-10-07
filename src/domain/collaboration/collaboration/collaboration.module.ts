@@ -23,6 +23,7 @@ import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { CollaborationLicenseService } from './collaboration.service.license';
 
 @Module({
   imports: [
@@ -51,7 +52,12 @@ import { LicenseModule } from '@domain/common/license/license.module';
     CollaborationAuthorizationService,
     CollaborationResolverMutations,
     CollaborationResolverFields,
+    CollaborationLicenseService,
   ],
-  exports: [CollaborationService, CollaborationAuthorizationService],
+  exports: [
+    CollaborationService,
+    CollaborationAuthorizationService,
+    CollaborationLicenseService,
+  ],
 })
 export class CollaborationModule {}
