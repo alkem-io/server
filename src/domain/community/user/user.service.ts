@@ -63,6 +63,8 @@ import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
+import { AuthenticationType } from '@common/enums/authentication.type';
+import { KratosAdapter } from '@services/adapters/kratos-adapter/kratos.adapter';
 
 @Injectable()
 export class UserService {
@@ -79,12 +81,27 @@ export class UserService {
     private storageAggregatorService: StorageAggregatorService,
     private accountHostService: AccountHostService,
     private contributorService: ContributorService,
+    private kratosAdapter: KratosAdapter,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
+
+  /**
+   * Retrieves the authentication type associated with a given email.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  public async getAuthenticationTypeByEmail(
+    email: string
+  ): Promise<AuthenticationType> {
+    const identity = await this.kratosAdapter.getIdentityByEmail(email);
+    if (!identity) return AuthenticationType.UNKNOWN;
+    return this.kratosAdapter.mapAuthenticationType(identity);
+  }
 
   private getUserCommunicationIdCacheKey(communicationId: string): string {
     return `@user:communicationId:${communicationId}`;
