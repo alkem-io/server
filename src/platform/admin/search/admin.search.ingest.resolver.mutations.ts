@@ -10,6 +10,10 @@ import { SearchIngestService } from '@services/api/search/v2/ingest/search.inges
 import { TaskService } from '@services/task';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { ExcalidrawContent } from '@common/interfaces';
 
 @Resolver()
 export class AdminSearchIngestResolverMutations {
@@ -18,8 +22,93 @@ export class AdminSearchIngestResolverMutations {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private searchIngestService: SearchIngestService,
     private taskService: TaskService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
+    @InjectEntityManager() private entityManager: EntityManager
   ) {}
+
+  @Mutation(() => Boolean)
+  async iterateOverWhiteboard() {
+    const chunkSize = 50;
+    let offset = 0;
+    let whiteboards: Whiteboard[];
+
+    let withUrl = 0;
+    let withDataUrl = 0;
+    let withBoth = 0;
+    let withoutFileStore = 0;
+
+    const domainSet = new Set<string>();
+
+    do {
+      whiteboards = await this.entityManager.find(Whiteboard, {
+        skip: offset,
+        take: chunkSize,
+        loadEagerRelations: false,
+        select: {
+          id: true,
+          content: true,
+          updatedDate: true,
+        },
+      });
+
+      for (const whiteboard of whiteboards) {
+        let ec: ExcalidrawContent | undefined;
+
+        if (!whiteboard.content) {
+          console.log(`whiteboard ${whiteboard.id} has no content`);
+          continue;
+        }
+
+        try {
+          ec = JSON.parse(whiteboard.content) as ExcalidrawContent;
+        } catch (e) {
+          console.log(`whiteboard ${whiteboard.id} has invalid content`);
+        }
+
+        if (!ec) {
+          continue;
+        }
+
+        if (!ec.files) {
+          console.error(`whiteboard ${whiteboard.id} does not have file store`);
+          withoutFileStore++;
+          continue;
+        }
+
+        const files = Object.entries(ec.files);
+
+        for (const [, file] of files) {
+          if (file.url) {
+            withUrl++;
+            const regex = /https:\/\/(.*?)\/api/;
+            const match = file.url.match(regex);
+
+            if (match) {
+              domainSet.add(match[1]);
+            }
+          }
+
+          if (file.dataURL) {
+            withDataUrl++;
+          }
+
+          if (file.url && file.dataURL) {
+            withBoth++;
+          }
+        }
+      }
+
+      offset += chunkSize;
+    } while (whiteboards.length === chunkSize);
+
+    console.log('withUrl', withUrl);
+    console.log('withDataUrl', withDataUrl);
+    console.log('withBoth', withBoth);
+    console.log('withoutFileStore', withoutFileStore);
+    console.log('domainSet', domainSet.values());
+
+    return true;
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
