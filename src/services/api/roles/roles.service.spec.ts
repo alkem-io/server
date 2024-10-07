@@ -246,6 +246,7 @@ const getSpaceRoleResultMock = ({
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
+        externalSubscriptionID: '',
         spaces: [],
         type: AccountType.ORGANIZATION,
       },
