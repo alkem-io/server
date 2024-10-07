@@ -111,7 +111,7 @@ export class RoleSetService {
       entitlements: [
         {
           type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
-          dataTtype: LicenseEntitlementDataType.FLAG,
+          dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: false,
         },

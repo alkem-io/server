@@ -3,7 +3,7 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 export class CreateLicenseEntitlementInput {
   type!: LicenseEntitlementType;
-  dataTtype!: LicenseEntitlementDataType;
+  dataType!: LicenseEntitlementDataType;
   limit!: number;
   enabled!: boolean;
 }

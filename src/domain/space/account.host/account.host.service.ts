@@ -65,25 +65,25 @@ export class AccountHostService {
       entitlements: [
         {
           type: LicenseEntitlementType.ACCOUNT_SPACE,
-          dataTtype: LicenseEntitlementDataType.LIMIT,
+          dataType: LicenseEntitlementDataType.LIMIT,
           limit: 0,
           enabled: false,
         },
         {
           type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          dataTtype: LicenseEntitlementDataType.LIMIT,
+          dataType: LicenseEntitlementDataType.LIMIT,
           limit: 0,
           enabled: false,
         },
         {
           type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
-          dataTtype: LicenseEntitlementDataType.LIMIT,
+          dataType: LicenseEntitlementDataType.LIMIT,
           limit: 0,
           enabled: false,
         },
         {
           type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-          dataTtype: LicenseEntitlementDataType.LIMIT,
+          dataType: LicenseEntitlementDataType.LIMIT,
           limit: 0,
           enabled: false,
         },

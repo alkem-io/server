@@ -167,19 +167,19 @@ export class SpaceService {
       entitlements: [
         {
           type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
-          dataTtype: LicenseEntitlementDataType.FLAG,
+          dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: false,
         },
         {
           type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
-          dataTtype: LicenseEntitlementDataType.FLAG,
+          dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: false,
         },
         {
           type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
-          dataTtype: LicenseEntitlementDataType.LIMIT,
+          dataType: LicenseEntitlementDataType.LIMIT,
           limit: 0,
           enabled: true,
         },

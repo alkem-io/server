@@ -132,13 +132,13 @@ export class CollaborationService {
       entitlements: [
         {
           type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
-          dataTtype: LicenseEntitlementDataType.FLAG,
+          dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: false,
         },
         {
           type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
-          dataTtype: LicenseEntitlementDataType.FLAG,
+          dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: false,
         },
