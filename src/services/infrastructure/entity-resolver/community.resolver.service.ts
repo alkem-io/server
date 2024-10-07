@@ -12,6 +12,7 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
 import { IAccount } from '@domain/space/account/account.interface';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { ILicense } from '@domain/common/license/license.interface';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Injectable()
 export class CommunityResolverService {
@@ -97,58 +98,6 @@ export class CommunityResolverService {
       );
     }
     return space.levelZeroSpaceID;
-  }
-
-  public async getLicenseForRoleSetOrFail(
-    roleSetID: string
-  ): Promise<ILicense> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        community: {
-          roleSet: {
-            id: roleSetID,
-          },
-        },
-      },
-      relations: {
-        license: {
-          entitlements: true,
-        },
-      },
-    });
-
-    if (!space || !space.license) {
-      throw new EntityNotFoundException(
-        `Unable to find Space with License for given roleSet id: ${roleSetID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return space.license;
-  }
-
-  public async getLicenseForCommunityOrFail(
-    communityID: string
-  ): Promise<ILicense> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        community: {
-          id: communityID,
-        },
-      },
-      relations: {
-        license: {
-          entitlements: true,
-        },
-      },
-    });
-
-    if (!space || !space.license) {
-      throw new EntityNotFoundException(
-        `Unable to find Space with License for given community id: ${communityID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return space.license;
   }
 
   private async getAccountForCommunityOrFail(
@@ -307,6 +256,55 @@ export class CommunityResolverService {
       );
     }
     return community;
+  }
+
+  public async getCollaborationLicenseFromWhiteboardOrFail(
+    whiteboardId: string
+  ): Promise<ILicense> {
+    // check for whitebaord in contributions
+    let collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        callouts: {
+          contributions: {
+            whiteboard: {
+              id: whiteboardId,
+            },
+          },
+        },
+      },
+      relations: {
+        license: {
+          entitlements: true,
+        },
+      },
+    });
+    // check for whiteboard in framing
+    if (!collaboration) {
+      collaboration = await this.entityManager.findOne(Collaboration, {
+        where: {
+          callouts: {
+            framing: {
+              whiteboard: {
+                id: whiteboardId,
+              },
+            },
+          },
+        },
+        relations: {
+          license: {
+            entitlements: true,
+          },
+        },
+      });
+    }
+    if (!collaboration || !collaboration.license) {
+      throw new EntityNotFoundException(
+        `Unable to find Collaboration with License for whiteboard: ${whiteboardId}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return collaboration.license;
   }
 
   public async getCommunityFromCalendarEventOrFail(

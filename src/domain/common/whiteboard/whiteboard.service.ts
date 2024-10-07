@@ -178,17 +178,13 @@ export class WhiteboardService {
   }
 
   public async isMultiUser(whiteboardId: string): Promise<boolean> {
-    const community =
-      await this.communityResolverService.getCommunityFromWhiteboardOrFail(
+    const license =
+      await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
         whiteboardId
-      );
-    const spaceLicense =
-      await this.communityResolverService.getLicenseForCommunityOrFail(
-        community.id
       );
 
     return this.licenseService.isEntitlementEnabled(
-      spaceLicense,
+      license,
       LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER
     );
   }

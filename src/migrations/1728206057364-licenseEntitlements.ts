@@ -73,6 +73,13 @@ export class LicenseEntitlements1728206057364 implements MigrationInterface {
       `ALTER TABLE \`role_set\` ADD UNIQUE INDEX \`IDX_77f80ef55ba1a1d45e625ea838\` (\`licenseId\`)`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` ADD \`licenseId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` ADD UNIQUE INDEX \`IDX_99f80ef55ba1a1d45e625ea838\` (\`licenseId\`)`
+    );
+
     // Create the license entries with default values
     const accounts: {
       id: string;
