@@ -4,6 +4,7 @@ import { AdminSearchIngestResolverMutations } from '@platform/admin/search/admin
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { TaskModule } from '@services/task';
+import { LicenseManagerModule } from '@core/license-manager';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { TaskModule } from '@services/task';
     AuthorizationModule,
     PlatformAuthorizationPolicyModule,
     TaskModule,
+    LicenseManagerModule,
   ],
   providers: [AdminSearchIngestResolverMutations],
   exports: [],

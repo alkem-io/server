@@ -27,3 +27,4 @@ export const ELASTICSEARCH_CLIENT_PROVIDER = 'elasticsearch-client-provider';
 export const EXCALIDRAW_PUBSUB_PROVIDER = 'excalidraw-pubsub-provider';
 export const APP_ID = 'app-id';
 export const STORAGE_SERVICE = 'storage-service';
+export const LICENSE_MANAGER = 'license-manager';
