@@ -250,6 +250,13 @@ export class TemplateService {
         template.whiteboard,
         templateData.whiteboard
       );
+      if (templateData.whiteboard.content) {
+        template.whiteboard =
+          await this.whiteboardService.updateWhiteboardContent(
+            template.whiteboard.id,
+            templateData.whiteboard.content
+          );
+      }
     }
 
     return await this.templateRepository.save(template);
