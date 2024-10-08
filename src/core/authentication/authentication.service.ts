@@ -10,7 +10,10 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
-import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
+import {
+  OryDefaultIdentitySchema,
+  OryTraits,
+} from './ory.default.identity.schema';
 import { NotSupportedException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { getBearerToken } from './get.bearer.token';
@@ -20,6 +23,7 @@ import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.inf
 import { getSession } from '@common/utils';
 import ConfigUtils from '@config/config.utils';
 import { AlkemioConfig } from '@src/types';
+import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 
 @Injectable()
 export class AuthenticationService {
@@ -88,15 +92,57 @@ export class AuthenticationService {
     return this.createAgentInfo(oryIdentity);
   }
 
+  /**
+   * Creates and returns an `AgentInfo` object based on the provided Ory identity and session.
+   *
+   * @param oryIdentity - Optional Ory identity schema containing user traits.
+   * @param session - Optional session information.
+   * @returns A promise that resolves to an `AgentInfo` object.
+   *
+   * This method performs the following steps:
+   * 1. Validates the provided Ory identity.
+   * 2. Checks for cached agent information based on the email from the Ory identity.
+   * 3. Builds basic agent information if no cached information is found.
+   * 4. Maps the authentication type from the session.
+   * 5. Retrieves additional metadata for the agent.
+   * 6. Populates the agent information with the retrieved metadata.
+   * 7. Adds verified credentials if enabled.
+   * 8. Caches the agent information.
+   */
   async createAgentInfo(
     oryIdentity?: OryDefaultIdentitySchema,
     session?: Session
   ): Promise<AgentInfo> {
-    const agentInfo = new AgentInfo();
-    if (!oryIdentity) {
-      return agentInfo;
-    }
+    if (!oryIdentity) return new AgentInfo();
 
+    const oryTraits = this.validateEmail(oryIdentity);
+
+    const cachedAgentInfo = await this.getCachedAgentInfo(oryTraits.email);
+    if (cachedAgentInfo) return cachedAgentInfo;
+
+    const agentInfo = this.buildBasicAgentInfo(oryIdentity, session);
+
+    const agentInfoMetadata = await this.getAgentInfoMetadata(agentInfo.email);
+    if (!agentInfoMetadata) return agentInfo;
+
+    this.populateAgentInfoWithMetadata(agentInfo, agentInfoMetadata);
+    await this.addVerifiedCredentialsIfEnabled(
+      agentInfo,
+      agentInfoMetadata.agentID
+    );
+
+    await this.agentCacheService.setAgentInfoCache(agentInfo);
+    return agentInfo;
+  }
+
+  /**
+   * Validates the email trait of the provided Ory identity.
+   *
+   * @param oryIdentity - The Ory identity schema containing traits to be validated.
+   * @returns The validated Ory traits.
+   * @throws NotSupportedException - If the email trait is missing or empty.
+   */
+  private validateEmail(oryIdentity: OryDefaultIdentitySchema): OryTraits {
     const oryTraits = oryIdentity.traits;
     if (!oryTraits.email || oryTraits.email.length === 0) {
       throw new NotSupportedException(
@@ -104,16 +150,38 @@ export class AuthenticationService {
         LogContext.AUTH
       );
     }
+    return oryTraits;
+  }
 
-    const cachedAgentInfo = await this.agentCacheService.getAgentInfoFromCache(
-      oryTraits.email
-    );
-    if (cachedAgentInfo) return cachedAgentInfo;
+  /**
+   * Retrieves the cached agent information for a given email.
+   *
+   * @param email - The email address of the agent.
+   * @returns A promise that resolves to the agent information if found in the cache, or undefined if not found.
+   */
+  private async getCachedAgentInfo(
+    email: string
+  ): Promise<AgentInfo | undefined> {
+    return await this.agentCacheService.getAgentInfoFromCache(email);
+  }
 
+  /**
+   * Builds and returns an `AgentInfo` object based on the provided Ory identity schema and session.
+   *
+   * @param oryIdentity - The Ory identity schema containing user traits and verifiable addresses.
+   * @param session - Optional session object containing session details like expiration time.
+   * @returns An `AgentInfo` object populated with the user's email, name, avatar URL, and session expiry.
+   */
+  private buildBasicAgentInfo(
+    oryIdentity: OryDefaultIdentitySchema,
+    session?: Session
+  ): AgentInfo {
+    const agentInfo = new AgentInfo();
+    const oryTraits = oryIdentity.traits;
     const isEmailVerified =
       oryIdentity.verifiable_addresses.find(x => x.via === 'email')?.verified ??
       false;
-    // Have a valid identity, get the information from Ory
+
     agentInfo.email = oryTraits.email;
     agentInfo.emailVerified = isEmailVerified;
     agentInfo.firstName = oryTraits.name.first;
@@ -122,58 +190,77 @@ export class AuthenticationService {
     agentInfo.expiry = session?.expires_at
       ? new Date(session.expires_at).getTime()
       : undefined;
-    let agentInfoMetadata;
 
+    return agentInfo;
+  }
+
+  /**
+   * Retrieves the agent information metadata for a given email.
+   *
+   * @param email - The email address of the user whose agent information metadata is to be retrieved.
+   * @returns A promise that resolves to the agent information metadata if found, or undefined if the user is not registered.
+   * @throws Will log an error message if the user is not registered.
+   */
+  private async getAgentInfoMetadata(
+    email: string
+  ): Promise<AgentInfoMetadata | undefined> {
     try {
-      agentInfoMetadata = await this.userService.getAgentInfoMetadata(
-        agentInfo.email
-      );
+      return await this.userService.getAgentInfoMetadata(email);
     } catch (error) {
       this.logger.verbose?.(
-        `User not registered: ${agentInfo.email}, ${error}`,
+        `User not registered: ${email}, ${error}`,
         LogContext.AUTH
       );
+      return undefined;
     }
+  }
 
-    if (!agentInfoMetadata) {
-      this.logger.verbose?.(
-        `User: no profile: ${agentInfo.email}`,
-        LogContext.AUTH
-      );
-      // No credentials to obtain, pass on what is there
-      return agentInfo;
-    }
-    this.logger.verbose?.(
-      `Use: registered: ${agentInfo.email}`,
-      LogContext.AUTH
-    );
-
-    if (!agentInfoMetadata.credentials) {
-      this.logger.warn?.(
-        `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
-        LogContext.AUTH
-      );
-    } else {
-      agentInfo.credentials = agentInfoMetadata.credentials;
-    }
+  /**
+   * Populates the given `agentInfo` object with metadata from `agentInfoMetadata`.
+   *
+   * @param agentInfo - The agent information object to be populated.
+   * @param agentInfoMetadata - The metadata containing information to populate the agent info.
+   *
+   * @remarks
+   * This method assigns the `agentID`, `userID`, and `communicationID` from `agentInfoMetadata` to `agentInfo`.
+   * If `agentInfoMetadata` contains credentials, they are also assigned to `agentInfo`.
+   * If credentials are not available, a warning is logged.
+   */
+  private populateAgentInfoWithMetadata(
+    agentInfo: AgentInfo,
+    agentInfoMetadata: AgentInfoMetadata
+  ): void {
     agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
     agentInfo.communicationID = agentInfoMetadata.communicationID;
 
-    // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
-    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
-
-    if (ssiEnabled) {
-      const VCs = await this.agentService.getVerifiedCredentials(
-        agentInfoMetadata.agentID
+    if (agentInfoMetadata.credentials) {
+      agentInfo.credentials = agentInfoMetadata.credentials;
+    } else {
+      this.logger.warn?.(
+        `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
+        LogContext.AUTH
       );
-
-      agentInfo.verifiedCredentials = VCs;
     }
+  }
 
-    await this.agentCacheService.setAgentInfoCache(agentInfo);
-
-    return agentInfo;
+  /**
+   * Adds verified credentials to the agent information if SSI (Self-Sovereign Identity) is enabled.
+   *
+   * @param agentInfo - The information of the agent to which verified credentials will be added.
+   * @param agentID - The unique identifier of the agent.
+   * @returns A promise that resolves when the operation is complete.
+   */
+  private async addVerifiedCredentialsIfEnabled(
+    agentInfo: AgentInfo,
+    agentID: string
+  ): Promise<void> {
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
+    if (ssiEnabled) {
+      const verifiedCredentials =
+        await this.agentService.getVerifiedCredentials(agentID);
+      agentInfo.verifiedCredentials = verifiedCredentials;
+    }
   }
 
   public async extendSession(sessionToBeExtended: Session): Promise<void> {
