@@ -3,6 +3,8 @@ import { ILicenseEntitlement } from './license.entitlement.interface';
 import { BaseAlkemioEntity } from '../entity/base-entity';
 import { License } from '../license/license.entity';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 
 @Entity()
 export class LicenseEntitlement
@@ -17,10 +19,10 @@ export class LicenseEntitlement
   license?: License;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  type!: string;
+  type!: LicenseEntitlementType;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  dataType!: string;
+  dataType!: LicenseEntitlementDataType;
 
   @Column('int', { nullable: false })
   limit!: number;

@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '../entity/base-entity';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { ILicense } from '../license/license.interface';
 
 @ObjectType('LicenseEntitlement')
 export abstract class ILicenseEntitlement extends IBaseAlkemio {
@@ -10,13 +11,13 @@ export abstract class ILicenseEntitlement extends IBaseAlkemio {
     description:
       'Type of the entitlement, e.g. Space, Whiteboard contributors etc.',
   })
-  type!: string;
+  type!: LicenseEntitlementType;
 
   @Field(() => LicenseEntitlementDataType, {
     nullable: false,
     description: 'Data type of the entitlement, e.g. Limit, Feature flag etc.',
   })
-  dataType!: string;
+  dataType!: LicenseEntitlementDataType;
 
   @Field(() => Number, {
     nullable: false,
@@ -29,4 +30,6 @@ export abstract class ILicenseEntitlement extends IBaseAlkemio {
     description: 'If the Entitlement is enabled',
   })
   enabled!: boolean;
+
+  license?: ILicense;
 }

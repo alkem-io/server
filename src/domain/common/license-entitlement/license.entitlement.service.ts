@@ -1,15 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CreateLicenseEntitlementInput } from './dto/license.entitlement.dto.create';
 import { LicenseEntitlement } from './license.entitlement.entity';
 import { ILicenseEntitlement } from './license.entitlement.interface';
+import { LicenseType } from '@common/enums/license.type';
+import { LicenseEntitlementUsageService } from '@services/infrastructure/license-entitlement-usage/license.entitlement.usage.service';
+import { ILicense } from '../license/license.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 
 @Injectable()
 export class LicenseEntitlementService {
   constructor(
+    private licenseEntitlementUsageService: LicenseEntitlementUsageService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     @InjectRepository(LicenseEntitlement)
     private entitlementRepository: Repository<LicenseEntitlement>
   ) {}
@@ -17,7 +28,11 @@ export class LicenseEntitlementService {
   public createEntitlement(
     entitlementInput: CreateLicenseEntitlementInput
   ): ILicenseEntitlement {
-    const entitlement = LicenseEntitlement.create(entitlementInput);
+    const entitlement = new LicenseEntitlement();
+    entitlement.limit = entitlementInput.limit;
+    entitlement.enabled = entitlementInput.enabled;
+    entitlement.type = entitlementInput.type;
+    entitlement.dataType = entitlementInput.dataType;
 
     return entitlement;
   }
@@ -67,5 +82,100 @@ export class LicenseEntitlementService {
     entitlement.limit = 0;
     entitlement.enabled = false;
     return entitlement;
+  }
+
+  private async getLicenseAndEntitlementOrFail(
+    licenseEntitlementID: string
+  ): Promise<{ licenseEntitlement: ILicenseEntitlement; license: ILicense }> {
+    const licenseEntitlement = await this.getEntitlementOrFail(
+      licenseEntitlementID,
+      {
+        relations: {
+          license: true,
+        },
+      }
+    );
+    if (!licenseEntitlement || !licenseEntitlement.license) {
+      throw new RelationshipNotFoundException(
+        `Unable to load license for entitlement: ${licenseEntitlementID}`,
+        LogContext.LICENSE
+      );
+    }
+    const license = licenseEntitlement.license;
+
+    return { licenseEntitlement, license };
+  }
+
+  public async getEntitlementUsage(
+    licenseEntitlementID: string
+  ): Promise<number> {
+    const { license, licenseEntitlement } =
+      await this.getLicenseAndEntitlementOrFail(licenseEntitlementID);
+
+    if (licenseEntitlement.dataType === LicenseEntitlementDataType.FLAG) {
+      return -1;
+    }
+    switch (license.type) {
+      case LicenseType.ACCOUNT:
+        return await this.licenseEntitlementUsageService.getEntitlementUsageForAccount(
+          license.id,
+          licenseEntitlement.type
+        );
+      default:
+        throw new EntityNotFoundException(
+          `Unexpected License Type encountered: ${license.type}`,
+          LogContext.LICENSE
+        );
+    }
+  }
+
+  private async getEntitlementUsageWithEntities(
+    license: ILicense,
+    licenseEntitlement: ILicenseEntitlement
+  ): Promise<number> {
+    switch (license.type) {
+      case LicenseType.ACCOUNT:
+        return await this.licenseEntitlementUsageService.getEntitlementUsageForAccount(
+          license.id,
+          licenseEntitlement.type
+        );
+      default:
+        throw new EntityNotFoundException(
+          `Unexpected License Type encountered: ${license.type}`,
+          LogContext.LICENSE
+        );
+    }
+  }
+
+  public async isEntitlementAvailable(
+    licenseEntitlementID: string
+  ): Promise<boolean> {
+    const { license, licenseEntitlement } =
+      await this.getLicenseAndEntitlementOrFail(licenseEntitlementID);
+    if (licenseEntitlement.dataType === LicenseEntitlementDataType.FLAG) {
+      return licenseEntitlement.enabled;
+    }
+
+    const entitlementLimit = licenseEntitlement.limit;
+    let entitlementsUsed = 999;
+    switch (license.type) {
+      case LicenseType.ACCOUNT:
+        entitlementsUsed = await this.getEntitlementUsageWithEntities(
+          license,
+          licenseEntitlement
+        );
+        break;
+      default:
+        throw new EntityNotFoundException(
+          `Unexpected License Type encountered: ${license.type}`,
+          LogContext.LICENSE
+        );
+    }
+    this.logger.verbose?.(
+      `Checking entitlement usage on license (${license.id} for entitlement ${licenseEntitlement.type}): ${entitlementsUsed} of ${entitlementLimit}`,
+      LogContext.LICENSE
+    );
+
+    return entitlementsUsed < entitlementLimit;
   }
 }

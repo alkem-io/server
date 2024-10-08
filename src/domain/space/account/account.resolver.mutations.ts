@@ -38,7 +38,6 @@ import { TransferAccountInnovationHubInput } from './dto/account.dto.transfer.in
 import { TransferAccountInnovationPackInput } from './dto/account.dto.transfer.innovation.pack';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { INameable } from '@domain/common/entity/nameable-entity';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -79,7 +78,6 @@ export class AccountResolverMutations {
       spaceData.accountID,
       {
         relations: {
-          spaces: true,
           license: {
             entitlements: true,
           },
@@ -91,8 +89,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_SPACE,
-      LicenseEntitlementType.ACCOUNT_SPACE,
-      account.spaces
+      LicenseEntitlementType.ACCOUNT_SPACE
     );
 
     let space = await this.accountService.createSpaceOnAccount(
@@ -148,7 +145,6 @@ export class AccountResolverMutations {
           license: {
             entitlements: true,
           },
-          innovationHubs: true,
         },
       }
     );
@@ -157,8 +153,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_INNOVATION_HUB,
-      LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
-      account.innovationHubs
+      LicenseEntitlementType.ACCOUNT_INNOVATION_HUB
     );
 
     let innovationHub = await this.innovationHubService.createInnovationHub(
@@ -190,7 +185,6 @@ export class AccountResolverMutations {
       virtualContributorData.accountID,
       {
         relations: {
-          virtualContributors: true,
           license: {
             entitlements: true,
           },
@@ -202,8 +196,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-      account.virtualContributors
+      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
     );
 
     const virtual = await this.accountService.createVirtualContributorOnAccount(
@@ -252,7 +245,6 @@ export class AccountResolverMutations {
       innovationPackData.accountID,
       {
         relations: {
-          innovationPacks: true,
           license: {
             entitlements: true,
           },
@@ -264,8 +256,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_INNOVATION_PACK,
-      LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-      account.innovationPacks
+      LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
     );
 
     const innovationPack =
@@ -567,8 +558,7 @@ export class AccountResolverMutations {
     account: IAccount,
     agentInfo: AgentInfo,
     authorizationPrivilege: AuthorizationPrivilege,
-    licenseType: LicenseEntitlementType,
-    licensedNameableResouces: INameable[]
+    licenseType: LicenseEntitlementType
   ) {
     if (!account.agent || !account.authorization || !account.license) {
       throw new RelationshipNotFoundException(
@@ -586,8 +576,7 @@ export class AccountResolverMutations {
     );
     const isEntitleMentEnabled = this.licenseService.isEntitlementAvailable(
       license,
-      LicenseEntitlementType.ACCOUNT_SPACE,
-      licensedNameableResouces.length
+      LicenseEntitlementType.ACCOUNT_SPACE
     );
     const isPlatformAdmin = this.authorizationService.isAccessGranted(
       agentInfo,

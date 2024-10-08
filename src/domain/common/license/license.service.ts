@@ -15,11 +15,12 @@ import { AuthorizationPolicyService } from '../authorization-policy/authorizatio
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
+import { LicenseType } from '@common/enums/license.type';
 
 @Injectable()
 export class LicenseService {
   constructor(
-    private entitlementService: LicenseEntitlementService,
+    private licenseEntitlementService: LicenseEntitlementService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(License)
     private licenseRepository: Repository<License>,
@@ -36,7 +37,7 @@ export class LicenseService {
 
     for (const entitlementData of licenseData.entitlements) {
       const entitlement =
-        this.entitlementService.createEntitlement(entitlementData);
+        this.licenseEntitlementService.createEntitlement(entitlementData);
       license.entitlements.push(entitlement);
     }
 
@@ -69,7 +70,7 @@ export class LicenseService {
     const entitlements = this.getEntitlementsFromLicenseOrFail(license);
 
     for (const entitlement of entitlements) {
-      await this.entitlementService.deleteEntitlement(entitlement.id);
+      await this.licenseEntitlementService.deleteEntitlement(entitlement.id);
     }
 
     if (license.authorization)
@@ -113,7 +114,7 @@ export class LicenseService {
   public reset(license: ILicense): ILicense {
     const entitlements = this.getEntitlementsFromLicenseOrFail(license);
     for (const entitlement of entitlements) {
-      this.entitlementService.reset(entitlement);
+      this.licenseEntitlementService.reset(entitlement);
     }
     return license;
   }
@@ -130,17 +131,35 @@ export class LicenseService {
     return entitlement.limit;
   }
 
-  public isEntitlementAvailable(
-    license: ILicense | undefined,
-    entitlementType: LicenseEntitlementType,
-    entitlementsUsed: number
-  ): boolean {
+  public async isEntitlementAvailable(
+    license: ILicense,
+    entitlementType: LicenseEntitlementType
+  ): Promise<boolean> {
     const entitlements = this.getEntitlementsFromLicenseOrFail(license);
     const entitlement = this.getEntitlementFromEntitlementsOrFail(
       entitlements,
       entitlementType
     );
     const entitlementLimit = entitlement.limit;
+    let entitlementsUsed = 999;
+    switch (license.type) {
+      case LicenseType.ACCOUNT:
+        entitlementsUsed =
+          await this.licenseEntitlementService.getEntitlementUsage(
+            entitlement.id
+          );
+        break;
+      default:
+        throw new EntityNotFoundException(
+          `Unexpected License Type encountered: ${license.type}`,
+          LogContext.LICENSE
+        );
+    }
+    this.logger.verbose?.(
+      `Checking entitlement usage on license (${license.id} for entitlement ${entitlementType}): ${entitlementsUsed} of ${entitlementLimit}`,
+      LogContext.LICENSE
+    );
+
     return entitlementsUsed < entitlementLimit;
   }
 
