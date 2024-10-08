@@ -10,7 +10,7 @@ export class LicenseEntitlementResolverFields {
     nullable: false,
     description: 'Whether the specified entitlement is available.',
   })
-  async isEntitlementAvailable(
+  async isAvailable(
     @Parent() licenseEntitlement: ILicenseEntitlement
   ): Promise<boolean> {
     return await this.licenseEntitlementService.isEntitlementAvailable(
@@ -18,11 +18,11 @@ export class LicenseEntitlementResolverFields {
     );
   }
 
-  @ResolveField('entitlementUsage', () => Number, {
+  @ResolveField('usage', () => Number, {
     nullable: false,
     description: 'The amount of the spcified entitlement used.',
   })
-  async entitlementUsage(
+  async usage(
     @Parent() licenseEntitlement: ILicenseEntitlement
   ): Promise<number> {
     return await this.licenseEntitlementService.getEntitlementUsage(
