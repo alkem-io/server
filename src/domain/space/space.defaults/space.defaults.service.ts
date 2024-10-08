@@ -46,7 +46,7 @@ export class SpaceDefaultsService {
         case SpaceType.CHALLENGE:
         case SpaceType.OPPORTUNITY:
           const subspaceTemplate =
-            await this.templatesManagerService.getTemplateDefault(
+            await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
               TemplateDefaultType.PLATFORM_SUBSPACE
             );
@@ -54,7 +54,7 @@ export class SpaceDefaultsService {
           break;
         case SpaceType.SPACE:
           const levelZeroTemplate =
-            await this.templatesManagerService.getTemplateDefault(
+            await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
               TemplateDefaultType.PLATFORM_SPACE
             );
@@ -62,7 +62,7 @@ export class SpaceDefaultsService {
           break;
         case SpaceType.KNOWLEDGE:
           const knowledgeTemplate =
-            await this.templatesManagerService.getTemplateDefault(
+            await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
               TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE
             );

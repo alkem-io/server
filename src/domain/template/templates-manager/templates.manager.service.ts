@@ -18,6 +18,7 @@ import { TemplateDefaultService } from '../template-default/template.default.ser
 import { ITemplateDefault } from '../template-default/template.default.interface';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { ITemplatesSet } from '../templates-set/templates.set.interface';
+import { ITemplate } from '../template/template.interface';
 
 @Injectable()
 export class TemplatesManagerService {
@@ -124,6 +125,23 @@ export class TemplatesManagerService {
       );
     }
     return templateDefault;
+  }
+
+  public async getTemplateFromTemplateDefault(
+    templatesManagerID: string,
+    templateDefaultType: TemplateDefaultType
+  ): Promise<ITemplate> {
+    const templateDefault = await this.getTemplateDefault(
+      templatesManagerID,
+      templateDefaultType
+    );
+    if (!templateDefault.template) {
+      throw new EntityNotFoundException(
+        `No Template for TemplateDefault found with type: ${templateDefaultType} in TemplatesManager with id: ${templatesManagerID}: ${templateDefault.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templateDefault.template;
   }
 
   public async getTemplateDefaults(
