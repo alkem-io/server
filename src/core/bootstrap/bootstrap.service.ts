@@ -140,7 +140,6 @@ export class BootstrapService {
       bootstrapSpaceCallouts
     );
     authResetNeeded =
-      authResetNeeded ||
       (await this.ensureSubspaceKnowledgeTemplatesArePresent(
         templateDefaults,
         TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
@@ -149,9 +148,8 @@ export class BootstrapService {
         bootstrapSpaceTutorialsInnovationFlowStates,
         bootstrapSpaceTutorialsCalloutGroups,
         bootstrapSpaceTutorialsCallouts
-      ));
+      )) || authResetNeeded;
     authResetNeeded =
-      authResetNeeded ||
       (await this.ensureSubspaceKnowledgeTemplatesArePresent(
         templateDefaults,
         TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
@@ -160,9 +158,8 @@ export class BootstrapService {
         bootstrapSubspaceKnowledgeInnovationFlowStates,
         bootstrapSubspaceKnowledgeCalloutGroups,
         bootstrapSubspaceKnowledgeCallouts
-      ));
+      )) || authResetNeeded;
     authResetNeeded =
-      authResetNeeded ||
       (await this.ensureSubspaceKnowledgeTemplatesArePresent(
         templateDefaults,
         TemplateDefaultType.PLATFORM_SUBSPACE,
@@ -171,7 +168,7 @@ export class BootstrapService {
         bootstrapSubspaceInnovationFlowStates,
         bootstrapSubspaceCalloutGroups,
         bootstrapSubspaceCallouts
-      ));
+      )) || authResetNeeded;
     if (authResetNeeded) {
       this.logger.verbose?.(
         '=== Identified that template defaults had not been reset; resetting auth now ===',
@@ -201,6 +198,10 @@ export class BootstrapService {
       );
     }
     if (!knowledgeTemplateDefault.template) {
+      this.logger.verbose?.(
+        `No template set for ${templateDefaultType}, setting it...`,
+        LogContext.BOOTSTRAP
+      );
       // No template set, so create one and then set it
       const template = await this.templatesSetService.createTemplate(
         templatesSet,

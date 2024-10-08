@@ -150,7 +150,7 @@ export class TemplatesSetService {
   ): Promise<ITemplate> {
     const collaborationInput =
       await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
-        collaboration
+        collaboration.id
       );
     const templateInput: CreateTemplateInput = {
       ...templateCollaborationInput,

@@ -46,7 +46,7 @@ export class SpaceDefaultsService {
         case SpaceType.CHALLENGE:
         case SpaceType.OPPORTUNITY:
           const subspaceTemplate =
-            await this.templatesManagerService.getTemplateDefault(
+            await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
               TemplateDefaultType.PLATFORM_SUBSPACE
             );
@@ -54,7 +54,7 @@ export class SpaceDefaultsService {
           break;
         case SpaceType.SPACE:
           const levelZeroTemplate =
-            await this.templatesManagerService.getTemplateDefault(
+            await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
               TemplateDefaultType.PLATFORM_SPACE
             );
@@ -62,7 +62,7 @@ export class SpaceDefaultsService {
           break;
         case SpaceType.KNOWLEDGE:
           const knowledgeTemplate =
-            await this.templatesManagerService.getTemplateDefault(
+            await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
               TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE
             );
@@ -73,11 +73,11 @@ export class SpaceDefaultsService {
     let collaborationTemplateInput: CreateCollaborationInput | undefined =
       undefined;
     if (templateID) {
-      const collaborationTemplate =
+      const collaborationFromTemplate =
         await this.templateService.getCollaboration(templateID);
       collaborationTemplateInput =
         await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
-          collaborationTemplate
+          collaborationFromTemplate.id
         );
     }
     if (!collaborationData.innovationFlowData) {
@@ -104,7 +104,7 @@ export class SpaceDefaultsService {
     const addTutorialCallouts = collaborationData.addTutorialCallouts;
     if (addTutorialCallouts === undefined || addTutorialCallouts) {
       const tutorialsTemplate =
-        await this.templatesManagerService.getTemplateDefault(
+        await this.templatesManagerService.getTemplateFromTemplateDefault(
           platformTemplatesManager.id,
           TemplateDefaultType.PLATFORM_SPACE_TUTORIALS
         );
@@ -113,7 +113,7 @@ export class SpaceDefaultsService {
           await this.templateService.getCollaboration(tutorialsTemplate.id);
         const tutorialsCollaborationTemplateInput =
           await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
-            tutorialsCollaborationTemplate
+            tutorialsCollaborationTemplate.id
           );
         if (tutorialsCollaborationTemplateInput.calloutsData) {
           collaborationData.calloutsData?.push(
