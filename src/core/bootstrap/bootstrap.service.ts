@@ -201,6 +201,10 @@ export class BootstrapService {
       );
     }
     if (!knowledgeTemplateDefault.template) {
+      this.logger.verbose?.(
+        `No template set for ${templateDefaultType}, setting it...`,
+        LogContext.BOOTSTRAP
+      );
       // No template set, so create one and then set it
       const template = await this.templatesSetService.createTemplate(
         templatesSet,
