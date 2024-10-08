@@ -6,7 +6,7 @@ import { LicenseEntitlementService } from './license.entitlement.service';
 export class LicenseEntitlementResolverFields {
   constructor(private licenseEntitlementService: LicenseEntitlementService) {}
 
-  @ResolveField('isEntitlementAvailable', () => Boolean, {
+  @ResolveField('isAvailable', () => Boolean, {
     nullable: false,
     description: 'Whether the specified entitlement is available.',
   })
