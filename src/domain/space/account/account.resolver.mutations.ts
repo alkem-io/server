@@ -560,7 +560,7 @@ export class AccountResolverMutations {
     authorizationPrivilege: AuthorizationPrivilege,
     licenseType: LicenseEntitlementType
   ) {
-    if (!account.agent || !account.authorization || !account.license) {
+    if (!account.authorization || !account.license) {
       throw new RelationshipNotFoundException(
         `Unable to load relations on account for checking auth + license: ${account.id}`,
         LogContext.ACCOUNT
