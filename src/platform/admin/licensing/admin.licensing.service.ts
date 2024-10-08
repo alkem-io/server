@@ -14,6 +14,8 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { ValidationException } from '@common/exceptions';
 import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { EntityManager } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
 
 @Injectable()
 export class AdminLicensingService {
@@ -22,6 +24,8 @@ export class AdminLicensingService {
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseIssuerService: LicenseIssuerService,
     private spaceService: SpaceService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -194,5 +198,13 @@ export class AdminLicensingService {
     );
 
     return account;
+  }
+
+  public async getAllAccounts(): Promise<IAccount[]> {
+    return this.entityManager.find(IAccount, {
+      relations: {
+        license: true,
+      },
+    });
   }
 }

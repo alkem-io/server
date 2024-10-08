@@ -188,4 +188,30 @@ export class AdminLicensingResolverMutations {
     await this.licenseService.saveAll(updatedLicenses);
     return this.spaceService.getSpaceOrFail(space.id);
   }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description: 'Reset all license plans on Accounts',
+  })
+  @Profiling.api
+  async resetLicenseOnAccounts(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<void> {
+    const licensing =
+      await this.licensingFrameworkService.getDefaultLicensingOrFail();
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      licensing.authorization,
+      AuthorizationPrivilege.GRANT,
+      'reset licenses on accounts'
+    );
+
+    const accounts = await this.adminLicensingService.getAllAccounts();
+    for (const account of accounts) {
+      const updatedLicenses =
+        await this.accountLicenseService.applyLicensePolicy(account.id);
+      await this.licenseService.saveAll(updatedLicenses);
+    }
+  }
 }
