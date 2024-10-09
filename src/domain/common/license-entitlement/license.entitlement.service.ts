@@ -14,6 +14,7 @@ import { LicenseEntitlementUsageService } from '@services/infrastructure/license
 import { ILicense } from '../license/license.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementNotSupportedException } from '@common/exceptions/license.entitlement.not.supported';
 
 @Injectable()
 export class LicenseEntitlementService {
@@ -115,21 +116,13 @@ export class LicenseEntitlementService {
     if (licenseEntitlement.dataType === LicenseEntitlementDataType.FLAG) {
       return -1;
     }
-    switch (license.type) {
-      case LicenseType.ACCOUNT:
-        return await this.licenseEntitlementUsageService.getEntitlementUsageForAccount(
-          license.id,
-          licenseEntitlement.type
-        );
-      default:
-        throw new EntityNotFoundException(
-          `Unexpected License Type encountered: ${license.type}`,
-          LogContext.LICENSE
-        );
-    }
+    return await this.getEntitlementUsageUsingEntities(
+      license,
+      licenseEntitlement
+    );
   }
 
-  private async getEntitlementUsageWithEntities(
+  public async getEntitlementUsageUsingEntities(
     license: ILicense,
     licenseEntitlement: ILicenseEntitlement
   ): Promise<number> {
@@ -152,6 +145,16 @@ export class LicenseEntitlementService {
   ): Promise<boolean> {
     const { license, licenseEntitlement } =
       await this.getLicenseAndEntitlementOrFail(licenseEntitlementID);
+    return this.isEntitlementAvailableUsingEntities(
+      license,
+      licenseEntitlement
+    );
+  }
+
+  public async isEntitlementAvailableUsingEntities(
+    license: ILicense,
+    licenseEntitlement: ILicenseEntitlement
+  ): Promise<boolean> {
     if (licenseEntitlement.dataType === LicenseEntitlementDataType.FLAG) {
       return licenseEntitlement.enabled;
     }
@@ -160,14 +163,21 @@ export class LicenseEntitlementService {
     let entitlementsUsed = 999;
     switch (license.type) {
       case LicenseType.ACCOUNT:
-        entitlementsUsed = await this.getEntitlementUsageWithEntities(
+        entitlementsUsed = await this.getEntitlementUsageUsingEntities(
           license,
           licenseEntitlement
         );
         break;
+      case LicenseType.ACCOUNT:
+      case LicenseType.COLLABORATION:
+      case LicenseType.ROLESET:
+        throw new LicenseEntitlementNotSupportedException(
+          `License Type ${license.type} is not supported for entitlement of type ${licenseEntitlement.type}`,
+          LogContext.LICENSE
+        );
       default:
         throw new EntityNotFoundException(
-          `Unexpected License Type encountered: ${license.type}`,
+          `Unexpected License Type encountered when checking availability: ${license.type}`,
           LogContext.LICENSE
         );
     }

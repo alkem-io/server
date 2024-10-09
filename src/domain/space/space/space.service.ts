@@ -179,7 +179,7 @@ export class SpaceService {
         },
         {
           type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
-          dataType: LicenseEntitlementDataType.LIMIT,
+          dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: true,
         },

@@ -15,7 +15,6 @@ import { AuthorizationPolicyService } from '../authorization-policy/authorizatio
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
-import { LicenseType } from '@common/enums/license.type';
 
 @Injectable()
 export class LicenseService {
@@ -140,27 +139,10 @@ export class LicenseService {
       entitlements,
       entitlementType
     );
-    const entitlementLimit = entitlement.limit;
-    let entitlementsUsed = 999;
-    switch (license.type) {
-      case LicenseType.ACCOUNT:
-        entitlementsUsed =
-          await this.licenseEntitlementService.getEntitlementUsage(
-            entitlement.id
-          );
-        break;
-      default:
-        throw new EntityNotFoundException(
-          `Unexpected License Type encountered: ${license.type}`,
-          LogContext.LICENSE
-        );
-    }
-    this.logger.verbose?.(
-      `Checking entitlement usage on license (${license.id} for entitlement ${entitlementType}): ${entitlementsUsed} of ${entitlementLimit}`,
-      LogContext.LICENSE
+    return await this.licenseEntitlementService.isEntitlementAvailableUsingEntities(
+      license,
+      entitlement
     );
-
-    return entitlementsUsed < entitlementLimit;
   }
 
   public isEntitlementEnabled(
@@ -203,6 +185,7 @@ export class LicenseService {
     }
     childEntitlement.limit = parentEntitlement.limit;
     childEntitlement.enabled = parentEntitlement.enabled;
+    childEntitlement.dataType = parentEntitlement.dataType;
   }
 
   private getEntitlementsFromLicenseOrFail(
