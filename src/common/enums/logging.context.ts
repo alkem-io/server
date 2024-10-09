@@ -75,4 +75,5 @@ export enum LogContext {
   AI_PERSONA_SERVICE_ENGINE = 'ai-persona-service-engine',
   AI_SERVER_EVENT_BUS = 'ai-server-event-bus',
   SUBSCRIPTION_PUBLISH = 'subscription-publish',
+  KRATOS = 'kratos',
 }
