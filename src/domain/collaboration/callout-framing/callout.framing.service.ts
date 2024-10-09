@@ -113,6 +113,13 @@ export class CalloutFramingService {
         calloutFraming.whiteboard,
         calloutFramingData.whiteboard
       );
+      if (calloutFramingData.whiteboard.content) {
+        calloutFraming.whiteboard =
+          await this.whiteboardService.updateWhiteboardContent(
+            calloutFraming.whiteboard.id,
+            calloutFramingData.whiteboard.content
+          );
+      }
     }
 
     return calloutFraming;
