@@ -596,9 +596,19 @@ export class UserService {
 
   async getPaginatedUsers(
     paginationArgs: PaginationArgs,
+    withTags?: boolean,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const qb = this.userRepository.createQueryBuilder('user');
+
+    if (withTags !== undefined) {
+      qb.leftJoin('user.profile', 'profile')
+        .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
+        // cannot use object or operators here
+        // because typeorm cannot construct the query properly
+        .where(`tagset.tags ${withTags ? '!=' : '='} ''`);
+    }
+
     if (filter) {
       applyUserFilter(qb, filter);
     }
