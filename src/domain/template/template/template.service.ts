@@ -293,9 +293,12 @@ export class TemplateService {
           template.innovationFlow.id
         );
         break;
+      case TemplateType.POST:
+        // Nothing to do
+        break;
       default:
         throw new EntityNotFoundException(
-          `Unable to delete template of type: ${template.type}`,
+          `Template type not recognized '${template.type}' when deleting template: ${template.id}`,
           LogContext.TEMPLATES
         );
     }
