@@ -4,6 +4,10 @@ import { IVcInteraction } from './vc.interaction.interface';
 import { Room } from '../room/room.entity';
 import { MESSAGEID_LENGTH, UUID_LENGTH } from '@common/constants';
 
+export type ExternalMetadata = {
+  threadId?: string;
+};
+
 @Entity()
 export class VcInteraction extends BaseAlkemioEntity implements IVcInteraction {
   @ManyToOne(() => Room, room => room.vcInteractions, {
@@ -18,4 +22,7 @@ export class VcInteraction extends BaseAlkemioEntity implements IVcInteraction {
 
   @Column('char', { length: UUID_LENGTH, nullable: false })
   virtualContributorID!: string;
+
+  @Column('simple-json')
+  externalMetadata: ExternalMetadata = {};
 }

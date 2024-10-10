@@ -19,6 +19,7 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
 import { ContributorModule } from '../contributor/contributor.module';
 import { VirtualContributorResolverSubscriptions } from './virtual.contributor.resolver.subscriptions';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
+import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.interaction.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SubscriptionServiceModule } from '@services/subscriptions/subscription-
     TypeOrmModule.forFeature([VirtualContributor]),
     PlatformAuthorizationPolicyModule,
     SubscriptionServiceModule,
+    VcInteractionModule,
   ],
   providers: [
     VirtualContributorService,

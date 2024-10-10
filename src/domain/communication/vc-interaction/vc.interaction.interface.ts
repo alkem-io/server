@@ -2,6 +2,7 @@ import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IRoom } from '../room/room.interface';
 import { UUID } from '@domain/common/scalars';
+import { ExternalMetadata } from './vc.interaction.entity';
 
 @ObjectType('VcInteraction')
 export abstract class IVcInteraction extends IBaseAlkemio {
@@ -13,4 +14,6 @@ export abstract class IVcInteraction extends IBaseAlkemio {
 
   @Field(() => UUID)
   virtualContributorID!: string;
+
+  externalMetadata: ExternalMetadata = {};
 }

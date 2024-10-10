@@ -23,6 +23,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/messages/ingest.space.command';
+import { IExternalConfig } from './dto/external.config';
+import { EncryptionService } from '@hedger/nestjs-encryption';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -32,7 +34,9 @@ export class AiPersonaServiceService {
     private eventBus: EventBus,
     @InjectRepository(AiPersonaService)
     private aiPersonaServiceRepository: Repository<AiPersonaService>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private readonly crypto: EncryptionService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async createAiPersonaService(
@@ -50,6 +54,10 @@ export class AiPersonaServiceService {
       aiPersonaServiceData.bodyOfKnowledgeType;
     aiPersonaService.prompt = aiPersonaServiceData.prompt;
     aiPersonaService.dataAccessMode = aiPersonaServiceData.dataAccessMode;
+
+    aiPersonaService.externalConfig = this.encryptExternalConfig(
+      aiPersonaServiceData.externalConfig
+    );
 
     const savedAiPersonaService =
       await this.aiPersonaServiceRepository.save(aiPersonaService);
@@ -78,13 +86,17 @@ export class AiPersonaServiceService {
       aiPersonaServiceData.ID
     );
 
-    if (aiPersonaServiceData.prompt !== undefined) {
+    if (aiPersonaServiceData.prompt) {
       aiPersonaService.prompt = aiPersonaServiceData.prompt;
     }
 
-    if (aiPersonaServiceData.engine !== undefined) {
+    if (aiPersonaServiceData.engine) {
       aiPersonaService.engine = aiPersonaServiceData.engine;
     }
+    aiPersonaService.externalConfig = this.encryptExternalConfig({
+      ...this.decryptExternalConfig(aiPersonaService.externalConfig || {}),
+      ...(aiPersonaServiceData.externalConfig || {}),
+    });
 
     return await this.aiPersonaServiceRepository.save(aiPersonaService);
   }
@@ -161,8 +173,12 @@ export class AiPersonaServiceService {
       contextID: personaQuestionInput.contextID,
       history,
       interactionID: personaQuestionInput.interactionID,
+      externalMetadata: personaQuestionInput.externalMetadata,
       displayName: personaQuestionInput.displayName,
       description: personaQuestionInput.description,
+      externalConfig: this.decryptExternalConfig(
+        aiPersonaService.externalConfig
+      ),
     };
 
     return this.aiPersonaEngineAdapter.sendQuery(input);
@@ -174,5 +190,37 @@ export class AiPersonaServiceService {
       engine: AiPersonaEngine.EXPERT,
       userID: aiPersonaService.id, // TODO: clearly wrong, just getting code to compile
     });
+  }
+
+  private encryptExternalConfig(
+    config: IExternalConfig | undefined
+  ): IExternalConfig {
+    if (!config) {
+      return {};
+    }
+    const result: IExternalConfig = {};
+    if (config.apiKey) {
+      result.apiKey = this.crypto.encrypt(config.apiKey);
+    }
+    if (config.assistantId) {
+      result.assistantId = this.crypto.encrypt(config.assistantId);
+    }
+    return result;
+  }
+
+  private decryptExternalConfig(
+    config: IExternalConfig | undefined
+  ): IExternalConfig {
+    if (!config) {
+      return {};
+    }
+    const result: IExternalConfig = {};
+    if (config.apiKey) {
+      result.apiKey = this.crypto.decrypt(config.apiKey);
+    }
+    if (config.assistantId) {
+      result.assistantId = this.crypto.decrypt(config.assistantId);
+    }
+    return result;
   }
 }
