@@ -101,12 +101,12 @@ export class BootstrapService {
       }
 
       await this.bootstrapUserProfiles();
+      await this.platformService.ensureForumCreated();
       await this.ensureAuthorizationsPopulated();
       await this.ensurePlatformTemplatesArePresent();
       await this.ensureOrganizationSingleton();
       await this.ensureSpaceSingleton();
       await this.ensureSsiPopulated();
-      await this.platformService.ensureForumCreated();
       // reset auth as last in the actions
       // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
