@@ -158,14 +158,16 @@ export class AiServerService {
   public async askQuestion(
     questionInput: AiPersonaServiceQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
-    if (
-      questionInput.contextID &&
-      !(await this.isContextLoaded(questionInput.contextID))
-    ) {
-      this.eventBus.publish(
-        new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
-      );
-    }
+    // the context is currently not used so no point in keeping this
+    // commenting it out for now to save some work
+    // if (
+    //   questionInput.contextID &&
+    //   !(await this.isContextLoaded(questionInput.contextID))
+    // ) {
+    //   this.eventBus.publish(
+    //     new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
+    //   );
+    // }
 
     const personaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(

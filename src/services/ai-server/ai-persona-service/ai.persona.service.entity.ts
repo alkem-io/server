@@ -25,7 +25,7 @@ export class AiPersonaService
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   dataAccessMode!: AiPersonaDataAccessMode;
 
-  @Column('simple-array', { nullable: false })
+  @Column('simple-json', { nullable: false })
   prompt!: string[];
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })

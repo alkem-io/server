@@ -13,6 +13,10 @@ export class ExtendAiPersonaServiceAndVcInteractionForGenericEngines172778774822
     await queryRunner.query(
       `ALTER TABLE \`ai_persona_service\` ADD \`externalConfig\` text NULL`
     );
+
+    await queryRunner.query(
+      `UPDATE \`ai_persona_service\` SET \`prompt\` = IF(prompt = '', JSON_ARRAY(), JSON_ARRAY(prompt))`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
