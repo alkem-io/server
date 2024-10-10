@@ -7,7 +7,7 @@ export enum FlowState {
   KNOWLEDGE_UPDATES = 'Knowledge Updates',
 }
 
-export const spaceDefaultsInnovationFlowStatesKnowledge: IInnovationFlowState[] =
+export const bootstrapSubspaceKnowledgeInnovationFlowStates: IInnovationFlowState[] =
   [
     {
       displayName: FlowState.INTRODUCTION,

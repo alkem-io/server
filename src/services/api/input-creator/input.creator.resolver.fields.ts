@@ -107,23 +107,7 @@ export class InputCreatorResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCalloutInput> {
-    const callout = await this.calloutService.getCalloutOrFail(id, {
-      relations: {
-        authorization: true,
-        framing: {
-          profile: {
-            references: true,
-            location: true,
-            tagsets: true,
-          },
-          whiteboard: {
-            profile: true,
-          },
-        },
-        contributionDefaults: true,
-        contributionPolicy: true,
-      },
-    });
+    const callout = await this.calloutService.getCalloutOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
@@ -132,7 +116,7 @@ export class InputCreatorResolverFields {
     );
 
     return await this.inputCreatorService.buildCreateCalloutInputFromCallout(
-      callout
+      callout.id
     );
   }
 
@@ -176,32 +160,7 @@ export class InputCreatorResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCollaborationInput> {
     const collaboration =
-      await this.collaborationService.getCollaborationOrFail(id, {
-        relations: {
-          authorization: true,
-          innovationFlow: {
-            profile: {
-              references: true,
-              location: true,
-              tagsets: true,
-            },
-          },
-          callouts: {
-            contributionDefaults: true,
-            contributionPolicy: true,
-            framing: {
-              profile: {
-                references: true,
-                location: true,
-                tagsets: true,
-              },
-              whiteboard: {
-                profile: true,
-              },
-            },
-          },
-        },
-      });
+      await this.collaborationService.getCollaborationOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       collaboration.authorization,
@@ -210,7 +169,7 @@ export class InputCreatorResolverFields {
     );
 
     return await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
-      collaboration
+      collaboration.id
     );
   }
 }
