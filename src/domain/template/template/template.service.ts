@@ -33,6 +33,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TemplateDefault } from '../template-default/template.default.entity';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 @Injectable()
 export class TemplateService {
@@ -107,6 +108,23 @@ export class TemplateService {
             `Collaboration Template requires collaboration input: ${JSON.stringify(templateData)}`,
             LogContext.TEMPLATES
           );
+        }
+        // Ensure that the collaboration has a default callouts setup
+        if (!templateData.collaborationData.calloutsData) {
+          templateData.collaborationData.calloutsData = [];
+        }
+        if (
+          !templateData.collaborationData.calloutGroups ||
+          !templateData.collaborationData.defaultCalloutGroupName
+        ) {
+          templateData.collaborationData.defaultCalloutGroupName =
+            CalloutGroupName.HOME;
+          templateData.collaborationData.calloutGroups = [
+            {
+              displayName: CalloutGroupName.HOME,
+              description: 'Home Callout Group',
+            },
+          ];
         }
         template.collaboration =
           await this.collaborationServerice.createCollaboration(
