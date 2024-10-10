@@ -36,6 +36,8 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -128,6 +130,20 @@ export class SpaceResolverFields {
     @Parent() space: ISpace
   ): Promise<LicensePrivilege[]> {
     return this.spaceService.getLicensePrivileges(space);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('license', () => ILicense, {
+    nullable: false,
+    description: 'The License operating on this Space.',
+  })
+  async license(
+    @Parent() space: ISpace,
+    @Loader(LicenseLoaderCreator, { parentClassRef: Space })
+    loader: ILoader<ILicense>
+  ): Promise<ILicense> {
+    return loader.load(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

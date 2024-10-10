@@ -67,7 +67,6 @@ import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { IAccount } from '../account/account.interface';
-import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
@@ -79,6 +78,11 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create.';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -100,8 +104,9 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private templatesManagerService: TemplatesManagerService,
     private collaborationService: CollaborationService,
-    private licensingService: LicensingService,
+    private licensingFrameworkService: LicensingFrameworkService,
     private licenseEngineService: LicenseEngineService,
+    private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -156,6 +161,30 @@ export class SpaceService {
         spaceData.storageAggregatorParent
       );
     space.storageAggregator = storageAggregator;
+
+    space.license = await this.licenseService.createLicense({
+      type: LicenseType.SPACE,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: true,
+        },
+      ],
+    });
 
     const roleSetRolesData = this.spaceDefaultsService.getRoleSetCommunityRoles(
       space.level
@@ -281,6 +310,7 @@ export class SpaceService {
         profile: true,
         storageAggregator: true,
         templatesManager: true,
+        license: true,
       },
     });
 
@@ -292,7 +322,8 @@ export class SpaceService {
       !space.agent ||
       !space.profile ||
       !space.storageAggregator ||
-      !space.authorization
+      !space.authorization ||
+      !space.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to delete Space: ${space.id} `,
@@ -313,6 +344,7 @@ export class SpaceService {
     await this.communityService.removeCommunity(space.community.id);
     await this.profileService.deleteProfile(space.profile.id);
     await this.agentService.deleteAgent(space.agent.id);
+    await this.licenseService.removeLicense(space.license.id);
     await this.authorizationPolicyService.delete(space.authorization);
 
     if (space.level === SpaceLevel.SPACE) {
@@ -1003,21 +1035,6 @@ export class SpaceService {
     );
   }
 
-  public async getLevelZeroSpaceAgent(space: ISpace): Promise<IAgent> {
-    const levelZeroSpace = await this.getSpaceOrFail(space.levelZeroSpaceID, {
-      relations: {
-        agent: true,
-      },
-    });
-    if (!levelZeroSpace.agent) {
-      throw new RelationshipNotFoundException(
-        `Agent not initialised on Level Zero Space: ${levelZeroSpace.id}`,
-        LogContext.SPACES
-      );
-    }
-    return levelZeroSpace.agent;
-  }
-
   public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
     await this.roleSetService.assignUserToRole(
       roleSet,
@@ -1237,10 +1254,10 @@ export class SpaceService {
     space: ISpace
   ): Promise<ISpaceSubscription | undefined> {
     const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
+      await this.licensingFrameworkService.getDefaultLicensingOrFail();
 
     const today = new Date();
-    const plans = await this.licensingService.getLicensePlans(
+    const plans = await this.licensingFrameworkService.getLicensePlans(
       licensingFramework.id
     );
 

@@ -54,6 +54,8 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -75,7 +77,8 @@ export class RoleSetResolverMutations {
     private invitationAuthorizationService: InvitationAuthorizationService,
     private contributorService: ContributorService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
-    private platformInvitationService: PlatformInvitationService
+    private platformInvitationService: PlatformInvitationService,
+    private licenseService: LicenseService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -154,7 +157,14 @@ export class RoleSetResolverMutations {
     @Args('roleData') roleData: AssignRoleOnRoleSetToVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
-      roleData.roleSetID
+      roleData.roleSetID,
+      {
+        relations: {
+          license: {
+            entitlements: true,
+          },
+        },
+      }
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
@@ -179,12 +189,10 @@ export class RoleSetResolverMutations {
       `assign virtual community role: ${roleSet.id}`
     );
 
-    // Also require ACCESS_VIRTUAL_CONTRIBUTORS to assign a virtual contributor
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      roleSet.authorization,
-      AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR,
-      `assign virtual community role VC privilege: ${roleSet.id}`
+    // Also require ACCESS_VIRTUAL_CONTRIBUTORS entitlement for the RoleSet
+    this.licenseService.isEntitlementEnabledOrFail(
+      roleSet.license,
+      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
     );
 
     await this.roleSetService.assignVirtualToRole(

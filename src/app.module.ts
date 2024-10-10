@@ -83,6 +83,7 @@ import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
+import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 
 @Module({
   imports: [
@@ -232,6 +233,7 @@ import { TemplateApplierModule } from '@domain/template/template-applier/templat
         };
       },
     }),
+    LoaderCreatorModule,
     ScalarsModule,
     AuthenticationModule,
     AuthorizationModule,

@@ -27,6 +27,8 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ISpace } from '../space/space.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -46,6 +48,20 @@ export class AccountResolverFields {
     @Loader(AgentLoaderCreator, { parentClassRef: Account })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
+    return loader.load(account.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('license', () => ILicense, {
+    nullable: false,
+    description: 'The License operating on this Account.',
+  })
+  async license(
+    @Parent() account: Account,
+    @Loader(LicenseLoaderCreator, { parentClassRef: Account })
+    loader: ILoader<ILicense>
+  ): Promise<ILicense> {
     return loader.load(account.id);
   }
 

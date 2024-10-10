@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { LicensingService } from './licensing.service';
-import { ILicensing } from './licensing.interface';
+import { LicensingFrameworkService } from './licensing.framework.service';
+import { ILicensingFramework } from './licensing.framework.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
   EntityNotInitializedException,
@@ -17,20 +17,20 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { CREDENTIAL_RULE_LICENSE_MANAGER } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
-export class LicensingAuthorizationService {
+export class LicensingFrameworkAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private licensingService: LicensingService,
+    private licensingFrameworkService: LicensingFrameworkService,
     private licensePolicyAuthorizationService: LicensePolicyAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    licensingInput: ILicensing,
+    licensingInput: ILicensingFramework,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
     let licensing = licensingInput;
     if (!licensing.licensePolicy) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         licensingInput.id,
         {
           relations: {
