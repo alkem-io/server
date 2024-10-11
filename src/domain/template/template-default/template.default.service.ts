@@ -74,7 +74,7 @@ export class TemplateDefaultService {
 
     if (!templateDefault)
       throw new EntityNotFoundException(
-        `No TempalteDefault found with the given id: ${templateDefaultID}`,
+        `No TemplateDefault found with the given id: ${templateDefaultID}`,
         LogContext.TEMPLATES
       );
     return templateDefault;
