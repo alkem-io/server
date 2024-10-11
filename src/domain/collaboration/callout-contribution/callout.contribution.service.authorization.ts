@@ -5,12 +5,10 @@ import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
 import { PostAuthorizationService } from '../post/post.service.authorization';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import {
   CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
@@ -20,6 +18,8 @@ import {
 import { LinkAuthorizationService } from '../link/link.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -29,13 +29,13 @@ export class CalloutContributionAuthorizationService {
     private postAuthorizationService: PostAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private linkAuthorizationService: LinkAuthorizationService,
-    private communityPolicyService: CommunityPolicyService
+    private roleSetService: RoleSetService
   ) {}
 
   public async applyAuthorizationPolicy(
     contributionID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy?: ICommunityPolicy,
+    roleSet?: IRoleSet,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const contribution =
@@ -109,9 +109,9 @@ export class CalloutContributionAuthorizationService {
       );
 
     // Extend to give the user creating the contribution more rights
-    contribution.authorization = this.appendCredentialRules(
+    contribution.authorization = await this.appendCredentialRules(
       contribution,
-      communityPolicy,
+      roleSet,
       spaceSettings
     );
     updatedAuthorizations.push(contribution.authorization);
@@ -121,7 +121,7 @@ export class CalloutContributionAuthorizationService {
         await this.postAuthorizationService.applyAuthorizationPolicy(
           contribution.post,
           contribution.authorization,
-          communityPolicy,
+          roleSet,
           spaceSettings
         );
       updatedAuthorizations.push(...postAuthorizations);
@@ -148,11 +148,11 @@ export class CalloutContributionAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private appendCredentialRules(
+  private async appendCredentialRules(
     contribution: ICalloutContribution,
-    communityPolicy?: ICommunityPolicy,
+    communityPolicy?: IRoleSet,
     spaceSettings?: ISpaceSettings
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     const authorization = contribution.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -204,10 +204,10 @@ export class CalloutContributionAuthorizationService {
     ];
     if (communityPolicy && spaceSettings) {
       const roleCredentials =
-        this.communityPolicyService.getCredentialsForRoleWithParents(
+        await this.roleSetService.getCredentialsForRoleWithParents(
           communityPolicy,
-          spaceSettings,
-          CommunityRole.ADMIN
+          CommunityRoleType.ADMIN,
+          spaceSettings
         );
       credentials.push(...roleCredentials);
     }

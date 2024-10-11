@@ -1,4 +1,3 @@
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
@@ -148,23 +147,31 @@ export class InnovationPackService {
     innovationPackID: string,
     options?: FindOneOptions<InnovationPack>
   ): Promise<IInnovationPack | never> {
-    let innovationPack: IInnovationPack | null = null;
-    if (innovationPackID.length === UUID_LENGTH) {
-      innovationPack = await this.innovationPackRepository.findOne({
-        where: { id: innovationPackID },
-        ...options,
-      });
-    }
-    if (!innovationPack) {
-      // look up based on nameID
-      innovationPack = await this.innovationPackRepository.findOne({
-        where: { nameID: innovationPackID },
-        ...options,
-      });
-    }
+    const innovationPack = await this.innovationPackRepository.findOne({
+      where: { id: innovationPackID },
+      ...options,
+    });
+
     if (!innovationPack)
       throw new EntityNotFoundException(
         `Unable to find InnovationPack with ID: ${innovationPackID}`,
+        LogContext.LIBRARY
+      );
+    return innovationPack;
+  }
+
+  async getInnovationPackByNameIdOrFail(
+    innovationPackNameID: string,
+    options?: FindOneOptions<InnovationPack>
+  ): Promise<IInnovationPack | never> {
+    const innovationPack = await this.innovationPackRepository.findOne({
+      where: { nameID: innovationPackNameID },
+      ...options,
+    });
+
+    if (!innovationPack)
+      throw new EntityNotFoundException(
+        `Unable to find InnovationPack using NameID: ${innovationPackNameID}`,
         LogContext.LIBRARY
       );
     return innovationPack;

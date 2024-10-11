@@ -7,14 +7,14 @@ import { AdminCommunicationResolverMutations } from './admin.communication.resol
 import { AdminCommunicationResolverQueries } from './admin.communication.resolver.queries';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { CommunityModule } from '@domain/community/community/community.module';
-import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     CommunityModule,
-    CommunityRoleModule,
+    RoleSetModule,
     CommunicationModule,
     CommunicationAdapterModule,
   ],

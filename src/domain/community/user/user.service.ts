@@ -45,8 +45,8 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
-import { CommunityCredentials } from './dto/user.dto.community.credentials';
-import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
+import { RoleSetCredentials } from './dto/user.dto.role.set.credentials';
+import { RoleSetMemberCredentials } from './dto/user.dto.role.set.member.credentials';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
@@ -63,6 +63,8 @@ import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
+import { AuthenticationType } from '@common/enums/authentication.type';
+import { KratosAdapter } from '@services/adapters/kratos-adapter/kratos.adapter';
 
 @Injectable()
 export class UserService {
@@ -79,12 +81,27 @@ export class UserService {
     private storageAggregatorService: StorageAggregatorService,
     private accountHostService: AccountHostService,
     private contributorService: ContributorService,
+    private kratosAdapter: KratosAdapter,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
+
+  /**
+   * Retrieves the authentication type associated with a given email.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  public async getAuthenticationTypeByEmail(
+    email: string
+  ): Promise<AuthenticationType> {
+    const identity = await this.kratosAdapter.getIdentityByEmail(email);
+    if (!identity) return AuthenticationType.UNKNOWN;
+    return this.kratosAdapter.mapAuthenticationType(identity);
+  }
 
   private getUserCommunicationIdCacheKey(communicationId: string): string {
     return `@user:communicationId:${communicationId}`;
@@ -579,9 +596,19 @@ export class UserService {
 
   async getPaginatedUsers(
     paginationArgs: PaginationArgs,
+    withTags?: boolean,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const qb = this.userRepository.createQueryBuilder('user');
+
+    if (withTags !== undefined) {
+      qb.leftJoin('user.profile', 'profile')
+        .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
+        // cannot use object or operators here
+        // because typeorm cannot construct the query properly
+        .where(`tagset.tags ${withTags ? '!=' : '='} ''`);
+    }
+
     if (filter) {
       applyUserFilter(qb, filter);
     }
@@ -590,7 +617,7 @@ export class UserService {
   }
 
   public async getPaginatedAvailableMemberUsers(
-    communityCredentials: CommunityMemberCredentials,
+    communityCredentials: RoleSetMemberCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
@@ -599,15 +626,15 @@ export class UserService {
     );
     const qb = this.userRepository.createQueryBuilder('user').select();
 
-    if (communityCredentials.parentCommunityMember) {
+    if (communityCredentials.parentRoleSetMember) {
       qb.leftJoin('user.agent', 'agent')
         .leftJoin('agent.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({
-          type: communityCredentials.parentCommunityMember.type,
-          resourceID: communityCredentials.parentCommunityMember.resourceID,
+          type: communityCredentials.parentRoleSetMember.type,
+          resourceID: communityCredentials.parentRoleSetMember.resourceID,
         });
     }
 
@@ -630,12 +657,12 @@ export class UserService {
   }
 
   public async getPaginatedAvailableLeadUsers(
-    communityCredentials: CommunityCredentials,
+    roleSetCredentials: RoleSetCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const currentLeadUsers = await this.usersWithCredentials(
-      communityCredentials.lead
+      roleSetCredentials.lead
     );
     const qb = this.userRepository
       .createQueryBuilder('user')
@@ -646,8 +673,8 @@ export class UserService {
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
       .setParameters({
-        type: communityCredentials.member.type,
-        resourceID: communityCredentials.member.resourceID,
+        type: roleSetCredentials.member.type,
+        resourceID: roleSetCredentials.member.resourceID,
       });
 
     if (currentLeadUsers.length > 0) {
