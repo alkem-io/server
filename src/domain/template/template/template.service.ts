@@ -109,28 +109,49 @@ export class TemplateService {
             LogContext.TEMPLATES
           );
         }
+        const collaborationData = templateData.collaborationData;
+        // Mark as a template
+        collaborationData.isTemplate = true;
+
         // Ensure that the collaboration has a default callouts setup
-        if (!templateData.collaborationData.calloutsData) {
-          templateData.collaborationData.calloutsData = [];
+        if (!collaborationData.calloutsData) {
+          collaborationData.calloutsData = [];
         }
         if (
-          !templateData.collaborationData.calloutGroups ||
-          !templateData.collaborationData.defaultCalloutGroupName
+          !collaborationData.calloutGroups ||
+          !collaborationData.defaultCalloutGroupName
         ) {
-          templateData.collaborationData.defaultCalloutGroupName =
-            CalloutGroupName.HOME;
-          templateData.collaborationData.calloutGroups = [
+          collaborationData.defaultCalloutGroupName = CalloutGroupName.HOME;
+          collaborationData.calloutGroups = [
             {
               displayName: CalloutGroupName.HOME,
               description: 'Home Callout Group',
             },
           ];
         }
+        if (!collaborationData.innovationFlowData) {
+          collaborationData.innovationFlowData = {
+            states: [
+              {
+                displayName: 'Default state',
+              },
+            ],
+            profile: {
+              displayName: 'Default Innovation Flow State',
+            },
+          };
+        }
+        // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
+        collaborationData.calloutsData.forEach(async calloutData => {
+          calloutData.isTemplate = true;
+          calloutData.enableComments = false;
+        });
         template.collaboration =
           await this.collaborationServerice.createCollaboration(
-            templateData.collaborationData!,
+            collaborationData!,
             storageAggregator
           );
+
         break;
       case TemplateType.WHITEBOARD:
         if (!templateData.whiteboard) {

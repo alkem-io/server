@@ -30,4 +30,6 @@ export class CreateCollaborationInput {
   calloutGroups?: ICalloutGroup[];
 
   defaultCalloutGroupName?: CalloutGroupName;
+
+  isTemplate?: boolean;
 }

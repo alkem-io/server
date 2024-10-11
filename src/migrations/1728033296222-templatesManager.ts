@@ -58,6 +58,9 @@ export class TemplatesManager1728033296222 implements MigrationInterface {
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_dea52ce918df6950019678fa35\` ON \`space\` (\`templatesManagerId\`)`
     );
+    await queryRunner.query(
+      'ALTER TABLE `collaboration` ADD `isTemplate` tinyint NOT NULL DEFAULT 0'
+    );
 
     const levelZeroSpaces: {
       id: string;
