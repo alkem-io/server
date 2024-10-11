@@ -154,6 +154,7 @@ export class TemplatesSetService {
       );
     const templateInput: CreateTemplateInput = {
       ...templateCollaborationInput,
+      type: TemplateType.CALLOUT,
       collaborationData: collaborationInput,
     };
     return await this.createTemplate(templatesSet, templateInput);
