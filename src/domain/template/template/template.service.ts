@@ -33,6 +33,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TemplateDefault } from '../template-default/template.default.entity';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 @Injectable()
 export class TemplateService {
@@ -108,11 +109,49 @@ export class TemplateService {
             LogContext.TEMPLATES
           );
         }
+        const collaborationData = templateData.collaborationData;
+        // Mark as a template
+        collaborationData.isTemplate = true;
+
+        // Ensure that the collaboration has a default callouts setup
+        if (!collaborationData.calloutsData) {
+          collaborationData.calloutsData = [];
+        }
+        if (
+          !collaborationData.calloutGroups ||
+          !collaborationData.defaultCalloutGroupName
+        ) {
+          collaborationData.defaultCalloutGroupName = CalloutGroupName.HOME;
+          collaborationData.calloutGroups = [
+            {
+              displayName: CalloutGroupName.HOME,
+              description: 'Home Callout Group',
+            },
+          ];
+        }
+        if (!collaborationData.innovationFlowData) {
+          collaborationData.innovationFlowData = {
+            states: [
+              {
+                displayName: 'Default state',
+              },
+            ],
+            profile: {
+              displayName: 'Default Innovation Flow State',
+            },
+          };
+        }
+        // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
+        collaborationData.calloutsData.forEach(async calloutData => {
+          calloutData.isTemplate = true;
+          calloutData.enableComments = false;
+        });
         template.collaboration =
           await this.collaborationServerice.createCollaboration(
-            templateData.collaborationData!,
+            collaborationData!,
             storageAggregator
           );
+
         break;
       case TemplateType.WHITEBOARD:
         if (!templateData.whiteboard) {
@@ -275,9 +314,12 @@ export class TemplateService {
           template.innovationFlow.id
         );
         break;
+      case TemplateType.POST:
+        // Nothing to do
+        break;
       default:
         throw new EntityNotFoundException(
-          `Unable to delete template of type: ${template.type}`,
+          `Template type not recognized '${template.type}' when deleting template: ${template.id}`,
           LogContext.TEMPLATES
         );
     }

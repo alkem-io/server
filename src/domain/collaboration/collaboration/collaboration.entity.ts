@@ -18,6 +18,9 @@ export class Collaboration
   })
   callouts?: Callout[];
 
+  @Column({ type: 'boolean', nullable: false, default: false })
+  isTemplate!: boolean;
+
   @OneToOne(() => TagsetTemplateSet, {
     eager: false,
     cascade: true,

@@ -242,6 +242,7 @@ export class SpaceService {
     //// Collaboration
     let collaborationData: CreateCollaborationInput =
       spaceData.collaborationData;
+    collaborationData.isTemplate = false;
     // Pick up the default template that is applicable
     collaborationData =
       await this.spaceDefaultsService.createCollaborationInput(
