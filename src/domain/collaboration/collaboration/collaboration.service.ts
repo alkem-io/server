@@ -98,6 +98,7 @@ export class CollaborationService {
     collaboration.groupsStr = this.calloutGroupsService.serializeGroups(
       collaborationData.calloutGroups
     );
+    collaboration.isTemplate = collaborationData.isTemplate || false;
 
     collaboration.tagsetTemplateSet =
       this.tagsetTemplateSetService.createTagsetTemplateSet();
