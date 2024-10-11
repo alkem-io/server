@@ -10,7 +10,7 @@ export * from './relationship.not.found.exception';
 export * from './validation.exception';
 export * from './registration.exception';
 export * from './matrix.entity.not.found.exception';
-export * from './community.policy.role.limits.exception';
+export * from './role.set.policy.role.limits.exception';
 export * from './subscription';
 
 export * from './pagination';

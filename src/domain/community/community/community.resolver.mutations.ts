@@ -3,19 +3,17 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { ICommunity } from '@domain/community/community/community.interface';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
+import { CreateUserGroupInput } from '../user-group/dto';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
-import { CreateUserGroupInput } from '../user-group/dto';
-import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -53,33 +51,6 @@ export class CommunityResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(authorizations);
     return group;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ICommunity, {
-    description: 'Update the Application Form used by this Community.',
-  })
-  @Profiling.api
-  async updateCommunityApplicationForm(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('applicationFormData')
-    applicationFormData: UpdateCommunityApplicationFormInput
-  ): Promise<ICommunity> {
-    const community = await this.communityService.getCommunityOrFail(
-      applicationFormData.communityID
-    );
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update community application form: ${community.id}`
-    );
-
-    return await this.communityService.updateApplicationForm(
-      community,
-      applicationFormData.formData
-    );
   }
 
   @UseGuards(GraphqlGuard)

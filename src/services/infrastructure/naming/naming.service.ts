@@ -8,7 +8,6 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { ICallout } from '@domain/collaboration/callout';
@@ -23,6 +22,7 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { SpaceReservedName } from '@common/enums/space.reserved.name';
 import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
 import { Template } from '@domain/template/template/template.entity';
+import { IRoleSet } from '@domain/access/role-set';
 
 export class NamingService {
   constructor(
@@ -238,10 +238,10 @@ export class NamingService {
     return result;
   }
 
-  async getCommunityPolicyAndSettingsForCollaboration(
+  async getRoleSetAndSettingsForCollaboration(
     collaborationID: string
   ): Promise<{
-    communityPolicy: ICommunityPolicy;
+    roleSet: IRoleSet;
     spaceSettings: ISpaceSettings;
   }> {
     const space = await this.entityManager.findOne(Space, {
@@ -252,24 +252,24 @@ export class NamingService {
       },
       relations: {
         community: {
-          policy: true,
+          roleSet: true,
         },
       },
     });
-    if (!space || !space.community || !space.community.policy) {
+    if (!space || !space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
         `Unable to load all entities for space with collaboration ${collaborationID}`,
         LogContext.COMMUNITY
       );
     }
     // Directly parse the settings string to avoid the need to load the settings service
-    const communityPolicy = space.community.policy;
+    const roleSet = space.community.roleSet;
     const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
-    return { communityPolicy, spaceSettings };
+    return { roleSet, spaceSettings };
   }
 
-  async getCommunityPolicyAndSettingsForCallout(calloutID: string): Promise<{
-    communityPolicy: ICommunityPolicy;
+  async getRoleSetAndSettingsForCallout(calloutID: string): Promise<{
+    roleSet: IRoleSet;
     spaceSettings: ISpaceSettings;
   }> {
     const space = await this.entityManager.findOne(Space, {
@@ -282,11 +282,11 @@ export class NamingService {
       },
       relations: {
         community: {
-          policy: true,
+          roleSet: true,
         },
       },
     });
-    if (!space || !space.community || !space.community.policy) {
+    if (!space || !space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
         `Unable to load all entities for space with callout ${calloutID}`,
         LogContext.COMMUNITY
@@ -294,10 +294,10 @@ export class NamingService {
     }
 
     // Directly parse the settings string to avoid the need to load the settings service
-    const communityPolicy = space.community.policy;
+    const roleSet = space.community.roleSet;
     const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
 
-    return { communityPolicy, spaceSettings };
+    return { roleSet: roleSet, spaceSettings };
   }
 
   async getPostForRoom(roomID: string): Promise<IPost> {

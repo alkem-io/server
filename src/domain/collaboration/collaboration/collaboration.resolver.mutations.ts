@@ -87,8 +87,8 @@ export class CollaborationResolverMutations {
         agentInfo.userID
       );
 
-    const { communityPolicy, spaceSettings } =
-      await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
+    const { roleSet: communityPolicy, spaceSettings } =
+      await this.namingService.getRoleSetAndSettingsForCollaboration(
         collaboration.id
       );
     // callout needs to be saved to apply the authorization policy

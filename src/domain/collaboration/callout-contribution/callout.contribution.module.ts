@@ -10,8 +10,8 @@ import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { PostModule } from '../post/post.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { LinkModule } from '../link/link.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { LinkModule } from '../link/link.module';
     NamingModule,
     LinkModule,
     ContributorLookupModule,
-    CommunityPolicyModule,
+    RoleSetModule,
     TypeOrmModule.forFeature([CalloutContribution]),
   ],
   providers: [

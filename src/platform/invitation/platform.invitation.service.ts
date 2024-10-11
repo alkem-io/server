@@ -119,7 +119,7 @@ export class PlatformInvitationService {
     const existingPlatformInvitations =
       await this.platformInvitationRepository.find({
         where: { email: email },
-        relations: { community: true },
+        relations: { roleSet: true },
       });
 
     if (existingPlatformInvitations.length > 0)

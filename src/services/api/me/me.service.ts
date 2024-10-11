@@ -40,15 +40,15 @@ export class MeService {
     );
     const results: CommunityInvitationResult[] = [];
     for (const invitation of invitations) {
-      if (!invitation.community) {
+      if (!invitation.roleSet) {
         throw new EntityNotFoundException(
           `Community not found for invitation ${invitation.id}`,
           LogContext.COMMUNITY
         );
       }
       const space =
-        await this.communityResolverService.getSpaceForCommunityOrFail(
-          invitation.community.id
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          invitation.roleSet.id
         );
       results.push({
         id: `${invitation.id}`,
@@ -67,15 +67,15 @@ export class MeService {
       await this.rolesService.getCommunityApplicationsForUser(userId, states);
     const results: CommunityApplicationResult[] = [];
     for (const application of applications) {
-      if (!application.community) {
+      if (!application.roleSet) {
         throw new EntityNotFoundException(
           `Community not found for application ${application.id}`,
           LogContext.COMMUNITY
         );
       }
       const space =
-        await this.communityResolverService.getSpaceForCommunityOrFail(
-          application.community.id
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          application.roleSet.id
         );
       results.push({
         id: `${application.id}`,
