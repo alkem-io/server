@@ -14,12 +14,14 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { TemplateService } from '../template/template.service';
 
 @Resolver()
 export class TemplatesManagerResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private templatesDefaultService: TemplateDefaultService,
+    private templateService: TemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -63,6 +65,11 @@ export class TemplatesManagerResolverMutations {
       templateDefault.authorization,
       AuthorizationPrivilege.UPDATE,
       `update templateDefault of type ${templateDefault.type}: ${templateDefault.id}`
+    );
+
+    // Check the provided ID is a template
+    await this.templateService.getTemplateOrFail(
+      templateDefaultData.templateID
     );
 
     const templatesSet = templatesManager.templatesSet.templates;

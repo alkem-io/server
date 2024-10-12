@@ -9,6 +9,7 @@ import { TemplatesManagerAuthorizationService } from './templates.manager.servic
 import { TemplatesSetModule } from '../templates-set/templates.set.module';
 import { TemplateDefaultModule } from '../template-default/template.default.module';
 import { TemplatesManagerResolverMutations } from './templates.manager.resolver.mutations';
+import { TemplateModule } from '../template/template.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { TemplatesManagerResolverMutations } from './templates.manager.resolver.
     AuthorizationModule,
     TemplatesSetModule,
     TemplateDefaultModule,
+    TemplateModule,
     TypeOrmModule.forFeature([TemplatesManager]),
   ],
   providers: [
