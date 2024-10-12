@@ -111,6 +111,7 @@ const getSubspacesMock = (
       visibility: SpaceVisibility.ACTIVE,
       collaboration: {
         id: '',
+        isTemplate: false,
         groupsStr: JSON.stringify([
           {
             displayName: 'HOME',
@@ -207,6 +208,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       visibility: SpaceVisibility.ACTIVE,
       collaboration: {
         id: '',
+        isTemplate: false,
         groupsStr: JSON.stringify([
           {
             displayName: 'HOME',

@@ -6,43 +6,50 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
-import { UpdateInnovationFlowFromTemplateInput } from './dto/template.applier.dto.update.innovation.flow';
+import { UpdateCollaborationFromTemplateInput } from './dto/template.applier.dto.update.collaboration';
 import { TemplateApplierService } from './template.applier.service';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { ICollaboration } from '@domain/collaboration/collaboration';
 
 @Resolver()
 export class TemplateApplierResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private innovationFlowService: InnovationFlowService,
+    private collaborationService: CollaborationService,
     private templateApplierService: TemplateApplierService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationFlow, {
+  @Mutation(() => ICollaboration, {
     description:
-      'Updates the InnovationFlow states from the specified template.',
+      'Updates the Collaboration, including InnovationFlow states, from the specified Collaboration Template.',
   })
-  async updateInnovationFlowStatesFromTemplate(
+  async updateCollaborationFromTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowData')
-    innovationFlowData: UpdateInnovationFlowFromTemplateInput
-  ): Promise<IInnovationFlow> {
-    const innovationFlow =
-      await this.innovationFlowService.getInnovationFlowOrFail(
-        innovationFlowData.innovationFlowID
+    @Args('updateData')
+    updateData: UpdateCollaborationFromTemplateInput
+  ): Promise<ICollaboration> {
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        updateData.collaborationID,
+        {
+          relations: {
+            innovationFlow: true,
+          },
+        }
       );
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      innovationFlow.authorization,
+      collaboration.authorization,
       AuthorizationPrivilege.UPDATE,
-      `updateInnovationFlow from template: ${innovationFlow.id}`
+      `update InnovationFlow states from template: ${collaboration.id}`
     );
 
-    return await this.templateApplierService.updateInnovationFlowStatesFromTemplate(
-      innovationFlowData
+    return await this.templateApplierService.updateCollaborationFromTemplate(
+      updateData,
+      collaboration
     );
   }
 }
