@@ -15,12 +15,15 @@ import {
   Session,
 } from '@ory/kratos-client';
 import jwt_decode from 'jwt-decode';
-import { getSession } from '@common/utils/get.session';
+import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
 import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserIdentityNotFoundException } from '@common/exceptions/user/user.identity.not.found.exception';
-import { KratosPayload } from './types/kratos.payload';
+import { AuthenticationService } from '@core/authentication/authentication.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
+import { SessionInvalidReason } from './types/session.invalid.enum';
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system.
@@ -93,50 +96,6 @@ export class KratosService {
     const adminBearerToken = await this.getBearerToken();
 
     return this.tryExtendSession(sessionToBeExtended, adminBearerToken);
-  }
-
-  public async getSession(
-    authorization?: string,
-    cookie?: string
-  ): Promise<Session | never> {
-    const kratosClient = this.kratosFrontEndClient;
-
-    return getSession(kratosClient, { authorization, cookie });
-  }
-
-  /**
-   * Retrieves a Kratos session from a JWT token.
-   *
-   * @param token - The JWT token from which to extract the session.
-   * @returns The extracted Kratos session.
-   * @throws Will throw an error if the token is empty.
-   * @throws Will throw an error if the token is a Bearer token.
-   * @throws Will throw an error if the token is not a valid JWT token.
-   * @throws Will throw an error if the Kratos session is not found in the token.
-   */
-  public getSessionFromJwt(token: string): Session | never {
-    if (!token) {
-      throw new Error('Token is empty!');
-    }
-
-    let session: Session | null;
-    const isBearerToken = token.startsWith('Bearer ');
-    if (isBearerToken) {
-      throw new Error('Bearer token found, not decodable as JWT');
-    }
-
-    try {
-      const decodedKatosPaylod = jwt_decode<KratosPayload>(token);
-      session = decodedKatosPaylod.session;
-    } catch (error: any) {
-      throw new Error(error?.message ?? 'Token is not a valid JWT token!');
-    }
-
-    if (!session) {
-      throw new Error('Kratos session not found in token');
-    }
-
-    return session;
   }
 
   /**
@@ -332,5 +291,268 @@ export class KratosService {
     await this.kratosIdentityClient.deleteIdentity({
       id: identity.id,
     });
+  }
+
+  /***
+ Checks if the session is still valid.
+ */
+  public validateSession(
+    session?: Session
+  ):
+    | { valid: true; reason?: undefined }
+    | { valid: false; reason: SessionInvalidReason } {
+    if (!session) {
+      return {
+        valid: false,
+        reason: 'Session not defined',
+      };
+    }
+
+    if (session.expires_at == undefined) {
+      return {
+        valid: false,
+        reason: 'Session expiry not defined',
+      };
+    }
+
+    if (new Date(session.expires_at).getTime() < Date.now()) {
+      return {
+        valid: false,
+        reason: 'Session expired',
+      };
+    }
+
+    return { valid: true };
+  }
+
+  public async getHeadersFromCookie(cookie?: string): Promise<any> {
+    /**
+     * Session cookies in Ory Kratos are pass-by-value (meaning they are not just an id or a reference to a session).
+     * When session is updated, new cookie must be obtained and sent to the client.
+     * toSession() calls /sessions/whoami endpoint that handles that.
+     * Another strategy (may be a more reliable one) is to call /sessions/whoami from the client for the cookies.
+     * In that case we may want to set a special header (e.g. X-Session-Extended) to indicate that the session is extended,
+     * that in turns will trigger the client to call /sessions/whoami.
+     */
+    const { headers } = await this.kratosFrontEndClient.toSession({
+      cookie,
+    });
+    return headers;
+  }
+
+  public async getDataFromBearerToken(bearerToken?: string): Promise<any> {
+    const { data } = await this.kratosFrontEndClient.toSession({
+      xSessionToken: bearerToken,
+    });
+    return data;
+  }
+
+  /* Sets the user into the context field or closes the connection */
+  public async authenticate(
+    headers: Record<string, string | string[] | undefined>,
+    authService: AuthenticationService
+  ): Promise<AgentInfo> {
+    const authorization = headers.authorization as string;
+
+    try {
+      const session = await this.getSession(authorization);
+
+      if (!session) {
+        this.logger.verbose?.(
+          'No Ory Kratos session',
+          LogContext.EXCALIDRAW_SERVER
+        );
+        return authService.createAgentInfo();
+      }
+
+      const oryIdentity = session.identity as OryDefaultIdentitySchema;
+      return authService.createAgentInfo(oryIdentity);
+    } catch (e: any) {
+      throw new Error(e?.message);
+    }
+  }
+
+  /* returns the user agent info */
+  public async getUserInfo(
+    headers: Record<string, string | string[] | undefined>,
+    authService: AuthenticationService
+  ): Promise<AgentInfo> {
+    try {
+      return await this.authenticate(headers, authService);
+    } catch (e) {
+      const err = e as Error;
+      this.logger.error(
+        `Error when trying to authenticate with excalidraw server: ${err.message}`,
+        err.stack,
+        LogContext.EXCALIDRAW_SERVER
+      );
+      return authService.createAgentInfo();
+    }
+  }
+
+  public checkSession(session?: Session) {
+    const { valid, reason } = this.validateSession(session);
+
+    if (!valid && reason === 'Session expired') {
+      return reason;
+    }
+  }
+
+  /**
+   * Retrieves a session using either an authorization header or a cookie.
+   * @param authorization - The authorization header value (optional).
+   * @param cookie - The cookie value (optional).
+   * @returns A promise that resolves to a Session object or throws an error if neither authorization nor cookie is provided.
+   * @throws Will throw an error if neither authorization nor cookie is provided.
+   */
+  public async getSession(
+    authorization?: string,
+    cookie?: string
+  ): Promise<Session | never> {
+    const kratosClient = this.kratosFrontEndClient;
+
+    if (authorization) {
+      return this.getSessionFromAuthorizationHeader(
+        kratosClient,
+        authorization
+      );
+    }
+
+    if (cookie) {
+      return this.getSessionFromCookie(kratosClient, cookie);
+    }
+
+    throw new Error('Authorization header or cookie not provided');
+  }
+
+  /**
+   * Retrieves a session from a cookie using the Kratos client.
+   *
+   * @param kratosClient - The Kratos Frontend API client instance.
+   * @param cookie - The session cookie to retrieve the session from.
+   * @returns A promise that resolves to the session data.
+   * @throws Will throw an error if the session retrieval fails.
+   */
+  getSessionFromCookie = async (kratosClient: FrontendApi, cookie: string) => {
+    try {
+      return (
+        await kratosClient.toSession({
+          cookie,
+        })
+      ).data;
+    } catch (e: any) {
+      throw new Error(e?.message);
+    }
+  };
+
+  /**
+   * Extracts and validates a session from the provided Authorization header.
+   *
+   * This function attempts to extract a token from the Authorization header and
+   * validate it using two different methods: `getSessionFromJwt` and
+   * `getSessionFromApiToken`. If both methods fail, an error is thrown.
+   *
+   * @param kratosClient - An instance of `FrontendApi` used to validate the token.
+   * @param authorizationHeader - The Authorization header containing the token.
+   * @returns The session object if the token is valid.
+   * @throws Will throw an error if the token is not provided or if it is invalid.
+   */
+  public getSessionFromAuthorizationHeader(
+    kratosClient: FrontendApi,
+    authorizationHeader: string
+  ) {
+    const [, token] = authorizationHeader.split(' ');
+
+    if (!token) {
+      throw new Error('Token not provided in the Authorization header');
+    }
+
+    try {
+      return this.getSessionFromJwt(token);
+    } catch (e) {
+      // ...
+    }
+
+    try {
+      return this.getSessionFromApiToken(kratosClient, token);
+    } catch (e) {
+      // ...
+    }
+
+    throw new Error('Not a valid token provided in the Authorization header');
+  }
+
+  /**
+   * Retrieves a session from an API token using the Kratos client.
+   *
+   * @param kratosClient - The Kratos client instance used to fetch the session.
+   * @param apiToken - The API token used to retrieve the session.
+   * @returns A promise that resolves to a `Session` object.
+   * @throws Will throw an error if the API token is an empty string.
+   * @throws Will throw an error if the session could not be extracted from the API token.
+   * @throws Will throw an error if the session is not found for the given API token.
+   */
+  getSessionFromApiToken = async (
+    kratosClient: FrontendApi,
+    apiToken: string
+  ): Promise<Session | never> => {
+    if (!apiToken) {
+      throw new Error('Token is an empty string');
+    }
+
+    let session: Session | null;
+
+    try {
+      session = (
+        await kratosClient.toSession({
+          xSessionToken: apiToken,
+        })
+      ).data;
+    } catch (error: any) {
+      throw new Error(
+        error?.message ?? 'Could not extract session from api token'
+      );
+    }
+
+    if (!session) {
+      throw new Error('Kratos session not found for api token');
+    }
+
+    return session;
+  };
+
+  /**
+   * Extracts a session from a JWT token.
+   *
+   * @param token - The JWT token from which to extract the session.
+   * @returns The extracted session.
+   * @throws Will throw an error if the token is empty.
+   * @throws Will throw an error if the token is a Bearer token.
+   * @throws Will throw an error if the token is not a valid JWT token.
+   * @throws Will throw an error if the Kratos session is not found in the token.
+   */
+  public getSessionFromJwt(token: string): Session | never {
+    if (!token) {
+      throw new Error('Token is empty!');
+    }
+
+    let session: Session | null;
+    const isBearerToken = token.startsWith('Bearer ');
+    if (isBearerToken) {
+      throw new Error('Bearer token found, not decodable as JWT');
+    }
+
+    try {
+      const decodedKatosPaylod = jwt_decode<KratosPayload>(token);
+      session = decodedKatosPaylod.session;
+    } catch (error: any) {
+      throw new Error(error?.message ?? 'Token is not a valid JWT token!');
+    }
+
+    if (!session) {
+      throw new Error('Kratos session not found in token');
+    }
+
+    return session;
   }
 }

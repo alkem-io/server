@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
-import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
 import { ApiRestrictedAccessException } from '@common/exceptions/auth';
 import { AuthenticationService } from './authentication.service';
@@ -11,30 +10,20 @@ import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { IncomingMessage } from 'http';
 import { AlkemioConfig } from '@src/types';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
   Strategy,
   'oathkeeper-api-token'
 ) {
-  private readonly kratosClient: FrontendApi;
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authService: AuthenticationService,
+    private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
-
-    const kratosPublicBaseUrl = this.configService.get(
-      'identity.authentication.providers.ory.kratos_public_base_url_server',
-      { infer: true }
-    );
-
-    this.kratosClient = new FrontendApi(
-      new Configuration({
-        basePath: kratosPublicBaseUrl,
-      })
-    );
   }
 
   async validate(payload: IncomingMessage) {
@@ -57,9 +46,8 @@ export class OryApiStrategy extends PassportStrategy(
       return this.authService.createAgentInfo();
     }
 
-    const { data } = await this.kratosClient.toSession({
-      xSessionToken: bearerToken,
-    });
+    const { data } =
+      await this.kratosService.getDataFromBearerToken(bearerToken);
 
     if (!data) {
       this.logger.verbose?.('No Ory Kratos API session', LogContext.AUTH);
