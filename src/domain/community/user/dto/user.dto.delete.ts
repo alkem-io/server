@@ -6,4 +6,7 @@ import { Field, InputType } from '@nestjs/graphql';
 export class DeleteUserInput extends DeleteBaseAlkemioInput {
   @Field(() => UUID_NAMEID_EMAIL, { nullable: false })
   ID!: string;
+
+  @Field(() => Boolean, { nullable: true, defaultValue: true })
+  deleteIdentity?: boolean;
 }

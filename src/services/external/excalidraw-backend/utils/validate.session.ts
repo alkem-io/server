@@ -1,16 +1,14 @@
 import { Session } from '@ory/kratos-client';
-
-type Reason =
-  | 'Session not defined'
-  | 'Session expiry not defined'
-  | 'Session expired';
+import { SessionInvalidReason } from '@services/infrastructure/kratos/types/session.invalid.enum';
 
 /***
  Checks if the session is still valid.
  */
 export const validateSession = (
   session?: Session
-): { valid: true; reason?: undefined } | { valid: false; reason: Reason } => {
+):
+  | { valid: true; reason?: undefined }
+  | { valid: false; reason: SessionInvalidReason } => {
   if (!session) {
     return {
       valid: false,
