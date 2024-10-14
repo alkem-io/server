@@ -77,6 +77,8 @@ security:
     # Cors allowed headers.
     allowed_headers: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
 
+  encryption_key: ${ENCRYPTION_KEY}:ktO2wPinKwidG8cgjhfKTHGqU6D5lxP0NkCVAJglnfw=
+
 innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
 
