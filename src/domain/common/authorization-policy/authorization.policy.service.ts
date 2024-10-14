@@ -25,16 +25,24 @@ import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authoriza
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class AuthorizationPolicyService {
+  private readonly authChunkSize: number;
   constructor(
     @InjectRepository(AuthorizationPolicy)
     private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
-  ) {}
+    private readonly logger: LoggerService,
+    private readonly configService: ConfigService<AlkemioConfig, true>
+  ) {
+    this.authChunkSize = this.configService.get('authorization.chunk', {
+      infer: true,
+    });
+  }
 
   public authorizationSelectOptions: FindOptionsSelect<AuthorizationPolicy> = {
     id: true,
@@ -193,7 +201,7 @@ export class AuthorizationPolicyService {
       LogContext.AUTH
     );
     await this.authorizationPolicyRepository.save(authorizationPolicies, {
-      chunk: 100,
+      chunk: this.authChunkSize,
     });
   }
 
