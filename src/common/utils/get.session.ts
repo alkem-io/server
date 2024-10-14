@@ -1,5 +1,5 @@
-import { KratosPayload } from '@core/authentication/kratos.payload';
 import { FrontendApi, Session } from '@ory/kratos-client';
+import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
 import jwt_decode from 'jwt-decode';
 
 /**

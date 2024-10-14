@@ -5,10 +5,6 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
-import {
-  OryDefaultIdentitySchema,
-  OryTraits,
-} from './ory.default.identity.schema';
 import { NotSupportedException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
@@ -17,6 +13,8 @@ import ConfigUtils from '@config/config.utils';
 import { AlkemioConfig } from '@src/types';
 import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { OryTraits } from '@services/infrastructure/kratos/types/ory.traits';
 
 @Injectable()
 export class AuthenticationService {

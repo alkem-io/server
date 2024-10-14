@@ -7,10 +7,10 @@ import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
 import { ApiRestrictedAccessException } from '@common/exceptions/auth';
 import { AuthenticationService } from './authentication.service';
-import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { IncomingMessage } from 'http';
 import { AlkemioConfig } from '@src/types';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(

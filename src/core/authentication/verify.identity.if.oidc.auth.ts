@@ -1,5 +1,5 @@
 import { Session } from '@ory/kratos-client';
-import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 
 /***
  * Sets the *verified* and *verified_at* fields of the FIRST verified address to **true** and **Date.now()**.

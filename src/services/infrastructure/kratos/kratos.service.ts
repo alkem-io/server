@@ -15,12 +15,12 @@ import {
   Session,
 } from '@ory/kratos-client';
 import jwt_decode from 'jwt-decode';
-import { KratosPayload } from '@core/authentication/kratos.payload';
 import { getSession } from '@common/utils/get.session';
 import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserIdentityNotFoundException } from '@common/exceptions/user/user.identity.not.found.exception';
+import { KratosPayload } from './types/kratos.payload';
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system.
