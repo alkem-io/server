@@ -54,16 +54,22 @@ export class UserResolverQueries {
   async usersPaginated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) pagination: PaginationArgs,
+    @Args({
+      name: 'withTags',
+      nullable: true,
+      description: 'Return only users with tags',
+    })
+    withTags?: boolean,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ): Promise<PaginatedUsers> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
 
-    return this.userService.getPaginatedUsers(pagination, filter);
+    return this.userService.getPaginatedUsers(pagination, withTags, filter);
   }
 
   @UseGuards(GraphqlGuard)
