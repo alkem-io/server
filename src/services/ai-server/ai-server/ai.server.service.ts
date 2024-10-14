@@ -36,6 +36,7 @@ import { AiPersonaServiceAuthorizationService } from '@services/ai-server/ai-per
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Injectable()
 export class AiServerService {
@@ -157,24 +158,44 @@ export class AiServerService {
   public async askQuestion(
     questionInput: AiPersonaServiceQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
-    if (
-      questionInput.contextID &&
-      !(await this.isContextLoaded(questionInput.contextID))
-    ) {
-      this.eventBus.publish(
-        new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
+    // the context is currently not used so no point in keeping this
+    // commenting it out for now to save some work
+    // if (
+    //   questionInput.contextID &&
+    //   !(await this.isContextLoaded(questionInput.contextID))
+    // ) {
+    //   this.eventBus.publish(
+    //     new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
+    //   );
+    // }
+
+    const personaService =
+      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+        questionInput.aiPersonaServiceID
+      );
+
+    const HISTORY_ENABLED_ENGINES = new Set<AiPersonaEngine>([
+      AiPersonaEngine.EXPERT,
+    ]);
+    const loadHistory = HISTORY_ENABLED_ENGINES.has(personaService.engine);
+
+    // history should be loaded trough the GQL API of the collaboration server
+    let history: InteractionMessage[] = [];
+    if (loadHistory) {
+      const historyLimit = parseInt(
+        this.config.get<number>(
+          'platform.virtual_contributors.history_length',
+          {
+            infer: true,
+          }
+        )
+      );
+
+      history = await this.getLastNInteractionMessages(
+        questionInput.interactionID,
+        historyLimit
       );
     }
-    const historyLimit = parseInt(
-      this.config.get<number>('platform.virtual_contributors.history_length', {
-        infer: true,
-      })
-    );
-
-    const history = await this.getLastNInteractionMessages(
-      questionInput.interactionID,
-      historyLimit
-    );
 
     return await this.aiPersonaServiceService.askQuestion(
       questionInput,
@@ -260,7 +281,11 @@ export class AiServerService {
       // try to get the collection and return true if it is there
       await chroma.getCollection({ name });
       return true;
-    } catch {
+    } catch (err) {
+      this.logger.error(
+        `Error checking if context is loaded for contextID ${contextID}: ${err}`,
+        LogContext.AI_SERVER
+      );
       return false;
     }
   }

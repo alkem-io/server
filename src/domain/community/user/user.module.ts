@@ -30,7 +30,7 @@ import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
-import { KratosAdapterModule } from '@services/adapters/kratos-adapter/kratos.adapter.module';
+import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 
 @Module({
   imports: [
@@ -52,7 +52,7 @@ import { KratosAdapterModule } from '@services/adapters/kratos-adapter/kratos.ad
     StorageAggregatorModule,
     StorageBucketModule,
     DocumentModule,
-    KratosAdapterModule,
+    KratosModule,
     ContributorModule,
     TypeOrmModule.forFeature([User]),
   ],

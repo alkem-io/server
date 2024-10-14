@@ -122,7 +122,7 @@ export class RoomService {
     }
 
     const interaction =
-      this.vcInteractionService.createVcInteraction(interactionData);
+      this.vcInteractionService.buildVcInteraction(interactionData);
     room.vcInteractions.push(interaction);
     await this.save(room);
     return interaction;
