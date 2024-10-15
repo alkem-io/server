@@ -4,6 +4,7 @@ import { NameID } from '@domain/common/scalars';
 import { IProfile } from '@domain/common/profile';
 import { IContext } from '@domain/context';
 import { SpaceLevel } from '@common/enums/space.level';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 
 @ObjectType()
 export class SpaceInfo {
@@ -31,4 +32,9 @@ export class SpaceInfo {
     description: 'The Context of the Space',
   })
   context!: IContext;
+
+  @Field(() => ICommunityGuidelines, {
+    description: 'The CommunityGuidelines for the Space',
+  })
+  communityGuidelines?: ICommunityGuidelines;
 }

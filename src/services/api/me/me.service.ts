@@ -65,6 +65,7 @@ export class MeService {
           level: space.level,
           profile: space.profile,
           context: space.context,
+          communityGuidelines: space.community?.guidelines,
         },
       });
     }
@@ -104,6 +105,7 @@ export class MeService {
           level: space.level,
           profile: space.profile,
           context: space.context,
+          communityGuidelines: space.community?.guidelines,
         },
       });
     }
