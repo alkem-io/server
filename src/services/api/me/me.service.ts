@@ -59,9 +59,8 @@ export class MeService {
       results.push({
         id: `${invitation.id}`,
         invitation: invitation,
-        spaceInfo: {
+        spacePendingMembershipInfo: {
           id: space.id,
-          nameID: space.nameID,
           level: space.level,
           profile: space.profile,
           context: space.context,
@@ -99,9 +98,8 @@ export class MeService {
       results.push({
         id: `${application.id}`,
         application: application,
-        spaceInfo: {
+        spacePendingMembershipInfo: {
           id: space.id,
-          nameID: space.nameID,
           level: space.level,
           profile: space.profile,
           context: space.context,
