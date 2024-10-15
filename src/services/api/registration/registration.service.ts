@@ -127,14 +127,14 @@ export class RegistrationService {
           invitedContributorID: user.id,
           roleSetID: roleSet.id,
           createdBy: platformInvitation.createdBy,
-          invitedToParent: platformInvitation.communityInvitedToParent,
+          extraRole: platformInvitation.roleSetExtraRole,
+          invitedToParent: platformInvitation.roleSetInvitedToParent,
         };
         let invitation =
           await this.roleSetService.createInvitationExistingContributor(
             invitationInput
           );
-        invitation.invitedToParent =
-          platformInvitation.communityInvitedToParent;
+        invitation.invitedToParent = platformInvitation.roleSetInvitedToParent;
 
         invitation = await this.invitationService.save(invitation);
         const authorization =
