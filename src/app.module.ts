@@ -84,9 +84,24 @@ import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.mo
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
+import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 
 @Module({
   imports: [
+    EncryptionModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const key = configService.get('security.encryption_key', {
+          infer: true,
+        });
+
+        return {
+          key,
+          cipher: Cipher.AES_256_CBC,
+        };
+      },
+    }),
     ConfigModule.forRoot({
       envFilePath: ['.env'],
       isGlobal: true,

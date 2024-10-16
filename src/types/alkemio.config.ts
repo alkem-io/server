@@ -1,4 +1,7 @@
 export type AlkemioConfig = {
+  authorization: {
+    chunk: number;
+  };
   hosting: {
     environment: string;
     port: number;
@@ -26,6 +29,7 @@ export type AlkemioConfig = {
       methods: string;
       allowed_headers: string;
     };
+    encryption_key: string;
   };
   innovation_hub: {
     header: string;

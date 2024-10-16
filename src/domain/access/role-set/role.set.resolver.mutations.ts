@@ -645,7 +645,7 @@ export class RoleSetResolverMutations {
           LogContext.COMMUNITY
         );
       } else {
-        invitationData.communityInvitedToParent = true;
+        invitationData.roleSetInvitedToParent = true;
       }
     }
 

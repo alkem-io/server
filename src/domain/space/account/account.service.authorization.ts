@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -33,6 +33,7 @@ import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-a
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -47,7 +48,8 @@ export class AccountAuthorizationService {
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
     private accountHostService: AccountHostService,
-    private licenseAuthorizationService: LicenseAuthorizationService
+    private licenseAuthorizationService: LicenseAuthorizationService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -149,6 +151,10 @@ export class AccountAuthorizationService {
     for (const space of account.spaces) {
       const spaceAuthorizations =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      this.logger.verbose?.(
+        `space nameID ${space.nameID}: authorizations to reset count = ${spaceAuthorizations.length}`,
+        LogContext.AUTH
+      );
       updatedAuthorizations.push(...spaceAuthorizations);
     }
 

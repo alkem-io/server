@@ -1,6 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { SpaceType } from '@common/enums/space.type';
 import { RolesResult } from './roles.dto.result';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @ObjectType()
 export class RolesResultCommunity extends RolesResult {
@@ -10,11 +11,11 @@ export class RolesResultCommunity extends RolesResult {
   })
   type!: SpaceType;
 
-  @Field(() => Number, {
+  @Field(() => SpaceLevel, {
     nullable: false,
     description: 'The level of the Space e.g. space/challenge/opportunity.',
   })
-  level!: number;
+  level!: SpaceLevel;
 
   constructor(
     nameID: string,

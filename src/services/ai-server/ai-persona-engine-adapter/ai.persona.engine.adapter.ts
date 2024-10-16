@@ -6,6 +6,8 @@ import {
   VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
   VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
   VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
+  VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
+  VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
 } from '@common/constants';
 import { Source } from '../../adapters/chat-guidance-adapter/source.type';
 import { AiPersonaEngineAdapterQueryInput } from './dto/ai.persona.engine.adapter.dto.question.input';
@@ -34,6 +36,10 @@ export class AiPersonaEngineAdapter {
     private virtualContributorEngineCommunityManager: ClientProxy,
     @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT)
     private virtualContributorEngineExpert: ClientProxy,
+    @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC)
+    private virtualContributorEngineGeneric: ClientProxy,
+    @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT)
+    private virtualContributorEngineOpenaiAssistant: ClientProxy,
     @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE)
     private virtualContributorEngineGuidance: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -44,7 +50,6 @@ export class AiPersonaEngineAdapter {
     eventData: AiPersonaEngineAdapterQueryInput
   ): Promise<IMessageAnswerToQuestion> {
     let responseData: AiPersonaEngineAdapterQueryResponse | undefined;
-
     try {
       switch (eventData.engine) {
         case AiPersonaEngine.COMMUNITY_MANAGER:
@@ -59,6 +64,21 @@ export class AiPersonaEngineAdapter {
               AiPersonaEngineAdapterQueryInput
             >({ cmd: AiPersonaEngineEventType.QUERY }, eventData);
           responseData = await firstValueFrom(responseCommunityManager);
+          break;
+        case AiPersonaEngine.GENERIC_OPENAI:
+          const responseGeneric = this.virtualContributorEngineGeneric.send<
+            AiPersonaEngineAdapterQueryResponse,
+            AiPersonaEngineAdapterQueryInput
+          >({ cmd: AiPersonaEngineEventType.QUERY }, eventData);
+          responseData = await firstValueFrom(responseGeneric);
+          break;
+        case AiPersonaEngine.OPENAI_ASSISTANT:
+          const responseOpenaiAssistant =
+            this.virtualContributorEngineOpenaiAssistant.send<
+              AiPersonaEngineAdapterQueryResponse,
+              AiPersonaEngineAdapterQueryInput
+            >({ cmd: AiPersonaEngineEventType.QUERY }, eventData);
+          responseData = await firstValueFrom(responseOpenaiAssistant);
           break;
         case AiPersonaEngine.EXPERT:
           if (!eventData.contextID || !eventData.bodyOfKnowledgeID)

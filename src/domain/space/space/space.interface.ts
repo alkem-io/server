@@ -10,6 +10,7 @@ import { IAccount } from '../account/account.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { ILicense } from '@domain/common/license/license.interface';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @ObjectType('Space')
 export class ISpace extends INameable {
@@ -20,11 +21,11 @@ export class ISpace extends INameable {
 
   account?: IAccount;
 
-  @Field(() => Number, {
+  @Field(() => SpaceLevel, {
     description:
       'The level of this Space, representing the number of Spaces above this one.',
   })
-  level!: number;
+  level!: SpaceLevel;
 
   @Field(() => SpaceType, {
     nullable: false,

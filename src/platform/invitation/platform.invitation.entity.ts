@@ -10,6 +10,7 @@ import {
   UUID_LENGTH,
 } from '@common/constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { CommunityRoleType } from '@common/enums/community.role';
 @Entity()
 export class PlatformInvitation
   extends AuthorizableEntity
@@ -23,7 +24,13 @@ export class PlatformInvitation
   roleSet?: RoleSet;
 
   @Column('boolean', { default: false })
-  communityInvitedToParent!: boolean;
+  roleSetInvitedToParent!: boolean;
+
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: true,
+  })
+  roleSetExtraRole?: CommunityRoleType;
 
   // Platform invitations for Community
   @ManyToOne(() => Platform, platform => platform.platformInvitations, {

@@ -347,6 +347,7 @@ export class CommunityResolverService {
       },
       relations: {
         profile: true,
+        context: true,
       },
     });
     if (!space) {
