@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class TemplatesManager1728033296222 implements MigrationInterface {
-  name = 'TemplatesManager1728033296222';
+export class TemplatesManager1728936661222 implements MigrationInterface {
+  name = 'TemplatesManager1728936661222';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
