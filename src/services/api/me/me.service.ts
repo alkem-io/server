@@ -50,10 +50,22 @@ export class MeService {
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           invitation.roleSet.id
         );
+      if (!space.profile || !space.context) {
+        throw new EntityNotFoundException(
+          `Missing entities on Space loaded for Invitation ${invitation.id}`,
+          LogContext.COMMUNITY
+        );
+      }
       results.push({
         id: `${invitation.id}`,
         invitation: invitation,
-        space: space,
+        spacePendingMembershipInfo: {
+          id: space.id,
+          level: space.level,
+          profile: space.profile,
+          context: space.context,
+          communityGuidelines: space.community?.guidelines,
+        },
       });
     }
     return results;
@@ -77,10 +89,22 @@ export class MeService {
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           application.roleSet.id
         );
+      if (!space.profile || !space.context) {
+        throw new EntityNotFoundException(
+          `Missing entities on Space loaded for Application ${application.id}`,
+          LogContext.COMMUNITY
+        );
+      }
       results.push({
         id: `${application.id}`,
         application: application,
-        space: space,
+        spacePendingMembershipInfo: {
+          id: space.id,
+          level: space.level,
+          profile: space.profile,
+          context: space.context,
+          communityGuidelines: space.community?.guidelines,
+        },
       });
     }
     return results;
