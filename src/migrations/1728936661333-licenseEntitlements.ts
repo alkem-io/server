@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { query } from 'express';
 
-export class LicenseEntitlements1728206057364 implements MigrationInterface {
-  name = 'LicenseEntitlements1728206057364';
+export class LicenseEntitlements1728936661333 implements MigrationInterface {
+  name = 'LicenseEntitlements1728936661333';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
