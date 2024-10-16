@@ -18,17 +18,19 @@ import { IPlatformInvitation } from '@platform/invitation/platform.invitation.in
 import { PlatformRoleService } from './platform.role.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountService } from '@domain/space/account/account.service';
-import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { LicenseService } from '@domain/common/license/license.service';
 
 @Resolver()
 export class PlatformRoleResolverMutations {
   constructor(
     private accountService: AccountService,
-    private accountAuthorizationService: AccountAuthorizationService,
+    private accountLicenseService: AccountLicenseService,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private notificationAdapter: NotificationAdapter,
     private platformRoleService: PlatformRoleService,
+    private licenseService: LicenseService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
@@ -62,7 +64,7 @@ export class PlatformRoleResolverMutations {
       membershipData.role === PlatformRole.BETA_TESTER ||
       membershipData.role === PlatformRole.VC_CAMPAIGN
     ) {
-      await this.resetAuthorizationForUserAccount(user);
+      await this.resetLicenseForUserAccount(user);
     }
 
     this.notifyPlatformGlobalRoleChange(
@@ -102,7 +104,7 @@ export class PlatformRoleResolverMutations {
       membershipData.role === PlatformRole.BETA_TESTER ||
       membershipData.role === PlatformRole.VC_CAMPAIGN
     ) {
-      await this.resetAuthorizationForUserAccount(user);
+      await this.resetLicenseForUserAccount(user);
     }
 
     this.notifyPlatformGlobalRoleChange(
@@ -114,11 +116,12 @@ export class PlatformRoleResolverMutations {
     return user;
   }
 
-  private async resetAuthorizationForUserAccount(user: IUser) {
+  private async resetLicenseForUserAccount(user: IUser) {
     const account = await this.accountService.getAccountOrFail(user.accountID);
-    const authorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    await this.authorizationPolicyService.saveAll(authorizations);
+    const licenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(licenses);
   }
 
   @UseGuards(GraphqlGuard)
