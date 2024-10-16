@@ -43,7 +43,7 @@ export class AdminUsersMutations {
     const user = await this.userService.getUserOrFail(userID);
     await this.kratosService.deleteIdentityByEmail(user.email);
     this.logger.verbose?.(
-      `Account associated with User ${user.email} has been deleted`,
+      `Account associated with User ${user.id} has been deleted`,
       LogContext.AUTH
     );
     return user;
