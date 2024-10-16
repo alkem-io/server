@@ -1,6 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISpace } from '@domain/space/space/space.interface';
+import { SpacePendingMembershipInfo } from './me.space.pending.membership.info';
 
 @ObjectType()
 export class CommunityPendingMembershipResult {
@@ -9,8 +9,9 @@ export class CommunityPendingMembershipResult {
   })
   id!: string;
 
-  @Field(() => ISpace, {
-    description: 'The space that the application is for',
+  @Field(() => SpacePendingMembershipInfo, {
+    description:
+      'The key information for the Space that the application/invitation is for',
   })
-  space!: ISpace;
+  spacePendingMembershipInfo!: SpacePendingMembershipInfo;
 }
