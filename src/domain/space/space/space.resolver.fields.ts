@@ -107,7 +107,6 @@ export class SpaceResolverFields {
     return this.spaceService.activeSubscription(space);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
