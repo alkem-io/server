@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -38,6 +38,7 @@ import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -52,7 +53,8 @@ export class SpaceAuthorizationService {
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceService: SpaceService,
-    private spaceSettingsService: SpaceSettingsService
+    private spaceSettingsService: SpaceSettingsService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -213,7 +215,13 @@ export class SpaceAuthorizationService {
     for (const subspace of space.subspaces) {
       const updatedSubspaceAuthorizations =
         await this.applyAuthorizationPolicy(subspace);
-      updatedAuthorizations.push(...updatedSubspaceAuthorizations);
+      this.logger.verbose?.(
+        `Subspace (${subspace.id}) auth reset: saving ${updatedSubspaceAuthorizations.length} authorizations`,
+        LogContext.AUTH
+      );
+      await this.authorizationPolicyService.saveAll(
+        updatedSubspaceAuthorizations
+      );
     }
 
     return updatedAuthorizations;
