@@ -29,6 +29,9 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from './user.entity';
 import { AuthenticationType } from '@common/enums/authentication.type';
+import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { Identity } from '@ory/kratos-client';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -38,6 +41,7 @@ export class UserResolverFields {
     private preferenceSetService: PreferenceSetService,
     private messagingService: MessagingService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -236,26 +240,60 @@ export class UserResolverFields {
     return loader.load(user.id);
   }
 
-  @ResolveField('authenticationMethod', () => AuthenticationType, {
+  @ResolveField('authentication', () => UserAuthenticationResult, {
     nullable: true,
-    description:
-      'The Authentication Method used for this User. One of email, linkedin, microsoft, or unknown',
+    description: 'Details about the authentication used for this User.',
   })
   @UseGuards(GraphqlGuard)
-  async authenticationMethod(
+  async authentication(
     @Parent() user: IUser,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<AuthenticationType> {
+  ): Promise<UserAuthenticationResult> {
     const isCurrentUser = user.id === agentInfo.userID;
     const platformAccessGranted = this.authorizationService.isAccessGranted(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN
     );
+    const result: UserAuthenticationResult = {
+      method: AuthenticationType.UNKNOWN,
+      createdAt: undefined,
+    };
     if (isCurrentUser || platformAccessGranted) {
-      return this.userService.getAuthenticationTypeByEmail(user.email);
+      const identity = await this.kratosService.getIdentityByEmail(user.email);
+      if (identity) {
+        result.method = await this.getAuthenticationTypeFromIdentity(identity);
+        result.createdAt = await this.getCreatedAtByEmail(identity);
+      }
     }
-    return AuthenticationType.UNKNOWN;
+
+    return result;
+  }
+
+  /**
+   * Retrieves the authentication type associated with a given email.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  private async getAuthenticationTypeFromIdentity(
+    identity: Identity
+  ): Promise<AuthenticationType> {
+    if (!identity) return AuthenticationType.UNKNOWN;
+    return this.kratosService.mapAuthenticationType(identity);
+  }
+
+  /**
+   * Retrieves the date at which the account associated with a given email was created.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  private async getCreatedAtByEmail(
+    identity: Identity
+  ): Promise<Date | undefined> {
+    if (!identity || !identity.created_at) return undefined;
+    return new Date(identity.created_at);
   }
 
   private async isAccessGranted(
