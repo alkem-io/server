@@ -262,6 +262,10 @@ export class RoleSetService {
     agentInfo: AgentInfo,
     roleSet: IRoleSet
   ): Promise<CommunityRoleType[]> {
+    if (!agentInfo.agentID) {
+      return [];
+    }
+
     const result: CommunityRoleType[] = [];
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const roles: CommunityRoleType[] = Object.values(
