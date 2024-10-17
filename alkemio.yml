@@ -264,6 +264,9 @@ monitoring:
     # Flag to control whether PII should be included on monitoring
     submit_pii: ${LOGGING_SENTRY_PII_ENABLED}:false
 
+    # Set the Sentry environment variable to be used
+    environment: ${LOGGING_SENTRY_ENVIRONMENT}:development
+
   # Elastic APM configuration
   apm:
     # Is real user monitoring enabled
