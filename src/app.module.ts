@@ -82,6 +82,7 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 
 @Module({
@@ -291,6 +292,7 @@ import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
     WhiteboardIntegrationModule,
     FileIntegrationModule,
     PlatformSettingsModule,
+    TemplateApplierModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

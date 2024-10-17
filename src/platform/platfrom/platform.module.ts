@@ -16,6 +16,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { ForumModule } from '@platform/forum/forum.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
+import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
     MetadataModule,
     LicensingModule,
     PlatformInvitationModule,
+    TemplatesManagerModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [

@@ -6,6 +6,7 @@ import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.ag
 import { Licensing } from '@platform/licensing/licensing.entity';
 import { Forum } from '@platform/forum/forum.entity';
 import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
+import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
@@ -24,6 +25,14 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   })
   @JoinColumn()
   library?: Library;
+
+  @OneToOne(() => TemplatesManager, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  templatesManager?: TemplatesManager;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,
