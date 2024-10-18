@@ -11,6 +11,7 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { UserService } from '@domain/community/user/user.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { UserIdentityDeletionException } from '@common/exceptions';
 
 @Resolver()
 export class AdminUsersMutations {
@@ -41,11 +42,19 @@ export class AdminUsersMutations {
     );
 
     const user = await this.userService.getUserOrFail(userID);
-    await this.kratosService.deleteIdentityByEmail(user.email);
-    this.logger.verbose?.(
-      `Account associated with User ${user.id} has been deleted`,
-      LogContext.AUTH
-    );
+    try {
+      await this.kratosService.deleteIdentityByEmail(user.email);
+      this.logger.verbose?.(
+        `Account associated with User ${user.email} has been deleted`,
+        LogContext.AUTH
+      );
+    } catch (error: any) {
+      this.logger.error?.(
+        `Failed to delete account for User ID ${userID}: ${error.message}`,
+        LogContext.AUTH
+      );
+      throw new UserIdentityDeletionException('Failed to delete user account');
+    }
     return user;
   }
 }
