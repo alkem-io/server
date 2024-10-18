@@ -1,4 +1,5 @@
 import { Identity } from '@ory/kratos-client';
+import { OryTraits } from './ory.traits';
 
 export interface OryDefaultIdentitySchema extends Identity {
   created_at: string; //UTC Zulu time
@@ -30,14 +31,4 @@ export interface OryDefaultIdentitySchema extends Identity {
       via: 'email';
     },
   ];
-}
-
-export interface OryTraits {
-  accepted_terms: boolean;
-  picture: string;
-  email: string;
-  name: {
-    first: string;
-    last: string;
-  };
 }

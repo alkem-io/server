@@ -22,7 +22,7 @@ export class AiServerAdapter {
     return this.aiServer.getBodyOfKnowledgeLastUpdated(personaServiceId);
   }
 
-  async refreshBodyOfKnowlege(personaServiceId: string): Promise<boolean> {
+  async refreshBodyOfKnowledge(personaServiceId: string): Promise<boolean> {
     this.logger.verbose?.(
       `Refresh body of knowledge mutation invoked for AI Persona service ${personaServiceId}`,
       LogContext.AI_SERVER_ADAPTER
@@ -68,6 +68,7 @@ export class AiServerAdapter {
     const vcInteractionID = questionInput.vcInteractionID;
     return this.aiServer.askQuestion({
       ...questionInput,
+      externalMetadata: questionInput.externalMetadata || {},
       interactionID: vcInteractionID,
     });
   }

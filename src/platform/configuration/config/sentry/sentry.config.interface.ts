@@ -20,4 +20,10 @@ export abstract class ISentryConfig {
     description: 'URL to the Sentry endpoint.',
   })
   endpoint!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The Sentry environment to report to.',
+  })
+  environment!: string;
 }

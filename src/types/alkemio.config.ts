@@ -29,6 +29,7 @@ export type AlkemioConfig = {
       methods: string;
       allowed_headers: string;
     };
+    encryption_key: string;
   };
   innovation_hub: {
     header: string;
@@ -83,6 +84,7 @@ export type AlkemioConfig = {
       enabled: boolean;
       endpoint: string;
       submit_pii: boolean;
+      environment: string;
     };
     apm: {
       rumEnabled: boolean;

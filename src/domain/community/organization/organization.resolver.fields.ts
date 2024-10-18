@@ -58,14 +58,14 @@ export class OrganizationResolverFields {
       parent.id
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
       `read user groups on org: ${organization.id}`
     );
 
-    return await this.organizationService.getUserGroups(organization);
+    return this.organizationService.getUserGroups(organization);
   }
 
   @UseGuards(GraphqlGuard)
@@ -84,7 +84,7 @@ export class OrganizationResolverFields {
       parent.id
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
