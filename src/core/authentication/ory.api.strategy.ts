@@ -11,6 +11,7 @@ import { IncomingMessage } from 'http';
 import { AlkemioConfig } from '@src/types';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { Session } from '@ory/kratos-client';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
@@ -46,8 +47,8 @@ export class OryApiStrategy extends PassportStrategy(
       return this.authService.createAgentInfo();
     }
 
-    const { data } =
-      await this.kratosService.getDataFromBearerToken(bearerToken);
+    const data: Session =
+      await this.kratosService.getSessionFromBearerToken(bearerToken);
 
     if (!data) {
       this.logger.verbose?.('No Ory Kratos API session', LogContext.AUTH);

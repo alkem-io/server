@@ -117,6 +117,7 @@ export class KonfigService {
         enabled: sentry?.enabled,
         endpoint: sentry?.endpoint,
         submitPII: sentry?.submit_pii,
+        environment: sentry?.environment,
       },
       apm: {
         rumEnabled: apm?.rumEnabled,

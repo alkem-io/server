@@ -264,6 +264,9 @@ monitoring:
     # Flag to control whether PII should be included on monitoring
     submit_pii: ${LOGGING_SENTRY_PII_ENABLED}:false
 
+    # Set the Sentry environment variable to be used
+    environment: ${LOGGING_SENTRY_ENVIRONMENT}:development
+
   # Elastic APM configuration
   apm:
     # Is real user monitoring enabled
@@ -286,7 +289,7 @@ communications:
 storage:
   file:
     # 20MB
-    max_file_size: 2097152
+    max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
   # MySQL database configuration for usage by the Alkemio Server.
   # The authentication method used by Alkemio Server is MySQL Native Password.
   # Note: both schema / database name are used for configuration and they need to have the same value.
