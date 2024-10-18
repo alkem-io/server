@@ -7,6 +7,7 @@ export * from './profile/profile.tagsets.loader.creator';
 export * from './callout-framing/callout.framing.whiteboard.loader';
 
 export * from './profile.loader.creator';
+export * from './license.loader.creator';
 export * from './preferences.loader.creator';
 export * from './agent.loader.creator';
 export * from './authorization.loader.creator';
