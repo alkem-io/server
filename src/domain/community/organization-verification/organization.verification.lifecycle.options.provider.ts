@@ -3,7 +3,11 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  InvalidStateTransitionException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -11,6 +15,7 @@ import { OrganizationVerificationEventInput } from './dto/organization.verificat
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationVerificationService } from './organization.verification.service';
 import { IOrganizationVerification } from './organization.verification.interface';
+import { ILifecycle } from '@domain/common/lifecycle';
 
 @Injectable()
 export class OrganizationVerificationLifecycleOptionsProvider {
@@ -25,7 +30,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
     organizationVerificationEventData: OrganizationVerificationEventInput,
     agentInfo: AgentInfo
   ): Promise<IOrganizationVerification> {
-    const organizationVerification =
+    let organizationVerification =
       await this.organizationVerificationService.getOrganizationVerificationOrFail(
         organizationVerificationEventData.organizationVerificationID
       );
@@ -51,9 +56,47 @@ export class OrganizationVerificationLifecycleOptionsProvider {
       organizationVerification.authorization
     );
 
-    return await this.organizationVerificationService.getOrganizationVerificationOrFail(
-      organizationVerification.id
+    organizationVerification =
+      await this.organizationVerificationService.getOrganizationVerificationOrFail(
+        organizationVerification.id,
+        {
+          relations: {
+            lifecycle: true,
+          },
+        }
+      );
+    if (!organizationVerification.lifecycle) {
+      throw new RelationshipNotFoundException(
+        `Unable to load lifecycle on Organization verificaiton: ${organizationVerification.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    // Ensure the cached state is synced with the lifecycle state
+    organizationVerification.status = this.getOrganizationVerificationState(
+      organizationVerification.lifecycle
     );
+    return await this.organizationVerificationService.save(
+      organizationVerification
+    );
+  }
+
+  private getOrganizationVerificationState(lifecycle: ILifecycle) {
+    const state = this.lifecycleService.getState(lifecycle);
+
+    switch (state) {
+      case 'notVerified':
+      case 'verificationPending':
+      case 'rejected':
+      case 'archived':
+        return OrganizationVerificationEnum.NOT_VERIFIED;
+      case 'manuallyVerified':
+        return OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION;
+      default:
+        throw new InvalidStateTransitionException(
+          `Organizaiton Verification unrecognized state: ${state}`,
+          LogContext.COMMUNITY
+        );
+    }
   }
 
   private organizationVerificationLifecycleMachineOptions: Partial<
