@@ -10,15 +10,13 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UpdateTemplateInput } from './dto/template.dto.update';
 import { DeleteTemplateInput } from './dto/template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
-import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
+import { LogContext } from '@common/enums/logging.context';
+import { ValidationException } from '@common/exceptions/validation.exception';
 
 @Resolver()
 export class TemplateResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private innovationFlowService: InnovationFlowService,
     private templateService: TemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -67,32 +65,15 @@ export class TemplateResolverMutations {
       AuthorizationPrivilege.DELETE,
       `template delete: ${template.id}`
     );
-    return await this.templateService.delete(template);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationFlow, {
-    description:
-      'Updates the InnovationFlow states from the specified template.',
-  })
-  async updateInnovationFlowStatesFromTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowData')
-    innovationFlowData: UpdateInnovationFlowFromTemplateInput
-  ): Promise<IInnovationFlow> {
-    const innovationFlow =
-      await this.innovationFlowService.getInnovationFlowOrFail(
-        innovationFlowData.innovationFlowID
+    const usedInTemplateDefault =
+      await this.templateService.isTemplateInUseInTemplateDefault(template.id);
+    if (usedInTemplateDefault) {
+      throw new ValidationException(
+        `Template is in use in TemplateDefault: ${template.id}`,
+        LogContext.TEMPLATES
       );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      innovationFlow.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `updateInnovationFlow from template: ${innovationFlow.id}`
-    );
+    }
 
-    return await this.templateService.updateInnovationFlowStatesFromTemplate(
-      innovationFlowData
-    );
+    return await this.templateService.delete(template);
   }
 }

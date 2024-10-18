@@ -26,6 +26,7 @@ import { LicensingAuthorizationService } from '@platform/licensing/licensing.ser
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
+import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -37,7 +38,8 @@ export class PlatformAuthorizationService {
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private libraryAuthorizationService: LibraryAuthorizationService,
-    private licensingAuthorizationService: LicensingAuthorizationService
+    private licensingAuthorizationService: LicensingAuthorizationService,
+    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
@@ -49,6 +51,7 @@ export class PlatformAuthorizationService {
         library: true,
         storageAggregator: true,
         licensing: true,
+        templatesManager: true,
       },
     });
 
@@ -58,7 +61,8 @@ export class PlatformAuthorizationService {
       !platform.library ||
       !platform.forum ||
       !platform.storageAggregator ||
-      !platform.licensing
+      !platform.licensing ||
+      !platform.templatesManager
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
@@ -84,6 +88,13 @@ export class PlatformAuthorizationService {
         platform.authorization
       );
     updatedAuthorizations.push(libraryUpdatedAuthorization);
+
+    const templatesManagerAuthorizations =
+      await this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
+        platform.templatesManager.id,
+        platform.authorization
+      );
+    updatedAuthorizations.push(...templatesManagerAuthorizations);
 
     for (const platformInvitation of platform.platformInvitations) {
       const updatedInvitation =

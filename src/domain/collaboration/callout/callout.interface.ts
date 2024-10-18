@@ -67,4 +67,10 @@ export abstract class ICallout extends IAuthorizable {
   publishedDate?: Date;
 
   collaboration?: ICollaboration;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Whether this callout is a Template or not.',
+  })
+  isTemplate!: boolean;
 }

@@ -1,4 +1,4 @@
-import { ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
@@ -16,4 +16,10 @@ export abstract class ICollaboration extends IAuthorizable {
   innovationFlow?: IInnovationFlow;
 
   groupsStr!: string;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Whether this Collaboration is a Template or not.',
+  })
+  isTemplate!: boolean;
 }

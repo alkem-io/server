@@ -2,10 +2,10 @@ import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { FlowState } from './space.defaults.innovation.flow.knowledge';
+import { FlowState } from './bootstrap.subspace.knowledge.innovation.flow.states';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
-export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
+export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
   {
     nameID: 'summary',
     type: CalloutType.POST,
@@ -216,7 +216,7 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
       profile: {
         displayName: 'Where to find the Virtual Contributor Profile',
         description:
-          'You can find the profile of your VC in your account page. \n\n1. Go to your profile (by clicking on your profile picture in the top right of your screen and selecting MY PROFILE in the dropdown menu).\n2. Go to the settings by clicking on the gear icon right of your name.\n3. Go to the ACCOUNT tab.\n Here you can see a list of all your VC\'s and go to their profile by clicking on their name.',
+          'You can find the profile of your VC in your account page. \n\n1. Go to your profile (by clicking on your profile picture in the top right of your screen and selecting MY PROFILE in the dropdown menu).\n2. Go to the settings by clicking on the gear icon right of your name.\n3. Go to the ACCOUNT tab.\n Here you can see a list of all your VCs and go to their profile by clicking on their name.',
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,

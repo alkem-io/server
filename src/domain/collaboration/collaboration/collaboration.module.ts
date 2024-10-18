@@ -19,7 +19,6 @@ import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tags
 import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
-import { SpaceDefaultsModule } from '@domain/space/space.defaults/space.defaults.module';
 import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
@@ -42,7 +41,6 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     TimelineModule,
     TagsetTemplateSetModule,
     InnovationFlowModule,
-    SpaceDefaultsModule,
     CalloutGroupsModule,
     LicenseEngineModule,
     TemporaryStorageModule,
