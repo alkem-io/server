@@ -84,6 +84,7 @@ export type AlkemioConfig = {
       enabled: boolean;
       endpoint: string;
       submit_pii: boolean;
+      environment: string;
     };
     apm: {
       rumEnabled: boolean;
