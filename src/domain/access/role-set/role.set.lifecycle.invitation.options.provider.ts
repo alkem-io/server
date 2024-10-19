@@ -150,12 +150,12 @@ export class RoleSetInvitationLifecycleOptionsProvider {
         invited: {
           on: {
             ACCEPT: {
-              target: 'accepted',
               guard: 'hasInvitationAcceptPrivilege',
+              target: 'accepted',
             },
             REJECT: {
-              target: 'rejected',
               guard: 'hasUpdatePrivilege',
+              target: 'rejected',
             },
           },
         },
@@ -166,12 +166,12 @@ export class RoleSetInvitationLifecycleOptionsProvider {
         rejected: {
           on: {
             REINVITE: {
-              target: 'invited',
               guard: 'hasUpdatePrivilege',
+              target: 'invited',
             },
             ARCHIVE: {
-              target: 'archived',
               guard: 'hasUpdatePrivilege',
+              target: 'archived',
             },
           },
         },

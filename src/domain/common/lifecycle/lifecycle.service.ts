@@ -155,7 +155,7 @@ export class LifecycleService {
     return isFinal;
   }
 
-  public getActorWithState(lifecycle: ILifecycle, machine: any): any {
+  private getActorWithState(lifecycle: ILifecycle, machine: any): any {
     const restoredState = this.getRestoredSnapshot(lifecycle);
     const actor = createActor(machine, {
       snapshot: restoredState,
