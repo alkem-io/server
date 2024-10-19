@@ -69,7 +69,6 @@ export class OrganizationVerificationLifecycleOptionsProvider {
     const machine = setup({
       actions: {
         organizationManuallyVerified: (_: any) => {
-          console.log('action organizationManuallyVerified');
           //throw new Error('Action not implemented');
         },
       },
