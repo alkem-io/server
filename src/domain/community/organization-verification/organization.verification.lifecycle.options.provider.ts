@@ -8,7 +8,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationVerificationService } from './organization.verification.service';
 import { IOrganizationVerification } from './organization.verification.interface';
 
@@ -60,26 +59,12 @@ export class OrganizationVerificationLifecycleOptionsProvider {
     MachineOptions<any, any>
   > = {
     actions: {
-      organizationManuallyVerified: async (_, event: any) => {
-        const organizationVerification =
-          await this.organizationVerificationService.getOrganizationVerificationOrFail(
-            event.parentID,
-            {
-              relations: { lifecycle: true },
-            }
-          );
-        const lifecycle = organizationVerification.lifecycle;
-        if (!lifecycle) {
-          throw new EntityNotInitializedException(
-            `Verification Lifecycle not initialized on Organization: ${organizationVerification.id}`,
-            LogContext.COMMUNITY
-          );
-        }
-        organizationVerification.status =
-          OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION;
-        await this.organizationVerificationService.save(
-          organizationVerification
+      organizationManuallyVerified: async (_, __) => {
+        throw new EntityNotInitializedException(
+          `Verification Lifecycle not initialized on Organization: ${_.id}`,
+          LogContext.COMMUNITY
         );
+        // Rely on state being synchronized in the containing handler
       },
     },
     guards: {
