@@ -11,7 +11,7 @@ import { OrganizationVerificationService } from './organization.verification.ser
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { setup } from 'xstate';
+import { AnyStateMachine, setup } from 'xstate';
 import { LifecycleEventInput } from '@domain/common/lifecycle';
 
 @Injectable()
@@ -65,7 +65,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
     );
   }
 
-  public getMachine(): any {
+  public getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
         organizationManuallyVerified: (_: any) => {
@@ -161,7 +161,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
         return OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION;
       default:
         throw new InvalidStateTransitionException(
-          `Organizaiton Verification unrecognized state: ${state}`,
+          `Organization Verification unrecognized state: ${state}`,
           LogContext.COMMUNITY
         );
     }

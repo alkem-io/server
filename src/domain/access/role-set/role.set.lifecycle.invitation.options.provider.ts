@@ -11,7 +11,7 @@ import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.d
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { RoleSetService } from './role.set.service';
-import { setup } from 'xstate';
+import { AnyStateMachine, setup } from 'xstate';
 
 @Injectable()
 export class RoleSetInvitationLifecycleOptionsProvider {
@@ -49,10 +49,10 @@ export class RoleSetInvitationLifecycleOptionsProvider {
     return await this.invitationService.getInvitationOrFail(invitationID);
   }
 
-  public getMachine(): any {
+  public getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
-        communityAddMember: async (event: any, __: any) => {
+        communityAddMember: async ({ event }) => {
           try {
             const invitation = await this.invitationService.getInvitationOrFail(
               event.parentID,

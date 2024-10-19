@@ -13,7 +13,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { RoleSetService } from './role.set.service';
-import { setup } from 'xstate';
+import { AnyStateMachine, setup } from 'xstate';
 
 @Injectable()
 export class RoleSetApplicationLifecycleOptionsProvider {
@@ -56,10 +56,10 @@ export class RoleSetApplicationLifecycleOptionsProvider {
     return await this.applicationService.getApplicationOrFail(applicationID);
   }
 
-  public getMachine(): any {
+  public getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
-        communityAddMember: async (event: any, __: any) => {
+        communityAddMember: async ({ event }) => {
           const application =
             await this.applicationService.getApplicationOrFail(event.parentID, {
               relations: { roleSet: true, user: true },
