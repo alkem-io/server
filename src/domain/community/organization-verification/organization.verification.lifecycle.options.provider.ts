@@ -2,11 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import {
-  EntityNotInitializedException,
-  InvalidStateTransitionException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
+import { InvalidStateTransitionException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -16,6 +12,8 @@ import { IOrganizationVerification } from './organization.verification.interface
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { LifecycleEvent } from '@domain/common/lifecycle/types/lifecycle.event';
+import { createMachine } from 'xstate';
+import { LifecycleEventInput } from '@domain/common/lifecycle';
 import { organizationVerificationLifecycleConfig } from './organization.verification.lifecycle.config';
 
 @Injectable()
@@ -36,57 +34,86 @@ export class OrganizationVerificationLifecycleOptionsProvider {
         organizationVerificationEventData.organizationVerificationID
       );
 
-    if (!organizationVerification.lifecycle)
-      throw new EntityNotInitializedException(
-        `Verification Lifecycle not initialized on Organization: ${organizationVerification.id}`,
-        LogContext.COMMUNITY
-      );
-
     // Send the event, translated if needed
     this.logger.verbose?.(
       `Event ${organizationVerificationEventData.eventName} triggered on organization: ${organizationVerification.id} using lifecycle ${organizationVerification.lifecycle.id}`,
       LogContext.COMMUNITY
     );
-    await this.lifecycleService.event({
+
+    const machine = this.getMachine();
+    const event: LifecycleEventInput = {
       ID: organizationVerification.lifecycle.id,
-      machineDefinition: organizationVerificationLifecycleConfig,
+      lifecycle: organizationVerification.lifecycle,
+      machine,
       eventName: organizationVerificationEventData.eventName,
-      actions: this.organizationVerificationLifecycleMachineOptions.actions,
-      guards: this.organizationVerificationLifecycleMachineOptions.guards,
       agentInfo,
       authorization: organizationVerification.authorization,
       parentID: organizationVerification.id,
-    });
+    };
+
+    await this.lifecycleService.event(event);
 
     organizationVerification =
       await this.organizationVerificationService.getOrganizationVerificationOrFail(
-        organizationVerification.id,
-        {
-          relations: {
-            lifecycle: true,
-          },
-        }
+        organizationVerification.id
       );
-    if (!organizationVerification.lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load lifecycle on Organization verificaiton: ${organizationVerification.id}`,
-        LogContext.COMMUNITY
-      );
-    }
+
     // Ensure the cached state is synced with the lifecycle state
     organizationVerification.status = this.getOrganizationVerificationState(
-      organizationVerification.lifecycle
+      organizationVerification.lifecycle,
+      machine
     );
     return await this.organizationVerificationService.save(
       organizationVerification
     );
   }
 
-  private getOrganizationVerificationState(lifecycle: ILifecycle) {
-    const state = this.lifecycleService.getState(
-      lifecycle,
-      organizationVerificationLifecycleConfig
-    );
+  public getMachine(): any {
+    const machine = createMachine(organizationVerificationLifecycleConfig);
+    machine.provide({
+      guards: {
+        organizationVerificationGrantAuthorized: (_: any, __: any) => {
+          console.log('organizationVerificationGrantAuthorized');
+          return true;
+        },
+        // To actually assign the verified status the GRANT privilege is needed on the verification
+        organizationVerificationGrantAuthorized2: (_: any, __: any) => {
+          const event: LifecycleEvent = _.event;
+          const agentInfo: AgentInfo = event.agentInfo;
+          const authorizationPolicy: IAuthorizationPolicy = event.authorization;
+          return this.authorizationService.isAccessGranted(
+            agentInfo,
+            authorizationPolicy,
+            AuthorizationPrivilege.GRANT
+          );
+        },
+        organizationVerificationUpdateAuthorized: (_: any, __: any) => {
+          const event: LifecycleEvent = _.event;
+          const agentInfo: AgentInfo = event.agentInfo;
+          const authorizationPolicy: IAuthorizationPolicy = event.authorization;
+          return this.authorizationService.isAccessGranted(
+            agentInfo,
+            authorizationPolicy,
+            AuthorizationPrivilege.UPDATE
+          );
+        },
+      },
+      actions: {
+        organizationManuallyVerified: (_: any) => {
+          console.log('action organizationManuallyVerified');
+          // throw new Error('Action not implemented');
+          // Rely on state being synchronized in the containing handler
+        },
+      },
+    });
+    return machine;
+  }
+
+  private getOrganizationVerificationState(
+    lifecycle: ILifecycle,
+    machine: any
+  ): OrganizationVerificationEnum {
+    const state = this.lifecycleService.getState(lifecycle, machine);
 
     switch (state) {
       case 'notVerified':
@@ -103,40 +130,4 @@ export class OrganizationVerificationLifecycleOptionsProvider {
         );
     }
   }
-
-  private organizationVerificationLifecycleMachineOptions: any = {
-    actions: {
-      organizationManuallyVerified: (_: any) => {
-        console.log('action organizationManuallyVerified');
-        // throw new Error('Action not implemented');
-        // Rely on state being synchronized in the containing handler
-      },
-    },
-    guards: {
-      organizationVerificationGrantAuthorized: (_: any, __: any) => {
-        console.log('organizationVerificationGrantAuthorized');
-      },
-      // To actually assign the verified status the GRANT privilege is needed on the verification
-      organizationVerificationGrantAuthorized2: (_: any, __: any) => {
-        const event: LifecycleEvent = _.event;
-        const agentInfo: AgentInfo = event.agentInfo;
-        const authorizationPolicy: IAuthorizationPolicy = event.authorization;
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          authorizationPolicy,
-          AuthorizationPrivilege.GRANT
-        );
-      },
-      organizationVerificationUpdateAuthorized: (_: any, __: any) => {
-        const event: LifecycleEvent = _.event;
-        const agentInfo: AgentInfo = event.agentInfo;
-        const authorizationPolicy: IAuthorizationPolicy = event.authorization;
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          authorizationPolicy,
-          AuthorizationPrivilege.UPDATE
-        );
-      },
-    },
-  };
 }

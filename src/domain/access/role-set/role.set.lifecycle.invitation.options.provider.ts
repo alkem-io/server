@@ -11,7 +11,7 @@ import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.d
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { RoleSetService } from './role.set.service';
-import { LifecycleEvent } from '@domain/common/lifecycle/types/lifecycle.event';
+import { createMachine } from 'xstate';
 import { invitationLifecycleConfig } from '../invitation/invitation.lifecycle.config';
 
 @Injectable()
@@ -32,59 +32,30 @@ export class RoleSetInvitationLifecycleOptionsProvider {
     const invitation =
       await this.invitationService.getInvitationOrFail(invitationID);
 
-    if (!invitation.lifecycle)
-      throw new EntityNotInitializedException(
-        `Lifecycle not initialized on Invitation: ${invitationID}`,
-        LogContext.COMMUNITY
-      );
-
     // Send the event, translated if needed
     this.logger.verbose?.(
       `Event ${invitationEventData.eventName} triggered on invitation: ${invitation.id} using lifecycle ${invitation.lifecycle.id}`,
       LogContext.COMMUNITY
     );
 
-    const { options, ready } = this.getInvitationLifecycleMachineOptions();
-
     await this.lifecycleService.event({
       ID: invitation.lifecycle.id,
-      machineDefinition: invitationLifecycleConfig,
+      machine: this.getMachine(),
+      lifecycle: invitation.lifecycle,
       eventName: invitationEventData.eventName,
-      actions: options.actions,
-      guards: options.guards,
       agentInfo,
       authorization: invitation.authorization,
       parentID: invitationID,
     });
 
-    await ready();
-
     return await this.invitationService.getInvitationOrFail(invitationID);
   }
 
-  private getInvitationLifecycleMachineOptions(): {
-    options: any;
-    ready: () => Promise<void>;
-  } {
-    let resolve: (value: void) => void;
-
-    const readyPromise = new Promise<void>(r => {
-      resolve = r;
-    });
-
-    let readyState = true;
-
-    const getReadiness = () => {
-      if (readyState) {
-        return Promise.resolve();
-      }
-      return readyPromise;
-    };
-
-    const options: any = {
+  public getMachine(): any {
+    const machine = createMachine(invitationLifecycleConfig);
+    machine.provide({
       actions: {
-        communityAddMember: async (_: any, event: LifecycleEvent) => {
-          readyState = false;
+        communityAddMember: async (event: any, __: any) => {
           try {
             const invitation = await this.invitationService.getInvitationOrFail(
               event.parentID,
@@ -139,13 +110,20 @@ export class RoleSetInvitationLifecycleOptionsProvider {
                 false
               );
             }
-          } finally {
-            resolve();
+          } catch (e) {
+            this.logger.error?.(
+              `Error adding member to community: ${e}`,
+              LogContext.COMMUNITY
+            );
+            throw new EntityNotInitializedException(
+              `Unable to add member to community: ${e}`,
+              LogContext.COMMUNITY
+            );
           }
         },
       },
       guards: {
-        communityUpdateAuthorized: (_: any, event: LifecycleEvent) => {
+        communityUpdateAuthorized: (event: any, __) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -154,10 +132,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
             AuthorizationPrivilege.UPDATE
           );
         },
-        communityInvitationAcceptAuthorized: (
-          _: any,
-          event: LifecycleEvent
-        ) => {
+        communityInvitationAcceptAuthorized: (event: any, __) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -167,11 +142,6 @@ export class RoleSetInvitationLifecycleOptionsProvider {
           );
         },
       },
-    };
-
-    return {
-      options,
-      ready: getReadiness,
-    };
+    });
   }
 }

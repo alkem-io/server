@@ -5,18 +5,12 @@ import {
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  AnyMachineSnapshot,
-  createActor,
-  createMachine,
-  MachineSnapshot,
-} from 'xstate';
+import { AnyMachineSnapshot, createActor, MachineSnapshot } from 'xstate';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
 import { LifecycleEventInput } from './dto/lifecycle.dto.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 
 @Injectable()
 export class LifecycleService {
@@ -46,14 +40,7 @@ export class LifecycleService {
       LogContext.LIFECYCLE
     );
 
-    const actor = this.getActorWithState(
-      lifecycle,
-      eventData.machineDefinition,
-      {
-        actions: eventData.actions,
-        guards: eventData.guards,
-      }
-    );
+    const actor = this.getActorWithState(lifecycle, eventData.machine);
 
     const snapshot = actor.getSnapshot();
     const startingState = snapshot.value;
@@ -154,35 +141,21 @@ export class LifecycleService {
     return JSON.parse(stateStr);
   }
 
-  public getState(
-    lifecycle: ILifecycle,
-    machineDefinition: ILifecycleDefinition
-  ): string {
-    const actor = this.getActorWithState(lifecycle, machineDefinition);
+  public getState(lifecycle: ILifecycle, machine: any): string {
+    const actor = this.getActorWithState(lifecycle, machine);
     const snapshot = actor.getSnapshot();
     return snapshot.value;
   }
 
-  public isFinalState(
-    lifecycle: ILifecycle,
-    machineDefinition: ILifecycleDefinition
-  ): boolean {
-    const actor = this.getActorWithState(lifecycle, machineDefinition);
+  public isFinalState(lifecycle: ILifecycle, machine: any): boolean {
+    const actor = this.getActorWithState(lifecycle, machine);
 
     const isFinal = actor.getSnapshot().status === 'done';
     if (!isFinal) return false;
     return isFinal;
   }
 
-  public getActorWithState(
-    lifecycle: ILifecycle,
-    machineDefinition: ILifecycleDefinition,
-    options?: any
-  ): any {
-    let machine = createMachine(machineDefinition);
-    if (options) {
-      machine = machine.provide(options);
-    }
+  public getActorWithState(lifecycle: ILifecycle, machine: any): any {
     const restoredState = this.getRestoredSnapshot(lifecycle);
     const actor = createActor(machine, {
       snapshot: restoredState,
@@ -204,11 +177,8 @@ export class LifecycleService {
     return actor;
   }
 
-  getNextEvents(
-    lifecycle: ILifecycle,
-    machineDefinition: ILifecycleDefinition
-  ): string[] {
-    const actor = this.getActorWithState(lifecycle, machineDefinition);
+  getNextEvents(lifecycle: ILifecycle, machine: any): string[] {
+    const actor = this.getActorWithState(lifecycle, machine);
     const snapshot = actor.getSnapshot();
     const nextEvents = this.getNextEventsFromSnapshot(snapshot);
     return nextEvents || [];

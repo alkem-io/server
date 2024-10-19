@@ -2,20 +2,20 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { applicationLifecycleConfig } from './application.lifecycle.config';
 import { IApplication } from './application.interface';
+import { createMachine } from 'xstate';
 
 @Resolver(() => IApplication)
 export class ApplicationLifecycleResolverFields {
+  private machine = createMachine(applicationLifecycleConfig);
+
   constructor(private lifecycleService: LifecycleService) {}
 
   @ResolveField('state', () => String, {
     nullable: true,
     description: 'The current state of this Lifecycle.',
   })
-  async state(@Parent() application: IApplication) {
-    return await this.lifecycleService.getState(
-      application.lifecycle,
-      applicationLifecycleConfig
-    );
+  state(@Parent() application: IApplication) {
+    return this.lifecycleService.getState(application.lifecycle, this.machine);
   }
 
   @ResolveField('nextEvents', () => [String], {
@@ -25,7 +25,7 @@ export class ApplicationLifecycleResolverFields {
   nextEvents(@Parent() application: IApplication) {
     return this.lifecycleService.getNextEvents(
       application.lifecycle,
-      applicationLifecycleConfig
+      this.machine
     );
   }
 
@@ -33,10 +33,10 @@ export class ApplicationLifecycleResolverFields {
     nullable: false,
     description: 'Is this lifecycle in a final state (done).',
   })
-  async isFinalized(@Parent() application: IApplication) {
-    return await this.lifecycleService.isFinalState(
+  isFinalized(@Parent() application: IApplication) {
+    return this.lifecycleService.isFinalState(
       application.lifecycle,
-      applicationLifecycleConfig
+      this.machine
     );
   }
 }

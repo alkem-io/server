@@ -1,11 +1,14 @@
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IOrganizationVerification } from './organization.verification.interface';
-import { organizationVerificationLifecycleConfig } from './organization.verification.lifecycle.config';
+import { OrganizationVerificationLifecycleOptionsProvider } from './organization.verification.lifecycle.options.provider';
 
 @Resolver(() => IOrganizationVerification)
 export class OrganizationVerificationLifecycleResolverFields {
-  constructor(private lifecycleService: LifecycleService) {}
+  constructor(
+    private lifecycleService: LifecycleService,
+    private organizationVerificationLifecycleOptionsProvider: OrganizationVerificationLifecycleOptionsProvider
+  ) {}
 
   @ResolveField('state', () => String, {
     nullable: true,
@@ -14,7 +17,7 @@ export class OrganizationVerificationLifecycleResolverFields {
   async state(@Parent() organizationVerification: IOrganizationVerification) {
     return await this.lifecycleService.getState(
       organizationVerification.lifecycle,
-      organizationVerificationLifecycleConfig
+      this.organizationVerificationLifecycleOptionsProvider.getMachine()
     );
   }
 
@@ -25,7 +28,7 @@ export class OrganizationVerificationLifecycleResolverFields {
   nextEvents(@Parent() organizationVerification: IOrganizationVerification) {
     return this.lifecycleService.getNextEvents(
       organizationVerification.lifecycle,
-      organizationVerificationLifecycleConfig
+      this.organizationVerificationLifecycleOptionsProvider.getMachine()
     );
   }
 
@@ -38,7 +41,7 @@ export class OrganizationVerificationLifecycleResolverFields {
   ) {
     return await this.lifecycleService.isFinalState(
       organizationVerification.lifecycle,
-      organizationVerificationLifecycleConfig
+      this.organizationVerificationLifecycleOptionsProvider.getMachine()
     );
   }
 }

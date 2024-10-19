@@ -13,7 +13,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { RoleSetService } from './role.set.service';
-import { LifecycleEvent } from '@domain/common/lifecycle/types/lifecycle.event';
+import { createMachine } from 'xstate';
 import { applicationLifecycleConfig } from '../application/application.lifecycle.config';
 
 @Injectable()
@@ -47,10 +47,9 @@ export class RoleSetApplicationLifecycleOptionsProvider {
     );
     await this.lifecycleService.event({
       ID: application.lifecycle.id,
-      machineDefinition: applicationLifecycleConfig,
+      machine: this.getMachine(),
       eventName: applicationEventData.eventName,
-      actions: this.applicationLifecycleMachineOptions.actions,
-      guards: this.applicationLifecycleMachineOptions.guards,
+      lifecycle: application.lifecycle,
       agentInfo,
       authorization: application.authorization,
       parentID: applicationID,
@@ -59,42 +58,43 @@ export class RoleSetApplicationLifecycleOptionsProvider {
     return await this.applicationService.getApplicationOrFail(applicationID);
   }
 
-  private applicationLifecycleMachineOptions: any = {
-    actions: {
-      communityAddMember: async (_: any, event: LifecycleEvent) => {
-        const application = await this.applicationService.getApplicationOrFail(
-          event.parentID,
-          {
-            relations: { roleSet: true, user: true },
-          }
-        );
-        const userID = application.user?.id;
-        const roleSet = application.roleSet;
-        if (!userID || !roleSet)
-          throw new EntityNotInitializedException(
-            `Lifecycle not initialized on Application: ${application.id}`,
-            LogContext.COMMUNITY
-          );
+  public getMachine(): any {
+    const machine = createMachine(applicationLifecycleConfig);
+    machine.provide({
+      actions: {
+        communityAddMember: async (event: any, __: any) => {
+          const application =
+            await this.applicationService.getApplicationOrFail(event.parentID, {
+              relations: { roleSet: true, user: true },
+            });
+          const userID = application.user?.id;
+          const roleSet = application.roleSet;
+          if (!userID || !roleSet)
+            throw new EntityNotInitializedException(
+              `Lifecycle not initialized on Application: ${application.id}`,
+              LogContext.COMMUNITY
+            );
 
-        await this.roleSetService.assignUserToRole(
-          roleSet,
-          CommunityRoleType.MEMBER,
-          userID,
-          event.agentInfo,
-          true
-        );
+          await this.roleSetService.assignUserToRole(
+            roleSet,
+            CommunityRoleType.MEMBER,
+            userID,
+            event.agentInfo,
+            true
+          );
+        },
       },
-    },
-    guards: {
-      communityUpdateAuthorized: (_: any, event: LifecycleEvent) => {
-        const agentInfo: AgentInfo = event.agentInfo;
-        const authorizationPolicy: AuthorizationPolicy = event.authorization;
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          authorizationPolicy,
-          AuthorizationPrivilege.UPDATE
-        );
+      guards: {
+        communityUpdateAuthorized: (event: any, __: any) => {
+          const agentInfo: AgentInfo = event.agentInfo;
+          const authorizationPolicy: AuthorizationPolicy = event.authorization;
+          return this.authorizationService.isAccessGranted(
+            agentInfo,
+            authorizationPolicy,
+            AuthorizationPrivilege.UPDATE
+          );
+        },
       },
-    },
-  };
+    });
+  }
 }
