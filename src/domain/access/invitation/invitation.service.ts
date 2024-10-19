@@ -24,6 +24,7 @@ import { ContributorService } from '@domain/community/contributor/contributor.se
 import { UserService } from '@domain/community/user/user.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import { createMachine } from 'xstate';
 
 @Injectable()
 export class InvitationService {
@@ -62,6 +63,7 @@ export class InvitationService {
   ): Promise<IInvitation> {
     const invitationID = deleteData.ID;
     const invitation = await this.getInvitationOrFail(invitationID);
+    await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id);
 
     if (invitation.authorization)
       await this.authorizationPolicyService.delete(invitation.authorization);
@@ -99,13 +101,9 @@ export class InvitationService {
   async getInvitationState(invitationID: string): Promise<string> {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
-    if (lifecycle) {
-      return await this.lifecycleService.getState(
-        lifecycle,
-        invitationLifecycleConfig
-      );
-    }
-    return '';
+    const machine = createMachine(invitationLifecycleConfig);
+
+    return this.lifecycleService.getState(lifecycle, machine);
   }
 
   async getInvitedContributor(invitation: IInvitation): Promise<IContributor> {
@@ -182,29 +180,19 @@ export class InvitationService {
   async isFinalizedInvitation(invitationID: string): Promise<boolean> {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
-    if (!lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Lifecycle for Invitation ${invitation.id} `,
-        LogContext.COMMUNITY
-      );
-    }
-    return await this.lifecycleService.isFinalState(
-      lifecycle,
-      invitationLifecycleConfig
-    );
+
+    const machine = createMachine(invitationLifecycleConfig);
+
+    return this.lifecycleService.isFinalState(lifecycle, machine);
   }
 
   async canInvitationBeAccepted(invitationID: string): Promise<boolean> {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
-    if (!lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Lifecycle for Invitation ${invitation.id} `,
-        LogContext.COMMUNITY
-      );
-    }
+
+    const machine = createMachine(invitationLifecycleConfig);
     const canAccept = this.lifecycleService
-      .getNextEvents(lifecycle, invitationLifecycleConfig)
+      .getNextEvents(lifecycle, machine)
       .includes('ACCEPT');
     return canAccept;
   }
