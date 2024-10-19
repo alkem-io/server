@@ -12,7 +12,7 @@ export abstract class IApplication extends IAuthorizable {
   roleSet?: IRoleSet;
 
   @Field(() => ILifecycle, { nullable: false })
-  lifecycle?: ILifecycle;
+  lifecycle!: ILifecycle;
 
   questions?: IQuestion[];
 

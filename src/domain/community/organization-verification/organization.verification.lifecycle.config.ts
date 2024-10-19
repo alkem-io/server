@@ -2,9 +2,7 @@ import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface
 
 export const organizationVerificationLifecycleConfig: ILifecycleDefinition = {
   id: 'organization-verification',
-  context: {
-    parentID: '',
-  },
+  context: {},
   initial: 'notVerified',
   states: {
     notVerified: {
@@ -26,9 +24,7 @@ export const organizationVerificationLifecycleConfig: ILifecycleDefinition = {
     },
     manuallyVerified: {
       entry: ['organizationManuallyVerified'],
-      data: {
-        organizationID: (context: any, _event: any) => context.parentID,
-      },
+
       on: {
         RESET: {
           target: 'notVerified',
@@ -38,8 +34,14 @@ export const organizationVerificationLifecycleConfig: ILifecycleDefinition = {
     },
     rejected: {
       on: {
-        REOPEN: 'notVerified',
-        ARCHIVE: 'archived',
+        REOPEN: {
+          target: 'notVerified',
+          cond: 'organizationVerificationGrantAuthorized',
+        },
+        ARCHIVE: {
+          target: 'archived',
+          cond: 'organizationVerificationGrantAuthorized',
+        },
       },
     },
     archived: {

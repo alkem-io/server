@@ -22,9 +22,6 @@ export const invitationLifecycleConfig: ILifecycleDefinition = {
     accepted: {
       type: 'final',
       entry: ['communityAddMember'],
-      data: {
-        invitationID: (context: any, _event: any) => context.parentID,
-      },
     },
     rejected: {
       on: {

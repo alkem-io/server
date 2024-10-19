@@ -52,10 +52,7 @@ export class InvitationService {
     // save the user to get the id assigned
     await this.invitationRepository.save(invitation);
 
-    invitation.lifecycle = await this.lifecycleService.createLifecycle(
-      invitation.id,
-      invitationLifecycleConfig
-    );
+    invitation.lifecycle = await this.lifecycleService.createLifecycle();
 
     return await this.invitationRepository.save(invitation);
   }
@@ -103,7 +100,10 @@ export class InvitationService {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
     if (lifecycle) {
-      return await this.lifecycleService.getState(lifecycle);
+      return await this.lifecycleService.getState(
+        lifecycle,
+        invitationLifecycleConfig
+      );
     }
     return '';
   }
@@ -164,7 +164,6 @@ export class InvitationService {
       findOpts.select = {
         lifecycle: {
           machineState: true,
-          machineDef: true,
         },
       };
     }
@@ -189,7 +188,10 @@ export class InvitationService {
         LogContext.COMMUNITY
       );
     }
-    return await this.lifecycleService.isFinalState(lifecycle);
+    return await this.lifecycleService.isFinalState(
+      lifecycle,
+      invitationLifecycleConfig
+    );
   }
 
   async canInvitationBeAccepted(invitationID: string): Promise<boolean> {
@@ -202,7 +204,7 @@ export class InvitationService {
       );
     }
     const canAccept = this.lifecycleService
-      .getNextEventsOld(lifecycle)
+      .getNextEvents(lifecycle, invitationLifecycleConfig)
       .includes('ACCEPT');
     return canAccept;
   }

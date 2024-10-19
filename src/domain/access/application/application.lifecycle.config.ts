@@ -19,9 +19,6 @@ export const applicationLifecycleConfig: ILifecycleDefinition = {
     approved: {
       type: 'final',
       entry: ['communityAddMember'],
-      data: {
-        applicationID: (context: any, _event: any) => context.parentID,
-      },
     },
     rejected: {
       on: {

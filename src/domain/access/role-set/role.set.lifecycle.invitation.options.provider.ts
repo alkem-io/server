@@ -11,6 +11,8 @@ import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.d
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { RoleSetService } from './role.set.service';
+import { LifecycleEvent } from '@domain/common/lifecycle/types/lifecycle.event';
+import { invitationLifecycleConfig } from '../invitation/invitation.lifecycle.config';
 
 @Injectable()
 export class RoleSetInvitationLifecycleOptionsProvider {
@@ -46,11 +48,13 @@ export class RoleSetInvitationLifecycleOptionsProvider {
 
     await this.lifecycleService.event({
       ID: invitation.lifecycle.id,
+      machineDefinition: invitationLifecycleConfig,
       eventName: invitationEventData.eventName,
       actions: options.actions,
       guards: options.guards,
       agentInfo,
       authorization: invitation.authorization,
+      parentID: invitationID,
     });
 
     await ready();
@@ -79,7 +83,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
 
     const options: any = {
       actions: {
-        communityAddMember: async (_: any, event: any) => {
+        communityAddMember: async (_: any, event: LifecycleEvent) => {
           readyState = false;
           try {
             const invitation = await this.invitationService.getInvitationOrFail(
@@ -141,10 +145,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
         },
       },
       guards: {
-        communityUpdateAuthorized: (
-          _: any,
-          event: { agentInfo: AgentInfo; authorization: AuthorizationPolicy }
-        ) => {
+        communityUpdateAuthorized: (_: any, event: LifecycleEvent) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -155,7 +156,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
         },
         communityInvitationAcceptAuthorized: (
           _: any,
-          event: { agentInfo: AgentInfo; authorization: AuthorizationPolicy }
+          event: LifecycleEvent
         ) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;

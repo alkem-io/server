@@ -13,6 +13,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { RoleSetService } from './role.set.service';
+import { LifecycleEvent } from '@domain/common/lifecycle/types/lifecycle.event';
+import { applicationLifecycleConfig } from '../application/application.lifecycle.config';
 
 @Injectable()
 export class RoleSetApplicationLifecycleOptionsProvider {
@@ -45,11 +47,13 @@ export class RoleSetApplicationLifecycleOptionsProvider {
     );
     await this.lifecycleService.event({
       ID: application.lifecycle.id,
+      machineDefinition: applicationLifecycleConfig,
       eventName: applicationEventData.eventName,
       actions: this.applicationLifecycleMachineOptions.actions,
       guards: this.applicationLifecycleMachineOptions.guards,
       agentInfo,
       authorization: application.authorization,
+      parentID: applicationID,
     });
 
     return await this.applicationService.getApplicationOrFail(applicationID);
@@ -57,7 +61,7 @@ export class RoleSetApplicationLifecycleOptionsProvider {
 
   private applicationLifecycleMachineOptions: any = {
     actions: {
-      communityAddMember: async (_: any, event: any) => {
+      communityAddMember: async (_: any, event: LifecycleEvent) => {
         const application = await this.applicationService.getApplicationOrFail(
           event.parentID,
           {
@@ -82,10 +86,7 @@ export class RoleSetApplicationLifecycleOptionsProvider {
       },
     },
     guards: {
-      communityUpdateAuthorized: (
-        _: any,
-        event: { agentInfo: AgentInfo; authorization: AuthorizationPolicy }
-      ) => {
+      communityUpdateAuthorized: (_: any, event: LifecycleEvent) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: AuthorizationPolicy = event.authorization;
         return this.authorizationService.isAccessGranted(

@@ -3,6 +3,7 @@ import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 
 @InputType()
 export class LifecycleEventInput {
@@ -24,4 +25,7 @@ export class LifecycleEventInput {
   guards!: any;
   agentInfo!: AgentInfo;
   authorization?: IAuthorizationPolicy;
+  parentID!: string;
+
+  machineDefinition!: ILifecycleDefinition;
 }

@@ -51,10 +51,7 @@ export class ApplicationService {
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
-    application.lifecycle = await this.lifecycleService.createLifecycle(
-      application.id,
-      applicationLifecycleConfig
-    );
+    application.lifecycle = await this.lifecycleService.createLifecycle();
 
     return await this.applicationRepository.save(application);
   }
@@ -124,7 +121,10 @@ export class ApplicationService {
 
     const lifecycle = application.lifecycle;
     if (lifecycle) {
-      return await this.lifecycleService.getState(lifecycle);
+      return this.lifecycleService.getState(
+        lifecycle,
+        applicationLifecycleConfig
+      );
     }
     return '';
   }
@@ -164,7 +164,6 @@ export class ApplicationService {
       findOpts.select = {
         lifecycle: {
           machineState: true,
-          machineDef: true,
         },
       };
     }
@@ -189,7 +188,10 @@ export class ApplicationService {
         LogContext.COMMUNITY
       );
     }
-    return await this.lifecycleService.isFinalState(lifecycle);
+    return await this.lifecycleService.isFinalState(
+      lifecycle,
+      applicationLifecycleConfig
+    );
   }
 
   async getQuestionsSorted(application: IApplication): Promise<IQuestion[]> {

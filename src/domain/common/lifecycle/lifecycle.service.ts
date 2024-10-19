@@ -26,16 +26,8 @@ export class LifecycleService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createLifecycle(
-    parentID: string,
-    machineConfig: ILifecycleDefinition
-  ): Promise<ILifecycle> {
-    // Ensure parent is set
-    if (machineConfig.context) {
-      machineConfig.context.parentID = parentID;
-    }
-    const machineConfigStr = this.serializeLifecycleDefinition(machineConfig);
-    const lifecycle = new Lifecycle(machineConfigStr);
+  async createLifecycle(): Promise<ILifecycle> {
+    const lifecycle = new Lifecycle();
 
     return await this.save(lifecycle);
   }
@@ -54,14 +46,18 @@ export class LifecycleService {
       LogContext.LIFECYCLE
     );
 
-    const actor = this.getActorWithState(lifecycle, {
-      actions: eventData.actions,
-      guards: eventData.guards,
-    });
+    const actor = this.getActorWithState(
+      lifecycle,
+      eventData.machineDefinition,
+      {
+        actions: eventData.actions,
+        guards: eventData.guards,
+      }
+    );
 
     const snapshot = actor.getSnapshot();
     const startingState = snapshot.value;
-    const nextEvents = this.getNextEvents(snapshot);
+    const nextEvents = this.getNextEventsFromSnapshot(snapshot);
     if (
       !nextEvents.find(name => {
         return name === eventName;
@@ -94,6 +90,7 @@ export class LifecycleService {
         type: eventName,
         agentInfo: eventData.agentInfo,
         authorization: eventData.authorization,
+        parentID: eventData.parentID,
       });
     } catch (e) {
       this.logger.error?.(
@@ -121,7 +118,7 @@ export class LifecycleService {
     return lifecycle;
   }
 
-  private getNextEvents(snapshot: AnyMachineSnapshot) {
+  private getNextEventsFromSnapshot(snapshot: AnyMachineSnapshot) {
     const notes = snapshot._nodes;
     if (!notes) {
       this.logger.warn(
@@ -133,7 +130,7 @@ export class LifecycleService {
     return [...new Set([...snapshot._nodes.flatMap(sn => sn.ownEvents)])];
   }
 
-  async getLifecycleOrFail(
+  public async getLifecycleOrFail(
     lifecycleID: string,
     options?: FindOneOptions<Lifecycle>
   ): Promise<ILifecycle | never> {
@@ -149,7 +146,7 @@ export class LifecycleService {
     return lifecycle;
   }
 
-  getRestoredSnapshot(
+  private getRestoredSnapshot(
     lifecycle: ILifecycle
   ): MachineSnapshot<any, any, any, any, any, any, any, any> | undefined {
     const stateStr = lifecycle.machineState;
@@ -157,33 +154,32 @@ export class LifecycleService {
     return JSON.parse(stateStr);
   }
 
-  public getState(lifecycle: ILifecycle): string {
-    const actor = this.getActorWithState(lifecycle);
+  public getState(
+    lifecycle: ILifecycle,
+    machineDefinition: ILifecycleDefinition
+  ): string {
+    const actor = this.getActorWithState(lifecycle, machineDefinition);
     const snapshot = actor.getSnapshot();
     return snapshot.value;
   }
 
-  isFinalState(lifecycle: ILifecycle): boolean {
-    const actor = this.getActorWithState(lifecycle);
+  public isFinalState(
+    lifecycle: ILifecycle,
+    machineDefinition: ILifecycleDefinition
+  ): boolean {
+    const actor = this.getActorWithState(lifecycle, machineDefinition);
 
     const isFinal = actor.getSnapshot().status === 'done';
     if (!isFinal) return false;
     return isFinal;
   }
 
-  getMachineDefinitionIdentifier(lifecycle: ILifecycle): string {
-    const templateID = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    ).id;
-    return templateID;
-  }
-
-  public getActorWithState(lifecycle: ILifecycle, options?: any): any {
-    const machineDef = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    );
-
-    let machine = createMachine(machineDef);
+  public getActorWithState(
+    lifecycle: ILifecycle,
+    machineDefinition: ILifecycleDefinition,
+    options?: any
+  ): any {
+    let machine = createMachine(machineDefinition);
     if (options) {
       machine = machine.provide(options);
     }
@@ -208,35 +204,14 @@ export class LifecycleService {
     return actor;
   }
 
-  getNextEventsOld(lifecycle: ILifecycle): string[] {
-    const actor = this.getActorWithState(lifecycle);
+  getNextEvents(
+    lifecycle: ILifecycle,
+    machineDefinition: ILifecycleDefinition
+  ): string[] {
+    const actor = this.getActorWithState(lifecycle, machineDefinition);
     const snapshot = actor.getSnapshot();
-    const nextEvents = this.getNextEvents(snapshot);
+    const nextEvents = this.getNextEventsFromSnapshot(snapshot);
     return nextEvents || [];
-  }
-
-  getMachineDefinition(lifecycle: ILifecycle): ILifecycleDefinition {
-    return this.deserializeLifecycleDefinition(lifecycle.machineDef);
-  }
-
-  deserializeLifecycleDefinition(value: string): ILifecycleDefinition {
-    const result: ILifecycleDefinition = JSON.parse(value);
-    return result;
-  }
-
-  serializeLifecycleDefinition(definition: ILifecycleDefinition): string {
-    const result = JSON.stringify(definition);
-    return result;
-  }
-
-  async getParentID(lifecycle: ILifecycle) {
-    const machineDefJson = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    );
-    if (machineDefJson.context && machineDefJson.context.parentID) {
-      return machineDefJson.context.parentID;
-    }
-    return '';
   }
 
   async save(lifecycle: Lifecycle): Promise<Lifecycle> {

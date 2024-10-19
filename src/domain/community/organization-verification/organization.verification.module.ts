@@ -8,6 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrganizationVerificationService } from './organization.verification.service';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { OrganizationVerificationAuthorizationService } from './organization.verification.service.authorization';
+import { OrganizationVerificationLifecycleResolverFields } from './organization.verification.resolver.fields.lifecycle';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { OrganizationVerificationAuthorizationService } from './organization.ver
     OrganizationVerificationAuthorizationService,
     OrganizationVerificationResolverMutations,
     OrganizationVerificationLifecycleOptionsProvider,
+    OrganizationVerificationLifecycleResolverFields,
   ],
   exports: [
     OrganizationVerificationService,
