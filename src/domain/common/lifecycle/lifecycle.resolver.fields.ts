@@ -20,8 +20,8 @@ export class LifecycleResolverFields {
     description: 'The next events of this Lifecycle.',
   })
   @Profiling.api
-  async nextEvents(@Parent() lifecycle: ILifecycle) {
-    return await this.lifecycleService.getNextEvents(lifecycle);
+  nextEvents(@Parent() lifecycle: ILifecycle) {
+    return this.lifecycleService.getNextEventsOld(lifecycle);
   }
 
   @ResolveField('stateIsFinal', () => Boolean, {
@@ -39,6 +39,8 @@ export class LifecycleResolverFields {
   })
   @Profiling.api
   async templateName(@Parent() lifecycle: ILifecycle) {
-    return await this.lifecycleService.getTemplateIdentifier(lifecycle);
+    return await this.lifecycleService.getMachineDefinitionIdentifier(
+      lifecycle
+    );
   }
 }

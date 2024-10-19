@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -45,15 +44,14 @@ export class RoleSetInvitationLifecycleOptionsProvider {
 
     const { options, ready } = this.getInvitationLifecycleMachineOptions();
 
-    await this.lifecycleService.event(
-      {
-        ID: invitation.lifecycle.id,
-        eventName: invitationEventData.eventName,
-      },
-      options,
+    await this.lifecycleService.event({
+      ID: invitation.lifecycle.id,
+      eventName: invitationEventData.eventName,
+      actions: options.actions,
+      guards: options.guards,
       agentInfo,
-      invitation.authorization
-    );
+      authorization: invitation.authorization,
+    });
 
     await ready();
 
@@ -61,7 +59,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
   }
 
   private getInvitationLifecycleMachineOptions(): {
-    options: Partial<MachineOptions<any, any>>;
+    options: any;
     ready: () => Promise<void>;
   } {
     let resolve: (value: void) => void;
@@ -79,9 +77,9 @@ export class RoleSetInvitationLifecycleOptionsProvider {
       return readyPromise;
     };
 
-    const options: Partial<MachineOptions<any, any>> = {
+    const options: any = {
       actions: {
-        communityAddMember: async (_, event: any) => {
+        communityAddMember: async (_: any, event: any) => {
           readyState = false;
           try {
             const invitation = await this.invitationService.getInvitationOrFail(
@@ -143,7 +141,10 @@ export class RoleSetInvitationLifecycleOptionsProvider {
         },
       },
       guards: {
-        communityUpdateAuthorized: (_, event) => {
+        communityUpdateAuthorized: (
+          _: any,
+          event: { agentInfo: AgentInfo; authorization: AuthorizationPolicy }
+        ) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -152,7 +153,10 @@ export class RoleSetInvitationLifecycleOptionsProvider {
             AuthorizationPrivilege.UPDATE
           );
         },
-        communityInvitationAcceptAuthorized: (_, event) => {
+        communityInvitationAcceptAuthorized: (
+          _: any,
+          event: { agentInfo: AgentInfo; authorization: AuthorizationPolicy }
+        ) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(

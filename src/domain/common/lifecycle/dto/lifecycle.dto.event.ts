@@ -1,6 +1,8 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 
 @InputType()
 export class LifecycleEventInput {
@@ -17,4 +19,9 @@ export class LifecycleEventInput {
   })
   @MaxLength(SMALL_TEXT_LENGTH)
   eventName!: string;
+
+  actions!: any;
+  guards!: any;
+  agentInfo!: AgentInfo;
+  authorization?: IAuthorizationPolicy;
 }

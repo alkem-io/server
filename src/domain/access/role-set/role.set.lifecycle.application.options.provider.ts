@@ -5,7 +5,6 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -44,24 +43,21 @@ export class RoleSetApplicationLifecycleOptionsProvider {
       `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${application.lifecycle.id}`,
       LogContext.COMMUNITY
     );
-    await this.lifecycleService.event(
-      {
-        ID: application.lifecycle.id,
-        eventName: applicationEventData.eventName,
-      },
-      this.applicationLifecycleMachineOptions,
+    await this.lifecycleService.event({
+      ID: application.lifecycle.id,
+      eventName: applicationEventData.eventName,
+      actions: this.applicationLifecycleMachineOptions.actions,
+      guards: this.applicationLifecycleMachineOptions.guards,
       agentInfo,
-      application.authorization
-    );
+      authorization: application.authorization,
+    });
 
     return await this.applicationService.getApplicationOrFail(applicationID);
   }
 
-  private applicationLifecycleMachineOptions: Partial<
-    MachineOptions<any, any>
-  > = {
+  private applicationLifecycleMachineOptions: any = {
     actions: {
-      communityAddMember: async (_, event: any) => {
+      communityAddMember: async (_: any, event: any) => {
         const application = await this.applicationService.getApplicationOrFail(
           event.parentID,
           {
@@ -86,7 +82,10 @@ export class RoleSetApplicationLifecycleOptionsProvider {
       },
     },
     guards: {
-      communityUpdateAuthorized: (_, event) => {
+      communityUpdateAuthorized: (
+        _: any,
+        event: { agentInfo: AgentInfo; authorization: AuthorizationPolicy }
+      ) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: AuthorizationPolicy = event.authorization;
         return this.authorizationService.isAccessGranted(

@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -40,36 +39,33 @@ export class OrganizationVerificationLifecycleOptionsProvider {
       `Event ${organizationVerificationEventData.eventName} triggered on organization: ${organizationVerification.id} using lifecycle ${organizationVerification.lifecycle.id}`,
       LogContext.COMMUNITY
     );
-    await this.lifecycleService.event(
-      {
-        ID: organizationVerification.lifecycle.id,
-        eventName: organizationVerificationEventData.eventName,
-      },
-      this.organizationVerificationLifecycleMachineOptions,
+    await this.lifecycleService.event({
+      ID: organizationVerification.lifecycle.id,
+      eventName: organizationVerificationEventData.eventName,
+      actions: this.organizationVerificationLifecycleMachineOptions.actions,
+      guards: this.organizationVerificationLifecycleMachineOptions.guards,
       agentInfo,
-      organizationVerification.authorization
-    );
+      authorization: organizationVerification.authorization,
+    });
 
     return await this.organizationVerificationService.getOrganizationVerificationOrFail(
       organizationVerification.id
     );
   }
 
-  private organizationVerificationLifecycleMachineOptions: Partial<
-    MachineOptions<any, any>
-  > = {
+  private organizationVerificationLifecycleMachineOptions: any = {
     actions: {
-      organizationManuallyVerified: async (_, __) => {
-        throw new EntityNotInitializedException(
-          `Verification Lifecycle not initialized on Organization: ${_.id}`,
-          LogContext.COMMUNITY
-        );
+      organizationManuallyVerified: (_: { id: any }, __: any) => {
+        throw new Error('Error crashing the server');
         // Rely on state being synchronized in the containing handler
       },
     },
     guards: {
       // To actually assign the verified status the GRANT privilege is needed on the verification
-      organizationVerificationGrantAuthorized: (_, event) => {
+      organizationVerificationGrantAuthorized: (
+        _: any,
+        event: { agentInfo: AgentInfo; authorization: IAuthorizationPolicy }
+      ) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: IAuthorizationPolicy = event.authorization;
         return this.authorizationService.isAccessGranted(
@@ -78,7 +74,10 @@ export class OrganizationVerificationLifecycleOptionsProvider {
           AuthorizationPrivilege.GRANT
         );
       },
-      organizationVerificationUpdateAuthorized: (_, event) => {
+      organizationVerificationUpdateAuthorized: (
+        _: any,
+        event: { agentInfo: AgentInfo; authorization: IAuthorizationPolicy }
+      ) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: IAuthorizationPolicy = event.authorization;
         return this.authorizationService.isAccessGranted(

@@ -202,7 +202,7 @@ export class InvitationService {
       );
     }
     const canAccept = this.lifecycleService
-      .getNextEvents(lifecycle)
+      .getNextEventsOld(lifecycle)
       .includes('ACCEPT');
     return canAccept;
   }
