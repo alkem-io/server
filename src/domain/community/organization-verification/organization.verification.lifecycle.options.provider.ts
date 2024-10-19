@@ -69,7 +69,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
     const machine = setup({
       actions: {
         organizationManuallyVerified: (_: any) => {
-          //throw new Error('Action not implemented');
+          // throw new Error('Action not implemented');
         },
       },
       guards: {
@@ -102,9 +102,6 @@ export class OrganizationVerificationLifecycleOptionsProvider {
               target: 'verificationPending',
               guard: {
                 type: 'hasUpdatePrivilege',
-                params: {
-                  privilege: AuthorizationPrivilege.UPDATE,
-                },
               },
             },
           },
