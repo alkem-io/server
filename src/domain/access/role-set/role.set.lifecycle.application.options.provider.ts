@@ -10,11 +10,10 @@ import { ApplicationService } from '@domain/access/application/application.servi
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { RoleSetService } from './role.set.service';
-import { createMachine } from 'xstate';
-import { applicationLifecycleConfig } from '../application/application.lifecycle.config';
+import { setup } from 'xstate';
 
 @Injectable()
 export class RoleSetApplicationLifecycleOptionsProvider {
@@ -46,7 +45,6 @@ export class RoleSetApplicationLifecycleOptionsProvider {
       LogContext.COMMUNITY
     );
     await this.lifecycleService.event({
-      ID: application.lifecycle.id,
       machine: this.getMachine(),
       eventName: applicationEventData.eventName,
       lifecycle: application.lifecycle,
@@ -59,8 +57,7 @@ export class RoleSetApplicationLifecycleOptionsProvider {
   }
 
   public getMachine(): any {
-    const machine = createMachine(applicationLifecycleConfig);
-    machine.provide({
+    const machine = setup({
       actions: {
         communityAddMember: async (event: any, __: any) => {
           const application =
@@ -85,14 +82,45 @@ export class RoleSetApplicationLifecycleOptionsProvider {
         },
       },
       guards: {
-        communityUpdateAuthorized: (event: any, __: any) => {
+        hasUpdatePrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
-          const authorizationPolicy: AuthorizationPolicy = event.authorization;
+          const authorizationPolicy: IAuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
             agentInfo,
             authorizationPolicy,
             AuthorizationPrivilege.UPDATE
           );
+        },
+      },
+    });
+    return machine.createMachine({
+      id: 'user-application',
+      context: {
+        parentID: '',
+      },
+      initial: 'new',
+      states: {
+        new: {
+          on: {
+            APPROVE: {
+              target: 'approved',
+              guard: 'hasUpdatePrivilege',
+            },
+            REJECT: 'rejected',
+          },
+        },
+        approved: {
+          type: 'final',
+          entry: ['communityAddMember'],
+        },
+        rejected: {
+          on: {
+            REOPEN: 'new',
+            ARCHIVE: 'archived',
+          },
+        },
+        archived: {
+          type: 'final',
         },
       },
     });

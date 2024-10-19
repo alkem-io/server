@@ -32,7 +32,6 @@ export class LifecycleService {
   }
 
   async event(eventData: LifecycleEventInput): Promise<ILifecycle> {
-    let lifecycle = await this.getLifecycleOrFail(eventData.ID);
     const eventName = eventData.eventName;
 
     this.logger.verbose?.(
@@ -40,7 +39,10 @@ export class LifecycleService {
       LogContext.LIFECYCLE
     );
 
-    const actor = this.getActorWithState(lifecycle, eventData.machine);
+    const actor = this.getActorWithState(
+      eventData.lifecycle,
+      eventData.machine
+    );
 
     const snapshot = actor.getSnapshot();
     const startingState = snapshot.value;
@@ -50,7 +52,7 @@ export class LifecycleService {
         return name === eventName;
       })
     ) {
-      const lifecycleMsgPrefix = `Lifecycle (${lifecycle.id}) event (${eventName}): `;
+      const lifecycleMsgPrefix = `Lifecycle (${eventData.lifecycle.id}) event (${eventName}): `;
       const lifecycleMsgSuffix = `event: ${eventData.eventName}, starting state: ${startingState}`;
       if (nextEvents.length === 0) {
         throw new InvalidStateTransitionException(
@@ -85,7 +87,7 @@ export class LifecycleService {
         LogContext.LIFECYCLE
       );
       throw new InvalidStateTransitionException(
-        `Unable to process event: ${eventName} on lifecycle ${lifecycle.id} - error: ${e}`,
+        `Unable to process event: ${eventName} on lifecycle ${eventData.lifecycle.id} - error: ${e}`,
         LogContext.LIFECYCLE
       );
     }
@@ -93,16 +95,14 @@ export class LifecycleService {
     const updatedState = actor.getSnapshot().value;
 
     const newStateStr = JSON.stringify(actor.getPersistedSnapshot());
-    lifecycle.machineState = newStateStr;
+    eventData.lifecycle.machineState = newStateStr;
     this.logger.verbose?.(
       `Lifecycle (id: ${
-        lifecycle.id
+        eventData.lifecycle.id
       }) event '${eventName} completed: from state '${startingState}' to state '${updatedState}'`,
       LogContext.LIFECYCLE
     );
-    lifecycle = await this.lifecycleRepository.save(lifecycle);
-
-    return lifecycle;
+    return await this.lifecycleRepository.save(eventData.lifecycle);
   }
 
   private getNextEventsFromSnapshot(snapshot: AnyMachineSnapshot) {

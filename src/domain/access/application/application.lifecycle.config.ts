@@ -11,7 +11,7 @@ export const applicationLifecycleConfig: ILifecycleDefinition = {
       on: {
         APPROVE: {
           target: 'approved',
-          cond: 'communityUpdateAuthorized',
+          guard: 'communityUpdateAuthorized',
         },
         REJECT: 'rejected',
       },

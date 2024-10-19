@@ -11,10 +11,8 @@ import { OrganizationVerificationService } from './organization.verification.ser
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { LifecycleEvent } from '@domain/common/lifecycle/types/lifecycle.event';
-import { createMachine } from 'xstate';
+import { setup } from 'xstate';
 import { LifecycleEventInput } from '@domain/common/lifecycle';
-import { organizationVerificationLifecycleConfig } from './organization.verification.lifecycle.config';
 
 @Injectable()
 export class OrganizationVerificationLifecycleOptionsProvider {
@@ -42,7 +40,6 @@ export class OrganizationVerificationLifecycleOptionsProvider {
 
     const machine = this.getMachine();
     const event: LifecycleEventInput = {
-      ID: organizationVerification.lifecycle.id,
       lifecycle: organizationVerification.lifecycle,
       machine,
       eventName: organizationVerificationEventData.eventName,
@@ -69,16 +66,16 @@ export class OrganizationVerificationLifecycleOptionsProvider {
   }
 
   public getMachine(): any {
-    const machine = createMachine(organizationVerificationLifecycleConfig);
-    machine.provide({
-      guards: {
-        organizationVerificationGrantAuthorized: (_: any, __: any) => {
-          console.log('organizationVerificationGrantAuthorized');
-          return true;
+    const machine = setup({
+      actions: {
+        organizationManuallyVerified: (_: any) => {
+          console.log('action organizationManuallyVerified');
+          //throw new Error('Action not implemented');
         },
+      },
+      guards: {
         // To actually assign the verified status the GRANT privilege is needed on the verification
-        organizationVerificationGrantAuthorized2: (_: any, __: any) => {
-          const event: LifecycleEvent = _.event;
+        hasGrantPrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: IAuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -87,8 +84,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
             AuthorizationPrivilege.GRANT
           );
         },
-        organizationVerificationUpdateAuthorized: (_: any, __: any) => {
-          const event: LifecycleEvent = _.event;
+        hasUpdatePrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: IAuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -98,14 +94,58 @@ export class OrganizationVerificationLifecycleOptionsProvider {
           );
         },
       },
-      actions: {
-        organizationManuallyVerified: (_: any) => {
-          console.log('action organizationManuallyVerified');
-          // throw new Error('Action not implemented');
-          // Rely on state being synchronized in the containing handler
+    }).createMachine({
+      initial: 'notVerified',
+      states: {
+        notVerified: {
+          on: {
+            VERIFICATION_REQUEST: {
+              target: 'verificationPending',
+              guard: {
+                type: 'hasUpdatePrivilege',
+                params: {
+                  privilege: AuthorizationPrivilege.UPDATE,
+                },
+              },
+            },
+          },
+        },
+        verificationPending: {
+          on: {
+            MANUALLY_VERIFY: {
+              target: 'manuallyVerified',
+              guard: 'hasGrantPrivilege',
+            },
+            REJECT: 'rejected',
+          },
+        },
+        manuallyVerified: {
+          entry: ['organizationManuallyVerified'],
+          on: {
+            RESET: {
+              target: 'notVerified',
+              guard: 'hasGrantPrivilege',
+            },
+          },
+        },
+        rejected: {
+          on: {
+            REOPEN: {
+              target: 'notVerified',
+              guard: 'hasGrantPrivilege',
+            },
+            ARCHIVE: {
+              target: 'archived',
+              guard: 'hasGrantPrivilege',
+            },
+          },
+        },
+        archived: {
+          type: 'final',
         },
       },
     });
+
     return machine;
   }
 

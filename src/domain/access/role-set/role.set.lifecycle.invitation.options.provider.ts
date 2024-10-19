@@ -11,8 +11,7 @@ import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.d
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { RoleSetService } from './role.set.service';
-import { createMachine } from 'xstate';
-import { invitationLifecycleConfig } from '../invitation/invitation.lifecycle.config';
+import { setup } from 'xstate';
 
 @Injectable()
 export class RoleSetInvitationLifecycleOptionsProvider {
@@ -39,7 +38,6 @@ export class RoleSetInvitationLifecycleOptionsProvider {
     );
 
     await this.lifecycleService.event({
-      ID: invitation.lifecycle.id,
       machine: this.getMachine(),
       lifecycle: invitation.lifecycle,
       eventName: invitationEventData.eventName,
@@ -52,8 +50,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
   }
 
   public getMachine(): any {
-    const machine = createMachine(invitationLifecycleConfig);
-    machine.provide({
+    const machine = setup({
       actions: {
         communityAddMember: async (event: any, __: any) => {
           try {
@@ -123,7 +120,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
         },
       },
       guards: {
-        communityUpdateAuthorized: (event: any, __) => {
+        hasUpdatePrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -132,7 +129,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
             AuthorizationPrivilege.UPDATE
           );
         },
-        communityInvitationAcceptAuthorized: (event: any, __) => {
+        hasInvitationAcceptPrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -140,6 +137,46 @@ export class RoleSetInvitationLifecycleOptionsProvider {
             authorizationPolicy,
             AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT
           );
+        },
+      },
+    });
+    return machine.createMachine({
+      id: 'user-invitation',
+      context: {
+        parentID: '',
+      },
+      initial: 'invited',
+      states: {
+        invited: {
+          on: {
+            ACCEPT: {
+              target: 'accepted',
+              guard: 'hasInvitationAcceptPrivilege',
+            },
+            REJECT: {
+              target: 'rejected',
+              guard: 'hasUpdatePrivilege',
+            },
+          },
+        },
+        accepted: {
+          type: 'final',
+          entry: ['communityAddMember'],
+        },
+        rejected: {
+          on: {
+            REINVITE: {
+              target: 'invited',
+              guard: 'hasUpdatePrivilege',
+            },
+            ARCHIVE: {
+              target: 'archived',
+              guard: 'hasUpdatePrivilege',
+            },
+          },
+        },
+        archived: {
+          type: 'final',
         },
       },
     });
