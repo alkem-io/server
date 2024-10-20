@@ -78,7 +78,7 @@ export class InvitationService {
   async getInvitationOrFail(
     invitationId: string,
     options?: FindOneOptions<Invitation>
-  ): Promise<Invitation | never> {
+  ): Promise<IInvitation | never> {
     const invitation = await this.invitationRepository.findOne({
       ...options,
       where: {

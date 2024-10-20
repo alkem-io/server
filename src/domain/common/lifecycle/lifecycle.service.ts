@@ -14,6 +14,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class LifecycleService {
+  private XSTATE_DONE_STATE = 'done';
+
   constructor(
     @InjectRepository(Lifecycle)
     private lifecycleRepository: Repository<Lifecycle>,
@@ -81,13 +83,13 @@ export class LifecycleService {
         authorization: eventData.authorization,
         parentID: eventData.parentID,
       });
-    } catch (e) {
+    } catch (e: any) {
       this.logger.error?.(
         `Error processing lifecycle event: ${e}`,
         LogContext.LIFECYCLE
       );
       throw new InvalidStateTransitionException(
-        `Unable to process event: ${eventName} on lifecycle ${eventData.lifecycle.id} - error: ${e}`,
+        `Unable to process event: ${eventName} on lifecycle ${eventData.lifecycle.id} - error: ${e.message}`,
         LogContext.LIFECYCLE
       );
     }
@@ -99,7 +101,7 @@ export class LifecycleService {
     this.logger.verbose?.(
       `Lifecycle (id: ${
         eventData.lifecycle.id
-      }) event '${eventName} completed: from state '${startingState}' to state '${updatedState}'`,
+      }) event '${eventName}' completed: from state '${startingState}' to state '${updatedState}'`,
       LogContext.LIFECYCLE
     );
     return await this.lifecycleRepository.save(eventData.lifecycle);
@@ -153,11 +155,12 @@ export class LifecycleService {
   ): boolean {
     const actor = this.getActorWithState(lifecycle, machine);
 
-    const isFinal = actor.getSnapshot().status === 'done';
-    if (!isFinal) return false;
-    return isFinal;
+    return actor.getSnapshot().status === this.XSTATE_DONE_STATE;
   }
 
+  // Note: cannot return a stronger typing than "any" as this then impacts the events that can be sent
+  // Need to add stronger typing to all the machines in terms of event types to be able to put AnyActor
+  // as the return type
   private getActorWithState(
     lifecycle: ILifecycle,
     machine: AnyStateMachine
