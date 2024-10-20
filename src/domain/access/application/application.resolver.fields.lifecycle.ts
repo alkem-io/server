@@ -29,7 +29,7 @@ export class ApplicationLifecycleResolverFields {
     );
   }
 
-  @ResolveField('stateIsFinal', () => Boolean, {
+  @ResolveField('isFinalized', () => Boolean, {
     nullable: false,
     description: 'Is this lifecycle in a final state (done).',
   })
