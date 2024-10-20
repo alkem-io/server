@@ -2,9 +2,12 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerificationLifecycleOptionsProvider } from './organization.verification.lifecycle.options.provider';
+import { ILifecycleFields } from '@domain/common/lifecycle/lifecycle.fields.interface';
 
 @Resolver(() => IOrganizationVerification)
-export class OrganizationVerificationLifecycleResolverFields {
+export class OrganizationVerificationLifecycleResolverFields
+  implements ILifecycleFields
+{
   constructor(
     private lifecycleService: LifecycleService,
     private organizationVerificationLifecycleOptionsProvider: OrganizationVerificationLifecycleOptionsProvider
@@ -14,8 +17,8 @@ export class OrganizationVerificationLifecycleResolverFields {
     nullable: true,
     description: 'The current state of this Lifecycle.',
   })
-  async state(@Parent() organizationVerification: IOrganizationVerification) {
-    return await this.lifecycleService.getState(
+  state(@Parent() organizationVerification: IOrganizationVerification): string {
+    return this.lifecycleService.getState(
       organizationVerification.lifecycle,
       this.organizationVerificationLifecycleOptionsProvider.getMachine()
     );
@@ -25,7 +28,9 @@ export class OrganizationVerificationLifecycleResolverFields {
     nullable: true,
     description: 'The next events of this Lifecycle.',
   })
-  nextEvents(@Parent() organizationVerification: IOrganizationVerification) {
+  nextEvents(
+    @Parent() organizationVerification: IOrganizationVerification
+  ): string[] {
     return this.lifecycleService.getNextEvents(
       organizationVerification.lifecycle,
       this.organizationVerificationLifecycleOptionsProvider.getMachine()
@@ -36,10 +41,10 @@ export class OrganizationVerificationLifecycleResolverFields {
     nullable: false,
     description: 'Is this lifecycle in a final state (done).',
   })
-  async isFinalized(
+  isFinalized(
     @Parent() organizationVerification: IOrganizationVerification
-  ) {
-    return await this.lifecycleService.isFinalState(
+  ): boolean {
+    return this.lifecycleService.isFinalState(
       organizationVerification.lifecycle,
       this.organizationVerificationLifecycleOptionsProvider.getMachine()
     );
