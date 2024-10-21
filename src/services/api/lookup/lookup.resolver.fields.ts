@@ -62,6 +62,8 @@ import { ITemplatesSet } from '@domain/template/templates-set/templates.set.inte
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -87,6 +89,7 @@ export class LookupResolverFields {
     private documentService: DocumentService,
     private templateService: TemplateService,
     private templatesSetService: TemplatesSetService,
+    private templatesManagerService: TemplatesManagerService,
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
@@ -641,6 +644,27 @@ export class LookupResolverFields {
     );
 
     return templatesSet;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ITemplatesManager, {
+    nullable: true,
+    description: 'Lookup the specified TemplatesManager',
+  })
+  async templatesManager(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ITemplatesManager> {
+    const templatesManager =
+      await this.templatesManagerService.getTemplatesManagerOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesManager.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup TemplatesManager: ${templatesManager.id}`
+    );
+
+    return templatesManager;
   }
 
   @UseGuards(GraphqlGuard)

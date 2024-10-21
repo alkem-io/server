@@ -1,5 +1,6 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { ObjectType } from '@nestjs/graphql';
 import { IConfig } from '@platform/configuration/config/config.interface';
@@ -17,4 +18,5 @@ export abstract class IPlatform extends IAuthorizable {
   storageAggregator!: IStorageAggregator;
   licensing?: ILicensing;
   platformInvitations!: IPlatformInvitation[];
+  templatesManager?: ITemplatesManager;
 }

@@ -31,12 +31,11 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { IAccount } from '../account/account.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { ISpaceSubscription } from './space.license.subscription.interface';
+import { ITemplatesManager } from '@domain/template/templates-manager';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -254,26 +253,15 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('library', () => ITemplatesSet, {
+  @ResolveField('templatesManager', () => ITemplatesManager, {
     nullable: true,
-    description: 'The Library in use by this Space',
+    description: 'The TemplatesManager in use by this Space',
   })
   @UseGuards(GraphqlGuard)
-  async library(@Parent() space: Space): Promise<ITemplatesSet> {
-    return await this.spaceService.getLibraryOrFail(space.levelZeroSpaceID);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('defaults', () => ISpaceDefaults, {
-    nullable: true,
-    description: 'The defaults in use by this Space',
-  })
-  @UseGuards(GraphqlGuard)
-  async defaults(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() space: Space
-  ): Promise<ISpaceDefaults> {
-    return await this.spaceService.getDefaultsOrFail(space.levelZeroSpaceID);
+  async templatesManager(@Parent() space: ISpace): Promise<ITemplatesManager> {
+    return await this.spaceService.getTemplatesManagerOrFail(
+      space.levelZeroSpaceID
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
