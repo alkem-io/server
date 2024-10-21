@@ -515,7 +515,7 @@ export class ConversionService {
     await this.communityService.save(childCommunity);
     parentCommunity.communication = childCommunication;
     await this.communityService.save(parentCommunity);
-    // And remove the old parent Communicaiton that is no longer used
+    // And remove the old parent Communication that is no longer used
     if (parentCommunication) {
       await this.communicationService.removeCommunication(
         parentCommunication.id

@@ -5,15 +5,15 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { RoleSetService } from './role.set.service';
+import { AnyStateMachine, setup } from 'xstate';
 
 @Injectable()
 export class RoleSetApplicationLifecycleOptionsProvider {
@@ -44,57 +44,85 @@ export class RoleSetApplicationLifecycleOptionsProvider {
       `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${application.lifecycle.id}`,
       LogContext.COMMUNITY
     );
-    await this.lifecycleService.event(
-      {
-        ID: application.lifecycle.id,
-        eventName: applicationEventData.eventName,
-      },
-      this.applicationLifecycleMachineOptions,
+    await this.lifecycleService.event({
+      machine: this.getMachine(),
+      eventName: applicationEventData.eventName,
+      lifecycle: application.lifecycle,
       agentInfo,
-      application.authorization
-    );
+      authorization: application.authorization,
+      parentID: applicationID,
+    });
 
     return await this.applicationService.getApplicationOrFail(applicationID);
   }
 
-  private applicationLifecycleMachineOptions: Partial<
-    MachineOptions<any, any>
-  > = {
-    actions: {
-      communityAddMember: async (_, event: any) => {
-        const application = await this.applicationService.getApplicationOrFail(
-          event.parentID,
-          {
-            relations: { roleSet: true, user: true },
-          }
-        );
-        const userID = application.user?.id;
-        const roleSet = application.roleSet;
-        if (!userID || !roleSet)
-          throw new EntityNotInitializedException(
-            `Lifecycle not initialized on Application: ${application.id}`,
-            LogContext.COMMUNITY
-          );
+  public getMachine(): AnyStateMachine {
+    const machine = setup({
+      actions: {
+        communityAddMember: async ({ event }) => {
+          const application =
+            await this.applicationService.getApplicationOrFail(event.parentID, {
+              relations: { roleSet: true, user: true },
+            });
+          const userID = application.user?.id;
+          const roleSet = application.roleSet;
+          if (!userID || !roleSet)
+            throw new EntityNotInitializedException(
+              `Lifecycle not initialized on Application: ${application.id}`,
+              LogContext.COMMUNITY
+            );
 
-        await this.roleSetService.assignUserToRole(
-          roleSet,
-          CommunityRoleType.MEMBER,
-          userID,
-          event.agentInfo,
-          true
-        );
+          await this.roleSetService.assignUserToRole(
+            roleSet,
+            CommunityRoleType.MEMBER,
+            userID,
+            event.agentInfo,
+            true
+          );
+        },
       },
-    },
-    guards: {
-      communityUpdateAuthorized: (_, event) => {
-        const agentInfo: AgentInfo = event.agentInfo;
-        const authorizationPolicy: AuthorizationPolicy = event.authorization;
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          authorizationPolicy,
-          AuthorizationPrivilege.UPDATE
-        );
+      guards: {
+        hasUpdatePrivilege: ({ event }) => {
+          const agentInfo: AgentInfo = event.agentInfo;
+          const authorizationPolicy: IAuthorizationPolicy = event.authorization;
+          return this.authorizationService.isAccessGranted(
+            agentInfo,
+            authorizationPolicy,
+            AuthorizationPrivilege.UPDATE
+          );
+        },
       },
-    },
-  };
+    });
+    return machine.createMachine({
+      id: 'user-application',
+      context: {
+        parentID: '',
+      },
+      initial: 'new',
+      states: {
+        new: {
+          on: {
+            APPROVE: {
+              target: 'approved',
+              guard: 'hasUpdatePrivilege',
+            },
+            REJECT: 'rejected',
+          },
+        },
+        approved: {
+          type: 'final',
+          entry: ['communityAddMember'],
+        },
+        rejected: {
+          on: {
+            REOPEN: 'new',
+            ARCHIVE: 'archived',
+          },
+        },
+        archived: {
+          type: 'final',
+        },
+      },
+    });
+  }
 }

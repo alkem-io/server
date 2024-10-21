@@ -21,9 +21,9 @@ import { applicationLifecycleConfig } from '@domain/access/application/applicati
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { asyncFilter } from '@common/utils';
 import { IContributor } from '../../community/contributor/contributor.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { createMachine } from 'xstate';
 
 @Injectable()
 export class ApplicationService {
@@ -51,10 +51,7 @@ export class ApplicationService {
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
-    application.lifecycle = await this.lifecycleService.createLifecycle(
-      application.id,
-      applicationLifecycleConfig
-    );
+    application.lifecycle = await this.lifecycleService.createLifecycle();
 
     return await this.applicationRepository.save(application);
   }
@@ -69,6 +66,8 @@ export class ApplicationService {
         await this.nvpService.removeNVP(question.id);
       }
     }
+
+    await this.lifecycleService.deleteLifecycle(application.lifecycle.id);
     if (application.authorization)
       await this.authorizationPolicyService.delete(application.authorization);
 
@@ -116,17 +115,10 @@ export class ApplicationService {
   }
 
   async getApplicationState(applicationID: string): Promise<string> {
-    const application = await this.getApplicationOrFail(applicationID, {
-      relations: {
-        lifecycle: true,
-      },
-    });
+    const application = await this.getApplicationOrFail(applicationID);
 
-    const lifecycle = application.lifecycle;
-    if (lifecycle) {
-      return await this.lifecycleService.getState(lifecycle);
-    }
-    return '';
+    const machine = createMachine(applicationLifecycleConfig);
+    return this.lifecycleService.getState(application.lifecycle, machine);
   }
 
   async findExistingApplications(
@@ -164,7 +156,6 @@ export class ApplicationService {
       findOpts.select = {
         lifecycle: {
           machineState: true,
-          machineDef: true,
         },
       };
     }
@@ -172,9 +163,11 @@ export class ApplicationService {
     const applications = await this.applicationRepository.find(findOpts);
 
     if (states.length) {
-      return asyncFilter(applications, async app =>
-        states.includes(await this.getApplicationState(app.id))
+      const machine = createMachine(applicationLifecycleConfig);
+      const filteredApplications = applications.filter(app =>
+        states.includes(this.lifecycleService.getState(app.lifecycle, machine))
       );
+      return filteredApplications;
     }
 
     return applications;
@@ -182,14 +175,9 @@ export class ApplicationService {
 
   async isFinalizedApplication(applicationID: string): Promise<boolean> {
     const application = await this.getApplicationOrFail(applicationID);
-    const lifecycle = application.lifecycle;
-    if (!lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Lifecycle for Application ${application.id} `,
-        LogContext.COMMUNITY
-      );
-    }
-    return await this.lifecycleService.isFinalState(lifecycle);
+
+    const machine = createMachine(applicationLifecycleConfig);
+    return this.lifecycleService.isFinalState(application.lifecycle, machine);
   }
 
   async getQuestionsSorted(application: IApplication): Promise<IQuestion[]> {
