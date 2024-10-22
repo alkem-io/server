@@ -340,7 +340,9 @@ export class KratosService {
     return headers;
   }
 
-  public async getDataFromBearerToken(bearerToken?: string): Promise<any> {
+  public async getSessionFromBearerToken(
+    bearerToken?: string
+  ): Promise<Session> {
     const { data } = await this.kratosFrontEndClient.toSession({
       xSessionToken: bearerToken,
     });

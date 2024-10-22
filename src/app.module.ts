@@ -85,6 +85,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
 import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
+import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
 
 @Module({
   imports: [
@@ -260,6 +261,7 @@ import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
     RolesModule,
     KonfigModule,
     AdminContributorsModule,
+    AdminUsersModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
