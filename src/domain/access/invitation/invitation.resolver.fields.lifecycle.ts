@@ -6,7 +6,9 @@ import { createMachine } from 'xstate';
 import { ILifecycleFields } from '@domain/common/lifecycle/lifecycle.fields.interface';
 
 @Resolver(() => IInvitation)
-export class InvitationLifecycleResolverFields implements ILifecycleFields {
+export class InvitationLifecycleResolverFields
+  implements ILifecycleFields<IInvitation>
+{
   private machine = createMachine(invitationLifecycleConfig);
   constructor(private lifecycleService: LifecycleService) {}
 

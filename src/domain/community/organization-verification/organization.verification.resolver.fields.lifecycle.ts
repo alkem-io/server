@@ -6,7 +6,7 @@ import { ILifecycleFields } from '@domain/common/lifecycle/lifecycle.fields.inte
 
 @Resolver(() => IOrganizationVerification)
 export class OrganizationVerificationLifecycleResolverFields
-  implements ILifecycleFields
+  implements ILifecycleFields<IOrganizationVerification>
 {
   constructor(
     private lifecycleService: LifecycleService,

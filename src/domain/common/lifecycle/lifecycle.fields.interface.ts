@@ -1,7 +1,7 @@
-export interface ILifecycleFields {
-  state(parent: any): string;
+export interface ILifecycleFields<T> {
+  state(parent: T): string;
 
-  nextEvents(parent: any): string[];
+  nextEvents(parent: T): string[];
 
-  isFinalized(parent: any): boolean;
+  isFinalized(parent: T): boolean;
 }
