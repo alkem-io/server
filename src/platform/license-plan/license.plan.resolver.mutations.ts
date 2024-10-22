@@ -31,13 +31,13 @@ export class LicensePlanResolverMutations {
       deleteData.ID,
       {
         relations: {
-          licensing: {
+          licensingFramework: {
             authorization: true,
           },
         },
       }
     );
-    if (!licensePlan.licensing) {
+    if (!licensePlan.licensingFramework) {
       throw new EntityNotFoundException(
         `Unable to find Licensing for LicensePlan with ID: ${deleteData.ID}`,
         LogContext.LICENSE
@@ -45,7 +45,7 @@ export class LicensePlanResolverMutations {
     }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      licensePlan.licensing.authorization,
+      licensePlan.licensingFramework.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteLicensePlan: ${licensePlan.id}`
     );
@@ -65,13 +65,13 @@ export class LicensePlanResolverMutations {
       updateData.ID,
       {
         relations: {
-          licensing: {
+          licensingFramework: {
             authorization: true,
           },
         },
       }
     );
-    if (!licensePlan.licensing) {
+    if (!licensePlan.licensingFramework) {
       throw new EntityNotFoundException(
         `Unable to find Licensing for LicensePlan with ID: ${updateData.ID}`,
         LogContext.LICENSE
@@ -79,7 +79,7 @@ export class LicensePlanResolverMutations {
     }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      licensePlan.licensing.authorization,
+      licensePlan.licensingFramework.authorization,
       AuthorizationPrivilege.UPDATE,
       `update LicensePlan: ${licensePlan.id}`
     );

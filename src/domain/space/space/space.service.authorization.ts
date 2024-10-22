@@ -33,11 +33,12 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
+import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { ILicense } from '@domain/common/license/license.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
@@ -54,6 +55,7 @@ export class SpaceAuthorizationService {
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceService: SpaceService,
     private spaceSettingsService: SpaceSettingsService,
+    private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -79,13 +81,18 @@ export class SpaceAuthorizationService {
         storageAggregator: true,
         subspaces: true,
         templatesManager: true,
+        license: {
+          entitlements: true,
+        },
       },
     });
     if (
       !space.authorization ||
       !space.community ||
       !space.community.roleSet ||
-      !space.subspaces
+      !space.subspaces ||
+      !space.license ||
+      !space.license.entitlements
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
@@ -94,8 +101,7 @@ export class SpaceAuthorizationService {
     }
 
     // Get the root space agent for licensing related logic
-    const levelZeroSpaceAgent =
-      await this.spaceService.getLevelZeroSpaceAgent(space);
+    const spaceLicense = space.license;
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
@@ -205,7 +211,7 @@ export class SpaceAuthorizationService {
     // propagate authorization rules for child entities
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
-      levelZeroSpaceAgent,
+      spaceLicense,
       spaceSettings,
       spaceMembershipAllowed
     );
@@ -244,7 +250,7 @@ export class SpaceAuthorizationService {
 
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
-    levelZeroSpaceAgent: IAgent,
+    spaceLicense: ILicense,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicy[]> {
@@ -256,7 +262,8 @@ export class SpaceAuthorizationService {
       !space.community.roleSet ||
       !space.context ||
       !space.profile ||
-      !space.storageAggregator
+      !space.storageAggregator ||
+      !space.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for space base ${space.id} `,
@@ -272,7 +279,6 @@ export class SpaceAuthorizationService {
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community.id,
         space.authorization,
-        levelZeroSpaceAgent,
         spaceSettings,
         spaceMembershipAllowed,
         isSubspaceCommunity
@@ -284,8 +290,7 @@ export class SpaceAuthorizationService {
         space.collaboration,
         space.authorization,
         space.community.roleSet,
-        spaceSettings,
-        levelZeroSpaceAgent
+        spaceSettings
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
@@ -302,6 +307,13 @@ export class SpaceAuthorizationService {
         space.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
+
+    const licenseAuthorizations =
+      this.licenseAuthorizationService.applyAuthorizationPolicy(
+        space.license,
+        space.authorization
+      );
+    updatedAuthorizations.push(...licenseAuthorizations);
 
     // Level zero space only entities
     if (space.level === SpaceLevel.SPACE) {

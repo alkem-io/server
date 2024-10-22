@@ -16,12 +16,21 @@ import { Application } from '@domain/access/application/application.entity';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
+import { License } from '@domain/common/license/license.entity';
 
 @Entity()
 export class RoleSet
   extends AuthorizableEntity
   implements IRoleSet, IGroupable
 {
+  @OneToOne(() => License, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  license?: License;
+
   @OneToOne(() => Form, {
     eager: false,
     cascade: true,

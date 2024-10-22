@@ -5,15 +5,15 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { LicensingService } from './licensing.service';
-import { CreateLicensePlanOnLicensingInput } from './dto/license.manager.dto.create.license.plan';
+import { LicensingFrameworkService } from './licensing.framework.service';
+import { CreateLicensePlanOnLicensingFrameworkInput } from './dto/licensing.framework.dto.create.license.plan';
 import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 
 @Resolver()
-export class LicensingResolverMutations {
+export class LicensingFrameworkResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private licensingService: LicensingService
+    private licensingFrameworkService: LicensingFrameworkService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -23,19 +23,19 @@ export class LicensingResolverMutations {
   @Profiling.api
   async createLicensePlan(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('planData') planData: CreateLicensePlanOnLicensingInput
+    @Args('planData') planData: CreateLicensePlanOnLicensingFrameworkInput
   ): Promise<ILicensePlan> {
-    const licensing = await this.licensingService.getLicensingOrFail(
-      planData.licensingID
+    const licensing = await this.licensingFrameworkService.getLicensingOrFail(
+      planData.licensingFrameworkID
     );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       licensing.authorization,
       AuthorizationPrivilege.CREATE,
-      `create licensePlan on licensing: ${licensing.id}`
+      `create licensePlan on licensing framework: ${licensing.id}`
     );
 
-    return await this.licensingService.createLicensePlan(planData);
+    return await this.licensingFrameworkService.createLicensePlan(planData);
   }
 }

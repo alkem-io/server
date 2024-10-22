@@ -15,12 +15,12 @@ import { IPlatform } from './platform.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
-import { ILicensing } from '@platform/licensing/licensing.interface';
 import { ForumService } from '@platform/forum/forum.service';
 import { IForum } from '@platform/forum/forum.interface';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
+import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
 
 @Injectable()
 export class PlatformService {
@@ -132,13 +132,15 @@ export class PlatformService {
     return storageAggregator;
   }
 
-  async getLicensing(platformInput: IPlatform): Promise<ILicensing> {
+  async getLicensingFramework(
+    platformInput: IPlatform
+  ): Promise<ILicensingFramework> {
     const platform = await this.getPlatformOrFail({
       relations: {
-        licensing: true,
+        licensingFramework: true,
       },
     });
-    const licensing = platform.licensing;
+    const licensing = platform.licensingFramework;
 
     if (!licensing) {
       throw new EntityNotFoundException(
