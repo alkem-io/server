@@ -58,7 +58,6 @@ export class OrganizationVerificationResolverMutations {
       eventName: organizationVerificationEventData.eventName,
       agentInfo,
       authorization: organizationVerification.authorization,
-      parentID: organizationVerification.id,
     };
 
     await this.lifecycleService.event(event);

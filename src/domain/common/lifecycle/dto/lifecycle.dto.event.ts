@@ -10,5 +10,4 @@ export class LifecycleEventInput {
 
   agentInfo!: AgentInfo;
   authorization?: IAuthorizationPolicy;
-  parentID!: string;
 }

@@ -86,7 +86,6 @@ export class LifecycleService {
         type: eventName,
         agentInfo: eventData.agentInfo,
         authorization: eventData.authorization,
-        parentID: eventData.parentID,
       });
 
       await waitFor(

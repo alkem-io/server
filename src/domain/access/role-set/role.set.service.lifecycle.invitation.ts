@@ -1,23 +1,19 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
-import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
-import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { RoleSetService } from './role.set.service';
 import { AnyStateMachine, setup } from 'xstate';
 
 @Injectable()
-export class RoleSetInvitationLifecycleOptionsProvider {
+export class RoleSetServiceLifecycleInvitation {
   private invitationMachine: AnyStateMachine;
   constructor(
-    private lifecycleService: LifecycleService,
     private authorizationService: AuthorizationService,
     private invitationService: InvitationService,
     private roleSetService: RoleSetService,
@@ -26,30 +22,8 @@ export class RoleSetInvitationLifecycleOptionsProvider {
     this.invitationMachine = this.getMachine();
   }
 
-  public async eventOnInvitation(
-    invitationEventData: InvitationEventInput,
-    agentInfo: AgentInfo
-  ): Promise<IInvitation> {
-    const invitationID = invitationEventData.invitationID;
-    const invitation =
-      await this.invitationService.getInvitationOrFail(invitationID);
-
-    // Send the event, translated if needed
-    this.logger.verbose?.(
-      `Event ${invitationEventData.eventName} triggered on invitation: ${invitation.id} using lifecycle ${invitation.lifecycle.id}`,
-      LogContext.COMMUNITY
-    );
-
-    await this.lifecycleService.event({
-      machine: this.invitationMachine,
-      lifecycle: invitation.lifecycle,
-      eventName: invitationEventData.eventName,
-      agentInfo,
-      authorization: invitation.authorization,
-      parentID: invitationID,
-    });
-
-    return await this.invitationService.getInvitationOrFail(invitationID);
+  public getInvitationMachine(): AnyStateMachine {
+    return this.invitationMachine;
   }
 
   private getMachine(): AnyStateMachine {

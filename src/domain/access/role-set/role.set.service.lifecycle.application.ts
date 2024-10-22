@@ -1,11 +1,6 @@
-import {
-  IApplication,
-  ApplicationEventInput,
-} from '@domain/access/application';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -16,10 +11,9 @@ import { RoleSetService } from './role.set.service';
 import { AnyStateMachine, setup } from 'xstate';
 
 @Injectable()
-export class RoleSetApplicationLifecycleOptionsProvider {
+export class RoleSetServiceLifecycleApplication {
   private applicationMachine: AnyStateMachine;
   constructor(
-    private lifecycleService: LifecycleService,
     private authorizationService: AuthorizationService,
     private applicationService: ApplicationService,
     private roleSetService: RoleSetService,
@@ -28,35 +22,8 @@ export class RoleSetApplicationLifecycleOptionsProvider {
     this.applicationMachine = this.getMachine();
   }
 
-  async eventOnApplication(
-    applicationEventData: ApplicationEventInput,
-    agentInfo: AgentInfo
-  ): Promise<IApplication> {
-    const applicationID = applicationEventData.applicationID;
-    const application =
-      await this.applicationService.getApplicationOrFail(applicationID);
-
-    if (!application.lifecycle)
-      throw new EntityNotInitializedException(
-        `Lifecycle not initialized on Application: ${applicationID}`,
-        LogContext.COMMUNITY
-      );
-
-    // Send the event, translated if needed
-    this.logger.verbose?.(
-      `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${application.lifecycle.id}`,
-      LogContext.COMMUNITY
-    );
-    await this.lifecycleService.event({
-      machine: this.applicationMachine,
-      eventName: applicationEventData.eventName,
-      lifecycle: application.lifecycle,
-      agentInfo,
-      authorization: application.authorization,
-      parentID: applicationID,
-    });
-
-    return await this.applicationService.getApplicationOrFail(applicationID);
+  public getApplicationMachine(): AnyStateMachine {
+    return this.applicationMachine;
   }
 
   private getMachine(): AnyStateMachine {
