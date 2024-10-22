@@ -22,7 +22,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Account } from '@domain/space/account/account.entity';
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from '@domain/community/user/user.entity';
-import { Platform } from '@platform/platfrom/platform.entity';
+import { Platform } from '@platform/platform/platform.entity';
 import { TemplatesManager } from '@domain/template/templates-manager';
 
 @Injectable()

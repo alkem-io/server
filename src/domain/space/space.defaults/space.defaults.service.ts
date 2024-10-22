@@ -20,7 +20,7 @@ import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.c
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { TemplateService } from '@domain/template/template/template.service';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
-import { PlatformService } from '@platform/platfrom/platform.service';
+import { PlatformService } from '@platform/platform/platform.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { ValidationException } from '@common/exceptions';
