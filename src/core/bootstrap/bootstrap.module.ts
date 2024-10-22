@@ -7,7 +7,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AdminAuthorizationModule } from '@platform/admin/authorization/admin.authorization.module';
 import { BootstrapService } from './bootstrap.service';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
-import { PlatformModule } from '@platform/platfrom/platform.module';
+import { PlatformModule } from '@platform/platform/platform.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';

@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { PlatformRole } from '@common/enums/platform.role';
-import { IPlatform } from '@platform/platfrom/platform.interface';
+import { IPlatform } from '@platform/platform/platform.interface';
 import { IRoleSet } from '@domain/access/role-set';
 import { CommunityRoleType } from '@common/enums/community.role';
 
