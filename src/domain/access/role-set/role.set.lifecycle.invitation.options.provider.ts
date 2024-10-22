@@ -52,7 +52,18 @@ export class RoleSetInvitationLifecycleOptionsProvider {
   public getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
-        communityAddMember: async ({ event }) => {
+        actionsPending: ({ context }) => {
+          context.actionsPending = true;
+          this.logger.verbose?.(
+            `actionsPending: ${context.actionsPending}`,
+            LogContext.COMMUNITY
+          );
+        },
+        communityAddMember: async ({ context, event }) => {
+          this.logger.verbose?.(
+            `communityAddMember: ${context.actionsPending}`,
+            LogContext.COMMUNITY
+          );
           try {
             const invitation = await this.invitationService.getInvitationOrFail(
               event.parentID,
@@ -116,6 +127,8 @@ export class RoleSetInvitationLifecycleOptionsProvider {
               `Unable to add member to community: ${e}`,
               LogContext.COMMUNITY
             );
+          } finally {
+            context.actionsPending = false;
           }
         },
       },
@@ -135,7 +148,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
           return this.authorizationService.isAccessGranted(
             agentInfo,
             authorizationPolicy,
-            AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT
+            AuthorizationPrivilege.UPDATE //COMMUNITY_INVITE_ACCEPT
           );
         },
       },
@@ -143,7 +156,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
     return machine.createMachine({
       id: 'user-invitation',
       context: {
-        parentID: '',
+        actionsCompleted: true,
       },
       initial: 'invited',
       states: {
@@ -160,8 +173,8 @@ export class RoleSetInvitationLifecycleOptionsProvider {
           },
         },
         accepted: {
-          type: 'final',
-          entry: ['communityAddMember'],
+          //type: 'final',
+          entry: ['actionsPending', 'communityAddMember'],
         },
         rejected: {
           on: {

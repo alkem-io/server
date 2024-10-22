@@ -68,8 +68,16 @@ export class OrganizationVerificationLifecycleOptionsProvider {
   public getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
-        organizationManuallyVerified: (_: any) => {
+        actionsPending: ({ context }) => {
+          context.actionsPending = true;
+          this.logger.verbose?.(
+            `actionsPending: ${context.actionsPending}`,
+            LogContext.COMMUNITY
+          );
+        },
+        organizationManuallyVerified: ({ context }) => {
           // throw new Error('Action not implemented');
+          context.actionsPending = false;
         },
       },
       guards: {
@@ -94,6 +102,9 @@ export class OrganizationVerificationLifecycleOptionsProvider {
         },
       },
     }).createMachine({
+      context: {
+        actionsCompleted: true,
+      },
       initial: 'notVerified',
       states: {
         notVerified: {
