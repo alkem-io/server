@@ -37,14 +37,14 @@ export class SpaceDefaultsService {
   public async createCollaborationInput(
     collaborationData: CreateCollaborationOnSpaceInput,
     spaceType: SpaceType
-  ): Promise<CreateCollaborationInput> {
+  ): Promise<CreateCollaborationOnSpaceInput> {
     const platformTemplatesManager =
       await this.platformService.getTemplatesManagerOrFail();
     let templateID = collaborationData.collaborationTemplateID;
     if (!templateID) {
       switch (spaceType) {
         case SpaceType.CHALLENGE:
-        case SpaceType.OPPORTUNITY:
+        case SpaceType.OPPORTUNITY: {
           const subspaceTemplate =
             await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
@@ -52,7 +52,8 @@ export class SpaceDefaultsService {
             );
           templateID = subspaceTemplate.id;
           break;
-        case SpaceType.SPACE:
+        }
+        case SpaceType.SPACE: {
           const levelZeroTemplate =
             await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
@@ -60,7 +61,8 @@ export class SpaceDefaultsService {
             );
           templateID = levelZeroTemplate.id;
           break;
-        case SpaceType.KNOWLEDGE:
+        }
+        case SpaceType.KNOWLEDGE: {
           const knowledgeTemplate =
             await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
@@ -68,6 +70,7 @@ export class SpaceDefaultsService {
             );
           templateID = knowledgeTemplate.id;
           break;
+        }
       }
     }
     let collaborationTemplateInput: CreateCollaborationInput | undefined =

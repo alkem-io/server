@@ -210,7 +210,7 @@ export class SpaceService {
       space.levelZeroSpaceID = space.id;
     }
 
-    //// Collaboration
+    // Collaboration:
     let collaborationData: CreateCollaborationInput =
       spaceData.collaborationData;
     collaborationData.isTemplate = false;
@@ -234,7 +234,7 @@ export class SpaceService {
       space.templatesManager = await this.createTemplatesManager();
     }
 
-    ////// Community
+    // Community:
     // set immediate community parent + resourceID
     if (!space.community || !space.community.roleSet) {
       throw new RelationshipNotFoundException(
@@ -317,7 +317,7 @@ export class SpaceService {
     await this.authorizationPolicyService.delete(space.authorization);
 
     if (space.level === SpaceLevel.SPACE) {
-      if (!space.templatesManager || !space.templatesManager) {
+      if (!space.templatesManager) {
         throw new RelationshipNotFoundException(
           `Unable to load entities to delete base subspace: ${space.id} `,
           LogContext.SPACES
@@ -1224,7 +1224,7 @@ export class SpaceService {
       },
     });
 
-    if (!levelZeroSpace || !levelZeroSpace.templatesManager) {
+    if (!levelZeroSpace?.templatesManager) {
       throw new EntityNotFoundException(
         `Unable to find templatesManager for level zero space with id: ${rootSpaceID}`,
         LogContext.SPACES

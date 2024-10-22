@@ -87,7 +87,7 @@ export class TemplatesManagerService {
       !templatesManager.templatesSet
     ) {
       throw new EntityNotFoundException(
-        `Unable to find authorization on TemplatesManager with id: ${templatesManagerID}`,
+        `Unable to find authorization, templateDefaults or templatesSet on TemplatesManager with id: ${templatesManagerID}`,
         LogContext.TEMPLATES
       );
     }

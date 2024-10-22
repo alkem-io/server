@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  LoggerService,
-  NotImplementedException,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { LogContext } from '@common/enums';
@@ -160,7 +155,7 @@ export class StorageAggregatorResolverService {
     if (!isUUID(templatesManagerId)) {
       throw new InvalidUUID(
         'Invalid UUID provided to find the StorageAggregator of a templatesManager',
-        LogContext.COMMUNITY,
+        LogContext.STORAGE_AGGREGATOR,
         { provided: templatesManagerId }
       );
     }
@@ -193,7 +188,7 @@ export class StorageAggregatorResolverService {
     if (platform && platform.storageAggregator) {
       return this.getStorageAggregatorOrFail(platform.storageAggregator.id);
     }
-    throw new NotImplementedException(
+    throw new EntityNotFoundException(
       `Unable to retrieve storage aggregator to use for TemplatesManager ${templatesManagerId}`,
       LogContext.STORAGE_AGGREGATOR
     );
@@ -205,7 +200,7 @@ export class StorageAggregatorResolverService {
     if (!isUUID(templatesSetId)) {
       throw new InvalidUUID(
         'Invalid UUID provided to find the StorageAggregator of a templateSet',
-        LogContext.COMMUNITY,
+        LogContext.STORAGE_AGGREGATOR,
         { provided: templatesSetId }
       );
     }
@@ -248,7 +243,7 @@ export class StorageAggregatorResolverService {
       );
     }
 
-    throw new NotImplementedException(
+    throw new EntityNotFoundException(
       `Unable to retrieve storage aggregator to use for TemplatesSet ${templatesSetId}`,
       LogContext.STORAGE_AGGREGATOR
     );
@@ -284,7 +279,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!space || !space.storageAggregator) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve storage aggregator for collaborationID: ${collaborationID}`,
         LogContext.STORAGE_AGGREGATOR
       );
@@ -328,7 +323,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!space || !space.storageAggregator) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve storage aggregator for communityID: ${communityID}`,
         LogContext.STORAGE_AGGREGATOR
       );
@@ -360,7 +355,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!space || !space.storageAggregator) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve storage aggregator for calloutID: ${calloutId} `,
         LogContext.STORAGE_AGGREGATOR
       );
