@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UpdateCollaborationFromTemplateInput } from './dto/template.applier.dto.update.collaboration';
 import { TemplateService } from '../template/template.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { RelationshipNotFoundException } from '@common/exceptions';

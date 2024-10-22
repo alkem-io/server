@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InnovationPackService } from './innovaton.pack.service';
+import { InnovationPackService } from './innovation.pack.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IInnovationPack } from './innovation.pack.interface';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
