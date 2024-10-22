@@ -14,7 +14,7 @@ export class ApplicationLifecycleResolverFields
   constructor(private lifecycleService: LifecycleService) {}
 
   @ResolveField('state', () => String, {
-    nullable: true,
+    nullable: false,
     description: 'The current state of this Lifecycle.',
   })
   state(@Parent() application: IApplication): string {
@@ -22,7 +22,7 @@ export class ApplicationLifecycleResolverFields
   }
 
   @ResolveField('nextEvents', () => [String], {
-    nullable: true,
+    nullable: false,
     description: 'The next events of this Lifecycle.',
   })
   nextEvents(@Parent() application: IApplication): string[] {

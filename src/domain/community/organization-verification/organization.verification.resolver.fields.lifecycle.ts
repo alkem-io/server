@@ -14,7 +14,7 @@ export class OrganizationVerificationLifecycleResolverFields
   ) {}
 
   @ResolveField('state', () => String, {
-    nullable: true,
+    nullable: false,
     description: 'The current state of this Lifecycle.',
   })
   state(@Parent() organizationVerification: IOrganizationVerification): string {
@@ -25,7 +25,7 @@ export class OrganizationVerificationLifecycleResolverFields
   }
 
   @ResolveField('nextEvents', () => [String], {
-    nullable: true,
+    nullable: false,
     description: 'The next events of this Lifecycle.',
   })
   nextEvents(

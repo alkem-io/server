@@ -13,7 +13,7 @@ export class InvitationLifecycleResolverFields
   constructor(private lifecycleService: LifecycleService) {}
 
   @ResolveField('state', () => String, {
-    nullable: true,
+    nullable: false,
     description: 'The current state of this Lifecycle.',
   })
   state(@Parent() invitation: IInvitation): string {
@@ -21,7 +21,7 @@ export class InvitationLifecycleResolverFields
   }
 
   @ResolveField('nextEvents', () => [String], {
-    nullable: true,
+    nullable: false,
     description: 'The next events of this Lifecycle.',
   })
   nextEvents(@Parent() invitation: IInvitation): string[] {
