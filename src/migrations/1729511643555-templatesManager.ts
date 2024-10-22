@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class TemplatesManager1728936661222 implements MigrationInterface {
-  name = 'TemplatesManager1728936661222';
+export class TemplatesManager1729511643555 implements MigrationInterface {
+  name = 'TemplatesManager1729511643555';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -17,28 +17,31 @@ export class TemplatesManager1728936661222 implements MigrationInterface {
     await queryRunner.query(
       `DROP INDEX \`REL_6b1efee39d076d9f7ecb8fef4c\` ON \`space\``
     );
-    await queryRunner.query(`CREATE TABLE \`template_default\` (\`id\` char(36) NOT NULL,
-                                                                    \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                                                                    \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-                                                                    \`version\` int NOT NULL,
-                                                                    \`type\` varchar(128) NOT NULL,
-                                                                    \`allowedTemplateType\` varchar(128) NOT NULL,
-                                                                    \`authorizationId\` char(36) NULL,
-                                                                    \`templatesManagerId\` char(36) NULL,
-                                                                    \`templateId\` char(36) NULL,
-                                                                    UNIQUE INDEX \`REL_9dbeb9326140b3ce01c1037efe\` (\`authorizationId\`),
-                                                                    UNIQUE INDEX \`REL_b6617b64c6ea8ebb24947ddbd4\` (\`templateId\`),
-                                                                    PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
-    await queryRunner.query(`CREATE TABLE \`templates_manager\` (\`id\` char(36) NOT NULL,
-                                                                     \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                                                                     \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-                                                                     \`version\` int NOT NULL,
-                                                                     \`authorizationId\` char(36) NULL,
-                                                                     \`templatesSetId\` char(36) NULL,
-                                                                     UNIQUE INDEX \`REL_19ea19263c6016f411fb008243\` (\`authorizationId\`),
-                                                                     UNIQUE INDEX \`REL_7ba875eee72ec5fcbe2355124d\` (\`templatesSetId\`),
-                                                                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
+    await queryRunner.query(`CREATE TABLE \`template_default\` (
+        \`id\` char(36) NOT NULL,
+        \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        \`version\` int NOT NULL,
+        \`type\` varchar(128) NOT NULL,
+        \`allowedTemplateType\` varchar(128) NOT NULL,
+        \`authorizationId\` char(36) NULL,
+        \`templatesManagerId\` char(36) NULL,
+        \`templateId\` char(36) NULL,
+        UNIQUE INDEX \`REL_9dbeb9326140b3ce01c1037efe\` (\`authorizationId\`),
+        UNIQUE INDEX \`REL_b6617b64c6ea8ebb24947ddbd4\` (\`templateId\`),
+        PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
+
+    await queryRunner.query(`CREATE TABLE \`templates_manager\` (
+        \`id\` char(36) NOT NULL,
+        \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        \`version\` int NOT NULL,
+        \`authorizationId\` char(36) NULL,
+        \`templatesSetId\` char(36) NULL,
+        UNIQUE INDEX \`REL_19ea19263c6016f411fb008243\` (\`authorizationId\`),
+        UNIQUE INDEX \`REL_7ba875eee72ec5fcbe2355124d\` (\`templatesSetId\`),
+        PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
     await queryRunner.query(
       `ALTER TABLE \`platform\` ADD \`templatesManagerId\` char(36) NULL`
@@ -59,7 +62,7 @@ export class TemplatesManager1728936661222 implements MigrationInterface {
       `CREATE UNIQUE INDEX \`REL_dea52ce918df6950019678fa35\` ON \`space\` (\`templatesManagerId\`)`
     );
     await queryRunner.query(
-      'ALTER TABLE `collaboration` ADD `isTemplate` tinyint NOT NULL DEFAULT 0'
+      `ALTER TABLE \`collaboration\` ADD \`isTemplate\` tinyint NOT NULL DEFAULT 0`
     );
 
     const levelZeroSpaces: {
@@ -289,9 +292,6 @@ export class TemplatesManager1728936661222 implements MigrationInterface {
     );
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_43559aeadc1a5169d17e81b3d4\` ON \`space\` (\`libraryId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`space\` ADD CONSTRAINT \`FK_6b1efee39d076d9f7ecb8fef4cd\` FOREIGN KEY (\`defaultsId\`) REFERENCES \`space_defaults\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`space\` ADD CONSTRAINT \`FK_43559aeadc1a5169d17e81b3d45\` FOREIGN KEY (\`libraryId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`

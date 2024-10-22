@@ -13,7 +13,7 @@ import { TemplatesManager } from './templates.manager.entity';
 import { ITemplatesManager } from './templates.manager.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplatesSetService } from '../templates-set/templates.set.service';
-import { CreateTemplatesManagerInput } from './dto/templates.manager.dto.create.';
+import { CreateTemplatesManagerInput } from './dto/templates.manager.dto.create';
 import { TemplateDefaultService } from '../template-default/template.default.service';
 import { ITemplateDefault } from '../template-default/template.default.interface';
 import { TemplateDefaultType } from '@common/enums/template.default.type';

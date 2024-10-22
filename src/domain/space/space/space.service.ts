@@ -76,7 +76,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create.';
+import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
 
