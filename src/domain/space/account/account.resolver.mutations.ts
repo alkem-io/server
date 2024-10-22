@@ -89,7 +89,7 @@ export class AccountResolverMutations {
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_SPACE,
-      LicenseEntitlementType.ACCOUNT_SPACE
+      LicenseEntitlementType.ACCOUNT_SPACE_FREE
     );
 
     let space = await this.accountService.createSpaceOnAccount(
@@ -576,7 +576,7 @@ export class AccountResolverMutations {
     );
     const isEntitleMentEnabled = this.licenseService.isEntitlementAvailable(
       license,
-      LicenseEntitlementType.ACCOUNT_SPACE
+      LicenseEntitlementType.ACCOUNT_SPACE_FREE
     );
     const isPlatformAdmin = this.authorizationService.isAccessGranted(
       agentInfo,
@@ -586,10 +586,10 @@ export class AccountResolverMutations {
     if (!isPlatformAdmin && !isEntitleMentEnabled) {
       const entitlementLimit = this.licenseService.getEntitlementLimit(
         license,
-        LicenseEntitlementType.ACCOUNT_SPACE
+        LicenseEntitlementType.ACCOUNT_SPACE_FREE
       );
       throw new ValidationException(
-        `Unable to create ${licenseType} on account: ${account.id}. Entitlement limit of ${entitlementLimit} of type ${LicenseEntitlementType.ACCOUNT_SPACE} reached`,
+        `Unable to create ${licenseType} on account: ${account.id}. Entitlement limit of ${entitlementLimit} of type ${LicenseEntitlementType.ACCOUNT_SPACE_FREE} reached`,
         LogContext.ACCOUNT
       );
     }

@@ -166,6 +166,24 @@ export class SpaceService {
       type: LicenseType.SPACE,
       entitlements: [
         {
+          type: LicenseEntitlementType.SPACE_FREE,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_PLUS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_PREMIUM,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
           type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
           dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,

@@ -43,7 +43,7 @@ export class LicenseEntitlementUsageService {
       );
     }
     switch (entitlementType) {
-      case LicenseEntitlementType.ACCOUNT_SPACE:
+      case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
         return account.spaces.length;
       case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
         return account.virtualContributors.length;

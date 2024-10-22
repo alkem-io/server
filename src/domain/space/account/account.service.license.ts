@@ -84,13 +84,35 @@ export class AccountLicenseService {
     }
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
-        case LicenseEntitlementType.ACCOUNT_SPACE:
+        case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
           const createSpace = await this.licenseEngineService.isAccessGranted(
             LicensePrivilege.ACCOUNT_CREATE_SPACE,
             accountAgent
           );
           if (createSpace) {
             entitlement.limit = 3;
+            entitlement.enabled = true;
+          }
+          break;
+        case LicenseEntitlementType.ACCOUNT_SPACE_PLUS:
+          const createSpacePLus =
+            await this.licenseEngineService.isAccessGranted(
+              LicensePrivilege.ACCOUNT_CREATE_SPACE,
+              accountAgent
+            );
+          if (createSpacePLus) {
+            entitlement.limit = 0;
+            entitlement.enabled = true;
+          }
+          break;
+        case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
+          const createSpacePremium =
+            await this.licenseEngineService.isAccessGranted(
+              LicensePrivilege.ACCOUNT_CREATE_SPACE,
+              accountAgent
+            );
+          if (createSpacePremium) {
+            entitlement.limit = 0;
             entitlement.enabled = true;
           }
           break;

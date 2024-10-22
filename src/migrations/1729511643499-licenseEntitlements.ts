@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { query } from 'express';
 
-export class LicenseEntitlements1728936661333 implements MigrationInterface {
-  name = 'LicenseEntitlements1728936661333';
+export class LicenseEntitlements1729511643499 implements MigrationInterface {
+  name = 'LicenseEntitlements1729511643499';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -92,7 +92,19 @@ export class LicenseEntitlements1728936661333 implements MigrationInterface {
       await this.createLicenseEntitlement(
         queryRunner,
         licenseID,
-        LicenseEntitlementType.ACCOUNT_SPACE,
+        LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+        LicenseEntitlementDataType.LIMIT
+      );
+      await this.createLicenseEntitlement(
+        queryRunner,
+        licenseID,
+        LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
+        LicenseEntitlementDataType.LIMIT
+      );
+      await this.createLicenseEntitlement(
+        queryRunner,
+        licenseID,
+        LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
         LicenseEntitlementDataType.LIMIT
       );
       await this.createLicenseEntitlement(
@@ -122,6 +134,24 @@ export class LicenseEntitlements1728936661333 implements MigrationInterface {
       const licenseID = await this.createLicense(queryRunner, 'space');
       await queryRunner.query(
         `UPDATE space SET licenseId = '${licenseID}' WHERE id = '${space.id}'`
+      );
+      await this.createLicenseEntitlement(
+        queryRunner,
+        licenseID,
+        LicenseEntitlementType.SPACE_FREE,
+        LicenseEntitlementDataType.FLAG
+      );
+      await this.createLicenseEntitlement(
+        queryRunner,
+        licenseID,
+        LicenseEntitlementType.SPACE_PLUS,
+        LicenseEntitlementDataType.FLAG
+      );
+      await this.createLicenseEntitlement(
+        queryRunner,
+        licenseID,
+        LicenseEntitlementType.SPACE_PREMIUM,
+        LicenseEntitlementDataType.FLAG
       );
       await this.createLicenseEntitlement(
         queryRunner,
@@ -332,10 +362,15 @@ export class LicenseEntitlements1728936661333 implements MigrationInterface {
 }
 
 enum LicenseEntitlementType {
-  ACCOUNT_SPACE = 'account-space',
+  ACCOUNT_SPACE_FREE = 'account-space-free',
+  ACCOUNT_SPACE_PLUS = 'account-space-plus',
+  ACCOUNT_SPACE_PREMIUM = 'account-space-premium',
   ACCOUNT_VIRTUAL_CONTRIBUTOR = 'account-virtual-contributor',
   ACCOUNT_INNOVATION_PACK = 'account-innovation-pack',
   ACCOUNT_INNOVATION_HUB = 'account-innovation-hub',
+  SPACE_FREE = 'space-free',
+  SPACE_PLUS = 'space-plus',
+  SPACE_PREMIUM = 'space-premium',
   SPACE_FLAG_SAVE_AS_TEMPLATE = 'space-flag-save-as-template',
   SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS = 'space-flag-virtual-contributor-access',
   SPACE_FLAG_WHITEBOARD_MULTI_USER = 'space-flag-whiteboard-multi-user',

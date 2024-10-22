@@ -64,7 +64,19 @@ export class AccountHostService {
       type: LicenseType.ACCOUNT,
       entitlements: [
         {
-          type: LicenseEntitlementType.ACCOUNT_SPACE,
+          type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
           dataType: LicenseEntitlementDataType.LIMIT,
           limit: 0,
           enabled: false,
