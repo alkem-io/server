@@ -14,7 +14,6 @@ import {
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { invitationLifecycleConfig } from '@domain/access/invitation/invitation.lifecycle.config';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { asyncFilter } from '@common/utils';
@@ -24,7 +23,7 @@ import { ContributorService } from '@domain/community/contributor/contributor.se
 import { UserService } from '@domain/community/user/user.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { createMachine } from 'xstate';
+import { InvitationLifecycleService } from './invitation.service.lifecycle';
 
 @Injectable()
 export class InvitationService {
@@ -35,6 +34,7 @@ export class InvitationService {
     private userService: UserService,
     private contributorService: ContributorService,
     private lifecycleService: LifecycleService,
+    private invitationLifecycleService: InvitationLifecycleService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -98,12 +98,11 @@ export class InvitationService {
     return await this.invitationRepository.save(invitation);
   }
 
-  async getInvitationState(invitationID: string): Promise<string> {
+  async getLifecycleState(invitationID: string): Promise<string> {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
-    const machine = createMachine(invitationLifecycleConfig);
 
-    return this.lifecycleService.getState(lifecycle, machine);
+    return this.invitationLifecycleService.getState(lifecycle);
   }
 
   async getInvitedContributor(invitation: IInvitation): Promise<IContributor> {
@@ -170,7 +169,7 @@ export class InvitationService {
 
     if (states.length) {
       return asyncFilter(invitations, async app =>
-        states.includes(await this.getInvitationState(app.id))
+        states.includes(await this.getLifecycleState(app.id))
       );
     }
 
@@ -181,18 +180,15 @@ export class InvitationService {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
 
-    const machine = createMachine(invitationLifecycleConfig);
-
-    return this.lifecycleService.isFinalState(lifecycle, machine);
+    return this.invitationLifecycleService.isFinalState(lifecycle);
   }
 
   async canInvitationBeAccepted(invitationID: string): Promise<boolean> {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
 
-    const machine = createMachine(invitationLifecycleConfig);
-    const canAccept = this.lifecycleService
-      .getNextEvents(lifecycle, machine)
+    const canAccept = this.invitationLifecycleService
+      .getNextEvents(lifecycle)
       .includes('ACCEPT');
     return canAccept;
   }

@@ -1,71 +1,55 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { InvalidStateTransitionException } from '@common/exceptions';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { InvalidStateTransitionException } from '@common/exceptions/invalid.state.tranistion.exception';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
-import { OrganizationVerificationService } from './organization.verification.service';
-import { IOrganizationVerification } from './organization.verification.interface';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { ILifecycle } from '@domain/common/lifecycle';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AnyStateMachine, setup } from 'xstate';
-import { LifecycleEventInput } from '@domain/common/lifecycle';
 
 @Injectable()
-export class OrganizationVerificationLifecycleOptionsProvider {
+export class OrganizationVerificationLifecycleService {
+  private organizationVerificationMachine: AnyStateMachine;
+
   constructor(
-    private lifecycleService: LifecycleService,
-    private organizationVerificationService: OrganizationVerificationService,
     private authorizationService: AuthorizationService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private lifecycleService: LifecycleService
+  ) {
+    this.organizationVerificationMachine =
+      this.getOrganizationVerificationMachineSetup();
+  }
 
-  async eventOnOrganizationVerfication(
-    organizationVerificationEventData: OrganizationVerificationEventInput,
-    agentInfo: AgentInfo
-  ): Promise<IOrganizationVerification> {
-    let organizationVerification =
-      await this.organizationVerificationService.getOrganizationVerificationOrFail(
-        organizationVerificationEventData.organizationVerificationID
-      );
-
-    // Send the event, translated if needed
-    this.logger.verbose?.(
-      `Event ${organizationVerificationEventData.eventName} triggered on organization: ${organizationVerification.id} using lifecycle ${organizationVerification.lifecycle.id}`,
-      LogContext.COMMUNITY
-    );
-
-    const machine = this.getMachine();
-    const event: LifecycleEventInput = {
-      lifecycle: organizationVerification.lifecycle,
-      machine,
-      eventName: organizationVerificationEventData.eventName,
-      agentInfo,
-      authorization: organizationVerification.authorization,
-      parentID: organizationVerification.id,
-    };
-
-    await this.lifecycleService.event(event);
-
-    organizationVerification =
-      await this.organizationVerificationService.getOrganizationVerificationOrFail(
-        organizationVerification.id
-      );
-
-    // Ensure the cached state is synced with the lifecycle state
-    organizationVerification.status = this.getOrganizationVerificationState(
-      organizationVerification.lifecycle,
-      machine
-    );
-    return await this.organizationVerificationService.save(
-      organizationVerification
+  public getState(lifecycle: ILifecycle): string {
+    return this.lifecycleService.getState(
+      lifecycle,
+      this.organizationVerificationMachine
     );
   }
 
-  public getMachine(): AnyStateMachine {
+  public getNextEvents(lifecycle: ILifecycle): string[] {
+    return this.lifecycleService.getNextEvents(
+      lifecycle,
+      this.organizationVerificationMachine
+    );
+  }
+
+  public isFinalState(lifecycle: ILifecycle): boolean {
+    return this.lifecycleService.isFinalState(
+      lifecycle,
+      this.organizationVerificationMachine
+    );
+  }
+
+  public getOrganizationVerificationMachine(): AnyStateMachine {
+    return this.organizationVerificationMachine;
+  }
+
+  private getOrganizationVerificationMachineSetup(): AnyStateMachine {
     const machine = setup({
       actions: {
         actionsPending: ({ context }) => {
@@ -156,11 +140,13 @@ export class OrganizationVerificationLifecycleOptionsProvider {
     return machine;
   }
 
-  private getOrganizationVerificationState(
-    lifecycle: ILifecycle,
-    machine: any
+  public getOrganizationVerificationState(
+    lifecycle: ILifecycle
   ): OrganizationVerificationEnum {
-    const state = this.lifecycleService.getState(lifecycle, machine);
+    const state = this.lifecycleService.getState(
+      lifecycle,
+      this.organizationVerificationMachine
+    );
 
     switch (state) {
       case 'notVerified':

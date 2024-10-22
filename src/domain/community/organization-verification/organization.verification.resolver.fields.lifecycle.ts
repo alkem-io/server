@@ -1,8 +1,8 @@
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IOrganizationVerification } from './organization.verification.interface';
-import { OrganizationVerificationLifecycleOptionsProvider } from './organization.verification.lifecycle.options.provider';
 import { ILifecycleFields } from '@domain/common/lifecycle/lifecycle.fields.interface';
+import { OrganizationVerificationLifecycleService } from './organization.verification.service.lifecycle';
 
 @Resolver(() => IOrganizationVerification)
 export class OrganizationVerificationLifecycleResolverFields
@@ -10,7 +10,7 @@ export class OrganizationVerificationLifecycleResolverFields
 {
   constructor(
     private lifecycleService: LifecycleService,
-    private organizationVerificationLifecycleOptionsProvider: OrganizationVerificationLifecycleOptionsProvider
+    private organizationVerificationLifecycleService: OrganizationVerificationLifecycleService
   ) {}
 
   @ResolveField('state', () => String, {
@@ -18,9 +18,8 @@ export class OrganizationVerificationLifecycleResolverFields
     description: 'The current state of this Lifecycle.',
   })
   state(@Parent() organizationVerification: IOrganizationVerification): string {
-    return this.lifecycleService.getState(
-      organizationVerification.lifecycle,
-      this.organizationVerificationLifecycleOptionsProvider.getMachine()
+    return this.organizationVerificationLifecycleService.getState(
+      organizationVerification.lifecycle
     );
   }
 
@@ -31,9 +30,8 @@ export class OrganizationVerificationLifecycleResolverFields
   nextEvents(
     @Parent() organizationVerification: IOrganizationVerification
   ): string[] {
-    return this.lifecycleService.getNextEvents(
-      organizationVerification.lifecycle,
-      this.organizationVerificationLifecycleOptionsProvider.getMachine()
+    return this.organizationVerificationLifecycleService.getNextEvents(
+      organizationVerification.lifecycle
     );
   }
 
@@ -44,9 +42,8 @@ export class OrganizationVerificationLifecycleResolverFields
   isFinalized(
     @Parent() organizationVerification: IOrganizationVerification
   ): boolean {
-    return this.lifecycleService.isFinalState(
-      organizationVerification.lifecycle,
-      this.organizationVerificationLifecycleOptionsProvider.getMachine()
+    return this.organizationVerificationLifecycleService.isFinalState(
+      organizationVerification.lifecycle
     );
   }
 }

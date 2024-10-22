@@ -17,13 +17,16 @@ import { AnyStateMachine, setup } from 'xstate';
 
 @Injectable()
 export class RoleSetApplicationLifecycleOptionsProvider {
+  private applicationMachine: AnyStateMachine;
   constructor(
     private lifecycleService: LifecycleService,
     private authorizationService: AuthorizationService,
     private applicationService: ApplicationService,
     private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+  ) {
+    this.applicationMachine = this.getMachine();
+  }
 
   async eventOnApplication(
     applicationEventData: ApplicationEventInput,
@@ -45,7 +48,7 @@ export class RoleSetApplicationLifecycleOptionsProvider {
       LogContext.COMMUNITY
     );
     await this.lifecycleService.event({
-      machine: this.getMachine(),
+      machine: this.applicationMachine,
       eventName: applicationEventData.eventName,
       lifecycle: application.lifecycle,
       agentInfo,
@@ -56,7 +59,7 @@ export class RoleSetApplicationLifecycleOptionsProvider {
     return await this.applicationService.getApplicationOrFail(applicationID);
   }
 
-  public getMachine(): AnyStateMachine {
+  private getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
         actionsPending: async ({ context }) => {

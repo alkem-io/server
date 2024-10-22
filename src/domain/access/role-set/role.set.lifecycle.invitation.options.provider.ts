@@ -15,15 +15,18 @@ import { AnyStateMachine, setup } from 'xstate';
 
 @Injectable()
 export class RoleSetInvitationLifecycleOptionsProvider {
+  private invitationMachine: AnyStateMachine;
   constructor(
     private lifecycleService: LifecycleService,
     private authorizationService: AuthorizationService,
     private invitationService: InvitationService,
     private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+  ) {
+    this.invitationMachine = this.getMachine();
+  }
 
-  async eventOnInvitation(
+  public async eventOnInvitation(
     invitationEventData: InvitationEventInput,
     agentInfo: AgentInfo
   ): Promise<IInvitation> {
@@ -38,7 +41,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
     );
 
     await this.lifecycleService.event({
-      machine: this.getMachine(),
+      machine: this.invitationMachine,
       lifecycle: invitation.lifecycle,
       eventName: invitationEventData.eventName,
       agentInfo,
@@ -49,7 +52,7 @@ export class RoleSetInvitationLifecycleOptionsProvider {
     return await this.invitationService.getInvitationOrFail(invitationID);
   }
 
-  public getMachine(): AnyStateMachine {
+  private getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
         actionsPending: ({ context }) => {

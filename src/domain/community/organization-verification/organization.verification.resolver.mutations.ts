@@ -1,21 +1,28 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Resolver, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
-import { OrganizationVerificationLifecycleOptionsProvider } from './organization.verification.lifecycle.options.provider';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerificationService } from './organization.verification.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { LifecycleEventInput } from '@domain/common/lifecycle/dto/lifecycle.dto.event';
+import { OrganizationVerificationLifecycleService } from './organization.verification.service.lifecycle';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 
 @Resolver(() => IOrganizationVerification)
 export class OrganizationVerificationResolverMutations {
   constructor(
     private organizationVerificationService: OrganizationVerificationService,
-    private organizationVerificationLifecycleOptionsProvider: OrganizationVerificationLifecycleOptionsProvider,
-    private authorizationService: AuthorizationService
+    private organizationVerificationLifecycleService: OrganizationVerificationLifecycleService,
+    private authorizationService: AuthorizationService,
+    private lifecycleService: LifecycleService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -23,23 +30,52 @@ export class OrganizationVerificationResolverMutations {
     description: 'Trigger an event on the Organization Verification.',
   })
   async eventOnOrganizationVerification(
-    @Args('organizationVerificationEventData')
+    @Args('eventData')
     organizationVerificationEventData: OrganizationVerificationEventInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IOrganizationVerification> {
-    const organizationVerification =
+    let organizationVerification =
       await this.organizationVerificationService.getOrganizationVerificationOrFail(
         organizationVerificationEventData.organizationVerificationID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       organizationVerification.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on organization verification: ${organizationVerification.id}`
     );
-    return await this.organizationVerificationLifecycleOptionsProvider.eventOnOrganizationVerfication(
-      organizationVerificationEventData,
-      agentInfo
+
+    // Send the event, translated if needed
+    this.logger.verbose?.(
+      `Event ${organizationVerificationEventData.eventName} triggered on organization: ${organizationVerification.id} using lifecycle ${organizationVerification.lifecycle.id}`,
+      LogContext.COMMUNITY
+    );
+
+    const event: LifecycleEventInput = {
+      lifecycle: organizationVerification.lifecycle,
+      machine:
+        this.organizationVerificationLifecycleService.getOrganizationVerificationMachine(),
+      eventName: organizationVerificationEventData.eventName,
+      agentInfo,
+      authorization: organizationVerification.authorization,
+      parentID: organizationVerification.id,
+    };
+
+    await this.lifecycleService.event(event);
+
+    organizationVerification =
+      await this.organizationVerificationService.getOrganizationVerificationOrFail(
+        organizationVerification.id
+      );
+
+    // Ensure the cached state is synced with the lifecycle state
+    organizationVerification.status =
+      this.organizationVerificationLifecycleService.getOrganizationVerificationState(
+        organizationVerification.lifecycle
+      );
+
+    return await this.organizationVerificationService.save(
+      organizationVerification
     );
   }
 }

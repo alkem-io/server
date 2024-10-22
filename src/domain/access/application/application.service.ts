@@ -17,13 +17,12 @@ import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { applicationLifecycleConfig } from '@domain/access/application/application.lifecycle.config';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IQuestion } from '@domain/common/question/question.interface';
 import { IContributor } from '../../community/contributor/contributor.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { createMachine } from 'xstate';
+import { ApplicationLifecycleService } from './application.service.lifecycle';
 
 @Injectable()
 export class ApplicationService {
@@ -31,8 +30,9 @@ export class ApplicationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
-    private lifecycleService: LifecycleService,
     private userService: UserService,
+    private lifecycleService: LifecycleService,
+    private applicationLifecycleService: ApplicationLifecycleService,
     private nvpService: NVPService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -114,13 +114,6 @@ export class ApplicationService {
     return user;
   }
 
-  async getApplicationState(applicationID: string): Promise<string> {
-    const application = await this.getApplicationOrFail(applicationID);
-
-    const machine = createMachine(applicationLifecycleConfig);
-    return this.lifecycleService.getState(application.lifecycle, machine);
-  }
-
   async findExistingApplications(
     userID: string,
     roleSetID: string
@@ -163,9 +156,10 @@ export class ApplicationService {
     const applications = await this.applicationRepository.find(findOpts);
 
     if (states.length) {
-      const machine = createMachine(applicationLifecycleConfig);
       const filteredApplications = applications.filter(app =>
-        states.includes(this.lifecycleService.getState(app.lifecycle, machine))
+        states.includes(
+          this.applicationLifecycleService.getState(app.lifecycle)
+        )
       );
       return filteredApplications;
     }
@@ -173,11 +167,17 @@ export class ApplicationService {
     return applications;
   }
 
+  async getLifecycleState(applicationID: string): Promise<string> {
+    const invitation = await this.getApplicationOrFail(applicationID);
+    const lifecycle = invitation.lifecycle;
+
+    return this.applicationLifecycleService.getState(lifecycle);
+  }
+
   async isFinalizedApplication(applicationID: string): Promise<boolean> {
     const application = await this.getApplicationOrFail(applicationID);
 
-    const machine = createMachine(applicationLifecycleConfig);
-    return this.lifecycleService.isFinalState(application.lifecycle, machine);
+    return this.applicationLifecycleService.isFinalState(application.lifecycle);
   }
 
   async getQuestionsSorted(application: IApplication): Promise<IQuestion[]> {
