@@ -16,7 +16,7 @@ import { IPlatformInvitation } from '@platform/invitation/platform.invitation.in
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { PlatformService } from '@platform/platfrom/platform.service';
+import { PlatformService } from '@platform/platform/platform.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AccountService } from '@domain/space/account/account.service';
 import { LicenseCredential } from '@common/enums/license.credential';

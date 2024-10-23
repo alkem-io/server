@@ -127,7 +127,7 @@ export class RolesService {
     const applicationResults: CommunityApplicationForRoleResult[] = [];
     for (const application of applications) {
       const roleSet = application.roleSet;
-      const state = await this.applicationService.getApplicationState(
+      const state = await this.applicationService.getLifecycleState(
         application.id
       );
       if (roleSet) {
@@ -200,7 +200,7 @@ export class RolesService {
     const invitationResults: CommunityInvitationForRoleResult[] = [];
     for (const invitation of invitations) {
       const roleSet = invitation.roleSet;
-      const state = await this.invitationService.getInvitationState(
+      const state = await this.invitationService.getLifecycleState(
         invitation.id
       );
       if (roleSet) {

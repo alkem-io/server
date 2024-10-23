@@ -11,6 +11,8 @@ import { InvitationAuthorizationService } from './invitation.service.authorizati
 import { InvitationResolverMutations } from './invitation.resolver.mutations';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { InvitationLifecycleResolverFields } from './invitation.resolver.fields.lifecycle';
+import { InvitationLifecycleService } from './invitation.service.lifecycle';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
     InvitationAuthorizationService,
     InvitationResolverFields,
     InvitationResolverMutations,
+    InvitationLifecycleResolverFields,
+    InvitationLifecycleService,
   ],
   exports: [
     InvitationService,

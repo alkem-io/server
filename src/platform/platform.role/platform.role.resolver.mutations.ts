@@ -7,13 +7,13 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { RoleChangeType } from '@alkemio/notifications-lib';
-import { RemovePlatformRoleFromUserInput } from '@platform/platfrom/dto/platform.dto.remove.role.user';
+import { RemovePlatformRoleFromUserInput } from '@platform/platform/dto/platform.dto.remove.role.user';
 import { IUser } from '@domain/community/user/user.interface';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 import { PlatformRole } from '@common/enums/platform.role';
-import { CreatePlatformInvitationForRoleInput } from '@platform/platfrom/dto/platform.invitation.dto.global.role';
+import { CreatePlatformInvitationForRoleInput } from '@platform/platform/dto/platform.invitation.dto.global.role';
 import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 import { PlatformRoleService } from './platform.role.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';

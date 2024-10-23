@@ -1,9 +1,9 @@
-import { UUID, UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
 export class UserAuthorizationPrivilegesInput {
-  @Field(() => UUID_NAMEID_EMAIL, {
+  @Field(() => UUID, {
     nullable: false,
     description:
       'The user to evaluate privileges granted based on held credentials.',

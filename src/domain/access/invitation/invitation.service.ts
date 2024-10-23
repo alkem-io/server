@@ -14,7 +14,6 @@ import {
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { invitationLifecycleConfig } from '@domain/access/invitation/invitation.lifecycle.config';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { asyncFilter } from '@common/utils';
@@ -24,6 +23,7 @@ import { ContributorService } from '@domain/community/contributor/contributor.se
 import { UserService } from '@domain/community/user/user.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import { InvitationLifecycleService } from './invitation.service.lifecycle';
 
 @Injectable()
 export class InvitationService {
@@ -34,6 +34,7 @@ export class InvitationService {
     private userService: UserService,
     private contributorService: ContributorService,
     private lifecycleService: LifecycleService,
+    private invitationLifecycleService: InvitationLifecycleService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -52,10 +53,7 @@ export class InvitationService {
     // save the user to get the id assigned
     await this.invitationRepository.save(invitation);
 
-    invitation.lifecycle = await this.lifecycleService.createLifecycle(
-      invitation.id,
-      invitationLifecycleConfig
-    );
+    invitation.lifecycle = await this.lifecycleService.createLifecycle();
 
     return await this.invitationRepository.save(invitation);
   }
@@ -65,6 +63,7 @@ export class InvitationService {
   ): Promise<IInvitation> {
     const invitationID = deleteData.ID;
     const invitation = await this.getInvitationOrFail(invitationID);
+    await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id);
 
     if (invitation.authorization)
       await this.authorizationPolicyService.delete(invitation.authorization);
@@ -79,7 +78,7 @@ export class InvitationService {
   async getInvitationOrFail(
     invitationId: string,
     options?: FindOneOptions<Invitation>
-  ): Promise<Invitation | never> {
+  ): Promise<IInvitation | never> {
     const invitation = await this.invitationRepository.findOne({
       ...options,
       where: {
@@ -99,13 +98,11 @@ export class InvitationService {
     return await this.invitationRepository.save(invitation);
   }
 
-  async getInvitationState(invitationID: string): Promise<string> {
+  async getLifecycleState(invitationID: string): Promise<string> {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
-    if (lifecycle) {
-      return await this.lifecycleService.getState(lifecycle);
-    }
-    return '';
+
+    return this.invitationLifecycleService.getState(lifecycle);
   }
 
   async getInvitedContributor(invitation: IInvitation): Promise<IContributor> {
@@ -164,7 +161,6 @@ export class InvitationService {
       findOpts.select = {
         lifecycle: {
           machineState: true,
-          machineDef: true,
         },
       };
     }
@@ -173,7 +169,7 @@ export class InvitationService {
 
     if (states.length) {
       return asyncFilter(invitations, async app =>
-        states.includes(await this.getInvitationState(app.id))
+        states.includes(await this.getLifecycleState(app.id))
       );
     }
 
@@ -183,25 +179,15 @@ export class InvitationService {
   async isFinalizedInvitation(invitationID: string): Promise<boolean> {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
-    if (!lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Lifecycle for Invitation ${invitation.id} `,
-        LogContext.COMMUNITY
-      );
-    }
-    return await this.lifecycleService.isFinalState(lifecycle);
+
+    return this.invitationLifecycleService.isFinalState(lifecycle);
   }
 
   async canInvitationBeAccepted(invitationID: string): Promise<boolean> {
     const invitation = await this.getInvitationOrFail(invitationID);
     const lifecycle = invitation.lifecycle;
-    if (!lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Lifecycle for Invitation ${invitation.id} `,
-        LogContext.COMMUNITY
-      );
-    }
-    const canAccept = this.lifecycleService
+
+    const canAccept = this.invitationLifecycleService
       .getNextEvents(lifecycle)
       .includes('ACCEPT');
     return canAccept;

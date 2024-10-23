@@ -22,13 +22,13 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { RoleSetEventsService } from './role.set.service.events';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { RoleSetApplicationLifecycleOptionsProvider } from './role.set.lifecycle.application.options.provider';
-import { RoleSetInvitationLifecycleOptionsProvider } from './role.set.lifecycle.invitation.options.provider';
+import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
+import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityCommunicationModule } from '@domain/community/community-communication/community.communication.module';
-import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields public';
+import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields.public';
 
 @Module({
   imports: [
@@ -61,8 +61,8 @@ import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields public';
     RoleSetResolverFields,
     RoleSetResolverFieldsPublic,
     RoleSetEventsService,
-    RoleSetApplicationLifecycleOptionsProvider,
-    RoleSetInvitationLifecycleOptionsProvider,
+    RoleSetServiceLifecycleApplication,
+    RoleSetServiceLifecycleInvitation,
   ],
   exports: [RoleSetService, RoleSetAuthorizationService],
 })

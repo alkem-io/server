@@ -12,7 +12,7 @@ import { IPlatformInvitation } from '@platform/invitation/platform.invitation.in
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { PlatformRole } from '@common/enums/platform.role';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IPlatform } from '@platform/platfrom/platform.interface';
+import { IPlatform } from '@platform/platform/platform.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformRoleResolverFields {

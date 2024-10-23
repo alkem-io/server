@@ -1,5 +1,5 @@
 import { Args, ResolveField, Resolver } from '@nestjs/graphql';
-import { IPlatform } from '@platform/platfrom/platform.interface';
+import { IPlatform } from '@platform/platform/platform.interface';
 import { InnovationHubArgsQuery } from '@domain/innovation-hub/dto/innovation.hub.args.query';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';

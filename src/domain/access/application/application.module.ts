@@ -10,6 +10,8 @@ import { ApplicationResolverFields } from './application.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationAuthorizationService } from './application.service.authorization';
 import { ApplicationResolverMutations } from './application.resolver.mutations';
+import { ApplicationLifecycleResolverFields } from './application.resolver.fields.lifecycle';
+import { ApplicationLifecycleService } from './application.service.lifecycle';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { ApplicationResolverMutations } from './application.resolver.mutations';
     ApplicationAuthorizationService,
     ApplicationResolverFields,
     ApplicationResolverMutations,
+    ApplicationLifecycleResolverFields,
+    ApplicationLifecycleService,
   ],
   exports: [
     ApplicationService,

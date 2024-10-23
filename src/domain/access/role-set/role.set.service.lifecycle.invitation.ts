@@ -1,88 +1,46 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MachineOptions } from 'xstate';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
-import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
-import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { RoleSetService } from './role.set.service';
+import { AnyStateMachine, setup } from 'xstate';
 
 @Injectable()
-export class RoleSetInvitationLifecycleOptionsProvider {
+export class RoleSetServiceLifecycleInvitation {
+  private invitationMachine: AnyStateMachine;
   constructor(
-    private lifecycleService: LifecycleService,
     private authorizationService: AuthorizationService,
     private invitationService: InvitationService,
     private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
-
-  async eventOnInvitation(
-    invitationEventData: InvitationEventInput,
-    agentInfo: AgentInfo
-  ): Promise<IInvitation> {
-    const invitationID = invitationEventData.invitationID;
-    const invitation =
-      await this.invitationService.getInvitationOrFail(invitationID);
-
-    if (!invitation.lifecycle)
-      throw new EntityNotInitializedException(
-        `Lifecycle not initialized on Invitation: ${invitationID}`,
-        LogContext.COMMUNITY
-      );
-
-    // Send the event, translated if needed
-    this.logger.verbose?.(
-      `Event ${invitationEventData.eventName} triggered on invitation: ${invitation.id} using lifecycle ${invitation.lifecycle.id}`,
-      LogContext.COMMUNITY
-    );
-
-    const { options, ready } = this.getInvitationLifecycleMachineOptions();
-
-    await this.lifecycleService.event(
-      {
-        ID: invitation.lifecycle.id,
-        eventName: invitationEventData.eventName,
-      },
-      options,
-      agentInfo,
-      invitation.authorization
-    );
-
-    await ready();
-
-    return await this.invitationService.getInvitationOrFail(invitationID);
+  ) {
+    this.invitationMachine = this.getMachine();
   }
 
-  private getInvitationLifecycleMachineOptions(): {
-    options: Partial<MachineOptions<any, any>>;
-    ready: () => Promise<void>;
-  } {
-    let resolve: (value: void) => void;
+  public getInvitationMachine(): AnyStateMachine {
+    return this.invitationMachine;
+  }
 
-    const readyPromise = new Promise<void>(r => {
-      resolve = r;
-    });
-
-    let readyState = true;
-
-    const getReadiness = () => {
-      if (readyState) {
-        return Promise.resolve();
-      }
-      return readyPromise;
-    };
-
-    const options: Partial<MachineOptions<any, any>> = {
+  private getMachine(): AnyStateMachine {
+    const machine = setup({
       actions: {
-        communityAddMember: async (_, event: any) => {
-          readyState = false;
+        actionsPending: ({ context }) => {
+          context.actionsPending = true;
+          this.logger.verbose?.(
+            `actionsPending: ${context.actionsPending}`,
+            LogContext.COMMUNITY
+          );
+        },
+        communityAddMember: async ({ context, event }) => {
+          this.logger.verbose?.(
+            `communityAddMember: ${context.actionsPending}`,
+            LogContext.COMMUNITY
+          );
           try {
             const invitation = await this.invitationService.getInvitationOrFail(
               event.parentID,
@@ -137,13 +95,22 @@ export class RoleSetInvitationLifecycleOptionsProvider {
                 false
               );
             }
+          } catch (e) {
+            this.logger.error?.(
+              `Error adding member to community: ${e}`,
+              LogContext.COMMUNITY
+            );
+            throw new EntityNotInitializedException(
+              `Unable to add member to community: ${e}`,
+              LogContext.COMMUNITY
+            );
           } finally {
-            resolve();
+            context.actionsPending = false;
           }
         },
       },
       guards: {
-        communityUpdateAuthorized: (_, event) => {
+        hasUpdatePrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
@@ -152,21 +119,56 @@ export class RoleSetInvitationLifecycleOptionsProvider {
             AuthorizationPrivilege.UPDATE
           );
         },
-        communityInvitationAcceptAuthorized: (_, event) => {
+        hasInvitationAcceptPrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
             agentInfo,
             authorizationPolicy,
-            AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT
+            AuthorizationPrivilege.UPDATE //COMMUNITY_INVITE_ACCEPT
           );
         },
       },
-    };
-
-    return {
-      options,
-      ready: getReadiness,
-    };
+    });
+    return machine.createMachine({
+      id: 'user-invitation',
+      context: {
+        actionsCompleted: true,
+      },
+      initial: 'invited',
+      states: {
+        invited: {
+          on: {
+            ACCEPT: {
+              guard: 'hasInvitationAcceptPrivilege',
+              target: 'accepted',
+            },
+            REJECT: {
+              guard: 'hasUpdatePrivilege',
+              target: 'rejected',
+            },
+          },
+        },
+        accepted: {
+          //type: 'final',
+          entry: ['actionsPending', 'communityAddMember'],
+        },
+        rejected: {
+          on: {
+            REINVITE: {
+              guard: 'hasUpdatePrivilege',
+              target: 'invited',
+            },
+            ARCHIVE: {
+              guard: 'hasUpdatePrivilege',
+              target: 'archived',
+            },
+          },
+        },
+        archived: {
+          type: 'final',
+        },
+      },
+    });
   }
 }

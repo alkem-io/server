@@ -21,9 +21,9 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
-import { PlatformService } from '@platform/platfrom/platform.service';
+import { PlatformService } from '@platform/platform/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
+import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';

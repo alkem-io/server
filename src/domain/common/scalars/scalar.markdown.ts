@@ -30,7 +30,7 @@ export class Markdown implements CustomScalar<string, string> {
       );
     }
 
-    // todo: add validaiton here...
+    // todo: add validation here...
 
     return value;
   };
