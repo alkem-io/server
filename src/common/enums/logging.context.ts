@@ -26,7 +26,6 @@ export enum LogContext {
   SEARCH_EXTRACT = 'search-extract',
   SEARCH_RESULT = 'search-result',
   OPPORTUNITY = 'opportunity',
-  IPFS = 'ipfs',
   LIFECYCLE = 'lifecycle',
   UNSPECIFIED = 'not_specified',
   NOTIFICATIONS = 'notifications',

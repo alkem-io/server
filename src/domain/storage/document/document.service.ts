@@ -58,8 +58,8 @@ export class DocumentService {
     const document = await this.getDocumentOrFail(documentID, {
       relations: { tagset: true },
     });
-    const DELETE_IPFS_CONTENTS = false;
-    if (DELETE_IPFS_CONTENTS) {
+    const DELETE_FILE = false;
+    if (DELETE_FILE) {
       // Delete the underlying document
       try {
         await this.removeFile(document.externalID);
@@ -218,7 +218,7 @@ export class DocumentService {
     } catch (error: any) {
       throw new DocumentDeleteFailedException(
         `Removing file ${CID} failed!`,
-        LogContext.IPFS,
+        LogContext.LOCAL_STORAGE,
         {
           message: error?.message,
           originalException: error,
@@ -234,7 +234,7 @@ export class DocumentService {
     } catch (error: any) {
       throw new DocumentSaveFailedException(
         `Uploading ${fileName} failed!`,
-        LogContext.IPFS,
+        LogContext.LOCAL_STORAGE,
         {
           message: error?.message,
           originalException: error,

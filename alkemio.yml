@@ -285,7 +285,7 @@ communications:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
 
 ## storage ##
-# Alkemio uses multiple types of persistent storage, including SQL database and IPFS.
+# Alkemio uses multiple types of persistent storage, including SQL database, postgres database, file storage, redis.
 storage:
   file:
     # 20MB
