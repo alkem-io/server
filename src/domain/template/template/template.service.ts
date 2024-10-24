@@ -77,7 +77,7 @@ export class TemplateService {
     );
 
     switch (template.type) {
-      case TemplateType.POST:
+      case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
           throw new ValidationException(
             `Post Template requires default description input: ${JSON.stringify(templateData)}`,
@@ -86,7 +86,8 @@ export class TemplateService {
         }
         template.postDefaultDescription = templateData.postDefaultDescription;
         break;
-      case TemplateType.COMMUNITY_GUIDELINES:
+      }
+      case TemplateType.COMMUNITY_GUIDELINES: {
         if (!templateData.communityGuidelinesData) {
           throw new ValidationException(
             `Community Guidelines Template requiresthe community guidelines input: ${JSON.stringify(templateData)}`,
@@ -102,7 +103,8 @@ export class TemplateService {
             storageAggregator
           );
         break;
-      case TemplateType.COLLABORATION:
+      }
+      case TemplateType.COLLABORATION: {
         if (!templateData.collaborationData) {
           throw new ValidationException(
             `Collaboration Template requires collaboration input: ${JSON.stringify(templateData)}`,
@@ -153,7 +155,8 @@ export class TemplateService {
           );
 
         break;
-      case TemplateType.WHITEBOARD:
+      }
+      case TemplateType.WHITEBOARD: {
         if (!templateData.whiteboard) {
           throw new ValidationException(
             `Whiteboard Template requires whitebboard input: ${JSON.stringify(templateData)}`,
@@ -171,7 +174,8 @@ export class TemplateService {
           storageAggregator
         );
         break;
-      case TemplateType.CALLOUT:
+      }
+      case TemplateType.CALLOUT: {
         if (!templateData.calloutData) {
           throw new ValidationException(
             `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
@@ -188,6 +192,8 @@ export class TemplateService {
           [],
           storageAggregator
         );
+        break;
+      }
       default:
         throw new ValidationException(
           `unknown template type: ${template.type}`,
