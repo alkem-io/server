@@ -232,6 +232,7 @@ export class TemplateService {
     const template = await this.getTemplateOrFail(templateInput.id, {
       relations: {
         profile: true,
+        whiteboard: true,
       },
     });
 
@@ -246,6 +247,16 @@ export class TemplateService {
       templateData.postDefaultDescription
     ) {
       template.postDefaultDescription = templateData.postDefaultDescription;
+    }
+    if (
+      template.type === TemplateType.WHITEBOARD &&
+      template.whiteboard &&
+      templateData.whiteboardContent
+    ) {
+      await this.whiteboardService.updateWhiteboardContent(
+        template.whiteboard.id,
+        templateData.whiteboardContent
+      );
     }
 
     return await this.templateRepository.save(template);
