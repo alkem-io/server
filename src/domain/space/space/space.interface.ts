@@ -8,8 +8,7 @@ import { IContext } from '@domain/context/context/context.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '../account/account.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
+import { ITemplatesManager } from '@domain/template/templates-manager';
 import { SpaceLevel } from '@common/enums/space.level';
 
 @ObjectType('Space')
@@ -55,6 +54,5 @@ export class ISpace extends INameable {
   })
   levelZeroSpaceID!: string;
 
-  library?: ITemplatesSet;
-  defaults?: ISpaceDefaults;
+  templatesManager?: ITemplatesManager;
 }

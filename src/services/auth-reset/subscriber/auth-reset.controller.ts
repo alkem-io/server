@@ -9,7 +9,7 @@ import {
 import { Channel, Message } from 'amqplib';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext, MessagingQueue } from '@common/enums';
-import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
+import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { UserService } from '@domain/community/user/user.service';

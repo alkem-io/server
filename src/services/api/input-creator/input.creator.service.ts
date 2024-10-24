@@ -1,3 +1,4 @@
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -8,11 +9,13 @@ import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/call
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
+import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
+import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.service';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';
@@ -33,59 +36,91 @@ import { Injectable } from '@nestjs/common';
 export class InputCreatorService {
   constructor(
     private calloutFramingService: CalloutFramingService,
-    private innovationFlowStatesService: InnovationFlowStatesService
+    private innovationFlowStatesService: InnovationFlowStatesService,
+    private collaborationService: CollaborationService,
+    private calloutService: CalloutService
   ) {}
 
   public async buildCreateCalloutInputsFromCallouts(
     callouts: ICallout[]
   ): Promise<CreateCalloutInput[]> {
-    return callouts.map(this.buildCreateCalloutInputFromCallout);
+    const result: CreateCalloutInput[] = [];
+    for (const callout of callouts) {
+      result.push(await this.buildCreateCalloutInputFromCallout(callout.id));
+    }
+    return result;
   }
 
-  public buildCreateCalloutInputFromCallout(
-    calloutInput: ICallout
-  ): CreateCalloutInput {
+  public async buildCreateCalloutInputFromCallout(
+    calloutID: string
+  ): Promise<CreateCalloutInput> {
+    const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      relations: {
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: {
+          profile: {
+            tagsets: true,
+            references: true,
+          },
+          whiteboard: {
+            profile: true,
+          },
+        },
+      },
+    });
     if (
-      !calloutInput.framing ||
-      !calloutInput.contributionDefaults ||
-      !calloutInput.contributionPolicy
+      !callout.framing ||
+      !callout.framing.profile ||
+      !callout.framing.profile.tagsets ||
+      !callout.contributionDefaults ||
+      !callout.contributionPolicy
     ) {
       throw new EntityNotInitializedException(
-        'Missing callout relation',
+        `Missing callout relation on callout: ${calloutID}`,
         LogContext.INPUT_CREATOR,
         {
           cause: 'Relation for Callout not loaded',
-          calloutId: calloutInput.id,
+          calloutId: calloutID,
         }
       );
     }
 
     const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(
-      calloutInput.framing
+      callout.framing
     );
     return {
-      nameID: calloutInput.nameID,
-      type: calloutInput.type,
-      visibility: calloutInput.visibility,
+      nameID: callout.nameID,
+      type: callout.type,
+      visibility: callout.visibility,
       groupName: calloutGroupTagset.tags[0],
       framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
-        calloutInput.framing
+        callout.framing
       ),
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-          calloutInput.contributionDefaults
+          callout.contributionDefaults
         ),
       contributionPolicy:
         this.buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          calloutInput.contributionPolicy
+          callout.contributionPolicy
         ),
-      sortOrder: calloutInput.sortOrder,
+      sortOrder: callout.sortOrder,
     };
   }
 
   public async buildCreateCollaborationInputFromCollaboration(
-    collaboration: ICollaboration
+    collaborationID: string
   ): Promise<CreateCollaborationInput> {
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(collaborationID, {
+        relations: {
+          callouts: true,
+          innovationFlow: {
+            profile: true,
+          },
+        },
+      });
     if (!collaboration.callouts || !collaboration.innovationFlow) {
       throw new RelationshipNotFoundException(
         `Collaboration ${collaboration.id} is missing a relation`,
@@ -95,14 +130,19 @@ export class InputCreatorService {
 
     const calloutInputs: CreateCalloutInput[] = [];
     for (const callout of collaboration.callouts) {
-      calloutInputs.push(this.buildCreateCalloutInputFromCallout(callout));
+      calloutInputs.push(
+        await this.buildCreateCalloutInputFromCallout(callout.id)
+      );
     }
 
+    const calloutGroups: ICalloutGroup[] = JSON.parse(collaboration.groupsStr);
     const result: CreateCollaborationInput = {
       calloutsData: calloutInputs,
       innovationFlowData: this.buildCreateInnovationFlowInputFromInnovationFlow(
         collaboration.innovationFlow
       ),
+      calloutGroups,
+      defaultCalloutGroupName: calloutGroups[0].displayName as CalloutGroupName,
     };
 
     return result;

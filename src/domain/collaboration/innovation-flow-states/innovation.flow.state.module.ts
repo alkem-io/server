@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { InnovationFlowStatesService } from './innovaton.flow.state.service';
+import { InnovationFlowStatesService } from './innovation.flow.state.service';
 
 @Module({
   imports: [],
