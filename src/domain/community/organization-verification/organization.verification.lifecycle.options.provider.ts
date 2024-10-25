@@ -93,7 +93,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
         return OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION;
       default:
         throw new InvalidStateTransitionException(
-          `Organizaiton Verification unrecognized state: ${state}`,
+          `Organization Verification unrecognized state: ${state}`,
           LogContext.COMMUNITY
         );
     }
