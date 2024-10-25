@@ -234,12 +234,6 @@ export class TemplateService {
         profile: true,
         whiteboard: templateInput.type === TemplateType.WHITEBOARD,
       },
-      select: {
-        id: true,
-        whiteboard: {
-          id: true,
-        },
-      },
     });
 
     if (templateData.profile) {
