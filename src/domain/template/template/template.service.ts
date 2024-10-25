@@ -232,7 +232,13 @@ export class TemplateService {
     const template = await this.getTemplateOrFail(templateInput.id, {
       relations: {
         profile: true,
-        whiteboard: true,
+        whiteboard: templateInput.type === TemplateType.WHITEBOARD,
+      },
+      select: {
+        id: true,
+        whiteboard: {
+          id: true,
+        },
       },
     });
 
