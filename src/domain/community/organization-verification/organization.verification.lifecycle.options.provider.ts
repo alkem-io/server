@@ -67,7 +67,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
       );
     if (!organizationVerification.lifecycle) {
       throw new RelationshipNotFoundException(
-        `Unable to load lifecycle on Organization verificaiton: ${organizationVerification.id}`,
+        `Unable to load lifecycle on Organization verification: ${organizationVerification.id}`,
         LogContext.COMMUNITY
       );
     }
