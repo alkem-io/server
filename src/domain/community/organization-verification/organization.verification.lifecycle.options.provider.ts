@@ -80,7 +80,9 @@ export class OrganizationVerificationLifecycleOptionsProvider {
     );
   }
 
-  private getOrganizationVerificationState(lifecycle: ILifecycle) {
+  private getOrganizationVerificationState(
+    lifecycle: ILifecycle
+  ): OrganizationVerificationEnum | never {
     const state = this.lifecycleService.getState(lifecycle);
 
     switch (state) {
