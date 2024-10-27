@@ -51,19 +51,7 @@ export class OrganizationVerificationLifecycleService {
 
   private getOrganizationVerificationMachineSetup(): AnyStateMachine {
     const machine = setup({
-      actions: {
-        actionsPending: ({ context }) => {
-          context.actionsPending = true;
-          this.logger.verbose?.(
-            `actionsPending: ${context.actionsPending}`,
-            LogContext.COMMUNITY
-          );
-        },
-        organizationManuallyVerified: ({ context }) => {
-          // throw new Error('Action not implemented');
-          context.actionsPending = false;
-        },
-      },
+      actions: {},
       guards: {
         // To actually assign the verified status the GRANT privilege is needed on the verification
         hasGrantPrivilege: ({ event }) => {
@@ -111,7 +99,7 @@ export class OrganizationVerificationLifecycleService {
           },
         },
         manuallyVerified: {
-          entry: ['organizationManuallyVerified'],
+          entry: [],
           on: {
             RESET: {
               target: 'notVerified',

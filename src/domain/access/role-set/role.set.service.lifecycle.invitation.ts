@@ -26,87 +26,81 @@ export class RoleSetServiceLifecycleInvitation {
     return this.invitationMachine;
   }
 
+  private async addMemberToRoleSet(
+    invitationID: string,
+    agentInfo: AgentInfo
+  ): Promise<void> {
+    try {
+      const invitation = await this.invitationService.getInvitationOrFail(
+        invitationID,
+        {
+          relations: {
+            roleSet: {
+              parentRoleSet: true,
+            },
+          },
+        }
+      );
+      const contributorID = invitation.invitedContributorID;
+      const roleSet = invitation.roleSet;
+      if (!contributorID || !roleSet) {
+        throw new EntityNotInitializedException(
+          `Lifecycle not initialized on Invitation: ${invitation.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+
+      if (invitation.invitedToParent) {
+        if (!roleSet.parentRoleSet) {
+          throw new EntityNotInitializedException(
+            `Unable to load parent community when flag to add is set: ${invitation.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+        await this.roleSetService.assignContributorToRole(
+          roleSet.parentRoleSet,
+          CommunityRoleType.MEMBER,
+          contributorID,
+          invitation.contributorType,
+          agentInfo,
+          true
+        );
+      }
+      await this.roleSetService.assignContributorToRole(
+        roleSet,
+        CommunityRoleType.MEMBER,
+        contributorID,
+        invitation.contributorType,
+        agentInfo,
+        true
+      );
+      if (invitation.extraRole) {
+        await this.roleSetService.assignContributorToRole(
+          roleSet,
+          invitation.extraRole,
+          contributorID,
+          invitation.contributorType,
+          agentInfo,
+          false
+        );
+      }
+    } catch (e: any) {
+      this.logger.error?.(
+        `Error adding member to community: ${e}`,
+        LogContext.COMMUNITY
+      );
+      throw new EntityNotInitializedException(
+        `Unable to add member to community: ${e}`,
+        LogContext.COMMUNITY
+      );
+    }
+  }
+
   private getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
-        actionsPending: ({ context }) => {
-          context.actionsPending = true;
-          this.logger.verbose?.(
-            `actionsPending: ${context.actionsPending}`,
-            LogContext.COMMUNITY
-          );
-        },
-        communityAddMember: async ({ context, event }) => {
-          this.logger.verbose?.(
-            `communityAddMember: ${context.actionsPending}`,
-            LogContext.COMMUNITY
-          );
-          try {
-            const invitation = await this.invitationService.getInvitationOrFail(
-              event.parentID,
-              {
-                relations: {
-                  roleSet: {
-                    parentRoleSet: true,
-                  },
-                },
-              }
-            );
-            const contributorID = invitation.invitedContributorID;
-            const roleSet = invitation.roleSet;
-            if (!contributorID || !roleSet) {
-              throw new EntityNotInitializedException(
-                `Lifecycle not initialized on Invitation: ${invitation.id}`,
-                LogContext.COMMUNITY
-              );
-            }
-
-            if (invitation.invitedToParent) {
-              if (!roleSet.parentRoleSet) {
-                throw new EntityNotInitializedException(
-                  `Unable to load parent community when flag to add is set: ${invitation.id}`,
-                  LogContext.COMMUNITY
-                );
-              }
-              await this.roleSetService.assignContributorToRole(
-                roleSet.parentRoleSet,
-                CommunityRoleType.MEMBER,
-                contributorID,
-                invitation.contributorType,
-                event.agentInfo,
-                true
-              );
-            }
-            await this.roleSetService.assignContributorToRole(
-              roleSet,
-              CommunityRoleType.MEMBER,
-              contributorID,
-              invitation.contributorType,
-              event.agentInfo,
-              true
-            );
-            if (invitation.extraRole) {
-              await this.roleSetService.assignContributorToRole(
-                roleSet,
-                invitation.extraRole,
-                contributorID,
-                invitation.contributorType,
-                event.agentInfo,
-                false
-              );
-            }
-          } catch (e) {
-            this.logger.error?.(
-              `Error adding member to community: ${e}`,
-              LogContext.COMMUNITY
-            );
-            throw new EntityNotInitializedException(
-              `Unable to add member to community: ${e}`,
-              LogContext.COMMUNITY
-            );
-          } finally {
-            context.actionsPending = false;
-          }
+        communityAddMember: async ({ event }) => {
+          await this.addMemberToRoleSet(event.parentID, event.agentInfo);
         },
       },
       guards: {
@@ -151,7 +145,7 @@ export class RoleSetServiceLifecycleInvitation {
         },
         accepted: {
           //type: 'final',
-          entry: ['actionsPending', 'communityAddMember'],
+          entry: ['communityAddMember'],
         },
         rejected: {
           on: {

@@ -8,6 +8,7 @@ export class LifecycleEventInput {
   lifecycle!: ILifecycle;
   eventName!: string;
 
+  parentID!: string;
   agentInfo!: AgentInfo;
   authorization?: IAuthorizationPolicy;
 }

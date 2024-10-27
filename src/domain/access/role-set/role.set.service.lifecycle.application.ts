@@ -26,44 +26,38 @@ export class RoleSetServiceLifecycleApplication {
     return this.applicationMachine;
   }
 
+  private async addMemberToRoleSet(
+    applicationID: string,
+    agentInfo: AgentInfo
+  ): Promise<void> {
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationID,
+      {
+        relations: { roleSet: true, user: true },
+      }
+    );
+    const userID = application.user?.id;
+    const roleSet = application.roleSet;
+    if (!userID || !roleSet)
+      throw new EntityNotInitializedException(
+        `Lifecycle not initialized on Application: ${application.id}`,
+        LogContext.COMMUNITY
+      );
+
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      CommunityRoleType.MEMBER,
+      userID,
+      agentInfo,
+      true
+    );
+  }
+
   private getMachine(): AnyStateMachine {
     const machine = setup({
       actions: {
-        actionsPending: async ({ context }) => {
-          context.actionsPending = true;
-          this.logger.verbose?.(
-            `actionsPending: ${context.actionsPending}`,
-            LogContext.COMMUNITY
-          );
-        },
-        communityAddMember: async ({ context, event }) => {
-          context.actionsCompleted = false;
-          try {
-            const application =
-              await this.applicationService.getApplicationOrFail(
-                event.parentID,
-                {
-                  relations: { roleSet: true, user: true },
-                }
-              );
-            const userID = application.user?.id;
-            const roleSet = application.roleSet;
-            if (!userID || !roleSet)
-              throw new EntityNotInitializedException(
-                `Lifecycle not initialized on Application: ${application.id}`,
-                LogContext.COMMUNITY
-              );
-
-            await this.roleSetService.assignUserToRole(
-              roleSet,
-              CommunityRoleType.MEMBER,
-              userID,
-              event.agentInfo,
-              true
-            );
-          } finally {
-            context.actionsPending = false;
-          }
+        communityAddMember: async ({ event }) => {
+          await this.addMemberToRoleSet(event.parentID, event.agentInfo);
         },
       },
       guards: {

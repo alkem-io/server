@@ -5,12 +5,7 @@ import {
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  AnyMachineSnapshot,
-  AnyStateMachine,
-  createActor,
-  waitFor,
-} from 'xstate';
+import { AnyMachineSnapshot, AnyStateMachine, createActor } from 'xstate';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
@@ -87,18 +82,6 @@ export class LifecycleService {
         agentInfo: eventData.agentInfo,
         authorization: eventData.authorization,
       });
-
-      await waitFor(
-        actor,
-        snapshot => {
-          const result = !snapshot.context.actionsPending;
-          console.log(`predicate: ${result}`);
-          return result;
-        },
-        {
-          timeout: 10000, // 10 seconds (10,000 milliseconds)
-        }
-      );
     } catch (e: any) {
       this.logger.error?.(
         `Error processing lifecycle event: ${e}`,

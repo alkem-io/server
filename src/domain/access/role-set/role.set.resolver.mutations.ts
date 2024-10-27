@@ -700,6 +700,7 @@ export class RoleSetResolverMutations {
       machine: this.roleSetServiceLifecycleApplication.getApplicationMachine(),
       eventName: eventData.eventName,
       lifecycle: application.lifecycle,
+      parentID: eventData.applicationID,
       agentInfo,
       authorization: application.authorization,
     });
@@ -738,6 +739,7 @@ export class RoleSetResolverMutations {
       machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
       lifecycle: invitation.lifecycle,
       eventName: eventData.eventName,
+      parentID: eventData.invitationID,
       agentInfo,
       authorization: invitation.authorization,
     });
