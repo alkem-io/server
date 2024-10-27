@@ -426,7 +426,7 @@ export class RoleSetResolverMutations {
     };
     await this.notificationAdapter.applicationCreated(notificationInput);
 
-    return application;
+    return await this.applicationService.getApplicationOrFail(application.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -585,7 +585,7 @@ export class RoleSetResolverMutations {
       await this.notificationAdapter.invitationCreated(notificationInput);
     }
 
-    return invitation;
+    return await this.invitationService.getInvitationOrFail(invitation.id);
   }
 
   @UseGuards(GraphqlGuard)
