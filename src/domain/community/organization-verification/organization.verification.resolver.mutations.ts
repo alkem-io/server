@@ -56,7 +56,6 @@ export class OrganizationVerificationResolverMutations {
       machine:
         this.organizationVerificationLifecycleService.getOrganizationVerificationMachine(),
       eventName: organizationVerificationEventData.eventName,
-      parentID: organizationVerification.id,
       agentInfo,
       authorization: organizationVerification.authorization,
     };

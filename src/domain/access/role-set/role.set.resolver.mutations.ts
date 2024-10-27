@@ -56,6 +56,14 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import {
+  InvitationLifecycleEvent,
+  InvitationLifecycleState,
+} from '../invitation/invitation.service.lifecycle';
+import {
+  ApplicationLifecycleEvent,
+  ApplicationLifecycleState,
+} from '../application/application.service.lifecycle';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -681,10 +689,10 @@ export class RoleSetResolverMutations {
     eventData: ApplicationEventInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IApplication> {
-    const application = await this.applicationService.getApplicationOrFail(
+    let application = await this.applicationService.getApplicationOrFail(
       eventData.applicationID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -700,10 +708,32 @@ export class RoleSetResolverMutations {
       machine: this.roleSetServiceLifecycleApplication.getApplicationMachine(),
       eventName: eventData.eventName,
       lifecycle: application.lifecycle,
-      parentID: eventData.applicationID,
       agentInfo,
       authorization: application.authorization,
     });
+
+    // Reload to trigger actions
+    application = await this.applicationService.getApplicationOrFail(
+      eventData.applicationID
+    );
+    const applicationState = this.lifecycleService.getState(
+      application.lifecycle,
+      this.roleSetServiceLifecycleApplication.getApplicationMachine()
+    );
+
+    if (applicationState === ApplicationLifecycleState.APPROVING) {
+      await this.roleSetService.approveApplication(
+        eventData.applicationID,
+        agentInfo
+      );
+      await this.lifecycleService.event({
+        machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
+        lifecycle: application.lifecycle,
+        eventName: ApplicationLifecycleEvent.APPROVED,
+        agentInfo,
+        authorization: application.authorization,
+      });
+    }
 
     return await this.applicationService.getApplicationOrFail(
       eventData.applicationID
@@ -719,10 +749,10 @@ export class RoleSetResolverMutations {
     eventData: InvitationEventInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IInvitation> {
-    const invitation = await this.invitationService.getInvitationOrFail(
+    let invitation = await this.invitationService.getInvitationOrFail(
       eventData.invitationID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       invitation.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -739,10 +769,30 @@ export class RoleSetResolverMutations {
       machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
       lifecycle: invitation.lifecycle,
       eventName: eventData.eventName,
-      parentID: eventData.invitationID,
       agentInfo,
       authorization: invitation.authorization,
     });
+
+    // Reload to trigger actions
+    invitation = await this.invitationService.getInvitationOrFail(
+      eventData.invitationID
+    );
+    const invitationState = await this.invitationService.getLifecycleState(
+      invitation.id
+    );
+    if (invitationState === InvitationLifecycleState.ACCEPTING) {
+      await this.roleSetService.acceptInvitationToRoleSet(
+        eventData.invitationID,
+        agentInfo
+      );
+      await this.lifecycleService.event({
+        machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
+        lifecycle: invitation.lifecycle,
+        eventName: InvitationLifecycleEvent.ACCEPTED,
+        agentInfo,
+        authorization: invitation.authorization,
+      });
+    }
 
     return await this.invitationService.getInvitationOrFail(invitation.id);
   }

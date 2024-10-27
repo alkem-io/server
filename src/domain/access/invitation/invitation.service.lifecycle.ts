@@ -37,46 +37,65 @@ export class InvitationLifecycleService {
   // Need to have a local states only machine to support queries for just nextEvents, final state etc.
   // This needs to be kept in sync with the primary machine that is used for event handling on Invitations.
   private getInvitationLifecycleMachineWithOnlyStates(): AnyStateMachine {
-    const config: ILifecycleDefinition = {
-      id: 'user-invitation',
-      context: {
-        parentID: '',
-      },
-      initial: 'invited',
-      states: {
-        invited: {
-          on: {
-            ACCEPT: {
-              target: 'accepted',
-              guard: 'communityInvitationAcceptAuthorized',
-            },
-            REJECT: {
-              target: 'rejected',
-              guard: 'communityUpdateAuthorized',
-            },
-          },
-        },
-        accepted: {
-          type: 'final',
-          entry: ['communityAddMember'],
-        },
-        rejected: {
-          on: {
-            REINVITE: {
-              target: 'invited',
-              guard: 'communityUpdateAuthorized',
-            },
-            ARCHIVE: {
-              target: 'archived',
-              guard: 'communityUpdateAuthorized',
-            },
-          },
-        },
-        archived: {
-          type: 'final',
-        },
-      },
-    };
-    return createMachine(config);
+    return createMachine(invitationLifecycleMachine);
   }
 }
+
+export enum InvitationLifecycleState {
+  INVITED = 'invited',
+  ACCEPTING = 'accepting',
+  ACCEPTED = 'accepted',
+  ARCHIVED = 'archived',
+  REJECTED = 'rejected',
+}
+
+export enum InvitationLifecycleEvent {
+  ACCEPTING = 'accepting',
+  ACCEPTED = 'accepted',
+}
+
+export const invitationLifecycleMachine: ILifecycleDefinition = {
+  id: 'contributor-invitation',
+  context: {},
+  initial: InvitationLifecycleState.INVITED,
+  states: {
+    invited: {
+      on: {
+        ACCEPT: {
+          guard: 'hasInvitationAcceptPrivilege',
+          target: InvitationLifecycleState.ACCEPTING,
+        },
+        REJECT: {
+          guard: 'hasUpdatePrivilege',
+          target: InvitationLifecycleState.REJECTED,
+        },
+      },
+    },
+    accepting: {
+      on: {
+        ACCEPTED: {
+          guard: 'hasInvitationAcceptPrivilege',
+          target: InvitationLifecycleState.ACCEPTED,
+        },
+      },
+    },
+    accepted: {
+      type: 'final',
+    },
+    rejected: {
+      on: {
+        REINVITE: {
+          guard: 'hasUpdatePrivilege',
+          target: InvitationLifecycleState.INVITED,
+        },
+        ARCHIVE: {
+          guard: 'hasUpdatePrivilege',
+          target: InvitationLifecycleState.ARCHIVED,
+        },
+      },
+    },
+    archived: {
+      type: 'final',
+    },
+  },
+};

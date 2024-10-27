@@ -1,22 +1,17 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CommunityRoleType } from '@common/enums/community.role';
-import { InvitationService } from '@domain/access/invitation/invitation.service';
-import { RoleSetService } from './role.set.service';
 import { AnyStateMachine, setup } from 'xstate';
+import { invitationLifecycleMachine } from '../invitation/invitation.service.lifecycle';
 
 @Injectable()
 export class RoleSetServiceLifecycleInvitation {
   private invitationMachine: AnyStateMachine;
   constructor(
     private authorizationService: AuthorizationService,
-    private invitationService: InvitationService,
-    private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     this.invitationMachine = this.getMachine();
@@ -26,83 +21,8 @@ export class RoleSetServiceLifecycleInvitation {
     return this.invitationMachine;
   }
 
-  private async addMemberToRoleSet(
-    invitationID: string,
-    agentInfo: AgentInfo
-  ): Promise<void> {
-    try {
-      const invitation = await this.invitationService.getInvitationOrFail(
-        invitationID,
-        {
-          relations: {
-            roleSet: {
-              parentRoleSet: true,
-            },
-          },
-        }
-      );
-      const contributorID = invitation.invitedContributorID;
-      const roleSet = invitation.roleSet;
-      if (!contributorID || !roleSet) {
-        throw new EntityNotInitializedException(
-          `Lifecycle not initialized on Invitation: ${invitation.id}`,
-          LogContext.COMMUNITY
-        );
-      }
-
-      if (invitation.invitedToParent) {
-        if (!roleSet.parentRoleSet) {
-          throw new EntityNotInitializedException(
-            `Unable to load parent community when flag to add is set: ${invitation.id}`,
-            LogContext.COMMUNITY
-          );
-        }
-        await this.roleSetService.assignContributorToRole(
-          roleSet.parentRoleSet,
-          CommunityRoleType.MEMBER,
-          contributorID,
-          invitation.contributorType,
-          agentInfo,
-          true
-        );
-      }
-      await this.roleSetService.assignContributorToRole(
-        roleSet,
-        CommunityRoleType.MEMBER,
-        contributorID,
-        invitation.contributorType,
-        agentInfo,
-        true
-      );
-      if (invitation.extraRole) {
-        await this.roleSetService.assignContributorToRole(
-          roleSet,
-          invitation.extraRole,
-          contributorID,
-          invitation.contributorType,
-          agentInfo,
-          false
-        );
-      }
-    } catch (e: any) {
-      this.logger.error?.(
-        `Error adding member to community: ${e}`,
-        LogContext.COMMUNITY
-      );
-      throw new EntityNotInitializedException(
-        `Unable to add member to community: ${e}`,
-        LogContext.COMMUNITY
-      );
-    }
-  }
-
   private getMachine(): AnyStateMachine {
     const machine = setup({
-      actions: {
-        communityAddMember: async ({ event }) => {
-          await this.addMemberToRoleSet(event.parentID, event.agentInfo);
-        },
-      },
       guards: {
         hasUpdatePrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
@@ -124,45 +44,6 @@ export class RoleSetServiceLifecycleInvitation {
         },
       },
     });
-    return machine.createMachine({
-      id: 'user-invitation',
-      context: {
-        actionsCompleted: true,
-      },
-      initial: 'invited',
-      states: {
-        invited: {
-          on: {
-            ACCEPT: {
-              guard: 'hasInvitationAcceptPrivilege',
-              target: 'accepted',
-            },
-            REJECT: {
-              guard: 'hasUpdatePrivilege',
-              target: 'rejected',
-            },
-          },
-        },
-        accepted: {
-          //type: 'final',
-          entry: ['communityAddMember'],
-        },
-        rejected: {
-          on: {
-            REINVITE: {
-              guard: 'hasUpdatePrivilege',
-              target: 'invited',
-            },
-            ARCHIVE: {
-              guard: 'hasUpdatePrivilege',
-              target: 'archived',
-            },
-          },
-        },
-        archived: {
-          type: 'final',
-        },
-      },
-    });
+    return machine.createMachine(invitationLifecycleMachine);
   }
 }

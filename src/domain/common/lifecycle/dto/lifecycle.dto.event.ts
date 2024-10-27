@@ -7,8 +7,6 @@ export class LifecycleEventInput {
   machine!: AnyStateMachine;
   lifecycle!: ILifecycle;
   eventName!: string;
-
-  parentID!: string;
   agentInfo!: AgentInfo;
   authorization?: IAuthorizationPolicy;
 }
