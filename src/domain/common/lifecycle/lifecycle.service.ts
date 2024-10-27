@@ -95,8 +95,8 @@ export class LifecycleService {
 
     const updatedState = actor.getSnapshot().value;
     if (updatedState === startingState) {
-      throw new InvalidStateTransitionException(
-        `Event ${eventName} did not change state`,
+      this.logger.warn(
+        `Event ${eventName} did not change state from ${startingState}`,
         LogContext.LIFECYCLE
       );
     }
