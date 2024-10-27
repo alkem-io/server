@@ -15,6 +15,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 @Injectable()
 export class LifecycleService {
   private XSTATE_DONE_STATE = 'done';
+  private XSTATE_ERROR_STATE = 'error';
 
   constructor(
     @InjectRepository(Lifecycle)
@@ -47,6 +48,12 @@ export class LifecycleService {
     );
 
     const snapshot = actor.getSnapshot();
+    if (snapshot.status === this.XSTATE_ERROR_STATE) {
+      throw new InvalidStateTransitionException(
+        `Actor in error state: ${JSON.stringify(snapshot)}`,
+        LogContext.LIFECYCLE
+      );
+    }
     const startingState = snapshot.value;
     const nextEvents = this.getNextEventsFromSnapshot(snapshot);
     if (
@@ -58,7 +65,7 @@ export class LifecycleService {
       const lifecycleMsgSuffix = `event: ${eventData.eventName}, starting state: ${startingState}`;
       if (nextEvents.length === 0) {
         throw new InvalidStateTransitionException(
-          `${lifecycleMsgPrefix} No next states for lifecycle, ${lifecycleMsgSuffix}`,
+          `${lifecycleMsgPrefix} No next states for lifecycle currently in state, ${lifecycleMsgSuffix}`,
           LogContext.LIFECYCLE
         );
       } else {

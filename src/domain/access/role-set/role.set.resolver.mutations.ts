@@ -727,7 +727,8 @@ export class RoleSetResolverMutations {
         agentInfo
       );
       await this.lifecycleService.event({
-        machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
+        machine:
+          this.roleSetServiceLifecycleApplication.getApplicationMachine(),
         lifecycle: application.lifecycle,
         eventName: ApplicationLifecycleEvent.APPROVED,
         agentInfo,
