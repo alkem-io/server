@@ -50,8 +50,7 @@ export enum InvitationLifecycleState {
 }
 
 export enum InvitationLifecycleEvent {
-  ACCEPTING = 'accepting',
-  ACCEPTED = 'accepted',
+  ACCEPTED = 'ACCEPTED',
 }
 
 export const invitationLifecycleMachine: ILifecycleDefinition = {

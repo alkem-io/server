@@ -49,7 +49,6 @@ export enum ApplicationLifecycleState {
 }
 
 export enum ApplicationLifecycleEvent {
-  APPROVE = 'APPROVE',
   APPROVED = 'APPROVED',
 }
 
