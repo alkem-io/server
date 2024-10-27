@@ -77,12 +77,13 @@ export class OrganizationVerificationLifecycleService {
       context: {
         actionsCompleted: true,
       },
-      initial: 'notVerified',
+      initial: OrganizationVerificationLifecycleState.NOT_VERIFIED,
       states: {
         notVerified: {
           on: {
             VERIFICATION_REQUEST: {
-              target: 'verificationPending',
+              target:
+                OrganizationVerificationLifecycleState.VERIFICATION_PENDING,
               guard: {
                 type: 'hasUpdatePrivilege',
               },
@@ -92,17 +93,17 @@ export class OrganizationVerificationLifecycleService {
         verificationPending: {
           on: {
             MANUALLY_VERIFY: {
-              target: 'manuallyVerified',
+              target: OrganizationVerificationLifecycleState.MANUALLY_VERIFIED,
               guard: 'hasGrantPrivilege',
             },
-            REJECT: 'rejected',
+            REJECT: OrganizationVerificationLifecycleState.REJECTED,
           },
         },
         manuallyVerified: {
           entry: [],
           on: {
             RESET: {
-              target: 'notVerified',
+              target: OrganizationVerificationLifecycleState.NOT_VERIFIED,
               guard: 'hasGrantPrivilege',
             },
           },
@@ -110,11 +111,11 @@ export class OrganizationVerificationLifecycleService {
         rejected: {
           on: {
             REOPEN: {
-              target: 'notVerified',
+              target: OrganizationVerificationLifecycleState.NOT_VERIFIED,
               guard: 'hasGrantPrivilege',
             },
             ARCHIVE: {
-              target: 'archived',
+              target: OrganizationVerificationLifecycleState.ARCHIVED,
               guard: 'hasGrantPrivilege',
             },
           },
@@ -137,12 +138,12 @@ export class OrganizationVerificationLifecycleService {
     );
 
     switch (state) {
-      case 'notVerified':
-      case 'verificationPending':
-      case 'rejected':
-      case 'archived':
+      case OrganizationVerificationLifecycleState.NOT_VERIFIED:
+      case OrganizationVerificationLifecycleState.VERIFICATION_PENDING:
+      case OrganizationVerificationLifecycleState.REJECTED:
+      case OrganizationVerificationLifecycleState.ARCHIVED:
         return OrganizationVerificationEnum.NOT_VERIFIED;
-      case 'manuallyVerified':
+      case OrganizationVerificationLifecycleState.MANUALLY_VERIFIED:
         return OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION;
       default:
         throw new InvalidStateTransitionException(
@@ -151,4 +152,12 @@ export class OrganizationVerificationLifecycleService {
         );
     }
   }
+}
+
+export enum OrganizationVerificationLifecycleState {
+  NOT_VERIFIED = 'notVerified',
+  VERIFICATION_PENDING = 'verificationPending',
+  MANUALLY_VERIFIED = 'manuallyVerified',
+  ARCHIVED = 'archived',
+  REJECTED = 'rejected',
 }
