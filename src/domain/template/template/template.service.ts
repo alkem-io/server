@@ -208,19 +208,24 @@ export class TemplateService {
     templateID: string,
     options?: FindOneOptions<Template>
   ): Promise<ITemplate | never> {
-    const template = await this.templateRepository.findOne({
+    /* TODO: This should be a findOne, but we have to use find because of a bug in TypeORM.
+     * updateTemplate makes use of this method and the select option to only fetch the whiteboard.id
+     * is causing an MySQL error with findOne which is not happening with find.
+     * When we tackle #4106 (Typeorm upgrade) we can switch back to findOne
+     */
+    const templates = await this.templateRepository.find({
       ...options,
       where: {
         ...options?.where,
         id: templateID,
       },
     });
-    if (!template)
+    if (templates.length !== 1)
       throw new EntityNotFoundException(
         `Not able to locate Template with the specified ID: ${templateID}`,
         LogContext.COMMUNICATION
       );
-    return template;
+    return templates[0];
   }
 
   // Only support updating the profile part of the template; not the contained entity. That should
@@ -233,6 +238,15 @@ export class TemplateService {
       relations: {
         profile: true,
         whiteboard: templateInput.type === TemplateType.WHITEBOARD,
+      },
+      select: {
+        id: true,
+        whiteboard:
+          templateInput.type === TemplateType.WHITEBOARD
+            ? {
+                id: true,
+              }
+            : undefined,
       },
     });
 
