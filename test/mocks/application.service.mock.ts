@@ -9,6 +9,6 @@ export const MockApplicationService: ValueProvider<
   useValue: {
     findApplicationsForUser: jest.fn(),
     isFinalizedApplication: jest.fn(),
-    getApplicationState: jest.fn(),
+    getLifecycleState: jest.fn(),
   },
 };
