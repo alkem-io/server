@@ -16,8 +16,9 @@ import { ISearchResultCallout } from './search.result.dto.entry.callout';
     const type = searchResult.type;
     switch (type) {
       case SearchResultType.SPACE:
-      case SearchResultType.CHALLENGE:
-      case SearchResultType.OPPORTUNITY:
+      case SearchResultType.SUBSPACE:
+      case SearchResultType.CHALLENGE: // todo remove - legacy from v1
+      case SearchResultType.OPPORTUNITY: // todo remove - legacy from v1
         return ISearchResultSpace;
       case SearchResultType.USER:
         return ISearchResultUser;
