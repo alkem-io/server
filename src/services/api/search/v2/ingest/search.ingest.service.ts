@@ -467,7 +467,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SPACE,
+          type: SearchEntityTypes.SUBSPACE,
           visibility: space?.visibility,
           spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -512,7 +512,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SPACE,
+          type: SearchEntityTypes.SUBSPACE,
           visibility: space?.visibility,
           spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
