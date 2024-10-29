@@ -373,7 +373,7 @@ export class VirtualContributorService {
 
   public async askQuestion(
     vcQuestionInput: VirtualContributorQuestionInput
-  ): Promise<IMessageAnswerToQuestion> {
+  ): Promise<void> {
     const virtualContributor = await this.getVirtualContributorOrFail(
       vcQuestionInput.virtualContributorID,
       {
@@ -391,6 +391,7 @@ export class VirtualContributorService {
         LogContext.AUTH
       );
     }
+
     this.logger.verbose?.(
       `still need to use the context ${vcQuestionInput.contextSpaceID}, ${vcQuestionInput.userID}`,
       LogContext.AI_PERSONA_SERVICE_ENGINE
@@ -417,10 +418,10 @@ export class VirtualContributorService {
       aiServerAdapterQuestionInput
     );
 
-    if (!vcInteraction.externalMetadata.threadId && response.threadId) {
-      vcInteraction.externalMetadata.threadId = response.threadId;
-      await this.vcInteractionService.save(vcInteraction);
-    }
+    // if (!vcInteraction.externalMetadata.threadId && response.threadId) {
+    //   vcInteraction.externalMetadata.threadId = response.threadId;
+    //   await this.vcInteractionService.save(vcInteraction);
+    // }
 
     return response;
   }

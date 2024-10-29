@@ -157,7 +157,7 @@ export class AiServerService {
 
   public async askQuestion(
     questionInput: AiPersonaServiceQuestionInput
-  ): Promise<IMessageAnswerToQuestion> {
+  ): Promise<void> {
     // the context is currently not used so no point in keeping this
     // commenting it out for now to save some work
     // if (

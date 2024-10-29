@@ -138,26 +138,26 @@ export class RoomServiceMentions {
 
     const result = await this.virtualContributorService.askQuestion(vcQuestion);
 
-    const simpleAnswer =
-      this.messageService.convertAnswerToSimpleMessage(result);
+    // const simpleAnswer =
+    //   this.messageService.convertAnswerToSimpleMessage(result);
 
-    const answerData: RoomSendMessageReplyInput = {
-      message: simpleAnswer,
-      roomID: room.id,
-      threadID: threadID,
-    };
-    const answerMessage = await this.roomService.sendMessageReply(
-      room,
-      virtualContributor.communicationID,
-      answerData,
-      'virtualContributor'
-    );
+    // const answerData: RoomSendMessageReplyInput = {
+    //   message: simpleAnswer,
+    //   roomID: room.id,
+    //   threadID: threadID,
+    // };
+    // const answerMessage = await this.roomService.sendMessageReply(
+    //   room,
+    //   virtualContributor.communicationID,
+    //   answerData,
+    //   'virtualContributor'
+    // );
 
-    this.subscriptionPublishService.publishRoomEvent(
-      room,
-      MutationType.CREATE,
-      answerMessage
-    );
+    // this.subscriptionPublishService.publishRoomEvent(
+    //   room,
+    //   MutationType.CREATE,
+    //   answerMessage
+    // );
   }
 
   public processNotificationMentions(

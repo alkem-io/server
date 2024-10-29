@@ -74,6 +74,11 @@ import amqplib from 'amqplib';
               exchange: eventBusConfig.exchange,
               routingKey: 'IngestSpaceResult',
             },
+            {
+              name: 'virtual-contributor-engine-expert',
+              exchange: eventBusConfig.exchange,
+              routingKey: 'expert',
+            },
           ],
         };
       },

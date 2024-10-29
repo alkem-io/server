@@ -127,12 +127,12 @@ export class AiPersonaService {
     return await this.aiPersonaRepository.save(aiPersona);
   }
 
-  public async askQuestion(
+  public askQuestion(
     aiPersona: IAiPersona,
     question: string,
     agentInfo: AgentInfo,
     contextSpaceID: string
-  ): Promise<IMessageAnswerToQuestion> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Asking question to AI Persona from user ${agentInfo.userID} + with context ${contextSpaceID}`,
       LogContext.PLATFORM
@@ -144,6 +144,6 @@ export class AiPersonaService {
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
     };
 
-    return await this.aiServerAdapter.askQuestion(input);
+    return this.aiServerAdapter.askQuestion(input);
   }
 }

@@ -60,23 +60,23 @@ export class AiServerResolverFields {
     return await this.aiServerService.getAiPersonaServiceOrFail(id);
   }
 
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => IMessageAnswerToQuestion, {
-    nullable: false,
-    description: 'Ask the virtual persona engine for guidance.',
-  })
-  async askAiPersonaServiceQuestion(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('aiPersonaQuestionInput')
-    aiPersonaQuestionInput: AiPersonaServiceQuestionInput
-  ): Promise<IMessageAnswerToQuestion> {
-    aiPersonaQuestionInput.userID =
-      aiPersonaQuestionInput.userID ?? agentInfo.userID;
-    // hardcode empty history for now; read it from the interaction
-    const history: InteractionMessage[] = [];
-    return this.aiPersonaServiceService.askQuestion(
-      aiPersonaQuestionInput,
-      history
-    );
-  }
+  // @UseGuards(GraphqlGuard)
+  // @ResolveField(() => IMessageAnswerToQuestion, {
+  //   nullable: false,
+  //   description: 'Ask the virtual persona engine for guidance.',
+  // })
+  // async askAiPersonaServiceQuestion(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('aiPersonaQuestionInput')
+  //   aiPersonaQuestionInput: AiPersonaServiceQuestionInput
+  // ): Promise<IMessageAnswerToQuestion> {
+  //   aiPersonaQuestionInput.userID =
+  //     aiPersonaQuestionInput.userID ?? agentInfo.userID;
+  //   // hardcode empty history for now; read it from the interaction
+  //   const history: InteractionMessage[] = [];
+  //   return this.aiPersonaServiceService.askQuestion(
+  //     aiPersonaQuestionInput,
+  //     history
+  //   );
+  // }
 }

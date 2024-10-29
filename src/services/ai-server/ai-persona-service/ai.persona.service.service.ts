@@ -159,7 +159,7 @@ export class AiPersonaServiceService {
   public async askQuestion(
     personaQuestionInput: AiPersonaServiceQuestionInput,
     history: InteractionMessage[]
-  ): Promise<IMessageAnswerToQuestion> {
+  ): Promise<void> {
     const aiPersonaService = await this.getAiPersonaServiceOrFail(
       personaQuestionInput.aiPersonaServiceID
     );

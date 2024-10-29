@@ -62,9 +62,7 @@ export class AiServerAdapter {
     return this.aiServer.createAiPersonaService(personaServiceData);
   }
 
-  async askQuestion(
-    questionInput: AiServerAdapterAskQuestionInput
-  ): Promise<IMessageAnswerToQuestion> {
+  askQuestion(questionInput: AiServerAdapterAskQuestionInput): Promise<void> {
     const vcInteractionID = questionInput.vcInteractionID;
     return this.aiServer.askQuestion({
       ...questionInput,

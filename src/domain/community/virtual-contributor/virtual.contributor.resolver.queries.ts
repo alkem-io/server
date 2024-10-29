@@ -56,30 +56,30 @@ export class VirtualContributorResolverQueries {
     return await this.virtualContributorService.getVirtualContributorOrFail(id);
   }
 
-  @UseGuards(GraphqlGuard)
-  @Query(() => IMessageAnswerToQuestion, {
-    nullable: false,
-    description: 'Ask the virtual contributor a question directly.',
-  })
-  async askVirtualContributorQuestion(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('virtualContributorQuestionInput')
-    virtualContributorQuestionInput: VirtualContributorQuestionInput
-  ): Promise<IMessageAnswerToQuestion> {
-    const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        virtualContributorQuestionInput.virtualContributorID
-      );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      virtualContributor.authorization,
-      AuthorizationPrivilege.READ,
-      `asking a question to virtual contributor (${virtualContributor.id}): $chatData.question`
-    );
-    virtualContributorQuestionInput.userID =
-      virtualContributorQuestionInput.userID ?? agentInfo.userID;
-    return this.virtualContributorService.askQuestion(
-      virtualContributorQuestionInput
-    );
-  }
+  // @UseGuards(GraphqlGuard)
+  // @Query(() => IMessageAnswerToQuestion, {
+  //   nullable: false,
+  //   description: 'Ask the virtual contributor a question directly.',
+  // })
+  // async askVirtualContributorQuestion(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('virtualContributorQuestionInput')
+  //   virtualContributorQuestionInput: VirtualContributorQuestionInput
+  // ): Promise<IMessageAnswerToQuestion> {
+  //   const virtualContributor =
+  //     await this.virtualContributorService.getVirtualContributorOrFail(
+  //       virtualContributorQuestionInput.virtualContributorID
+  //     );
+  //   this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     virtualContributor.authorization,
+  //     AuthorizationPrivilege.READ,
+  //     `asking a question to virtual contributor (${virtualContributor.id}): $chatData.question`
+  //   );
+  //   virtualContributorQuestionInput.userID =
+  //     virtualContributorQuestionInput.userID ?? agentInfo.userID;
+  //   return this.virtualContributorService.askQuestion(
+  //     virtualContributorQuestionInput
+  //   );
+  // }
 }
