@@ -9,6 +9,6 @@ export const MockInvitationService: ValueProvider<
   useValue: {
     findInvitationsForContributor: jest.fn(),
     isFinalizedInvitation: jest.fn(),
-    getInvitationState: jest.fn(),
+    getLifecycleState: jest.fn(),
   },
 };

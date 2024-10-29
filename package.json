@@ -112,7 +112,7 @@
     "socket.io": "^4.7.5",
     "typeorm": "0.3.13",
     "winston": "^3.13.1",
-    "xstate": "^4.37.2",
+    "xstate": "^5.18.2",
     "yaml": "^2.4.5"
   },
   "devDependencies": {
