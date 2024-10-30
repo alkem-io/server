@@ -62,41 +62,45 @@ export class TemplateApplierService {
         newStatesStr
       );
 
-    const calloutsFromTemplate =
-      await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
-        collaborationFromTemplate.callouts ?? []
+    if (updateData.addCallouts) {
+      const calloutsFromTemplate =
+        await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
+          collaborationFromTemplate.callouts ?? []
+        );
+
+      const newCallouts = await this.collaborationService.addCallouts(
+        targetCollaboration,
+        calloutsFromTemplate,
+        storageAggregator,
+        userID
       );
+      targetCollaboration.callouts?.push(...newCallouts);
 
-    const newCallouts = await this.collaborationService.addCallouts(
-      targetCollaboration,
-      calloutsFromTemplate,
-      storageAggregator,
-      userID
-    );
-    targetCollaboration.callouts?.push(...newCallouts);
+      const authorizations: IAuthorizationPolicy[] = [];
 
-    const authorizations: IAuthorizationPolicy[] = [];
+      const { roleSet: communityPolicy, spaceSettings } =
+        await this.namingService.getRoleSetAndSettingsForCollaboration(
+          targetCollaboration.id
+        );
 
-    const { roleSet: communityPolicy, spaceSettings } =
-      await this.namingService.getRoleSetAndSettingsForCollaboration(
-        targetCollaboration.id
-      );
+      // Need to save before applying authorization policy to get the callout ids
+      const result = await this.collaborationService.save(targetCollaboration);
 
-    // Need to save before applying authorization policy to get the callout ids
-    const result = await this.collaborationService.save(targetCollaboration);
+      for (const callout of newCallouts) {
+        authorizations.push(
+          ...(await this.calloutAuthorizationService.applyAuthorizationPolicy(
+            callout.id,
+            targetCollaboration.authorization,
+            communityPolicy,
+            spaceSettings
+          ))
+        );
+      }
+      await this.authorizationPolicyService.saveAll(authorizations);
 
-    for (const callout of newCallouts) {
-      authorizations.push(
-        ...(await this.calloutAuthorizationService.applyAuthorizationPolicy(
-          callout.id,
-          targetCollaboration.authorization,
-          communityPolicy,
-          spaceSettings
-        ))
-      );
+      return result;
+    } else {
+      return await this.collaborationService.save(targetCollaboration);
     }
-    await this.authorizationPolicyService.saveAll(authorizations);
-
-    return result;
   }
 }
