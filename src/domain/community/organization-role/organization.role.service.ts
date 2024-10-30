@@ -184,7 +184,7 @@ export class OrganizationRoleService {
         });
         if (orgOwners.length === 1)
           throw new ForbiddenException(
-            `Not allowed to remove last owner for organisaiton: ${organization.id}`,
+            `Not allowed to remove last owner for Organization: ${organization.id}`,
             LogContext.AUTH
           );
       }

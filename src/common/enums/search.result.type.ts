@@ -2,6 +2,7 @@ import { registerEnumType } from '@nestjs/graphql';
 
 export enum SearchResultType {
   SPACE = 'space',
+  SUBSPACE = 'subspace',
   CHALLENGE = 'challenge', // todo remove
   OPPORTUNITY = 'opportunity', // todo remove
   USER = 'user',

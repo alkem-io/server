@@ -1,11 +1,11 @@
 import { UUID_LENGTH } from '@common/constants';
-import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 
 @InputType()
 export class UpdateCalloutPublishInfoInput {
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: false,
     description:
       'The identifier for the Callout whose publisher is to be updated.',
@@ -13,7 +13,7 @@ export class UpdateCalloutPublishInfoInput {
   @MaxLength(UUID_LENGTH)
   calloutID!: string;
 
-  @Field(() => UUID_NAMEID_EMAIL, {
+  @Field(() => UUID, {
     nullable: true,
     description: 'The identifier of the publisher of the Callout.',
   })
