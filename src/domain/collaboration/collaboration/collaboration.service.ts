@@ -187,7 +187,7 @@ export class CollaborationService {
     return tagsetTemplateDataStates;
   }
 
-  private async addCallouts(
+  public async addCallouts(
     collaboration: ICollaboration,
     calloutsData: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,

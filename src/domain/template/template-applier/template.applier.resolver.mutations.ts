@@ -10,6 +10,7 @@ import { UpdateCollaborationFromTemplateInput } from './dto/template.applier.dto
 import { TemplateApplierService } from './template.applier.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 
 @Resolver()
 export class TemplateApplierResolverMutations {
@@ -17,6 +18,7 @@ export class TemplateApplierResolverMutations {
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
     private templateApplierService: TemplateApplierService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -35,7 +37,13 @@ export class TemplateApplierResolverMutations {
         updateData.collaborationID,
         {
           relations: {
-            innovationFlow: true,
+            tagsetTemplateSet: true,
+            callouts: true,
+            innovationFlow: {
+              profile: {
+                tagsets: true,
+              },
+            },
           },
         }
       );
@@ -47,9 +55,16 @@ export class TemplateApplierResolverMutations {
       `update InnovationFlow states from template: ${collaboration.id}`
     );
 
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
+        collaboration.id
+      );
+
     return await this.templateApplierService.updateCollaborationFromTemplate(
       updateData,
-      collaboration
+      collaboration,
+      storageAggregator,
+      agentInfo.userID
     );
   }
 }
