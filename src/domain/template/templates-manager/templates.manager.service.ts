@@ -56,8 +56,11 @@ export class TemplatesManagerService {
     options?: FindOneOptions<TemplatesManager>
   ): Promise<ITemplatesManager | never> {
     const templatesManager = await this.templatesManagerRepository.findOne({
-      where: { id: templatesManagerID },
       ...options,
+      where: {
+        id: templatesManagerID,
+        ...(options?.where || {}),
+      },
     });
     if (!templatesManager)
       throw new EntityNotFoundException(
@@ -185,6 +188,6 @@ export class TemplatesManagerService {
       );
     }
 
-    return templatesManager?.templatesSet;
+    return templatesManager.templatesSet;
   }
 }

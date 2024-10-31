@@ -111,14 +111,14 @@ export class TemplateApplierService {
       const result = await this.collaborationService.save(targetCollaboration);
 
       for (const callout of newCallouts) {
-        authorizations.push(
-          ...(await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        const calloutAuthorizations =
+          await this.calloutAuthorizationService.applyAuthorizationPolicy(
             callout.id,
             targetCollaboration.authorization,
             communityPolicy,
             spaceSettings
-          ))
-        );
+          );
+        authorizations.push(...calloutAuthorizations);
       }
       await this.authorizationPolicyService.saveAll(authorizations);
 

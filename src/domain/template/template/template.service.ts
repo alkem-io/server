@@ -223,7 +223,7 @@ export class TemplateService {
     if (templates.length !== 1)
       throw new EntityNotFoundException(
         `Not able to locate Template with the specified ID: ${templateID}`,
-        LogContext.COMMUNICATION
+        LogContext.TEMPLATES
       );
     return templates[0];
   }
