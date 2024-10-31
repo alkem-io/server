@@ -11,6 +11,7 @@ import { RoomType } from '@common/enums/room.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IAgent } from '@domain/agent';
 import { IAccount } from '@domain/space/account/account.interface';
+import { ICommunication } from '@domain/communication/communication/communication.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -40,6 +41,43 @@ export class CommunityResolverService {
       );
     }
     return space.levelZeroSpaceID;
+  }
+
+  async getCommunityForRoleSet(roleSetID: string): Promise<ICommunity> {
+    const community = await this.entityManager.findOne(Community, {
+      where: {
+        roleSet: {
+          id: roleSetID,
+        },
+      },
+    });
+    if (!community) {
+      throw new EntityNotFoundException(
+        `Unable to find Community for given RoleSet id: ${roleSetID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return community;
+  }
+
+  async getCommunicationForRoleSet(roleSetID: string): Promise<ICommunication> {
+    const community = await this.entityManager.findOne(Community, {
+      where: {
+        roleSet: {
+          id: roleSetID,
+        },
+      },
+      relations: {
+        communication: true,
+      },
+    });
+    if (!community || !community.communication) {
+      throw new EntityNotFoundException(
+        `Unable to find Community for given RoleSet id: ${roleSetID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return community.communication;
   }
 
   public async getLevelZeroSpaceIdForCollaboration(
@@ -271,13 +309,36 @@ export class CommunityResolverService {
     return community;
   }
 
+  public async getSpaceForRoleSetOrFail(roleSetID: string): Promise<ISpace> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          roleSet: {
+            id: roleSetID,
+          },
+        },
+      },
+      relations: {
+        profile: true,
+        context: true,
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for roleSet: ${roleSetID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return space;
+  }
+
   public async getSpaceForCommunityOrFail(
-    communityId: string
+    communityID: string
   ): Promise<ISpace> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         community: {
-          id: communityId,
+          id: communityID,
         },
       },
       relations: {
@@ -286,7 +347,7 @@ export class CommunityResolverService {
     });
     if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find space for community: ${communityId}`,
+        `Unable to find space for Community: ${communityID}`,
         LogContext.URL_GENERATOR
       );
     }
@@ -317,10 +378,10 @@ export class CommunityResolverService {
     return space;
   }
 
-  public async getDisplayNameForCommunityOrFail(
-    communityId: string
+  public async getDisplayNameForRoleSetOrFail(
+    roleSetID: string
   ): Promise<string> {
-    const space = await this.getSpaceForCommunityOrFail(communityId);
+    const space = await this.getSpaceForRoleSetOrFail(roleSetID);
     return space.profile.displayName;
   }
 
@@ -338,7 +399,9 @@ export class CommunityResolverService {
         },
       },
       relations: {
-        community: true,
+        community: {
+          roleSet: true,
+        },
       },
     });
     if (!space || !space.community) {
@@ -368,7 +431,9 @@ export class CommunityResolverService {
         },
       },
       relations: {
-        community: true,
+        community: {
+          roleSet: true,
+        },
       },
     });
     if (!space || !space.community) {
@@ -398,24 +463,5 @@ export class CommunityResolverService {
         );
       }
     }
-  }
-
-  public async getCommunityWithParentOrFail(
-    communityID: string
-  ): Promise<ICommunity> {
-    const community = await this.communityRepository
-      .createQueryBuilder('community')
-      .leftJoinAndSelect('community.parentCommunity', 'parentCommunity')
-      .where('community.id = :id')
-      .setParameters({ id: `${communityID}` })
-      .getOne();
-
-    if (!community) {
-      throw new EntityNotFoundException(
-        `Unable to find Community with parent: ${communityID}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
-    return community;
   }
 }

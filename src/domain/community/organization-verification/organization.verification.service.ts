@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationVerification } from './organization.verification.entity';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { organizationVerificationLifecycleConfig } from '@domain/community/organization-verification/organization.verification.lifecycle.config';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { CreateOrganizationVerificationInput } from './dto/organization.verification.dto.create';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -40,10 +39,7 @@ export class OrganizationVerificationService {
 
     // Create the lifecycle
     organizationVerification.lifecycle =
-      await this.lifecycleService.createLifecycle(
-        organizationVerification.id,
-        organizationVerificationLifecycleConfig
-      );
+      await this.lifecycleService.createLifecycle();
 
     return organizationVerification;
   }

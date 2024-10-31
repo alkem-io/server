@@ -14,7 +14,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
-import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
@@ -31,6 +30,7 @@ import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
+import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 
 @Module({
   imports: [
@@ -48,11 +48,11 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     PlatformAuthorizationPolicyModule,
     PreferenceModule,
     PreferenceSetModule,
-    KonfigModule,
     MessagingModule,
     StorageAggregatorModule,
     StorageBucketModule,
     DocumentModule,
+    KratosModule,
     ContributorModule,
     TypeOrmModule.forFeature([User]),
   ],

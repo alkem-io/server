@@ -15,8 +15,9 @@ interface SearchResultBuilderFunction<TypedSearchResult> {
 
 export interface ISearchResultBuilder {
   [SearchResultType.SPACE]: SearchResultBuilderFunction<ISearchResultSpace>;
-  [SearchResultType.CHALLENGE]: SearchResultBuilderFunction<ISearchResultChallenge>;
-  [SearchResultType.OPPORTUNITY]: SearchResultBuilderFunction<ISearchResultOpportunity>;
+  [SearchResultType.SUBSPACE]: SearchResultBuilderFunction<ISearchResultSpace>;
+  [SearchResultType.CHALLENGE]: SearchResultBuilderFunction<ISearchResultChallenge>; // todo remove - legacy from v1
+  [SearchResultType.OPPORTUNITY]: SearchResultBuilderFunction<ISearchResultOpportunity>; // todo remove - legacy from v1
   [SearchResultType.USER]: SearchResultBuilderFunction<ISearchResultUser>;
   [SearchResultType.ORGANIZATION]: SearchResultBuilderFunction<ISearchResultOrganization>;
   [SearchResultType.USERGROUP]: SearchResultBuilderFunction<ISearchResultUserGroup>;

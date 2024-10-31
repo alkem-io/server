@@ -1,8 +1,9 @@
-import { ICommunity } from '@domain/community/community/community.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { PlatformRole } from '@common/enums/platform.role';
-import { IPlatform } from '@platform/platfrom/platform.interface';
+import { IPlatform } from '@platform/platform/platform.interface';
+import { IRoleSet } from '@domain/access/role-set';
+import { CommunityRoleType } from '@common/enums/community.role';
 
 @ObjectType('PlatformInvitation')
 export class IPlatformInvitation extends IAuthorizable {
@@ -31,7 +32,7 @@ export class IPlatformInvitation extends IAuthorizable {
 
   createdBy!: string;
 
-  community?: ICommunity;
+  roleSet?: IRoleSet;
 
   platform?: IPlatform;
 
@@ -40,7 +41,14 @@ export class IPlatformInvitation extends IAuthorizable {
     description:
       'Whether to also add the invited user to the parent community.',
   })
-  communityInvitedToParent!: boolean;
+  roleSetInvitedToParent!: boolean;
+
+  @Field(() => CommunityRoleType, {
+    nullable: true,
+    description:
+      'An additional role to assign to the Contributor, in addition to the entry Role.',
+  })
+  roleSetExtraRole?: CommunityRoleType;
 
   @Field(() => PlatformRole, {
     nullable: true,

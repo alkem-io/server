@@ -13,9 +13,9 @@ import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication
 import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { ValidationException } from '@common/exceptions';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -23,7 +23,7 @@ export class AdminCommunicationService {
     private communicationAdapter: CommunicationAdapter,
     private communicationService: CommunicationService,
     private communityService: CommunityService,
-    private communityRoleService: CommunityRoleService,
+    private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -35,11 +35,16 @@ export class AdminCommunicationService {
       LogContext.COMMUNICATION
     );
     const community = await this.communityService.getCommunityOrFail(
-      communicationData.communityID
+      communicationData.communityID,
+      {
+        relations: {
+          roleSet: true,
+        },
+      }
     );
-    const communityMembers = await this.communityRoleService.getUsersWithRole(
-      community,
-      CommunityRole.MEMBER
+    const communityMembers = await this.roleSetService.getUsersWithRole(
+      community.roleSet,
+      CommunityRoleType.MEMBER
     );
     const communication = await this.communityService.getCommunication(
       community.id,
@@ -103,14 +108,19 @@ export class AdminCommunicationService {
       LogContext.COMMUNICATION
     );
     const community = await this.communityService.getCommunityOrFail(
-      communicationData.communityID
+      communicationData.communityID,
+      {
+        relations: {
+          roleSet: true,
+        },
+      }
     );
     const communication = await this.communityService.getCommunication(
       community.id
     );
-    const communityMembers = await this.communityRoleService.getUsersWithRole(
-      community,
-      CommunityRole.MEMBER
+    const communityMembers = await this.roleSetService.getUsersWithRole(
+      community.roleSet,
+      CommunityRoleType.MEMBER
     );
     for (const communityMember of communityMembers) {
       await this.communicationService.addContributorToCommunications(

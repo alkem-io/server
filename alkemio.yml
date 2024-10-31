@@ -53,6 +53,10 @@ bootstrap:
   authorization:
     enabled: ${BOOTSTRAP_AUTHORIZATION_ENABLED}:true
     file: ${BOOTSTRAP_AUTHORIZATION_FILE}
+# Settings related to the authorization framework
+authorization:
+  # amount of authorization policies saved in a single chunk
+  chunk: ${AUTHORIZATION_CHUNK_SIZE}:1000
 
 ## security ##
 # The various means by which the security of the Alkemio platform can be configured.
@@ -77,6 +81,8 @@ security:
     # Cors allowed headers.
     allowed_headers: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
 
+  encryption_key: ${ENCRYPTION_KEY}:ktO2wPinKwidG8cgjhfKTHGqU6D5lxP0NkCVAJglnfw=
+
 innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
 
@@ -85,9 +91,9 @@ search:
   use_new: ${SEARCH_USE_NEW}:true
   # max results per search
   max_results: ${SEARCH_MAX_RESULTS}:40
-  # the index pattern used when ingesting data, e.g. alkemio-data-[organization];
+  # the index pattern used when ingesting data in Elasticsearch, e.g. alkemio-data-[organization];
   # The dash at the end is MANDATORY
-  index_pattern: ${SEARCH_INDEX_PATTERN}:alkemio-data-
+  index_pattern: ${ELASTIC_SEARCH_INDEX_PATTERN}:alkemio-data-
 
 ## identity ##
 
@@ -258,6 +264,9 @@ monitoring:
     # Flag to control whether PII should be included on monitoring
     submit_pii: ${LOGGING_SENTRY_PII_ENABLED}:false
 
+    # Set the Sentry environment variable to be used
+    environment: ${LOGGING_SENTRY_ENVIRONMENT}:development
+
   # Elastic APM configuration
   apm:
     # Is real user monitoring enabled
@@ -280,7 +289,7 @@ communications:
 storage:
   file:
     # 20MB
-    max_file_size: 2097152
+    max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
   # MySQL database configuration for usage by the Alkemio Server.
   # The authentication method used by Alkemio Server is MySQL Native Password.
   # Note: both schema / database name are used for configuration and they need to have the same value.

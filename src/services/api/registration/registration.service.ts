@@ -10,20 +10,20 @@ import { getEmailDomain } from '@common/utils';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { IInvitation } from '@domain/community/invitation/invitation.interface';
-import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
-import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
+import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
+import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
-import { InvitationService } from '@domain/community/invitation/invitation.service';
-import { ApplicationService } from '@domain/community/application/application.service';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { ApplicationService } from '@domain/access/application/application.service';
 import { OrganizationRole } from '@common/enums/organization.role';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
-import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
-import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { PlatformRoleService } from '@platform/platform.role/platform.role.service';
 import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { IOrganization } from '@domain/community/organization';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 
 export class RegistrationService {
   constructor(
@@ -33,12 +33,12 @@ export class RegistrationService {
     private organizationService: OrganizationService,
     private organizationRoleService: OrganizationRoleService,
     private preferenceSetService: PreferenceSetService,
-    private communityRoleService: CommunityRoleService,
     private platformInvitationService: PlatformInvitationService,
     private platformRoleService: PlatformRoleService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationService: InvitationService,
     private applicationService: ApplicationService,
+    private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -119,28 +119,28 @@ export class RegistrationService {
 
     const communityInvitations: IInvitation[] = [];
     for (const platformInvitation of platformInvitations) {
-      const community = platformInvitation.community;
+      const roleSet = platformInvitation.roleSet;
 
       // Process community invitations
-      if (community) {
+      if (roleSet) {
         const invitationInput: CreateInvitationInput = {
-          invitedContributor: user.id,
-          communityID: community.id,
+          invitedContributorID: user.id,
+          roleSetID: roleSet.id,
           createdBy: platformInvitation.createdBy,
-          invitedToParent: platformInvitation.communityInvitedToParent,
+          extraRole: platformInvitation.roleSetExtraRole,
+          invitedToParent: platformInvitation.roleSetInvitedToParent,
         };
         let invitation =
-          await this.communityRoleService.createInvitationExistingContributor(
+          await this.roleSetService.createInvitationExistingContributor(
             invitationInput
           );
-        invitation.invitedToParent =
-          platformInvitation.communityInvitedToParent;
+        invitation.invitedToParent = platformInvitation.roleSetInvitedToParent;
 
         invitation = await this.invitationService.save(invitation);
         const authorization =
           await this.invitationAuthorizationService.applyAuthorizationPolicy(
             invitation,
-            community.authorization
+            roleSet.authorization
           );
         await this.authorizationPolicyService.save(authorization);
 

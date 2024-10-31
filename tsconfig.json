@@ -15,6 +15,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "strictNullChecks": true,
     "paths": {
       "@interfaces/*": ["src/common/interfaces/*"],
       "@domain/*": ["src/domain/*"],

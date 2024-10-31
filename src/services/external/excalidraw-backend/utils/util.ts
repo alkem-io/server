@@ -4,11 +4,11 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { getSession } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { SocketIoSocket } from '../types/socket.io.socket';
 import { CONNECTION_CLOSED } from '../types/event.names';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 
 /* Sets the user into the context field or closes the connection */
 const authenticate = async (
