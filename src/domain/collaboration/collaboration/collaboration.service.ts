@@ -199,9 +199,9 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
-    const calloutNameIds: string[] = compact([
-      ...collaboration.callouts?.map(callout => callout.nameID),
-    ]);
+    const calloutNameIds: string[] = compact(
+      collaboration.callouts?.map(callout => callout.nameID)
+    );
 
     const callouts: ICallout[] = [];
     for (const calloutDefault of calloutsData) {
