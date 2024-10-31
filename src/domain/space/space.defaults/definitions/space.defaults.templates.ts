@@ -1,8 +1,7 @@
 import { TemplateType } from '@common/enums/template.type';
-import { spaceDefaultsInnovationFlowStatesChallenge } from './challenge/space.defaults.innovation.flow.challenge';
 import { CreateTemplateInput } from '@domain/template/template/dto/template.dto.create';
 
-const posts: CreateTemplateInput[] = [
+export const posts: CreateTemplateInput[] = [
   {
     nameID: 'meeting-notes',
     profileData: {
@@ -40,65 +39,3 @@ const posts: CreateTemplateInput[] = [
       '💬**What is blocking this space at the moment?**\n\n*Uncover the current challenges and obstacles that hinder progress in this space. What barriers are present, and how do they impact the community?*\n\n📢 **Describe your call to action**:\n\n*What steps can we take to address these challenges, and how can we overcome these obstacles?*\n\n📚 **Type of knowledge, expertise, and resources:**\n\n*Specify the types of knowledge, expertise, and resources needed to navigate and overcome the identified challenges*\n\n✏️ **Additional context:**\n\n*providing additional context*\n\nTogether, lets transform challenges into pportunities and propel this space forward! 🚀💪\n',
   },
 ];
-
-const innovationFlows: CreateTemplateInput[] = [
-  {
-    nameID: 'default-innovation-flow',
-    profileData: {
-      displayName: 'Default innovationFlow',
-      description: 'Default innovationFlow',
-    },
-    tags: ['default'],
-    type: TemplateType.INNOVATION_FLOW,
-    innovationFlowData: {
-      profile: {
-        displayName: 'Default innovationFlow',
-        description: 'Default innovationFlow',
-      },
-      states: spaceDefaultsInnovationFlowStatesChallenge,
-    },
-  },
-  {
-    nameID: 'coordination-flow',
-    profileData: {
-      displayName: 'Coordination Flow',
-      description:
-        'This flow helps you to quickly structure your Challenge when using it for Coordination purposes',
-    },
-    tags: ['coordination'],
-    type: TemplateType.INNOVATION_FLOW,
-    innovationFlowData: {
-      profile: {
-        displayName: 'Default innovationFlow',
-        description: 'Default innovationFlow',
-      },
-      states: [
-        {
-          displayName: 'Key Insights',
-          description: '👍 Reviewing essential concepts and discoveries',
-        },
-        {
-          displayName: 'Brainstorm',
-          description: '💡 Organizing ideas and strategies',
-        },
-        {
-          displayName: 'Notes',
-          description: '📝 Capturing thoughts and observations',
-        },
-        {
-          displayName: 'To Do',
-          description: '☑️ Managing tasks and priorities',
-        },
-        {
-          displayName: 'Other',
-          description: '🌟 A flexible space for miscellaneous content',
-        },
-      ],
-    },
-  },
-];
-
-export const templatesSetDefaults: any = {
-  posts,
-  innovationFlows,
-};

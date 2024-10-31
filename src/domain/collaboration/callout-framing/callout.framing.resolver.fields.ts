@@ -1,5 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common/decorators';
+import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICalloutFraming } from './callout.framing.interface';
