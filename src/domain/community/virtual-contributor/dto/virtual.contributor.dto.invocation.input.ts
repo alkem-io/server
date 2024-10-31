@@ -1,8 +1,46 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
+export enum InvocationResultAction {
+  POST_REPLY = 'postReply',
+}
+
 @InputType()
-export class VirtualContributorQuestionInput {
+export class RoomDetails {
+  @Field(() => String, {
+    nullable: false,
+    description: 'The room to which the reply shold be posted.',
+  })
+  roomID!: string;
+  @Field(() => String, {
+    nullable: false,
+    description: 'The thread to which the reply shold be posted.',
+  })
+  threadID!: string;
+  @Field(() => String, {
+    nullable: false,
+    description: 'The communicationID for the VC',
+  })
+  communicationID!: string;
+}
+
+@InputType()
+export class ResultHandler {
+  @Field(() => InvocationResultAction, {
+    nullable: false,
+    description:
+      'The action that should be taken with the result of the invocation',
+  })
+  action!: InvocationResultAction;
+  @Field(() => RoomDetails, {
+    nullable: true,
+    description: 'The context needed for the result handler',
+  })
+  roomDetails?: RoomDetails = undefined;
+}
+
+@InputType()
+export class VirtualContributorInvocationInput {
   @Field(() => UUID, {
     nullable: false,
     description: 'Virtual Contributor to be asked.',
@@ -41,4 +79,10 @@ export class VirtualContributorQuestionInput {
       'The Virtual Contributor interaciton part of which is this question',
   })
   vcInteractionID?: string | undefined = undefined;
+
+  @Field(() => ResultHandler, {
+    nullable: false,
+    description: 'What should happen with the result of the VC invocation',
+  })
+  resultHandler!: ResultHandler;
 }

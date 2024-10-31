@@ -19,7 +19,10 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { VirtualContributorQuestionInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.question.input';
+import {
+  InvocationResultAction,
+  VirtualContributorInvocationInput,
+} from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.invocation.input';
 import { MessageService } from '../message/message.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
@@ -124,19 +127,27 @@ export class RoomServiceMentions {
       );
     }
 
-    const vcQuestion: VirtualContributorQuestionInput = {
+    const vcQuestion: VirtualContributorInvocationInput = {
       virtualContributorID: virtualContributor.id,
       question: question,
       contextSpaceID,
       userID: agentInfo.userID,
       threadID,
+      resultHandler: {
+        action: InvocationResultAction.POST_REPLY,
+        roomDetails: {
+          roomID: room.id,
+          threadID,
+          communicationID: virtualContributor.communicationID,
+        },
+      },
     };
 
     if (vcInteraction) {
       vcQuestion.vcInteractionID = vcInteraction.id;
     }
 
-    const result = await this.virtualContributorService.askQuestion(vcQuestion);
+    const result = await this.virtualContributorService.invoke(vcQuestion);
 
     // const simpleAnswer =
     //   this.messageService.convertAnswerToSimpleMessage(result);

@@ -1,5 +1,8 @@
 import { IEvent } from '@nestjs/cqrs';
-import { AiPersonaEngineAdapterQueryInput } from '@services/ai-server/ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.question.input';
+import { AiPersonaEngineAdapterInvocationInput } from '@services/ai-server/ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
 export class InvokeEngineResult implements IEvent {
-  constructor(public eventData: AiPersonaEngineAdapterQueryInput) {}
+  constructor(
+    public input: AiPersonaEngineAdapterInvocationInput,
+    public response: { answer: string }
+  ) {}
 }

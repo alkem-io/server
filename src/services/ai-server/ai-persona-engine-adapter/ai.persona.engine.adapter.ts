@@ -10,7 +10,7 @@ import {
   VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
 } from '@common/constants';
 import { Source } from '../../adapters/chat-guidance-adapter/source.type';
-import { AiPersonaEngineAdapterQueryInput } from './dto/ai.persona.engine.adapter.dto.question.input';
+import { AiPersonaEngineAdapterInvocationInput } from './dto/ai.persona.engine.adapter.dto.invocation.input';
 import { AiPersonaEngineAdapterQueryResponse } from './dto/ai.persona.engine.adapter.dto.question.response';
 import { LogContext } from '@common/enums/logging.context';
 import { AiPersonaEngineAdapterInputBase } from './dto/ai.persona.engine.adapter.dto.base';
@@ -49,7 +49,7 @@ export class AiPersonaEngineAdapter {
     private eventBus: EventBus
   ) {}
 
-  public sendQuery(eventData: AiPersonaEngineAdapterQueryInput): void {
+  public invoke(eventData: AiPersonaEngineAdapterInvocationInput): void {
     this.eventBus.publish(new InvokeEngine(eventData));
     // let responseData: AiPersonaEngineAdapterQueryResponse | undefined;
     // try {

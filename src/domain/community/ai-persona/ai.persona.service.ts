@@ -13,7 +13,10 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
+import {
+  AiServerAdapteInvocationInput,
+  InvocationResultAction,
+} from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
@@ -127,7 +130,7 @@ export class AiPersonaService {
     return await this.aiPersonaRepository.save(aiPersona);
   }
 
-  public askQuestion(
+  public invoke(
     aiPersona: IAiPersona,
     question: string,
     agentInfo: AgentInfo,
@@ -138,12 +141,15 @@ export class AiPersonaService {
       LogContext.PLATFORM
     );
 
-    const input: AiServerAdapterAskQuestionInput = {
+    const input: AiServerAdapteInvocationInput = {
       question: question,
       displayName: '',
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
+      resultHandler: {
+        action: InvocationResultAction.POST_REPLY,
+      },
     };
 
-    return this.aiServerAdapter.askQuestion(input);
+    return this.aiServerAdapter.invoke(input);
   }
 }

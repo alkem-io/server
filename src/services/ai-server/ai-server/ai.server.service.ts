@@ -16,7 +16,7 @@ import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.
 import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
 import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto';
-import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.persona.service.question.dto.input';
+import { AiPersonaServiceInvocationInput } from '../ai-persona-service/dto/ai.persona.service.invocation.dto.input';
 import {
   IngestSpace,
   SpaceIngestionPurpose,
@@ -37,6 +37,9 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { InvokeEngineResult } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
+import { InvocationResultAction } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
+import { RoomControllerService } from '@services/room-integration/room.controller.service';
 
 @Injectable()
 export class AiServerService {
@@ -49,6 +52,7 @@ export class AiServerService {
     private communicationAdapter: CommunicationAdapter,
     private subscriptionPublishService: SubscriptionPublishService,
     private config: ConfigService<AlkemioConfig, true>,
+    private roomControllerService: RoomControllerService,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
     @InjectRepository(VirtualContributor)
@@ -155,8 +159,8 @@ export class AiServerService {
     );
   }
 
-  public async askQuestion(
-    questionInput: AiPersonaServiceQuestionInput
+  public async invoke(
+    invocationInput: AiPersonaServiceInvocationInput
   ): Promise<void> {
     // the context is currently not used so no point in keeping this
     // commenting it out for now to save some work
@@ -171,7 +175,7 @@ export class AiServerService {
 
     const personaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        questionInput.aiPersonaServiceID
+        invocationInput.aiPersonaServiceID
       );
 
     const HISTORY_ENABLED_ENGINES = new Set<AiPersonaEngine>([
@@ -192,15 +196,12 @@ export class AiServerService {
       );
 
       history = await this.getLastNInteractionMessages(
-        questionInput.interactionID,
+        invocationInput.interactionID,
         historyLimit
       );
     }
 
-    return await this.aiPersonaServiceService.askQuestion(
-      questionInput,
-      history
-    );
+    return await this.aiPersonaServiceService.invoke(invocationInput, history);
   }
   async getLastNInteractionMessages(
     interactionID: string | undefined,
@@ -410,5 +411,21 @@ export class AiServerService {
     const result =
       await this.aiPersonaEngineAdapter.sendIngest(ingestAdapterInput);
     return result;
+  }
+
+  public async handleInvokeEngineResult(event: InvokeEngineResult) {
+    const resultHandler = event.input.resultHandler;
+    //TODO use some sort of a factory when adding the next handler and DO NOT extend
+    //this with elseif or switch
+    if (
+      resultHandler.action === InvocationResultAction.POST_REPLY &&
+      resultHandler.roomDetails
+    )
+      this.roomControllerService.postReply(
+        resultHandler.roomDetails.roomID,
+        resultHandler.roomDetails.threadID,
+        resultHandler.roomDetails.communicationID,
+        event.response.answer
+      );
   }
 }

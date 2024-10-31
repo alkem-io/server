@@ -14,7 +14,7 @@ export class Publisher implements IEventPublisher {
   publish<T extends object>(event: T): any {
     let routingKey = event.constructor.name;
     if (event instanceof InvokeEngine) {
-      routingKey = event.eventData.engine;
+      routingKey = event.input.engine;
     }
     this.amqpConnection.publish(
       'event-bus',

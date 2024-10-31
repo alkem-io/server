@@ -15,6 +15,7 @@ import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.int
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { RoomIntegrationModule } from '@services/room-integration/room.integration.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
     VcInteractionModule,
     CommunicationAdapterModule,
     SubscriptionServiceModule,
+    RoomIntegrationModule,
   ],
   providers: [
     AiServerResolverQueries,

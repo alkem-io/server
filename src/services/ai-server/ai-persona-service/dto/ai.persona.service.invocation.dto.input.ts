@@ -2,8 +2,46 @@ import { UUID } from '@domain/common/scalars';
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { Field, InputType } from '@nestjs/graphql';
 
+export enum InvocationResultAction {
+  POST_REPLY = 'postReply',
+}
+
 @InputType()
-export class AiPersonaServiceQuestionInput {
+export class RoomDetails {
+  @Field(() => String, {
+    nullable: false,
+    description: 'The room to which the reply shold be posted.',
+  })
+  roomID!: string;
+  @Field(() => String, {
+    nullable: false,
+    description: 'The thread to which the reply shold be posted.',
+  })
+  threadID!: string;
+  @Field(() => String, {
+    nullable: false,
+    description: 'The communicationID for the VC',
+  })
+  communicationID!: string;
+}
+
+@InputType()
+export class ResultHandler {
+  @Field(() => InvocationResultAction, {
+    nullable: false,
+    description:
+      'The action that should be taken with the result of the invocation',
+  })
+  action!: InvocationResultAction;
+  @Field(() => RoomDetails, {
+    nullable: true,
+    description: 'The context needed for the result handler',
+  })
+  roomDetails?: RoomDetails = undefined;
+}
+
+@InputType()
+export class AiPersonaServiceInvocationInput {
   @Field(() => UUID, {
     nullable: false,
     description: 'Virtual Persona Type.',
@@ -58,4 +96,9 @@ export class AiPersonaServiceQuestionInput {
   // intentially skippuing the Field decorator as we are not sure we want to expose this data
   // through the API
   externalMetadata: ExternalMetadata = {};
+  @Field(() => ResultHandler, {
+    nullable: false,
+    description: 'What should happen with the result of the VC invocation',
+  })
+  resultHandler!: ResultHandler;
 }

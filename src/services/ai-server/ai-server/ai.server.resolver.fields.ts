@@ -11,7 +11,7 @@ import { UseGuards } from '@nestjs/common';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.persona.service.question.dto.input';
+import { AiPersonaServiceInvocationInput } from '../ai-persona-service/dto/ai.persona.service.invocation.dto.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';

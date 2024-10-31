@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AiServerAdapterAskQuestionInput } from './dto/ai.server.adapter.dto.ask.question';
+import { AiServerAdapteInvocationInput } from './dto/ai.server.adapter.dto.invocation';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
@@ -62,11 +62,11 @@ export class AiServerAdapter {
     return this.aiServer.createAiPersonaService(personaServiceData);
   }
 
-  askQuestion(questionInput: AiServerAdapterAskQuestionInput): Promise<void> {
-    const vcInteractionID = questionInput.vcInteractionID;
-    return this.aiServer.askQuestion({
-      ...questionInput,
-      externalMetadata: questionInput.externalMetadata || {},
+  invoke(invocationInput: AiServerAdapteInvocationInput): Promise<void> {
+    const vcInteractionID = invocationInput.vcInteractionID;
+    return this.aiServer.invoke({
+      ...invocationInput,
+      externalMetadata: invocationInput.externalMetadata || {},
       interactionID: vcInteractionID,
     });
   }

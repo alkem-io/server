@@ -28,10 +28,10 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput } from '../ai-persona/dto';
-import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
+import { VirtualContributorInvocationInput } from './dto/virtual.contributor.dto.invocation.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
+import { AiServerAdapteInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { IAiPersona } from '../ai-persona';
@@ -371,11 +371,11 @@ export class VirtualContributorService {
     );
   }
 
-  public async askQuestion(
-    vcQuestionInput: VirtualContributorQuestionInput
+  public async invoke(
+    invocationInput: VirtualContributorInvocationInput
   ): Promise<void> {
     const virtualContributor = await this.getVirtualContributorOrFail(
-      vcQuestionInput.virtualContributorID,
+      invocationInput.virtualContributorID,
       {
         relations: {
           authorization: true,
@@ -387,34 +387,35 @@ export class VirtualContributorService {
     );
     if (!virtualContributor.agent) {
       throw new EntityNotInitializedException(
-        `Virtual Contributor Agent not initialized: ${vcQuestionInput.virtualContributorID}`,
+        `Virtual Contributor Agent not initialized: ${invocationInput.virtualContributorID}`,
         LogContext.AUTH
       );
     }
 
     this.logger.verbose?.(
-      `still need to use the context ${vcQuestionInput.contextSpaceID}, ${vcQuestionInput.userID}`,
+      `still need to use the context ${invocationInput.contextSpaceID}, ${invocationInput.userID}`,
       LogContext.AI_PERSONA_SERVICE_ENGINE
     );
 
     const vcInteraction =
       await this.vcInteractionService.getVcInteractionOrFail(
-        vcQuestionInput.vcInteractionID!
+        invocationInput.vcInteractionID!
       );
 
-    const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
+    const aiServerAdapterQuestionInput: AiServerAdapteInvocationInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
-      question: vcQuestionInput.question,
-      contextID: vcQuestionInput.contextSpaceID,
-      userID: vcQuestionInput.userID,
-      threadID: vcQuestionInput.threadID,
+      question: invocationInput.question,
+      contextID: invocationInput.contextSpaceID,
+      userID: invocationInput.userID,
+      threadID: invocationInput.threadID,
       vcInteractionID: vcInteraction.id,
       externalMetadata: vcInteraction.externalMetadata,
       description: virtualContributor.profile.description,
       displayName: virtualContributor.profile.displayName,
+      resultHandler: invocationInput.resultHandler,
     };
 
-    const response = await this.aiServerAdapter.askQuestion(
+    const response = await this.aiServerAdapter.invoke(
       aiServerAdapterQuestionInput
     );
 

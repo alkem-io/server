@@ -16,8 +16,6 @@ export class InvokeEngineResultHandler
   ) {}
 
   async handle(event: InvokeEngineResult) {
-    console.log('\n\n\n');
-    console.log(event);
-    console.log('\n\n\n');
+    this.aiServerService.handleInvokeEngineResult(event);
   }
 }

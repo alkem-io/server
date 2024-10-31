@@ -10,7 +10,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
-import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
+import { VirtualContributorInvocationInput } from './dto/virtual.contributor.dto.invocation.input';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Resolver()
@@ -63,12 +63,12 @@ export class VirtualContributorResolverQueries {
   // })
   // async askVirtualContributorQuestion(
   //   @CurrentUser() agentInfo: AgentInfo,
-  //   @Args('virtualContributorQuestionInput')
-  //   virtualContributorQuestionInput: VirtualContributorQuestionInput
+  //   @Args('VirtualContributorInvocationInput')
+  //   VirtualContributorInvocationInput: VirtualContributorInvocationInput
   // ): Promise<IMessageAnswerToQuestion> {
   //   const virtualContributor =
   //     await this.virtualContributorService.getVirtualContributorOrFail(
-  //       virtualContributorQuestionInput.virtualContributorID
+  //       VirtualContributorInvocationInput.virtualContributorID
   //     );
   //   this.authorizationService.grantAccessOrFail(
   //     agentInfo,
@@ -76,10 +76,10 @@ export class VirtualContributorResolverQueries {
   //     AuthorizationPrivilege.READ,
   //     `asking a question to virtual contributor (${virtualContributor.id}): $chatData.question`
   //   );
-  //   virtualContributorQuestionInput.userID =
-  //     virtualContributorQuestionInput.userID ?? agentInfo.userID;
+  //   VirtualContributorInvocationInput.userID =
+  //     VirtualContributorInvocationInput.userID ?? agentInfo.userID;
   //   return this.virtualContributorService.askQuestion(
-  //     virtualContributorQuestionInput
+  //     VirtualContributorInvocationInput
   //   );
   // }
 }
