@@ -1,10 +1,10 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { UserPreferenceType } from '@common/enums/user.preference.type';
 
 @InputType()
 export class UpdateUserPreferenceInput {
-  @Field(() => UUID_NAMEID_EMAIL, {
+  @Field(() => UUID, {
     description: 'ID of the User',
   })
   userID!: string;

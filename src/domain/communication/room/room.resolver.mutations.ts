@@ -188,7 +188,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        // Mentions notificaitons should be sent regardless of callout visibility per client-web#5557
+        // Mentions notifications should be sent regardless of callout visibility per client-web#5557
         this.roomServiceMentions.processNotificationMentions(
           mentions,
           callout.id,

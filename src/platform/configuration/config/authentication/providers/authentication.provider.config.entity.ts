@@ -34,7 +34,7 @@ export class AuthenticationProviderConfig
 
   @Field(() => AuthenticationProviderConfigUnion, {
     nullable: false,
-    description: 'Configuration of the authenticaiton provider',
+    description: 'Configuration of the authentication provider',
   })
   config?: typeof AuthenticationProviderConfigUnion;
 }

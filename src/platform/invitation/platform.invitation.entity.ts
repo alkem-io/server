@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { PlatformRole } from '@common/enums/platform.role';
-import { Platform } from '@platform/platfrom/platform.entity';
+import { Platform } from '@platform/platform/platform.entity';
 import {
   ENUM_LENGTH,
   MID_TEXT_LENGTH,
