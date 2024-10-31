@@ -12,6 +12,8 @@ import { TemplateAuthorizationService } from '../template/template.service.autho
 import { CreateTemplateOnTemplatesSetInput } from './dto/templates.set.dto.create.template';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TemplateService } from '../template/template.service';
+import { CreateTemplateFromCollaborationOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.collaboration';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -21,6 +23,7 @@ export class TemplatesSetResolverMutations {
     private templatesSetService: TemplatesSetService,
     private templateAuthorizationService: TemplateAuthorizationService,
     private templateService: TemplateService,
+    private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -46,6 +49,51 @@ export class TemplatesSetResolverMutations {
       templatesSet,
       templateData
     );
+    const authorizations =
+      await this.templateAuthorizationService.applyAuthorizationPolicy(
+        template,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return this.templateService.getTemplateOrFail(template.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ITemplate, {
+    description:
+      'Creates a new Template on the specified TemplatesSet using the provided Collaboration as content.',
+  })
+  async createTemplateFromCollaboration(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('templateData')
+    templateData: CreateTemplateFromCollaborationOnTemplatesSetInput
+  ): Promise<ITemplate> {
+    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
+      templateData.templatesSetID
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesSet.authorization,
+      AuthorizationPrivilege.CREATE,
+      `templatesSet create template from Collaboration, templatesSetId: ${templatesSet.id}`
+    );
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        templateData.collaborationID
+      );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      collaboration.authorization,
+      AuthorizationPrivilege.READ,
+      `templatesSet create template from Collaboration, read access, collaborationId:${collaboration.id} templatesSetId:${templatesSet.id}`
+    );
+    const template =
+      await this.templatesSetService.createTemplateFromCollaboration(
+        templatesSet,
+        templateData,
+        collaboration
+      );
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(
         template,

@@ -7,7 +7,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LookupByNameQueryResults } from './dto/lookup.by.name.query.results';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { NameID, UUID } from '@domain/common/scalars';
 import { TemplateService } from '@domain/template/template/template.service';
