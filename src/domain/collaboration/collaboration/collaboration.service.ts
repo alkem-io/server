@@ -37,7 +37,7 @@ import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { keyBy } from 'lodash';
+import { compact, keyBy } from 'lodash';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
@@ -199,9 +199,23 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
+    const calloutNameIds: string[] = compact([
+      ...collaboration.callouts?.map(callout => callout.nameID),
+    ]);
 
     const callouts: ICallout[] = [];
     for (const calloutDefault of calloutsData) {
+      if (
+        !calloutDefault.nameID ||
+        calloutNameIds.includes(calloutDefault.nameID)
+      ) {
+        calloutDefault.nameID =
+          this.namingService.createNameIdAvoidingReservedNameIDs(
+            calloutDefault.framing.profile.displayName,
+            calloutNameIds
+          );
+        calloutNameIds.push(calloutDefault.nameID);
+      }
       const callout = await this.calloutService.createCallout(
         calloutDefault,
         collaboration.tagsetTemplateSet.tagsetTemplates,
