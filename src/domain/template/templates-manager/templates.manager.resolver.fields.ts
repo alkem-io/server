@@ -16,7 +16,7 @@ export class TemplatesManagerResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('templateDefaults', () => [ITemplateDefault], {
     nullable: false,
-    description: 'The TemplateDefaultss in this TemplatesManager.',
+    description: 'The TemplateDefaults in this TemplatesManager.',
   })
   async templateDefaults(
     @Parent() templatesManager: ITemplatesManager
@@ -29,7 +29,7 @@ export class TemplatesManagerResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,
-    description: 'The templatesSet in use by this InnovationPack',
+    description: 'The templatesSet in use by this TemplatesManager.',
   })
   @UseGuards(GraphqlGuard)
   async templatesSet(

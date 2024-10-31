@@ -43,7 +43,7 @@ export class TemplateService {
     private communityGuidelinesService: CommunityGuidelinesService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
-    private collaborationServerice: CollaborationService,
+    private collaborationService: CollaborationService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @InjectEntityManager('default')
@@ -90,7 +90,7 @@ export class TemplateService {
       case TemplateType.COMMUNITY_GUIDELINES: {
         if (!templateData.communityGuidelinesData) {
           throw new ValidationException(
-            `Community Guidelines Template requiresthe community guidelines input: ${JSON.stringify(templateData)}`,
+            `Community Guidelines Template requires the community guidelines input: ${JSON.stringify(templateData)}`,
             LogContext.TEMPLATES
           );
         }
@@ -144,12 +144,12 @@ export class TemplateService {
           };
         }
         // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
-        collaborationData.calloutsData.forEach(async calloutData => {
+        collaborationData.calloutsData.forEach(calloutData => {
           calloutData.isTemplate = true;
           calloutData.enableComments = false;
         });
         template.collaboration =
-          await this.collaborationServerice.createCollaboration(
+          await this.collaborationService.createCollaboration(
             collaborationData!,
             storageAggregator
           );
@@ -159,7 +159,7 @@ export class TemplateService {
       case TemplateType.WHITEBOARD: {
         if (!templateData.whiteboard) {
           throw new ValidationException(
-            `Whiteboard Template requires whitebboard input: ${JSON.stringify(templateData)}`,
+            `Whiteboard Template requires whiteboard input: ${JSON.stringify(templateData)}`,
             LogContext.TEMPLATES
           );
         }
@@ -294,7 +294,7 @@ export class TemplateService {
       );
     }
     switch (template.type) {
-      case TemplateType.COMMUNITY_GUIDELINES:
+      case TemplateType.COMMUNITY_GUIDELINES: {
         if (!template.communityGuidelines) {
           throw new RelationshipNotFoundException(
             `Unable to load Guidelines on Template: ${templateInput.id} `,
@@ -305,7 +305,8 @@ export class TemplateService {
           template.communityGuidelines.id
         );
         break;
-      case TemplateType.CALLOUT:
+      }
+      case TemplateType.CALLOUT: {
         if (!template.callout) {
           throw new RelationshipNotFoundException(
             `Unable to load Callout on Template: ${templateInput.id} `,
@@ -314,7 +315,8 @@ export class TemplateService {
         }
         await this.calloutService.deleteCallout(template.callout.id);
         break;
-      case TemplateType.WHITEBOARD:
+      }
+      case TemplateType.WHITEBOARD: {
         if (!template.whiteboard) {
           throw new RelationshipNotFoundException(
             `Unable to load Whiteboard on Template: ${templateInput.id} `,
@@ -323,18 +325,20 @@ export class TemplateService {
         }
         await this.whiteboardService.deleteWhiteboard(template.whiteboard.id);
         break;
-      case TemplateType.COLLABORATION:
+      }
+      case TemplateType.COLLABORATION: {
         if (!template.collaboration) {
           throw new RelationshipNotFoundException(
             `Unable to load Collaboration on Template: ${templateInput.id} `,
             LogContext.TEMPLATES
           );
         }
-        await this.collaborationServerice.deleteCollaboration(
+        await this.collaborationService.deleteCollaboration(
           template.collaboration.id
         );
         break;
-      case TemplateType.INNOVATION_FLOW:
+      }
+      case TemplateType.INNOVATION_FLOW: {
         if (!template.innovationFlow) {
           throw new RelationshipNotFoundException(
             `Unable to load InnovationFlow on Template: ${templateInput.id} `,
@@ -345,14 +349,17 @@ export class TemplateService {
           template.innovationFlow.id
         );
         break;
-      case TemplateType.POST:
+      }
+      case TemplateType.POST: {
         // Nothing to do
         break;
-      default:
+      }
+      default: {
         throw new EntityNotFoundException(
           `Template type not recognized '${template.type}' when deleting template: ${template.id}`,
           LogContext.TEMPLATES
         );
+      }
     }
 
     const templateId: string = template.id;

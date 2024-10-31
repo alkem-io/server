@@ -58,12 +58,12 @@ export class TemplatesManagerAuthorizationService {
     updatedAuthorizations.push(templatesManager.authorization);
 
     for (const templateDefault of templatesManager.templateDefaults) {
-      const templateDefaultAuthorizations =
+      const templateDefaultAuthorization =
         await this.templateDefaultAuthorizationService.applyAuthorizationPolicy(
           templateDefault,
           parentAuthorization
         );
-      updatedAuthorizations.push(templateDefaultAuthorizations);
+      updatedAuthorizations.push(templateDefaultAuthorization);
     }
 
     const templatesSetUpdatedAuthorizations =

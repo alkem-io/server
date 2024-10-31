@@ -55,7 +55,7 @@ export class TemplatesManagerService {
     templatesManagerID: string,
     options?: FindOneOptions<TemplatesManager>
   ): Promise<ITemplatesManager | never> {
-    const templatesManager = await TemplatesManager.findOne({
+    const templatesManager = await this.templatesManagerRepository.findOne({
       where: { id: templatesManagerID },
       ...options,
     });

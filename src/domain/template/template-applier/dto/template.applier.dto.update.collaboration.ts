@@ -1,5 +1,4 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional } from 'class-validator';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @InputType()
@@ -7,7 +6,6 @@ export class UpdateCollaborationFromTemplateInput {
   @Field(() => UUID, {
     description: 'ID of the Collaboration to be updated',
   })
-  @IsOptional()
   collaborationID!: string;
 
   @Field(() => UUID, {

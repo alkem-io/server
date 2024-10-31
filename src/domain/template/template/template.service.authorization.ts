@@ -86,7 +86,7 @@ export class TemplateAuthorizationService {
     updatedAuthorizations.push(...profileAuthorizations);
 
     switch (template.type) {
-      case TemplateType.COMMUNITY_GUIDELINES:
+      case TemplateType.COMMUNITY_GUIDELINES: {
         if (!template.communityGuidelines) {
           throw new RelationshipNotFoundException(
             `Unable to load Community Guidelines on Template of that type: ${template.id} `,
@@ -100,7 +100,8 @@ export class TemplateAuthorizationService {
           );
         updatedAuthorizations.push(...guidelineAuthorizations);
         break;
-      case TemplateType.CALLOUT:
+      }
+      case TemplateType.CALLOUT: {
         if (!template.callout) {
           throw new RelationshipNotFoundException(
             `Unable to load Callout on Template of that type: ${template.id} `,
@@ -114,7 +115,8 @@ export class TemplateAuthorizationService {
           );
         updatedAuthorizations.push(...calloutAuthorizations);
         break;
-      case TemplateType.WHITEBOARD:
+      }
+      case TemplateType.WHITEBOARD: {
         if (!template.whiteboard) {
           throw new RelationshipNotFoundException(
             `Unable to load Whiteboard on Template of that type: ${template.id} `,
@@ -128,7 +130,8 @@ export class TemplateAuthorizationService {
           );
         updatedAuthorizations.push(...whiteboardAuthorizations);
         break;
-      case TemplateType.COLLABORATION:
+      }
+      case TemplateType.COLLABORATION: {
         if (!template.collaboration) {
           throw new RelationshipNotFoundException(
             `Unable to load Collaboration on Template of that type: ${template.id} `,
@@ -142,7 +145,8 @@ export class TemplateAuthorizationService {
           );
         updatedAuthorizations.push(...collaborationAuthorizations);
         break;
-      case TemplateType.INNOVATION_FLOW:
+      }
+      case TemplateType.INNOVATION_FLOW: {
         if (!template.innovationFlow) {
           throw new RelationshipNotFoundException(
             `Unable to load InnovationFlow on Template of that type: ${template.id} `,
@@ -156,13 +160,16 @@ export class TemplateAuthorizationService {
           );
         updatedAuthorizations.push(...innovationFlowAuthorizations);
         break;
-      case TemplateType.POST:
+      }
+      case TemplateType.POST: {
         break;
-      default:
+      }
+      default: {
         throw new EntityNotFoundException(
           `Unable to reset auth on template of type: ${template.type}`,
           LogContext.TEMPLATES
         );
+      }
     }
 
     if (template.type == TemplateType.INNOVATION_FLOW) {

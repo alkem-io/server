@@ -76,7 +76,7 @@ export class TemplatesSetResolverMutations {
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
-      `templatesSet create template from Collaboration: templatesSetId:'${templatesSet.id}'`
+      `templatesSet create template from Collaboration, templatesSetId: ${templatesSet.id}`
     );
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
@@ -86,7 +86,7 @@ export class TemplatesSetResolverMutations {
       agentInfo,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
-      `templatesSet create template from Collaboration, read access: collaborationId:'${collaboration.id}' templatesSetId:'${templatesSet.id}'`
+      `templatesSet create template from Collaboration, read access, collaborationId:${collaboration.id} templatesSetId:${templatesSet.id}`
     );
     const template =
       await this.templatesSetService.createTemplateFromCollaboration(
