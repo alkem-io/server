@@ -692,6 +692,12 @@ export class RoleSetResolverMutations {
     let application = await this.applicationService.getApplicationOrFail(
       eventData.applicationID
     );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      application.authorization,
+      AuthorizationPrivilege.COMMUNITY_APPLY_ACCEPT,
+      `event on application: ${application.id}`
+    );
 
     // Send the event, translated if needed
     this.logger.verbose?.(
