@@ -100,6 +100,7 @@
     "jwt-decode": "^3.1.2",
     "lodash": "^4.17.21",
     "logform": "^2.6.1",
+    "mime-detect": "^1.2.0",
     "module-alias": "^2.2.3",
     "mysql2": "^3.10.3",
     "nest-winston": "^1.9.7",

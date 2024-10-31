@@ -271,12 +271,11 @@ export class WhiteboardService {
             message: `Skipping failed to upload document to profile: ${e?.message}`,
             fileUrl: file.url,
             profileId: profile.id,
+            originalException: e,
           },
           e?.stack,
           LogContext.WHITEBOARD
         );
-        // delete the file from the content
-        delete whiteboardContent.files[file.id];
         // skip this file
         continue;
       }
