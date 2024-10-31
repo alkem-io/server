@@ -756,4 +756,71 @@ export class CollaborationService {
 
     return calloutsInOrder;
   }
+
+  /**
+   * Move callouts that are not in valid groups or flowStates to the default group & first flowState
+   * @param defaultGroupName
+   * @param defaultFlowStateName
+   * @param callouts
+   */
+  public moveCalloutsToCorrectGroupAndState(
+    defaultGroupName: string | undefined,
+    defaultFlowStateName: string | undefined,
+    validGroupNames: string[],
+    validFlowStateNames: string[],
+    callouts: {
+      framing: {
+        profile: {
+          tagsets?: {
+            name: string;
+            type?: TagsetType;
+            tags?: string[];
+          }[];
+        };
+      };
+    }[]
+  ): void {
+    for (const callout of callouts) {
+      if (!callout.framing.profile.tagsets) {
+        callout.framing.profile.tagsets = [];
+      }
+      let calloutGroupTagset = callout.framing.profile.tagsets?.find(
+        tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
+      );
+      let flowStateTagset = callout.framing.profile.tagsets?.find(
+        tagset => tagset.name === TagsetReservedName.FLOW_STATE
+      );
+
+      if (defaultGroupName) {
+        if (!calloutGroupTagset) {
+          calloutGroupTagset = {
+            name: TagsetReservedName.CALLOUT_GROUP,
+            type: TagsetType.SELECT_ONE,
+            tags: [defaultGroupName],
+          };
+          callout.framing.profile.tagsets.push(calloutGroupTagset);
+        } else {
+          const calloutGroup = calloutGroupTagset.tags?.[0];
+          if (!calloutGroup || !validGroupNames.includes(calloutGroup)) {
+            calloutGroupTagset.tags = [defaultGroupName];
+          }
+        }
+      }
+      if (defaultFlowStateName) {
+        if (!flowStateTagset) {
+          flowStateTagset = {
+            name: TagsetReservedName.FLOW_STATE,
+            type: TagsetType.SELECT_ONE,
+            tags: [defaultFlowStateName],
+          };
+          callout.framing.profile.tagsets.push(flowStateTagset);
+        } else {
+          const flowState = flowStateTagset.tags?.[0];
+          if (!flowState || !validFlowStateNames.includes(flowState)) {
+            flowStateTagset.tags = [defaultFlowStateName];
+          }
+        }
+      }
+    }
+  }
 }

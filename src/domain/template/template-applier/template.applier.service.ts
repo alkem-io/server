@@ -12,6 +12,7 @@ import { CalloutAuthorizationService } from '@domain/collaboration/callout/callo
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class TemplateApplierService {
@@ -75,6 +76,29 @@ export class TemplateApplierService {
         userID
       );
       targetCollaboration.callouts?.push(...newCallouts);
+
+      const defaultGroupName =
+        targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
+          tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
+        )?.defaultSelectedValue;
+      const validGroupNames =
+        targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
+          tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
+        )?.allowedValues;
+      const defaultFlowState = this.innovationFlowService.getStates(
+        targetCollaboration.innovationFlow
+      )?.[0].displayName;
+      const validFlowStates = this.innovationFlowService
+        .getStates(targetCollaboration.innovationFlow)
+        ?.map(state => state.displayName);
+
+      this.collaborationService.moveCalloutsToCorrectGroupAndState(
+        defaultGroupName,
+        defaultFlowState,
+        validGroupNames ?? [],
+        validFlowStates ?? [],
+        targetCollaboration.callouts
+      );
 
       const authorizations: IAuthorizationPolicy[] = [];
 

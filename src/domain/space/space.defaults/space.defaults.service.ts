@@ -24,6 +24,7 @@ import { PlatformService } from '@platform/platform/platform.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { ValidationException } from '@common/exceptions';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -31,6 +32,7 @@ export class SpaceDefaultsService {
     private templateService: TemplateService,
     private inputCreatorService: InputCreatorService,
     private platformService: PlatformService,
+    private collaborationService: CollaborationService,
     private templatesManagerService: TemplatesManagerService
   ) {}
 
@@ -95,17 +97,28 @@ export class SpaceDefaultsService {
         );
       }
     }
-    if (!collaborationData.calloutsData && collaborationTemplateInput) {
-      collaborationData.calloutsData = collaborationTemplateInput?.calloutsData;
+    if (collaborationTemplateInput && collaborationData.addCallouts) {
+      if (!collaborationData.calloutsData) {
+        collaborationData.calloutsData =
+          collaborationTemplateInput?.calloutsData;
+      } else if (collaborationTemplateInput?.calloutsData) {
+        // The request includes the calloutsData, so merge template callouts with request callouts
+        collaborationData.calloutsData.push(
+          ...collaborationTemplateInput.calloutsData
+        );
+      }
+    } else {
+      collaborationData.calloutsData = [];
     }
+
     if (!collaborationData.calloutGroups && collaborationTemplateInput) {
       collaborationData.calloutGroups =
         collaborationTemplateInput?.calloutGroups;
     }
 
     // Add in tutorials if needed
-    const addTutorialCallouts = collaborationData.addTutorialCallouts;
-    if (addTutorialCallouts === undefined || addTutorialCallouts) {
+
+    if (collaborationData.addTutorialCallouts) {
       const tutorialsTemplate =
         await this.templatesManagerService.getTemplateFromTemplateDefault(
           platformTemplatesManager.id,
@@ -129,6 +142,27 @@ export class SpaceDefaultsService {
       collaborationData.defaultCalloutGroupName =
         collaborationTemplateInput.defaultCalloutGroupName;
     }
+
+    // Move callouts that are not in valid groups or flowStates to the default group & first flowState
+    const defaultGroupName =
+      collaborationTemplateInput?.defaultCalloutGroupName;
+    const defaultFlowStateName =
+      collaborationData.innovationFlowData?.states?.[0]?.displayName;
+    const validGroupNames = collaborationData.calloutGroups?.map(
+      group => group.displayName
+    );
+    const validFlowStateNames =
+      collaborationData.innovationFlowData?.states?.map(
+        state => state.displayName
+      );
+
+    this.collaborationService.moveCalloutsToCorrectGroupAndState(
+      defaultGroupName,
+      defaultFlowStateName,
+      validGroupNames ?? [],
+      validFlowStateNames ?? [],
+      collaborationData.calloutsData ?? []
+    );
 
     return collaborationData;
   }

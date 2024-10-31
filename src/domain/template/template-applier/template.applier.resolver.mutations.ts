@@ -38,7 +38,13 @@ export class TemplateApplierResolverMutations {
         {
           relations: {
             tagsetTemplateSet: true,
-            callouts: true,
+            callouts: {
+              framing: {
+                profile: {
+                  tagsets: true,
+                },
+              },
+            },
             innovationFlow: {
               profile: {
                 tagsets: true,
