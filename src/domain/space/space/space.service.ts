@@ -14,7 +14,14 @@ import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, In, Not, Repository } from 'typeorm';
+import {
+  DeepPartial,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Not,
+  Repository,
+} from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
@@ -763,6 +770,21 @@ export class SpaceService {
     return await this.updateSettings(space, settingsData.settings);
   }
 
+  /**
+   * Should the authorization policy be updated based on the update settings.
+   * Some setting do not require an update to the authorization policy.
+   * @param settingsData
+   */
+  public shouldUpdateAuthorizationPolicy(
+    settingsData: UpdateSpaceSettingsEntityInput
+  ): boolean {
+    return !hasOnlyAllowedFields<UpdateSpaceSettingsEntityInput>(settingsData, {
+      collaboration: {
+        allowEventsFromSubspaces: true,
+      },
+    });
+  }
+
   async getSubspaces(
     space: ISpace,
     args?: LimitAndShuffleIdsQueryArgs
@@ -1422,4 +1444,27 @@ export class SpaceService {
 
     return metrics;
   }
+}
+// todo: better typing
+/**
+ * Checks if an object contains only the allowed fields.
+ *
+ * @template T - The type of the object and allowed fields.
+ * @param {T} obj - The object to check.
+ * @param {DeepPartial<T>} allowedFields - The allowed fields, which can be a partial and nested structure.
+ * @returns {boolean} - Returns true if the object contains only the allowed fields, otherwise false.
+ */
+function hasOnlyAllowedFields<T extends object>(
+  obj: T,
+  allowedFields: DeepPartial<T>
+): boolean {
+  return Object.keys(obj).every(key => {
+    const objValue = (obj as any)[key];
+    const allowedValue = (allowedFields as any)[key];
+
+    if (typeof objValue === 'object' && objValue !== null) {
+      return hasOnlyAllowedFields(objValue, allowedValue || {});
+    }
+    return key in allowedFields;
+  });
 }
