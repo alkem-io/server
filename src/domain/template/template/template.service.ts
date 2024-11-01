@@ -284,6 +284,7 @@ export class TemplateService {
         callout: true,
         whiteboard: true,
         innovationFlow: true,
+        collaboration: true,
       },
     });
 
