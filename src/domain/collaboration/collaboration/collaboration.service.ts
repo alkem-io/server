@@ -153,6 +153,12 @@ export class CollaborationService {
         storageAggregator
       );
 
+    this.moveCalloutsToCorrectGroupAndState(
+      groupTagsetTemplateInput.allowedValues,
+      statesTagsetTemplate.allowedValues,
+      collaboration.callouts
+    );
+
     return collaboration;
   }
 
@@ -780,13 +786,9 @@ export class CollaborationService {
 
   /**
    * Move callouts that are not in valid groups or flowStates to the default group & first flowState
-   * @param defaultGroupName
-   * @param defaultFlowStateName
    * @param callouts
    */
   public moveCalloutsToCorrectGroupAndState(
-    defaultGroupName: string | undefined,
-    defaultFlowStateName: string | undefined,
     validGroupNames: string[],
     validFlowStateNames: string[],
     callouts: {
@@ -801,6 +803,9 @@ export class CollaborationService {
       };
     }[]
   ): void {
+    const defaultGroupName: string | undefined = validGroupNames?.[0];
+    const defaultFlowStateName: string | undefined = validFlowStateNames?.[0];
+
     for (const callout of callouts) {
       if (!callout.framing.profile.tagsets) {
         callout.framing.profile.tagsets = [];

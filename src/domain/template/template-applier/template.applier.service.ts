@@ -77,24 +77,15 @@ export class TemplateApplierService {
       );
       targetCollaboration.callouts?.push(...newCallouts);
 
-      const defaultGroupName =
-        targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
-          tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
-        )?.defaultSelectedValue;
       const validGroupNames =
         targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
           tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
         )?.allowedValues;
-      const defaultFlowState = this.innovationFlowService.getStates(
-        targetCollaboration.innovationFlow
-      )?.[0].displayName;
       const validFlowStates = this.innovationFlowService
         .getStates(targetCollaboration.innovationFlow)
         ?.map(state => state.displayName);
 
       this.collaborationService.moveCalloutsToCorrectGroupAndState(
-        defaultGroupName,
-        defaultFlowState,
         validGroupNames ?? [],
         validFlowStates ?? [],
         targetCollaboration.callouts
