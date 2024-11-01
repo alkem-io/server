@@ -31,6 +31,7 @@ import { AccountModule } from '@domain/space/account/account.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     ContextModule,
     TemplateModule,
     TemplatesSetModule,
+    TemplatesManagerModule,
     WhiteboardModule,
     InnovationFlowModule,
     InnovationPackModule,

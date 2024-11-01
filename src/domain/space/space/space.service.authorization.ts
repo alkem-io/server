@@ -35,9 +35,9 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
+import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
@@ -51,7 +51,7 @@ export class SpaceAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
-    private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
+    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceService: SpaceService,
     private spaceSettingsService: SpaceSettingsService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -78,8 +78,7 @@ export class SpaceAuthorizationService {
         profile: true,
         storageAggregator: true,
         subspaces: true,
-        library: true,
-        defaults: true,
+        templatesManager: true,
       },
     });
     if (
@@ -207,7 +206,6 @@ export class SpaceAuthorizationService {
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
       levelZeroSpaceAgent,
-      space.community.roleSet,
       spaceSettings,
       spaceMembershipAllowed
     );
@@ -247,7 +245,6 @@ export class SpaceAuthorizationService {
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
     levelZeroSpaceAgent: IAgent,
-    roleSet: IRoleSet,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicy[]> {
@@ -308,26 +305,19 @@ export class SpaceAuthorizationService {
 
     // Level zero space only entities
     if (space.level === SpaceLevel.SPACE) {
-      if (!space.library || !space.defaults) {
+      if (!space.templatesManager) {
         throw new RelationshipNotFoundException(
-          `Unable to load space level zero entities on auth reset for space base ${space.id} `,
+          `Unable to load templatesManager on level zero space for auth reset ${space.id} `,
           LogContext.SPACES
         );
       }
 
-      const libraryAuthorizations =
-        await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
-          space.library,
+      const templatesManagerAuthorizations =
+        await this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
+          space.templatesManager.id,
           space.authorization
         );
-      updatedAuthorizations.push(...libraryAuthorizations);
-
-      const defaultsAuthorizations =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          space.defaults.authorization,
-          space.authorization
-        );
-      updatedAuthorizations.push(defaultsAuthorizations);
+      updatedAuthorizations.push(...templatesManagerAuthorizations);
     }
 
     /// For fields that always should be available

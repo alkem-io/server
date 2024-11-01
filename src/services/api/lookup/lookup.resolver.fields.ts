@@ -17,7 +17,7 @@ import { ContextService } from '@domain/context/context/context.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IProfile } from '@domain/common/profile';
 import { ICallout } from '@domain/collaboration/callout';
@@ -52,7 +52,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
@@ -63,6 +63,8 @@ import { TemplatesSetService } from '@domain/template/templates-set/templates.se
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -88,6 +90,7 @@ export class LookupResolverFields {
     private documentService: DocumentService,
     private templateService: TemplateService,
     private templatesSetService: TemplatesSetService,
+    private templatesManagerService: TemplatesManagerService,
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
@@ -661,6 +664,27 @@ export class LookupResolverFields {
     );
 
     return templatesSet;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ITemplatesManager, {
+    nullable: true,
+    description: 'Lookup the specified TemplatesManager',
+  })
+  async templatesManager(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ITemplatesManager> {
+    const templatesManager =
+      await this.templatesManagerService.getTemplatesManagerOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesManager.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup TemplatesManager: ${templatesManager.id}`
+    );
+
+    return templatesManager;
   }
 
   @UseGuards(GraphqlGuard)

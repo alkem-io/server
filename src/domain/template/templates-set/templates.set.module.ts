@@ -10,6 +10,8 @@ import { TemplatesSetService } from './templates.set.service';
 import { TemplatesSetAuthorizationService } from './templates.set.service.authorization';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     TemplateModule,
     NamingModule,
     StorageAggregatorResolverModule,
+    CollaborationModule,
+    InputCreatorModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],
   providers: [
