@@ -241,6 +241,8 @@ export class TemplateService {
       },
       select: {
         id: true,
+        type: true,
+        postDefaultDescription: templateInput.type === TemplateType.POST,
         whiteboard:
           templateInput.type === TemplateType.WHITEBOARD
             ? {
@@ -267,10 +269,8 @@ export class TemplateService {
       template.whiteboard &&
       templateData.whiteboardContent
     ) {
-      await this.whiteboardService.updateWhiteboardContent(
-        template.whiteboard.id,
-        templateData.whiteboardContent
-      );
+      // If we don't update the content here, the whiteboard will is overwritten with the old content
+      template.whiteboard.content = templateData.whiteboardContent;
     }
 
     return await this.templateRepository.save(template);
