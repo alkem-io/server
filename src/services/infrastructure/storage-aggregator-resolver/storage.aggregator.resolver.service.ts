@@ -22,7 +22,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Account } from '@domain/space/account/account.entity';
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from '@domain/community/user/user.entity';
-import { Platform } from '@platform/platfrom/platform.entity';
+import { Platform } from '@platform/platform/platform.entity';
 import { TemplatesManager } from '@domain/template/templates-manager';
 
 @Injectable()
@@ -205,7 +205,7 @@ export class StorageAggregatorResolverService {
     if (!isUUID(templatesSetId)) {
       throw new InvalidUUID(
         'Invalid UUID provided to find the StorageAggregator of a templateSet',
-        LogContext.COMMUNITY,
+        LogContext.STORAGE_AGGREGATOR,
         { provided: templatesSetId }
       );
     }
@@ -248,7 +248,7 @@ export class StorageAggregatorResolverService {
       );
     }
 
-    throw new NotImplementedException(
+    throw new EntityNotFoundException(
       `Unable to retrieve storage aggregator to use for TemplatesSet ${templatesSetId}`,
       LogContext.STORAGE_AGGREGATOR
     );
@@ -284,7 +284,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!space || !space.storageAggregator) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve storage aggregator for collaborationID: ${collaborationID}`,
         LogContext.STORAGE_AGGREGATOR
       );
@@ -328,7 +328,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!space || !space.storageAggregator) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve storage aggregator for communityID: ${communityID}`,
         LogContext.STORAGE_AGGREGATOR
       );
@@ -360,7 +360,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!space || !space.storageAggregator) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve storage aggregator for calloutID: ${calloutId} `,
         LogContext.STORAGE_AGGREGATOR
       );

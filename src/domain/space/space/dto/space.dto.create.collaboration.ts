@@ -11,6 +11,13 @@ export class CreateCollaborationOnSpaceInput extends CreateCollaborationInput {
   })
   addTutorialCallouts? = false;
 
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Add callouts from the template to the Collaboration; defaults to true.',
+  })
+  addCallouts? = true;
+
   @Field(() => UUID, {
     nullable: true,
     description: 'The Template to use for instantiating the Collaboration.',

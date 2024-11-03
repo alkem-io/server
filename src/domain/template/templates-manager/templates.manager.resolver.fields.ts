@@ -1,5 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
+import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { TemplatesManagerService } from './templates.manager.service';
 import { ITemplatesManager } from './templates.manager.interface';
@@ -16,7 +16,7 @@ export class TemplatesManagerResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('templateDefaults', () => [ITemplateDefault], {
     nullable: false,
-    description: 'The TemplateDefaultss in this TemplatesManager.',
+    description: 'The TemplateDefaults in this TemplatesManager.',
   })
   async templateDefaults(
     @Parent() templatesManager: ITemplatesManager
@@ -29,7 +29,7 @@ export class TemplatesManagerResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,
-    description: 'The templatesSet in use by this InnovationPack',
+    description: 'The templatesSet in use by this TemplatesManager.',
   })
   @UseGuards(GraphqlGuard)
   async templatesSet(

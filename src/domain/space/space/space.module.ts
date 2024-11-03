@@ -59,6 +59,9 @@ import { SpaceLicenseService } from './space.service.license';
     NameReporterModule,
     SpaceDefaultsModule,
     LicenseModule,
+    RoleSetModule,
+    NameReporterModule,
+    SpaceDefaultsModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [

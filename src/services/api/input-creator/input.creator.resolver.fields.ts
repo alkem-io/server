@@ -12,7 +12,7 @@ import { CommunityGuidelinesService } from '@domain/community/community-guidelin
 import { InputCreatorService } from './input.creator.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';

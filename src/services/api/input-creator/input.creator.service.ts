@@ -15,7 +15,7 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
+import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.service';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';

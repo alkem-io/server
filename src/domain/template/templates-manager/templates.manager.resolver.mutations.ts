@@ -27,7 +27,7 @@ export class TemplatesManagerResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplateDefault, {
-    description: 'Updates the specified SpaceDefaults.',
+    description: 'Updates the specified Template Defaults.',
   })
   async updateTemplateDefault(
     @CurrentUser() agentInfo: AgentInfo,

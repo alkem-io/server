@@ -2,6 +2,7 @@ import { VERY_LONG_TEXT_LENGTH } from '@common/constants/entity.field.length.con
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
@@ -25,4 +26,11 @@ export class UpdateTemplateInput extends UpdateBaseAlkemioInput {
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   postDefaultDescription!: string;
+
+  @Field(() => WhiteboardContent, {
+    nullable: true,
+    description: 'The new content to be used.',
+  })
+  @IsOptional()
+  whiteboardContent?: string;
 }

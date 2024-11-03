@@ -1,5 +1,5 @@
 import { Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
+import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ITemplate } from '../template/template.interface';
 import { TemplatesSetService } from './templates.set.service';

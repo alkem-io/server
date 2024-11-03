@@ -17,7 +17,7 @@ import { ContextService } from '@domain/context/context/context.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IProfile } from '@domain/common/profile';
 import { ICallout } from '@domain/collaboration/callout';
@@ -52,7 +52,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
@@ -62,6 +62,7 @@ import { ITemplatesSet } from '@domain/template/templates-set/templates.set.inte
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 
@@ -200,6 +201,25 @@ export class LookupResolverFields {
       `lookup VirtualContributor: ${virtualContributor.id}`
     );
     return virtualContributor;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IUser, {
+    nullable: true,
+    description: 'A particular User',
+  })
+  async user(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
+  ): Promise<IUser> {
+    const user = await this.userService.getUserOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      user.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup User: ${user.id}`
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)

@@ -21,6 +21,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Profile } from '@domain/common/profile';
 import { TemplatesManager } from '@domain/template/templates-manager';
 import { License } from '@domain/common/license/license.entity';
+import { SpaceLevel } from '@common/enums/space.level';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
   @OneToOne(() => Profile, {
@@ -102,7 +103,7 @@ export class Space extends NameableEntity implements ISpace {
   levelZeroSpaceID!: string;
 
   @Column('int', { nullable: false })
-  level!: number;
+  level!: SpaceLevel;
 
   @Column('varchar', {
     length: ENUM_LENGTH,

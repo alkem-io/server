@@ -20,10 +20,11 @@ import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.c
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { TemplateService } from '@domain/template/template/template.service';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
-import { PlatformService } from '@platform/platfrom/platform.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { ValidationException } from '@common/exceptions';
+import { PlatformService } from '@platform/platform/platform.service';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -31,20 +32,21 @@ export class SpaceDefaultsService {
     private templateService: TemplateService,
     private inputCreatorService: InputCreatorService,
     private platformService: PlatformService,
+    private collaborationService: CollaborationService,
     private templatesManagerService: TemplatesManagerService
   ) {}
 
   public async createCollaborationInput(
     collaborationData: CreateCollaborationOnSpaceInput,
     spaceType: SpaceType
-  ): Promise<CreateCollaborationInput> {
+  ): Promise<CreateCollaborationOnSpaceInput> {
     const platformTemplatesManager =
       await this.platformService.getTemplatesManagerOrFail();
     let templateID = collaborationData.collaborationTemplateID;
     if (!templateID) {
       switch (spaceType) {
         case SpaceType.CHALLENGE:
-        case SpaceType.OPPORTUNITY:
+        case SpaceType.OPPORTUNITY: {
           const subspaceTemplate =
             await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
@@ -52,7 +54,8 @@ export class SpaceDefaultsService {
             );
           templateID = subspaceTemplate.id;
           break;
-        case SpaceType.SPACE:
+        }
+        case SpaceType.SPACE: {
           const levelZeroTemplate =
             await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
@@ -60,7 +63,8 @@ export class SpaceDefaultsService {
             );
           templateID = levelZeroTemplate.id;
           break;
-        case SpaceType.KNOWLEDGE:
+        }
+        case SpaceType.KNOWLEDGE: {
           const knowledgeTemplate =
             await this.templatesManagerService.getTemplateFromTemplateDefault(
               platformTemplatesManager.id,
@@ -68,6 +72,7 @@ export class SpaceDefaultsService {
             );
           templateID = knowledgeTemplate.id;
           break;
+        }
       }
     }
     let collaborationTemplateInput: CreateCollaborationInput | undefined =
@@ -92,17 +97,28 @@ export class SpaceDefaultsService {
         );
       }
     }
-    if (!collaborationData.calloutsData && collaborationTemplateInput) {
-      collaborationData.calloutsData = collaborationTemplateInput?.calloutsData;
+    if (collaborationTemplateInput && collaborationData.addCallouts) {
+      if (!collaborationData.calloutsData) {
+        collaborationData.calloutsData =
+          collaborationTemplateInput?.calloutsData;
+      } else if (collaborationTemplateInput?.calloutsData) {
+        // The request includes the calloutsData, so merge template callouts with request callouts
+        collaborationData.calloutsData.push(
+          ...collaborationTemplateInput.calloutsData
+        );
+      }
+    } else {
+      collaborationData.calloutsData = [];
     }
+
     if (!collaborationData.calloutGroups && collaborationTemplateInput) {
       collaborationData.calloutGroups =
         collaborationTemplateInput?.calloutGroups;
     }
 
     // Add in tutorials if needed
-    const addTutorialCallouts = collaborationData.addTutorialCallouts;
-    if (addTutorialCallouts === undefined || addTutorialCallouts) {
+
+    if (collaborationData.addTutorialCallouts) {
       const tutorialsTemplate =
         await this.templatesManagerService.getTemplateFromTemplateDefault(
           platformTemplatesManager.id,
@@ -126,6 +142,27 @@ export class SpaceDefaultsService {
       collaborationData.defaultCalloutGroupName =
         collaborationTemplateInput.defaultCalloutGroupName;
     }
+
+    // Move callouts that are not in valid groups or flowStates to the default group & first flowState
+    const defaultGroupName =
+      collaborationTemplateInput?.defaultCalloutGroupName;
+    const defaultFlowStateName =
+      collaborationData.innovationFlowData?.states?.[0]?.displayName;
+    const validGroupNames = collaborationData.calloutGroups?.map(
+      group => group.displayName
+    );
+    const validFlowStateNames =
+      collaborationData.innovationFlowData?.states?.map(
+        state => state.displayName
+      );
+
+    this.collaborationService.moveCalloutsToCorrectGroupAndState(
+      defaultGroupName,
+      defaultFlowStateName,
+      validGroupNames ?? [],
+      validFlowStateNames ?? [],
+      collaborationData.calloutsData ?? []
+    );
 
     return collaborationData;
   }

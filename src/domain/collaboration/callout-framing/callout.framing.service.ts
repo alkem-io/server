@@ -108,18 +108,12 @@ export class CalloutFramingService {
       );
     }
 
-    if (calloutFraming.whiteboard && calloutFramingData.whiteboard) {
-      calloutFraming.whiteboard = await this.whiteboardService.updateWhiteboard(
-        calloutFraming.whiteboard,
-        calloutFramingData.whiteboard
-      );
-      if (calloutFramingData.whiteboard.content) {
-        calloutFraming.whiteboard =
-          await this.whiteboardService.updateWhiteboardContent(
-            calloutFraming.whiteboard.id,
-            calloutFramingData.whiteboard.content
-          );
-      }
+    if (calloutFraming.whiteboard && calloutFramingData.whiteboardContent) {
+      calloutFraming.whiteboard =
+        await this.whiteboardService.updateWhiteboardContent(
+          calloutFraming.whiteboard.id,
+          calloutFramingData.whiteboardContent
+        );
     }
 
     return calloutFraming;

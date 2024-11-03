@@ -19,7 +19,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateType } from '@common/enums/template.type';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
@@ -43,7 +43,7 @@ export class TemplateService {
     private communityGuidelinesService: CommunityGuidelinesService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
-    private collaborationServerice: CollaborationService,
+    private collaborationService: CollaborationService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @InjectEntityManager('default')
@@ -77,7 +77,7 @@ export class TemplateService {
     );
 
     switch (template.type) {
-      case TemplateType.POST:
+      case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
           throw new ValidationException(
             `Post Template requires default description input: ${JSON.stringify(templateData)}`,
@@ -86,10 +86,11 @@ export class TemplateService {
         }
         template.postDefaultDescription = templateData.postDefaultDescription;
         break;
-      case TemplateType.COMMUNITY_GUIDELINES:
+      }
+      case TemplateType.COMMUNITY_GUIDELINES: {
         if (!templateData.communityGuidelinesData) {
           throw new ValidationException(
-            `Community Guidelines Template requiresthe community guidelines input: ${JSON.stringify(templateData)}`,
+            `Community Guidelines Template requires the community guidelines input: ${JSON.stringify(templateData)}`,
             LogContext.TEMPLATES
           );
         }
@@ -102,7 +103,8 @@ export class TemplateService {
             storageAggregator
           );
         break;
-      case TemplateType.COLLABORATION:
+      }
+      case TemplateType.COLLABORATION: {
         if (!templateData.collaborationData) {
           throw new ValidationException(
             `Collaboration Template requires collaboration input: ${JSON.stringify(templateData)}`,
@@ -142,21 +144,22 @@ export class TemplateService {
           };
         }
         // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
-        collaborationData.calloutsData.forEach(async calloutData => {
+        collaborationData.calloutsData.forEach(calloutData => {
           calloutData.isTemplate = true;
           calloutData.enableComments = false;
         });
         template.collaboration =
-          await this.collaborationServerice.createCollaboration(
+          await this.collaborationService.createCollaboration(
             collaborationData!,
             storageAggregator
           );
 
         break;
-      case TemplateType.WHITEBOARD:
+      }
+      case TemplateType.WHITEBOARD: {
         if (!templateData.whiteboard) {
           throw new ValidationException(
-            `Whiteboard Template requires whitebboard input: ${JSON.stringify(templateData)}`,
+            `Whiteboard Template requires whiteboard input: ${JSON.stringify(templateData)}`,
             LogContext.TEMPLATES
           );
         }
@@ -171,7 +174,8 @@ export class TemplateService {
           storageAggregator
         );
         break;
-      case TemplateType.CALLOUT:
+      }
+      case TemplateType.CALLOUT: {
         if (!templateData.calloutData) {
           throw new ValidationException(
             `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
@@ -188,6 +192,8 @@ export class TemplateService {
           [],
           storageAggregator
         );
+        break;
+      }
       default:
         throw new ValidationException(
           `unknown template type: ${template.type}`,
@@ -202,19 +208,24 @@ export class TemplateService {
     templateID: string,
     options?: FindOneOptions<Template>
   ): Promise<ITemplate | never> {
-    const template = await this.templateRepository.findOne({
+    /* TODO: This should be a findOne, but we have to use find because of a bug in TypeORM.
+     * updateTemplate makes use of this method and the select option to only fetch the whiteboard.id
+     * is causing an MySQL error with findOne which is not happening with find.
+     * When we tackle #4106 (Typeorm upgrade) we can switch back to findOne
+     */
+    const templates = await this.templateRepository.find({
       ...options,
       where: {
         ...options?.where,
         id: templateID,
       },
     });
-    if (!template)
+    if (templates.length !== 1)
       throw new EntityNotFoundException(
         `Not able to locate Template with the specified ID: ${templateID}`,
-        LogContext.COMMUNICATION
+        LogContext.TEMPLATES
       );
-    return template;
+    return templates[0];
   }
 
   // Only support updating the profile part of the template; not the contained entity. That should
@@ -226,6 +237,16 @@ export class TemplateService {
     const template = await this.getTemplateOrFail(templateInput.id, {
       relations: {
         profile: true,
+        whiteboard: templateInput.type === TemplateType.WHITEBOARD,
+      },
+      select: {
+        id: true,
+        whiteboard:
+          templateInput.type === TemplateType.WHITEBOARD
+            ? {
+                id: true,
+              }
+            : undefined,
       },
     });
 
@@ -240,6 +261,16 @@ export class TemplateService {
       templateData.postDefaultDescription
     ) {
       template.postDefaultDescription = templateData.postDefaultDescription;
+    }
+    if (
+      template.type === TemplateType.WHITEBOARD &&
+      template.whiteboard &&
+      templateData.whiteboardContent
+    ) {
+      await this.whiteboardService.updateWhiteboardContent(
+        template.whiteboard.id,
+        templateData.whiteboardContent
+      );
     }
 
     return await this.templateRepository.save(template);
@@ -263,7 +294,7 @@ export class TemplateService {
       );
     }
     switch (template.type) {
-      case TemplateType.COMMUNITY_GUIDELINES:
+      case TemplateType.COMMUNITY_GUIDELINES: {
         if (!template.communityGuidelines) {
           throw new RelationshipNotFoundException(
             `Unable to load Guidelines on Template: ${templateInput.id} `,
@@ -274,7 +305,8 @@ export class TemplateService {
           template.communityGuidelines.id
         );
         break;
-      case TemplateType.CALLOUT:
+      }
+      case TemplateType.CALLOUT: {
         if (!template.callout) {
           throw new RelationshipNotFoundException(
             `Unable to load Callout on Template: ${templateInput.id} `,
@@ -283,7 +315,8 @@ export class TemplateService {
         }
         await this.calloutService.deleteCallout(template.callout.id);
         break;
-      case TemplateType.WHITEBOARD:
+      }
+      case TemplateType.WHITEBOARD: {
         if (!template.whiteboard) {
           throw new RelationshipNotFoundException(
             `Unable to load Whiteboard on Template: ${templateInput.id} `,
@@ -292,18 +325,20 @@ export class TemplateService {
         }
         await this.whiteboardService.deleteWhiteboard(template.whiteboard.id);
         break;
-      case TemplateType.COLLABORATION:
+      }
+      case TemplateType.COLLABORATION: {
         if (!template.collaboration) {
           throw new RelationshipNotFoundException(
             `Unable to load Collaboration on Template: ${templateInput.id} `,
             LogContext.TEMPLATES
           );
         }
-        await this.collaborationServerice.deleteCollaboration(
+        await this.collaborationService.deleteCollaboration(
           template.collaboration.id
         );
         break;
-      case TemplateType.INNOVATION_FLOW:
+      }
+      case TemplateType.INNOVATION_FLOW: {
         if (!template.innovationFlow) {
           throw new RelationshipNotFoundException(
             `Unable to load InnovationFlow on Template: ${templateInput.id} `,
@@ -314,14 +349,17 @@ export class TemplateService {
           template.innovationFlow.id
         );
         break;
-      case TemplateType.POST:
+      }
+      case TemplateType.POST: {
         // Nothing to do
         break;
-      default:
+      }
+      default: {
         throw new EntityNotFoundException(
           `Template type not recognized '${template.type}' when deleting template: ${template.id}`,
           LogContext.TEMPLATES
         );
+      }
     }
 
     const templateId: string = template.id;

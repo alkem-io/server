@@ -22,7 +22,7 @@ import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
 import { UpdateProfileSelectTagsetValueInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.value';
-import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
+import { InnovationFlowStatesService } from '../innovation-flow-states/innovation.flow.state.service';
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';

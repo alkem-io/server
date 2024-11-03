@@ -37,11 +37,11 @@ import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { keyBy } from 'lodash';
+import { compact, keyBy } from 'lodash';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
-import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
+import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
@@ -210,7 +210,7 @@ export class CollaborationService {
     return tagsetTemplateDataStates;
   }
 
-  private async addCallouts(
+  public async addCallouts(
     collaboration: ICollaboration,
     calloutsData: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,
@@ -222,9 +222,23 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
+    const calloutNameIds: string[] = compact(
+      collaboration.callouts?.map(callout => callout.nameID)
+    );
 
     const callouts: ICallout[] = [];
     for (const calloutDefault of calloutsData) {
+      if (
+        !calloutDefault.nameID ||
+        calloutNameIds.includes(calloutDefault.nameID)
+      ) {
+        calloutDefault.nameID =
+          this.namingService.createNameIdAvoidingReservedNameIDs(
+            calloutDefault.framing.profile.displayName,
+            calloutNameIds
+          );
+        calloutNameIds.push(calloutDefault.nameID);
+      }
       const callout = await this.calloutService.createCallout(
         calloutDefault,
         collaboration.tagsetTemplateSet.tagsetTemplates,
@@ -781,5 +795,72 @@ export class CollaborationService {
     );
 
     return calloutsInOrder;
+  }
+
+  /**
+   * Move callouts that are not in valid groups or flowStates to the default group & first flowState
+   * @param defaultGroupName
+   * @param defaultFlowStateName
+   * @param callouts
+   */
+  public moveCalloutsToCorrectGroupAndState(
+    defaultGroupName: string | undefined,
+    defaultFlowStateName: string | undefined,
+    validGroupNames: string[],
+    validFlowStateNames: string[],
+    callouts: {
+      framing: {
+        profile: {
+          tagsets?: {
+            name: string;
+            type?: TagsetType;
+            tags?: string[];
+          }[];
+        };
+      };
+    }[]
+  ): void {
+    for (const callout of callouts) {
+      if (!callout.framing.profile.tagsets) {
+        callout.framing.profile.tagsets = [];
+      }
+      let calloutGroupTagset = callout.framing.profile.tagsets?.find(
+        tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
+      );
+      let flowStateTagset = callout.framing.profile.tagsets?.find(
+        tagset => tagset.name === TagsetReservedName.FLOW_STATE
+      );
+
+      if (defaultGroupName) {
+        if (!calloutGroupTagset) {
+          calloutGroupTagset = {
+            name: TagsetReservedName.CALLOUT_GROUP,
+            type: TagsetType.SELECT_ONE,
+            tags: [defaultGroupName],
+          };
+          callout.framing.profile.tagsets.push(calloutGroupTagset);
+        } else {
+          const calloutGroup = calloutGroupTagset.tags?.[0];
+          if (!calloutGroup || !validGroupNames.includes(calloutGroup)) {
+            calloutGroupTagset.tags = [defaultGroupName];
+          }
+        }
+      }
+      if (defaultFlowStateName) {
+        if (!flowStateTagset) {
+          flowStateTagset = {
+            name: TagsetReservedName.FLOW_STATE,
+            type: TagsetType.SELECT_ONE,
+            tags: [defaultFlowStateName],
+          };
+          callout.framing.profile.tagsets.push(flowStateTagset);
+        } else {
+          const flowState = flowStateTagset.tags?.[0];
+          if (!flowState || !validFlowStateNames.includes(flowState)) {
+            flowStateTagset.tags = [defaultFlowStateName];
+          }
+        }
+      }
+    }
   }
 }

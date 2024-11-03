@@ -35,7 +35,19 @@ export class TemplateApplierResolverMutations {
         updateData.collaborationID,
         {
           relations: {
-            innovationFlow: true,
+            tagsetTemplateSet: true,
+            callouts: {
+              framing: {
+                profile: {
+                  tagsets: true,
+                },
+              },
+            },
+            innovationFlow: {
+              profile: {
+                tagsets: true,
+              },
+            },
           },
         }
       );

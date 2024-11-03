@@ -6,6 +6,7 @@ import { Template } from '../template/template.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { TemplateType } from '@common/enums/template.type';
 import { TemplatesManager } from '../templates-manager/templates.manager.entity';
+import { IsEnum } from 'class-validator';
 
 @Entity()
 export class TemplateDefault
@@ -35,5 +36,6 @@ export class TemplateDefault
   template?: Template;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  @IsEnum(TemplateType)
   allowedTemplateType!: TemplateType;
 }
