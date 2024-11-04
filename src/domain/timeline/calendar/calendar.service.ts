@@ -24,6 +24,10 @@ import { TimelineResolverService } from '@services/infrastructure/entity-resolve
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ISpace } from '@domain/space/space/space.interface';
+import { PrefixKeys } from '@src/types';
+import { Space } from '@domain/space/space/space.entity';
+import { convertToEntity } from '@common/utils/convert-to-entity';
 
 @Injectable()
 export class CalendarService {
@@ -139,21 +143,26 @@ export class CalendarService {
     calendarEvent.calendar = calendar;
     return await this.calendarEventService.save(calendarEvent);
   }
-
+  // todo: refactor to use args in sql query
   public async getCalendarEventsArgs(
     calendar: ICalendar,
     args: CalendarArgsEvents,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    includeSubspaceEvents: boolean
   ): Promise<ICalendarEvent[]> {
     const calendarLoaded = await this.getCalendarOrFail(calendar.id, {
       relations: { events: true },
+      // todo use args here
     });
     const allEvents = calendarLoaded.events;
-    if (!allEvents)
+    if (!allEvents) {
       throw new EntityNotFoundException(
-        `Calendar not initialised, no events: ${calendar.id}`,
+        `Events not initialized on Calendar: ${calendar.id}`,
         LogContext.CALENDAR
       );
+    }
+
+    const space = await this.getSpaceFromCalendarOrFail(calendar.id);
 
     // First filter the events the current user has READ privilege to
     const readableEvents = allEvents.filter(event =>
@@ -195,6 +204,46 @@ export class CalendarService {
       event.authorization,
       AuthorizationPrivilege.READ
     );
+  }
+
+  public async getSpaceFromCalendarOrFail(calendarId: string): Promise<ISpace> {
+    const spaceAlias = 'space';
+    const rawSpace = await this.calendarRepository
+      .createQueryBuilder('calendar')
+      .where({ id: calendarId })
+      // .leftJoin('organization.profile', 'profile')
+      .leftJoin('timeline', 'timeline', 'timeline.calendarId = calendar.id')
+      // .leftJoin(
+      //   'timeline.calendar',
+      //   'timeline',
+      //   'timeline.calendarId = calendar.id'
+      // )
+      // .leftJoin('collaboration.timeline', 'collaboration')
+      .leftJoin(
+        'collaboration',
+        'collaboration',
+        'collaboration.timelineId = timeline.id'
+      )
+      // .leftJoin('space.collaboration', 'space')
+      .leftJoinAndSelect(
+        'space',
+        spaceAlias,
+        'space.collaborationId = collaboration.id'
+      )
+      // .select('space.nameID', 'spaceNameId')
+      // .addSelect('space.nameID', 'spaceNameId')
+      // .addSelect('space.nameID')
+      .getRawOne<PrefixKeys<Space, `${typeof spaceAlias}_`>>();
+
+    if (!rawSpace) {
+      throw new EntityNotFoundException(
+        'Space not found for Calendar',
+        LogContext.CALENDAR,
+        { calendarId }
+      );
+    }
+
+    return convertToEntity(rawSpace, 'space_');
   }
 
   public async processActivityCalendarEventCreated(

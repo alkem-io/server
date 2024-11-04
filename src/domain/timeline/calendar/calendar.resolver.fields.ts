@@ -12,6 +12,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CalendarService } from './calendar.service';
 import { UUID_NAMEID } from '@domain/common/scalars';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Resolver(() => ICalendar)
 export class CalendarResolverFields {
@@ -48,14 +49,22 @@ export class CalendarResolverFields {
     nullable: true,
     description: 'The list of CalendarEvents for this Calendar.',
   })
-  async events(
+  public async events(
     @Parent() calendar: ICalendar,
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: CalendarArgsEvents
   ) {
-    return await this.calendarService.getCalendarEventsArgs(
+    // todo move to space service
+    const space = await this.calendarService.getSpaceFromCalendarOrFail(
+      calendar.id
+    );
+
+    const includeSubspaceEvents = space.level === SpaceLevel.SPACE;
+
+    return this.calendarService.getCalendarEventsArgs(
       calendar,
       args,
+      includeSubspaceEvents,
       agentInfo
     );
   }

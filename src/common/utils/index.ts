@@ -15,3 +15,4 @@ export * from './untildify';
 export * from './path.resolve';
 export * from './get-differences';
 export * from './has-allowed-allowed-fields';
+export * from './convert-to-entity';
