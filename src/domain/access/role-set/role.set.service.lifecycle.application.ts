@@ -33,6 +33,15 @@ export class RoleSetServiceLifecycleApplication {
             AuthorizationPrivilege.UPDATE
           );
         },
+        hasApplicationAcceptPrivilege: ({ event }) => {
+          const agentInfo: AgentInfo = event.agentInfo;
+          const authorizationPolicy: IAuthorizationPolicy = event.authorization;
+          return this.authorizationService.isAccessGranted(
+            agentInfo,
+            authorizationPolicy,
+            AuthorizationPrivilege.COMMUNITY_APPLY_ACCEPT
+          );
+        },
       },
     });
     return machine.createMachine(applicationLifecycleMachine);

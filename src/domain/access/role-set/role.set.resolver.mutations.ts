@@ -692,10 +692,12 @@ export class RoleSetResolverMutations {
     let application = await this.applicationService.getApplicationOrFail(
       eventData.applicationID
     );
+
+    //toDo fix this temporary fix. Patches the immediate issue but doesn't solve the design issue of guards not being triggered on transitions
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.COMMUNITY_APPLY_ACCEPT,
       `event on application: ${application.id}`
     );
 

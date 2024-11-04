@@ -4,7 +4,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
-import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
+import { UseGuards } from '@nestjs/common';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AdminAuthorizationService } from './admin.authorization.service';

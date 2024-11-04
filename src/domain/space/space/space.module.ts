@@ -22,16 +22,15 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
-import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { AccountHostModule } from '../account.host/account.host.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
-import { TemplateModule } from '@domain/template/template/template.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
+import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 
 @Module({
   imports: [
@@ -47,8 +46,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     LicenseEngineModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
-    SpaceDefaultsModule,
-    TemplatesSetModule,
+    TemplatesManagerModule,
     SpaceSettingssModule,
     StorageAggregatorModule,
     ContributionReporterModule,
@@ -57,10 +55,9 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     SpaceFilterModule,
     ActivityAdapterModule,
     LoaderCreatorModule,
-    TemplateModule,
     RoleSetModule,
-    InputCreatorModule,
     NameReporterModule,
+    SpaceDefaultsModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [

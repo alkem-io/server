@@ -18,9 +18,8 @@ import { Account } from '../account/account.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
-import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 import { Profile } from '@domain/common/profile';
+import { TemplatesManager } from '@domain/template/templates-manager';
 import { SpaceLevel } from '@common/enums/space.level';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
@@ -111,21 +110,13 @@ export class Space extends NameableEntity implements ISpace {
   })
   visibility!: SpaceVisibility;
 
-  @OneToOne(() => TemplatesSet, {
+  @OneToOne(() => TemplatesManager, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  library?: TemplatesSet;
-
-  @OneToOne(() => SpaceDefaults, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  defaults?: SpaceDefaults;
+  templatesManager?: TemplatesManager;
 
   constructor() {
     super();
