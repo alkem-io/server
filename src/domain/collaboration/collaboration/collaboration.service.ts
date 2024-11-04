@@ -95,11 +95,14 @@ export class CollaborationService {
       AuthorizationPolicyType.COLLABORATION
     );
     collaboration.callouts = [];
-    collaboration.timeline = this.timelineService.createTimeline();
     collaboration.groupsStr = this.calloutGroupsService.serializeGroups(
       collaborationData.calloutGroups
     );
     collaboration.isTemplate = collaborationData.isTemplate || false;
+
+    if (!collaboration.isTemplate) {
+      collaboration.timeline = this.timelineService.createTimeline();
+    }
 
     collaboration.tagsetTemplateSet =
       this.tagsetTemplateSetService.createTagsetTemplateSet();
