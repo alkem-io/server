@@ -86,6 +86,7 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
+import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -773,12 +774,28 @@ export class SpaceService {
   /**
    * Should the authorization policy be updated based on the update settings.
    * Some setting do not require an update to the authorization policy.
+   * @param spaceId
    * @param settingsData
    */
-  public shouldUpdateAuthorizationPolicy(
+  public async shouldUpdateAuthorizationPolicy(
+    spaceId: string,
     settingsData: UpdateSpaceSettingsEntityInput
-  ): boolean {
-    return !hasOnlyAllowedFields<UpdateSpaceSettingsEntityInput>(settingsData, {
+  ): Promise<boolean> {
+    const space = await this.spaceRepository.findOneOrFail({
+      where: { id: spaceId },
+      select: { id: true, settingsStr: true },
+    });
+
+    const originalSettings = this.getSettings(space as ISpace);
+    // compare the new values from the incoming update request with the original settings
+    const difference = getDiff(settingsData, originalSettings);
+    // if there is no difference, then no need to update the authorization policy
+    if (difference === null) {
+      return false;
+    }
+    // if a difference was detected, check if the difference is in the allowed fields
+    // if another field was updated, outside the allowed list, the auth policy has to be updated
+    return !hasOnlyAllowedFields(difference, {
       collaboration: {
         allowEventsFromSubspaces: true,
       },
@@ -1444,27 +1461,4 @@ export class SpaceService {
 
     return metrics;
   }
-}
-// todo: better typing
-/**
- * Checks if an object contains only the allowed fields.
- *
- * @template T - The type of the object and allowed fields.
- * @param {T} obj - The object to check.
- * @param {DeepPartial<T>} allowedFields - The allowed fields, which can be a partial and nested structure.
- * @returns {boolean} - Returns true if the object contains only the allowed fields, otherwise false.
- */
-function hasOnlyAllowedFields<T extends object>(
-  obj: T,
-  allowedFields: DeepPartial<T>
-): boolean {
-  return Object.keys(obj).every(key => {
-    const objValue = (obj as any)[key];
-    const allowedValue = (allowedFields as any)[key];
-
-    if (typeof objValue === 'object' && objValue !== null) {
-      return hasOnlyAllowedFields(objValue, allowedValue || {});
-    }
-    return key in allowedFields;
-  });
 }

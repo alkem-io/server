@@ -13,3 +13,5 @@ export * from './get.session';
 export * from './calculate.buffer.hash';
 export * from './untildify';
 export * from './path.resolve';
+export * from './get-differences';
+export * from './has-allowed-allowed-fields';

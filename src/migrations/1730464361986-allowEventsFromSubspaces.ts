@@ -4,6 +4,9 @@ export class AllowEventsFromSubspaces1730464361986 implements MigrationInterface
     name = 'AllowEventsFromSubspaces1730464361986'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+      // defaults to false
+      await queryRunner.query(`ALTER TABLE \`calendar_event\` ADD \`visibleOnParentCalendar\` tinyint NOT NULL`);
+
       const spaceSettings: { id: string, settingsStr: string }[] = await queryRunner.query(`SELECT id, settingsStr FROM alkemio.space;`);
 
       for (const { id, settingsStr } of spaceSettings) {
@@ -13,6 +16,8 @@ export class AllowEventsFromSubspaces1730464361986 implements MigrationInterface
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
+      await queryRunner.query(`ALTER TABLE \`calendar_event\` DROP COLUMN \`visibleOnParentCalendar\``);
+
       const spaceSettings: { id: string, settingsStr: string }[] = await queryRunner.query(`SELECT id, settingsStr FROM alkemio.space;`);
 
       for (const { id, settingsStr } of spaceSettings) {

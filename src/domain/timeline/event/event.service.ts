@@ -140,9 +140,11 @@ export class CalendarEventService {
       calendarEvent.type = calendarEventData.type;
     }
 
-    await this.calendarEventRepository.save(calendarEvent);
+    calendarEvent.visibleOnParentCalendar =
+      calendarEventData.visibleOnParentCalendar ??
+      calendarEvent.visibleOnParentCalendar;
 
-    return calendarEvent;
+    return this.calendarEventRepository.save(calendarEvent);
   }
 
   public async saveCalendarEvent(

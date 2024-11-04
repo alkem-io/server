@@ -27,13 +27,13 @@ export class CalendarEventResolverMutations {
   ): Promise<ICalendarEvent> {
     const calendarEvent =
       await this.calendarEventService.getCalendarEventOrFail(deleteData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       calendarEvent.authorization,
       AuthorizationPrivilege.DELETE,
       `delete calendarEvent: ${calendarEvent.id}`
     );
-    return await this.calendarEventService.deleteCalendarEvent(deleteData);
+    return this.calendarEventService.deleteCalendarEvent(deleteData);
   }
 
   @UseGuards(GraphqlGuard)
@@ -46,12 +46,12 @@ export class CalendarEventResolverMutations {
   ): Promise<ICalendarEvent> {
     const calendarEvent =
       await this.calendarEventService.getCalendarEventOrFail(eventData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       calendarEvent.authorization,
       AuthorizationPrivilege.UPDATE,
       `update calendarEvent: ${calendarEvent.id}`
     );
-    return await this.calendarEventService.updateCalendarEvent(eventData);
+    return this.calendarEventService.updateCalendarEvent(eventData);
   }
 }

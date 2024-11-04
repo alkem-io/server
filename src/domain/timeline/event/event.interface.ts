@@ -47,4 +47,10 @@ export abstract class ICalendarEvent extends INameable {
     description: 'The length of the event in days.',
   })
   durationDays?: number;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Is the event visible on the parent calendar.',
+  })
+  visibleOnParentCalendar!: boolean;
 }
