@@ -60,7 +60,7 @@ export const applicationLifecycleMachine: ILifecycleDefinition = {
     new: {
       on: {
         APPROVE: {
-          guards: 'hasUpdatePrivilege',
+          guards: 'hasApplicationAcceptPrivilege',
           target: ApplicationLifecycleState.APPROVING,
         },
         REJECT: {
@@ -72,7 +72,7 @@ export const applicationLifecycleMachine: ILifecycleDefinition = {
     approving: {
       on: {
         APPROVED: {
-          guards: 'hasUpdatePrivilege',
+          guards: 'hasApplicationAcceptPrivilege',
           target: ApplicationLifecycleState.APPROVED,
         },
       },
