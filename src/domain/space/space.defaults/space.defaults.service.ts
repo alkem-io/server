@@ -25,6 +25,7 @@ import { TemplatesManagerService } from '@domain/template/templates-manager/temp
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { ValidationException } from '@common/exceptions';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { ITemplatesManager } from '@domain/template/templates-manager';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -38,7 +39,8 @@ export class SpaceDefaultsService {
 
   public async createCollaborationInput(
     collaborationData: CreateCollaborationOnSpaceInput,
-    spaceType: SpaceType
+    spaceType: SpaceType,
+    parentSpaceTemplatesManager?: ITemplatesManager
   ): Promise<CreateCollaborationOnSpaceInput> {
     const platformTemplatesManager =
       await this.platformService.getTemplatesManagerOrFail();
@@ -47,12 +49,29 @@ export class SpaceDefaultsService {
       switch (spaceType) {
         case SpaceType.CHALLENGE:
         case SpaceType.OPPORTUNITY: {
-          const subspaceTemplate =
-            await this.templatesManagerService.getTemplateFromTemplateDefault(
-              platformTemplatesManager.id,
-              TemplateDefaultType.PLATFORM_SUBSPACE
-            );
-          templateID = subspaceTemplate.id;
+          if (parentSpaceTemplatesManager) {
+            try {
+              const subspaceTemplate =
+                await this.templatesManagerService.getTemplateFromTemplateDefault(
+                  parentSpaceTemplatesManager.id,
+                  TemplateDefaultType.SPACE_SUBSPACE
+                );
+              if (subspaceTemplate) {
+                templateID = subspaceTemplate.id;
+              }
+            } catch (e) {
+              // Space does not have a subspace default template, just use the platform default
+            }
+          }
+          // Get the platform default template if no parent template
+          if (!templateID) {
+            const subspaceTemplate =
+              await this.templatesManagerService.getTemplateFromTemplateDefault(
+                platformTemplatesManager.id,
+                TemplateDefaultType.PLATFORM_SUBSPACE
+              );
+            templateID = subspaceTemplate.id;
+          }
           break;
         }
         case SpaceType.SPACE: {
@@ -144,10 +163,6 @@ export class SpaceDefaultsService {
     }
 
     // Move callouts that are not in valid groups or flowStates to the default group & first flowState
-    const defaultGroupName =
-      collaborationTemplateInput?.defaultCalloutGroupName;
-    const defaultFlowStateName =
-      collaborationData.innovationFlowData?.states?.[0]?.displayName;
     const validGroupNames = collaborationData.calloutGroups?.map(
       group => group.displayName
     );
@@ -157,8 +172,6 @@ export class SpaceDefaultsService {
       );
 
     this.collaborationService.moveCalloutsToCorrectGroupAndState(
-      defaultGroupName,
-      defaultFlowStateName,
       validGroupNames ?? [],
       validFlowStateNames ?? [],
       collaborationData.calloutsData ?? []
