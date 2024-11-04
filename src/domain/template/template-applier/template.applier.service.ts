@@ -13,6 +13,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { ICallout } from '@domain/collaboration/callout';
 
 @Injectable()
 export class TemplateApplierService {
@@ -76,46 +77,68 @@ export class TemplateApplierService {
         userID
       );
       targetCollaboration.callouts?.push(...newCallouts);
-
-      const validGroupNames =
-        targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
-          tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
-        )?.allowedValues;
-      const validFlowStates = this.innovationFlowService
-        .getStates(targetCollaboration.innovationFlow)
-        ?.map(state => state.displayName);
-
-      this.collaborationService.moveCalloutsToDefaultGroupAndState(
-        validGroupNames ?? [],
-        validFlowStates ?? [],
-        targetCollaboration.callouts
-      );
-
-      const authorizations: IAuthorizationPolicy[] = [];
-
-      const { roleSet: communityPolicy, spaceSettings } =
-        await this.namingService.getRoleSetAndSettingsForCollaboration(
-          targetCollaboration.id
-        );
+      this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
 
       // Need to save before applying authorization policy to get the callout ids
       const result = await this.collaborationService.save(targetCollaboration);
 
-      for (const callout of newCallouts) {
-        const calloutAuthorizations =
-          await this.calloutAuthorizationService.applyAuthorizationPolicy(
-            callout.id,
-            targetCollaboration.authorization,
-            communityPolicy,
-            spaceSettings
-          );
-        authorizations.push(...calloutAuthorizations);
-      }
-      await this.authorizationPolicyService.saveAll(authorizations);
+      await this.applyAuthorizationPolicyToNewCallouts(
+        targetCollaboration,
+        newCallouts
+      );
 
       return result;
     } else {
+      this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
       return await this.collaborationService.save(targetCollaboration);
     }
+  }
+  private ensureCalloutsInValidGroupsAndStates(
+    targetCollaboration: ICollaboration
+  ) {
+    // We don't have callouts or we don't have innovationFlow, can't do anything
+    if (!targetCollaboration.innovationFlow || !targetCollaboration.callouts) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Callouts or InnovationFlow ${targetCollaboration.id} `,
+        LogContext.TEMPLATES
+      );
+    }
+
+    const validGroupNames =
+      targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
+        tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
+      )?.allowedValues;
+    const validFlowStates = this.innovationFlowService
+      .getStates(targetCollaboration.innovationFlow)
+      ?.map(state => state.displayName);
+
+    this.collaborationService.moveCalloutsToDefaultGroupAndState(
+      validGroupNames ?? [],
+      validFlowStates ?? [],
+      targetCollaboration.callouts
+    );
+  }
+  private async applyAuthorizationPolicyToNewCallouts(
+    targetCollaboration: ICollaboration,
+    newCallouts: ICallout[]
+  ): Promise<unknown> {
+    const authorizations: IAuthorizationPolicy[] = [];
+
+    const { roleSet: communityPolicy, spaceSettings } =
+      await this.namingService.getRoleSetAndSettingsForCollaboration(
+        targetCollaboration.id
+      );
+
+    for (const callout of newCallouts) {
+      const calloutAuthorizations =
+        await this.calloutAuthorizationService.applyAuthorizationPolicy(
+          callout.id,
+          targetCollaboration.authorization,
+          communityPolicy,
+          spaceSettings
+        );
+      authorizations.push(...calloutAuthorizations);
+    }
+    return await this.authorizationPolicyService.saveAll(authorizations);
   }
 }
