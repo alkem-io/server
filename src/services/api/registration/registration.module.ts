@@ -9,7 +9,7 @@ import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
-import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
+import { PlatformRoleModule } from '@platform/platform.role/platform.role.module';
 import { OrganizationRoleModule } from '@domain/community/organization-role/organization.role.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';

@@ -2,28 +2,19 @@ import {
   SMALL_TEXT_LENGTH,
   VERY_LONG_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
-import { TemplateType } from '@common/enums/template.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { CreateTemplateBaseInput } from './template.dto.create.base';
+import { TemplateType } from '@common/enums/template.type';
 
 @InputType()
-export class CreateTemplateInput extends CreateNameableInput {
-  @Field(() => [String], { nullable: true })
-  @IsOptional()
-  tags?: string[];
-
-  @Field(() => String, { nullable: true })
-  @IsOptional()
-  visualUri?: string;
-
+export class CreateTemplateInput extends CreateTemplateBaseInput {
   @Field(() => TemplateType, {
     nullable: false,
     description: 'The type of the Template to be created.',
@@ -38,12 +29,6 @@ export class CreateTemplateInput extends CreateNameableInput {
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   postDefaultDescription?: string;
-
-  @Field(() => CreateInnovationFlowInput, { nullable: true })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => CreateInnovationFlowInput)
-  innovationFlowData?: CreateInnovationFlowInput;
 
   @Field(() => CreateCommunityGuidelinesInput, {
     nullable: true,
