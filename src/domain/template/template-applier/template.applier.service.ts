@@ -7,12 +7,8 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 
 @Injectable()
 export class TemplateApplierService {
@@ -21,15 +17,12 @@ export class TemplateApplierService {
     private innovationFlowService: InnovationFlowService,
     private collaborationService: CollaborationService,
     private inputCreatorService: InputCreatorService,
-    private calloutAuthorizationService: CalloutAuthorizationService,
-    private namingService: NamingService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private storageAggregatorResolverService: StorageAggregatorResolverService
   ) {}
 
   async updateCollaborationFromTemplate(
     updateData: UpdateCollaborationFromTemplateInput,
     targetCollaboration: ICollaboration,
-    storageAggregator: IStorageAggregator,
     userID: string
   ): Promise<ICollaboration> {
     const collaborationTemplate = await this.templateService.getCollaboration(
@@ -63,6 +56,10 @@ export class TemplateApplierService {
         newStatesStr
       );
 
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
+        targetCollaboration.id
+      );
     if (updateData.addCallouts) {
       const calloutsFromTemplate =
         await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
@@ -99,28 +96,7 @@ export class TemplateApplierService {
         validFlowStates ?? [],
         targetCollaboration.callouts
       );
-
-      const authorizations: IAuthorizationPolicy[] = [];
-
-      const { roleSet: communityPolicy, spaceSettings } =
-        await this.namingService.getRoleSetAndSettingsForCollaboration(
-          targetCollaboration.id
-        );
-
-      // Need to save before applying authorization policy to get the callout ids
       const result = await this.collaborationService.save(targetCollaboration);
-
-      for (const callout of newCallouts) {
-        const calloutAuthorizations =
-          await this.calloutAuthorizationService.applyAuthorizationPolicy(
-            callout.id,
-            targetCollaboration.authorization,
-            communityPolicy,
-            spaceSettings
-          );
-        authorizations.push(...calloutAuthorizations);
-      }
-      await this.authorizationPolicyService.saveAll(authorizations);
 
       return result;
     } else {

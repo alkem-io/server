@@ -10,13 +10,20 @@ import { UpdateCollaborationFromTemplateInput } from './dto/template.applier.dto
 import { TemplateApplierService } from './template.applier.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class TemplateApplierResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
+    private calloutAuthorizationService: CalloutAuthorizationService,
     private templateApplierService: TemplateApplierService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -30,7 +37,7 @@ export class TemplateApplierResolverMutations {
     @Args('updateData')
     updateData: UpdateCollaborationFromTemplateInput
   ): Promise<ICollaboration> {
-    const collaboration =
+    let targetCollaboration =
       await this.collaborationService.getCollaborationOrFail(
         updateData.collaborationID,
         {
@@ -54,14 +61,46 @@ export class TemplateApplierResolverMutations {
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      collaboration.authorization,
+      targetCollaboration.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update InnovationFlow states from template: ${collaboration.id}`
+      `update InnovationFlow states from template: ${targetCollaboration.id}`
     );
 
-    return await this.templateApplierService.updateCollaborationFromTemplate(
-      updateData,
-      collaboration
+    targetCollaboration =
+      await this.templateApplierService.updateCollaborationFromTemplate(
+        updateData,
+        targetCollaboration,
+        agentInfo.userID
+      );
+    // Reset the authorization policy to re-evaluate the access control rules.
+    targetCollaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        targetCollaboration.id,
+        {
+          relations: {
+            callouts: true,
+            authorization: true,
+          },
+        }
+      );
+    if (!targetCollaboration.callouts) {
+      throw new RelationshipNotFoundException(
+        `Unable to retrieve callouts for collaboration: ${targetCollaboration.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+    for (const callout of targetCollaboration.callouts) {
+      const calloutAuthorizations =
+        await this.calloutAuthorizationService.applyAuthorizationPolicy(
+          callout.id,
+          targetCollaboration.authorization
+        );
+      updatedAuthorizations.push(...calloutAuthorizations);
+    }
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return this.collaborationService.getCollaborationOrFail(
+      targetCollaboration.id
     );
   }
 }
