@@ -47,16 +47,10 @@ export class TemplatesManager1729511643555 implements MigrationInterface {
       `ALTER TABLE \`platform\` ADD \`templatesManagerId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_81f92b22d30540102e9654e892\` (\`templatesManagerId\`)`
-    );
-    await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_81f92b22d30540102e9654e892\` ON \`platform\` (\`templatesManagerId\`)`
     );
     await queryRunner.query(
       `ALTER TABLE \`space\` ADD \`templatesManagerId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`space\` ADD UNIQUE INDEX \`IDX_dea52ce918df6950019678fa35\` (\`templatesManagerId\`)`
     );
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_dea52ce918df6950019678fa35\` ON \`space\` (\`templatesManagerId\`)`
@@ -256,13 +250,7 @@ export class TemplatesManager1729511643555 implements MigrationInterface {
       `DROP INDEX \`REL_81f92b22d30540102e9654e892\` ON \`platform\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`space\` DROP INDEX \`IDX_dea52ce918df6950019678fa35\``
-    );
-    await queryRunner.query(
       `ALTER TABLE \`space\` DROP COLUMN \`templatesManagerId\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`platform\` DROP INDEX \`IDX_81f92b22d30540102e9654e892\``
     );
     await queryRunner.query(
       `ALTER TABLE \`platform\` DROP COLUMN \`templatesManagerId\``
