@@ -153,7 +153,7 @@ export class CollaborationService {
         storageAggregator
       );
 
-    this.moveCalloutsToCorrectGroupAndState(
+    this.moveCalloutsToDefaultGroupAndState(
       groupTagsetTemplateInput.allowedValues,
       statesTagsetTemplate.allowedValues,
       collaboration.callouts
@@ -224,6 +224,7 @@ export class CollaborationService {
         calloutNameIds.push(calloutDefault.nameID);
       }
       if (
+        calloutDefault.isTemplate === false &&
         calloutDefault.type === CalloutType.POST &&
         calloutDefault.contributionPolicy?.state === CalloutState.OPEN
       ) {
@@ -235,8 +236,6 @@ export class CollaborationService {
         storageAggregator,
         userID
       );
-      // default callouts are already published
-      callout.visibility = CalloutVisibility.PUBLISHED;
       callouts.push(callout);
     }
     return callouts;
@@ -788,7 +787,7 @@ export class CollaborationService {
    * Move callouts that are not in valid groups or flowStates to the default group & first flowState
    * @param callouts
    */
-  public moveCalloutsToCorrectGroupAndState(
+  public moveCalloutsToDefaultGroupAndState(
     validGroupNames: string[],
     validFlowStateNames: string[],
     callouts: {

@@ -85,7 +85,7 @@ export class TemplateApplierService {
         .getStates(targetCollaboration.innovationFlow)
         ?.map(state => state.displayName);
 
-      this.collaborationService.moveCalloutsToCorrectGroupAndState(
+      this.collaborationService.moveCalloutsToDefaultGroupAndState(
         validGroupNames ?? [],
         validFlowStates ?? [],
         targetCollaboration.callouts
