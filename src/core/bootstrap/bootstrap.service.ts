@@ -21,9 +21,9 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
-import { PlatformService } from '@platform/platfrom/platform.service';
+import { PlatformService } from '@platform/platform/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
+import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
@@ -35,6 +35,26 @@ import { AiServerService } from '@services/ai-server/ai-server/ai.server.service
 import { Space } from '@domain/space/space/space.entity';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IUser } from '@domain/community/user/user.interface';
+import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { TemplateDefaultService } from '@domain/template/template-default/template.default.service';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { TemplateType } from '@common/enums/template.type';
+import { bootstrapSubspaceKnowledgeInnovationFlowStates } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.innovation.flow.states';
+import { bootstrapSubspaceKnowledgeCallouts } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.callouts';
+import { bootstrapSubspaceKnowledgeCalloutGroups } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.callout.groups';
+import { ITemplateDefault } from '@domain/template/template-default/template.default.interface';
+import { ITemplatesSet } from '@domain/template/templates-set';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
+import { bootstrapSubspaceInnovationFlowStates } from './platform-template-definitions/subspace/bootstrap.subspace.innovation.flow.states';
+import { bootstrapSubspaceCalloutGroups } from './platform-template-definitions/subspace/bootstrap.subspace.callout.groups';
+import { bootstrapSubspaceCallouts } from './platform-template-definitions/subspace/bootstrap.subspace.callouts';
+import { bootstrapSpaceInnovationFlowStates } from './platform-template-definitions/space/bootstrap.space.innovation.flow';
+import { bootstrapSpaceCalloutGroups } from './platform-template-definitions/space/bootstrap.space.callout.groups';
+import { bootstrapSpaceCallouts } from './platform-template-definitions/space/bootstrap.space.callouts';
+import { bootstrapSpaceTutorialsInnovationFlowStates } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.innovation.flow.states';
+import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callout.groups';
+import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
 
 @Injectable()
 export class BootstrapService {
@@ -60,7 +80,10 @@ export class BootstrapService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
-    private aiServerAuthorizationService: AiServerAuthorizationService
+    private aiServerAuthorizationService: AiServerAuthorizationService,
+    private templatesManagerService: TemplatesManagerService,
+    private templatesSetService: TemplatesSetService,
+    private templateDefaultService: TemplateDefaultService
   ) {}
 
   async bootstrap() {
@@ -78,12 +101,13 @@ export class BootstrapService {
       }
 
       await this.bootstrapUserProfiles();
+      await this.platformService.ensureForumCreated();
+      await this.ensureAuthorizationsPopulated();
+      await this.ensurePlatformTemplatesArePresent();
       await this.ensureOrganizationSingleton();
       await this.ensureSpaceSingleton();
       await this.ensureSsiPopulated();
-      await this.platformService.ensureForumCreated();
       // reset auth as last in the actions
-      await this.ensureAuthorizationsPopulated();
       // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
       this.logger.error(
@@ -93,6 +117,118 @@ export class BootstrapService {
       );
       throw new BootstrapException(error.message, { originalException: error });
     }
+  }
+
+  private async ensurePlatformTemplatesArePresent() {
+    const templatesManager =
+      await this.platformService.getTemplatesManagerOrFail();
+    const templateDefaults =
+      await this.templatesManagerService.getTemplateDefaults(
+        templatesManager.id
+      );
+    const templatesSet =
+      await this.templatesManagerService.getTemplatesSetOrFail(
+        templatesManager.id
+      );
+    let authResetNeeded = await this.ensureSubspaceKnowledgeTemplatesArePresent(
+      templateDefaults,
+      TemplateDefaultType.PLATFORM_SPACE,
+      templatesSet,
+      'space',
+      bootstrapSpaceInnovationFlowStates,
+      bootstrapSpaceCalloutGroups,
+      bootstrapSpaceCallouts
+    );
+    authResetNeeded =
+      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+        templateDefaults,
+        TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
+        templatesSet,
+        'space',
+        bootstrapSpaceTutorialsInnovationFlowStates,
+        bootstrapSpaceTutorialsCalloutGroups,
+        bootstrapSpaceTutorialsCallouts
+      )) || authResetNeeded;
+    authResetNeeded =
+      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+        templateDefaults,
+        TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
+        templatesSet,
+        'knowledge',
+        bootstrapSubspaceKnowledgeInnovationFlowStates,
+        bootstrapSubspaceKnowledgeCalloutGroups,
+        bootstrapSubspaceKnowledgeCallouts
+      )) || authResetNeeded;
+    authResetNeeded =
+      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+        templateDefaults,
+        TemplateDefaultType.PLATFORM_SUBSPACE,
+        templatesSet,
+        'challenge',
+        bootstrapSubspaceInnovationFlowStates,
+        bootstrapSubspaceCalloutGroups,
+        bootstrapSubspaceCallouts
+      )) || authResetNeeded;
+    if (authResetNeeded) {
+      this.logger.verbose?.(
+        '=== Identified that template defaults had not been reset; resetting auth now ===',
+        LogContext.BOOTSTRAP
+      );
+      const updatedAuthorizations =
+        await this.platformAuthorizationService.applyAuthorizationPolicy();
+      await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    }
+  }
+
+  private async ensureSubspaceKnowledgeTemplatesArePresent(
+    templateDefaults: ITemplateDefault[],
+    templateDefaultType: TemplateDefaultType,
+    templatesSet: ITemplatesSet,
+    nameID: string,
+    flowStates: IInnovationFlowState[],
+    calloutGroups: any[],
+    callouts: any[]
+  ): Promise<boolean> {
+    const knowledgeTemplateDefault = templateDefaults.find(
+      td => td.type === templateDefaultType
+    );
+    if (!knowledgeTemplateDefault) {
+      throw new BootstrapException(
+        `Unable to load Template Default for ${templateDefaultType}`
+      );
+    }
+    if (!knowledgeTemplateDefault.template) {
+      this.logger.verbose?.(
+        `No template set for ${templateDefaultType}, setting it...`,
+        LogContext.BOOTSTRAP
+      );
+      // No template set, so create one and then set it
+      const template = await this.templatesSetService.createTemplate(
+        templatesSet,
+        {
+          profileData: {
+            displayName: `${nameID} Template`,
+          },
+          type: TemplateType.COLLABORATION,
+          collaborationData: {
+            innovationFlowData: {
+              profile: {
+                displayName: `${nameID} Innovation Flow`,
+              },
+              states: flowStates,
+            },
+            calloutGroups: calloutGroups,
+            calloutsData: callouts,
+            defaultCalloutGroupName: calloutGroups[0].displayName,
+          },
+        }
+      );
+      // Set the default template
+      knowledgeTemplateDefault.template = template;
+      await this.templateDefaultService.save(knowledgeTemplateDefault);
+      return true;
+    }
+    return false;
   }
 
   async bootstrapUserProfiles() {
@@ -235,7 +371,7 @@ export class BootstrapService {
     }
   }
 
-  async ensureAuthorizationsPopulated() {
+  private async ensureAuthorizationsPopulated() {
     // For platform
     const platform = await this.platformService.getPlatformOrFail();
     const platformAuthorization =

@@ -124,7 +124,7 @@ describe('RolesService', () => {
         .mockResolvedValue(false);
 
       jest
-        .spyOn(applicationService, 'getApplicationState')
+        .spyOn(applicationService, 'getLifecycleState')
         .mockResolvedValue('new');
 
       jest

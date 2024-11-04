@@ -184,11 +184,6 @@ export class SearchResultService {
     const subspaces = await this.entityManager.find(Space, {
       where: { id: In(subspaceIds) },
       relations: { parentSpace: true },
-      select: {
-        id: true,
-        level: true,
-        parentSpace: { id: true, level: true },
-      },
     });
 
     return subspaces
@@ -627,6 +622,7 @@ export class SearchResultService {
       select: {
         id: true,
         type: true,
+        level: true,
         settingsStr: true,
         visibility: true,
         collaboration: {

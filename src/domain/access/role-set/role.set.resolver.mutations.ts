@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoleSetService } from './role.set.service';
 import { CurrentUser } from '@src/common/decorators';
@@ -27,8 +27,8 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { RoleSetApplicationLifecycleOptionsProvider } from './role.set.lifecycle.application.options.provider';
-import { RoleSetInvitationLifecycleOptionsProvider } from './role.set.lifecycle.invitation.options.provider';
+import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
+import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { AssignRoleOnRoleSetToUserInput } from './dto/role.set.dto.role.assign.user';
 import { IUser } from '@domain/community/user/user.interface';
@@ -54,6 +54,16 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import {
+  InvitationLifecycleEvent,
+  InvitationLifecycleState,
+} from '../invitation/invitation.service.lifecycle';
+import {
+  ApplicationLifecycleEvent,
+  ApplicationLifecycleState,
+} from '../application/application.service.lifecycle';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -67,15 +77,17 @@ export class RoleSetResolverMutations {
     private userAuthorizationService: UserAuthorizationService,
     private virtualContributorService: VirtualContributorService,
     private communityResolverService: CommunityResolverService,
-    private roleSetLifecycleApplicationOptionsProvider: RoleSetApplicationLifecycleOptionsProvider,
-    private roleSetLifecycleInvitationOptionsProvider: RoleSetInvitationLifecycleOptionsProvider,
+    private roleSetServiceLifecycleApplication: RoleSetServiceLifecycleApplication,
+    private roleSetServiceLifecycleInvitation: RoleSetServiceLifecycleInvitation,
     private applicationService: ApplicationService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private contributorService: ContributorService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
-    private platformInvitationService: PlatformInvitationService
+    private platformInvitationService: PlatformInvitationService,
+    private lifecycleService: LifecycleService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -414,7 +426,7 @@ export class RoleSetResolverMutations {
     };
     await this.notificationAdapter.applicationCreated(notificationInput);
 
-    return application;
+    return await this.applicationService.getApplicationOrFail(application.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -573,7 +585,7 @@ export class RoleSetResolverMutations {
       await this.notificationAdapter.invitationCreated(notificationInput);
     }
 
-    return invitation;
+    return await this.invitationService.getInvitationOrFail(invitation.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -673,22 +685,61 @@ export class RoleSetResolverMutations {
     description: 'Trigger an event on the Application.',
   })
   async eventOnApplication(
-    @Args('applicationEventData')
-    applicationEventData: ApplicationEventInput,
+    @Args('eventData')
+    eventData: ApplicationEventInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IApplication> {
-    const application = await this.applicationService.getApplicationOrFail(
-      applicationEventData.applicationID
+    let application = await this.applicationService.getApplicationOrFail(
+      eventData.applicationID
     );
-    await this.authorizationService.grantAccessOrFail(
+
+    //toDo fix this temporary fix. Patches the immediate issue but doesn't solve the design issue of guards not being triggered on transitions
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.COMMUNITY_APPLY_ACCEPT,
       `event on application: ${application.id}`
     );
-    return await this.roleSetLifecycleApplicationOptionsProvider.eventOnApplication(
-      applicationEventData,
-      agentInfo
+
+    // Send the event, translated if needed
+    this.logger.verbose?.(
+      `Event ${eventData.eventName} triggered on application: ${application.id} using lifecycle ${application.lifecycle.id}`,
+      LogContext.COMMUNITY
+    );
+    await this.lifecycleService.event({
+      machine: this.roleSetServiceLifecycleApplication.getApplicationMachine(),
+      eventName: eventData.eventName,
+      lifecycle: application.lifecycle,
+      agentInfo,
+      authorization: application.authorization,
+    });
+
+    // Reload to trigger actions
+    application = await this.applicationService.getApplicationOrFail(
+      eventData.applicationID
+    );
+    const applicationState = this.lifecycleService.getState(
+      application.lifecycle,
+      this.roleSetServiceLifecycleApplication.getApplicationMachine()
+    );
+
+    if (applicationState === ApplicationLifecycleState.APPROVING) {
+      await this.roleSetService.approveApplication(
+        eventData.applicationID,
+        agentInfo
+      );
+      await this.lifecycleService.event({
+        machine:
+          this.roleSetServiceLifecycleApplication.getApplicationMachine(),
+        lifecycle: application.lifecycle,
+        eventName: ApplicationLifecycleEvent.APPROVED,
+        agentInfo,
+        authorization: application.authorization,
+      });
+    }
+
+    return await this.applicationService.getApplicationOrFail(
+      eventData.applicationID
     );
   }
 
@@ -696,24 +747,57 @@ export class RoleSetResolverMutations {
   @Mutation(() => IInvitation, {
     description: 'Trigger an event on the Invitation.',
   })
-  async eventOnCommunityInvitation(
-    @Args('invitationEventData')
-    invitationEventData: InvitationEventInput,
+  async eventOnInvitation(
+    @Args('eventData')
+    eventData: InvitationEventInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IInvitation> {
-    const invitation = await this.invitationService.getInvitationOrFail(
-      invitationEventData.invitationID
+    let invitation = await this.invitationService.getInvitationOrFail(
+      eventData.invitationID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       invitation.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on invitation: ${invitation.id}`
     );
-    return await this.roleSetLifecycleInvitationOptionsProvider.eventOnInvitation(
-      invitationEventData,
-      agentInfo
+
+    // Send the event, translated if needed
+    this.logger.verbose?.(
+      `Event ${eventData.eventName} triggered on invitation: ${invitation.id} using lifecycle ${invitation.lifecycle.id}`,
+      LogContext.COMMUNITY
     );
+
+    await this.lifecycleService.event({
+      machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
+      lifecycle: invitation.lifecycle,
+      eventName: eventData.eventName,
+      agentInfo,
+      authorization: invitation.authorization,
+    });
+
+    // Reload to trigger actions
+    invitation = await this.invitationService.getInvitationOrFail(
+      eventData.invitationID
+    );
+    const invitationState = await this.invitationService.getLifecycleState(
+      invitation.id
+    );
+    if (invitationState === InvitationLifecycleState.ACCEPTING) {
+      await this.roleSetService.acceptInvitationToRoleSet(
+        eventData.invitationID,
+        agentInfo
+      );
+      await this.lifecycleService.event({
+        machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
+        lifecycle: invitation.lifecycle,
+        eventName: InvitationLifecycleEvent.ACCEPTED,
+        agentInfo,
+        authorization: invitation.authorization,
+      });
+    }
+
+    return await this.invitationService.getInvitationOrFail(invitation.id);
   }
 
   @UseGuards(GraphqlGuard)

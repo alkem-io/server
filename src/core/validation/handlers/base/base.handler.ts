@@ -82,6 +82,7 @@ import { RemoveRoleOnRoleSetFromVirtualContributorInput } from '@domain/access/r
 import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.update.application.form';
 import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
 import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
+import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -92,6 +93,9 @@ export class BaseHandler extends AbstractHandler {
       AssignRoleOnRoleSetToUserInput,
       AssignRoleOnRoleSetToOrganizationInput,
       AssignRoleOnRoleSetToVirtualContributorInput,
+      InvitationEventInput,
+      ApplicationEventInput,
+      OrganizationVerificationEventInput,
       RemoveRoleOnRoleSetFromUserInput,
       RemoveRoleOnRoleSetFromOrganizationInput,
       RemoveRoleOnRoleSetFromVirtualContributorInput,
@@ -101,10 +105,8 @@ export class BaseHandler extends AbstractHandler {
       RolesUserInput,
       InviteForEntryRoleOnRoleSetInput,
       InviteNewContributorForRoleOnRoleSetInput,
-      ApplicationEventInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
-      OrganizationVerificationEventInput,
       CreateCalloutFramingInput,
       CreateCalloutContributionPolicyInput,
       CreateCalloutContributionDefaultsInput,
