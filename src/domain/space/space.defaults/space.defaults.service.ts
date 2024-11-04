@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums/logging.context';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
@@ -26,6 +26,7 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { ValidationException } from '@common/exceptions';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ITemplatesManager } from '@domain/template/templates-manager';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -34,7 +35,8 @@ export class SpaceDefaultsService {
     private inputCreatorService: InputCreatorService,
     private platformService: PlatformService,
     private collaborationService: CollaborationService,
-    private templatesManagerService: TemplatesManagerService
+    private templatesManagerService: TemplatesManagerService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async createCollaborationInput(
@@ -61,6 +63,11 @@ export class SpaceDefaultsService {
               }
             } catch (e) {
               // Space does not have a subspace default template, just use the platform default
+              this.logger.warn(
+                `Space does not have a subspace default template, using platform default parentSpaceTemplatesManager.id: ${parentSpaceTemplatesManager?.id}`,
+                undefined,
+                LogContext.TEMPLATES
+              );
             }
           }
           // Get the platform default template if no parent template
@@ -171,7 +178,7 @@ export class SpaceDefaultsService {
         state => state.displayName
       );
 
-    this.collaborationService.moveCalloutsToCorrectGroupAndState(
+    this.collaborationService.moveCalloutsToDefaultGroupAndState(
       validGroupNames ?? [],
       validFlowStateNames ?? [],
       collaborationData.calloutsData ?? []
