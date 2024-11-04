@@ -23,7 +23,6 @@ import { SpaceReservedName } from '@common/enums/space.reserved.name';
 import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
 import { Template } from '@domain/template/template/template.entity';
 import { IRoleSet } from '@domain/access/role-set';
-import { NAMEID_MAX_LENGTH } from '@common/constants';
 
 export class NamingService {
   constructor(
@@ -233,7 +232,7 @@ export class NamingService {
     let count = 1;
     while (reservedNameIDs.includes(result)) {
       // If the nameID is already reserved, try again with a new random suffix starting from 1 but with two digits
-      result = `${guess.substring(0, NAMEID_MAX_LENGTH - 1 - count.toString().length)}-${count.toString()}`;
+      result = `${guess}-${count.toString()}`;
       count++;
     }
     return result;
