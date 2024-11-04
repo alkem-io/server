@@ -54,6 +54,7 @@ import { Callout } from '@domain/collaboration/callout';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
 import { IRoleSet } from '@domain/access/role-set';
+import { CalloutState } from '@common/enums/callout.state';
 
 @Injectable()
 export class CollaborationService {
@@ -152,6 +153,12 @@ export class CollaborationService {
         storageAggregator
       );
 
+    this.moveCalloutsToCorrectGroupAndState(
+      groupTagsetTemplateInput.allowedValues,
+      statesTagsetTemplate.allowedValues,
+      collaboration.callouts
+    );
+
     return collaboration;
   }
 
@@ -215,6 +222,12 @@ export class CollaborationService {
             calloutNameIds
           );
         calloutNameIds.push(calloutDefault.nameID);
+      }
+      if (
+        calloutDefault.type === CalloutType.POST &&
+        calloutDefault.contributionPolicy?.state === CalloutState.OPEN
+      ) {
+        calloutDefault.enableComments = true;
       }
       const callout = await this.calloutService.createCallout(
         calloutDefault,
@@ -773,13 +786,9 @@ export class CollaborationService {
 
   /**
    * Move callouts that are not in valid groups or flowStates to the default group & first flowState
-   * @param defaultGroupName
-   * @param defaultFlowStateName
    * @param callouts
    */
   public moveCalloutsToCorrectGroupAndState(
-    defaultGroupName: string | undefined,
-    defaultFlowStateName: string | undefined,
     validGroupNames: string[],
     validFlowStateNames: string[],
     callouts: {
@@ -794,6 +803,9 @@ export class CollaborationService {
       };
     }[]
   ): void {
+    const defaultGroupName: string | undefined = validGroupNames?.[0];
+    const defaultFlowStateName: string | undefined = validFlowStateNames?.[0];
+
     for (const callout of callouts) {
       if (!callout.framing.profile.tagsets) {
         callout.framing.profile.tagsets = [];
