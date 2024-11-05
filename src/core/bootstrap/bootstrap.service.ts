@@ -55,6 +55,8 @@ import { bootstrapSpaceCallouts } from './platform-template-definitions/space/bo
 import { bootstrapSpaceTutorialsInnovationFlowStates } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.innovation.flow.states';
 import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callout.groups';
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
+import { LicenseService } from '@domain/common/license/license.service';
+import { AccountLicenseService } from '@domain/space/account/account.service.license';
 
 @Injectable()
 export class BootstrapService {
@@ -83,7 +85,9 @@ export class BootstrapService {
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesManagerService: TemplatesManagerService,
     private templatesSetService: TemplatesSetService,
-    private templateDefaultService: TemplateDefaultService
+    private templateDefaultService: TemplateDefaultService,
+    private accountLicenseService: AccountLicenseService,
+    private licenseService: LicenseService
   ) {}
 
   async bootstrap() {
@@ -327,6 +331,11 @@ export class BootstrapService {
               account
             );
           await this.authorizationPolicyService.saveAll(accountAuthorizations);
+
+          const accountEntitlements =
+            await this.accountLicenseService.applyLicensePolicy(account.id);
+          await this.licenseService.saveAll(accountEntitlements);
+
           if (!this.adminAgentInfo) {
             this.adminAgentInfo = await this.createSystemAgentInfo(user);
           }
@@ -454,6 +463,10 @@ export class BootstrapService {
           account
         );
       await this.authorizationPolicyService.saveAll(accountAuthorizations);
+
+      const accountEntitlements =
+        await this.accountLicenseService.applyLicensePolicy(account.id);
+      await this.licenseService.saveAll(accountEntitlements);
     }
   }
 
@@ -492,6 +505,10 @@ export class BootstrapService {
       const spaceAuthorizations =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
       await this.authorizationPolicyService.saveAll(spaceAuthorizations);
+
+      const accountEntitlements =
+        await this.accountLicenseService.applyLicensePolicy(account.id);
+      await this.licenseService.saveAll(accountEntitlements);
 
       return this.spaceService.getSpaceOrFail(space.id);
     }

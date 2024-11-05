@@ -19,12 +19,14 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
+import { LicenseModule } from '@domain/common/license/license.module';
 
 @Module({
   imports: [
     AiServerModule,
     AgentModule,
     AuthorizationPolicyModule,
+    LicenseModule,
     ContributorModule,
     SpaceModule,
     OrganizationModule,
