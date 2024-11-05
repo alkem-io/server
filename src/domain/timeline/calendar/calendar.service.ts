@@ -11,7 +11,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EqualOperator, FindOneOptions, Repository } from 'typeorm';
 import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventService } from '../event/event.service';
 import { Calendar } from './calendar.entity';
@@ -28,6 +28,9 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { PrefixKeys } from '@src/types';
 import { Space } from '@domain/space/space/space.entity';
 import { convertToEntity } from '@common/utils/convert-to-entity';
+import { Collaboration } from '@domain/collaboration/collaboration';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
+import { CalendarEvent } from '@domain/timeline/event';
 
 @Injectable()
 export class CalendarService {
@@ -90,17 +93,39 @@ export class CalendarService {
     return calendar;
   }
 
-  public async getCalendarEvents(
-    calendar: ICalendar
-  ): Promise<ICalendarEvent[]> {
-    const events = calendar.events;
-    if (!events)
-      throw new EntityNotFoundException(
-        `Undefined calendar events found: ${calendar.id}`,
-        LogContext.CALENDAR
-      );
+  public async getCalendarEventsFromSubspaces(
+    spaceId: string,
+    agentInfo: AgentInfo
+  ) {
+    const result = await this.calendarRepository.manager
+      .createQueryBuilder(Space, 'space')
+      .where({
+        parentSpace: {
+          id: spaceId,
+        },
+      })
+      .leftJoin(
+        Collaboration,
+        'collaboration',
+        'collaboration.id = space.collaborationId'
+      )
+      .leftJoin(Timeline, 'timeline', 'timeline.id = collaboration.timelineId')
+      .leftJoin(Calendar, 'calendar', 'calendar.id = timeline.calendarId')
+      .leftJoin(
+        CalendarEvent,
+        'calendarEvent',
+        'calendarEvent.calendarId = calendar.id'
+      )
+      // cannot find alias when using relations https://github.com/typeorm/typeorm/issues/2707
+      .andWhere('calendarEvent.visibleOnParentCalendar = true')
+      .andWhere('calendarEvent.id IS NOT NULL')
+      .select('calendarEvent.id')
+      .getRawMany<PrefixKeys<{ id: string }, 'calendarEvent_'>>();
 
-    return events;
+    const ids = result.map(({ calendarEvent_id }) => calendarEvent_id);
+    const events = await this.calendarEventService.getCalendarEvents(ids);
+
+    return events.filter(event => this.hasAgentAccessToEvent(event, agentInfo));
   }
 
   public async createCalendarEvent(
@@ -147,8 +172,7 @@ export class CalendarService {
   public async getCalendarEventsArgs(
     calendar: ICalendar,
     args: CalendarArgsEvents,
-    agentInfo: AgentInfo,
-    includeSubspaceEvents: boolean
+    agentInfo: AgentInfo
   ): Promise<ICalendarEvent[]> {
     const calendarLoaded = await this.getCalendarOrFail(calendar.id, {
       relations: { events: true },
@@ -161,8 +185,6 @@ export class CalendarService {
         LogContext.CALENDAR
       );
     }
-
-    const space = await this.getSpaceFromCalendarOrFail(calendar.id);
 
     // First filter the events the current user has READ privilege to
     const readableEvents = allEvents.filter(event =>
@@ -211,28 +233,17 @@ export class CalendarService {
     const rawSpace = await this.calendarRepository
       .createQueryBuilder('calendar')
       .where({ id: calendarId })
-      // .leftJoin('organization.profile', 'profile')
       .leftJoin('timeline', 'timeline', 'timeline.calendarId = calendar.id')
-      // .leftJoin(
-      //   'timeline.calendar',
-      //   'timeline',
-      //   'timeline.calendarId = calendar.id'
-      // )
-      // .leftJoin('collaboration.timeline', 'collaboration')
       .leftJoin(
         'collaboration',
         'collaboration',
         'collaboration.timelineId = timeline.id'
       )
-      // .leftJoin('space.collaboration', 'space')
       .leftJoinAndSelect(
         'space',
         spaceAlias,
         'space.collaborationId = collaboration.id'
       )
-      // .select('space.nameID', 'spaceNameId')
-      // .addSelect('space.nameID', 'spaceNameId')
-      // .addSelect('space.nameID')
       .getRawOne<PrefixKeys<Space, `${typeof spaceAlias}_`>>();
 
     if (!rawSpace) {
@@ -242,7 +253,7 @@ export class CalendarService {
         { calendarId }
       );
     }
-
+    // todo: not needed when using select instead of leftJoinAndSelect
     return convertToEntity(rawSpace, 'space_');
   }
 

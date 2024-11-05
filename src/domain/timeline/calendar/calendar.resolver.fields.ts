@@ -13,10 +13,14 @@ import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CalendarService } from './calendar.service';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { SpaceLevel } from '@common/enums/space.level';
+import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 
 @Resolver(() => ICalendar)
 export class CalendarResolverFields {
-  constructor(private calendarService: CalendarService) {}
+  constructor(
+    private calendarService: CalendarService,
+    private spaceSettingsService: SpaceSettingsService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('event', () => ICalendarEvent, {
@@ -54,17 +58,43 @@ export class CalendarResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: CalendarArgsEvents
   ) {
-    // todo move to space service
+    return this.calendarService.getCalendarEventsArgs(
+      calendar,
+      args,
+      agentInfo
+    );
+  }
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('subspaceEvents', () => [ICalendarEvent], {
+    nullable: true,
+    description:
+      'List of events in the immediate Subspaces. Only visible if allowed in the Space settings and per event.',
+  })
+  public async subspaceEvents(
+    @Parent() calendar: ICalendar,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
     const space = await this.calendarService.getSpaceFromCalendarOrFail(
       calendar.id
     );
 
-    const includeSubspaceEvents = space.level === SpaceLevel.SPACE;
+    if (space.level !== SpaceLevel.SPACE) {
+      return null;
+    }
 
-    return this.calendarService.getCalendarEventsArgs(
-      calendar,
-      args,
-      includeSubspaceEvents,
+    const spaceSettings = this.spaceSettingsService.getSettings(
+      space.settingsStr
+    );
+    const subspaceEventsShouldBubble =
+      spaceSettings.collaboration.allowEventsFromSubspaces;
+
+    if (!subspaceEventsShouldBubble) {
+      return null;
+    }
+
+    return this.calendarService.getCalendarEventsFromSubspaces(
+      space.id,
       agentInfo
     );
   }

@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -151,6 +151,12 @@ export class CalendarEventService {
     calendarEvent: ICalendarEvent
   ): Promise<ICalendarEvent> {
     return await this.calendarEventRepository.save(calendarEvent);
+  }
+
+  public getCalendarEvents(eventIds: string[]): Promise<ICalendarEvent[]> {
+    return this.calendarEventRepository.findBy({
+      id: In(eventIds),
+    });
   }
 
   public async getProfile(calendarEvent: ICalendarEvent): Promise<IProfile> {
