@@ -13,13 +13,7 @@ export class LicenseEntitlements1729511643666 implements MigrationInterface {
       `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_425bbb4b951f7f4629710763fc0\``
     );
     await queryRunner.query(
-      `DROP INDEX \`IDX_81f92b22d30540102e9654e892\` ON \`platform\``
-    );
-    await queryRunner.query(
       `DROP INDEX \`REL_425bbb4b951f7f4629710763fc\` ON \`platform\``
-    );
-    await queryRunner.query(
-      `DROP INDEX \`IDX_dea52ce918df6950019678fa35\` ON \`space\``
     );
     await queryRunner.renameColumn(
       'license_plan',
