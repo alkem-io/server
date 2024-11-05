@@ -73,34 +73,38 @@ export class TemplateApplierService {
         userID
       );
       targetCollaboration.callouts?.push(...newCallouts);
+      this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
 
-      const defaultGroupName =
-        targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
-          tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
-        )?.defaultSelectedValue;
-      const validGroupNames =
-        targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
-          tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
-        )?.allowedValues;
-      const defaultFlowState = this.innovationFlowService.getStates(
-        targetCollaboration.innovationFlow
-      )?.[0].displayName;
-      const validFlowStates = this.innovationFlowService
-        .getStates(targetCollaboration.innovationFlow)
-        ?.map(state => state.displayName);
-
-      this.collaborationService.moveCalloutsToCorrectGroupAndState(
-        defaultGroupName,
-        defaultFlowState,
-        validGroupNames ?? [],
-        validFlowStates ?? [],
-        targetCollaboration.callouts
-      );
-      const result = await this.collaborationService.save(targetCollaboration);
-
-      return result;
+      // Need to save before applying authorization policy to get the callout ids
+      return await this.collaborationService.save(targetCollaboration);
     } else {
+      this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
       return await this.collaborationService.save(targetCollaboration);
     }
+  }
+  private ensureCalloutsInValidGroupsAndStates(
+    targetCollaboration: ICollaboration
+  ) {
+    // We don't have callouts or we don't have innovationFlow, can't do anything
+    if (!targetCollaboration.innovationFlow || !targetCollaboration.callouts) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Callouts or InnovationFlow ${targetCollaboration.id} `,
+        LogContext.TEMPLATES
+      );
+    }
+
+    const validGroupNames =
+      targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
+        tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
+      )?.allowedValues;
+    const validFlowStates = this.innovationFlowService
+      .getStates(targetCollaboration.innovationFlow)
+      ?.map(state => state.displayName);
+
+    this.collaborationService.moveCalloutsToDefaultGroupAndState(
+      validGroupNames ?? [],
+      validFlowStates ?? [],
+      targetCollaboration.callouts
+    );
   }
 }
