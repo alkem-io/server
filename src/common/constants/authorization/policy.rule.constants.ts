@@ -27,3 +27,5 @@ export const PRIVILEGE_RULE_READ_USER_SETTINGS =
 export const POLICY_RULE_COMMUNITY_INVITE_MEMBER = 'policyRule-communityInvite';
 export const POLICY_RULE_COMMUNITY_ADD_VC =
   'policyRule-communityAddVirtualContributor';
+export const POLICY_RULE_COMMUNITY_APPROVE_APPLICATION =
+  'policyRule-communityApproveApplication';
