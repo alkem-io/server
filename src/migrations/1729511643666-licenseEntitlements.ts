@@ -408,20 +408,25 @@ const licenseCredentialRules = [
     name: 'Space Save As Templatet',
   },
   {
+    credentialType: 'space-license-free',
+    grantedEntitlements: [LicenseEntitlementType.SPACE_FREE],
+    name: 'Space License Free',
+  },
+  {
     credentialType: 'space-license-plus',
     grantedEntitlements: [
+      LicenseEntitlementType.SPACE_PLUS,
       LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
       LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
-      LicenseEntitlementType.SPACE_PLUS,
     ],
     name: 'Space License Plus',
   },
   {
     credentialType: 'space-license-premium',
     grantedEntitlements: [
+      LicenseEntitlementType.SPACE_PREMIUM,
       LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
       LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
-      LicenseEntitlementType.SPACE_PREMIUM,
     ],
     name: 'Space License Premium',
   },
