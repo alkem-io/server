@@ -98,12 +98,34 @@ export class SpaceLicenseService {
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
         case LicenseEntitlementType.SPACE_FREE:
-          const createSpace =
+          const spaceFree =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FREE,
               levelZeroSpaceAgent
             );
-          if (createSpace) {
+          if (spaceFree) {
+            entitlement.limit = 1;
+            entitlement.enabled = true;
+          }
+          break;
+        case LicenseEntitlementType.SPACE_PLUS:
+          const spacePlus =
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.SPACE_PLUS,
+              levelZeroSpaceAgent
+            );
+          if (spacePlus) {
+            entitlement.limit = 1;
+            entitlement.enabled = true;
+          }
+          break;
+        case LicenseEntitlementType.SPACE_PREMIUM:
+          const spacePremium =
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.SPACE_PREMIUM,
+              levelZeroSpaceAgent
+            );
+          if (spacePremium) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }

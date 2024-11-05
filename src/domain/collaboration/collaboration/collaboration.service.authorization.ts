@@ -116,7 +116,6 @@ export class CollaborationAuthorizationService {
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
       !collaboration.innovationFlow.profile ||
-      !collaboration.timeline ||
       !collaboration.license ||
       !collaboration.license.entitlements
     ) {
