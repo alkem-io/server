@@ -211,6 +211,18 @@ export class LicenseEntitlements1729511643666 implements MigrationInterface {
       );
     }
 
+    const licensePolicies: {
+      id: string;
+      credentialRulesStr: string;
+    }[] = await queryRunner.query(
+      `SELECT id, credentialRulesStr FROM license_policy`
+    );
+    for (const policy of licensePolicies) {
+      await queryRunner.query(
+        `UPDATE license_policy SET credentialRulesStr = '${JSON.stringify(licenseCredentialRules)}' WHERE id = '${policy.id}'`
+      );
+    }
+
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_3ef80ef55ba1a1d45e625ea838\` ON \`space\` (\`licenseId\`)`
     );
@@ -380,3 +392,53 @@ enum LicenseEntitlementDataType {
   LIMIT = 'limit',
   FLAG = 'flag',
 }
+
+const licenseCredentialRules = [
+  {
+    credentialType: 'space-feature-virtual-contributors',
+    grantedEntitlements: [
+      LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+    ],
+    name: 'Space Virtual Contributors',
+  },
+  {
+    credentialType: 'space-feature-whiteboard-multi-user',
+    grantedEntitlements: [
+      LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+    ],
+    name: 'Space Multi-user whiteboards',
+  },
+  {
+    credentialType: 'space-feature-save-as-template',
+    grantedEntitlements: [LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE],
+    name: 'Space Save As Templatet',
+  },
+  {
+    credentialType: 'space-license-plus',
+    grantedEntitlements: [
+      LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+      LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+      LicenseEntitlementType.SPACE_PLUS,
+    ],
+    name: 'Space License Plus',
+  },
+  {
+    credentialType: 'space-license-premium',
+    grantedEntitlements: [
+      LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+      LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+      LicenseEntitlementType.SPACE_PREMIUM,
+    ],
+    name: 'Space License Premium',
+  },
+  {
+    credentialType: 'account-license-plus',
+    grantedEntitlements: [
+      LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+      LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
+      LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+    ],
+    name: 'Account License Plus',
+  },
+];

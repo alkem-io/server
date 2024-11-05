@@ -9,7 +9,6 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceService } from './space.service';
 import { RoleSetLicenseService } from '@domain/access/role-set/role.set.service.license';
@@ -98,20 +97,32 @@ export class SpaceLicenseService {
     }
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
-        case LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE:
-          const createSpace = await this.licenseEngineService.isAccessGranted(
-            LicensePrivilege.SPACE_SAVE_AS_TEMPLATE,
-            levelZeroSpaceAgent
-          );
+        case LicenseEntitlementType.SPACE_FREE:
+          const createSpace =
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.SPACE_FREE,
+              levelZeroSpaceAgent
+            );
           if (createSpace) {
+            entitlement.limit = 1;
+            entitlement.enabled = true;
+          }
+          break;
+        case LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE:
+          const saveAsTemplate =
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+              levelZeroSpaceAgent
+            );
+          if (saveAsTemplate) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
           break;
         case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS:
           const createVirtualContributor =
-            await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.SPACE_VIRTUAL_CONTRIBUTOR_ACCESS,
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
               levelZeroSpaceAgent
             );
           if (createVirtualContributor) {
@@ -121,8 +132,8 @@ export class SpaceLicenseService {
           break;
         case LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER:
           const createInnovationHub =
-            await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.SPACE_WHITEBOARD_MULTI_USER,
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
               levelZeroSpaceAgent
             );
           if (createInnovationHub) {

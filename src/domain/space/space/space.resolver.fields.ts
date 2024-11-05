@@ -33,7 +33,6 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { IAccount } from '../account/account.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { ILicense } from '@domain/common/license/license.interface';
@@ -118,17 +117,6 @@ export class SpaceResolverFields {
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
     return loader.load(space.id);
-  }
-
-  @ResolveField('licensePrivileges', () => [LicensePrivilege], {
-    nullable: true,
-    description:
-      'The privileges granted based on the License credentials held by this Space.',
-  })
-  async licensePrivileges(
-    @Parent() space: ISpace
-  ): Promise<LicensePrivilege[]> {
-    return this.spaceService.getLicensePrivileges(space);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

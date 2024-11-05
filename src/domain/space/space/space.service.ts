@@ -63,7 +63,6 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AccountHostService } from '../account.host/account.host.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LicenseCredential } from '@common/enums/license.credential';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { IAccount } from '../account/account.interface';
@@ -862,29 +861,6 @@ export class SpaceService {
         : -1
     );
     return sortedSubspaces;
-  }
-
-  async getLicensePrivileges(space: ISpace): Promise<LicensePrivilege[]> {
-    let spaceAgent = space.agent;
-    if (!space.agent) {
-      const accountWithAgent = await this.getSpaceOrFail(space.id, {
-        relations: {
-          agent: {
-            credentials: true,
-          },
-        },
-      });
-      spaceAgent = accountWithAgent.agent;
-    }
-    if (!spaceAgent) {
-      throw new EntityNotFoundException(
-        `Unable to find agent with credentials for Space: ${space.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-    const privileges =
-      await this.licenseEngineService.getGrantedPrivileges(spaceAgent);
-    return privileges;
   }
 
   async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {

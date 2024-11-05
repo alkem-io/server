@@ -10,7 +10,6 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { IAccount } from './account.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceLicenseService } from '../space/space.service.license';
@@ -85,10 +84,11 @@ export class AccountLicenseService {
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
         case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
-          const createSpace = await this.licenseEngineService.isAccessGranted(
-            LicensePrivilege.ACCOUNT_CREATE_SPACE,
-            accountAgent
-          );
+          const createSpace =
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+              accountAgent
+            );
           if (createSpace) {
             entitlement.limit = 3;
             entitlement.enabled = true;
@@ -96,8 +96,8 @@ export class AccountLicenseService {
           break;
         case LicenseEntitlementType.ACCOUNT_SPACE_PLUS:
           const createSpacePLus =
-            await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.ACCOUNT_CREATE_SPACE,
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
               accountAgent
             );
           if (createSpacePLus) {
@@ -107,8 +107,8 @@ export class AccountLicenseService {
           break;
         case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
           const createSpacePremium =
-            await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.ACCOUNT_CREATE_SPACE,
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
               accountAgent
             );
           if (createSpacePremium) {
@@ -118,8 +118,8 @@ export class AccountLicenseService {
           break;
         case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
           const createVirtualContributor =
-            await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR,
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
               accountAgent
             );
           if (createVirtualContributor) {
@@ -129,8 +129,8 @@ export class AccountLicenseService {
           break;
         case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
           const createInnovationHub =
-            await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.ACCOUNT_CREATE_INNOVATION_HUB,
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
               accountAgent
             );
           if (createInnovationHub) {
@@ -140,8 +140,8 @@ export class AccountLicenseService {
           break;
         case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
           const createInnovationPack =
-            await this.licenseEngineService.isAccessGranted(
-              LicensePrivilege.ACCOUNT_CREATE_INNOVATION_PACK,
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
               accountAgent
             );
           if (createInnovationPack) {
