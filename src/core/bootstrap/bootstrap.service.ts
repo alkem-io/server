@@ -304,16 +304,6 @@ export class BootstrapService {
             },
           });
 
-          const credentialsData = userData.credentials;
-          for (const credentialData of credentialsData) {
-            await this.adminAuthorizationService.grantCredentialToUser({
-              userID: user.id,
-              type: credentialData.type,
-              resourceID: credentialData.resourceID,
-            });
-          }
-          await this.userAuthorizationService.grantCredentials(user);
-
           // Once all is done, reset the user authorizations
           const userAuthorizations =
             await this.userAuthorizationService.applyAuthorizationPolicy(
@@ -327,6 +317,18 @@ export class BootstrapService {
               account
             );
           await this.authorizationPolicyService.saveAll(accountAuthorizations);
+
+          const credentialsData = userData.credentials;
+          for (const credentialData of credentialsData) {
+            await this.adminAuthorizationService.grantCredentialToUser({
+              userID: user.id,
+              type: credentialData.type,
+              resourceID: credentialData.resourceID,
+            });
+          }
+          await this.userAuthorizationService.grantCredentialsAllUsersReceive(
+            user.id
+          );
         }
       }
     } catch (error: any) {

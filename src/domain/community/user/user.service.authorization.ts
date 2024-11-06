@@ -169,20 +169,20 @@ export class UserAuthorizationService {
     return updatedAuthorizations;
   }
 
-  async grantCredentials(user: IUser): Promise<IUser> {
-    const agent = await this.userService.getAgent(user.id);
+  async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
+    const agent = await this.userService.getAgent(userID);
 
-    user.agent = await this.agentService.grantCredential({
+    await this.agentService.grantCredential({
       type: AuthorizationCredential.GLOBAL_REGISTERED,
       agentID: agent.id,
     });
-    user.agent = await this.agentService.grantCredential({
+    await this.agentService.grantCredential({
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,
       agentID: agent.id,
-      resourceID: user.id,
+      resourceID: userID,
     });
-    user.agent = await this.agentService.saveAgent(user.agent);
-    return user;
+
+    return await this.userService.getUserOrFail(userID);
   }
 
   private appendGlobalCredentialRules(
