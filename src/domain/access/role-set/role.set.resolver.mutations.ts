@@ -693,11 +693,11 @@ export class RoleSetResolverMutations {
       eventData.applicationID
     );
 
-    //toDo fix this temporary fix. Patches the immediate issue but doesn't solve the design issue of guards not being triggered on transitions
+    // Assumption is that the user with the GRANT also has UPDATE
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
-      AuthorizationPrivilege.COMMUNITY_APPLY_ACCEPT,
+      AuthorizationPrivilege.UPDATE,
       `event on application: ${application.id}`
     );
 

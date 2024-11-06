@@ -61,11 +61,11 @@ export const invitationLifecycleMachine: ILifecycleDefinition = {
     invited: {
       on: {
         ACCEPT: {
-          guards: 'hasInvitationAcceptPrivilege',
+          guard: 'hasInvitationAcceptPrivilege',
           target: InvitationLifecycleState.ACCEPTING,
         },
         REJECT: {
-          guards: 'hasUpdatePrivilege',
+          guard: 'hasUpdatePrivilege',
           target: InvitationLifecycleState.REJECTED,
         },
       },
@@ -73,7 +73,7 @@ export const invitationLifecycleMachine: ILifecycleDefinition = {
     accepting: {
       on: {
         ACCEPTED: {
-          guards: 'hasInvitationAcceptPrivilege',
+          guard: 'hasInvitationAcceptPrivilege',
           target: InvitationLifecycleState.ACCEPTED,
         },
       },
@@ -84,11 +84,11 @@ export const invitationLifecycleMachine: ILifecycleDefinition = {
     rejected: {
       on: {
         REINVITE: {
-          guards: 'hasUpdatePrivilege',
+          guard: 'hasUpdatePrivilege',
           target: InvitationLifecycleState.INVITED,
         },
         ARCHIVE: {
-          guards: 'hasUpdatePrivilege',
+          guard: 'hasUpdatePrivilege',
           target: InvitationLifecycleState.ARCHIVED,
         },
       },
