@@ -6,12 +6,12 @@ export class AuthorizationPolicy1730877510629 implements MigrationInterface {
     await this.updateAuthorizationPolicyTypeOnSingleton(
       queryRunner,
       'ai_server',
-      'ai_server'
+      'ai-server'
     );
     await this.updateAuthorizationPolicyTypeOnSingleton(
       queryRunner,
       'license_policy',
-      'license_policy'
+      'license-policy'
     );
     await this.updateAuthorizationPolicyTypeOnSingleton(
       queryRunner,
