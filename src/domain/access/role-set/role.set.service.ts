@@ -8,7 +8,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Not, Repository } from 'typeorm';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LogContext } from '@common/enums/logging.context';
@@ -756,7 +756,7 @@ export class RoleSetService {
       );
 
       if (!hasAnotherAdminRole) {
-        await this.removeContributorToImplicitRole(
+        await this.removeContributorFromImplicitRole(
           parentRoleSet,
           agent,
           CommunityRoleImplicit.SUBSPACE_ADMIN
@@ -952,7 +952,7 @@ export class RoleSetService {
     });
   }
 
-  private async removeContributorToImplicitRole(
+  private async removeContributorFromImplicitRole(
     roleSet: IRoleSet,
     agent: IAgent,
     role: CommunityRoleImplicit
@@ -1297,20 +1297,12 @@ export class RoleSetService {
     parentRoleSet: IRoleSet,
     childRoleSet: IRoleSet
   ): Promise<IRoleSet[]> {
-    const peerRoleSets: IRoleSet[] = await this.roleSetRepository.find({
+    return this.roleSetRepository.find({
       where: {
-        parentRoleSet: {
-          id: parentRoleSet.id,
-        },
+        parentRoleSet: { id: parentRoleSet.id },
+        id: Not(childRoleSet.id),
       },
     });
-    const result: IRoleSet[] = [];
-    for (const roleSet of peerRoleSets) {
-      if (roleSet && !(roleSet.id === childRoleSet.id)) {
-        result.push(roleSet);
-      }
-    }
-    return result;
   }
 
   public async setParentRoleSetAndCredentials(
