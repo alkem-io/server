@@ -129,7 +129,7 @@ export class UserResolverMutations {
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
     const updatedAuthorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     return await this.userService.getUserOrFail(user.id);

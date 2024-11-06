@@ -125,7 +125,7 @@ export class RoleSetResolverMutations {
     // reset the user authorization policy so that their profile is visible to other community members
     const user = await this.userService.getUserOrFail(roleData.contributorID);
     const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(authorizations);
     return await this.userService.getUserOrFail(roleData.contributorID);
   }
@@ -249,7 +249,7 @@ export class RoleSetResolverMutations {
     // to other community members
     const user = await this.userService.getUserOrFail(roleData.contributorID);
     const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(authorizations);
     return await this.userService.getUserOrFail(roleData.contributorID);
   }
