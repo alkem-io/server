@@ -7,7 +7,6 @@ import { DID } from './scalar.did';
 import { Markdown } from './scalar.markdown';
 import { MessageID } from './scalar.messageid';
 import { LifecycleDefinitionScalar } from './scalar.lifecycle.definition';
-import { CID } from './scalar.cid';
 import { Emoji } from './scalar.emoji';
 import { WhiteboardContent } from './scalar.whiteboard.content';
 
@@ -20,7 +19,6 @@ import { WhiteboardContent } from './scalar.whiteboard.content';
     UUID_NAMEID,
     UUID_NAMEID_EMAIL,
     DID,
-    CID,
     Markdown,
     MessageID,
     LifecycleDefinitionScalar,
