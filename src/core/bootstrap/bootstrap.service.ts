@@ -58,8 +58,6 @@ import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions
 
 @Injectable()
 export class BootstrapService {
-  private adminAgentInfo?: AgentInfo;
-
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
@@ -327,16 +325,6 @@ export class BootstrapService {
               account
             );
           await this.authorizationPolicyService.saveAll(accountAuthorizations);
-          if (!this.adminAgentInfo) {
-            this.adminAgentInfo = await this.createSystemAgentInfo(user);
-          }
-        } else {
-          if (!this.adminAgentInfo) {
-            const user = await this.userService.getUserByEmail(userData.email);
-            if (user) {
-              this.adminAgentInfo = await this.createSystemAgentInfo(user);
-            }
-          }
         }
       }
     } catch (error: any) {
@@ -432,6 +420,7 @@ export class BootstrapService {
       DEFAULT_HOST_ORG_NAMEID
     );
     if (!hostOrganization) {
+      const adminAgentInfo = await this.getAdminAgentInfo();
       hostOrganization = await this.organizationService.createOrganization(
         {
           nameID: DEFAULT_HOST_ORG_NAMEID,
@@ -439,7 +428,7 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         },
-        this.adminAgentInfo
+        adminAgentInfo
       );
       const orgAuthorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
@@ -455,6 +444,21 @@ export class BootstrapService {
         );
       await this.authorizationPolicyService.saveAll(accountAuthorizations);
     }
+  }
+
+  private async getAdminAgentInfo(): Promise<AgentInfo> {
+    const adminUserEmail = 'admin@alkem.io';
+    const adminUser = await this.userService.getUserByEmail(adminUserEmail, {
+      relations: {
+        agent: true,
+      },
+    });
+    if (!adminUser) {
+      throw new BootstrapException(
+        `Unable to load fixed admin user for creating organization: ${adminUserEmail}`
+      );
+    }
+    return this.createSystemAgentInfo(adminUser);
   }
 
   private async ensureSpaceSingleton() {
