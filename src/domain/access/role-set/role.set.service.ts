@@ -757,7 +757,7 @@ export class RoleSetService {
 
       if (!hasAnotherAdminRole) {
         await this.removeContributorFromImplicitRole(
-          roleSet,
+          parentRoleSet,
           agent,
           CommunityRoleImplicit.SUBSPACE_ADMIN
         );
