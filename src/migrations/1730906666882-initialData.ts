@@ -88,6 +88,21 @@ export class InitialData1730906666882 implements MigrationInterface {
          ('${preferenceDefinitionIds[40]}',1,'Privileges','Allow contributors to create Callouts.','Allow contributors to create Callouts.','boolean','AllowContributorsToCreateCallouts','challenge'),
          ('${preferenceDefinitionIds[41]}',1,'Notification','New comment on my Post','Receive notification when a comment is created on my Post','boolean','NotificationPostCommentCreated','user')`
     );
+
+    // Create the AI Server entity
+    const aiServerID = randomUUID();
+    const aiServerAuthID = randomUUID();
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
+                  ('${aiServerAuthID}',
+                  1, '', '', 0, '', 'ai-server')`
+    );
+    await queryRunner.query(
+      `INSERT INTO ai_server (id, version, authorizationId) VALUES
+              ('${aiServerID}',
+              1,
+              '${aiServerAuthID}')`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
