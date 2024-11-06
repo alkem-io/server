@@ -294,7 +294,7 @@ export class BootstrapService {
           userData.email
         );
         if (!userExists) {
-          let user = await this.userService.createUser({
+          const user = await this.userService.createUser({
             email: userData.email,
             accountUpn: userData.email,
             firstName: userData.firstName,
@@ -312,11 +312,13 @@ export class BootstrapService {
               resourceID: credentialData.resourceID,
             });
           }
-          user = await this.userAuthorizationService.grantCredentials(user);
+          await this.userAuthorizationService.grantCredentials(user);
 
           // Once all is done, reset the user authorizations
           const userAuthorizations =
-            await this.userAuthorizationService.applyAuthorizationPolicy(user);
+            await this.userAuthorizationService.applyAuthorizationPolicy(
+              user.id
+            );
           await this.authorizationPolicyService.saveAll(userAuthorizations);
 
           const account = await this.userService.getAccount(user);

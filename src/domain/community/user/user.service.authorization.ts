@@ -45,9 +45,9 @@ export class UserAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    userInput: IUser
+    userID: string
   ): Promise<IAuthorizationPolicy[]> {
-    const user = await this.userService.getUserOrFail(userInput.id, {
+    const user = await this.userService.getUserOrFail(userID, {
       loadEagerRelations: false,
       relations: {
         authorization: true,

@@ -81,7 +81,7 @@ export class RegistrationResolverMutations {
       await this.userAuthorizationService.grantCredentials(userInput);
 
     const userAuthorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(userAuthorizations);
 
     const userAccount = await this.userService.getAccount(user);
