@@ -6,9 +6,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IApplication } from './application.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION } from '@common/constants/authorization/credential.rule.constants';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { POLICY_RULE_COMMUNITY_APPROVE_APPLICATION } from '@common/constants';
-
 @Injectable()
 export class ApplicationAuthorizationService {
   constructor(
@@ -26,10 +23,6 @@ export class ApplicationAuthorizationService {
         parentAuthorization
       );
 
-    application.authorization = this.appendPrivilegeRules(
-      application.authorization
-    );
-
     application.authorization =
       await this.extendAuthorizationPolicy(application);
 
@@ -45,6 +38,7 @@ export class ApplicationAuthorizationService {
     const user = await this.applicationService.getContributor(application.id);
 
     // also grant the user privileges to manage their own application
+    // Note: the GRANT privilege iS NOT assigned to the user; that is what is actually used to approve the application
     const userApplicationRule =
       this.authorizationPolicyService.createCredentialRule(
         [
@@ -65,21 +59,6 @@ export class ApplicationAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       application.authorization,
       newRules
-    );
-  }
-
-  private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    const approveApplicationPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_APPLY_ACCEPT],
-      AuthorizationPrivilege.GRANT,
-      POLICY_RULE_COMMUNITY_APPROVE_APPLICATION
-    );
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      [approveApplicationPrivilege]
     );
   }
 }

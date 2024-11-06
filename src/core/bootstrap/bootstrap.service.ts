@@ -58,8 +58,6 @@ import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions
 
 @Injectable()
 export class BootstrapService {
-  private adminAgentInfo?: AgentInfo;
-
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
@@ -296,7 +294,7 @@ export class BootstrapService {
           userData.email
         );
         if (!userExists) {
-          let user = await this.userService.createUser({
+          const user = await this.userService.createUser({
             email: userData.email,
             accountUpn: userData.email,
             firstName: userData.firstName,
@@ -306,19 +304,11 @@ export class BootstrapService {
             },
           });
 
-          const credentialsData = userData.credentials;
-          for (const credentialData of credentialsData) {
-            await this.adminAuthorizationService.grantCredentialToUser({
-              userID: user.id,
-              type: credentialData.type,
-              resourceID: credentialData.resourceID,
-            });
-          }
-          user = await this.userAuthorizationService.grantCredentials(user);
-
           // Once all is done, reset the user authorizations
           const userAuthorizations =
-            await this.userAuthorizationService.applyAuthorizationPolicy(user);
+            await this.userAuthorizationService.applyAuthorizationPolicy(
+              user.id
+            );
           await this.authorizationPolicyService.saveAll(userAuthorizations);
 
           const account = await this.userService.getAccount(user);
@@ -327,16 +317,18 @@ export class BootstrapService {
               account
             );
           await this.authorizationPolicyService.saveAll(accountAuthorizations);
-          if (!this.adminAgentInfo) {
-            this.adminAgentInfo = await this.createSystemAgentInfo(user);
+
+          const credentialsData = userData.credentials;
+          for (const credentialData of credentialsData) {
+            await this.adminAuthorizationService.grantCredentialToUser({
+              userID: user.id,
+              type: credentialData.type,
+              resourceID: credentialData.resourceID,
+            });
           }
-        } else {
-          if (!this.adminAgentInfo) {
-            const user = await this.userService.getUserByEmail(userData.email);
-            if (user) {
-              this.adminAgentInfo = await this.createSystemAgentInfo(user);
-            }
-          }
+          await this.userAuthorizationService.grantCredentialsAllUsersReceive(
+            user.id
+          );
         }
       }
     } catch (error: any) {
@@ -432,6 +424,7 @@ export class BootstrapService {
       DEFAULT_HOST_ORG_NAMEID
     );
     if (!hostOrganization) {
+      const adminAgentInfo = await this.getAdminAgentInfo();
       hostOrganization = await this.organizationService.createOrganization(
         {
           nameID: DEFAULT_HOST_ORG_NAMEID,
@@ -439,7 +432,7 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         },
-        this.adminAgentInfo
+        adminAgentInfo
       );
       const orgAuthorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
@@ -455,6 +448,21 @@ export class BootstrapService {
         );
       await this.authorizationPolicyService.saveAll(accountAuthorizations);
     }
+  }
+
+  private async getAdminAgentInfo(): Promise<AgentInfo> {
+    const adminUserEmail = 'admin@alkem.io';
+    const adminUser = await this.userService.getUserByEmail(adminUserEmail, {
+      relations: {
+        agent: true,
+      },
+    });
+    if (!adminUser) {
+      throw new BootstrapException(
+        `Unable to load fixed admin user for creating organization: ${adminUserEmail}`
+      );
+    }
+    return this.createSystemAgentInfo(adminUser);
   }
 
   private async ensureSpaceSingleton() {

@@ -30,7 +30,6 @@ export enum AuthorizationPrivilege {
   UPDATE_INNOVATION_FLOW = 'update-innovation-flow',
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
-  COMMUNITY_APPLY_ACCEPT = 'community-apply-accept',
   COMMUNITY_INVITE = 'community-invite',
   COMMUNITY_INVITE_ACCEPT = 'community-invite-accept',
   COMMUNITY_ADD_MEMBER = 'community-add-member', // only for global admins
