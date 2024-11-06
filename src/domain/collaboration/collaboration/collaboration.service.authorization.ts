@@ -62,11 +62,7 @@ export class CollaborationAuthorizationService {
           },
         }
       );
-    if (
-      !collaboration.callouts ||
-      !collaboration.innovationFlow ||
-      !collaboration.timeline
-    ) {
+    if (!collaboration.callouts || !collaboration.innovationFlow) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
         LogContext.SPACES
@@ -121,8 +117,7 @@ export class CollaborationAuthorizationService {
     if (
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
-      !collaboration.innovationFlow.profile ||
-      !collaboration.timeline
+      !collaboration.innovationFlow.profile
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization children:  ${collaboration.id}`,
@@ -148,7 +143,8 @@ export class CollaborationAuthorizationService {
         collaboration.authorization
       );
 
-    if (roleSet && spaceSettings) {
+    // Collaboration templates don't have timeline so this won't be executed for them
+    if (roleSet && spaceSettings && collaboration.timeline) {
       const extendedAuthorizationContributors =
         await this.appendCredentialRulesForContributors(
           clonedAuthorization,

@@ -25,12 +25,9 @@ export class ProfileDocumentsService {
     fileUrl: string,
     profile: IProfile
   ): Promise<string | undefined> {
+    // if outside Alkemio - skip
     if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
-      throw new BaseException(
-        'File URL not inside Alkemio',
-        LogContext.COLLABORATION,
-        AlkemioErrorStatus.UNSPECIFIED
-      );
+      return undefined;
     }
 
     const storageBucketToCheck = profile.storageBucket;

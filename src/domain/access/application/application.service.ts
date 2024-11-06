@@ -17,13 +17,12 @@ import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { applicationLifecycleConfig } from '@domain/access/application/application.lifecycle.config';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { asyncFilter } from '@common/utils';
 import { IContributor } from '../../community/contributor/contributor.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ApplicationLifecycleService } from './application.service.lifecycle';
 
 @Injectable()
 export class ApplicationService {
@@ -31,8 +30,9 @@ export class ApplicationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
-    private lifecycleService: LifecycleService,
     private userService: UserService,
+    private lifecycleService: LifecycleService,
+    private applicationLifecycleService: ApplicationLifecycleService,
     private nvpService: NVPService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -51,10 +51,7 @@ export class ApplicationService {
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
-    application.lifecycle = await this.lifecycleService.createLifecycle(
-      application.id,
-      applicationLifecycleConfig
-    );
+    application.lifecycle = await this.lifecycleService.createLifecycle();
 
     return await this.applicationRepository.save(application);
   }
@@ -69,6 +66,8 @@ export class ApplicationService {
         await this.nvpService.removeNVP(question.id);
       }
     }
+
+    await this.lifecycleService.deleteLifecycle(application.lifecycle.id);
     if (application.authorization)
       await this.authorizationPolicyService.delete(application.authorization);
 
@@ -115,20 +114,6 @@ export class ApplicationService {
     return user;
   }
 
-  async getApplicationState(applicationID: string): Promise<string> {
-    const application = await this.getApplicationOrFail(applicationID, {
-      relations: {
-        lifecycle: true,
-      },
-    });
-
-    const lifecycle = application.lifecycle;
-    if (lifecycle) {
-      return await this.lifecycleService.getState(lifecycle);
-    }
-    return '';
-  }
-
   async findExistingApplications(
     userID: string,
     roleSetID: string
@@ -164,7 +149,6 @@ export class ApplicationService {
       findOpts.select = {
         lifecycle: {
           machineState: true,
-          machineDef: true,
         },
       };
     }
@@ -172,24 +156,28 @@ export class ApplicationService {
     const applications = await this.applicationRepository.find(findOpts);
 
     if (states.length) {
-      return asyncFilter(applications, async app =>
-        states.includes(await this.getApplicationState(app.id))
+      const filteredApplications = applications.filter(app =>
+        states.includes(
+          this.applicationLifecycleService.getState(app.lifecycle)
+        )
       );
+      return filteredApplications;
     }
 
     return applications;
   }
 
+  async getLifecycleState(applicationID: string): Promise<string> {
+    const invitation = await this.getApplicationOrFail(applicationID);
+    const lifecycle = invitation.lifecycle;
+
+    return this.applicationLifecycleService.getState(lifecycle);
+  }
+
   async isFinalizedApplication(applicationID: string): Promise<boolean> {
     const application = await this.getApplicationOrFail(applicationID);
-    const lifecycle = application.lifecycle;
-    if (!lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Lifecycle for Application ${application.id} `,
-        LogContext.COMMUNITY
-      );
-    }
-    return await this.lifecycleService.isFinalState(lifecycle);
+
+    return this.applicationLifecycleService.isFinalState(application.lifecycle);
   }
 
   async getQuestionsSorted(application: IApplication): Promise<IQuestion[]> {

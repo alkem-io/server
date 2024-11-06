@@ -529,6 +529,76 @@ export class RoleSetService {
     return user;
   }
 
+  public async acceptInvitationToRoleSet(
+    invitationID: string,
+    agentInfo: AgentInfo
+  ): Promise<void> {
+    try {
+      const invitation = await this.invitationService.getInvitationOrFail(
+        invitationID,
+        {
+          relations: {
+            roleSet: {
+              parentRoleSet: true,
+            },
+          },
+        }
+      );
+      const contributorID = invitation.invitedContributorID;
+      const roleSet = invitation.roleSet;
+      if (!contributorID || !roleSet) {
+        throw new EntityNotInitializedException(
+          `Lifecycle not initialized on Invitation: ${invitation.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+
+      if (invitation.invitedToParent) {
+        if (!roleSet.parentRoleSet) {
+          throw new EntityNotInitializedException(
+            `Unable to load parent community when flag to add is set: ${invitation.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+        await this.assignContributorToRole(
+          roleSet.parentRoleSet,
+          CommunityRoleType.MEMBER,
+          contributorID,
+          invitation.contributorType,
+          agentInfo,
+          true
+        );
+      }
+      await this.assignContributorToRole(
+        roleSet,
+        CommunityRoleType.MEMBER,
+        contributorID,
+        invitation.contributorType,
+        agentInfo,
+        true
+      );
+      if (invitation.extraRole) {
+        await this.assignContributorToRole(
+          roleSet,
+          invitation.extraRole,
+          contributorID,
+          invitation.contributorType,
+          agentInfo,
+          false
+        );
+      }
+    } catch (e: any) {
+      this.logger.error?.(
+        `Error adding member to community: ${e}`,
+        LogContext.COMMUNITY
+      );
+      throw new RoleSetMembershipException(
+        `Unable to add member to community: ${e}`,
+        LogContext.COMMUNITY
+      );
+    }
+  }
+
   private async contributorAddedToRole(
     contributor: IContributor,
     roleSet: IRoleSet,
@@ -1376,6 +1446,33 @@ export class RoleSetService {
       );
     }
     return entryRole;
+  }
+
+  public async approveApplication(
+    applicationID: string,
+    agentInfo: AgentInfo
+  ): Promise<void> {
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationID,
+      {
+        relations: { roleSet: true, user: true },
+      }
+    );
+    const userID = application.user?.id;
+    const roleSet = application.roleSet;
+    if (!userID || !roleSet)
+      throw new EntityNotInitializedException(
+        `Lifecycle not initialized on Application: ${application.id}`,
+        LogContext.COMMUNITY
+      );
+
+    await this.assignUserToRole(
+      roleSet,
+      CommunityRoleType.MEMBER,
+      userID,
+      agentInfo,
+      true
+    );
   }
 
   public async isEntryRole(
