@@ -257,14 +257,9 @@ export class SchemaSetup1730713372181 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `storage_aggregator` ADD CONSTRAINT `FK_b80c28f5335ab5442f63c644d94` FOREIGN KEY (`parentStorageAggregatorId`) REFERENCES `storage_aggregator`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
-    await queryRunner.query(
-      'ALTER TABLE `storage_aggregator` ADD CONSTRAINT `FK_0647707288c243e60091c8d8620` FOREIGN KEY (`directStorageId`) REFERENCES `storage_bucket`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
-    );
+
     await queryRunner.query(
       'ALTER TABLE `storage_bucket` ADD CONSTRAINT `FK_f2f48b57269987b13b415a00587` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
-    );
-    await queryRunner.query(
-      'ALTER TABLE `storage_bucket` ADD CONSTRAINT `FK_11d0ed50a26da5513f7e4347847` FOREIGN KEY (`storageAggregatorId`) REFERENCES `storage_aggregator`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `profile` ADD CONSTRAINT `FK_a96475631aba7dce41db03cc8b2` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
