@@ -15,7 +15,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { EventBus } from '@nestjs/cqrs';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { InteractionMessage } from './dto/interaction.message';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import {
@@ -168,7 +167,7 @@ export class AiPersonaServiceService {
       engine: aiPersonaService.engine,
       prompt: aiPersonaService.prompt,
       userID: invocationInput.userID,
-      question: invocationInput.question,
+      message: invocationInput.message,
       bodyOfKnowledgeID: aiPersonaService.bodyOfKnowledgeID,
       contextID: invocationInput.contextID,
       history,
@@ -180,6 +179,7 @@ export class AiPersonaServiceService {
         aiPersonaService.externalConfig
       ),
       resultHandler: invocationInput.resultHandler,
+      personaServiceID: invocationInput.aiPersonaServiceID,
     };
 
     return this.aiPersonaEngineAdapter.invoke(input);

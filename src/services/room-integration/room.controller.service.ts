@@ -1,33 +1,71 @@
+import { LogContext } from '@common/enums';
 import { MutationType } from '@common/enums/subscriptions';
 import { RoomService } from '@domain/communication/room/room.service';
-import { Injectable } from '@nestjs/common';
+// import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class RoomControllerService {
   constructor(
     private roomService: RoomService,
-    private subscriptionPublishService: SubscriptionPublishService
+    private subscriptionPublishService: SubscriptionPublishService,
+    // private vcInteractionService: VcInteractionService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async postReply(
-    roomID: string,
-    threadID: string,
-    communctionID: string,
-    message: string
+    { roomID, threadID, communicationID }: RoomDetails,
+    message: any
+    // vcInteractionID?: string
   ) {
     const room = await this.roomService.getRoomOrFail(roomID);
     const answerMessage = await this.roomService.sendMessageReply(
       room,
-
-      communctionID,
-      { roomID: room.externalRoomID, message, threadID },
+      communicationID,
+      {
+        roomID: room.externalRoomID,
+        message: this.convertResultToMessage(message),
+        threadID,
+      },
       'virtualContributor'
     );
+
+    //TODO fix me with the expert engine
+    // if (vcInteractionID) {
+    //   const vcInteraction =
+    //     await this.vcInteractionService.getVcInteractionOrFail(vcInteractionID);
+    //   if (!vcInteraction.externalMetadata.threadId && response.threadId) {
+    //     vcInteraction.externalMetadata.threadId = response.threadId;
+    //     await this.vcInteractionService.save(vcInteraction);
+    //   }
+    // }
+
     this.subscriptionPublishService.publishRoomEvent(
       room,
       MutationType.CREATE,
       answerMessage
     );
+  }
+
+  //TODO type the result when all engine services are migrated
+  private convertResultToMessage(result: any): string {
+    this.logger.verbose?.(
+      `Converting result to room message: ${JSON.stringify(result)}`,
+      LogContext.COMMUNICATION
+    );
+    let answer = result.result;
+
+    if (result.sources) {
+      answer = `${answer}\n${result.sources
+        .map(
+          ({ title, uri }: { title: string; uri: string }) =>
+            `- [${title}](${uri})`
+        )
+        .join('\n')}`;
+    }
+    return answer;
   }
 }

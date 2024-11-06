@@ -7,6 +7,7 @@ export class RoomDetails {
   roomID!: string;
   threadID!: string;
   communicationID!: string;
+  vcInteractionID?: string;
 }
 
 export class ResultHandler {
@@ -15,11 +16,10 @@ export class ResultHandler {
 }
 
 export class AiServerAdapteInvocationInput {
-  question!: string;
+  message!: string;
   aiPersonaServiceID!: string;
   contextID?: string;
   userID?: string;
-  threadID?: string;
   vcInteractionID?: string;
   description?: string;
   displayName!: string;

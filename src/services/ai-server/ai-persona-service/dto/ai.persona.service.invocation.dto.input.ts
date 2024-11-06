@@ -23,6 +23,12 @@ export class RoomDetails {
     description: 'The communicationID for the VC',
   })
   communicationID!: string;
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The Virtual Contributor interaciton part of which is this question',
+  })
+  vcInteractionID?: string | undefined = undefined;
 }
 
 @InputType()
@@ -50,9 +56,9 @@ export class AiPersonaServiceInvocationInput {
 
   @Field(() => String, {
     nullable: false,
-    description: 'The question that is being asked.',
+    description: 'The message being sent to the engine.',
   })
-  question!: string;
+  message!: string;
 
   @Field(() => String, {
     nullable: true,

@@ -28,12 +28,15 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput } from '../ai-persona/dto';
-import { VirtualContributorInvocationInput } from './dto/virtual.contributor.dto.invocation.input';
+import {
+  InvocationResultAction,
+  VirtualContributorInvocationInput,
+  isInputValidForAction,
+} from './dto';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiServerAdapteInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
@@ -397,33 +400,32 @@ export class VirtualContributorService {
       LogContext.AI_PERSONA_SERVICE_ENGINE
     );
 
-    const vcInteraction =
-      await this.vcInteractionService.getVcInteractionOrFail(
-        invocationInput.vcInteractionID!
-      );
-
-    const aiServerAdapterQuestionInput: AiServerAdapteInvocationInput = {
+    const aiServerAdapterInvocationInput: AiServerAdapteInvocationInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
-      question: invocationInput.question,
+      message: invocationInput.message,
       contextID: invocationInput.contextSpaceID,
       userID: invocationInput.userID,
-      threadID: invocationInput.threadID,
-      vcInteractionID: vcInteraction.id,
-      externalMetadata: vcInteraction.externalMetadata,
       description: virtualContributor.profile.description,
       displayName: virtualContributor.profile.displayName,
       resultHandler: invocationInput.resultHandler,
     };
 
+    if (
+      isInputValidForAction(invocationInput, InvocationResultAction.POST_REPLY)
+    ) {
+      const vcInteraction =
+        await this.vcInteractionService.getVcInteractionOrFail(
+          invocationInput.resultHandler.roomDetails!.vcInteractionID!
+        );
+
+      aiServerAdapterInvocationInput.vcInteractionID = vcInteraction.id;
+      aiServerAdapterInvocationInput.externalMetadata =
+        vcInteraction.externalMetadata;
+    }
+
     const response = await this.aiServerAdapter.invoke(
-      aiServerAdapterQuestionInput
+      aiServerAdapterInvocationInput
     );
-
-    // if (!vcInteraction.externalMetadata.threadId && response.threadId) {
-    //   vcInteraction.externalMetadata.threadId = response.threadId;
-    //   await this.vcInteractionService.save(vcInteraction);
-    // }
-
     return response;
   }
 

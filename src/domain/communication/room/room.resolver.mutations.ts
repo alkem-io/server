@@ -344,7 +344,7 @@ export class RoomResolverMutations {
             const contextSpaceID =
               await this.roomServiceMentions.getSpaceIdForRoom(room);
 
-            await this.roomServiceMentions.askQuestionToVirtualContributor(
+            await this.roomServiceMentions.invokeVirtualContributor(
               vcMentioned?.nameID,
               messageData.message,
               threadID,
@@ -435,7 +435,7 @@ export class RoomResolverMutations {
             const contextSpaceID =
               await this.roomServiceMentions.getSpaceIdForRoom(room);
 
-            await this.roomServiceMentions.askQuestionToVirtualContributor(
+            await this.roomServiceMentions.invokeVirtualContributor(
               vcMentioned?.nameID,
               messageData.message,
               threadID,

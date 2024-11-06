@@ -19,7 +19,6 @@ import {
 } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
@@ -142,7 +141,7 @@ export class AiPersonaService {
     );
 
     const input: AiServerAdapteInvocationInput = {
-      question: question,
+      message: question,
       displayName: '',
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
       resultHandler: {

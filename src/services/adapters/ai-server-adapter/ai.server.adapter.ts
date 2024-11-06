@@ -4,7 +4,6 @@ import { AiServerAdapteInvocationInput } from './dto/ai.server.adapter.dto.invoc
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { LogContext } from '@common/enums';
 
@@ -63,11 +62,9 @@ export class AiServerAdapter {
   }
 
   invoke(invocationInput: AiServerAdapteInvocationInput): Promise<void> {
-    const vcInteractionID = invocationInput.vcInteractionID;
     return this.aiServer.invoke({
       ...invocationInput,
       externalMetadata: invocationInput.externalMetadata || {},
-      interactionID: vcInteractionID,
     });
   }
 }

@@ -15,7 +15,10 @@ import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.servic
 import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
-import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto';
+import {
+  CreateAiPersonaServiceInput,
+  isInputValidForAction,
+} from '../ai-persona-service/dto';
 import { AiPersonaServiceInvocationInput } from '../ai-persona-service/dto/ai.persona.service.invocation.dto.input';
 import {
   IngestSpace,
@@ -24,7 +27,6 @@ import {
 import { EventBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { ChromaClient } from 'chromadb';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import {
@@ -181,7 +183,9 @@ export class AiServerService {
     const HISTORY_ENABLED_ENGINES = new Set<AiPersonaEngine>([
       AiPersonaEngine.EXPERT,
     ]);
-    const loadHistory = HISTORY_ENABLED_ENGINES.has(personaService.engine);
+    const loadHistory =
+      HISTORY_ENABLED_ENGINES.has(personaService.engine) &&
+      isInputValidForAction(invocationInput, InvocationResultAction.POST_REPLY);
 
     // history should be loaded trough the GQL API of the collaboration server
     let history: InteractionMessage[] = [];
@@ -196,7 +200,7 @@ export class AiServerService {
       );
 
       history = await this.getLastNInteractionMessages(
-        invocationInput.interactionID,
+        invocationInput.resultHandler.roomDetails!.vcInteractionID,
         historyLimit
       );
     }
@@ -414,18 +418,16 @@ export class AiServerService {
   }
 
   public async handleInvokeEngineResult(event: InvokeEngineResult) {
-    const resultHandler = event.input.resultHandler;
+    const resultHandler = event.original.resultHandler;
     //TODO use some sort of a factory when adding the next handler and DO NOT extend
     //this with elseif or switch
     if (
-      resultHandler.action === InvocationResultAction.POST_REPLY &&
-      resultHandler.roomDetails
+      isInputValidForAction(event.original, InvocationResultAction.POST_REPLY)
     )
       this.roomControllerService.postReply(
-        resultHandler.roomDetails.roomID,
-        resultHandler.roomDetails.threadID,
-        resultHandler.roomDetails.communicationID,
-        event.response.answer
+        resultHandler.roomDetails!,
+        event.response,
+        event.original.interactionID
       );
   }
 }

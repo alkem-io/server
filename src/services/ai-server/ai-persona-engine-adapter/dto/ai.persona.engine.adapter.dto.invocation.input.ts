@@ -19,7 +19,7 @@ export class ResultHandler {
 
 export interface AiPersonaEngineAdapterInvocationInput
   extends AiPersonaEngineAdapterInputBase {
-  question: string;
+  message: string;
   prompt?: string[];
   contextID?: string;
   bodyOfKnowledgeID: string;
@@ -30,4 +30,5 @@ export interface AiPersonaEngineAdapterInvocationInput
   externalConfig: IExternalConfig;
   externalMetadata: ExternalMetadata;
   resultHandler: ResultHandler;
+  personaServiceID: string;
 }

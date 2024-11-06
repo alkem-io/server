@@ -22,6 +22,12 @@ export class RoomDetails {
     description: 'The communicationID for the VC',
   })
   communicationID!: string;
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The Virtual Contributor interaciton part of which is this question',
+  })
+  vcInteractionID?: string | undefined = undefined;
 }
 
 @InputType()
@@ -51,7 +57,7 @@ export class VirtualContributorInvocationInput {
     nullable: false,
     description: 'The question that is being asked.',
   })
-  question!: string;
+  message!: string;
 
   @Field(() => String, {
     nullable: true,
@@ -65,20 +71,6 @@ export class VirtualContributorInvocationInput {
     description: 'User identifier used internaly by the engine',
   })
   userID: string | undefined = undefined;
-
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The ID of the message thread where the Virtual Contributor is asked a question',
-  })
-  threadID?: string | undefined = undefined;
-
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The Virtual Contributor interaciton part of which is this question',
-  })
-  vcInteractionID?: string | undefined = undefined;
 
   @Field(() => ResultHandler, {
     nullable: false,
