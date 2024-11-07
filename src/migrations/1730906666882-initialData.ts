@@ -7,6 +7,14 @@ import {
 
 export class InitialData1730906666882 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const migrations = await queryRunner.query(
+      'SELECT name FROM migrations_typeorm;'
+    );
+
+    if (migrations.length > 1) {
+      return;
+    }
+
     // create library instance with authorization
     const libraryAuthID = randomUUID();
     const libraryID = randomUUID();
