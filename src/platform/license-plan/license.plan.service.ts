@@ -18,7 +18,7 @@ export class LicensePlanService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createLicensePlan(
+  public async createLicensePlan(
     licensePlanData: CreateLicensePlanInput
   ): Promise<ILicensePlan> {
     const licensePlan: ILicensePlan = LicensePlan.create();
@@ -40,17 +40,19 @@ export class LicensePlanService {
     return await this.save(licensePlan);
   }
 
-  async save(licensePlan: ILicensePlan): Promise<ILicensePlan> {
+  public async save(licensePlan: ILicensePlan): Promise<ILicensePlan> {
     return await this.licensePlanRepository.save(licensePlan);
   }
 
-  async update(licensePlanData: UpdateLicensePlanInput): Promise<ILicensePlan> {
+  public async update(
+    licensePlanData: UpdateLicensePlanInput
+  ): Promise<ILicensePlan> {
     const licensePlan = await this.getLicensePlanOrFail(licensePlanData.ID);
 
     return await this.licensePlanRepository.save(licensePlan);
   }
 
-  async deleteLicensePlan(
+  public async deleteLicensePlan(
     deleteData: DeleteLicensePlanInput
   ): Promise<ILicensePlan> {
     const licensePlan = await this.getLicensePlanOrFail(deleteData.ID);
@@ -62,7 +64,7 @@ export class LicensePlanService {
     return result;
   }
 
-  async getLicensePlanOrFail(
+  public async getLicensePlanOrFail(
     licensePlanID: string,
     options?: FindOneOptions<LicensePlan>
   ): Promise<ILicensePlan | never> {
@@ -78,5 +80,16 @@ export class LicensePlanService {
       );
     }
     return licensePlan;
+  }
+
+  public async licensePlanByNameExists(name: string): Promise<boolean> {
+    const licensePlan = await this.licensePlanRepository.findOne({
+      where: { name },
+    });
+
+    if (!licensePlan) {
+      return false;
+    }
+    return true;
   }
 }
