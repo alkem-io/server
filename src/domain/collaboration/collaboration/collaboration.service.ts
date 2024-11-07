@@ -54,6 +54,7 @@ import { Callout } from '@domain/collaboration/callout';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
 import { IRoleSet } from '@domain/access/role-set';
+import { CalloutState } from '@common/enums/callout.state';
 
 @Injectable()
 export class CollaborationService {
@@ -94,11 +95,14 @@ export class CollaborationService {
       AuthorizationPolicyType.COLLABORATION
     );
     collaboration.callouts = [];
-    collaboration.timeline = this.timelineService.createTimeline();
     collaboration.groupsStr = this.calloutGroupsService.serializeGroups(
       collaborationData.calloutGroups
     );
     collaboration.isTemplate = collaborationData.isTemplate || false;
+
+    if (!collaboration.isTemplate) {
+      collaboration.timeline = this.timelineService.createTimeline();
+    }
 
     collaboration.tagsetTemplateSet =
       this.tagsetTemplateSetService.createTagsetTemplateSet();
@@ -151,6 +155,12 @@ export class CollaborationService {
         [statesTagsetTemplate],
         storageAggregator
       );
+
+    this.moveCalloutsToDefaultGroupAndState(
+      groupTagsetTemplateInput.allowedValues,
+      statesTagsetTemplate.allowedValues,
+      collaboration.callouts
+    );
 
     return collaboration;
   }
@@ -216,14 +226,19 @@ export class CollaborationService {
           );
         calloutNameIds.push(calloutDefault.nameID);
       }
+      if (
+        calloutDefault.isTemplate === false &&
+        calloutDefault.type === CalloutType.POST &&
+        calloutDefault.contributionPolicy?.state === CalloutState.OPEN
+      ) {
+        calloutDefault.enableComments = true;
+      }
       const callout = await this.calloutService.createCallout(
         calloutDefault,
         collaboration.tagsetTemplateSet.tagsetTemplates,
         storageAggregator,
         userID
       );
-      // default callouts are already published
-      callout.visibility = CalloutVisibility.PUBLISHED;
       callouts.push(callout);
     }
     return callouts;
@@ -333,7 +348,6 @@ export class CollaborationService {
 
     if (
       !collaboration.callouts ||
-      !collaboration.timeline ||
       !collaboration.innovationFlow ||
       !collaboration.authorization
     )
@@ -346,7 +360,10 @@ export class CollaborationService {
       await this.calloutService.deleteCallout(callout.id);
     }
 
-    await this.timelineService.deleteTimeline(collaboration.timeline.id);
+    if (collaboration.timeline) {
+      // There's no timeline for collaboration templates
+      await this.timelineService.deleteTimeline(collaboration.timeline.id);
+    }
 
     await this.authorizationPolicyService.delete(collaboration.authorization);
 
@@ -773,13 +790,9 @@ export class CollaborationService {
 
   /**
    * Move callouts that are not in valid groups or flowStates to the default group & first flowState
-   * @param defaultGroupName
-   * @param defaultFlowStateName
    * @param callouts
    */
-  public moveCalloutsToCorrectGroupAndState(
-    defaultGroupName: string | undefined,
-    defaultFlowStateName: string | undefined,
+  public moveCalloutsToDefaultGroupAndState(
     validGroupNames: string[],
     validFlowStateNames: string[],
     callouts: {
@@ -794,6 +807,9 @@ export class CollaborationService {
       };
     }[]
   ): void {
+    const defaultGroupName: string | undefined = validGroupNames?.[0];
+    const defaultFlowStateName: string | undefined = validFlowStateNames?.[0];
+
     for (const callout of callouts) {
       if (!callout.framing.profile.tagsets) {
         callout.framing.profile.tagsets = [];

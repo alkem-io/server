@@ -100,7 +100,9 @@ export class AuthResetController {
     const retryCount = originalMsg.properties.headers?.[RETRY_HEADER] ?? 0;
 
     try {
-      await this.platformAuthorizationService.applyAuthorizationPolicy();
+      const authorizations =
+        await this.platformAuthorizationService.applyAuthorizationPolicy();
+      await this.authorizationPolicyService.saveAll(authorizations);
       this.logger.verbose?.(
         'Finished resetting authorization for platform.',
         LogContext.AUTH_POLICY
@@ -146,7 +148,10 @@ export class AuthResetController {
 
     try {
       const user = await this.userService.getUserOrFail(payload.id);
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+      const authorizations =
+        await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
+      await this.authorizationPolicyService.saveAll(authorizations);
+
       channel.ack(originalMsg);
 
       const message = `Finished resetting authorization for user with id ${payload.id}.`;
@@ -195,9 +200,11 @@ export class AuthResetController {
       const organization = await this.organizationService.getOrganizationOrFail(
         payload.id
       );
-      await this.organizationAuthorizationService.applyAuthorizationPolicy(
-        organization
-      );
+      const authorizations =
+        await this.organizationAuthorizationService.applyAuthorizationPolicy(
+          organization
+        );
+      await this.authorizationPolicyService.saveAll(authorizations);
       channel.ack(originalMsg);
 
       const message = `Finished resetting authorization for organization with id ${payload.id}.`;

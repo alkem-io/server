@@ -5,6 +5,7 @@ import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { FlowState } from './bootstrap.space.tutorials.innovation.flow.states';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
   {
@@ -15,6 +16,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 1,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '👋 Welcome to your space!',
@@ -37,6 +39,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 2,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '⚙️ Set it up your way!',
@@ -59,6 +62,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 3,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '🧩 Collaboration tools',
@@ -81,6 +85,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 4,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '🧹 Cleaning up',
@@ -103,6 +108,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 1,
     groupName: CalloutGroupName.COMMUNITY,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '🤝 Set up your Community',
@@ -125,6 +131,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 1,
     groupName: CalloutGroupName.SUBSPACES,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '↪️ Subspaces',
@@ -147,6 +154,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 1,
     groupName: CalloutGroupName.KNOWLEDGE,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '📚 The Knowledge Base',

@@ -226,7 +226,8 @@ export class SpaceService {
     collaborationData =
       await this.spaceDefaultsService.createCollaborationInput(
         collaborationData,
-        space.type
+        space.type,
+        spaceData.templatesManagerParent
       );
     space.collaboration = await this.collaborationService.createCollaboration(
       collaborationData,
@@ -912,6 +913,7 @@ export class SpaceService {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {
       relations: {
         storageAggregator: true,
+        templatesManager: true,
         community: {
           roleSet: true,
         },
@@ -945,6 +947,7 @@ export class SpaceService {
 
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
+    subspaceData.templatesManagerParent = space.templatesManager;
     subspaceData.level = space.level + 1;
     let subspace = await this.createSpace(subspaceData, agentInfo);
 

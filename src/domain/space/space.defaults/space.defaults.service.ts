@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums/logging.context';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
@@ -25,6 +25,8 @@ import { TemplatesManagerService } from '@domain/template/templates-manager/temp
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { ValidationException } from '@common/exceptions';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { ITemplatesManager } from '@domain/template/templates-manager';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -33,12 +35,14 @@ export class SpaceDefaultsService {
     private inputCreatorService: InputCreatorService,
     private platformService: PlatformService,
     private collaborationService: CollaborationService,
-    private templatesManagerService: TemplatesManagerService
+    private templatesManagerService: TemplatesManagerService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async createCollaborationInput(
     collaborationData: CreateCollaborationOnSpaceInput,
-    spaceType: SpaceType
+    spaceType: SpaceType,
+    parentSpaceTemplatesManager?: ITemplatesManager
   ): Promise<CreateCollaborationOnSpaceInput> {
     const platformTemplatesManager =
       await this.platformService.getTemplatesManagerOrFail();
@@ -47,12 +51,34 @@ export class SpaceDefaultsService {
       switch (spaceType) {
         case SpaceType.CHALLENGE:
         case SpaceType.OPPORTUNITY: {
-          const subspaceTemplate =
-            await this.templatesManagerService.getTemplateFromTemplateDefault(
-              platformTemplatesManager.id,
-              TemplateDefaultType.PLATFORM_SUBSPACE
-            );
-          templateID = subspaceTemplate.id;
+          if (parentSpaceTemplatesManager) {
+            try {
+              const subspaceTemplate =
+                await this.templatesManagerService.getTemplateFromTemplateDefault(
+                  parentSpaceTemplatesManager.id,
+                  TemplateDefaultType.SPACE_SUBSPACE
+                );
+              if (subspaceTemplate) {
+                templateID = subspaceTemplate.id;
+              }
+            } catch (e) {
+              // Space does not have a subspace default template, just use the platform default
+              this.logger.warn(
+                `Space does not have a subspace default template, using platform default parentSpaceTemplatesManager.id: ${parentSpaceTemplatesManager?.id}`,
+                undefined,
+                LogContext.TEMPLATES
+              );
+            }
+          }
+          // Get the platform default template if no parent template
+          if (!templateID) {
+            const subspaceTemplate =
+              await this.templatesManagerService.getTemplateFromTemplateDefault(
+                platformTemplatesManager.id,
+                TemplateDefaultType.PLATFORM_SUBSPACE
+              );
+            templateID = subspaceTemplate.id;
+          }
           break;
         }
         case SpaceType.SPACE: {
@@ -144,10 +170,6 @@ export class SpaceDefaultsService {
     }
 
     // Move callouts that are not in valid groups or flowStates to the default group & first flowState
-    const defaultGroupName =
-      collaborationTemplateInput?.defaultCalloutGroupName;
-    const defaultFlowStateName =
-      collaborationData.innovationFlowData?.states?.[0]?.displayName;
     const validGroupNames = collaborationData.calloutGroups?.map(
       group => group.displayName
     );
@@ -156,9 +178,7 @@ export class SpaceDefaultsService {
         state => state.displayName
       );
 
-    this.collaborationService.moveCalloutsToCorrectGroupAndState(
-      defaultGroupName,
-      defaultFlowStateName,
+    this.collaborationService.moveCalloutsToDefaultGroupAndState(
       validGroupNames ?? [],
       validFlowStateNames ?? [],
       collaborationData.calloutsData ?? []
