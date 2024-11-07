@@ -18,6 +18,12 @@ import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Calendar } from '@domain/timeline/calendar/calendar.entity';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
+import { Collaboration } from '@domain/collaboration/collaboration';
+import { Space } from '@domain/space/space/space.entity';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class CalendarEventService {
@@ -152,6 +158,28 @@ export class CalendarEventService {
   ): Promise<ICalendarEvent> {
     return await this.calendarEventRepository.save(calendarEvent);
   }
+  // todo: test
+  public getCalendarEvent(
+    calendarId: string,
+    idOrNameId: string
+  ): Promise<ICalendarEvent> {
+    return this.calendarEventRepository.findOneOrFail({
+      where: [
+        {
+          id: idOrNameId,
+          calendar: {
+            id: calendarId,
+          },
+        },
+        {
+          nameID: idOrNameId,
+          calendar: {
+            id: calendarId,
+          },
+        },
+      ],
+    });
+  }
 
   public getCalendarEvents(eventIds: string[]): Promise<ICalendarEvent[]> {
     return this.calendarEventRepository.findBy({
@@ -159,7 +187,9 @@ export class CalendarEventService {
     });
   }
 
-  public async getProfile(calendarEvent: ICalendarEvent): Promise<IProfile> {
+  public async getProfileOrFail(
+    calendarEvent: ICalendarEvent
+  ): Promise<IProfile> {
     const calendarEventLoaded = await this.getCalendarEventOrFail(
       calendarEvent.id,
       {
@@ -173,6 +203,29 @@ export class CalendarEventService {
       );
 
     return calendarEventLoaded.profile;
+  }
+
+  public getSubspace(
+    calendarEvent: ICalendarEvent
+  ): Promise<ISpace | undefined> {
+    return this.calendarEventRepository
+      .createQueryBuilder('calendarEvent')
+      .leftJoin(Calendar, 'calendar', 'calendar.id = calendarEvent.calendarId')
+      .leftJoin(Timeline, 'timeline', 'timeline.calendarId = calendar.id')
+      .leftJoin(
+        Collaboration,
+        'collaboration',
+        'collaboration.timelineId = timeline.id'
+      )
+      .leftJoin(
+        Space,
+        'subspace',
+        'subspace.collaborationId = collaboration.id'
+      )
+      .where('calendarEvent.id = :id', { id: calendarEvent.id })
+      .andWhere('subspace.level != :level', { level: SpaceLevel.SPACE })
+      .select('subspace.*')
+      .getRawOne<ISpace>();
   }
 
   public async getComments(calendarEventID: string) {

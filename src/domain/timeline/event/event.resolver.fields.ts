@@ -10,6 +10,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Resolver(() => ICalendarEvent)
 export class CalendarEventResolverFields {
@@ -54,7 +55,7 @@ export class CalendarEventResolverFields {
   })
   @Profiling.api
   async profile(@Parent() calendarEvent: ICalendarEvent): Promise<IProfile> {
-    return await this.calendarEventService.getProfile(calendarEvent);
+    return await this.calendarEventService.getProfileOrFail(calendarEvent);
   }
 
   @ResolveField('startDate', () => Date, {
@@ -63,5 +64,13 @@ export class CalendarEventResolverFields {
   })
   startDate(@Parent() event: ICalendarEvent): Date {
     return event.startDate;
+  }
+
+  @ResolveField('subspace', () => ISpace, {
+    nullable: true,
+    description: 'The start time for this CalendarEvent.',
+  })
+  subspace(@Parent() event: ICalendarEvent): Promise<ISpace | undefined> {
+    return this.calendarEventService.getSubspace(event);
   }
 }

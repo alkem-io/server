@@ -58,7 +58,7 @@ export abstract class ICalendarEvent extends INameable {
   @Field(() => ISpace, {
     nullable: true,
     description:
-      'Which Subspace is this event part of. Only applicable if "visibleOnParentCalendar" is true.',
+      'Which Subspace is this event part of. Only applicable if the Space has this option enabled.',
   })
-  parentSubspace?: ISpace;
+  subspace?: ISpace;
 }

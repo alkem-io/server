@@ -2,7 +2,6 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -11,12 +10,11 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EqualOperator, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventService } from '../event/event.service';
 import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
-import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
 import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
@@ -31,6 +29,7 @@ import { convertToEntity } from '@common/utils/convert-to-entity';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { CalendarEvent } from '@domain/timeline/event';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class CalendarService {
@@ -94,20 +93,20 @@ export class CalendarService {
   }
 
   public async getCalendarEventsFromSubspaces(
-    spaceId: string,
-    agentInfo: AgentInfo
-  ) {
+    rootSpaceId: string
+  ): Promise<ICalendarEvent[]> {
     const result = await this.calendarRepository.manager
-      .createQueryBuilder(Space, 'space')
+      .createQueryBuilder(Space, 'subspace')
+      // if all the subspaces must be included change the statement
+      // to be levelZeroSpace = spaceId and level > space level
       .where({
-        parentSpace: {
-          id: spaceId,
-        },
+        parentSpace: { id: rootSpaceId },
+        level: SpaceLevel.CHALLENGE,
       })
       .leftJoin(
         Collaboration,
         'collaboration',
-        'collaboration.id = space.collaborationId'
+        'collaboration.id = subspace.collaborationId'
       )
       .leftJoin(Timeline, 'timeline', 'timeline.id = collaboration.timelineId')
       .leftJoin(Calendar, 'calendar', 'calendar.id = timeline.calendarId')
@@ -123,9 +122,7 @@ export class CalendarService {
       .getRawMany<PrefixKeys<{ id: string }, 'calendarEvent_'>>();
 
     const ids = result.map(({ calendarEvent_id }) => calendarEvent_id);
-    const events = await this.calendarEventService.getCalendarEvents(ids);
-
-    return events.filter(event => this.hasAgentAccessToEvent(event, agentInfo));
+    return this.calendarEventService.getCalendarEvents(ids);
   }
 
   public async createCalendarEvent(
@@ -169,52 +166,49 @@ export class CalendarService {
     return await this.calendarEventService.save(calendarEvent);
   }
   // todo: refactor to use args in sql query
-  public async getCalendarEventsArgs(
+  public async getCalendarEvents(
     calendar: ICalendar,
-    args: CalendarArgsEvents,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    rootSpaceId?: string
   ): Promise<ICalendarEvent[]> {
     const calendarLoaded = await this.getCalendarOrFail(calendar.id, {
       relations: { events: true },
-      // todo use args here
     });
-    const allEvents = calendarLoaded.events;
-    if (!allEvents) {
+    const events = calendarLoaded.events;
+    if (!events) {
       throw new EntityNotFoundException(
         `Events not initialized on Calendar: ${calendar.id}`,
         LogContext.CALENDAR
       );
     }
 
+    if (rootSpaceId) {
+      const subspaceEvents =
+        await this.getCalendarEventsFromSubspaces(rootSpaceId);
+      events.push(...subspaceEvents);
+    }
+
     // First filter the events the current user has READ privilege to
-    const readableEvents = allEvents.filter(event =>
-      this.hasAgentAccessToEvent(event, agentInfo)
+    return events.filter(event => this.hasAgentAccessToEvent(event, agentInfo));
+  }
+
+  public async getCalendarEvent(
+    calendarId: string,
+    idOrNameId: string
+  ): Promise<ICalendarEvent> {
+    const event = await this.calendarEventService.getCalendarEvent(
+      calendarId,
+      idOrNameId
     );
-
-    // (a) by IDs, results in order specified by IDs
-    if (args.IDs) {
-      const results: ICalendarEvent[] = [];
-      for (const eventID of args.IDs) {
-        const event = readableEvents.find(
-          e => e.id === eventID || e.nameID === eventID
-        );
-
-        if (!event)
-          throw new EntityNotFoundException(
-            `Event with requested ID (${eventID}) not located within current Calendar: ${calendar.id}`,
-            LogContext.CALENDAR
-          );
-        results.push(event);
-      }
-      return results;
+    if (!event) {
+      throw new EntityNotFoundException(
+        'Event not found in Calendar',
+        LogContext.CALENDAR,
+        { calendarId, eventId: idOrNameId }
+      );
     }
 
-    // (b) limit number of results
-    if (args.limit) {
-      return limitAndShuffle(readableEvents, args.limit, false);
-    }
-
-    return readableEvents;
+    return event;
   }
 
   private hasAgentAccessToEvent(
