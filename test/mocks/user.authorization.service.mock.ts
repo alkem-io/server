@@ -7,7 +7,7 @@ export const MockUserAuthorizationService: ValueProvider<
 > = {
   provide: UserAuthorizationService,
   useValue: {
-    grantCredentials: jest.fn(),
+    grantCredentialsAllUsersReceive: jest.fn(),
     applyAuthorizationPolicy: jest.fn(),
   },
 };

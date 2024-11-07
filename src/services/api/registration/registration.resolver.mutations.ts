@@ -78,10 +78,12 @@ export class RegistrationResolverMutations {
     agentInfo: AgentInfo
   ): Promise<IUser> {
     const user =
-      await this.userAuthorizationService.grantCredentials(userInput);
+      await this.userAuthorizationService.grantCredentialsAllUsersReceive(
+        userInput.id
+      );
 
     const userAuthorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(userAuthorizations);
 
     const userAccount = await this.userService.getAccount(user);
