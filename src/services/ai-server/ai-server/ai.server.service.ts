@@ -426,8 +426,8 @@ export class AiServerService {
     )
       this.roomControllerService.postReply(
         resultHandler.roomDetails!,
-        event.response,
-        event.original.interactionID
+        event.response
+        // event.original.interactionID
       );
   }
 }
