@@ -4,6 +4,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { FlowState } from './bootstrap.subspace.knowledge.innovation.flow.states';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
   {
@@ -14,6 +15,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 1,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'No Time? A quick summary ⬇️',
@@ -36,6 +38,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 2,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'The Virtual Contributor',
@@ -58,6 +61,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 3,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'Interacting with a Virtual Contributor',
@@ -80,6 +84,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 4,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'The Profile of your Virtual Contributor',
@@ -102,6 +107,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 5,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'Types of Content',
@@ -124,6 +130,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 6,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'Terms & Conditions',
@@ -146,6 +153,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 7,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'Example 1: Background information',
@@ -168,6 +176,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 8,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'Example 2: Random facts and figures',
@@ -190,6 +199,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 9,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'Example 3: Links and Documents',
@@ -212,6 +222,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 10,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'Where to find the Virtual Contributor Profile',
@@ -234,6 +245,7 @@ export const bootstrapSubspaceKnowledgeCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 11,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: 'Updating my Body of Knowledge',
