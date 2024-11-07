@@ -103,6 +103,45 @@ export class InitialData1730906666882 implements MigrationInterface {
               1,
               '${aiServerAuthID}')`
     );
+
+    const licensePolicyID = randomUUID();
+    const licensePolicyAuthID = randomUUID();
+
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
+                    ('${licensePolicyAuthID}',
+                    1, '', '', 0, '', 'license-policy')`
+    );
+    await queryRunner.query(
+      `INSERT INTO license_policy (id, version, authorizationId, credentialRulesStr) VALUES
+                ('${licensePolicyID}',
+                1,
+                '${licensePolicyAuthID}',
+                '${JSON.stringify(licenseCredentialRules)}'
+                )`
+    );
+
+    // // Create the agent on each account
+    const [platform]: { id: string; licensePolicyId: string }[] =
+      await queryRunner.query('SELECT id FROM platform LIMIT 1; ');
+    const licensingID = randomUUID();
+    const licensingAuthID = randomUUID();
+
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
+                    ('${licensingAuthID}',
+                    1, '', '', 0, '', 'licensing')`
+    );
+    await queryRunner.query(
+      `INSERT INTO licensing (id, version, authorizationId, licensePolicyId) VALUES
+                ('${licensingID}',
+                1,
+                '${licensingAuthID}',
+                '${licensePolicyID}')`
+    );
+    await queryRunner.query(
+      `UPDATE platform SET licensingId = '${licensingID}' WHERE id = '${platform.id}'`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
@@ -138,3 +177,70 @@ export class InitialData1730906666882 implements MigrationInterface {
     return storageAggregatorID;
   }
 }
+
+type CredentialRule = {
+  credentialType: LicenseCredential;
+  grantedPrivileges: LicensePrivilege[];
+  name: string;
+};
+
+enum LicenseCredential {
+  FEATURE_VIRTUAL_CONTRIBUTORS = 'space-feature-virtual-contributors',
+  FEATURE_WHITEBOARD_MULTI_USER = 'space-feature-whiteboard-multi-user',
+  FEATURE_SAVE_AS_TEMPLATE = 'space-feature-save-as-template',
+  LICENSE_PLUS = 'space-license-plus',
+  LICENSE_PREMIUM = 'space-license-premium',
+  ACCOUNT_LICENSE_PLUS = 'account-license-plus',
+}
+
+enum LicensePrivilege {
+  VIRTUAL_CONTRIBUTOR_ACCESS = 'space-virtual-contributor-access',
+  WHITEBOARD_MULTI_USER = 'space-whiteboard-multi-user',
+  SAVE_AS_TEMPLATE = 'space-save-as-template',
+  CREATE_SPACE = 'account-create-space',
+  CREATE_VIRTUAL_CONTRIBUTOR = 'account-create-virtual-contributor',
+  CREATE_INNOVATION_PACK = 'account-create-innovation-pack',
+}
+
+const licenseCredentialRules: CredentialRule[] = [
+  {
+    credentialType: LicenseCredential.FEATURE_VIRTUAL_CONTRIBUTORS,
+    grantedPrivileges: [LicensePrivilege.VIRTUAL_CONTRIBUTOR_ACCESS],
+    name: 'Space Virtual Contributors',
+  },
+  {
+    credentialType: LicenseCredential.FEATURE_WHITEBOARD_MULTI_USER,
+    grantedPrivileges: [LicensePrivilege.WHITEBOARD_MULTI_USER],
+    name: 'Space Multi-user whiteboards',
+  },
+  {
+    credentialType: LicenseCredential.FEATURE_SAVE_AS_TEMPLATE,
+    grantedPrivileges: [LicensePrivilege.SAVE_AS_TEMPLATE],
+    name: 'Space Save As Template',
+  },
+  {
+    credentialType: LicenseCredential.LICENSE_PLUS,
+    grantedPrivileges: [
+      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      LicensePrivilege.SAVE_AS_TEMPLATE,
+    ],
+    name: 'Space License Plus',
+  },
+  {
+    credentialType: LicenseCredential.LICENSE_PREMIUM,
+    grantedPrivileges: [
+      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      LicensePrivilege.SAVE_AS_TEMPLATE,
+    ],
+    name: 'Space License Premium',
+  },
+  {
+    credentialType: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+    grantedPrivileges: [
+      LicensePrivilege.CREATE_SPACE,
+      LicensePrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
+      LicensePrivilege.CREATE_INNOVATION_PACK,
+    ],
+    name: 'Account License Plus',
+  },
+];
