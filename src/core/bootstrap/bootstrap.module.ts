@@ -16,6 +16,9 @@ import { SearchIngestModule } from '@services/api/search/v2/ingest';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { Space } from '@domain/space/space/space.entity';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
+import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
+import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
     TypeOrmModule.forFeature([Space]),
     NameReporterModule,
     SearchIngestModule,
+    TemplatesSetModule,
+    TemplatesManagerModule,
+    TemplateDefaultModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],

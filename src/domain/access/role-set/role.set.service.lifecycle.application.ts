@@ -24,6 +24,7 @@ export class RoleSetServiceLifecycleApplication {
   private getMachine(): AnyStateMachine {
     const machine = setup({
       guards: {
+        // UPDATE privilege is used to manage lifecycle transitions, EXCEPT those related to approving which require GRANT
         hasUpdatePrivilege: ({ event }) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: IAuthorizationPolicy = event.authorization;
@@ -31,6 +32,15 @@ export class RoleSetServiceLifecycleApplication {
             agentInfo,
             authorizationPolicy,
             AuthorizationPrivilege.UPDATE
+          );
+        },
+        hasGrantPrivilege: ({ event }) => {
+          const agentInfo: AgentInfo = event.agentInfo;
+          const authorizationPolicy: IAuthorizationPolicy = event.authorization;
+          return this.authorizationService.isAccessGranted(
+            agentInfo,
+            authorizationPolicy,
+            AuthorizationPrivilege.GRANT
           );
         },
       },

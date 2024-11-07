@@ -20,6 +20,7 @@ import { ForumService } from '@platform/forum/forum.service';
 import { IForum } from '@platform/forum/forum.interface';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 
 @Injectable()
 export class PlatformService {
@@ -80,6 +81,20 @@ export class PlatformService {
       );
     }
     return forum;
+  }
+
+  async getTemplatesManagerOrFail(): Promise<ITemplatesManager> {
+    const platform = await this.getPlatformOrFail({
+      relations: { templatesManager: true },
+    });
+    if (!platform || !platform.templatesManager) {
+      throw new EntityNotFoundException(
+        'Unable to find templatesManager for platform',
+        LogContext.PLATFORM
+      );
+    }
+
+    return platform.templatesManager;
   }
 
   async ensureForumCreated(): Promise<IForum> {

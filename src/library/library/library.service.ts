@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';

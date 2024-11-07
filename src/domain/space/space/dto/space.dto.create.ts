@@ -7,6 +7,7 @@ import { CreateContextInput } from '@domain/context/context/dto/context.dto.crea
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 import { CreateCollaborationOnSpaceInput } from './space.dto.create.collaboration';
 import { SpaceLevel } from '@common/enums/space.level';
+import { ITemplatesManager } from '@domain/template/templates-manager';
 
 @InputType()
 export class CreateSpaceInput extends CreateNameableInput {
@@ -27,6 +28,8 @@ export class CreateSpaceInput extends CreateNameableInput {
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;
+  // For accessing the default templates of the parent space
+  templatesManagerParent?: ITemplatesManager;
 
   level!: SpaceLevel;
 

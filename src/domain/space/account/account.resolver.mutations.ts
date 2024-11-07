@@ -25,7 +25,7 @@ import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innova
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { SpaceAuthorizationService } from '../space/space.service.authorization';
 import { ISpace } from '../space/space.interface';
 import {

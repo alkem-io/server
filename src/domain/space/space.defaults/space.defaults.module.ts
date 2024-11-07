@@ -1,15 +1,18 @@
 import { Module } from '@nestjs/common';
 import { SpaceDefaultsService } from './space.defaults.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { SpaceDefaults } from './space.defaults.entity';
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { TemplateModule } from '@domain/template/template/template.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { PlatformModule } from '@platform/platform/platform.module';
+import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
-    AuthorizationModule,
-    AuthorizationPolicyModule,
-    TypeOrmModule.forFeature([SpaceDefaults]),
+    TemplateModule,
+    TemplatesManagerModule,
+    InputCreatorModule,
+    CollaborationModule,
+    PlatformModule,
   ],
   providers: [SpaceDefaultsService],
   exports: [SpaceDefaultsService],

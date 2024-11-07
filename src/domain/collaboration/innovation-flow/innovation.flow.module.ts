@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InnovationFlow } from './innovation.flow.entity';
-import { InnovationFlowService } from './innovaton.flow.service';
+import { InnovationFlowService } from './innovation.flow.service';
 import { InnovationFlowAuthorizationService } from './innovation.flow.service.authorization';
 import { InnovationFlowResolverFields } from './innovation.flow.resolver.fields';
 import { InnovationFlowResolverMutations } from './innovation.flow.resolver.mutations';

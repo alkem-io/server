@@ -20,10 +20,6 @@ import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platfor
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UpdateSpaceDefaultsInput } from '../space.defaults/dto/space.defaults.dto.update';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { TemplateService } from '@domain/template/template/template.service';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -34,11 +30,9 @@ export class SpaceResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
-    private spaceDefaultsService: SpaceDefaultsService,
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
     private subspaceCreatedSubscription: PubSubEngine,
-    private namingReporter: NameReporterService,
-    private templateService: TemplateService
+    private namingReporter: NameReporterService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -226,40 +220,5 @@ export class SpaceResolverMutations {
     );
 
     return this.spaceService.getSpaceOrFail(subspace.id);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpaceDefaults, {
-    description: 'Updates the specified SpaceDefaults.',
-  })
-  async updateSpaceDefaults(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('spaceDefaultsData')
-    spaceDefaultsData: UpdateSpaceDefaultsInput
-  ): Promise<ISpaceDefaults> {
-    const spaceDefaults =
-      await this.spaceDefaultsService.getSpaceDefaultsOrFail(
-        spaceDefaultsData.spaceDefaultsID,
-        {}
-      );
-
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      spaceDefaults.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update spaceDefaults: ${spaceDefaults.id}`
-    );
-
-    if (spaceDefaultsData.flowTemplateID) {
-      const innovationFlowTemplate =
-        await this.templateService.getTemplateOrFail(
-          spaceDefaultsData.flowTemplateID
-        );
-      return await this.spaceDefaultsService.updateSpaceDefaults(
-        spaceDefaults,
-        innovationFlowTemplate
-      );
-    }
-    return spaceDefaults;
   }
 }

@@ -27,6 +27,7 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { Community } from '@domain/community/community';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -84,7 +85,6 @@ export class UrlGeneratorService {
   }
 
   public async getUrlFromCache(entityId: string): Promise<string | undefined> {
-    return undefined; //!!
     const url = await this.cacheManager.get<string>(
       this.getUrlIdCacheKey(entityId)
     );
@@ -403,8 +403,10 @@ export class UrlGeneratorService {
   ): Promise<string> {
     const space = await this.entityManager.findOne(Space, {
       where: {
-        library: {
-          id: templatesSetID,
+        templatesManager: {
+          templatesSet: {
+            id: templatesSetID,
+          },
         },
       },
     });
@@ -413,12 +415,22 @@ export class UrlGeneratorService {
       // TODO: this later should link fully to the actual template by nameID when the client properly picks that up
       return `${this.endpoint_cluster}/${space.nameID}/settings/templates`;
     }
-    const innovationPackInfo = await this.getNameableEntityInfoOrFail(
-      'innovation_pack',
-      'templatesSetId',
-      templatesSetID
-    );
-    return `${this.endpoint_cluster}/${this.PATH_INNOVATION_PACKS}/${innovationPackInfo.entityNameID}`;
+
+    const innovationPack = await this.entityManager.findOne(InnovationPack, {
+      where: {
+        templatesSet: {
+          id: templatesSetID,
+        },
+      },
+    });
+    if (!innovationPack) {
+      throw new EntityNotFoundException(
+        `Unable to find InnovationPack for TemplatesSet: ${templatesSetID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    return `${this.endpoint_cluster}/${this.PATH_INNOVATION_PACKS}/${innovationPack.nameID}`;
   }
 
   private async getSpaceUrlPath(

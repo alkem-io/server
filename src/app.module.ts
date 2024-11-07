@@ -66,7 +66,6 @@ import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.mo
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
-import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
@@ -82,6 +81,7 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
 
@@ -278,7 +278,6 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
-    IpfsLogModule,
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,
@@ -293,6 +292,7 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
     WhiteboardIntegrationModule,
     FileIntegrationModule,
     PlatformSettingsModule,
+    TemplateApplierModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
