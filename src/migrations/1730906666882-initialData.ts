@@ -121,7 +121,6 @@ export class InitialData1730906666882 implements MigrationInterface {
                 )`
     );
 
-    // // Create the agent on each account
     const [platform]: { id: string; licensePolicyId: string }[] =
       await queryRunner.query('SELECT id FROM platform LIMIT 1; ');
     const licensingID = randomUUID();
@@ -141,6 +140,38 @@ export class InitialData1730906666882 implements MigrationInterface {
     );
     await queryRunner.query(
       `UPDATE platform SET licensingId = '${licensingID}' WHERE id = '${platform.id}'`
+    );
+
+    const platformTemplatesManagerID = await this.createTemplatesManager(
+      queryRunner,
+      undefined
+    );
+    await queryRunner.query(
+      `UPDATE \`platform\` SET templatesManagerId = '${platformTemplatesManagerID}'`
+    );
+    await this.createTemplateDefault(
+      queryRunner,
+      platformTemplatesManagerID,
+      TemplateDefaultType.PLATFORM_SPACE,
+      TemplateType.COLLABORATION
+    );
+    await this.createTemplateDefault(
+      queryRunner,
+      platformTemplatesManagerID,
+      TemplateDefaultType.PLATFORM_SUBSPACE,
+      TemplateType.COLLABORATION
+    );
+    await this.createTemplateDefault(
+      queryRunner,
+      platformTemplatesManagerID,
+      TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
+      TemplateType.COLLABORATION
+    );
+    await this.createTemplateDefault(
+      queryRunner,
+      platformTemplatesManagerID,
+      TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
+      TemplateType.COLLABORATION
     );
   }
 
@@ -175,6 +206,87 @@ export class InitialData1730906666882 implements MigrationInterface {
     );
 
     return storageAggregatorID;
+  }
+
+  private async createTemplatesManager(
+    queryRunner: QueryRunner,
+    templatesSetInputId: string | undefined
+  ): Promise<string> {
+    const templatesManagerID = randomUUID();
+    const templatesManagerAuthID = await this.createAuthorizationPolicy(
+      queryRunner,
+      'templates_manager'
+    );
+    let templatesSetID = templatesSetInputId;
+    if (!templatesSetID) {
+      templatesSetID = await this.createTemplatesSet(queryRunner);
+    }
+
+    // create the new templates manager
+    await queryRunner.query(
+      `INSERT INTO templates_manager (id, version, authorizationId, templatesSetId) VALUES
+              (
+              '${templatesManagerID}',
+              1,
+              '${templatesManagerAuthID}',
+              '${templatesSetID}')`
+    );
+
+    return templatesManagerID;
+  }
+
+  private async createTemplatesSet(queryRunner: QueryRunner): Promise<string> {
+    const templatesSetID = randomUUID();
+    const templatesSetAuthID = await this.createAuthorizationPolicy(
+      queryRunner,
+      'templates_set'
+    );
+    // create the new templates set
+    await queryRunner.query(
+      `INSERT INTO templates_set (id, version, authorizationId) VALUES
+              (
+              '${templatesSetID}',
+              1,
+              '${templatesSetAuthID}')`
+    );
+    return templatesSetID;
+  }
+
+  private async createAuthorizationPolicy(
+    queryRunner: QueryRunner,
+    policyType: string
+  ): Promise<string> {
+    const authID = randomUUID();
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
+              ('${authID}',
+              1, '', '', 0, '', '${policyType}')`
+    );
+    return authID;
+  }
+
+  private async createTemplateDefault(
+    queryRunner: QueryRunner,
+    templatesManagerID: string,
+    templateDefaultType: TemplateDefaultType,
+    allowedTemplateType: TemplateType
+  ): Promise<string> {
+    const templateDefaultID = randomUUID();
+    const templateDefaultAuthID = await this.createAuthorizationPolicy(
+      queryRunner,
+      'template_default'
+    );
+    await queryRunner.query(
+      `INSERT INTO template_default (id, version, type, allowedTemplateType, authorizationId, templatesManagerId) VALUES
+              (
+              '${templateDefaultID}',
+              1,
+              '${templateDefaultType}',
+              '${allowedTemplateType}',
+              '${templateDefaultAuthID}',
+              '${templatesManagerID}')`
+    );
+    return templateDefaultID;
   }
 }
 
@@ -244,3 +356,20 @@ const licenseCredentialRules: CredentialRule[] = [
     name: 'Account License Plus',
   },
 ];
+
+enum TemplateDefaultType {
+  PLATFORM_SPACE = 'platform-space',
+  PLATFORM_SPACE_TUTORIALS = 'platform-space-tutorials',
+  PLATFORM_SUBSPACE = 'platform-subspace',
+  PLATFORM_SUBSPACE_KNOWLEDGE = 'platform-subspace-knowledge',
+  SPACE_SUBSPACE = 'space-subspace',
+}
+
+enum TemplateType {
+  CALLOUT = 'callout',
+  POST = 'post',
+  WHITEBOARD = 'whiteboard',
+  COMMUNITY_GUIDELINES = 'community-guidelines',
+  INNOVATION_FLOW = 'innovation-flow',
+  COLLABORATION = 'collaboration',
+}
