@@ -15,19 +15,15 @@ export class InitialData1730906666882 implements MigrationInterface {
       return;
     }
 
-    // create library instance with authorization
-    const libraryAuthID = randomUUID();
-    const libraryID = randomUUID();
-    const libraryAuthPolicy = `[{"type":"global-admin","resourceID":"","grantedPrivileges":["create","read","update","delete"],"inheritable":true},{"type":"global-admin-hubs","resourceID":"","grantedPrivileges":["create","read","update","delete"],"inheritable":true}]`;
+    await this.initializePlatform(queryRunner);
+    await this.initializePreferenceDefinitions(queryRunner);
+    await this.initializeAiServer(queryRunner);
+  }
 
-    await queryRunner.query(
-      `INSERT INTO authorization_policy VALUES ('${libraryAuthID}', NOW(), NOW(), 1, '${libraryAuthPolicy}', '', '', 0, 'library')`
-    );
-    await queryRunner.query(
-      `INSERT INTO library (id, createdDate, updatedDate, version, authorizationId) VALUES ('${libraryID}', NOW(), NOW(), 1, '${libraryAuthID}')`
-    );
+  public async down(queryRunner: QueryRunner): Promise<void> {}
 
-    // create platform instance with authorization
+  private async initializePlatform(queryRunner: QueryRunner): Promise<void> {
+    const libraryID = await this.initializeLibrary(queryRunner);
     const platformAuthID = randomUUID();
     const platformID = randomUUID();
     const platformStorageAggregatorID =
@@ -48,6 +44,105 @@ export class InitialData1730906666882 implements MigrationInterface {
       'ALTER TABLE `storage_aggregator` ADD CONSTRAINT `FK_0647707288c243e60091c8d8620` FOREIGN KEY (`directStorageId`) REFERENCES `storage_bucket`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
 
+    await this.initializePlatformLicensing(queryRunner, platformID);
+    await this.initializePlatformTemplatesManager(queryRunner);
+  }
+
+  private async initializeLibrary(queryRunner: QueryRunner): Promise<string> {
+    const libraryAuthID = randomUUID();
+    const libraryID = randomUUID();
+    const libraryAuthPolicy = `[{"type":"global-admin","resourceID":"","grantedPrivileges":["create","read","update","delete"],"inheritable":true},{"type":"global-admin-hubs","resourceID":"","grantedPrivileges":["create","read","update","delete"],"inheritable":true}]`;
+
+    await queryRunner.query(
+      `INSERT INTO authorization_policy VALUES ('${libraryAuthID}', NOW(), NOW(), 1, '${libraryAuthPolicy}', '', '', 0, 'library')`
+    );
+    await queryRunner.query(
+      `INSERT INTO library (id, createdDate, updatedDate, version, authorizationId) VALUES ('${libraryID}', NOW(), NOW(), 1, '${libraryAuthID}')`
+    );
+
+    return libraryID;
+  }
+
+  private async initializePlatformLicensing(
+    queryRunner: QueryRunner,
+    platformID: string
+  ): Promise<void> {
+    const licensePolicyID = randomUUID();
+    const licensePolicyAuthID = randomUUID();
+
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
+                    ('${licensePolicyAuthID}',
+                    1, '', '', 0, '', 'license-policy')`
+    );
+    await queryRunner.query(
+      `INSERT INTO license_policy (id, version, authorizationId, credentialRulesStr) VALUES
+                ('${licensePolicyID}',
+                1,
+                '${licensePolicyAuthID}',
+                '${JSON.stringify(licenseCredentialRules)}'
+                )`
+    );
+
+    const licensingID = randomUUID();
+    const licensingAuthID = randomUUID();
+
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
+                    ('${licensingAuthID}',
+                    1, '', '', 0, '', 'licensing')`
+    );
+    await queryRunner.query(
+      `INSERT INTO licensing (id, version, authorizationId, licensePolicyId) VALUES
+                ('${licensingID}',
+                1,
+                '${licensingAuthID}',
+                '${licensePolicyID}')`
+    );
+    await queryRunner.query(
+      `UPDATE platform SET licensingId = '${licensingID}' WHERE id = '${platformID}'`
+    );
+  }
+
+  private async initializePlatformTemplatesManager(
+    queryRunner: QueryRunner
+  ): Promise<void> {
+    const platformTemplatesManagerID = await this.createTemplatesManager(
+      queryRunner,
+      undefined
+    );
+    await queryRunner.query(
+      `UPDATE \`platform\` SET templatesManagerId = '${platformTemplatesManagerID}'`
+    );
+    await this.createTemplateDefault(
+      queryRunner,
+      platformTemplatesManagerID,
+      TemplateDefaultType.PLATFORM_SPACE,
+      TemplateType.COLLABORATION
+    );
+    await this.createTemplateDefault(
+      queryRunner,
+      platformTemplatesManagerID,
+      TemplateDefaultType.PLATFORM_SUBSPACE,
+      TemplateType.COLLABORATION
+    );
+    await this.createTemplateDefault(
+      queryRunner,
+      platformTemplatesManagerID,
+      TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
+      TemplateType.COLLABORATION
+    );
+    await this.createTemplateDefault(
+      queryRunner,
+      platformTemplatesManagerID,
+      TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
+      TemplateType.COLLABORATION
+    );
+  }
+
+  private async initializePreferenceDefinitions(
+    queryRunner: QueryRunner
+  ): Promise<void> {
     var preferenceDefinitionIds = [...Array(42)].map(id => randomUUID());
 
     await queryRunner.query(
@@ -96,94 +191,23 @@ export class InitialData1730906666882 implements MigrationInterface {
          ('${preferenceDefinitionIds[40]}',1,'Privileges','Allow contributors to create Callouts.','Allow contributors to create Callouts.','boolean','AllowContributorsToCreateCallouts','challenge'),
          ('${preferenceDefinitionIds[41]}',1,'Notification','New comment on my Post','Receive notification when a comment is created on my Post','boolean','NotificationPostCommentCreated','user')`
     );
+  }
 
-    // Create the AI Server entity
+  private async initializeAiServer(queryRunner: QueryRunner): Promise<void> {
     const aiServerID = randomUUID();
     const aiServerAuthID = randomUUID();
     await queryRunner.query(
       `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
-                  ('${aiServerAuthID}',
-                  1, '', '', 0, '', 'ai-server')`
+                      ('${aiServerAuthID}',
+                      1, '', '', 0, '', 'ai-server')`
     );
     await queryRunner.query(
       `INSERT INTO ai_server (id, version, authorizationId) VALUES
-              ('${aiServerID}',
-              1,
-              '${aiServerAuthID}')`
-    );
-
-    const licensePolicyID = randomUUID();
-    const licensePolicyAuthID = randomUUID();
-
-    await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
-                    ('${licensePolicyAuthID}',
-                    1, '', '', 0, '', 'license-policy')`
-    );
-    await queryRunner.query(
-      `INSERT INTO license_policy (id, version, authorizationId, credentialRulesStr) VALUES
-                ('${licensePolicyID}',
-                1,
-                '${licensePolicyAuthID}',
-                '${JSON.stringify(licenseCredentialRules)}'
-                )`
-    );
-
-    const [platform]: { id: string; licensePolicyId: string }[] =
-      await queryRunner.query('SELECT id FROM platform LIMIT 1; ');
-    const licensingID = randomUUID();
-    const licensingAuthID = randomUUID();
-
-    await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
-                    ('${licensingAuthID}',
-                    1, '', '', 0, '', 'licensing')`
-    );
-    await queryRunner.query(
-      `INSERT INTO licensing (id, version, authorizationId, licensePolicyId) VALUES
-                ('${licensingID}',
-                1,
-                '${licensingAuthID}',
-                '${licensePolicyID}')`
-    );
-    await queryRunner.query(
-      `UPDATE platform SET licensingId = '${licensingID}' WHERE id = '${platform.id}'`
-    );
-
-    const platformTemplatesManagerID = await this.createTemplatesManager(
-      queryRunner,
-      undefined
-    );
-    await queryRunner.query(
-      `UPDATE \`platform\` SET templatesManagerId = '${platformTemplatesManagerID}'`
-    );
-    await this.createTemplateDefault(
-      queryRunner,
-      platformTemplatesManagerID,
-      TemplateDefaultType.PLATFORM_SPACE,
-      TemplateType.COLLABORATION
-    );
-    await this.createTemplateDefault(
-      queryRunner,
-      platformTemplatesManagerID,
-      TemplateDefaultType.PLATFORM_SUBSPACE,
-      TemplateType.COLLABORATION
-    );
-    await this.createTemplateDefault(
-      queryRunner,
-      platformTemplatesManagerID,
-      TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
-      TemplateType.COLLABORATION
-    );
-    await this.createTemplateDefault(
-      queryRunner,
-      platformTemplatesManagerID,
-      TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
-      TemplateType.COLLABORATION
+                  ('${aiServerID}',
+                  1,
+                  '${aiServerAuthID}')`
     );
   }
-
-  public async down(queryRunner: QueryRunner): Promise<void> {}
 
   private async createStorageAggregator(
     queryRunner: QueryRunner
