@@ -5,6 +5,7 @@ import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { FlowState } from './bootstrap.space.innovation.flow';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 export const bootstrapSpaceCallouts: CreateCalloutInput[] = [
   {
@@ -15,6 +16,7 @@ export const bootstrapSpaceCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 1,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '👋 Welcome to your space!',
