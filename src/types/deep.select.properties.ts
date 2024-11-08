@@ -10,7 +10,7 @@ export type DeepSelectProperty<Property> =
           ? boolean
           : Property extends boolean
             ? boolean
-            : Property extends Function
+            : Property extends (...args: any[]) => any
               ? never
               : Property extends Buffer
                 ? boolean

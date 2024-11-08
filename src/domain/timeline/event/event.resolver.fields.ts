@@ -68,7 +68,8 @@ export class CalendarEventResolverFields {
 
   @ResolveField('subspace', () => ISpace, {
     nullable: true,
-    description: 'The start time for this CalendarEvent.',
+    description:
+      'The subspace associated with this CalendarEvent. Only applicable if the event is not part of this Space calendar',
   })
   subspace(@Parent() event: ICalendarEvent): Promise<ISpace | undefined> {
     return this.calendarEventService.getSubspace(event);

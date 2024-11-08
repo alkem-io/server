@@ -6,4 +6,4 @@ import { SpaceSettingsService } from './space.settings.service';
   providers: [SpaceSettingsService],
   exports: [SpaceSettingsService],
 })
-export class SpaceSettingssModule {}
+export class SpaceSettingsModule {}
