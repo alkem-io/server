@@ -128,7 +128,7 @@ export class RoleSetResolverMutations {
     // reset the user authorization policy so that their profile is visible to other community members
     const user = await this.userService.getUserOrFail(roleData.contributorID);
     const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(authorizations);
     return await this.userService.getUserOrFail(roleData.contributorID);
   }
@@ -257,7 +257,7 @@ export class RoleSetResolverMutations {
     // to other community members
     const user = await this.userService.getUserOrFail(roleData.contributorID);
     const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(authorizations);
     return await this.userService.getUserOrFail(roleData.contributorID);
   }
@@ -701,11 +701,11 @@ export class RoleSetResolverMutations {
       eventData.applicationID
     );
 
-    //toDo fix this temporary fix. Patches the immediate issue but doesn't solve the design issue of guards not being triggered on transitions
+    // Assumption is that the user with the GRANT also has UPDATE
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
-      AuthorizationPrivilege.COMMUNITY_APPLY_ACCEPT,
+      AuthorizationPrivilege.UPDATE,
       `event on application: ${application.id}`
     );
 

@@ -8,7 +8,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Not, Repository } from 'typeorm';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LogContext } from '@common/enums/logging.context';
@@ -580,14 +580,23 @@ export class RoleSetService {
             LogContext.COMMUNITY
           );
         }
-        await this.assignContributorToRole(
-          roleSet.parentRoleSet,
-          CommunityRoleType.MEMBER,
-          contributorID,
-          invitation.contributorType,
-          agentInfo,
-          true
+        // Check if the user is already a member of the parent roleSet
+        const { agent } =
+          await this.contributorService.getContributorAndAgent(contributorID);
+        const isMemberOfParentRoleSet = await this.isMember(
+          agent,
+          roleSet.parentRoleSet
         );
+        if (!isMemberOfParentRoleSet) {
+          await this.assignContributorToRole(
+            roleSet.parentRoleSet,
+            CommunityRoleType.MEMBER,
+            contributorID,
+            invitation.contributorType,
+            agentInfo,
+            true
+          );
+        }
       }
       await this.assignContributorToRole(
         roleSet,
@@ -598,14 +607,22 @@ export class RoleSetService {
         true
       );
       if (invitation.extraRole) {
-        await this.assignContributorToRole(
-          roleSet,
-          invitation.extraRole,
-          contributorID,
-          invitation.contributorType,
-          agentInfo,
-          false
-        );
+        try {
+          await this.assignContributorToRole(
+            roleSet,
+            invitation.extraRole,
+            contributorID,
+            invitation.contributorType,
+            agentInfo,
+            false
+          );
+        } catch (e: any) {
+          // Do not throw an exception further as there might not be entitlements to grant the extra role
+          this.logger.warn?.(
+            `Unable to add contributor (${contributorID}) to extra role (${invitation.extraRole}) in community: ${e}`,
+            LogContext.COMMUNITY
+          );
+        }
       }
     } catch (e: any) {
       this.logger.error?.(
@@ -776,7 +793,7 @@ export class RoleSetService {
       );
 
       if (!hasAnotherAdminRole) {
-        await this.removeContributorToImplicitRole(
+        await this.removeContributorFromImplicitRole(
           parentRoleSet,
           agent,
           CommunityRoleImplicit.SUBSPACE_ADMIN
@@ -972,7 +989,7 @@ export class RoleSetService {
     });
   }
 
-  private async removeContributorToImplicitRole(
+  private async removeContributorFromImplicitRole(
     roleSet: IRoleSet,
     agent: IAgent,
     role: CommunityRoleImplicit
@@ -1317,20 +1334,12 @@ export class RoleSetService {
     parentRoleSet: IRoleSet,
     childRoleSet: IRoleSet
   ): Promise<IRoleSet[]> {
-    const peerRoleSets: IRoleSet[] = await this.roleSetRepository.find({
+    return this.roleSetRepository.find({
       where: {
-        parentRoleSet: {
-          id: parentRoleSet.id,
-        },
+        parentRoleSet: { id: parentRoleSet.id },
+        id: Not(childRoleSet.id),
       },
     });
-    const result: IRoleSet[] = [];
-    for (const roleSet of peerRoleSets) {
-      if (roleSet && !(roleSet.id === childRoleSet.id)) {
-        result.push(roleSet);
-      }
-    }
-    return result;
   }
 
   public async setParentRoleSetAndCredentials(
