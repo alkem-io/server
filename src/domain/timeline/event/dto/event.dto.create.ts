@@ -3,7 +3,6 @@ import { MID_TEXT_LENGTH } from '@src/common/constants';
 import { IsDate, IsOptional, MaxLength } from 'class-validator';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
-import { Column } from 'typeorm';
 
 @InputType()
 export class CreateCalendarEventInput extends CreateNameableInput {

@@ -1,5 +1,6 @@
 /**
- * Compares two objects and returns the differences.
+ * Compares the first object to the second and returns the differences.
+ * Comparison is done against the keys in obj1.
  * Return __null__ if no differences are found.
  *
  * @template T - The type of the objects being compared.

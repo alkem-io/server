@@ -158,7 +158,7 @@ export class CalendarEventService {
   ): Promise<ICalendarEvent> {
     return await this.calendarEventRepository.save(calendarEvent);
   }
-  // todo: test
+
   public getCalendarEvent(
     calendarId: string,
     idOrNameId: string

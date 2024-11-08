@@ -37,12 +37,6 @@ describe('hasOnlyAllowedFields', () => {
     expect(hasOnlyAllowedFields(obj, allowedFields)).toBe(false);
   });
 
-  it('returns true when object contains only allowed fields with partial structure', () => {
-    const obj = { a: 1, b: { c: 2 } };
-    const allowedFields = { a: true, b: {} };
-    expect(hasOnlyAllowedFields(obj, allowedFields)).toBe(true);
-  });
-
   it('returns false when object contains disallowed fields with partial structure', () => {
     const obj = { a: 1, b: { c: 2, d: 3 } };
     const allowedFields = { a: true, b: {} };

@@ -130,12 +130,12 @@ export class SpaceResolverMutations {
 
     space = await this.spaceService.updateSpaceSettings(space, settingsData);
     space = await this.spaceService.save(space);
-    // todo: client sends all of the settings, no matter changed or not
+    // As the settings may update the authorization for the Space, the authorization policy will need to be reset
+    // but not all settings will require this, so only update if necessary
     if (shouldUpdateAuthorization) {
-      // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-      // const updatedAuthorizations =
-      //   await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-      // await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+      const updatedAuthorizations =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      await this.authorizationPolicyService.saveAll(updatedAuthorizations);
     }
 
     return this.spaceService.getSpaceOrFail(space.id);

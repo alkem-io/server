@@ -4,11 +4,12 @@ export class AllowEventsFromSubspaces1730464361986 implements MigrationInterface
     name = 'AllowEventsFromSubspaces1730464361986'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-      // defaults to false
+      // add setting to calendar event to allow events from subspaces
+      // defaults to false per requirements
       await queryRunner.query(`ALTER TABLE \`calendar_event\` ADD \`visibleOnParentCalendar\` tinyint NOT NULL`);
-
+      // add setting to space to allow events from subspaces
       const spaceSettings: { id: string, settingsStr: string }[] = await queryRunner.query(`SELECT id, settingsStr FROM alkemio.space;`);
-
+      // iterate over all spaces and update settings
       for (const { id, settingsStr } of spaceSettings) {
         const newSettings = addEventsFromSubspacesSetting(settingsStr);
         await queryRunner.query(`UPDATE alkemio.space SET settingsStr = ? WHERE id = ?`, [newSettings, id]);
