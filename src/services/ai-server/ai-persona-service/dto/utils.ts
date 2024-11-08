@@ -12,5 +12,6 @@ export const isInputValidForAction = (
       input.resultHandler.action === action && input.resultHandler.roomDetails
     );
   }
-  return true;
+  // better safe than sorry
+  return false;
 };

@@ -35,7 +35,7 @@ import {
 } from './dto';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { AiServerAdapteInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
+import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
@@ -400,7 +400,7 @@ export class VirtualContributorService {
       LogContext.AI_PERSONA_SERVICE_ENGINE
     );
 
-    const aiServerAdapterInvocationInput: AiServerAdapteInvocationInput = {
+    const aiServerAdapterInvocationInput: AiServerAdapterInvocationInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
       message: invocationInput.message,
       contextID: invocationInput.contextSpaceID,

@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AiServerAdapteInvocationInput } from './dto/ai.server.adapter.dto.invocation';
+import { AiServerAdapterInvocationInput } from './dto/ai.server.adapter.dto.invocation';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
@@ -61,7 +61,7 @@ export class AiServerAdapter {
     return this.aiServer.createAiPersonaService(personaServiceData);
   }
 
-  invoke(invocationInput: AiServerAdapteInvocationInput): Promise<void> {
+  invoke(invocationInput: AiServerAdapterInvocationInput): Promise<void> {
     return this.aiServer.invoke({
       ...invocationInput,
       externalMetadata: invocationInput.externalMetadata || {},

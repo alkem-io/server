@@ -205,7 +205,7 @@ export class AiServerService {
       );
     }
 
-    return await this.aiPersonaServiceService.invoke(invocationInput, history);
+    return this.aiPersonaServiceService.invoke(invocationInput, history);
   }
   async getLastNInteractionMessages(
     interactionID: string | undefined,

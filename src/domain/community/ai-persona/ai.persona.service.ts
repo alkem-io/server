@@ -14,7 +14,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import {
-  AiServerAdapteInvocationInput,
+  AiServerAdapterInvocationInput,
   InvocationResultAction,
 } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
@@ -131,7 +131,7 @@ export class AiPersonaService {
 
   public invoke(
     aiPersona: IAiPersona,
-    question: string,
+    message: string,
     agentInfo: AgentInfo,
     contextSpaceID: string
   ): Promise<void> {
@@ -140,8 +140,8 @@ export class AiPersonaService {
       LogContext.PLATFORM
     );
 
-    const input: AiServerAdapteInvocationInput = {
-      message: question,
+    const input: AiServerAdapterInvocationInput = {
+      message,
       displayName: '',
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
       resultHandler: {

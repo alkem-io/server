@@ -55,14 +55,13 @@ export class VirtualContributorInvocationInput {
 
   @Field(() => String, {
     nullable: false,
-    description: 'The question that is being asked.',
+    description: 'The message for the virtual contributor invocation.',
   })
   message!: string;
 
   @Field(() => String, {
     nullable: true,
-    description:
-      'The space in which context the Virtual Contributor is asked a question',
+    description: 'The context space for the Virtual Contributor invocation',
   })
   contextSpaceID: string | undefined = undefined;
 

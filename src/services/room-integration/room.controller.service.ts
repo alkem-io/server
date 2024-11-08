@@ -18,7 +18,7 @@ export class RoomControllerService {
 
   public async postReply(
     { roomID, threadID, communicationID }: RoomDetails,
-    message: any
+    message: any //TODO type this properly with the implementation of the rest of the engines
     // vcInteractionID?: string
   ) {
     const room = await this.roomService.getRoomOrFail(roomID);

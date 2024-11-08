@@ -28,6 +28,4 @@ export class IMessageAnswerToQuestion {
     description: 'The answer to the question',
   })
   answer!: string;
-
-  threadId?: string;
 }

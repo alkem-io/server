@@ -6,8 +6,10 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AiPersonaService } from './ai.persona.service.entity';
 import { IAiPersonaService } from './ai.persona.service.interface';
-import { CreateAiPersonaServiceInput as CreateAiPersonaServiceInput } from './dto/ai.persona.service.dto.create';
-import { DeleteAiPersonaServiceInput as DeleteAiPersonaServiceInput } from './dto/ai.persona..service.dto.delete';
+import {
+  CreateAiPersonaServiceInput as CreateAiPersonaServiceInput,
+  DeleteAiPersonaServiceInput as DeleteAiPersonaServiceInput,
+} from './dto';
 import { UpdateAiPersonaServiceInput } from './dto/ai.persona.service.dto.update';
 import { AiPersonaServiceInvocationInput } from './dto/ai.persona.service.invocation.dto.input';
 import { LogContext } from '@common/enums/logging.context';

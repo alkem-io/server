@@ -15,7 +15,7 @@ export class ResultHandler {
   roomDetails?: RoomDetails = undefined;
 }
 
-export class AiServerAdapteInvocationInput {
+export class AiServerAdapterInvocationInput {
   message!: string;
   aiPersonaServiceID!: string;
   contextID?: string;

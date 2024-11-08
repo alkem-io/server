@@ -1,21 +1,14 @@
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, LoggerService } from '@nestjs/common';
-import { LogContext } from '@common/enums';
 import { InvokeEngineResult } from '../messages/invoke.engine.result';
 
 @EventsHandler(InvokeEngineResult)
 export class InvokeEngineResultHandler
   implements IEventHandler<InvokeEngineResult>
 {
-  constructor(
-    private readonly aiServerService: AiServerService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
-  ) {}
+  constructor(private readonly aiServerService: AiServerService) {}
 
   async handle(event: InvokeEngineResult) {
-    this.aiServerService.handleInvokeEngineResult(event);
+    await this.aiServerService.handleInvokeEngineResult(event);
   }
 }
