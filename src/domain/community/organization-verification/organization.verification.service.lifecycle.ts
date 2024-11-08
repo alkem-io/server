@@ -84,7 +84,7 @@ export class OrganizationVerificationLifecycleService {
             VERIFICATION_REQUEST: {
               target:
                 OrganizationVerificationLifecycleState.VERIFICATION_PENDING,
-              guards: {
+              guard: {
                 type: 'hasUpdatePrivilege',
               },
             },
@@ -94,7 +94,7 @@ export class OrganizationVerificationLifecycleService {
           on: {
             MANUALLY_VERIFY: {
               target: OrganizationVerificationLifecycleState.MANUALLY_VERIFIED,
-              guards: 'hasGrantPrivilege',
+              guard: 'hasGrantPrivilege',
             },
             REJECT: OrganizationVerificationLifecycleState.REJECTED,
           },
@@ -104,7 +104,7 @@ export class OrganizationVerificationLifecycleService {
           on: {
             RESET: {
               target: OrganizationVerificationLifecycleState.NOT_VERIFIED,
-              guards: 'hasGrantPrivilege',
+              guard: 'hasGrantPrivilege',
             },
           },
         },
@@ -112,11 +112,11 @@ export class OrganizationVerificationLifecycleService {
           on: {
             REOPEN: {
               target: OrganizationVerificationLifecycleState.NOT_VERIFIED,
-              guards: 'hasGrantPrivilege',
+              guard: 'hasGrantPrivilege',
             },
             ARCHIVE: {
               target: OrganizationVerificationLifecycleState.ARCHIVED,
-              guards: 'hasGrantPrivilege',
+              guard: 'hasGrantPrivilege',
             },
           },
         },

@@ -60,11 +60,11 @@ export const applicationLifecycleMachine: ILifecycleDefinition = {
     new: {
       on: {
         APPROVE: {
-          guards: 'hasApplicationAcceptPrivilege',
+          guard: 'hasGrantPrivilege',
           target: ApplicationLifecycleState.APPROVING,
         },
         REJECT: {
-          guards: 'hasUpdatePrivilege',
+          guard: 'hasUpdatePrivilege',
           target: ApplicationLifecycleState.REJECTED,
         },
       },
@@ -72,7 +72,7 @@ export const applicationLifecycleMachine: ILifecycleDefinition = {
     approving: {
       on: {
         APPROVED: {
-          guards: 'hasApplicationAcceptPrivilege',
+          guard: 'hasGrantPrivilege',
           target: ApplicationLifecycleState.APPROVED,
         },
       },
@@ -83,11 +83,11 @@ export const applicationLifecycleMachine: ILifecycleDefinition = {
     rejected: {
       on: {
         REOPEN: {
-          guards: 'hasUpdatePrivilege',
+          guard: 'hasUpdatePrivilege',
           target: ApplicationLifecycleState.NEW,
         },
         ARCHIVE: {
-          guards: 'hasUpdatePrivilege',
+          guard: 'hasUpdatePrivilege',
           target: ApplicationLifecycleState.ARCHIVED,
         },
       },
