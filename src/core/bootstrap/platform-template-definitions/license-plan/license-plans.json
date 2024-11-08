@@ -10,8 +10,8 @@
       "requiresPaymentMethod": "0",
       "requiresContactSupport": "1",
       "licenseCredential": "space-license-premium",
-      "assignToNewOrganizationAccount": "0",
-      "assignToNewUserAccount": "0",
+      "assignToNewOrganizationAccounts": "0",
+      "assignToNewUserAccounts": "0",
       "type": "space-plan"
     },
     {
@@ -24,8 +24,8 @@
       "requiresPaymentMethod": "0",
       "requiresContactSupport": "0",
       "licenseCredential": "space-license-plus",
-      "assignToNewOrganizationAccount": "0",
-      "assignToNewUserAccount": "0",
+      "assignToNewOrganizationAccounts": "0",
+      "assignToNewUserAccounts": "0",
       "type": "space-plan"
     },
     {
@@ -38,8 +38,8 @@
       "requiresPaymentMethod": "0",
       "requiresContactSupport": "0",
       "licenseCredential": "space-license-free",
-      "assignToNewOrganizationAccount": "1",
-      "assignToNewUserAccount": "1",
+      "assignToNewOrganizationAccounts": "1",
+      "assignToNewUserAccounts": "1",
       "type": "space-plan"
     },
     {
@@ -52,8 +52,8 @@
       "requiresPaymentMethod": "0",
       "requiresContactSupport": "1",
       "licenseCredential": "space-feature-whiteboard-multi-user",
-      "assignToNewOrganizationAccount": "0",
-      "assignToNewUserAccount": "0",
+      "assignToNewOrganizationAccounts": "0",
+      "assignToNewUserAccounts": "0",
       "type": "space-feature-flag"
     },
     {
@@ -66,8 +66,8 @@
       "requiresPaymentMethod": "0",
       "requiresContactSupport": "1",
       "licenseCredential": "account-license-plus",
-      "assignToNewOrganizationAccount": "0",
-      "assignToNewUserAccount": "0",
+      "assignToNewOrganizationAccounts": "0",
+      "assignToNewUserAccounts": "0",
       "type": "account-plan"
     },
     {
@@ -80,8 +80,8 @@
       "requiresPaymentMethod": "0",
       "requiresContactSupport": "1",
       "licenseCredential": "space-feature-virtual-contributors",
-      "assignToNewOrganizationAccount": "1",
-      "assignToNewUserAccount": "1",
+      "assignToNewOrganizationAccounts": "1",
+      "assignToNewUserAccounts": "1",
       "type": "space-feature-flag"
     },
     {
@@ -94,8 +94,8 @@
       "requiresPaymentMethod": "0",
       "requiresContactSupport": "1",
       "licenseCredential": "space-license-enterprise",
-      "assignToNewOrganizationAccount": "0",
-      "assignToNewUserAccount": "0",
+      "assignToNewOrganizationAccounts": "0",
+      "assignToNewUserAccounts": "0",
       "type": "space-plan"
     },
     {
@@ -108,8 +108,8 @@
       "requiresPaymentMethod": "0",
       "requiresContactSupport": "1",
       "licenseCredential": "space-feature-save-as-template",
-      "assignToNewOrganizationAccount": "1",
-      "assignToNewUserAccount": "1",
+      "assignToNewOrganizationAccounts": "1",
+      "assignToNewUserAccounts": "1",
       "type": "space-feature-flag"
     }
   ]
