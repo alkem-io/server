@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class AllowEventsFromSubspaces1730464361986 implements MigrationInterface {
-    name = 'AllowEventsFromSubspaces1730464361986'
+export class AllowEventsFromSubspaces1731077703010 implements MigrationInterface {
+    name = 'AllowEventsFromSubspaces1731077703010'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
       // add setting to calendar event to allow events from subspaces
