@@ -4,9 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { SpaceService } from '@domain/space/space/space.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
-import fs from 'fs';
-import * as defaultRoles from '@templates/authorization-bootstrap.json';
-import * as defaultLicensePlan from '@templates/license-plans.json';
+import * as defaultRoles from './platform-template-definitions/user/users.json';
+import * as defaultLicensePlan from './platform-template-definitions/license-plan/license-plans.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
@@ -236,50 +235,14 @@ export class BootstrapService {
   }
 
   async bootstrapUserProfiles() {
-    const bootstrapAuthorizationEnabled = this.configService.get(
-      'bootstrap.authorization.enabled',
-      { infer: true }
-    );
-    if (!bootstrapAuthorizationEnabled) {
-      this.logger.verbose?.(
-        `Authorization Profile Loading: ${bootstrapAuthorizationEnabled}`,
-        LogContext.BOOTSTRAP
-      );
-      return;
-    }
-
-    const bootstrapFilePath = this.configService.get(
-      'bootstrap.authorization.file',
-      { infer: true }
-    );
-
-    let bootstrapAuthorizationRolesJson = {
+    const bootstrapAuthorizationRolesJson = {
       ...defaultRoles,
     };
 
-    if (
-      bootstrapFilePath &&
-      fs.existsSync(bootstrapFilePath) &&
-      fs.statSync(bootstrapFilePath).isFile()
-    ) {
-      this.logger.verbose?.(
-        `Authorization bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
-        LogContext.BOOTSTRAP
-      );
-      const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
-      this.logger.verbose?.(bootstratDataStr);
-      if (!bootstratDataStr) {
-        throw new BootstrapException(
-          'Specified authorization bootstrap file not found!'
-        );
-      }
-      bootstrapAuthorizationRolesJson = JSON.parse(bootstratDataStr);
-    } else {
-      this.logger.verbose?.(
-        'Authorization bootstrap: default configuration being loaded',
-        LogContext.BOOTSTRAP
-      );
-    }
+    this.logger.verbose?.(
+      'Authorization bootstrap: default configuration being loaded',
+      LogContext.BOOTSTRAP
+    );
 
     const users = bootstrapAuthorizationRolesJson.users;
     if (!users) {
