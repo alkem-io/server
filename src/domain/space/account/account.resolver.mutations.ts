@@ -321,7 +321,7 @@ export class AccountResolverMutations {
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.LICENSE_RESET,
-      `reset license definition on Space: ${agentInfo.email}`
+      `reset license definition on Account: ${agentInfo.userID}`
     );
     const accountLicenses = await this.accountLicenseService.applyLicensePolicy(
       account.id
