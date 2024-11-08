@@ -165,7 +165,7 @@ export class CalendarService {
     calendarEvent.calendar = calendar;
     return await this.calendarEventService.save(calendarEvent);
   }
-  // todo: refactor to use args in sql query
+
   public async getCalendarEvents(
     calendar: ICalendar,
     agentInfo: AgentInfo,
