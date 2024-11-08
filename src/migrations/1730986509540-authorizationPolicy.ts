@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AuthorizationPolicy1730877510629 implements MigrationInterface {
+export class AuthorizationPolicy1730986509540 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Get the authorization ID on the ai_server table
     await this.updateAuthorizationPolicyTypeOnSingleton(

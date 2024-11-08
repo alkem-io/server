@@ -6,6 +6,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
 import fs from 'fs';
 import * as defaultRoles from '@templates/authorization-bootstrap.json';
+import * as defaultLicensePlan from '@templates/license-plans.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
@@ -55,6 +56,8 @@ import { bootstrapSpaceCallouts } from './platform-template-definitions/space/bo
 import { bootstrapSpaceTutorialsInnovationFlowStates } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.innovation.flow.states';
 import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callout.groups';
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
+import { LicensingService } from '@platform/licensing/licensing.service';
+import { LicensePlanService } from '@platform/license-plan/license.plan.service';
 
 @Injectable()
 export class BootstrapService {
@@ -81,7 +84,9 @@ export class BootstrapService {
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesManagerService: TemplatesManagerService,
     private templatesSetService: TemplatesSetService,
-    private templateDefaultService: TemplateDefaultService
+    private templateDefaultService: TemplateDefaultService,
+    private licensingService: LicensingService,
+    private licensePlanService: LicensePlanService
   ) {}
 
   async bootstrap() {
@@ -99,6 +104,7 @@ export class BootstrapService {
       }
 
       await this.bootstrapUserProfiles();
+      await this.bootstrapLicensePlans();
       await this.platformService.ensureForumCreated();
       await this.ensureAuthorizationsPopulated();
       await this.ensurePlatformTemplatesArePresent();
@@ -247,7 +253,7 @@ export class BootstrapService {
       { infer: true }
     );
 
-    let bootstrapJson = {
+    let bootstrapAuthorizationRolesJson = {
       ...defaultRoles,
     };
 
@@ -267,7 +273,7 @@ export class BootstrapService {
           'Specified authorization bootstrap file not found!'
         );
       }
-      bootstrapJson = JSON.parse(bootstratDataStr);
+      bootstrapAuthorizationRolesJson = JSON.parse(bootstratDataStr);
     } else {
       this.logger.verbose?.(
         'Authorization bootstrap: default configuration being loaded',
@@ -275,7 +281,7 @@ export class BootstrapService {
       );
     }
 
-    const users = bootstrapJson.users;
+    const users = bootstrapAuthorizationRolesJson.users;
     if (!users) {
       this.logger.verbose?.(
         'No users section in the authorization bootstrap file!',
@@ -283,6 +289,44 @@ export class BootstrapService {
       );
     } else {
       await this.createUserProfiles(users);
+    }
+  }
+
+  async bootstrapLicensePlans() {
+    const bootstrapLicensePlans = {
+      ...defaultLicensePlan,
+    };
+
+    const licensePlans = bootstrapLicensePlans.licensePlans;
+    if (!licensePlans) {
+      this.logger.verbose?.(
+        'No licensePlans section in the license plans bootstrap file!',
+        LogContext.BOOTSTRAP
+      );
+    } else {
+      await this.createLicensePlans(licensePlans);
+    }
+  }
+
+  async createLicensePlans(licensePlansData: any[]) {
+    try {
+      const licensing = await this.licensingService.getDefaultLicensingOrFail();
+      for (const licensePlanData of licensePlansData) {
+        const planExists =
+          await this.licensePlanService.licensePlanByNameExists(
+            licensePlanData.type
+          );
+        if (!planExists) {
+          await this.licensingService.createLicensePlan({
+            ...licensePlanData,
+            licensingID: licensing.id,
+          });
+        }
+      }
+    } catch (error: any) {
+      throw new BootstrapException(
+        `Unable to create license plans ${error.message}`
+      );
     }
   }
 
