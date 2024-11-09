@@ -4,8 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { SpaceService } from '@domain/space/space/space.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
-import fs from 'fs';
-import * as defaultRoles from '@templates/authorization-bootstrap.json';
+import * as defaultRoles from './platform-template-definitions/user/users.json';
+import * as defaultLicensePlan from './platform-template-definitions/license-plan/license-plans.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
@@ -57,6 +57,8 @@ import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-defini
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
 import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { LicensePlanService } from '@platform/license-plan/license.plan.service';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
 
 @Injectable()
 export class BootstrapService {
@@ -85,7 +87,9 @@ export class BootstrapService {
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
     private accountLicenseService: AccountLicenseService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private licensingFrameworkService: LicensingFrameworkService,
+    private licensePlanService: LicensePlanService
   ) {}
 
   async bootstrap() {
@@ -103,6 +107,7 @@ export class BootstrapService {
       }
 
       await this.bootstrapUserProfiles();
+      await this.bootstrapLicensePlans();
       await this.platformService.ensureForumCreated();
       await this.ensureAuthorizationsPopulated();
       await this.ensurePlatformTemplatesArePresent();
@@ -234,52 +239,16 @@ export class BootstrapService {
   }
 
   async bootstrapUserProfiles() {
-    const bootstrapAuthorizationEnabled = this.configService.get(
-      'bootstrap.authorization.enabled',
-      { infer: true }
-    );
-    if (!bootstrapAuthorizationEnabled) {
-      this.logger.verbose?.(
-        `Authorization Profile Loading: ${bootstrapAuthorizationEnabled}`,
-        LogContext.BOOTSTRAP
-      );
-      return;
-    }
-
-    const bootstrapFilePath = this.configService.get(
-      'bootstrap.authorization.file',
-      { infer: true }
-    );
-
-    let bootstrapJson = {
+    const bootstrapAuthorizationRolesJson = {
       ...defaultRoles,
     };
 
-    if (
-      bootstrapFilePath &&
-      fs.existsSync(bootstrapFilePath) &&
-      fs.statSync(bootstrapFilePath).isFile()
-    ) {
-      this.logger.verbose?.(
-        `Authorization bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
-        LogContext.BOOTSTRAP
-      );
-      const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
-      this.logger.verbose?.(bootstratDataStr);
-      if (!bootstratDataStr) {
-        throw new BootstrapException(
-          'Specified authorization bootstrap file not found!'
-        );
-      }
-      bootstrapJson = JSON.parse(bootstratDataStr);
-    } else {
-      this.logger.verbose?.(
-        'Authorization bootstrap: default configuration being loaded',
-        LogContext.BOOTSTRAP
-      );
-    }
+    this.logger.verbose?.(
+      'Authorization bootstrap: default configuration being loaded',
+      LogContext.BOOTSTRAP
+    );
 
-    const users = bootstrapJson.users;
+    const users = bootstrapAuthorizationRolesJson.users;
     if (!users) {
       this.logger.verbose?.(
         'No users section in the authorization bootstrap file!',
@@ -287,6 +256,45 @@ export class BootstrapService {
       );
     } else {
       await this.createUserProfiles(users);
+    }
+  }
+
+  async bootstrapLicensePlans() {
+    const bootstrapLicensePlans = {
+      ...defaultLicensePlan,
+    };
+
+    const licensePlans = bootstrapLicensePlans.licensePlans;
+    if (!licensePlans) {
+      this.logger.verbose?.(
+        'No licensePlans section in the license plans bootstrap file!',
+        LogContext.BOOTSTRAP
+      );
+    } else {
+      await this.createLicensePlans(licensePlans);
+    }
+  }
+
+  async createLicensePlans(licensePlansData: any[]) {
+    try {
+      const licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
+      for (const licensePlanData of licensePlansData) {
+        const planExists =
+          await this.licensePlanService.licensePlanByNameExists(
+            licensePlanData.type
+          );
+        if (!planExists) {
+          await this.licensingFrameworkService.createLicensePlan({
+            ...licensePlanData,
+            licensingID: licensing.id,
+          });
+        }
+      }
+    } catch (error: any) {
+      throw new BootstrapException(
+        `Unable to create license plans ${error.message}`
+      );
     }
   }
 

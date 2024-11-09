@@ -58,7 +58,6 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { CalloutState } from '@common/enums/callout.state';
 
 @Injectable()
 export class CollaborationService {
@@ -250,9 +249,8 @@ export class CollaborationService {
         calloutNameIds.push(calloutDefault.nameID);
       }
       if (
-        calloutDefault.isTemplate === false &&
-        calloutDefault.type === CalloutType.POST &&
-        calloutDefault.contributionPolicy?.state === CalloutState.OPEN
+        !calloutDefault.isTemplate &&
+        calloutDefault.type === CalloutType.POST
       ) {
         calloutDefault.enableComments = true;
       }
@@ -372,7 +370,6 @@ export class CollaborationService {
 
     if (
       !collaboration.callouts ||
-      !collaboration.timeline ||
       !collaboration.innovationFlow ||
       !collaboration.authorization ||
       !collaboration.license
@@ -386,7 +383,10 @@ export class CollaborationService {
       await this.calloutService.deleteCallout(callout.id);
     }
 
-    await this.timelineService.deleteTimeline(collaboration.timeline.id);
+    if (collaboration.timeline) {
+      // There's no timeline for collaboration templates
+      await this.timelineService.deleteTimeline(collaboration.timeline.id);
+    }
 
     await this.authorizationPolicyService.delete(collaboration.authorization);
 

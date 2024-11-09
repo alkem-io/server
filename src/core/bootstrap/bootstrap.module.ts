@@ -20,6 +20,8 @@ import { TemplatesSetModule } from '@domain/template/templates-set/templates.set
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { LicensePlanModule } from '@platform/license-plan/license.plan.module';
+import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { LicenseModule } from '@domain/common/license/license.module';
     TemplatesSetModule,
     TemplatesManagerModule,
     TemplateDefaultModule,
+    LicensingFrameworkModule,
+    LicensePlanModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],

@@ -4,6 +4,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { FlowState } from './bootstrap.subspace.innovation.flow.states';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 export const bootstrapSubspaceCallouts: CreateCalloutInput[] = [
   {
@@ -14,6 +15,7 @@ export const bootstrapSubspaceCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 1,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName: '👋 Welcome to your subpace!',
@@ -37,6 +39,7 @@ export const bootstrapSubspaceCallouts: CreateCalloutInput[] = [
     },
     sortOrder: 2,
     groupName: CalloutGroupName.HOME,
+    visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
         displayName:
