@@ -30,7 +30,7 @@ export class AuthResetService {
     try {
       await this.publishAuthorizationResetAllAccounts(task.id);
       await this.publishAuthorizationResetAllOrganizations(task.id);
-      await this.publishAuthorizatinoResetAllUsers(task.id);
+      await this.publishAuthorizationResetAllUsers(task.id);
       await this.publishAuthorizationResetPlatform();
       await this.publishAuthorizationResetAiServer();
       // And reset licenses
@@ -92,7 +92,7 @@ export class AuthResetService {
     return task.id;
   }
 
-  public async publishAuthorizatinoResetAllUsers(taskId?: string) {
+  public async publishAuthorizationResetAllUsers(taskId?: string) {
     const users = await this.manager.find(User, {
       select: { id: true },
     });
