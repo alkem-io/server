@@ -16,12 +16,6 @@ export type AlkemioConfig = {
     };
     max_json_payload_size: string;
   };
-  bootstrap: {
-    authorization: {
-      enabled: string;
-      file: string;
-    };
-  };
   security: {
     cors: {
       enabled: boolean;
