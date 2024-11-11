@@ -16,5 +16,6 @@ export const spaceDefaultsSettingsRootSpace: ISpaceSettings = {
     inheritMembershipRights: false,
     allowMembersToCreateSubspaces: false,
     allowMembersToCreateCallouts: false,
+    allowEventsFromSubspaces: true,
   },
 };

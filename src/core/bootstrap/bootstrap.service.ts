@@ -4,8 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { SpaceService } from '@domain/space/space/space.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
-import fs from 'fs';
-import * as defaultRoles from '@templates/authorization-bootstrap.json';
+import * as defaultRoles from './platform-template-definitions/user/users.json';
+import * as defaultLicensePlan from './platform-template-definitions/license-plan/license-plans.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
@@ -55,11 +55,11 @@ import { bootstrapSpaceCallouts } from './platform-template-definitions/space/bo
 import { bootstrapSpaceTutorialsInnovationFlowStates } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.innovation.flow.states';
 import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callout.groups';
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
+import { LicensingService } from '@platform/licensing/licensing.service';
+import { LicensePlanService } from '@platform/license-plan/license.plan.service';
 
 @Injectable()
 export class BootstrapService {
-  private adminAgentInfo?: AgentInfo;
-
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
@@ -83,7 +83,9 @@ export class BootstrapService {
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesManagerService: TemplatesManagerService,
     private templatesSetService: TemplatesSetService,
-    private templateDefaultService: TemplateDefaultService
+    private templateDefaultService: TemplateDefaultService,
+    private licensingService: LicensingService,
+    private licensePlanService: LicensePlanService
   ) {}
 
   async bootstrap() {
@@ -101,6 +103,7 @@ export class BootstrapService {
       }
 
       await this.bootstrapUserProfiles();
+      await this.bootstrapLicensePlans();
       await this.platformService.ensureForumCreated();
       await this.ensureAuthorizationsPopulated();
       await this.ensurePlatformTemplatesArePresent();
@@ -232,52 +235,16 @@ export class BootstrapService {
   }
 
   async bootstrapUserProfiles() {
-    const bootstrapAuthorizationEnabled = this.configService.get(
-      'bootstrap.authorization.enabled',
-      { infer: true }
-    );
-    if (!bootstrapAuthorizationEnabled) {
-      this.logger.verbose?.(
-        `Authorization Profile Loading: ${bootstrapAuthorizationEnabled}`,
-        LogContext.BOOTSTRAP
-      );
-      return;
-    }
-
-    const bootstrapFilePath = this.configService.get(
-      'bootstrap.authorization.file',
-      { infer: true }
-    );
-
-    let bootstrapJson = {
+    const bootstrapAuthorizationRolesJson = {
       ...defaultRoles,
     };
 
-    if (
-      bootstrapFilePath &&
-      fs.existsSync(bootstrapFilePath) &&
-      fs.statSync(bootstrapFilePath).isFile()
-    ) {
-      this.logger.verbose?.(
-        `Authorization bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
-        LogContext.BOOTSTRAP
-      );
-      const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
-      this.logger.verbose?.(bootstratDataStr);
-      if (!bootstratDataStr) {
-        throw new BootstrapException(
-          'Specified authorization bootstrap file not found!'
-        );
-      }
-      bootstrapJson = JSON.parse(bootstratDataStr);
-    } else {
-      this.logger.verbose?.(
-        'Authorization bootstrap: default configuration being loaded',
-        LogContext.BOOTSTRAP
-      );
-    }
+    this.logger.verbose?.(
+      'Authorization bootstrap: default configuration being loaded',
+      LogContext.BOOTSTRAP
+    );
 
-    const users = bootstrapJson.users;
+    const users = bootstrapAuthorizationRolesJson.users;
     if (!users) {
       this.logger.verbose?.(
         'No users section in the authorization bootstrap file!',
@@ -285,6 +252,44 @@ export class BootstrapService {
       );
     } else {
       await this.createUserProfiles(users);
+    }
+  }
+
+  async bootstrapLicensePlans() {
+    const bootstrapLicensePlans = {
+      ...defaultLicensePlan,
+    };
+
+    const licensePlans = bootstrapLicensePlans.licensePlans;
+    if (!licensePlans) {
+      this.logger.verbose?.(
+        'No licensePlans section in the license plans bootstrap file!',
+        LogContext.BOOTSTRAP
+      );
+    } else {
+      await this.createLicensePlans(licensePlans);
+    }
+  }
+
+  async createLicensePlans(licensePlansData: any[]) {
+    try {
+      const licensing = await this.licensingService.getDefaultLicensingOrFail();
+      for (const licensePlanData of licensePlansData) {
+        const planExists =
+          await this.licensePlanService.licensePlanByNameExists(
+            licensePlanData.name
+          );
+        if (!planExists) {
+          await this.licensingService.createLicensePlan({
+            ...licensePlanData,
+            licensingID: licensing.id,
+          });
+        }
+      }
+    } catch (error: any) {
+      throw new BootstrapException(
+        `Unable to create license plans ${error.message}`
+      );
     }
   }
 
@@ -296,7 +301,7 @@ export class BootstrapService {
           userData.email
         );
         if (!userExists) {
-          let user = await this.userService.createUser({
+          const user = await this.userService.createUser({
             email: userData.email,
             accountUpn: userData.email,
             firstName: userData.firstName,
@@ -306,19 +311,11 @@ export class BootstrapService {
             },
           });
 
-          const credentialsData = userData.credentials;
-          for (const credentialData of credentialsData) {
-            await this.adminAuthorizationService.grantCredentialToUser({
-              userID: user.id,
-              type: credentialData.type,
-              resourceID: credentialData.resourceID,
-            });
-          }
-          user = await this.userAuthorizationService.grantCredentials(user);
-
           // Once all is done, reset the user authorizations
           const userAuthorizations =
-            await this.userAuthorizationService.applyAuthorizationPolicy(user);
+            await this.userAuthorizationService.applyAuthorizationPolicy(
+              user.id
+            );
           await this.authorizationPolicyService.saveAll(userAuthorizations);
 
           const account = await this.userService.getAccount(user);
@@ -327,16 +324,18 @@ export class BootstrapService {
               account
             );
           await this.authorizationPolicyService.saveAll(accountAuthorizations);
-          if (!this.adminAgentInfo) {
-            this.adminAgentInfo = await this.createSystemAgentInfo(user);
+
+          const credentialsData = userData.credentials;
+          for (const credentialData of credentialsData) {
+            await this.adminAuthorizationService.grantCredentialToUser({
+              userID: user.id,
+              type: credentialData.type,
+              resourceID: credentialData.resourceID,
+            });
           }
-        } else {
-          if (!this.adminAgentInfo) {
-            const user = await this.userService.getUserByEmail(userData.email);
-            if (user) {
-              this.adminAgentInfo = await this.createSystemAgentInfo(user);
-            }
-          }
+          await this.userAuthorizationService.grantCredentialsAllUsersReceive(
+            user.id
+          );
         }
       }
     } catch (error: any) {
@@ -432,6 +431,7 @@ export class BootstrapService {
       DEFAULT_HOST_ORG_NAMEID
     );
     if (!hostOrganization) {
+      const adminAgentInfo = await this.getAdminAgentInfo();
       hostOrganization = await this.organizationService.createOrganization(
         {
           nameID: DEFAULT_HOST_ORG_NAMEID,
@@ -439,7 +439,7 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         },
-        this.adminAgentInfo
+        adminAgentInfo
       );
       const orgAuthorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
@@ -455,6 +455,21 @@ export class BootstrapService {
         );
       await this.authorizationPolicyService.saveAll(accountAuthorizations);
     }
+  }
+
+  private async getAdminAgentInfo(): Promise<AgentInfo> {
+    const adminUserEmail = 'admin@alkem.io';
+    const adminUser = await this.userService.getUserByEmail(adminUserEmail, {
+      relations: {
+        agent: true,
+      },
+    });
+    if (!adminUser) {
+      throw new BootstrapException(
+        `Unable to load fixed admin user for creating organization: ${adminUserEmail}`
+      );
+    }
+    return this.createSystemAgentInfo(adminUser);
   }
 
   private async ensureSpaceSingleton() {

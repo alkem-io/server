@@ -21,6 +21,7 @@ export enum AuthorizationPolicyType {
   COMMUNICATION = 'communication',
   ROOM = 'room',
   AI_PERSONA = 'ai-persona',
+  AI_SERVER = 'ai-server',
   APPLICATION = 'application',
   ROLE_SET = 'role-set',
   COMMUNITY = 'community',
@@ -50,8 +51,10 @@ export enum AuthorizationPolicyType {
   CALENDAR = 'calendar',
   CALENDAR_EVENT = 'calendar-event',
   TIMELINE = 'timeline',
+  LIBRARY = 'library',
   IN_MEMORY = 'in-memory',
   LICENSING = 'licensing',
+  LICENSE_POLICY = 'license-policy',
   UNKNOWN = 'unknown',
   AI_PERSONA_SERVICE = 'ai-persona-service',
 }

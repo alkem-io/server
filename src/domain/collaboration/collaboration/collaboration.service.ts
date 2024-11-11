@@ -54,7 +54,6 @@ import { Callout } from '@domain/collaboration/callout';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
 import { IRoleSet } from '@domain/access/role-set';
-import { CalloutState } from '@common/enums/callout.state';
 
 @Injectable()
 export class CollaborationService {
@@ -227,9 +226,8 @@ export class CollaborationService {
         calloutNameIds.push(calloutDefault.nameID);
       }
       if (
-        calloutDefault.isTemplate === false &&
-        calloutDefault.type === CalloutType.POST &&
-        calloutDefault.contributionPolicy?.state === CalloutState.OPEN
+        !calloutDefault.isTemplate &&
+        calloutDefault.type === CalloutType.POST
       ) {
         calloutDefault.enableComments = true;
       }
