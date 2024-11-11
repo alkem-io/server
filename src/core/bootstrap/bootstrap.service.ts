@@ -282,7 +282,7 @@ export class BootstrapService {
       for (const licensePlanData of licensePlansData) {
         const planExists =
           await this.licensePlanService.licensePlanByNameExists(
-            licensePlanData.type
+            licensePlanData.name
           );
         if (!planExists) {
           await this.licensingFrameworkService.createLicensePlan({

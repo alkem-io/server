@@ -515,7 +515,7 @@ export class RoleSetService {
       return user;
     }
 
-    user.agent = await this.assignContributorAgentToRole(
+    await this.assignContributorAgentToRole(
       roleSet,
       roleType,
       agent,
@@ -546,7 +546,7 @@ export class RoleSetService {
       triggerNewMemberEvents
     );
 
-    return user;
+    return await this.userService.getUserOrFail(userID);
   }
 
   public async acceptInvitationToRoleSet(

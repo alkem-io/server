@@ -82,6 +82,7 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
+import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -811,6 +812,37 @@ export class SpaceService {
     settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
     return await this.updateSettings(space, settingsData.settings);
+  }
+
+  /**
+   * Should the authorization policy be updated based on the update settings.
+   * Some setting do not require an update to the authorization policy.
+   * @param spaceId
+   * @param settingsData
+   */
+  public async shouldUpdateAuthorizationPolicy(
+    spaceId: string,
+    settingsData: UpdateSpaceSettingsEntityInput
+  ): Promise<boolean> {
+    const space = await this.spaceRepository.findOneOrFail({
+      where: { id: spaceId },
+      select: { id: true, settingsStr: true },
+    });
+
+    const originalSettings = this.getSettings(space as ISpace);
+    // compare the new values from the incoming update request with the original settings
+    const difference = getDiff(settingsData, originalSettings);
+    // if there is no difference, then no need to update the authorization policy
+    if (difference === null) {
+      return false;
+    }
+    // if a difference was detected, check if the difference is in the allowed fields
+    // if another field was updated, outside the allowed list, the auth policy has to be updated
+    return !hasOnlyAllowedFields(difference, {
+      collaboration: {
+        allowEventsFromSubspaces: true,
+      },
+    });
   }
 
   async getSubspaces(

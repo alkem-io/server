@@ -6,16 +6,19 @@ import {
   AuthorizationAgentPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
-import { ICalendar } from './calendar.interface';
-import { ICalendarEvent } from '../event/event.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CalendarService } from './calendar.service';
 import { UUID_NAMEID } from '@domain/common/scalars';
+import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
+import { ICalendarEvent } from '../event/event.interface';
+import { ICalendar } from './calendar.interface';
 
 @Resolver(() => ICalendar)
 export class CalendarResolverFields {
-  constructor(private calendarService: CalendarService) {}
+  constructor(
+    private calendarService: CalendarService,
+    private spaceSettingsService: SpaceSettingsService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('event', () => ICalendarEvent, {
@@ -32,31 +35,36 @@ export class CalendarResolverFields {
       type: () => UUID_NAMEID,
       description: 'The ID or NAMEID of the CalendarEvent',
     })
-    ID: string
+    idOrNameId: string
   ): Promise<ICalendarEvent> {
-    const results = await this.calendarService.getCalendarEventsArgs(
-      calendar,
-      { IDs: [ID] },
-      agentInfo
-    );
-    return results[0];
+    return this.calendarService.getCalendarEvent(calendar.id, idOrNameId);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('events', () => [ICalendarEvent], {
-    nullable: true,
+    nullable: false,
     description: 'The list of CalendarEvents for this Calendar.',
   })
-  async events(
+  public async events(
     @Parent() calendar: ICalendar,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true }) args: CalendarArgsEvents
+    @CurrentUser() agentInfo: AgentInfo
   ) {
-    return await this.calendarService.getCalendarEventsArgs(
+    const space = await this.calendarService.getSpaceFromCalendarOrFail(
+      calendar.id
+    );
+
+    const spaceSettings = this.spaceSettingsService.getSettings(
+      space.settingsStr
+    );
+
+    const shouldSubspaceEventsBubble =
+      spaceSettings.collaboration.allowEventsFromSubspaces;
+
+    return this.calendarService.getCalendarEvents(
       calendar,
-      args,
-      agentInfo
+      agentInfo,
+      shouldSubspaceEventsBubble ? space.id : undefined
     );
   }
 }

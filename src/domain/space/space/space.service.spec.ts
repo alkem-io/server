@@ -18,11 +18,15 @@ import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
+import { Repository } from 'typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 const moduleMocker = new ModuleMocker(global);
 
 describe('SpaceService', () => {
   let service: SpaceService;
+  let spaceRepository: Repository<Space>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -37,10 +41,175 @@ describe('SpaceService', () => {
       .compile();
 
     service = module.get<SpaceService>(SpaceService);
+    spaceRepository = module.get<Repository<Space>>(getRepositoryToken(Space));
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('shouldUpdateAuthorizationPolicy', () => {
+    it('returns false if there is no difference in settings', async () => {
+      const spaceId = '1';
+      const settingsData = {
+        collaboration: { allowEventsFromSubspaces: true },
+      } as ISpaceSettings;
+      const space = {
+        id: spaceId,
+        settingsStr: JSON.stringify(settingsData),
+      } as Space;
+
+      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      jest.spyOn(service, 'getSettings').mockReturnValue(settingsData);
+
+      const result = await service.shouldUpdateAuthorizationPolicy(
+        spaceId,
+        settingsData
+      );
+      expect(result).toBe(false);
+    });
+
+    it('returns true if there is a difference in settings outside allowed fields', async () => {
+      const spaceId = '1';
+      const settingsData = {
+        collaboration: {
+          allowEventsFromSubspaces: false,
+          allowMembersToCreateSubspaces: false,
+        },
+      } as ISpaceSettings;
+      const originalSettings = {
+        collaboration: {
+          allowEventsFromSubspaces: true,
+          allowMembersToCreateSubspaces: true,
+        },
+      } as ISpaceSettings;
+      const space = {
+        id: spaceId,
+        settingsStr: JSON.stringify(originalSettings),
+      } as Space;
+
+      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      jest.spyOn(service, 'getSettings').mockReturnValue(originalSettings);
+
+      const result = await service.shouldUpdateAuthorizationPolicy(
+        spaceId,
+        settingsData
+      );
+      expect(result).toBe(true);
+    });
+
+    it('returns false if the difference is only in allowed fields', async () => {
+      const spaceId = '1';
+      const settingsData = {
+        collaboration: { allowEventsFromSubspaces: false },
+      } as ISpaceSettings;
+      const originalSettings = {
+        collaboration: { allowEventsFromSubspaces: true },
+      } as ISpaceSettings;
+      const space = {
+        id: spaceId,
+        settingsStr: JSON.stringify(originalSettings),
+      } as Space;
+
+      jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
+      jest.spyOn(service, 'getSettings').mockReturnValue(originalSettings);
+
+      const result = await service.shouldUpdateAuthorizationPolicy(
+        spaceId,
+        settingsData
+      );
+      expect(result).toBe(false);
+    });
+
+    it('throws an error if space is not found', async () => {
+      const spaceId = '1';
+      const settingsData = {
+        collaboration: { allowEventsFromSubspaces: true },
+      } as ISpaceSettings;
+
+      jest
+        .spyOn(spaceRepository, 'findOneOrFail')
+        .mockRejectedValue(new Error('Space not found'));
+
+      await expect(
+        service.shouldUpdateAuthorizationPolicy(spaceId, settingsData)
+      ).rejects.toThrow('Space not found');
+    });
+  });
+});
+
+/**
+ * Active spaces go first and then all the Demo spaces
+ * In those two groups, Public spaces go first
+ * And then they are sorted by number of challenges and number of opportunities
+ */
+describe('SpacesSorting', () => {
+  let service: SpaceService;
+  let filterService: SpaceFilterService;
+
+  beforeEach(async () => {
+    const filterModule: TestingModule = await Test.createTestingModule({
+      providers: [SpaceFilterService, MockCacheManager, MockWinstonProvider],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    filterService = filterModule.get<SpaceFilterService>(SpaceFilterService);
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SpaceService,
+        MockCacheManager,
+        MockWinstonProvider,
+        repositoryProviderMockFactory(Space),
+      ],
+    })
+      .useMocker(injectionToken => {
+        // SpaceFilterService should be a real one and not mocked.
+        if (typeof injectionToken === 'function') {
+          const mockMetadata = moduleMocker.getMetadata(
+            injectionToken
+          ) as MockFunctionMetadata<any, any>;
+          if (mockMetadata.name === 'SpaceFilterService') {
+            return filterService;
+          }
+        }
+        // The rest of the dependencies can be mocks
+        return defaultMockerFactory(injectionToken);
+      })
+      .compile();
+
+    service = module.get<SpaceService>(SpaceService);
+  });
+
+  it('Sorting test', () => {
+    const activeDemoSpaces = getFilteredSpaces(spaceTestData, [
+      SpaceVisibility.ACTIVE,
+      SpaceVisibility.DEMO,
+    ]);
+    const result = service['sortSpacesDefault'](activeDemoSpaces);
+    expect(JSON.stringify(result)).toBe(
+      '["6","2","1","5","9","3","8","4","10"]'
+    );
+  });
+  it('Filtering test 1', () => {
+    const activeSpaces = getFilteredSpaces(spaceTestData, [
+      SpaceVisibility.ACTIVE,
+    ]);
+    const result = service['sortSpacesDefault'](activeSpaces);
+
+    expect(JSON.stringify(result)).toBe('["6","2","1","5","9"]');
+  });
+  it('Filtering test 2', () => {
+    const demoSpaces = getFilteredSpaces(spaceTestData, [SpaceVisibility.DEMO]);
+    const result = service['sortSpacesDefault'](demoSpaces);
+    expect(JSON.stringify(result)).toBe('["3","8","4","10"]');
+  });
+  it('Filtering test 3', () => {
+    const archivedSpaces = getFilteredSpaces(spaceTestData, [
+      SpaceVisibility.ARCHIVED,
+    ]);
+    const result = service['sortSpacesDefault'](archivedSpaces);
+    expect(JSON.stringify(result)).toBe('["7"]');
   });
 });
 
@@ -408,78 +577,3 @@ const spaceTestData: Space[] = [
     opportunitiesCounts: [1, 2, 0],
   }),
 ];
-
-/**
- * Active spaces go first and then all the Demo spaces
- * In those two groups, Public spaces go first
- * And then they are sorted by number of challenges and number of opportunities
- */
-describe('SpacesSorting', () => {
-  let service: SpaceService;
-  let filterService: SpaceFilterService;
-
-  beforeEach(async () => {
-    const filterModule: TestingModule = await Test.createTestingModule({
-      providers: [SpaceFilterService, MockCacheManager, MockWinstonProvider],
-    })
-      .useMocker(defaultMockerFactory)
-      .compile();
-    filterService = filterModule.get<SpaceFilterService>(SpaceFilterService);
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SpaceService,
-        MockCacheManager,
-        MockWinstonProvider,
-        repositoryProviderMockFactory(Space),
-      ],
-    })
-      .useMocker(injectionToken => {
-        // SpaceFilterService should be a real one and not mocked.
-        if (typeof injectionToken === 'function') {
-          const mockMetadata = moduleMocker.getMetadata(
-            injectionToken
-          ) as MockFunctionMetadata<any, any>;
-          if (mockMetadata.name === 'SpaceFilterService') {
-            return filterService;
-          }
-        }
-        // The rest of the dependencies can be mocks
-        return defaultMockerFactory(injectionToken);
-      })
-      .compile();
-
-    service = module.get<SpaceService>(SpaceService);
-  });
-
-  it('Sorting test', () => {
-    const activeDemoSpaces = getFilteredSpaces(spaceTestData, [
-      SpaceVisibility.ACTIVE,
-      SpaceVisibility.DEMO,
-    ]);
-    const result = service['sortSpacesDefault'](activeDemoSpaces);
-    expect(JSON.stringify(result)).toBe(
-      '["6","2","1","5","9","3","8","4","10"]'
-    );
-  });
-  it('Filtering test 1', () => {
-    const activeSpaces = getFilteredSpaces(spaceTestData, [
-      SpaceVisibility.ACTIVE,
-    ]);
-    const result = service['sortSpacesDefault'](activeSpaces);
-
-    expect(JSON.stringify(result)).toBe('["6","2","1","5","9"]');
-  });
-  it('Filtering test 2', () => {
-    const demoSpaces = getFilteredSpaces(spaceTestData, [SpaceVisibility.DEMO]);
-    const result = service['sortSpacesDefault'](demoSpaces);
-    expect(JSON.stringify(result)).toBe('["3","8","4","10"]');
-  });
-  it('Filtering test 3', () => {
-    const archivedSpaces = getFilteredSpaces(spaceTestData, [
-      SpaceVisibility.ARCHIVED,
-    ]);
-    const result = service['sortSpacesDefault'](archivedSpaces);
-    expect(JSON.stringify(result)).toBe('["7"]');
-  });
-});
