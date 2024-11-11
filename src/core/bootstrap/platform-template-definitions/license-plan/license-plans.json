@@ -71,7 +71,7 @@
       "type": "account-plan"
     },
     {
-      "name": "SPACE_FEATURE_VIRTUAL_CONTIBUTORS",
+      "name": "SPACE_FEATURE_VIRTUAL_CONTRIBUTORS",
       "enabled": "1",
       "sortOrder": "70",
       "pricePerMonth": "0.00",

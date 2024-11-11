@@ -45,4 +45,10 @@ export class CreateCalendarEventInput extends CreateNameableInput {
   })
   @IsOptional()
   durationDays!: number;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Is the event visible on the parent calendar.',
+  })
+  visibleOnParentCalendar!: boolean;
 }

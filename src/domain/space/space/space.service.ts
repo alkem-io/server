@@ -14,7 +14,14 @@ import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, In, Not, Repository } from 'typeorm';
+import {
+  DeepPartial,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Not,
+  Repository,
+} from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
@@ -79,6 +86,7 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
+import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -762,6 +770,37 @@ export class SpaceService {
     settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
     return await this.updateSettings(space, settingsData.settings);
+  }
+
+  /**
+   * Should the authorization policy be updated based on the update settings.
+   * Some setting do not require an update to the authorization policy.
+   * @param spaceId
+   * @param settingsData
+   */
+  public async shouldUpdateAuthorizationPolicy(
+    spaceId: string,
+    settingsData: UpdateSpaceSettingsEntityInput
+  ): Promise<boolean> {
+    const space = await this.spaceRepository.findOneOrFail({
+      where: { id: spaceId },
+      select: { id: true, settingsStr: true },
+    });
+
+    const originalSettings = this.getSettings(space as ISpace);
+    // compare the new values from the incoming update request with the original settings
+    const difference = getDiff(settingsData, originalSettings);
+    // if there is no difference, then no need to update the authorization policy
+    if (difference === null) {
+      return false;
+    }
+    // if a difference was detected, check if the difference is in the allowed fields
+    // if another field was updated, outside the allowed list, the auth policy has to be updated
+    return !hasOnlyAllowedFields(difference, {
+      collaboration: {
+        allowEventsFromSubspaces: true,
+      },
+    });
   }
 
   async getSubspaces(

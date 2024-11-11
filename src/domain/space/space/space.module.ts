@@ -22,7 +22,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { SpaceSettingssModule } from '../space.settings/space.settings.module';
+import { SpaceSettingsModule } from '../space.settings/space.settings.module';
 import { AccountHostModule } from '../account.host/account.host.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
@@ -47,7 +47,7 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     NamingModule,
     PlatformAuthorizationPolicyModule,
     TemplatesManagerModule,
-    SpaceSettingssModule,
+    SpaceSettingsModule,
     StorageAggregatorModule,
     ContributionReporterModule,
     CollaborationModule,
