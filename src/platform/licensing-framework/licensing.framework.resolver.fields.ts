@@ -21,7 +21,9 @@ export class LicensingFrameworkResolverFields {
   async plans(
     @Parent() licensing: ILicensingFramework
   ): Promise<ILicensePlan[]> {
-    return await this.licensingFrameworkService.getLicensePlans(licensing.id);
+    return await this.licensingFrameworkService.getLicensePlansOrFail(
+      licensing.id
+    );
   }
 
   @ResolveField('policy', () => ILicensePolicy, {

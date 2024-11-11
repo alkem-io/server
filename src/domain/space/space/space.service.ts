@@ -83,6 +83,7 @@ import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.da
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { getDiff, hasOnlyAllowedFields } from '@common/utils';
+import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -1283,13 +1284,24 @@ export class SpaceService {
   public async activeSubscription(
     space: ISpace
   ): Promise<ISpaceSubscription | undefined> {
-    const licensingFramework =
-      await this.licensingFrameworkService.getDefaultLicensingOrFail();
-
     const today = new Date();
-    const plans = await this.licensingFrameworkService.getLicensePlans(
-      licensingFramework.id
-    );
+    let plans: ILicensePlan[] = [];
+
+    try {
+      const licensingFramework =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
+
+      plans = await this.licensingFrameworkService.getLicensePlansOrFail(
+        licensingFramework.id
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to retrieve licensing framework',
+        error,
+        LogContext.LICENSE
+      );
+      return undefined;
+    }
 
     return (await this.getSubscriptions(space))
       .filter(

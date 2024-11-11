@@ -137,9 +137,10 @@ export class AccountHostService {
     const licensingFramework =
       await this.licensingFrameworkService.getDefaultLicensingOrFail();
     const licensePlansToAssign: ILicensePlan[] = [];
-    const licensePlans = await this.licensingFrameworkService.getLicensePlans(
-      licensingFramework.id
-    );
+    const licensePlans =
+      await this.licensingFrameworkService.getLicensePlansOrFail(
+        licensingFramework.id
+      );
     for (const plan of licensePlans) {
       if (type === AccountType.USER && plan.assignToNewUserAccounts) {
         licensePlansToAssign.push(plan);

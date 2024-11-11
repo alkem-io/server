@@ -41,7 +41,7 @@ export class LicensingFrameworkService {
 
   async getDefaultLicensingOrFail(
     options?: FindOneOptions<LicensingFramework>
-  ): Promise<ILicensingFramework> {
+  ): Promise<ILicensingFramework | never> {
     const licensingFrameworks = await this.licensingFrameworkRepository.find({
       ...options,
     });
@@ -61,7 +61,9 @@ export class LicensingFrameworkService {
     return this.licensingFrameworkRepository.save(licensing);
   }
 
-  public async getLicensePlans(licensingID: string): Promise<ILicensePlan[]> {
+  public async getLicensePlansOrFail(
+    licensingID: string
+  ): Promise<ILicensePlan[] | never> {
     const licensing = await this.getLicensingOrFail(licensingID, {
       relations: {
         plans: true,
@@ -80,7 +82,7 @@ export class LicensingFrameworkService {
     licensingID: string,
     planID: string
   ): Promise<ILicensePlan> {
-    const licensePlans = await this.getLicensePlans(licensingID);
+    const licensePlans = await this.getLicensePlansOrFail(licensingID);
     const plan = licensePlans.find(plan => plan.id === planID);
     if (!plan) {
       throw new EntityNotFoundException(
