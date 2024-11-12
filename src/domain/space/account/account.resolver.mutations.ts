@@ -560,14 +560,21 @@ export class AccountResolverMutations {
     authorizationPrivilege: AuthorizationPrivilege,
     licenseType: LicenseEntitlementType
   ) {
-    if (!account.authorization || !account.license) {
+    if (!account.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load relations on account for checking auth + license: ${account.id}`,
+        `Unable to load authorization on account: ${account.id}`,
         LogContext.ACCOUNT
       );
     }
-    const license = account.license;
+    if (!account.license) {
+      throw new RelationshipNotFoundException(
+        `Unable to load license on account: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
     const authorization = account.authorization;
+    const license = account.license;
+    
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
@@ -576,7 +583,7 @@ export class AccountResolverMutations {
     );
     const isEntitleMentEnabled = this.licenseService.isEntitlementAvailable(
       license,
-      LicenseEntitlementType.ACCOUNT_SPACE_FREE
+      licenseType
     );
     const isPlatformAdmin = this.authorizationService.isAccessGranted(
       agentInfo,
@@ -586,10 +593,10 @@ export class AccountResolverMutations {
     if (!isPlatformAdmin && !isEntitleMentEnabled) {
       const entitlementLimit = this.licenseService.getEntitlementLimit(
         license,
-        LicenseEntitlementType.ACCOUNT_SPACE_FREE
+        licenseType
       );
       throw new ValidationException(
-        `Unable to create ${licenseType} on account: ${account.id}. Entitlement limit of ${entitlementLimit} of type ${LicenseEntitlementType.ACCOUNT_SPACE_FREE} reached`,
+        `Unable to create ${licenseType} on account: ${account.id}. Entitlement limit of ${entitlementLimit} of type ${licenseType} reached`,
         LogContext.ACCOUNT
       );
     }
