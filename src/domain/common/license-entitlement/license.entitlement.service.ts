@@ -60,7 +60,9 @@ export class LicenseEntitlementService {
     return entitlement;
   }
 
-  async deleteEntitlement(entitlementID: string): Promise<ILicenseEntitlement> {
+  async deleteEntitlementOrFail(
+    entitlementID: string
+  ): Promise<ILicenseEntitlement | never> {
     const entitlement = await this.getEntitlementOrFail(entitlementID);
 
     const { id } = entitlement;

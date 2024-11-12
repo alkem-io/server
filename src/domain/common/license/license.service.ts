@@ -59,7 +59,7 @@ export class LicenseService {
     return license;
   }
 
-  async removeLicense(licenseID: string): Promise<ILicense> {
+  async removeLicenseOrFail(licenseID: string): Promise<ILicense | never> {
     // Note need to load it in with all contained entities so can remove fully
     const license = await this.getLicenseOrFail(licenseID, {
       relations: {
@@ -69,7 +69,9 @@ export class LicenseService {
     const entitlements = this.getEntitlementsFromLicenseOrFail(license);
 
     for (const entitlement of entitlements) {
-      await this.licenseEntitlementService.deleteEntitlement(entitlement.id);
+      await this.licenseEntitlementService.deleteEntitlementOrFail(
+        entitlement.id
+      );
     }
 
     if (license.authorization)
@@ -190,7 +192,7 @@ export class LicenseService {
 
   private getEntitlementsFromLicenseOrFail(
     license: ILicense | undefined
-  ): ILicenseEntitlement[] {
+  ): ILicenseEntitlement[] | never {
     if (!license) {
       throw new RelationshipNotFoundException(
         'Unable to load Entitlements for License',

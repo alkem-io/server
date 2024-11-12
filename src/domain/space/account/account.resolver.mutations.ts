@@ -574,7 +574,7 @@ export class AccountResolverMutations {
     }
     const authorization = account.authorization;
     const license = account.license;
-    
+
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,

@@ -137,7 +137,7 @@ export class RoleSetService {
     return roleSet;
   }
 
-  async removeRoleSet(roleSetID: string): Promise<boolean> {
+  async removeRoleSetOrFail(roleSetID: string): Promise<boolean | never> {
     // Note need to load it in with all contained entities so can remove fully
     const roleSet = await this.getRoleSetOrFail(roleSetID, {
       relations: {
@@ -191,7 +191,7 @@ export class RoleSetService {
     }
 
     await this.formService.removeForm(roleSet.applicationForm);
-    await this.licenseService.removeLicense(roleSet.license.id);
+    await this.licenseService.removeLicenseOrFail(roleSet.license.id);
 
     await this.roleSetRepository.remove(roleSet as RoleSet);
     return true;

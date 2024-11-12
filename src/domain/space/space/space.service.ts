@@ -320,7 +320,9 @@ export class SpaceService {
     return await this.spaceRepository.save(space);
   }
 
-  async deleteSpace(deleteData: DeleteSpaceInput): Promise<ISpace> {
+  async deleteSpaceOrFail(
+    deleteData: DeleteSpaceInput
+  ): Promise<ISpace | never> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {
         subspaces: true,
@@ -361,11 +363,13 @@ export class SpaceService {
     }
 
     await this.contextService.removeContext(space.context.id);
-    await this.collaborationService.deleteCollaboration(space.collaboration.id);
-    await this.communityService.removeCommunity(space.community.id);
+    await this.collaborationService.deleteCollaborationOrFail(
+      space.collaboration.id
+    );
+    await this.communityService.removeCommunityOrFail(space.community.id);
     await this.profileService.deleteProfile(space.profile.id);
     await this.agentService.deleteAgent(space.agent.id);
-    await this.licenseService.removeLicense(space.license.id);
+    await this.licenseService.removeLicenseOrFail(space.license.id);
     await this.authorizationPolicyService.delete(space.authorization);
 
     if (space.level === SpaceLevel.SPACE) {

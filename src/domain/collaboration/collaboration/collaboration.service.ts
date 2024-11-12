@@ -354,9 +354,9 @@ export class CollaborationService {
     return [];
   }
 
-  public async deleteCollaboration(
+  public async deleteCollaborationOrFail(
     collaborationID: string
-  ): Promise<ICollaboration> {
+  ): Promise<ICollaboration | never> {
     // Note need to load it in with all contained entities so can remove fully
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: {
@@ -393,7 +393,7 @@ export class CollaborationService {
     await this.innovationFlowService.deleteInnovationFlow(
       collaboration.innovationFlow.id
     );
-    await this.licenseService.removeLicense(collaboration.license.id);
+    await this.licenseService.removeLicenseOrFail(collaboration.license.id);
 
     return await this.collaborationRepository.remove(
       collaboration as Collaboration

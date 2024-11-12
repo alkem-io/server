@@ -138,7 +138,7 @@ export class AccountService {
     return await this.accountRepository.save(account);
   }
 
-  async deleteAccount(accountInput: IAccount): Promise<IAccount> {
+  async deleteAccountOrFail(accountInput: IAccount): Promise<IAccount | never> {
     const accountID = accountInput.id;
     const account = await this.getAccountOrFail(accountID, {
       relations: {
@@ -171,7 +171,7 @@ export class AccountService {
 
     await this.storageAggregatorService.delete(account.storageAggregator.id);
 
-    await this.licenseService.removeLicense(account.license.id);
+    await this.licenseService.removeLicenseOrFail(account.license.id);
 
     for (const vc of account.virtualContributors) {
       await this.virtualContributorService.deleteVirtualContributor(vc.id);
@@ -185,7 +185,7 @@ export class AccountService {
     }
 
     for (const space of account.spaces) {
-      await this.spaceService.deleteSpace({ ID: space.id });
+      await this.spaceService.deleteSpaceOrFail({ ID: space.id });
     }
 
     const result = await this.accountRepository.remove(account as Account);
