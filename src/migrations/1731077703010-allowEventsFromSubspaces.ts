@@ -13,14 +13,14 @@ export class AllowEventsFromSubspaces1731077703010
     );
     // add setting to space to allow events from subspaces
     const spaceSettings: { id: string; settingsStr: string }[] =
-      await queryRunner.query(`SELECT id, settingsStr FROM alkemio.space;`);
+      await queryRunner.query(`SELECT id, settingsStr FROM space;`);
     // iterate over all spaces and update settings
     for (const { id, settingsStr } of spaceSettings) {
       const newSettings = addEventsFromSubspacesSetting(settingsStr);
-      await queryRunner.query(
-        `UPDATE alkemio.space SET settingsStr = ? WHERE id = ?`,
-        [newSettings, id]
-      );
+      await queryRunner.query(`UPDATE space SET settingsStr = ? WHERE id = ?`, [
+        newSettings,
+        id,
+      ]);
     }
   }
 
@@ -30,14 +30,14 @@ export class AllowEventsFromSubspaces1731077703010
     );
 
     const spaceSettings: { id: string; settingsStr: string }[] =
-      await queryRunner.query(`SELECT id, settingsStr FROM alkemio.space;`);
+      await queryRunner.query(`SELECT id, settingsStr FROM space;`);
 
     for (const { id, settingsStr } of spaceSettings) {
       const newSettings = removeEventsFromSubspacesSetting(settingsStr);
-      await queryRunner.query(
-        `UPDATE alkemio.space SET settingsStr = ? WHERE id = ?`,
-        [newSettings, id]
-      );
+      await queryRunner.query(`UPDATE space SET settingsStr = ? WHERE id = ?`, [
+        newSettings,
+        id,
+      ]);
     }
   }
 }
