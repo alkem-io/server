@@ -99,7 +99,7 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
       useFactory: clientProxyFactory(
         MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
-        false
+        true
       ),
 
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],

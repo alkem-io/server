@@ -21,6 +21,9 @@ export class RoomControllerService {
     message: any //TODO type this properly with the implementation of the rest of the engines
     // vcInteractionID?: string
   ) {
+    if (!threadID) {
+      return;
+    }
     const room = await this.roomService.getRoomOrFail(roomID);
     const answerMessage = await this.roomService.sendMessageReply(
       room,
@@ -42,6 +45,27 @@ export class RoomControllerService {
     //     await this.vcInteractionService.save(vcInteraction);
     //   }
     // }
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room,
+      MutationType.CREATE,
+      answerMessage
+    );
+  }
+  public async postMessage(
+    { roomID, communicationID }: RoomDetails,
+    message: any //TODO type this properly with the implementation of the rest of the engines
+    // vcInteractionID?: string
+  ) {
+    const room = await this.roomService.getRoomOrFail(roomID);
+    const answerMessage = await this.roomService.sendMessage(
+      room,
+      communicationID,
+      {
+        roomID: room.externalRoomID,
+        message: this.convertResultToMessage(message),
+      }
+    );
 
     this.subscriptionPublishService.publishRoomEvent(
       room,

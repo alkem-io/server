@@ -10,6 +10,8 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { ChatGuidanceService } from './chat.guidance.service';
 import { ChatGuidanceAnswerRelevanceInput } from './dto/chat.guidance.relevance.dto';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
+import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Resolver()
 export class ChatGuidanceResolverMutations {
@@ -23,6 +25,34 @@ export class ChatGuidanceResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
+  @Mutation(() => IMessageAnswerToQuestion, {
+    nullable: false,
+    description: 'Ask the chat engine for guidance.',
+  })
+  async askChatGuidanceQuestion(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('chatData') chatData: ChatGuidanceInput
+  ): Promise<{ result: boolean }> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
+      `Access interactive guidance: ${agentInfo.email}`
+    );
+
+    if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
+      return { result: false };
+      // return {
+      //   answer: 'guidance engine not enabled',
+      //   question: chatData.question,
+      //   sources: [],
+      // };
+    }
+    this.chatGuidanceService.askQuestion(chatData, agentInfo);
+    return { result: true };
+  }
+
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Resets the interaction with the chat engine.',
   })
@@ -30,7 +60,7 @@ export class ChatGuidanceResolverMutations {
   async resetChatGuidance(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
@@ -48,7 +78,7 @@ export class ChatGuidanceResolverMutations {
   })
   @Profiling.api
   async ingest(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,

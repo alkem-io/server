@@ -2,10 +2,11 @@ import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.intera
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
+  POST_MESSAGE = 'postMessage',
 }
 export class RoomDetails {
   roomID!: string;
-  threadID!: string;
+  threadID?: string;
   communicationID!: string;
   vcInteractionID?: string;
 }
@@ -25,4 +26,5 @@ export class AiServerAdapterInvocationInput {
   displayName!: string;
   externalMetadata?: ExternalMetadata = {};
   resultHandler!: ResultHandler;
+  language?: string;
 }

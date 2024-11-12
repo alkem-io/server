@@ -4,6 +4,7 @@ import { Field, InputType } from '@nestjs/graphql';
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
+  POST_MESSAGE = 'postMessage',
 }
 
 @InputType()
@@ -14,10 +15,10 @@ export class RoomDetails {
   })
   roomID!: string;
   @Field(() => String, {
-    nullable: false,
+    nullable: true,
     description: 'The thread to which the reply shold be posted.',
   })
-  threadID!: string;
+  threadID?: string;
   @Field(() => String, {
     nullable: false,
     description: 'The communicationID for the VC',
@@ -107,4 +108,6 @@ export class AiPersonaServiceInvocationInput {
     description: 'What should happen with the result of the VC invocation',
   })
   resultHandler!: ResultHandler;
+
+  language?: string;
 }

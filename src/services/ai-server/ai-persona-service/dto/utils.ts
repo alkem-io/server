@@ -9,9 +9,17 @@ export const isInputValidForAction = (
 ) => {
   if (action === InvocationResultAction.POST_REPLY) {
     return (
+      input.resultHandler.action === action &&
+      input.resultHandler.roomDetails &&
+      input.resultHandler.roomDetails.threadID
+    );
+  }
+  if (action === InvocationResultAction.POST_MESSAGE) {
+    return (
       input.resultHandler.action === action && input.resultHandler.roomDetails
     );
   }
+
   // better safe than sorry
   return false;
 };

@@ -423,11 +423,20 @@ export class AiServerService {
     //this with elseif or switch
     if (
       isInputValidForAction(event.original, InvocationResultAction.POST_REPLY)
-    )
+    ) {
       this.roomControllerService.postReply(
         resultHandler.roomDetails!,
         event.response
-        // event.original.interactionID
       );
+    }
+    if (
+      isInputValidForAction(event.original, InvocationResultAction.POST_MESSAGE)
+    ) {
+      this.roomControllerService.postMessage(
+        resultHandler.roomDetails!,
+        event.response
+      );
+    }
+    // event.original.interactionID
   }
 }

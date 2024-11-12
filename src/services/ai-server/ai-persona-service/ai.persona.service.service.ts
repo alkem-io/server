@@ -182,6 +182,7 @@ export class AiPersonaServiceService {
       ),
       resultHandler: invocationInput.resultHandler,
       personaServiceID: invocationInput.aiPersonaServiceID,
+      language: invocationInput.language,
     };
 
     return this.aiPersonaEngineAdapter.invoke(input);
