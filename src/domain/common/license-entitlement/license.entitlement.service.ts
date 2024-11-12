@@ -38,12 +38,6 @@ export class LicenseEntitlementService {
     return entitlement;
   }
 
-  public async save(
-    entitlement: ILicenseEntitlement
-  ): Promise<ILicenseEntitlement> {
-    return await this.entitlementRepository.save(entitlement);
-  }
-
   async getEntitlementOrFail(
     entitlementID: string,
     options?: FindOneOptions<LicenseEntitlement>
@@ -75,7 +69,7 @@ export class LicenseEntitlementService {
     };
   }
 
-  async saveEntitlement(
+  public async saveEntitlement(
     entitlement: ILicenseEntitlement
   ): Promise<ILicenseEntitlement> {
     return await this.entitlementRepository.save(entitlement);

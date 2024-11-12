@@ -91,7 +91,7 @@ export class LicenseService {
   async saveAll(licenses: ILicense[]): Promise<void> {
     this.logger.verbose?.(
       `Saving ${licenses.length} licenses`,
-      LogContext.AUTH
+      LogContext.LICENSE
     );
     await this.licenseRepository.save(licenses, {
       chunk: 100,
