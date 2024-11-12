@@ -164,9 +164,10 @@ export class LicenseEntitlementService {
           licenseEntitlement
         );
         break;
-      case LicenseType.ACCOUNT:
+      case LicenseType.SPACE:
       case LicenseType.COLLABORATION:
       case LicenseType.ROLESET:
+      case LicenseType.WHITEBOARD:
         throw new LicenseEntitlementNotSupportedException(
           `License Type ${license.type} is not supported for entitlement of type ${licenseEntitlement.type}`,
           LogContext.LICENSE
