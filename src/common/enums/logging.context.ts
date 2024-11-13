@@ -14,6 +14,7 @@ export enum LogContext {
   COLLABORATION = 'collaboration',
   AGENT = 'agent',
   ACTIVITY = 'activity',
+  IN_APP_NOTIFICATION = 'in-app-notification',
   ACTIVITY_FEED = 'activity-feed',
   API = 'api',
   AUTH = 'auth',
