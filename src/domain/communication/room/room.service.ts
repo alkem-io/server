@@ -64,6 +64,13 @@ export class RoomService {
     return room;
   }
 
+  async findRoom(options?: FindOneOptions<Room>): Promise<Room | null> {
+    const room = await this.roomRepository.findOne({
+      ...options,
+    });
+    return room;
+  }
+
   async deleteRoom(roomInput: IRoom): Promise<IRoom> {
     const room = await this.getRoomOrFail(roomInput.id, {
       relations: {

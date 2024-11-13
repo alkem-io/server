@@ -141,4 +141,22 @@ export class MeResolverFields {
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(agentInfo, limit);
   }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => String, {
+    nullable: false,
+    description: '',
+  })
+  async guidanceRoomID(@CurrentUser() agentInfo: AgentInfo): Promise<string> {
+    const email = agentInfo.email;
+    if (!email) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated user; no identifier',
+        LogContext.RESOLVER_FIELD
+      );
+    }
+
+    const user = await this.userService.getUserByEmail(email);
+    return `${user?.communicationID}-guidance`;
+  }
 }

@@ -9,7 +9,9 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 import { InvocationResultAction } from '@services/ai-server/ai-persona-service/dto';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomService } from '@domain/communication/room/room.service';
+import { RoomType } from '@common/enums/room.type';
 
 export class ChatGuidanceService {
   constructor(
@@ -19,6 +21,7 @@ export class ChatGuidanceService {
     private readonly logger: LoggerService,
     private aiServerAdapter: AiServerAdapter,
     private communicationAdapter: CommunicationAdapter,
+    private roomService: RoomService,
     private virtualContributorService: VirtualContributorService
   ) {}
 
@@ -61,16 +64,7 @@ export class ChatGuidanceService {
   public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
     const room = await this.getGuidanceRoom(agentInfo);
     if (room) {
-      const roomDetails = await this.communicationAdapter.getCommunityRoom(
-        room.id
-      );
-      roomDetails.messages.map(async message => {
-        await this.communicationAdapter.deleteMessage({
-          roomID: room.id,
-          messageId: message.id,
-          senderCommunicationsID: message.sender,
-        });
-      });
+      await this.roomService.deleteRoom(room);
     }
     return true;
   }
@@ -92,37 +86,38 @@ export class ChatGuidanceService {
     message: string,
     guidanceVcCommId: string
   ) {
-    const room = await this.getGuidanceRoom(agentInfo);
-    let roomID;
+    let room = await this.getGuidanceRoom(agentInfo);
     if (!room) {
-      const roomName = `${agentInfo.communicationID}-guidance`;
-      roomID = await this.communicationAdapter.createCommunityRoom(roomName);
-    } else {
-      roomID = room.id;
+      const displayName = `${agentInfo.communicationID}-guidance`;
+      room = await this.roomService.createRoom(displayName, RoomType.GUIDANCE);
+      await this.roomService.save(room);
     }
+
     await this.communicationAdapter.addUserToRoom(
-      roomID,
+      room.externalRoomID,
       agentInfo.communicationID
     );
-    await this.communicationAdapter.addUserToRoom(roomID, guidanceVcCommId);
+    await this.communicationAdapter.addUserToRoom(
+      room.externalRoomID,
+      guidanceVcCommId
+    );
 
     await this.communicationAdapter.sendMessage({
-      roomID,
+      roomID: room.externalRoomID,
       senderCommunicationsID: agentInfo.communicationID,
       message,
     });
-    return roomID;
+    return room.externalRoomID;
   }
 
-  private async getGuidanceRoom(
-    agentInfo: AgentInfo
-  ): Promise<CommunicationRoomResult | undefined> {
-    const roomName = `${agentInfo.communicationID}-guidance`;
-    const rooms = await this.communicationAdapter.getCommunityRooms(
-      agentInfo.communicationID
-    );
-
-    const room = rooms.find(room => room.displayName === roomName);
-    return room;
+  private async getGuidanceRoom(agentInfo: AgentInfo): Promise<IRoom | null> {
+    const displayName = `${agentInfo.communicationID}-guidance`;
+    const type = RoomType.GUIDANCE;
+    return this.roomService.findRoom({
+      where: {
+        displayName,
+        type,
+      },
+    });
   }
 }

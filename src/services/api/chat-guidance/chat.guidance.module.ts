@@ -8,6 +8,7 @@ import { GuidanceReporterModule } from '@services/external/elasticsearch/guidanc
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
     AiServerAdapterModule,
     CommunicationAdapterModule,
     VirtualContributorModule,
+    RoomModule,
   ],
   providers: [ChatGuidanceService, ChatGuidanceResolverMutations],
   exports: [ChatGuidanceService, ChatGuidanceResolverMutations],
