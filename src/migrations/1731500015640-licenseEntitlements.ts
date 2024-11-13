@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { query } from 'express';
 
-export class LicenseEntitlements1730877510666 implements MigrationInterface {
-  name = 'LicenseEntitlements1730877510666';
+export class LicenseEntitlements1731500015640 implements MigrationInterface {
+  name = 'LicenseEntitlements1731500015640';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -235,6 +235,8 @@ export class LicenseEntitlements1730877510666 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`account\` ADD CONSTRAINT \`FK_8339e62882f239dc00ff5866f8c\` FOREIGN KEY (\`licenseId\`) REFERENCES \`license\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+
+    await this.convergeSchema(queryRunner);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -364,6 +366,209 @@ export class LicenseEntitlements1730877510666 implements MigrationInterface {
                 )`
     );
     return licenseEntitlementID;
+  }
+
+  private async convergeSchema(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`license_entitlement\` DROP FOREIGN KEY \`FK_44e464f560f510b9fc5fa073397\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_99f80ef55ba1a1d45e625ea838\` ON \`collaboration\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`FK_3030904030f5d30f483b49905d1\` ON \`license_plan\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_77f80ef55ba1a1d45e625ea838\` ON \`role_set\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_3ef80ef55ba1a1d45e625ea838\` ON \`space\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_8339e62882f239dc00ff5866f8\` ON \`account\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` ADD UNIQUE INDEX \`IDX_aa5815c9577533141cbc4aebe9\` (\`licenseId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` DROP FOREIGN KEY \`FK_29b5cd2c555b47f80942dfa4aa7\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` DROP FOREIGN KEY \`FK_427ff5dfcabbc692ed6d71acaea\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` ADD UNIQUE INDEX \`IDX_29b5cd2c555b47f80942dfa4aa\` (\`authorizationId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` ADD UNIQUE INDEX \`IDX_427ff5dfcabbc692ed6d71acae\` (\`licensePolicyId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_36d8347a558f81ced8a621fe50\` (\`licensingFrameworkId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`role_set\` ADD UNIQUE INDEX \`IDX_c25bfb0c837427dd54e250b240\` (\`licenseId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_aa5815c9577533141cbc4aebe9\` ON \`collaboration\` (\`licenseId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_29b5cd2c555b47f80942dfa4aa\` ON \`licensing_framework\` (\`authorizationId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_427ff5dfcabbc692ed6d71acae\` ON \`licensing_framework\` (\`licensePolicyId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_36d8347a558f81ced8a621fe50\` ON \`platform\` (\`licensingFrameworkId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_c25bfb0c837427dd54e250b240\` ON \`role_set\` (\`licenseId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`license_entitlement\` ADD CONSTRAINT \`FK_badab780c9f3e196d98ab324686\` FOREIGN KEY (\`licenseId\`) REFERENCES \`license\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` ADD CONSTRAINT \`FK_aa5815c9577533141cbc4aebe9f\` FOREIGN KEY (\`licenseId\`) REFERENCES \`license\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`license_plan\` ADD CONSTRAINT \`FK_9f99adf29316d6aa1d0e8ecae54\` FOREIGN KEY (\`licensingFrameworkId\`) REFERENCES \`licensing_framework\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` ADD CONSTRAINT \`FK_29b5cd2c555b47f80942dfa4aa7\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` ADD CONSTRAINT \`FK_427ff5dfcabbc692ed6d71acaea\` FOREIGN KEY (\`licensePolicyId\`) REFERENCES \`license_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_36d8347a558f81ced8a621fe509\` FOREIGN KEY (\`licensingFrameworkId\`) REFERENCES \`licensing_framework\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`role_set\` ADD CONSTRAINT \`FK_c25bfb0c837427dd54e250b240e\` FOREIGN KEY (\`licenseId\`) REFERENCES \`license\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      'DROP INDEX `IDX_aa5815c9577533141cbc4aebe9` ON `collaboration`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `IDX_29b5cd2c555b47f80942dfa4aa` ON `licensing_framework`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `IDX_427ff5dfcabbc692ed6d71acae` ON `licensing_framework`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_0c6a4d0a6c13a3f5df6ac01509` ON `licensing_framework`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_a5dae5a376dd49c7c076893d40` ON `licensing_framework`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `IDX_36d8347a558f81ced8a621fe50` ON `platform`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `IDX_c25bfb0c837427dd54e250b240` ON `role_set`'
+    );
+  }
+
+  private async divergeSchema(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`role_set\` DROP FOREIGN KEY \`FK_c25bfb0c837427dd54e250b240e\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_36d8347a558f81ced8a621fe509\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` DROP FOREIGN KEY \`FK_427ff5dfcabbc692ed6d71acaea\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` DROP FOREIGN KEY \`FK_29b5cd2c555b47f80942dfa4aa7\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`license_plan\` DROP FOREIGN KEY \`FK_9f99adf29316d6aa1d0e8ecae54\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` DROP FOREIGN KEY \`FK_aa5815c9577533141cbc4aebe9f\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`license_entitlement\` DROP FOREIGN KEY \`FK_badab780c9f3e196d98ab324686\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`REL_c25bfb0c837427dd54e250b240\` ON \`role_set\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`REL_36d8347a558f81ced8a621fe50\` ON \`platform\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`REL_427ff5dfcabbc692ed6d71acae\` ON \`licensing_framework\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`REL_29b5cd2c555b47f80942dfa4aa\` ON \`licensing_framework\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`REL_aa5815c9577533141cbc4aebe9\` ON \`collaboration\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`role_set\` DROP INDEX \`IDX_c25bfb0c837427dd54e250b240\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` DROP INDEX \`IDX_36d8347a558f81ced8a621fe50\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` DROP INDEX \`IDX_427ff5dfcabbc692ed6d71acae\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` DROP INDEX \`IDX_29b5cd2c555b47f80942dfa4aa\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` ADD CONSTRAINT \`FK_427ff5dfcabbc692ed6d71acaea\` FOREIGN KEY (\`licensePolicyId\`) REFERENCES \`license_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`licensing_framework\` ADD CONSTRAINT \`FK_29b5cd2c555b47f80942dfa4aa7\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` DROP INDEX \`IDX_aa5815c9577533141cbc4aebe9\``
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`IDX_8339e62882f239dc00ff5866f8\` ON \`account\` (\`licenseId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`IDX_3ef80ef55ba1a1d45e625ea838\` ON \`space\` (\`licenseId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`IDX_77f80ef55ba1a1d45e625ea838\` ON \`role_set\` (\`licenseId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_0c6a4d0a6c13a3f5df6ac01509\` ON \`licensing_framework\` (\`authorizationId\`)`
+    );
+    await queryRunner.query(
+      `CREATE INDEX \`FK_3030904030f5d30f483b49905d1\` ON \`license_plan\` (\`licensingFrameworkId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`IDX_99f80ef55ba1a1d45e625ea838\` ON \`collaboration\` (\`licenseId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`license_entitlement\` ADD CONSTRAINT \`FK_44e464f560f510b9fc5fa073397\` FOREIGN KEY (\`licenseId\`) REFERENCES \`license\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      'CREATE UNIQUE INDEX `IDX_c25bfb0c837427dd54e250b240` ON `role_set` (`licenseId`)'
+    );
+    await queryRunner.query(
+      'CREATE UNIQUE INDEX `IDX_36d8347a558f81ced8a621fe50` ON `platform` (`licensingFrameworkId`)'
+    );
+    await queryRunner.query(
+      'CREATE UNIQUE INDEX `REL_a5dae5a376dd49c7c076893d40` ON `licensing_framework` (`licensePolicyId`)'
+    );
+    await queryRunner.query(
+      'CREATE UNIQUE INDEX `REL_0c6a4d0a6c13a3f5df6ac01509` ON `licensing_framework` (`authorizationId`)'
+    );
+    await queryRunner.query(
+      'CREATE UNIQUE INDEX `IDX_427ff5dfcabbc692ed6d71acae` ON `licensing_framework` (`licensePolicyId`)'
+    );
+    await queryRunner.query(
+      'CREATE UNIQUE INDEX `IDX_29b5cd2c555b47f80942dfa4aa` ON `licensing_framework` (`authorizationId`)'
+    );
+    await queryRunner.query(
+      'CREATE UNIQUE INDEX `IDX_aa5815c9577533141cbc4aebe9` ON `collaboration` (`licenseId`)'
+    );
+
+    await this.divergeSchema(queryRunner);
   }
 }
 
