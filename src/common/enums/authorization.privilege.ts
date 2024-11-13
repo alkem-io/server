@@ -41,7 +41,6 @@ export enum AuthorizationPrivilege {
   MOVE_POST = 'move-post',
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
-  ACCESS_VIRTUAL_CONTRIBUTOR = 'access-virtual-contributor',
   UPDATE_CONTENT = 'update-content',
   SAVE_AS_TEMPLATE = 'save-as-template',
   TRANSFER_RESOURCE = 'transfer-resource',
