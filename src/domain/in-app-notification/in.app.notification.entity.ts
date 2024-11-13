@@ -1,11 +1,11 @@
 import { Column, Entity } from 'typeorm';
 import { NotificationEventType } from '@alkemio/notifications-lib';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
+import { BaseAlkemioEntity } from '../common/entity/base-entity/base.alkemio.entity';
 import { InAppNotificationState } from './in.app.notification.state';
 
 // todo: comments
-@Entity('InAppNotification')
+@Entity('in_app_notification')
 export class InAppNotificationEntity extends BaseAlkemioEntity {
   @Column({ type: 'datetime', comment: 'UTC', nullable: false })
   triggeredAt!: number;

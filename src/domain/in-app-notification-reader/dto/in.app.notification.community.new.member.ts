@@ -3,11 +3,13 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ICommunity } from '@domain/community/community';
 import { InAppNotification } from './in.app.notification.interface';
+import { NotificationEventType } from '@alkemio/notifications-lib';
 
 @ObjectType('InAppNotificationCommunityNewMember', {
   implements: () => InAppNotification,
 })
 export class InAppNotificationCommunityNewMember extends InAppNotification {
+  type!: NotificationEventType.COMMUNITY_NEW_MEMBER;
   // overwrite the description
   @Field(() => IContributor, {
     nullable: false,

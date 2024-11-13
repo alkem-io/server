@@ -3,7 +3,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Callout } from '@domain/collaboration/callout';
 import { Space } from '@domain/space/space/space.entity';
-import { InAppNotificationEntity } from './in.app.notification.entity';
+import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
 import { InAppNotificationCalloutPublished } from '@domain/in-app-notification-reader/dto/in.app.notification.callout.published';
 import { User } from '@domain/community/user/user.entity';
 import { InAppNotification } from '@domain/in-app-notification-reader/dto/in.app.notification.interface';
@@ -83,7 +83,7 @@ export class InAppNotificationBuilder {
     data: InAppNotificationOfType<NotificationEventType.COMMUNICATION_USER_MENTION>[]
   ): Promise<InAppNotificationUserMentioned[]> {
     // on a later stage the entity has to be chosen conditionally
-    const notifications = data.map<InAppNotificationUserMentioned>(x => {
+    const notifications = data.map(x => {
       const contributorType = getContributorType(x.receiver);
 
       if (!contributorType) {

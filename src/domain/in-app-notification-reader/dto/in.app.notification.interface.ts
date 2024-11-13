@@ -7,7 +7,7 @@ import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { InAppNotificationUserMentioned } from '@domain/in-app-notification-reader/dto/in.app.notification.user.mentioned';
 import { InAppNotificationCommunityNewMember } from '@domain/in-app-notification-reader/dto/in.app.notification.community.new.member';
 import { BaseException } from '@common/exceptions/base.exception';
-import { InAppNotificationState } from '@domain/in-app-notification-reader/in.app.notification.state';
+import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
 @InterfaceType('InAppNotification', {
   isAbstract: true,

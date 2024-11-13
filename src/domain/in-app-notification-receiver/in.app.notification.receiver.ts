@@ -1,9 +1,9 @@
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { NotificationEventType } from '@alkemio/notifications-lib';
-import { InAppNotificationEntity } from '@domain/in-app-notification-reader/in.app.notification.entity';
+import { InAppNotificationEntity } from '@domain/in-app-notification/in.app.notification.entity';
 import { InAppNotificationBuilder } from '@domain/in-app-notification-reader/in.app.notification.builder';
-import { InAppNotificationState } from '@domain/in-app-notification-reader/in.app.notification.state';
+import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
 type InAppNotificationEvent = {
   /** UTC */

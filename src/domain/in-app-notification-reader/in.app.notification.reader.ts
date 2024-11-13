@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
-import { InAppNotificationEntity } from '@domain/in-app-notification-reader/in.app.notification.entity';
+import { InAppNotificationEntity } from '@domain/in-app-notification/in.app.notification.entity';
 import { InAppNotificationBuilder } from '@domain/in-app-notification-reader/in.app.notification.builder';
 import { InAppNotification } from '@domain/in-app-notification-reader/dto/in.app.notification.interface';
 
