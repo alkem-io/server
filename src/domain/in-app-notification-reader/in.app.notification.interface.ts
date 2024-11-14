@@ -2,12 +2,12 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { NotificationEventType } from '@alkemio/notifications-lib';
-import { InAppNotificationCalloutPublished } from '@domain/in-app-notification-reader/dto/in.app.notification.callout.published';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { InAppNotificationUserMentioned } from '@domain/in-app-notification-reader/dto/in.app.notification.user.mentioned';
-import { InAppNotificationCommunityNewMember } from '@domain/in-app-notification-reader/dto/in.app.notification.community.new.member';
 import { BaseException } from '@common/exceptions/base.exception';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
+import { InAppNotificationCalloutPublished } from './dto/in.app.notification.callout.published';
+import { InAppNotificationUserMentioned } from './dto/in.app.notification.user.mentioned';
+import { InAppNotificationCommunityNewMember } from './dto/in.app.notification.community.new.member';
 
 @InterfaceType('InAppNotification', {
   isAbstract: true,
@@ -37,11 +37,11 @@ export class InAppNotification {
   })
   id!: string;
 
-  @Field(() => Number, {
+  @Field(() => Date, {
     nullable: false,
-    description: 'When (UTC) was the action triggered.',
+    description: 'When (UTC) was the notification sent.',
   })
-  triggeredAt!: number;
+  triggeredAt!: Date;
   // todo: graphql enum
   @Field(() => String, {
     nullable: false,
@@ -56,10 +56,10 @@ export class InAppNotification {
   state!: InAppNotificationState;
 
   @Field(() => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The contributor that triggered this notification.',
   })
-  triggeredBy!: IContributor;
+  triggeredBy?: IContributor;
   // todo: graphql enum
   @Field(() => String, {
     nullable: false,
@@ -73,5 +73,5 @@ export class InAppNotification {
   })
   receiver!: IContributor;
   // the type of the resource to be resolved in the concrete class
-  resourceID!: string;
+  resourceID?: string;
 }

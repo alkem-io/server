@@ -31,6 +31,8 @@ import { NotificationInputPlatformInvitation } from './dto/notification.dto.inpu
 import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/notification.dto.input.community.invitation.vc';
 import { NotificationInputSpaceCreated } from './dto/notification.dto.input.space.created';
+import { InAppNotificationReceiver } from '@domain/in-app-notification-receiver/in.app.notification.receiver';
+import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
 @Injectable()
 export class NotificationAdapter {
@@ -38,7 +40,8 @@ export class NotificationAdapter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private notificationPayloadBuilder: NotificationPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
+    private inAppNotificationReceiver: InAppNotificationReceiver // todo: remove later
   ) {}
 
   public async calloutPublished(
@@ -54,6 +57,16 @@ export class NotificationAdapter {
       );
 
     this.notificationsClient.emit<number>(event, payload);
+    await this.inAppNotificationReceiver.store([
+      {
+        triggeredAt: new Date(),
+        type: event,
+        triggeredByID: eventData.triggeredBy,
+        resourceID: eventData.callout.id,
+        category: 'N/A',
+        receiverID: 'd1858413-540d-48d6-ad56-59d2773480d6',
+      },
+    ]);
   }
 
   public async postCreated(
@@ -243,6 +256,16 @@ export class NotificationAdapter {
 
     if (payload) {
       this.notificationsClient.emit<number>(event, payload);
+      this.inAppNotificationReceiver.store([
+        {
+          triggeredAt: new Date(),
+          type: event,
+          triggeredByID: eventData.triggeredBy,
+          category: 'N/A',
+          // receiverID: 'd1858413-540d-48d6-ad56-59d2773480d6',
+          receiverID: eventData.mentionedEntityID,
+        },
+      ]);
     }
   }
 

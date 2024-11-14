@@ -1,14 +1,16 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { NotificationEventType } from '@alkemio/notifications-lib';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ICommunity } from '@domain/community/community';
-import { InAppNotification } from './in.app.notification.interface';
-import { NotificationEventType } from '@alkemio/notifications-lib';
+import { InAppNotification } from '../in.app.notification.interface';
+import { InAppNotificationBase } from './in.app.notification.base';
 
 @ObjectType('InAppNotificationCommunityNewMember', {
   implements: () => InAppNotification,
 })
-export class InAppNotificationCommunityNewMember extends InAppNotification {
+// todo: implement InAppNotificationBase
+export class InAppNotificationCommunityNewMember extends InAppNotificationBase {
   type!: NotificationEventType.COMMUNITY_NEW_MEMBER;
   // overwrite the description
   @Field(() => IContributor, {
