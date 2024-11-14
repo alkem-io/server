@@ -18,9 +18,9 @@ export class InAppNotificationUserMentioned extends InAppNotificationBase {
   contributorType!: CommunityContributorType;
   // overwrite the description
   @Field(() => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The contributor that mentioned the receiver.',
   })
-  triggeredBy!: IContributor;
+  triggeredBy?: IContributor;
   // !! the receiver is the mentioned Contributor
 }

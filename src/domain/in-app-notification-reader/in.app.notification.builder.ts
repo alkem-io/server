@@ -214,11 +214,11 @@ export class InAppNotificationBuilder {
         return undefined;
       }
 
-      const contributorJoined = joinedContributors.find(
+      const actor = joinedContributors.find(
         contributor => contributor.id === event.contributorID
       );
 
-      if (!contributorJoined) {
+      if (!actor) {
         this.logger.warn(
           {
             message: 'Unable to find Contributor that joined',
@@ -230,13 +230,13 @@ export class InAppNotificationBuilder {
         return undefined;
       }
 
-      const contributorType = getContributorType(contributorJoined);
+      const contributorType = getContributorType(actor);
 
       if (!contributorType) {
         this.logger.warn(
           {
             message: 'Unable to determine contributor type',
-            contributorID: contributorJoined.id,
+            contributorID: actor.id,
           },
           LogContext.IN_APP_NOTIFICATION
         );
@@ -287,7 +287,7 @@ export class InAppNotificationBuilder {
         ...event,
         triggeredBy: event.triggeredBy,
         contributorType,
-        contributorJoined,
+        actor,
         space,
       };
     });

@@ -15,10 +15,10 @@ export class InAppNotificationCommunityNewMember extends InAppNotificationBase {
   type!: NotificationEventType.COMMUNITY_NEW_MEMBER;
   // overwrite the description
   @Field(() => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The Contributor that added the Contributor in.',
   })
-  triggeredBy!: IContributor;
+  triggeredBy?: IContributor;
 
   @Field(() => CommunityContributorType, {
     nullable: false,
@@ -27,10 +27,10 @@ export class InAppNotificationCommunityNewMember extends InAppNotificationBase {
   contributorType!: CommunityContributorType;
 
   @Field(() => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The Contributor that joined.',
   })
-  contributorJoined!: IContributor;
+  actor?: IContributor;
 
   @Field(() => ISpace, {
     nullable: false,
