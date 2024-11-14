@@ -54,6 +54,10 @@ export class InAppNotificationBuilder {
   private async calloutPublished(
     data: InAppNotificationOfType<NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED>[]
   ): Promise<InAppNotificationCalloutPublished[]> {
+    if (!data.length) {
+      return [];
+    }
+
     const calloutIds = data.map(event => event.resourceID);
 
     const result = await this.manager
@@ -144,6 +148,9 @@ export class InAppNotificationBuilder {
   private async userMentioned(
     data: InAppNotificationOfType<NotificationEventType.COMMUNICATION_USER_MENTION>[]
   ): Promise<InAppNotificationUserMentioned[]> {
+    if (!data.length) {
+      return [];
+    }
     // on a later stage the entity has to be chosen conditionally
     const notifications = data.map(x => {
       const contributorType = getContributorType(x.receiver);
@@ -174,6 +181,10 @@ export class InAppNotificationBuilder {
   private async communityNewMember(
     data: InAppNotificationOfType<NotificationEventType.COMMUNITY_NEW_MEMBER>[]
   ): Promise<InAppNotificationCommunityNewMember[]> {
+    if (!data.length) {
+      return [];
+    }
+
     const joinedContributorIds = data
       .map(x => x.contributorID)
       .filter((x): x is string => !!x);
