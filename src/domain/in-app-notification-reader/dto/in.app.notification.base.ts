@@ -46,8 +46,12 @@ export abstract class InAppNotificationBase {
     description: 'The contributor that should receive this notification.',
   })
   receiver!: IContributor;
+
+  @Field(() => IContributor, {
+    nullable: true,
+    description: 'The contributor is the main actor in the notification.',
+  })
+  actor?: IContributor;
   // the type and name to be resolved in the concrete class
   resourceID?: string;
-  // the type and name to be resolved in the concrete class
-  contributor?: IContributor;
 }

@@ -185,14 +185,6 @@ export class InAppNotificationBuilder {
       return [];
     }
 
-    const joinedContributorIds = data
-      .map(x => x.contributorID)
-      .filter((x): x is string => !!x);
-    // later conditionally choose the entity
-    const joinedContributors = await this.manager.findBy(User, {
-      id: In(joinedContributorIds),
-    });
-
     const results = await this.manager
       .createQueryBuilder(Space, 'space')
       .leftJoin(Community, 'community', 'community.id = space.communityID')
@@ -213,27 +205,13 @@ export class InAppNotificationBuilder {
     const notifications = data.map<
       InAppNotificationCommunityNewMember | undefined
     >(event => {
-      if (!event.contributorID) {
-        this.logger.warn(
-          {
-            message: 'The data for Contributor that joined is missing',
-            contributorID: event.contributorID,
-          },
-          LogContext.IN_APP_NOTIFICATION
-        );
-
-        return undefined;
-      }
-
-      const actor = joinedContributors.find(
-        contributor => contributor.id === event.contributorID
-      );
-
+      const actor = event.actor;
       if (!actor) {
         this.logger.warn(
           {
-            message: 'Unable to find Contributor that joined',
-            contributorID: event.contributorID,
+            message:
+              'Unable to find Contributor that joined. Expected in the actor field',
+            contributorID: event.actor,
           },
           LogContext.IN_APP_NOTIFICATION
         );
@@ -298,7 +276,6 @@ export class InAppNotificationBuilder {
         ...event,
         triggeredBy: event.triggeredBy,
         contributorType,
-        actor,
         space,
       };
     });
@@ -313,7 +290,7 @@ export class InAppNotificationBuilder {
     const triggeredBys = await this.manager.findBy(User, {
       id: In(notifications.map(notification => notification.triggeredByID)),
     });
-    const contributors = await this.manager.findBy(User, {
+    const actors = await this.manager.findBy(User, {
       id: In(notifications.map(notification => notification.contributorID)),
     });
     // on a later stage the entity has to be chosen conditionally
@@ -340,7 +317,7 @@ export class InAppNotificationBuilder {
           return;
         }
 
-        const contributor = contributors.find(
+        const contributor = actors.find(
           user => user.id === event.contributorID
         );
 
@@ -380,7 +357,7 @@ export class InAppNotificationBuilder {
           resourceID: event.resourceID,
           triggeredBy,
           receiver,
-          contributor,
+          actor: contributor,
         };
       }
     );
