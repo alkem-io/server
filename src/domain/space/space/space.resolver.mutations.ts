@@ -134,7 +134,7 @@ export class SpaceResolverMutations {
     // but not all settings will require this, so only update if necessary
     if (shouldUpdateAuthorization) {
       const updatedAuthorizations =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
       await this.authorizationPolicyService.saveAll(updatedAuthorizations);
     }
 
@@ -164,7 +164,7 @@ export class SpaceResolverMutations {
     );
     space = await this.spaceService.save(space);
     const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     return await this.spaceService.getSpaceOrFail(space.id);
@@ -196,7 +196,9 @@ export class SpaceResolverMutations {
     // Save here so can reuse it later without another load
     const displayName = subspace.profile.displayName;
     const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        subspace.id
+      );
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 

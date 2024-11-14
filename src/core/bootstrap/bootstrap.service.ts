@@ -514,7 +514,7 @@ export class BootstrapService {
 
       const space = await this.accountService.createSpaceOnAccount(spaceInput);
       const spaceAuthorizations =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
       await this.authorizationPolicyService.saveAll(spaceAuthorizations);
 
       const accountEntitlements =

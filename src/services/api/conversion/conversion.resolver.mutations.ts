@@ -60,7 +60,7 @@ export class ConversionResolverMutations {
     );
     space = await this.spaceService.save(space);
     const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     return this.spaceService.getSpaceOrFail(space.id);
@@ -90,7 +90,9 @@ export class ConversionResolverMutations {
       );
     subspace = await this.spaceService.save(subspace);
     const subspaceAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        subspace.id
+      );
     await this.authorizationPolicyService.saveAll(subspaceAuthorizations);
     return await this.spaceService.getSpaceOrFail(subspace.id);
   }

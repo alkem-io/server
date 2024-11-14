@@ -150,7 +150,7 @@ export class AccountAuthorizationService {
 
     for (const space of account.spaces) {
       const spaceAuthorizations =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
       this.logger.verbose?.(
         `space nameID ${space.nameID}: authorizations to reset count = ${spaceAuthorizations.length}`,
         LogContext.AUTH

@@ -60,9 +60,22 @@ export class SpaceAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    spaceInput: ISpace
+    spaceID: string
   ): Promise<IAuthorizationPolicy[]> {
-    const space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
+    // Space needs to know whether to use the provided parent authorization policy or not
+    // Three key scenarios a) space (L0) in account, space in subspace, space in Template
+    // For both a + b the space currently picks up the account authorization, which is not
+    // correct as the account is just where the space is hosted, the account owner(s) etc
+    // should not automatically have any rights in the spaces there.
+    // TBD: rights of account need discussion. They should be able to take hosting related
+    // actions like being able to remove licenses or de-activating it, but not set admins
+    // or automatically see inside the spaces.
+    // For scenario a, the space should pick up a base space authorization. Or just use
+    // the passed in base space authorization, which the account service supplies?
+    // For scenario b, if the subspace is private then it should also pick up the same
+    // base authorization.
+    // For scenario c, the space should use the passed in parent authorization
+    const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
         parentSpace: {
           authorization: true,
@@ -119,7 +132,7 @@ export class SpaceAuthorizationService {
       }
 
       const spaceSettings = this.spaceSettingsService.getSettings(
-        spaceInput.settingsStr
+        space.settingsStr
       );
       parentSpaceAdminCredentialCriterias =
         await this.roleSetService.getCredentialsForRole(
@@ -219,8 +232,9 @@ export class SpaceAuthorizationService {
 
     // Finally propagate to child spaces
     for (const subspace of space.subspaces) {
-      const updatedSubspaceAuthorizations =
-        await this.applyAuthorizationPolicy(subspace);
+      const updatedSubspaceAuthorizations = await this.applyAuthorizationPolicy(
+        subspace.id
+      );
       this.logger.verbose?.(
         `Subspace (${subspace.id}) auth reset: saving ${updatedSubspaceAuthorizations.length} authorizations`,
         LogContext.AUTH
