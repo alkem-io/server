@@ -34,6 +34,8 @@ import { NotificationInputSpaceCreated } from './dto/notification.dto.input.spac
 import { InAppNotificationReceiver } from '@domain/in-app-notification-receiver/in.app.notification.receiver';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
+const hardcodedInAppReceiverID = 'd1858413-540d-48d6-ad56-59d2773480d6';
+
 @Injectable()
 export class NotificationAdapter {
   constructor(
@@ -64,7 +66,7 @@ export class NotificationAdapter {
         triggeredByID: eventData.triggeredBy,
         resourceID: eventData.callout.id,
         category: 'N/A',
-        receiverID: 'd1858413-540d-48d6-ad56-59d2773480d6',
+        receiverID: hardcodedInAppReceiverID,
       },
     ]);
   }
@@ -262,8 +264,8 @@ export class NotificationAdapter {
           type: event,
           triggeredByID: eventData.triggeredBy,
           category: 'N/A',
-          // receiverID: 'd1858413-540d-48d6-ad56-59d2773480d6',
-          receiverID: eventData.mentionedEntityID,
+          receiverID: hardcodedInAppReceiverID,
+          // receiverID: eventData.mentionedEntityID,
         },
       ]);
     }
@@ -407,6 +409,17 @@ export class NotificationAdapter {
         eventData.community
       );
     this.notificationsClient.emit(event, payload);
+    this.inAppNotificationReceiver.store([
+      {
+        triggeredAt: new Date(),
+        type: event,
+        category: 'N/A',
+        triggeredByID: eventData.triggeredBy,
+        resourceID: eventData.community.id,
+        receiverID: hardcodedInAppReceiverID,
+        contributorID: eventData.contributorID,
+      },
+    ]);
   }
 
   public async platformGlobalRoleChanged(

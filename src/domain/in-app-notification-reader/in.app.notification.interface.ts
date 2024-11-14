@@ -72,6 +72,8 @@ export class InAppNotification {
     description: 'The contributor that should receive this notification.',
   })
   receiver!: IContributor;
-  // the type of the resource to be resolved in the concrete class
+  // the type and name to be resolved in the concrete class
   resourceID?: string;
+  // the type and name to be resolved in the concrete class
+  contributorID?: string;
 }

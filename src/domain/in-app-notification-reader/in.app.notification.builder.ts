@@ -15,6 +15,7 @@ import { InAppNotification } from './in.app.notification.interface';
 import { InAppNotificationCalloutPublished } from './dto/in.app.notification.callout.published';
 import { InAppNotificationUserMentioned } from './dto/in.app.notification.user.mentioned';
 import { InAppNotificationCommunityNewMember } from './dto/in.app.notification.community.new.member';
+import { Community } from '@domain/community/community';
 
 type NotificationTypeMap = {
   [K in NotificationEventType]: InAppNotification & { type: K };
@@ -173,34 +174,136 @@ export class InAppNotificationBuilder {
   private async communityNewMember(
     data: InAppNotificationOfType<NotificationEventType.COMMUNITY_NEW_MEMBER>[]
   ): Promise<InAppNotificationCommunityNewMember[]> {
-    // const notifications = data.map<InAppNotificationCommunityNewMember>(x => {
-    //   const contributorType = getContributorType(x.triggeredBy);
-    //
-    //   if (!contributorType) {
-    //     this.logger.warn(
-    //       {
-    //         message: 'Unable to determine contributor type',
-    //         contributorID: x.receiver.id,
-    //       },
-    //       LogContext.IN_APP_NOTIFICATION
-    //     );
-    //
-    //     return undefined;
-    //   }
-    //
-    //   return {
-    //     ...x,
-    //     contributorType,
-    //   };
-    // }
+    const joinedContributorIds = data
+      .map(x => x.contributorID)
+      .filter((x): x is string => !!x);
+    // later conditionally choose the entity
+    const joinedContributors = await this.manager.findBy(User, {
+      id: In(joinedContributorIds),
+    });
 
-    return [];
+    const results = await this.manager
+      .createQueryBuilder(Space, 'space')
+      .leftJoin(Community, 'community', 'community.id = space.communityID')
+      .select('space.id', 'spaceId')
+      .addSelect('community.id', 'communityId')
+      .getRawMany<{ spaceId: string; communityId: string }>();
+    const spaces = await this.manager.findBy(Space, {
+      id: In(results.map(x => x.spaceId)),
+    });
+
+    const spaceMap = new Map(
+      results.map(x => [
+        x.communityId,
+        spaces.find(space => space.id === x.spaceId),
+      ])
+    );
+
+    const notifications = data.map<
+      InAppNotificationCommunityNewMember | undefined
+    >(event => {
+      if (!event.contributorID) {
+        this.logger.warn(
+          {
+            message: 'The data for Contributor that joined is missing',
+            contributorID: event.contributorID,
+          },
+          LogContext.IN_APP_NOTIFICATION
+        );
+
+        return undefined;
+      }
+
+      const contributorJoined = joinedContributors.find(
+        contributor => contributor.id === event.contributorID
+      );
+
+      if (!contributorJoined) {
+        this.logger.warn(
+          {
+            message: 'Unable to find Contributor that joined',
+            contributorID: event.contributorID,
+          },
+          LogContext.IN_APP_NOTIFICATION
+        );
+
+        return undefined;
+      }
+
+      const contributorType = getContributorType(contributorJoined);
+
+      if (!contributorType) {
+        this.logger.warn(
+          {
+            message: 'Unable to determine contributor type',
+            contributorID: contributorJoined.id,
+          },
+          LogContext.IN_APP_NOTIFICATION
+        );
+
+        return undefined;
+      }
+
+      if (!event.resourceID) {
+        this.logger.warn(
+          {
+            message:
+              'The data for Community that was joined is missing. The code expects a communityID in the resourceID field',
+            communityID: event.resourceID,
+          },
+          LogContext.IN_APP_NOTIFICATION
+        );
+
+        return undefined;
+      }
+
+      const space = spaceMap.get(event.resourceID);
+
+      if (!space) {
+        this.logger.warn(
+          {
+            message: 'Unable to find Space',
+            notificationID: event.id,
+          },
+          LogContext.IN_APP_NOTIFICATION
+        );
+
+        return undefined;
+      }
+
+      if (!event.triggeredBy) {
+        this.logger.warn(
+          {
+            message:
+              'The data for Contributor that added the Contributor in is missing. It was expected in the triggeredBy field',
+          },
+          LogContext.IN_APP_NOTIFICATION
+        );
+
+        return undefined;
+      }
+
+      return {
+        ...event,
+        triggeredBy: event.triggeredBy,
+        contributorType,
+        contributorJoined,
+        space,
+      };
+    });
+
+    return notifications.filter(
+      (x): x is InAppNotificationCommunityNewMember => !!x
+    );
   }
 
   private async baseNotification(notifications: InAppNotificationEntity[]) {
     // on a later stage the entity has to be chosen conditionally
     const triggeredBys = await this.manager.findBy(User, {
       id: In(notifications.map(notification => notification.triggeredByID)),
+    });
+    const contributors = await this.manager.findBy(User, {
+      id: In(notifications.map(notification => notification.contributorID)),
     });
     // on a later stage the entity has to be chosen conditionally
     const receivers = await this.manager.findBy(User, {
@@ -213,7 +316,7 @@ export class InAppNotificationBuilder {
           user => user.id === event.triggeredByID
         );
 
-        if (!triggeredBy) {
+        if (!triggeredBy && event.triggeredByID) {
           this.logger.warn(
             {
               message:
@@ -224,6 +327,22 @@ export class InAppNotificationBuilder {
             LogContext.IN_APP_NOTIFICATION
           );
           return;
+        }
+
+        const contributor = contributors.find(
+          user => user.id === event.contributorID
+        );
+
+        if (!contributor && event.contributorID) {
+          this.logger.warn(
+            {
+              message:
+                'Unable to find contributor who is the actor in the notification',
+              contributorID: event.contributorID,
+              inAppNotification: event.id,
+            },
+            LogContext.IN_APP_NOTIFICATION
+          );
         }
 
         const receiver = receivers.find(user => user.id === event.receiverID);
@@ -248,8 +367,9 @@ export class InAppNotificationBuilder {
           state: event.state,
           category: event.category,
           resourceID: event.resourceID,
-          triggeredBy: triggeredBy,
-          receiver: receiver,
+          triggeredBy,
+          receiver,
+          contributor,
         };
       }
     );
