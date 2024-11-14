@@ -5,6 +5,8 @@ import { IAnswerToQuestionSource } from './message.answer.to.question.source.int
   description: 'A detailed answer to a question, typically from an AI service.',
 })
 export class IMessageAnswerToQuestion {
+  // TODO: REMOVE??
+
   @Field(() => String, {
     nullable: true,
     description: 'The id of the answer; null if an error was returned',
@@ -12,7 +14,7 @@ export class IMessageAnswerToQuestion {
   id?: string;
 
   @Field(() => String, {
-    nullable: false,
+    nullable: true,
     description: 'The original question',
   })
   question!: string;
@@ -24,8 +26,14 @@ export class IMessageAnswerToQuestion {
   sources?: IAnswerToQuestionSource[];
 
   @Field(() => String, {
-    nullable: false,
+    nullable: true,
     description: 'The answer to the question',
   })
   answer!: string;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Message sent OK',
+  })
+  result!: boolean;
 }

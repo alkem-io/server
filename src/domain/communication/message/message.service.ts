@@ -9,7 +9,7 @@ export class MessageService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
+  // TODO: REMOVE??
   public convertAnswerToSimpleMessage(
     answerToQuestion: IMessageAnswerToQuestion
   ): string {

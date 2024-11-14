@@ -47,6 +47,7 @@ export class GuidanceEngineAdapter {
       this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
       // not a real answer; just return an error
       return {
+        result: false,
         answer: errorMessage,
         question: eventData.question,
       };
@@ -79,6 +80,7 @@ export class GuidanceEngineAdapter {
       this.logger.error(errorMessage, err?.stack, LogContext.CHAT_GUIDANCE);
       // not a real answer; just return an error
       return {
+        result: false,
         answer: errorMessage,
         question: eventData.question,
       };
@@ -92,9 +94,8 @@ export class GuidanceEngineAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<GuidanceEngineBaseResponse>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<GuidanceEngineBaseResponse>(response);
 
       return responseData.result === successfulResetResponse;
     } catch (err: any) {
@@ -116,9 +117,8 @@ export class GuidanceEngineAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<GuidanceEngineBaseResponse>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<GuidanceEngineBaseResponse>(response);
       return responseData.result === successfulIngestionResponse;
     } catch (err: any) {
       this.logger.error(
