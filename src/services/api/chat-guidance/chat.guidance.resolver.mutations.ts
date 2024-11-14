@@ -91,7 +91,6 @@ export class ChatGuidanceResolverMutations {
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
       return false;
     }
-    // TODO: PENDING, DELETE ALL MESSAGES FROM THE USER's ROOM
     return this.chatGuidanceService.resetUserHistory(agentInfo);
   }
 
