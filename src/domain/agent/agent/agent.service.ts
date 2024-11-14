@@ -206,12 +206,13 @@ export class AgentService {
 
     const credential =
       await this.credentialService.createCredential(grantCredentialData);
+    credential.agent = agent;
+    await this.credentialService.save(credential);
+    const agentWithCredential = await this.getAgentOrFail(agent.id);
+    await this.agentInfoCacheService.updateAgentInfoCache(agentWithCredential);
+    await this.setAgentCache(agentWithCredential);
 
-    agent.credentials?.push(credential);
-    await this.agentInfoCacheService.updateAgentInfoCache(agent);
-    await this.setAgentCache(agent);
-
-    return await this.saveAgent(agent);
+    return agentWithCredential;
   }
 
   async revokeCredential(

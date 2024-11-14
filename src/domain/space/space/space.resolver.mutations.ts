@@ -122,15 +122,23 @@ export class SpaceResolverMutations {
       `space settings update: ${space.id}`
     );
 
+    const shouldUpdateAuthorization =
+      await this.spaceService.shouldUpdateAuthorizationPolicy(
+        space.id,
+        settingsData.settings
+      );
+
     space = await this.spaceService.updateSpaceSettings(space, settingsData);
     space = await this.spaceService.save(space);
-
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    // but not all settings will require this, so only update if necessary
+    if (shouldUpdateAuthorization) {
+      const updatedAuthorizations =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    }
 
-    return await this.spaceService.getSpaceOrFail(space.id);
+    return this.spaceService.getSpaceOrFail(space.id);
   }
 
   @UseGuards(GraphqlGuard)

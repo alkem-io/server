@@ -29,12 +29,20 @@ export class LicenseIssuerService {
       );
       expires = oneMonthFromNow;
     }
-    const updatedAgent = await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: licensePlan.licenseCredential,
-      resourceID: resourceID,
-      expires: expires,
-    });
+    let updatedAgent: IAgent = agent;
+    try {
+      updatedAgent = await this.agentService.grantCredential({
+        agentID: agent.id,
+        type: licensePlan.licenseCredential,
+        resourceID: resourceID,
+        expires: expires,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to assign license credential ${licensePlan.licenseCredential}  ${licensePlan.id} to agent ${agent.id}: ${error}`
+      );
+    }
+
     return updatedAgent;
   }
 

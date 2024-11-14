@@ -122,7 +122,7 @@ export class CalloutResolverMutations {
     const savedCallout =
       await this.calloutService.updateCalloutVisibility(calloutData);
 
-    if (savedCallout.visibility !== oldVisibility) {
+    if (!savedCallout.isTemplate && savedCallout.visibility !== oldVisibility) {
       if (savedCallout.visibility === CalloutVisibility.PUBLISHED) {
         // Save published info
         await this.calloutService.updateCalloutPublishInfo(
