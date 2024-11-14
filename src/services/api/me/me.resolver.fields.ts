@@ -146,12 +146,14 @@ export class MeResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
-    nullable: false,
+    nullable: true,
     description:
       'Get the room ID for the current user to be able to communicate with the AI guidance service.',
   })
-  async guidanceRoomID(@CurrentUser() agentInfo: AgentInfo): Promise<string> {
+  async guidanceRoomID(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<string | undefined> {
     const room = await this.chatGuidanceService.getGuidanceRoom(agentInfo);
-    return room.id;
+    return room?.id;
   }
 }

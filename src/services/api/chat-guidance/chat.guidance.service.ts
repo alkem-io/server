@@ -27,10 +27,24 @@ export class ChatGuidanceService {
 
   private guidanceVcId = '00724d82-4f6f-427e-ae05-7054591da820' as const; // f68419ec-dc31-4663-9b4d-5dfecc90446e
 
+  /**
+   *
+   * @param chatData
+   * @param agentInfo
+   * @returns {
+   *  room: IRoom;
+   *  roomCreated: boolean; Indicates that the room has just been created with this request
+   * }
+   */
   public async askQuestion(
     chatData: ChatGuidanceInput,
     agentInfo: AgentInfo
-  ): Promise<void> {
+  ): Promise<{
+    room: IRoom;
+    roomCreated: boolean;
+  }> {
+    let roomCreated = false;
+
     const guidanceVc =
       await this.virtualContributorService.getVirtualContributorOrFail(
         this.guidanceVcId,
@@ -41,7 +55,20 @@ export class ChatGuidanceService {
         }
       );
 
-    const roomID = await this.sendUserMessage(agentInfo, chatData.question);
+    let room = await this.getGuidanceRoom(agentInfo);
+    if (!room) {
+      room = await this.createGuidanceRoom(agentInfo);
+      roomCreated = true;
+    }
+    if (!room) {
+      throw new Error('Unable to create room for guidance');
+    }
+
+    await this.communicationAdapter.sendMessage({
+      roomID: room.externalRoomID,
+      senderCommunicationsID: agentInfo.communicationID,
+      message: chatData.question,
+    });
 
     this.aiServerAdapter.invoke({
       message: chatData.question,
@@ -52,11 +79,16 @@ export class ChatGuidanceService {
       resultHandler: {
         action: InvocationResultAction.POST_REPLY,
         roomDetails: {
-          roomID,
+          roomID: room.id,
           communicationID: guidanceVc.communicationID,
         },
       },
     });
+
+    return {
+      room,
+      roomCreated,
+    };
   }
 
   public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
@@ -79,43 +111,23 @@ export class ChatGuidanceService {
     });
   }
 
-  private async sendUserMessage(
-    agentInfo: AgentInfo,
-    message: string
-  ): Promise<string> {
-    const room = await this.getGuidanceRoom(agentInfo);
-
-    await this.communicationAdapter.sendMessage({
-      roomID: room.externalRoomID,
-      senderCommunicationsID: agentInfo.communicationID,
-      message,
-    });
-    return room.externalRoomID;
-  }
-
   private getGuidanceRoomDisplayNameForUser(agentInfo: AgentInfo) {
     return `${agentInfo.communicationID}-guidance`;
   }
 
-  public async getGuidanceRoom(agentInfo: AgentInfo): Promise<IRoom> {
+  public async getGuidanceRoom(agentInfo: AgentInfo): Promise<IRoom | null> {
     if (!agentInfo.communicationID) {
       throw new Error(
         `Unable to retrieve authenticated user communicationID ${agentInfo.userID}`
       );
     }
 
-    const room = await this.roomService.findRoom({
+    return this.roomService.findRoom({
       where: {
         displayName: this.getGuidanceRoomDisplayNameForUser(agentInfo),
         type: RoomType.GUIDANCE,
       },
     });
-
-    if (room) {
-      return room;
-    } else {
-      return this.createGuidanceRoom(agentInfo);
-    }
   }
 
   private async createGuidanceRoom(agentInfo: AgentInfo): Promise<IRoom> {
@@ -124,9 +136,6 @@ export class ChatGuidanceService {
       RoomType.GUIDANCE
     );
     room = await this.roomService.save(room);
-
-    // TODO: Missing some room authorization initialization here!
-    // this.roomAuthorizationService....;
 
     const guidanceVc =
       await this.virtualContributorService.getVirtualContributorOrFail(

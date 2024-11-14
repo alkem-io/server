@@ -12,6 +12,9 @@ import { ChatGuidanceAnswerRelevanceInput } from './dto/chat.guidance.relevance.
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
+import { UserService } from '@domain/community/user/user.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class ChatGuidanceResolverMutations {
@@ -20,7 +23,10 @@ export class ChatGuidanceResolverMutations {
     private readonly logger: LoggerService,
     private chatGuidanceService: ChatGuidanceService,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private roomAuthorizationService: RoomAuthorizationService,
+    private userService: UserService,
     private guidanceReporterService: GuidanceReporterService
   ) {}
 
@@ -48,7 +54,23 @@ export class ChatGuidanceResolverMutations {
       //   sources: [],
       // };
     }
-    this.chatGuidanceService.askQuestion(chatData, agentInfo);
+    const { room, roomCreated } = await this.chatGuidanceService.askQuestion(
+      chatData,
+      agentInfo
+    );
+
+    if (roomCreated) {
+      // TODO!!: Do something with the authorization, probably we want to give permissions to the
+      // owner user and to the VC to send messages to this room, for now this is just inheriting the user authorization
+      // which is probably not even correct
+      const user = await this.userService.getUserOrFail(agentInfo.userID);
+      const roomAuthorization =
+        this.roomAuthorizationService.applyAuthorizationPolicy(
+          room,
+          user.authorization
+        );
+      await this.authorizationPolicyService.saveAll([roomAuthorization]);
+    }
     return { result: true };
   }
 
