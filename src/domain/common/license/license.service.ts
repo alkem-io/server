@@ -216,7 +216,7 @@ export class LicenseService {
       entitlement => entitlement.type === type
     );
     if (!entitlement) {
-      throw new RelationshipNotFoundException(
+      throw new EntityNotFoundException(
         `Unable to find entitlement of type ${type} in Entitlements for License: ${JSON.stringify(entitlements)}`,
         LogContext.LICENSE
       );
