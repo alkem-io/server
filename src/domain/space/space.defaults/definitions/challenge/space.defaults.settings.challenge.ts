@@ -16,5 +16,6 @@ export const spaceDefaultsSettingsChallenge: ISpaceSettings = {
     inheritMembershipRights: true,
     allowMembersToCreateSubspaces: true,
     allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
   },
 };

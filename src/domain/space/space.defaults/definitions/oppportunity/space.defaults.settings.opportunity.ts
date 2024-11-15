@@ -16,5 +16,6 @@ export const spaceDefaultsSettingsOpportunity: ISpaceSettings = {
     inheritMembershipRights: true,
     allowMembersToCreateSubspaces: true,
     allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
   },
 };
