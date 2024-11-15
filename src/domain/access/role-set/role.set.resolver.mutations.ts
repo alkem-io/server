@@ -54,8 +54,8 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import {
   InvitationLifecycleEvent,
   InvitationLifecycleState,
@@ -64,6 +64,8 @@ import {
   ApplicationLifecycleEvent,
   ApplicationLifecycleState,
 } from '../application/application.service.lifecycle';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -86,6 +88,7 @@ export class RoleSetResolverMutations {
     private contributorService: ContributorService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private platformInvitationService: PlatformInvitationService,
+    private licenseService: LicenseService,
     private lifecycleService: LifecycleService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -166,7 +169,14 @@ export class RoleSetResolverMutations {
     @Args('roleData') roleData: AssignRoleOnRoleSetToVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
-      roleData.roleSetID
+      roleData.roleSetID,
+      {
+        relations: {
+          license: {
+            entitlements: true,
+          },
+        },
+      }
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
@@ -191,12 +201,10 @@ export class RoleSetResolverMutations {
       `assign virtual community role: ${roleSet.id}`
     );
 
-    // Also require ACCESS_VIRTUAL_CONTRIBUTORS to assign a virtual contributor
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      roleSet.authorization,
-      AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR,
-      `assign virtual community role VC privilege: ${roleSet.id}`
+    // Also require ACCOUNT_VIRTUAL_CONTRIBUTOR entitlement for the RoleSet
+    this.licenseService.isEntitlementEnabledOrFail(
+      roleSet.license,
+      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
     );
 
     await this.roleSetService.assignVirtualToRole(

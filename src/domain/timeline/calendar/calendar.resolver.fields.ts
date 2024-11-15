@@ -9,7 +9,6 @@ import {
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CalendarService } from './calendar.service';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 import { ICalendarEvent } from '../event/event.interface';
 import { ICalendar } from './calendar.interface';

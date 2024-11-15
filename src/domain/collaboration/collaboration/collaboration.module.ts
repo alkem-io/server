@@ -20,9 +20,10 @@ import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
 import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
-import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
+import { LicenseModule } from '@domain/common/license/license.module';
+import { CollaborationLicenseService } from './collaboration.service.license';
 
 @Module({
   imports: [
@@ -42,7 +43,7 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     TagsetTemplateSetModule,
     InnovationFlowModule,
     CalloutGroupsModule,
-    LicenseEngineModule,
+    LicenseModule,
     TemporaryStorageModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
@@ -51,7 +52,12 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     CollaborationAuthorizationService,
     CollaborationResolverMutations,
     CollaborationResolverFields,
+    CollaborationLicenseService,
   ],
-  exports: [CollaborationService, CollaborationAuthorizationService],
+  exports: [
+    CollaborationService,
+    CollaborationAuthorizationService,
+    CollaborationLicenseService,
+  ],
 })
 export class CollaborationModule {}

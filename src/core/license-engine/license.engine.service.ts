@@ -5,7 +5,6 @@ import {
   ForbiddenException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { ILicensePolicy } from '@platform/license-policy/license.policy.interface';
 import { ForbiddenLicensePolicyException } from '@common/exceptions/forbidden.license.policy.exception';
 import { EntityManager } from 'typeorm';
@@ -13,6 +12,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { LicensePolicy } from '@platform/license-policy';
 import { IAgent, ICredential } from '@domain/agent';
 import { ILicensePolicyCredentialRule } from './license.policy.rule.credential.interface';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
 export class LicenseEngineService {
@@ -23,31 +23,31 @@ export class LicenseEngineService {
     private entityManager: EntityManager
   ) {}
 
-  public async grantAccessOrFail(
-    privilegeRequired: LicensePrivilege,
+  public async grantEntitlementOrFail(
+    entitlementRequired: LicenseEntitlementType,
     agent: IAgent,
     msg: string,
     licensePolicy: ILicensePolicy | undefined
   ) {
-    const accessGranted = await this.isAccessGranted(
-      privilegeRequired,
+    const accessGranted = await this.isEntitlementGranted(
+      entitlementRequired,
       agent,
       licensePolicy
     );
     if (accessGranted) return true;
 
-    const errorMsg = `License.engine: unable to grant '${privilegeRequired}' privilege: ${msg} license: ${agent.id}`;
+    const errorMsg = `License.engine: unable to grant '${entitlementRequired}' privilege: ${msg} license: ${agent.id}`;
     // If you get to here then no match was found
     throw new ForbiddenLicensePolicyException(
       errorMsg,
-      privilegeRequired,
+      entitlementRequired,
       licensePolicy?.id || 'no license policy',
       agent.id
     );
   }
 
-  public async isAccessGranted(
-    privilegeRequired: LicensePrivilege,
+  public async isEntitlementGranted(
+    entitlementRequired: LicenseEntitlementType,
     agent: IAgent,
     licensePolicy?: ILicensePolicy | undefined
   ): Promise<boolean> {
@@ -60,9 +60,11 @@ export class LicenseEngineService {
     for (const credentialRule of credentialRules) {
       for (const credential of credentials) {
         if (credential.type === credentialRule.credentialType) {
-          if (credentialRule.grantedPrivileges.includes(privilegeRequired)) {
+          if (
+            credentialRule.grantedEntitlements.includes(entitlementRequired)
+          ) {
             this.logger.verbose?.(
-              `[CredentialRule] Granted privilege '${privilegeRequired}' using rule '${credentialRule.name}'`,
+              `[CredentialRule] Granted privilege '${entitlementRequired}' using rule '${credentialRule.name}'`,
               LogContext.LICENSE
             );
             return true;
@@ -94,14 +96,14 @@ export class LicenseEngineService {
     return policy;
   }
 
-  public async getGrantedPrivileges(
+  public async getGrantedEntitlements(
     agent: IAgent,
     licensePolicy?: ILicensePolicy
-  ) {
+  ): Promise<LicenseEntitlementType[]> {
     const policy = await this.getLicensePolicyOrFail(licensePolicy);
     const credentials = await this.getCredentialsFromAgent(agent);
 
-    const grantedPrivileges: LicensePrivilege[] = [];
+    const grantedEntitlements: LicenseEntitlementType[] = [];
 
     const credentialRules = this.convertCredentialRulesStr(
       policy.credentialRulesStr
@@ -109,14 +111,14 @@ export class LicenseEngineService {
     for (const rule of credentialRules) {
       for (const credential of credentials) {
         if (rule.credentialType === credential.type) {
-          for (const privilege of rule.grantedPrivileges) {
-            grantedPrivileges.push(privilege);
+          for (const entitlement of rule.grantedEntitlements) {
+            grantedEntitlements.push(entitlement);
           }
         }
       }
     }
 
-    const uniquePrivileges = grantedPrivileges.filter(
+    const uniquePrivileges = grantedEntitlements.filter(
       (item, i, ar) => ar.indexOf(item) === i
     );
 

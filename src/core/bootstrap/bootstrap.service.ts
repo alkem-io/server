@@ -55,8 +55,10 @@ import { bootstrapSpaceCallouts } from './platform-template-definitions/space/bo
 import { bootstrapSpaceTutorialsInnovationFlowStates } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.innovation.flow.states';
 import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callout.groups';
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
-import { LicensingService } from '@platform/licensing/licensing.service';
+import { LicenseService } from '@domain/common/license/license.service';
+import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicensePlanService } from '@platform/license-plan/license.plan.service';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
 
 @Injectable()
 export class BootstrapService {
@@ -84,7 +86,9 @@ export class BootstrapService {
     private templatesManagerService: TemplatesManagerService,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
-    private licensingService: LicensingService,
+    private accountLicenseService: AccountLicenseService,
+    private licenseService: LicenseService,
+    private licensingFrameworkService: LicensingFrameworkService,
     private licensePlanService: LicensePlanService
   ) {}
 
@@ -273,14 +277,15 @@ export class BootstrapService {
 
   async createLicensePlans(licensePlansData: any[]) {
     try {
-      const licensing = await this.licensingService.getDefaultLicensingOrFail();
+      const licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
       for (const licensePlanData of licensePlansData) {
         const planExists =
           await this.licensePlanService.licensePlanByNameExists(
             licensePlanData.name
           );
         if (!planExists) {
-          await this.licensingService.createLicensePlan({
+          await this.licensingFrameworkService.createLicensePlan({
             ...licensePlanData,
             licensingID: licensing.id,
           });
@@ -454,6 +459,10 @@ export class BootstrapService {
           account
         );
       await this.authorizationPolicyService.saveAll(accountAuthorizations);
+
+      const accountEntitlements =
+        await this.accountLicenseService.applyLicensePolicy(account.id);
+      await this.licenseService.saveAll(accountEntitlements);
     }
   }
 
@@ -507,6 +516,10 @@ export class BootstrapService {
       const spaceAuthorizations =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
       await this.authorizationPolicyService.saveAll(spaceAuthorizations);
+
+      const accountEntitlements =
+        await this.accountLicenseService.applyLicensePolicy(account.id);
+      await this.licenseService.saveAll(accountEntitlements);
 
       return this.spaceService.getSpaceOrFail(space.id);
     }

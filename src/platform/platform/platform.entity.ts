@@ -3,10 +3,10 @@ import { Library } from '@library/library/library.entity';
 import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { IPlatform } from './platform.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { Licensing } from '@platform/licensing/licensing.entity';
 import { Forum } from '@platform/forum/forum.entity';
 import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
 import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
+import { LicensingFramework } from '@platform/licensing-framework/licensing.framework.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
@@ -42,13 +42,13 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   @JoinColumn()
   storageAggregator!: StorageAggregator;
 
-  @OneToOne(() => Licensing, {
+  @OneToOne(() => LicensingFramework, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  licensing?: Licensing;
+  licensingFramework?: LicensingFramework;
 
   @OneToMany(
     () => PlatformInvitation,

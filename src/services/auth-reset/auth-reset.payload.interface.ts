@@ -1,4 +1,4 @@
-import { AUTH_RESET_EVENT_TYPE } from './event.type';
+import { RESET_EVENT_TYPE } from './reset.event.type';
 
 /**
  * The payload type of the event
@@ -7,7 +7,7 @@ export interface AuthResetEventPayload {
   /**
    * the type of the event
    */
-  type: AUTH_RESET_EVENT_TYPE;
+  type: RESET_EVENT_TYPE;
   /**
    * the uuid of the entity
    */

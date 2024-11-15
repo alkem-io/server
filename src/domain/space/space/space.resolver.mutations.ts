@@ -102,7 +102,7 @@ export class SpaceResolverMutations {
       AuthorizationPrivilege.DELETE,
       `deleteSpace: ${space.nameID}`
     );
-    return await this.spaceService.deleteSpace(deleteData);
+    return await this.spaceService.deleteSpaceOrFail(deleteData);
   }
 
   @UseGuards(GraphqlGuard)

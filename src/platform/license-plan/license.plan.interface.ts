@@ -1,12 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { ILicensing } from '@platform/licensing/licensing.interface';
 import { LicenseCredential } from '@common/enums/license.credential';
 import { LicensePlanType } from '@common/enums/license.plan.type';
+import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
 
 @ObjectType('LicensePlan')
 export abstract class ILicensePlan extends IBaseAlkemio {
-  licensing?: ILicensing;
+  licensingFramework?: ILicensingFramework;
 
   @Field(() => String, {
     description: 'The name of the License Plan',

@@ -14,12 +14,16 @@ import { ICallout } from '../callout/callout.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Loader } from '@core/dataloader/decorators';
-import { CollaborationTimelineLoaderCreator } from '@core/dataloader/creators';
+import {
+  CollaborationTimelineLoaderCreator,
+  LicenseLoaderCreator,
+} from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { ICalloutGroup } from '../callout-groups/callout.group.interface';
+import { ILicense } from '@domain/common/license/license.interface';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -88,5 +92,19 @@ export class CollaborationResolverFields {
     const tagsetTemplateSet =
       await this.collaborationService.getTagsetTemplatesSet(collaboration.id);
     return tagsetTemplateSet.tagsetTemplates;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('license', () => ILicense, {
+    nullable: false,
+    description: 'The License operating on this Collaboration.',
+  })
+  async license(
+    @Parent() collaboration: ICollaboration,
+    @Loader(LicenseLoaderCreator, { parentClassRef: Collaboration })
+    loader: ILoader<ILicense>
+  ): Promise<ILicense> {
+    return loader.load(collaboration.id);
   }
 }
