@@ -33,7 +33,7 @@ export class RoomControllerService {
       'virtualContributor'
     );
 
-    //TODO fix me with the expert engine
+    //TODO fix me with the openai assistant engine
     // if (vcInteractionID) {
     //   const vcInteraction =
     //     await this.vcInteractionService.getVcInteractionOrFail(vcInteractionID);
