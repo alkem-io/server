@@ -50,6 +50,7 @@ export class Search2Service {
     return this.searchResultService.resolveSearchResults(
       searchResults,
       agentInfo,
+      onlyPublicResults,
       searchData.searchInSpaceFilter
     );
   }

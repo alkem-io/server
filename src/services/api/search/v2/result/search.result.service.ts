@@ -33,6 +33,7 @@ import {
 } from '../../dto';
 import { SearchEntityTypes } from '@services/api/search/search.entity.types';
 import { User } from '@domain/community/user/user.entity';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 
 type PostParents = {
   post: Post;
@@ -64,6 +65,7 @@ export class SearchResultService {
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
     agentInfo: AgentInfo,
+    onlyPublicResults: boolean = false,
     spaceId?: string
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
@@ -80,8 +82,16 @@ export class SearchResultService {
       callouts,
       calloutsOfWhiteboards,
     ] = await Promise.all([
-      this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
-      this.getSubspaceSearchResults(groupedResults.subspace ?? [], agentInfo),
+      this.getSpaceSearchResults(
+        groupedResults.space ?? [],
+        onlyPublicResults,
+        spaceId
+      ),
+      this.getSubspaceSearchResults(
+        groupedResults.subspace ?? [],
+        onlyPublicResults,
+        agentInfo
+      ),
       this.getUserSearchResults(groupedResults.user ?? [], spaceId),
       this.getOrganizationSearchResults(
         groupedResults.organization ?? [],
@@ -125,6 +135,7 @@ export class SearchResultService {
   // todo: heavy copy-pasting below: must be refactored
   public async getSpaceSearchResults(
     rawSearchResults: ISearchResult[],
+    onlyPublicResults: boolean = false,
     spaceId?: string
   ): Promise<ISearchResultSpace[]> {
     if (rawSearchResults.length === 0) {
@@ -143,6 +154,9 @@ export class SearchResultService {
 
     const spaces = await this.entityManager.findBy(Space, {
       id: In(spaceIds),
+      visibility: onlyPublicResults
+        ? SpaceVisibility.ACTIVE
+        : In(Object.values(SpaceVisibility)),
     });
 
     return spaces
@@ -173,6 +187,7 @@ export class SearchResultService {
 
   public async getSubspaceSearchResults(
     rawSearchResults: ISearchResult[],
+    onlyPublicResults: boolean = false,
     agentInfo: AgentInfo
   ): Promise<ISearchResultSpace[]> {
     if (rawSearchResults.length === 0) {
@@ -182,7 +197,12 @@ export class SearchResultService {
     const subspaceIds = rawSearchResults.map(hit => hit.result.id);
 
     const subspaces = await this.entityManager.find(Space, {
-      where: { id: In(subspaceIds) },
+      where: {
+        id: In(subspaceIds),
+        visibility: onlyPublicResults
+          ? SpaceVisibility.ACTIVE
+          : In(Object.values(SpaceVisibility)),
+      },
       relations: { parentSpace: true },
     });
 
