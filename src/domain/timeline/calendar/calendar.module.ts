@@ -13,6 +13,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { SpaceSettingsModule } from '@domain/space/space.settings/space.settings.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     EntityResolverModule,
     ActivityAdapterModule,
     StorageAggregatorResolverModule,
+    SpaceSettingsModule,
     TypeOrmModule.forFeature([Calendar]),
   ],
   providers: [

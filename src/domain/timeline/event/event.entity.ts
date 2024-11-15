@@ -52,6 +52,9 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @Column('int', { nullable: true })
   durationDays?: number;
 
+  @Column('boolean', { nullable: false })
+  visibleOnParentCalendar!: boolean;
+
   constructor() {
     super();
   }

@@ -19,6 +19,8 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
+import { LicensingModule } from '@platform/licensing/licensing.module';
+import { LicensePlanModule } from '@platform/license-plan/license.plan.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { TemplateDefaultModule } from '@domain/template/template-default/templat
     TemplatesSetModule,
     TemplatesManagerModule,
     TemplateDefaultModule,
+    LicensingModule,
+    LicensePlanModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],
