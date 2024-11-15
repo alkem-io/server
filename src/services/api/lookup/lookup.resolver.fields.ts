@@ -717,16 +717,9 @@ export class LookupResolverFields {
     description: 'Lookup the specified License',
   })
   async license(
-    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ILicense> {
     const license = await this.licenseService.getLicenseOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      license.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup license: ${license.id}`
-    );
 
     return license;
   }
