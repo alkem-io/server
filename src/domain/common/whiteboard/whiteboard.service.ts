@@ -22,9 +22,9 @@ import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LicenseService } from '../license/license.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
 export class WhiteboardService {
@@ -32,10 +32,10 @@ export class WhiteboardService {
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private licenseEngineService: LicenseEngineService,
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private licenseService: LicenseService
   ) {}
 
   async createWhiteboard(
@@ -177,22 +177,16 @@ export class WhiteboardService {
     return this.save(whiteboard);
   }
 
-  async isMultiUser(whiteboardId: string): Promise<boolean> {
-    const community =
-      await this.communityResolverService.getCommunityFromWhiteboardOrFail(
+  public async isMultiUser(whiteboardId: string): Promise<boolean> {
+    const license =
+      await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
         whiteboardId
       );
-    const levelZeroSpaceAgent =
-      await this.communityResolverService.getLevelZeroSpaceAgentForCommunityOrFail(
-        community.id
-      );
 
-    const enabled = await this.licenseEngineService.isAccessGranted(
-      LicensePrivilege.SPACE_WHITEBOARD_MULTI_USER,
-      levelZeroSpaceAgent
+    return this.licenseService.isEntitlementEnabled(
+      license,
+      LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER
     );
-
-    return enabled;
   }
 
   public async getProfile(

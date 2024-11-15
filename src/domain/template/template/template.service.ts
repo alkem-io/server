@@ -334,7 +334,7 @@ export class TemplateService {
             LogContext.TEMPLATES
           );
         }
-        await this.collaborationService.deleteCollaboration(
+        await this.collaborationService.deleteCollaborationOrFail(
           template.collaboration.id
         );
         break;

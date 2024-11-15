@@ -1,4 +1,9 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  LoggerService,
+  NotImplementedException,
+} from '@nestjs/common';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { LogContext } from '@common/enums';
@@ -155,7 +160,7 @@ export class StorageAggregatorResolverService {
     if (!isUUID(templatesManagerId)) {
       throw new InvalidUUID(
         'Invalid UUID provided to find the StorageAggregator of a templatesManager',
-        LogContext.STORAGE_AGGREGATOR,
+        LogContext.COMMUNITY,
         { provided: templatesManagerId }
       );
     }
@@ -188,7 +193,7 @@ export class StorageAggregatorResolverService {
     if (platform && platform.storageAggregator) {
       return this.getStorageAggregatorOrFail(platform.storageAggregator.id);
     }
-    throw new EntityNotFoundException(
+    throw new NotImplementedException(
       `Unable to retrieve storage aggregator to use for TemplatesManager ${templatesManagerId}`,
       LogContext.STORAGE_AGGREGATOR
     );

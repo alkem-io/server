@@ -5,27 +5,27 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { CreateLicensePlanOnLicensingInput } from './dto/license.manager.dto.create.license.plan';
-import { Licensing } from './licensing.entity';
-import { ILicensing } from './licensing.interface';
+import { CreateLicensePlanOnLicensingFrameworkInput } from './dto/licensing.framework.dto.create.license.plan';
+import { LicensingFramework } from './licensing.framework.entity';
+import { ILicensingFramework } from './licensing.framework.interface';
 import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 import { LicensePlanService } from '@platform/license-plan/license.plan.service';
 import { ILicensePolicy } from '@platform/license-policy/license.policy.interface';
 
 @Injectable()
-export class LicensingService {
+export class LicensingFrameworkService {
   constructor(
     private licensePlanService: LicensePlanService,
-    @InjectRepository(Licensing)
-    private licensingRepository: Repository<Licensing>,
+    @InjectRepository(LicensingFramework)
+    private licensingFrameworkRepository: Repository<LicensingFramework>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async getLicensingOrFail(
     licensingID: string,
-    options?: FindOneOptions<Licensing>
-  ): Promise<ILicensing> {
-    const licensing = await this.licensingRepository.findOne({
+    options?: FindOneOptions<LicensingFramework>
+  ): Promise<ILicensingFramework> {
+    const licensing = await this.licensingFrameworkRepository.findOne({
       where: { id: licensingID },
       ...options,
     });
@@ -40,9 +40,9 @@ export class LicensingService {
   }
 
   async getDefaultLicensingOrFail(
-    options?: FindOneOptions<Licensing>
-  ): Promise<ILicensing> {
-    const licensingFrameworks = await this.licensingRepository.find({
+    options?: FindOneOptions<LicensingFramework>
+  ): Promise<ILicensingFramework | never> {
+    const licensingFrameworks = await this.licensingFrameworkRepository.find({
       ...options,
     });
 
@@ -55,11 +55,15 @@ export class LicensingService {
     return licensingFrameworks[0];
   }
 
-  public async save(licensing: ILicensing): Promise<ILicensing> {
-    return this.licensingRepository.save(licensing);
+  public async save(
+    licensing: ILicensingFramework
+  ): Promise<ILicensingFramework> {
+    return this.licensingFrameworkRepository.save(licensing);
   }
 
-  public async getLicensePlans(licensingID: string): Promise<ILicensePlan[]> {
+  public async getLicensePlansOrFail(
+    licensingID: string
+  ): Promise<ILicensePlan[] | never> {
     const licensing = await this.getLicensingOrFail(licensingID, {
       relations: {
         plans: true,
@@ -78,7 +82,7 @@ export class LicensingService {
     licensingID: string,
     planID: string
   ): Promise<ILicensePlan> {
-    const licensePlans = await this.getLicensePlans(licensingID);
+    const licensePlans = await this.getLicensePlansOrFail(licensingID);
     const plan = licensePlans.find(plan => plan.id === planID);
     if (!plan) {
       throw new EntityNotFoundException(
@@ -91,10 +95,10 @@ export class LicensingService {
   }
 
   public async createLicensePlan(
-    licensePlanData: CreateLicensePlanOnLicensingInput
+    licensePlanData: CreateLicensePlanOnLicensingFrameworkInput
   ): Promise<ILicensePlan> {
     const licensing = await this.getLicensingOrFail(
-      licensePlanData.licensingID,
+      licensePlanData.licensingFrameworkID,
       {
         relations: {
           plans: true,
@@ -110,7 +114,7 @@ export class LicensingService {
     const licensePlan =
       await this.licensePlanService.createLicensePlan(licensePlanData);
     licensing.plans.push(licensePlan);
-    await this.licensingRepository.save(licensing);
+    await this.licensingFrameworkRepository.save(licensing);
 
     return licensePlan;
   }

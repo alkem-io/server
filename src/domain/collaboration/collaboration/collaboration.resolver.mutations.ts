@@ -57,7 +57,7 @@ export class CollaborationResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete collaboration: ${collaboration.id}`
     );
-    return this.collaborationService.deleteCollaboration(deleteData.ID);
+    return this.collaborationService.deleteCollaborationOrFail(deleteData.ID);
   }
 
   @UseGuards(GraphqlGuard)

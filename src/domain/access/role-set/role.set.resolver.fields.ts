@@ -18,6 +18,11 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { IInvitation } from '../invitation/invitation.interface';
 import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 import { RoleSetMemberCredentials } from '@domain/community/user/dto/user.dto.role.set.member.credentials';
+import { ILicense } from '@domain/common/license/license.interface';
+import { RoleSet } from './role.set.entity';
+import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFields {
@@ -193,5 +198,19 @@ export class RoleSetResolverFields {
   async applications(@Parent() roleSet: IRoleSet) {
     const apps = await this.roleSetService.getApplications(roleSet);
     return apps || [];
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('license', () => ILicense, {
+    nullable: false,
+    description: 'The License operating on this RoleSet.',
+  })
+  async license(
+    @Parent() roleSet: IRoleSet,
+    @Loader(LicenseLoaderCreator, { parentClassRef: RoleSet })
+    loader: ILoader<ILicense>
+  ): Promise<ILicense> {
+    return loader.load(roleSet.id);
   }
 }
