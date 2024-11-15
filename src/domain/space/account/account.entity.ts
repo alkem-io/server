@@ -8,10 +8,15 @@ import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.ag
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { AccountType } from '@common/enums/account.type';
+import { License } from '@domain/common/license/license.entity';
+import { ENUM_LENGTH } from '@common/constants';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
-  @Column('varchar', { length: 128, nullable: true })
+  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
   type!: AccountType;
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
+  externalSubscriptionID!: string;
 
   @OneToMany(() => Space, space => space.account, {
     eager: false,
@@ -26,6 +31,14 @@ export class Account extends AuthorizableEntity implements IAccount {
   })
   @JoinColumn()
   agent?: Agent;
+
+  @OneToOne(() => License, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  license?: License;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,

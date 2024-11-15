@@ -36,6 +36,7 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { CommunityRoleType } from '@common/enums/community.role';
 import { IRoleSet } from './role.set.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 
 @Injectable()
 export class RoleSetAuthorizationService {
@@ -45,7 +46,8 @@ export class RoleSetAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private virtualContributorService: VirtualContributorService,
-    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService
+    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
+    private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -61,13 +63,15 @@ export class RoleSetAuthorizationService {
         applications: true,
         invitations: true,
         platformInvitations: true,
+        license: true,
       },
     });
     if (
       !roleSet.roles ||
       !roleSet.applications ||
       !roleSet.invitations ||
-      !roleSet.platformInvitations
+      !roleSet.platformInvitations ||
+      !roleSet.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for roleSet authorization: ${roleSet.id} `,
@@ -138,6 +142,12 @@ export class RoleSetAuthorizationService {
         );
       updatedAuthorizations.push(platformInvitationAuthorization);
     }
+    const licenseAuthorization =
+      this.licenseAuthorizationService.applyAuthorizationPolicy(
+        roleSet.license,
+        roleSet.authorization
+      );
+    updatedAuthorizations.push(...licenseAuthorization);
 
     return updatedAuthorizations;
   }

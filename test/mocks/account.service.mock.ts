@@ -6,6 +6,6 @@ export const MockAccountService: ValueProvider<PublicPart<AccountService>> = {
   provide: AccountService,
   useValue: {
     getAccount: jest.fn(),
-    deleteAccount: jest.fn(),
+    deleteAccountOrFail: jest.fn(),
   },
 };

@@ -6,10 +6,10 @@ import { ILicensePolicy } from './license.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicensePolicy } from './license.policy.entity';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { ILicensePolicyCredentialRule } from '@core/license-engine';
 import { LicenseCredential } from '@common/enums/license.credential';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
 export class LicensePolicyService {
@@ -22,12 +22,12 @@ export class LicensePolicyService {
   ) {}
 
   createCredentialRule(
-    grantedPrivileges: LicensePrivilege[],
+    grantedEntitlements: LicenseEntitlementType[],
     credentialType: LicenseCredential,
     name: string
   ): ILicensePolicyCredentialRule {
     return {
-      grantedPrivileges,
+      grantedEntitlements: grantedEntitlements,
       credentialType,
       name,
     };

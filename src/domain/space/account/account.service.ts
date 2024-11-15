@@ -36,6 +36,7 @@ import { AccountHostService } from '../account.host/account.host.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicenseCredential } from '@common/enums/license.credential';
+import { LicenseService } from '@domain/common/license/license.service';
 
 @Injectable()
 export class AccountService {
@@ -51,6 +52,7 @@ export class AccountService {
     private innovationPackService: InnovationPackService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private namingService: NamingService,
+    private licenseService: LicenseService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -136,7 +138,7 @@ export class AccountService {
     return await this.accountRepository.save(account);
   }
 
-  async deleteAccount(accountInput: IAccount): Promise<IAccount> {
+  async deleteAccountOrFail(accountInput: IAccount): Promise<IAccount | never> {
     const accountID = accountInput.id;
     const account = await this.getAccountOrFail(accountID, {
       relations: {
@@ -146,6 +148,7 @@ export class AccountService {
         innovationPacks: true,
         storageAggregator: true,
         innovationHubs: true,
+        license: true,
       },
     });
 
@@ -155,7 +158,8 @@ export class AccountService {
       !account.virtualContributors ||
       !account.storageAggregator ||
       !account.innovationHubs ||
-      !account.innovationPacks
+      !account.innovationPacks ||
+      !account.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
@@ -166,6 +170,8 @@ export class AccountService {
     await this.agentService.deleteAgent(account.agent.id);
 
     await this.storageAggregatorService.delete(account.storageAggregator.id);
+
+    await this.licenseService.removeLicenseOrFail(account.license.id);
 
     for (const vc of account.virtualContributors) {
       await this.virtualContributorService.deleteVirtualContributor(vc.id);
@@ -179,7 +185,7 @@ export class AccountService {
     }
 
     for (const space of account.spaces) {
-      await this.spaceService.deleteSpace({ ID: space.id });
+      await this.spaceService.deleteSpaceOrFail({ ID: space.id });
     }
 
     const result = await this.accountRepository.remove(account as Account);

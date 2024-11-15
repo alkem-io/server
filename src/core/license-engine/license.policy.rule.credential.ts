@@ -1,21 +1,21 @@
 import { LicenseCredential } from '@common/enums/license.credential';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { ILicensePolicyCredentialRule } from './license.policy.rule.credential.interface';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 export class LicensePolicyCredentialRule
   implements ILicensePolicyCredentialRule
 {
   credentialType: LicenseCredential;
-  grantedPrivileges: LicensePrivilege[];
+  grantedEntitlements: LicenseEntitlementType[];
   name: string;
 
   constructor(
-    grantedPrivileges: LicensePrivilege[],
+    grantedEntitlements: LicenseEntitlementType[],
     credentialType: LicenseCredential,
     name: string
   ) {
     this.credentialType = credentialType;
-    this.grantedPrivileges = grantedPrivileges;
+    this.grantedEntitlements = grantedEntitlements;
     this.name = name;
   }
 }
