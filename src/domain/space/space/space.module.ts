@@ -12,27 +12,26 @@ import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.f
 import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
-import { SpaceSettingssModule } from '../space.settings/space.settings.module';
-import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
-import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { SpaceSettingsModule } from '../space.settings/space.settings.module';
 import { AccountHostModule } from '../account.host/account.host.module';
-import { LicensingModule } from '@platform/licensing/licensing.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
-import { TemplateModule } from '@domain/template/template/template.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
+import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
+import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
+import { LicenseModule } from '@domain/common/license/license.module';
+import { SpaceLicenseService } from './space.service.license';
 
 @Module({
   imports: [
@@ -42,37 +41,35 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     AuthorizationModule,
     ContextModule,
     CommunityModule,
-    CommunityRoleModule,
-    CommunityPolicyModule,
     ProfileModule,
-    LicensingModule,
+    LicensingFrameworkModule,
     LicenseIssuerModule,
     LicenseEngineModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
-    SpaceDefaultsModule,
-    TemplatesSetModule,
-    SpaceSettingssModule,
+    TemplatesManagerModule,
+    SpaceSettingsModule,
     StorageAggregatorModule,
     ContributionReporterModule,
     CollaborationModule,
     InputCreatorModule,
     SpaceFilterModule,
     ActivityAdapterModule,
-    LoaderCreatorModule,
-    TemplateModule,
-    InputCreatorModule,
+    RoleSetModule,
     NameReporterModule,
+    SpaceDefaultsModule,
+    LicenseModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [
     SpaceService,
     SpaceAuthorizationService,
+    SpaceLicenseService,
     SpaceResolverFields,
     SpaceResolverQueries,
     SpaceResolverMutations,
     SpaceResolverSubscriptions,
   ],
-  exports: [SpaceService, SpaceAuthorizationService],
+  exports: [SpaceService, SpaceAuthorizationService, SpaceLicenseService],
 })
 export class SpaceModule {}

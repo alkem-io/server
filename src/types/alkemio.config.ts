@@ -1,4 +1,7 @@
 export type AlkemioConfig = {
+  authorization: {
+    chunk: number;
+  };
   hosting: {
     environment: string;
     port: number;
@@ -13,12 +16,6 @@ export type AlkemioConfig = {
     };
     max_json_payload_size: string;
   };
-  bootstrap: {
-    authorization: {
-      enabled: string;
-      file: string;
-    };
-  };
   security: {
     cors: {
       enabled: boolean;
@@ -26,6 +23,7 @@ export type AlkemioConfig = {
       methods: string;
       allowed_headers: string;
     };
+    encryption_key: string;
   };
   innovation_hub: {
     header: string;
@@ -86,6 +84,7 @@ export type AlkemioConfig = {
       enabled: boolean;
       endpoint: string;
       submit_pii: boolean;
+      environment: string;
     };
     apm: {
       rumEnabled: boolean;
@@ -203,6 +202,7 @@ export type AlkemioConfig = {
     newuser: string;
     tips: string;
     aup: string;
+    documentation_path: string;
     landing_page: {
       enabled: boolean;
     };

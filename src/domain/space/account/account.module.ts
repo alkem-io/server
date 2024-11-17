@@ -13,7 +13,6 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
-import { LicensingModule } from '@platform/licensing/licensing.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 import { AccountHostModule } from '../account.host/account.host.module';
@@ -24,6 +23,9 @@ import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.modul
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
+import { LicenseModule } from '@domain/common/license/license.module';
+import { AccountLicenseService } from './account.service.license';
+import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
 
 @Module({
   imports: [
@@ -35,9 +37,10 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     StorageAggregatorModule,
     TemporaryStorageModule,
     PlatformAuthorizationPolicyModule,
-    LicensingModule,
+    LicensingFrameworkModule,
     LicenseIssuerModule,
     LicenseEngineModule,
+    LicenseModule,
     SpaceModule,
     InnovationHubModule,
     InnovationPackModule,
@@ -53,7 +56,8 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     AccountResolverFields,
     AccountResolverMutations,
     AccountResolverQueries,
+    AccountLicenseService,
   ],
-  exports: [AccountService, AccountAuthorizationService],
+  exports: [AccountService, AccountAuthorizationService, AccountLicenseService],
 })
 export class AccountModule {}

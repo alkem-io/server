@@ -150,4 +150,10 @@ export abstract class IPlatformLocations {
     description: 'URL where users can get tips and tricks',
   })
   aup!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'URL for the documentation site',
+  })
+  documentation!: string;
 }

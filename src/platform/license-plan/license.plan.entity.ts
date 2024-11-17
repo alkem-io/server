@@ -1,19 +1,19 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ILicensePlan } from './license.plan.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { Licensing } from '@platform/licensing/licensing.entity';
 import { LicenseCredential } from '@common/enums/license.credential';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { ENUM_LENGTH } from '@common/constants';
+import { LicensingFramework } from '@platform/licensing-framework/licensing.framework.entity';
 
 @Entity()
 export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
-  @ManyToOne(() => Licensing, licensing => licensing.plans, {
+  @ManyToOne(() => LicensingFramework, licensing => licensing.plans, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  licensing?: Licensing;
+  licensingFramework?: LicensingFramework;
 
   @Column('text', { nullable: false })
   name!: string;

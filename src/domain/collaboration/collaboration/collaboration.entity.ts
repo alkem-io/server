@@ -5,6 +5,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { TagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
+import { License } from '@domain/common/license/license.entity';
 
 @Entity()
 export class Collaboration
@@ -16,6 +17,9 @@ export class Collaboration
     cascade: true,
   })
   callouts?: Callout[];
+
+  @Column({ type: 'boolean', nullable: false, default: false })
+  isTemplate!: boolean;
 
   @OneToOne(() => TagsetTemplateSet, {
     eager: false,
@@ -42,4 +46,12 @@ export class Collaboration
 
   @Column('text', { nullable: false })
   groupsStr!: string;
+
+  @OneToOne(() => License, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  license?: License;
 }

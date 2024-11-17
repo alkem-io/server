@@ -8,6 +8,7 @@ export enum AuthorizationPrivilege {
   GRANT = 'grant', // allow the issuing / revoking of credentials of the same type within a given scope
   GRANT_GLOBAL_ADMINS = 'grant-global-admins',
   AUTHORIZATION_RESET = 'authorization-reset',
+  LICENSE_RESET = 'license-reset',
   PLATFORM_ADMIN = 'platform-admin', // To determine if the user should have access to the platform administration
   CONTRIBUTE = 'contribute',
   CREATE_CALLOUT = 'create-callout',
@@ -26,7 +27,6 @@ export enum AuthorizationPrivilege {
   CREATE_INNOVATION_HUB = 'create-innovation-hub',
   FILE_UPLOAD = 'file-upload',
   FILE_DELETE = 'file-delete',
-  UPDATE_WHITEBOARD = 'update-whiteboard',
   UPDATE_INNOVATION_FLOW = 'update-innovation-flow',
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
@@ -41,8 +41,6 @@ export enum AuthorizationPrivilege {
   MOVE_POST = 'move-post',
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
-  ACCESS_VIRTUAL_CONTRIBUTOR = 'access-virtual-contributor',
-  ACCESS_DASHBOARD_REFRESH = 'access-dashboard-refresh',
   UPDATE_CONTENT = 'update-content',
   SAVE_AS_TEMPLATE = 'save-as-template',
   TRANSFER_RESOURCE = 'transfer-resource',

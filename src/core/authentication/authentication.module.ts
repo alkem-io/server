@@ -10,6 +10,7 @@ import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { OryApiStrategy } from './ory.api.strategy';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 @Module({
   imports: [
     PassportModule.register({
@@ -20,6 +21,7 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     AgentModule,
     CredentialModule,
     AuthenticationAgentInfoModule,
+    KratosModule,
     CacheModule.register(),
     JwtModule.registerAsync({
       imports: [ConfigModule],

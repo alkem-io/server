@@ -1,3 +1,5 @@
+import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
+
 export class AiServerAdapterAskQuestionInput {
   question!: string;
   aiPersonaServiceID!: string;
@@ -7,4 +9,5 @@ export class AiServerAdapterAskQuestionInput {
   vcInteractionID?: string;
   description?: string;
   displayName!: string;
+  externalMetadata?: ExternalMetadata = {};
 }

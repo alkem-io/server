@@ -5,188 +5,133 @@ import {
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { State, createMachine, interpret, MachineOptions } from 'xstate';
+import { AnyMachineSnapshot, AnyStateMachine, createActor } from 'xstate';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
 import { LifecycleEventInput } from './dto/lifecycle.dto.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 
 @Injectable()
 export class LifecycleService {
+  private XSTATE_DONE_STATE = 'done';
+  private XSTATE_ERROR_STATE = 'error';
+
   constructor(
     @InjectRepository(Lifecycle)
     private lifecycleRepository: Repository<Lifecycle>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createLifecycle(
-    parentID: string,
-    machineConfig: ILifecycleDefinition
-  ): Promise<ILifecycle> {
-    // Ensure parent is set
-    if (machineConfig.context) {
-      machineConfig.context.parentID = parentID;
-    }
-    const machineConfigStr = this.serializeLifecycleDefinition(machineConfig);
-    const lifecycle = new Lifecycle(machineConfigStr);
+  async createLifecycle(): Promise<ILifecycle> {
+    const lifecycle = new Lifecycle();
 
-    return await this.lifecycleRepository.save(lifecycle);
+    return this.save(lifecycle);
   }
 
   async deleteLifecycle(lifecycleID: string): Promise<ILifecycle> {
     const lifecycle = await this.getLifecycleOrFail(lifecycleID);
-    return await this.lifecycleRepository.remove(lifecycle as Lifecycle);
+    return this.lifecycleRepository.remove(lifecycle as Lifecycle);
   }
 
-  async event(
-    lifecycleEventData: LifecycleEventInput,
-    options: Partial<MachineOptions<any, any>>,
-    agentInfo: AgentInfo,
-    authorization?: IAuthorizationPolicy
-  ): Promise<ILifecycle> {
-    const lifecycle = await this.getLifecycleOrFail(lifecycleEventData.ID);
-    const eventName = lifecycleEventData.eventName;
-    const machineDef = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    );
+  async event(eventData: LifecycleEventInput): Promise<ILifecycle> {
+    const eventName = eventData.eventName;
 
     this.logger.verbose?.(
-      `[Lifecycle] Processing event: ${lifecycleEventData.eventName}`,
+      `[Lifecycle] Processing event: ${eventData.eventName}`,
       LogContext.LIFECYCLE
     );
-    const machine = createMachine(machineDef, options);
-    const machineWithLifecycle = machine.withContext({
-      ...machine.context,
-    });
 
-    const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
-    const restoredState = State.create(restoredStateDef);
+    const actor = this.getActorWithState(
+      eventData.lifecycle,
+      eventData.machine
+    );
 
-    const nextStates =
-      machineWithLifecycle.resolveState(restoredStateDef).nextEvents;
+    const snapshot = actor.getSnapshot();
+    if (snapshot.status === this.XSTATE_ERROR_STATE) {
+      throw new InvalidStateTransitionException(
+        `Actor in error state: ${JSON.stringify(snapshot)}`,
+        LogContext.LIFECYCLE
+      );
+    }
+    const startingState = snapshot.value;
+    const nextEvents = this.getNextEventsFromSnapshot(snapshot);
     if (
-      !nextStates.find(name => {
+      !nextEvents.find(name => {
         return name === eventName;
       })
     ) {
-      const lifecycleMsgPrefix = `Lifecycle (${lifecycle.id}) event (${eventName}): `;
-      const lifecycleMsgSuffix = `event: ${JSON.stringify(lifecycleEventData)}, context: ${JSON.stringify(machineDef.context)}`;
-      if (nextStates.length === 0) {
+      const lifecycleMsgPrefix = `Lifecycle (${eventData.lifecycle.id}) event (${eventName}): `;
+      const lifecycleMsgSuffix = `event: ${eventData.eventName}, starting state: ${startingState}`;
+      if (nextEvents.length === 0) {
         throw new InvalidStateTransitionException(
-          `${lifecycleMsgPrefix} No next states for lifecycle, ${lifecycleMsgSuffix}`,
+          `${lifecycleMsgPrefix} No next states for lifecycle currently in state, ${lifecycleMsgSuffix}`,
           LogContext.LIFECYCLE
         );
       } else {
         throw new InvalidStateTransitionException(
-          `${lifecycleMsgPrefix} Not in valid set of next events: ${nextStates}, ${lifecycleMsgSuffix}`,
+          `${lifecycleMsgPrefix} Not in valid set of next events: ${nextEvents}, ${lifecycleMsgSuffix}`,
           LogContext.LIFECYCLE
         );
       }
     }
 
-    const interpretedLifecycle = interpret(machineWithLifecycle);
     this.logger.verbose?.(
-      `[Lifecycle] machine interpreted, starting from state: ${restoredState.value.toString()}`,
+      `[Lifecycle] machine interpreted, starting from state: ${startingState}`,
       LogContext.LIFECYCLE
     );
 
-    const machineService = interpretedLifecycle.start(restoredState);
-    let parentID = '';
-    if (machineDef.context && machine.context.parentID) {
-      parentID = machineDef.context.parentID;
-    }
+    actor.start();
 
-    machineService.send({
-      type: eventName,
-      parentID: parentID,
-      agentInfo: agentInfo,
-      authorization: authorization,
-    });
-    this.logger.verbose?.(
-      `Lifecycle (id: ${
-        lifecycle.id
-      }) event '${eventName}: from state '${restoredState.value.toString()}' to state '${machineService.state.value.toString()}', parentID: ${parentID}`,
-      LogContext.LIFECYCLE
-    );
-
-    const stateToHydrate = interpretedLifecycle.state;
-    // Note: https://git.com/statelyai/xstate/discussions/1757
-    // restoring state has the hydrated actions, which unless removed will be executed again
-    stateToHydrate.actions = [];
-    // Remove also the event itself as this would otherwise pull all agent / authorization policy into the hydrated state
-    stateToHydrate.event = '';
-    stateToHydrate._event.data.agentInfo.credentials = '';
-    stateToHydrate._event.data.agentInfo.verifiedCredentials = '';
-    stateToHydrate._event.data.authorization = '';
-
-    //stateToHydrate._event = un;
-    const newStateStr = JSON.stringify(stateToHydrate);
-
-    // Todo: do not stop as this triggers an exit action from the last state.
-    //machineService.stop();
-    lifecycle.machineState = newStateStr;
-
-    return await this.lifecycleRepository.save(lifecycle);
-  }
-
-  async initializationEvent(lifecycle: ILifecycle): Promise<ILifecycle> {
-    // NOTE: This initialization is done in a way that NO events are triggered as we are not
-    // passing in the lifecycle options due to circular injection dependencies. If the lifecycle
-    // needs to have actions / guards on the way in to the initial state then we need to do further
-    // design work.
-    if (lifecycle.machineState) {
-      // machine is already initialized, nothing to do
-      this.logger.verbose?.(
-        `[Lifecycle] machine is already initialized, no action needed: ${lifecycle.id}`,
+    try {
+      actor.send({
+        type: eventName,
+        agentInfo: eventData.agentInfo,
+        authorization: eventData.authorization,
+      });
+    } catch (e: any) {
+      this.logger.error?.(
+        `Error processing lifecycle event: ${e}`,
         LogContext.LIFECYCLE
       );
-      return lifecycle;
+      throw new InvalidStateTransitionException(
+        `Unable to process event: ${eventName} on lifecycle ${eventData.lifecycle.id} - error: ${e.message}`,
+        LogContext.LIFECYCLE
+      );
     }
 
-    const machineDef = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    );
+    const updatedState = actor.getSnapshot().value;
+    if (updatedState === startingState) {
+      this.logger.warn(
+        `Event ${eventName} did not change state from ${startingState}`,
+        LogContext.LIFECYCLE
+      );
+    }
 
+    const newStateStr = JSON.stringify(actor.getPersistedSnapshot());
+    eventData.lifecycle.machineState = newStateStr;
     this.logger.verbose?.(
-      `[Lifecycle] Initializing lifecycle: ${lifecycle.id}`,
+      `Lifecycle (id: ${
+        eventData.lifecycle.id
+      }) event '${eventName}' completed: from state '${startingState}' to state '${updatedState}'`,
       LogContext.LIFECYCLE
     );
-    const machine = createMachine(machineDef);
-    const machineWithLifecycle = machine.withContext({
-      ...machine.context,
-    });
-
-    const initialStateDef = machine.initialState;
-    const restoredState = State.create(initialStateDef);
-
-    const interpretedLifecycle = interpret(machineWithLifecycle);
-    this.logger.verbose?.(
-      `[Lifecycle] machine interpreted, starting from state: ${restoredState.value.toString()}`,
-      LogContext.LIFECYCLE
-    );
-
-    interpretedLifecycle.start(restoredState);
-
-    const stateToHydrate = interpretedLifecycle.state;
-    // Note: https://git.com/statelyai/xstate/discussions/1757
-    // restoring state has the hydrated actions, which unless removed will be executed again
-    stateToHydrate.actions = [];
-
-    //stateToHydrate._event = un;
-    const newStateStr = JSON.stringify(stateToHydrate);
-
-    // Todo: do not stop as this triggers an exit action from the last state.
-    //machineService.stop();
-    lifecycle.machineState = newStateStr;
-
-    return await this.lifecycleRepository.save(lifecycle);
+    return await this.lifecycleRepository.save(eventData.lifecycle);
   }
 
-  async getLifecycleOrFail(
+  private getNextEventsFromSnapshot(snapshot: AnyMachineSnapshot) {
+    const notes = snapshot._nodes;
+    if (!notes) {
+      this.logger.warn(
+        `No nodes found in snapshot: ${JSON.stringify(snapshot)}`,
+        LogContext.LIFECYCLE
+      );
+      return [];
+    }
+    return [...new Set([...snapshot._nodes.flatMap(sn => sn.ownEvents)])];
+  }
+
+  public async getLifecycleOrFail(
     lifecycleID: string,
     options?: FindOneOptions<Lifecycle>
   ): Promise<ILifecycle | never> {
@@ -202,89 +147,65 @@ export class LifecycleService {
     return lifecycle;
   }
 
-  getRestoredStateDefinition(lifecycle: ILifecycle) {
-    const machineDef = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    );
-    const machine = createMachine(machineDef);
-
+  private getRestoredSnapshot(
+    lifecycle: ILifecycle
+  ): AnyMachineSnapshot | undefined {
     const stateStr = lifecycle.machineState;
-    if (!stateStr) {
-      // no state stored, return initial state
-      return machine.initialState;
-    }
+    if (!stateStr) return undefined;
     return JSON.parse(stateStr);
   }
 
-  getState(lifecycle: ILifecycle): string {
-    const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
-    const state = State.create(restoredStateDef);
-    return state.value.toString();
+  public getState(lifecycle: ILifecycle, machine: AnyStateMachine): string {
+    const actor = this.getActorWithState(lifecycle, machine);
+    const snapshot = actor.getSnapshot();
+    return snapshot.value;
   }
 
-  getStates(lifecycle: ILifecycle): string[] {
-    const machineDef = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    );
-    const machine = createMachine(machineDef);
-    const states = machine.states;
-    return Object.keys(states);
+  public isFinalState(
+    lifecycle: ILifecycle,
+    machine: AnyStateMachine
+  ): boolean {
+    const actor = this.getActorWithState(lifecycle, machine);
+
+    return actor.getSnapshot().status === this.XSTATE_DONE_STATE;
   }
 
-  isFinalState(lifecycle: ILifecycle): boolean {
-    const restoredState = this.getRestoredState(lifecycle);
-    const isFinal = restoredState.done;
-    if (!isFinal) return false;
-    return isFinal;
+  // Note: cannot return a stronger typing than "any" as this then impacts the events that can be sent
+  // Need to add stronger typing to all the machines in terms of event types to be able to put AnyActor
+  // as the return type
+  private getActorWithState(
+    lifecycle: ILifecycle,
+    machine: AnyStateMachine
+  ): any {
+    const restoredState = this.getRestoredSnapshot(lifecycle);
+    const actor = createActor(machine, {
+      snapshot: restoredState,
+    });
+    actor.subscribe(snapshot => {
+      this.logger.verbose?.(
+        `XState machine state changed to ${snapshot.value}`,
+        LogContext.LIFECYCLE
+      );
+    });
+    actor.subscribe({
+      error: error => {
+        this.logger.error(
+          `XState machine error ${error}`,
+          LogContext.LIFECYCLE
+        );
+      },
+    });
+    return actor;
   }
 
-  getTemplateIdentifier(lifecycle: ILifecycle): string {
-    const templateID = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    ).id;
-    return templateID;
-  }
-
-  getNextEvents(lifecycle: ILifecycle): string[] {
-    const restoredState = this.getRestoredState(lifecycle);
-    const next = restoredState.nextEvents;
-    return next || [];
-  }
-
-  getMachineDefinition(lifecycle: ILifecycle): ILifecycleDefinition {
-    return this.deserializeLifecycleDefinition(lifecycle.machineDef);
-  }
-
-  deserializeLifecycleDefinition(value: string): ILifecycleDefinition {
-    const result: ILifecycleDefinition = JSON.parse(value);
-    return result;
-  }
-
-  serializeLifecycleDefinition(definition: ILifecycleDefinition): string {
-    const result = JSON.stringify(definition);
-    return result;
-  }
-
-  async getParentID(lifecycle: ILifecycle) {
-    const machineDefJson = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    );
-    if (machineDefJson.context && machineDefJson.context.parentID) {
-      return machineDefJson.context.parentID;
-    }
-    return '';
+  getNextEvents(lifecycle: ILifecycle, machine: AnyStateMachine): string[] {
+    const actor = this.getActorWithState(lifecycle, machine);
+    const snapshot = actor.getSnapshot();
+    const nextEvents = this.getNextEventsFromSnapshot(snapshot);
+    return nextEvents || [];
   }
 
   async save(lifecycle: Lifecycle): Promise<Lifecycle> {
     return await this.lifecycleRepository.save(lifecycle);
-  }
-
-  private getRestoredState(lifecycle: ILifecycle) {
-    const machineDef = this.deserializeLifecycleDefinition(
-      lifecycle.machineDef
-    );
-    const machine = createMachine(machineDef);
-    const restoredStateDefinition = this.getRestoredStateDefinition(lifecycle);
-    return machine.resolveState(restoredStateDefinition);
   }
 }

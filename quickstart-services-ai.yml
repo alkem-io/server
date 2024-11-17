@@ -271,7 +271,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.3.1
+    image: alkemio/whiteboard-collaboration-service:v0.5.0
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -477,3 +477,52 @@ services:
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/ory/kratos/public
       - CHUNK_SIZE=1000
       - CHUNK_OVERLAP=100
+
+  virtual_contributor_engine_generic:
+    container_name: alkemio_dev_virtual_contributor_engine_generic
+    hostname: virtual-contributor-engine-generic
+    image: alkemio/virtual-contributor-engine-generic:v0.1.1
+    platform: linux/x86_64
+    restart: always
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_PORT
+      - RABBITMQ_QUEUE=virtual-contributor-engine-generic
+      - LOCAL_PATH=./
+      - LOG_LEVEL=DEBUG
+      - LANGCHAIN_TRACING_V2
+      - LANGCHAIN_ENDPOINT
+      - LANGCHAIN_API_KEY
+      - LANGCHAIN_PROJECT=virtual-contributor-engine-generic
+      - HISTORY_LENGTH=20
+
+  virtual_contributor_engine_openai_assistant:
+    container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
+    hostname: virtual-contributor-engine-openai-assistant
+    image: alkemio/virtual-contributor-engine-openai-assistant:v0.1.0
+    platform: linux/x86_64
+    restart: always
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_PORT
+      - RABBITMQ_QUEUE=virtual-contributor-engine-openai-assistant
+      - LOCAL_PATH=./
+      - LOG_LEVEL=DEBUG

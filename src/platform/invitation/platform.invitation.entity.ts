@@ -1,30 +1,36 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { Community } from '@domain/community/community/community.entity';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { PlatformRole } from '@common/enums/platform.role';
-import { Platform } from '@platform/platfrom/platform.entity';
+import { Platform } from '@platform/platform/platform.entity';
 import {
   ENUM_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { CommunityRoleType } from '@common/enums/community.role';
 @Entity()
 export class PlatformInvitation
   extends AuthorizableEntity
   implements IPlatformInvitation
 {
-  // Platform invitations for Community
-  @ManyToOne(() => Community, community => community.platformInvitations, {
+  @ManyToOne(() => RoleSet, roleSet => roleSet.platformInvitations, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  community?: Community;
+  roleSet?: RoleSet;
 
   @Column('boolean', { default: false })
-  communityInvitedToParent!: boolean;
+  roleSetInvitedToParent!: boolean;
+
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: true,
+  })
+  roleSetExtraRole?: CommunityRoleType;
 
   // Platform invitations for Community
   @ManyToOne(() => Platform, platform => platform.platformInvitations, {

@@ -57,7 +57,7 @@ export class CollaborationResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete collaboration: ${collaboration.id}`
     );
-    return this.collaborationService.deleteCollaboration(deleteData.ID);
+    return this.collaborationService.deleteCollaborationOrFail(deleteData.ID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -87,8 +87,8 @@ export class CollaborationResolverMutations {
         agentInfo.userID
       );
 
-    const { communityPolicy, spaceSettings } =
-      await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
+    const { roleSet: communityPolicy, spaceSettings } =
+      await this.namingService.getRoleSetAndSettingsForCollaboration(
         collaboration.id
       );
     // callout needs to be saved to apply the authorization policy

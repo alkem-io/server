@@ -108,7 +108,7 @@ export class VirtualContributorResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `refresh body of knowledge: ${virtual.id}`
     );
-    return await this.virtualContributorService.refershBodyOfKnowledge(
+    return await this.virtualContributorService.refreshBodyOfKnowledge(
       virtual,
       agentInfo
     );

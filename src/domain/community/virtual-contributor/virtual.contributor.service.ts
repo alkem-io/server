@@ -38,11 +38,13 @@ import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { Invitation } from '../invitation';
+
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -56,6 +58,7 @@ export class VirtualContributorService {
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
     private accountHostService: AccountHostService,
+    private vcInteractionService: VcInteractionService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(VirtualContributor)
@@ -346,7 +349,7 @@ export class VirtualContributorService {
     return storageBucket;
   }
 
-  public async refershBodyOfKnowledge(
+  public async refreshBodyOfKnowledge(
     virtualContributor: IVirtualContributor,
     agentInfo: AgentInfo
   ): Promise<boolean> {
@@ -363,7 +366,7 @@ export class VirtualContributorService {
 
     const aiPersona = virtualContributor.aiPersona;
 
-    return await this.aiServerAdapter.refreshBodyOfKnowlege(
+    return await this.aiServerAdapter.refreshBodyOfKnowledge(
       aiPersona.aiPersonaServiceID
     );
   }
@@ -392,18 +395,34 @@ export class VirtualContributorService {
       `still need to use the context ${vcQuestionInput.contextSpaceID}, ${vcQuestionInput.userID}`,
       LogContext.AI_PERSONA_SERVICE_ENGINE
     );
+
+    const vcInteraction =
+      await this.vcInteractionService.getVcInteractionOrFail(
+        vcQuestionInput.vcInteractionID!
+      );
+
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
       question: vcQuestionInput.question,
       contextID: vcQuestionInput.contextSpaceID,
       userID: vcQuestionInput.userID,
       threadID: vcQuestionInput.threadID,
-      vcInteractionID: vcQuestionInput.vcInteractionID,
+      vcInteractionID: vcInteraction.id,
+      externalMetadata: vcInteraction.externalMetadata,
       description: virtualContributor.profile.description,
       displayName: virtualContributor.profile.displayName,
     };
 
-    return await this.aiServerAdapter.askQuestion(aiServerAdapterQuestionInput);
+    const response = await this.aiServerAdapter.askQuestion(
+      aiServerAdapterQuestionInput
+    );
+
+    if (!vcInteraction.externalMetadata.threadId && response.threadId) {
+      vcInteraction.externalMetadata.threadId = response.threadId;
+      await this.vcInteractionService.save(vcInteraction);
+    }
+
+    return response;
   }
 
   // TODO: move to store
@@ -439,7 +458,7 @@ export class VirtualContributorService {
   async save(
     virtualContributor: IVirtualContributor
   ): Promise<IVirtualContributor> {
-    return await this.virtualContributorRepository.save(virtualContributor);
+    return this.virtualContributorRepository.save(virtualContributor);
   }
 
   public async getAgent(
@@ -591,7 +610,7 @@ export class VirtualContributorService {
   //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation
   private async deleteVCInvitations(contributorID: string) {
     const invitations = await this.entityManager.find(Invitation, {
-      where: { invitedContributor: contributorID },
+      where: { invitedContributorID: contributorID },
     });
     for (const invitation of invitations) {
       if (invitation.authorization) {

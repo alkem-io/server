@@ -58,6 +58,10 @@ export default class SearchResultBuilderService
     return searchResultSpace;
   }
 
+  async [SearchResultType.SUBSPACE](rawSearchResult: ISearchResult) {
+    return this[SearchResultType.SPACE](rawSearchResult);
+  }
+
   async [SearchResultType.CHALLENGE](rawSearchResult: ISearchResult) {
     const subspace = await this.spaceService.getSpaceOrFail(
       rawSearchResult.result.id

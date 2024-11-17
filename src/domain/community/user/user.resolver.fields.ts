@@ -1,8 +1,4 @@
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@common/decorators';
+import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
@@ -32,6 +28,10 @@ import { Loader } from '@core/dataloader/decorators';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from './user.entity';
+import { AuthenticationType } from '@common/enums/authentication.type';
+import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { Identity } from '@ory/kratos-client';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -41,6 +41,7 @@ export class UserResolverFields {
     private preferenceSetService: PreferenceSetService,
     private messagingService: MessagingService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -71,7 +72,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The Agent representing this User.',
   })
-  @Profiling.api
   async agent(
     @Parent() user: User,
     @Loader(AgentLoaderCreator, { parentClassRef: User })
@@ -85,7 +85,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The Authorization for this User.',
   })
-  @Profiling.api
   async authorization(
     @Parent() user: User,
     @Loader(AuthorizationLoaderCreator, { parentClassRef: User })
@@ -133,7 +132,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'The direct rooms this user is a member of',
   })
-  @Profiling.api
   async directRooms(@Parent() user: User): Promise<DirectRoomResult[]> {
     return this.userService.getDirectRooms(user);
   }
@@ -143,7 +141,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The email address for this User.',
   })
-  @Profiling.api
   async email(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -165,7 +162,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'The phone number for this User.',
   })
-  @Profiling.api
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -209,7 +205,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'Can a message be sent to this User.',
   })
-  @Profiling.api
   async isContactable(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -243,6 +238,62 @@ export class UserResolverFields {
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(user.id);
+  }
+
+  @ResolveField('authentication', () => UserAuthenticationResult, {
+    nullable: true,
+    description: 'Details about the authentication used for this User.',
+  })
+  @UseGuards(GraphqlGuard)
+  async authentication(
+    @Parent() user: IUser,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<UserAuthenticationResult> {
+    const isCurrentUser = user.id === agentInfo.userID;
+    const platformAccessGranted = this.authorizationService.isAccessGranted(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_ADMIN
+    );
+    const result: UserAuthenticationResult = {
+      method: AuthenticationType.UNKNOWN,
+      createdAt: undefined,
+    };
+    if (isCurrentUser || platformAccessGranted) {
+      const identity = await this.kratosService.getIdentityByEmail(user.email);
+      if (identity) {
+        result.method = await this.getAuthenticationTypeFromIdentity(identity);
+        result.createdAt = await this.getCreatedAtByEmail(identity);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Retrieves the authentication type associated with a given email.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  private async getAuthenticationTypeFromIdentity(
+    identity: Identity
+  ): Promise<AuthenticationType> {
+    if (!identity) return AuthenticationType.UNKNOWN;
+    return this.kratosService.mapAuthenticationType(identity);
+  }
+
+  /**
+   * Retrieves the date at which the account associated with a given email was created.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  private async getCreatedAtByEmail(
+    identity: Identity
+  ): Promise<Date | undefined> {
+    if (!identity || !identity.created_at) return undefined;
+    return new Date(identity.created_at);
   }
 
   private async isAccessGranted(

@@ -17,7 +17,7 @@ import { ContextService } from '@domain/context/context/context.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IProfile } from '@domain/common/profile';
 import { ICallout } from '@domain/collaboration/callout';
@@ -28,10 +28,10 @@ import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { ICalendarEvent } from '@domain/timeline/event';
 import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
-import { ApplicationService } from '@domain/community/application/application.service';
-import { InvitationService } from '@domain/community/invitation/invitation.service';
-import { IApplication } from '@domain/community/application';
-import { IInvitation } from '@domain/community/invitation';
+import { ApplicationService } from '@domain/access/application/application.service';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { IApplication } from '@domain/access/application';
+import { IInvitation } from '@domain/access/invitation';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -52,7 +52,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
@@ -60,6 +60,13 @@ import { TemplateService } from '@domain/template/template/template.service';
 import { ITemplate } from '@domain/template/template/template.interface';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseService } from '@domain/common/license/license.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -85,13 +92,16 @@ export class LookupResolverFields {
     private documentService: DocumentService,
     private templateService: TemplateService,
     private templatesSetService: TemplatesSetService,
+    private templatesManagerService: TemplatesManagerService,
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
     private userService: UserService,
     private guidelinesService: CommunityGuidelinesService,
     private virtualContributorService: VirtualContributorService,
-    private innovationHubService: InnovationHubService
+    private innovationHubService: InnovationHubService,
+    private roleSetService: RoleSetService,
+    private licenseService: LicenseService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -136,6 +146,27 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField(() => IRoleSet, {
+    nullable: true,
+    description: 'Lookup the specified RoleSet',
+  })
+  async roleSet(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IRoleSet> {
+    const roleSet = await this.roleSetService.getRoleSetOrFail(id);
+    // Note: RoleSet is publicly accessible for information such as RoleDefinitions, so do not check for READ access here
+    // this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   roleSet.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `lookup RoleSet: ${roleSet.id}`
+    // );
+
+    return roleSet;
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => IDocument, {
     nullable: true,
     description: 'Lookup the specified Document',
@@ -161,9 +192,37 @@ export class LookupResolverFields {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
-    return await this.virtualContributorService.getVirtualContributorOrFail(id);
+    const virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup VirtualContributor: ${virtualContributor.id}`
+    );
+    return virtualContributor;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IUser, {
+    nullable: true,
+    description: 'A particular User',
+  })
+  async user(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
+  ): Promise<IUser> {
+    const user = await this.userService.getUserOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      user.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup User: ${user.id}`
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -611,6 +670,27 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField(() => ITemplatesManager, {
+    nullable: true,
+    description: 'Lookup the specified TemplatesManager',
+  })
+  async templatesManager(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ITemplatesManager> {
+    const templatesManager =
+      await this.templatesManagerService.getTemplatesManagerOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesManager.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup TemplatesManager: ${templatesManager.id}`
+    );
+
+    return templatesManager;
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICommunityGuidelines, {
     nullable: true,
     description: 'Lookup the specified Community guidelines',
@@ -629,5 +709,18 @@ export class LookupResolverFields {
     );
 
     return guidelines;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ILicense, {
+    nullable: true,
+    description: 'Lookup the specified License',
+  })
+  async license(
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ILicense> {
+    const license = await this.licenseService.getLicenseOrFail(id);
+
+    return license;
   }
 }

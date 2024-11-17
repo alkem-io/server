@@ -122,7 +122,7 @@ export class CalloutResolverMutations {
     const savedCallout =
       await this.calloutService.updateCalloutVisibility(calloutData);
 
-    if (savedCallout.visibility !== oldVisibility) {
+    if (!savedCallout.isTemplate && savedCallout.visibility !== oldVisibility) {
       if (savedCallout.visibility === CalloutVisibility.PUBLISHED) {
         // Save published info
         await this.calloutService.updateCalloutPublishInfo(
@@ -225,12 +225,15 @@ export class CalloutResolverMutations {
         );
     }
 
-    const contribution = await this.calloutService.createContributionOnCallout(
+    let contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
       agentInfo.userID
     );
 
-    await this.calloutContributionService.save(contribution);
+    const { roleSet, spaceSettings } =
+      await this.namingService.getRoleSetAndSettingsForCallout(callout.id);
+    contribution = await this.calloutContributionService.save(contribution);
+
     const destinationStorageBucket =
       await this.calloutContributionService.getStorageBucketForContribution(
         contribution.id
@@ -242,17 +245,11 @@ export class CalloutResolverMutations {
       contributionData,
       destinationStorageBucket
     );
-
-    // Ensure settings are available
-    const { communityPolicy, spaceSettings } =
-      await this.namingService.getCommunityPolicyAndSettingsForCallout(
-        callout.id
-      );
     const updatedAuthorizations =
       await this.contributionAuthorizationService.applyAuthorizationPolicy(
         contribution.id,
         callout.authorization,
-        communityPolicy,
+        roleSet,
         spaceSettings
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);

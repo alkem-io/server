@@ -7,7 +7,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LookupByNameQueryResults } from './dto/lookup.by.name.query.results';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { NameID, UUID } from '@domain/common/scalars';
 import { TemplateService } from '@domain/template/template/template.service';
@@ -31,7 +31,7 @@ export class LookupByNameResolverFields {
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<IInnovationPack> {
     const innovationPack =
-      await this.innovationPackService.getInnovationPackOrFail(nameid);
+      await this.innovationPackService.getInnovationPackByNameIdOrFail(nameid);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       innovationPack.authorization,
@@ -46,23 +46,24 @@ export class LookupByNameResolverFields {
   @ResolveField(() => ITemplate, {
     nullable: true,
     description:
-      'Lookup the specified Template using a templatesSetId and NameID',
+      'Lookup the specified Template using a templatesSetId and the template NameID',
   })
   async template(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('templatesSetID', { type: () => UUID }) ID: string,
     @Args('NAMEID', { type: () => NameID }) nameID: string
   ): Promise<ITemplate> {
-    const template = await this.templateService.getTemplateInTemplatesSetOrFail(
-      ID,
-      nameID
-    );
+    const template =
+      await this.templateService.getTemplateByNameIDInTemplatesSetOrFail(
+        ID,
+        nameID
+      );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       template.authorization,
       AuthorizationPrivilege.READ,
-      `lookup InnovationPack by NameID: ${template.id}`
+      `lookup template by NameID: ${template.id}`
     );
 
     return template;

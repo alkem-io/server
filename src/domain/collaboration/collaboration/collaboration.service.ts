@@ -26,7 +26,6 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -38,11 +37,11 @@ import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { keyBy } from 'lodash';
+import { compact, keyBy } from 'lodash';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
-import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
+import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
@@ -54,6 +53,11 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { Callout } from '@domain/collaboration/callout';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
+import { IRoleSet } from '@domain/access/role-set';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 
 @Injectable()
 export class CollaborationService {
@@ -70,7 +74,8 @@ export class CollaborationService {
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private timelineService: TimelineService,
-    private calloutGroupsService: CalloutGroupsService
+    private calloutGroupsService: CalloutGroupsService,
+    private licenseService: LicenseService
   ) {}
 
   async createCollaboration(
@@ -94,10 +99,14 @@ export class CollaborationService {
       AuthorizationPolicyType.COLLABORATION
     );
     collaboration.callouts = [];
-    collaboration.timeline = this.timelineService.createTimeline();
     collaboration.groupsStr = this.calloutGroupsService.serializeGroups(
       collaborationData.calloutGroups
     );
+    collaboration.isTemplate = collaborationData.isTemplate || false;
+
+    if (!collaboration.isTemplate) {
+      collaboration.timeline = this.timelineService.createTimeline();
+    }
 
     collaboration.tagsetTemplateSet =
       this.tagsetTemplateSetService.createTagsetTemplateSet();
@@ -121,6 +130,24 @@ export class CollaborationService {
         collaboration.tagsetTemplateSet,
         groupTagsetTemplateInput
       );
+
+    collaboration.license = await this.licenseService.createLicense({
+      type: LicenseType.COLLABORATION,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+      ],
+    });
 
     // save the tagset template so can use it in the innovation flow as a template for it's tags
     await this.tagsetTemplateSetService.save(collaboration.tagsetTemplateSet);
@@ -150,6 +177,12 @@ export class CollaborationService {
         [statesTagsetTemplate],
         storageAggregator
       );
+
+    this.moveCalloutsToDefaultGroupAndState(
+      groupTagsetTemplateInput.allowedValues,
+      statesTagsetTemplate.allowedValues,
+      collaboration.callouts
+    );
 
     return collaboration;
   }
@@ -186,7 +219,7 @@ export class CollaborationService {
     return tagsetTemplateDataStates;
   }
 
-  private async addCallouts(
+  public async addCallouts(
     collaboration: ICollaboration,
     calloutsData: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,
@@ -198,17 +231,35 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
+    const calloutNameIds: string[] = compact(
+      collaboration.callouts?.map(callout => callout.nameID)
+    );
 
     const callouts: ICallout[] = [];
     for (const calloutDefault of calloutsData) {
+      if (
+        !calloutDefault.nameID ||
+        calloutNameIds.includes(calloutDefault.nameID)
+      ) {
+        calloutDefault.nameID =
+          this.namingService.createNameIdAvoidingReservedNameIDs(
+            calloutDefault.framing.profile.displayName,
+            calloutNameIds
+          );
+        calloutNameIds.push(calloutDefault.nameID);
+      }
+      if (
+        !calloutDefault.isTemplate &&
+        calloutDefault.type === CalloutType.POST
+      ) {
+        calloutDefault.enableComments = true;
+      }
       const callout = await this.calloutService.createCallout(
         calloutDefault,
         collaboration.tagsetTemplateSet.tagsetTemplates,
         storageAggregator,
         userID
       );
-      // default callouts are already published
-      callout.visibility = CalloutVisibility.PUBLISHED;
       callouts.push(callout);
     }
     return callouts;
@@ -303,9 +354,9 @@ export class CollaborationService {
     return [];
   }
 
-  public async deleteCollaboration(
+  public async deleteCollaborationOrFail(
     collaborationID: string
-  ): Promise<ICollaboration> {
+  ): Promise<ICollaboration | never> {
     // Note need to load it in with all contained entities so can remove fully
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: {
@@ -313,14 +364,15 @@ export class CollaborationService {
         timeline: true,
         innovationFlow: true,
         authorization: true,
+        license: true,
       },
     });
 
     if (
       !collaboration.callouts ||
-      !collaboration.timeline ||
       !collaboration.innovationFlow ||
-      !collaboration.authorization
+      !collaboration.authorization ||
+      !collaboration.license
     )
       throw new RelationshipNotFoundException(
         `Unable to remove Collaboration: missing child entities ${collaboration.id} `,
@@ -331,13 +383,17 @@ export class CollaborationService {
       await this.calloutService.deleteCallout(callout.id);
     }
 
-    await this.timelineService.deleteTimeline(collaboration.timeline.id);
+    if (collaboration.timeline) {
+      // There's no timeline for collaboration templates
+      await this.timelineService.deleteTimeline(collaboration.timeline.id);
+    }
 
     await this.authorizationPolicyService.delete(collaboration.authorization);
 
     await this.innovationFlowService.deleteInnovationFlow(
       collaboration.innovationFlow.id
     );
+    await this.licenseService.removeLicenseOrFail(collaboration.license.id);
 
     return await this.collaborationRepository.remove(
       collaboration as Collaboration
@@ -690,14 +746,12 @@ export class CollaborationService {
     return result.whiteboardsCount;
   }
 
-  public async getCommunityPolicy(
-    collaborationID: string
-  ): Promise<ICommunityPolicy> {
-    const { communityPolicy } =
-      await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
+  public async getRoleSet(collaborationID: string): Promise<IRoleSet> {
+    const { roleSet } =
+      await this.namingService.getRoleSetAndSettingsForCollaboration(
         collaborationID
       );
-    return communityPolicy;
+    return roleSet;
   }
 
   public async updateCalloutsSortOrder(
@@ -756,5 +810,71 @@ export class CollaborationService {
     );
 
     return calloutsInOrder;
+  }
+
+  /**
+   * Move callouts that are not in valid groups or flowStates to the default group & first flowState
+   * @param callouts
+   */
+  public moveCalloutsToDefaultGroupAndState(
+    validGroupNames: string[],
+    validFlowStateNames: string[],
+    callouts: {
+      framing: {
+        profile: {
+          tagsets?: {
+            name: string;
+            type?: TagsetType;
+            tags?: string[];
+          }[];
+        };
+      };
+    }[]
+  ): void {
+    const defaultGroupName: string | undefined = validGroupNames?.[0];
+    const defaultFlowStateName: string | undefined = validFlowStateNames?.[0];
+
+    for (const callout of callouts) {
+      if (!callout.framing.profile.tagsets) {
+        callout.framing.profile.tagsets = [];
+      }
+      let calloutGroupTagset = callout.framing.profile.tagsets?.find(
+        tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
+      );
+      let flowStateTagset = callout.framing.profile.tagsets?.find(
+        tagset => tagset.name === TagsetReservedName.FLOW_STATE
+      );
+
+      if (defaultGroupName) {
+        if (!calloutGroupTagset) {
+          calloutGroupTagset = {
+            name: TagsetReservedName.CALLOUT_GROUP,
+            type: TagsetType.SELECT_ONE,
+            tags: [defaultGroupName],
+          };
+          callout.framing.profile.tagsets.push(calloutGroupTagset);
+        } else {
+          const calloutGroup = calloutGroupTagset.tags?.[0];
+          if (!calloutGroup || !validGroupNames.includes(calloutGroup)) {
+            calloutGroupTagset.tags = [defaultGroupName];
+          }
+        }
+      }
+      if (defaultFlowStateName) {
+        if (!flowStateTagset) {
+          flowStateTagset = {
+            name: TagsetReservedName.FLOW_STATE,
+            type: TagsetType.SELECT_ONE,
+            tags: [defaultFlowStateName],
+          };
+          callout.framing.profile.tagsets.push(flowStateTagset);
+        } else {
+          const flowState = flowStateTagset.tags?.[0];
+          if (!flowState || !validFlowStateNames.includes(flowState)) {
+            flowStateTagset.tags = [defaultFlowStateName];
+          }
+        }
+      }
+    }
   }
 }

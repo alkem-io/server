@@ -5,7 +5,7 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { IInnovationPack } from './innovation.pack.interface';
-import { InnovationPackService } from './innovaton.pack.service';
+import { InnovationPackService } from './innovation.pack.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';

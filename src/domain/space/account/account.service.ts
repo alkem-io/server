@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -23,7 +24,7 @@ import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.inno
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { SpaceLevel } from '@common/enums/space.level';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -35,6 +36,7 @@ import { AccountHostService } from '../account.host/account.host.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicenseCredential } from '@common/enums/license.credential';
+import { LicenseService } from '@domain/common/license/license.service';
 
 @Injectable()
 export class AccountService {
@@ -50,6 +52,7 @@ export class AccountService {
     private innovationPackService: InnovationPackService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private namingService: NamingService,
+    private licenseService: LicenseService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -92,25 +95,35 @@ export class AccountService {
     spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
-    let space = await this.spaceService.createSpace(
-      spaceData,
-      undefined,
-      agentInfo
-    );
+    let space = await this.spaceService.createSpace(spaceData, agentInfo);
     space.account = account;
 
     space = await this.spaceService.save(space);
 
-    if (agentInfo) {
-      await this.spaceService.assignUserToRoles(space, agentInfo);
-    }
-    const spaceWithAgent = await this.spaceService.getSpaceOrFail(space.id, {
+    space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
+        community: {
+          roleSet: true,
+        },
         agent: true,
       },
     });
-    await this.accountHostService.assignLicensePlansToSpace(
-      spaceWithAgent,
+    if (!space.agent || !space.community || !space.community.roleSet) {
+      throw new EntityNotInitializedException(
+        `Unable to load space ${space.id} with required entities for creating space`,
+        LogContext.SPACES
+      );
+    }
+    const spaceAgent = space.agent;
+    const roleSet = space.community.roleSet;
+
+    if (agentInfo) {
+      await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+    }
+
+    space.agent = await this.accountHostService.assignLicensePlansToSpace(
+      spaceAgent,
+      space.id,
       account.type,
       spaceData.licensePlanID
     );
@@ -125,7 +138,7 @@ export class AccountService {
     return await this.accountRepository.save(account);
   }
 
-  async deleteAccount(accountInput: IAccount): Promise<IAccount> {
+  async deleteAccountOrFail(accountInput: IAccount): Promise<IAccount | never> {
     const accountID = accountInput.id;
     const account = await this.getAccountOrFail(accountID, {
       relations: {
@@ -135,6 +148,7 @@ export class AccountService {
         innovationPacks: true,
         storageAggregator: true,
         innovationHubs: true,
+        license: true,
       },
     });
 
@@ -144,7 +158,8 @@ export class AccountService {
       !account.virtualContributors ||
       !account.storageAggregator ||
       !account.innovationHubs ||
-      !account.innovationPacks
+      !account.innovationPacks ||
+      !account.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
@@ -155,6 +170,8 @@ export class AccountService {
     await this.agentService.deleteAgent(account.agent.id);
 
     await this.storageAggregatorService.delete(account.storageAggregator.id);
+
+    await this.licenseService.removeLicenseOrFail(account.license.id);
 
     for (const vc of account.virtualContributors) {
       await this.virtualContributorService.deleteVirtualContributor(vc.id);
@@ -168,7 +185,7 @@ export class AccountService {
     }
 
     for (const space of account.spaces) {
-      await this.spaceService.deleteSpace({ ID: space.id });
+      await this.spaceService.deleteSpaceOrFail({ ID: space.id });
     }
 
     const result = await this.accountRepository.remove(account as Account);

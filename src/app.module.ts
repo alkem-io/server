@@ -46,7 +46,7 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
 import { GeoLocationModule } from '@services/external/geo-location';
-import { PlatformModule } from '@platform/platfrom/platform.module';
+import { PlatformModule } from '@platform/platform/platform.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
@@ -66,7 +66,6 @@ import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.mo
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
-import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
@@ -77,14 +76,32 @@ import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/wh
 import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
 import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
-import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
+import { PlatformRoleModule } from '@platform/platform.role/platform.role.module';
 import { LookupByNameModule } from '@services/api/lookup-by-name';
-import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
+import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
+import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
+import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
+import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
 
 @Module({
   imports: [
+    EncryptionModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const key = configService.get('security.encryption_key', {
+          infer: true,
+        });
+
+        return {
+          key,
+          cipher: Cipher.AES_256_CBC,
+        };
+      },
+    }),
     ConfigModule.forRoot({
       envFilePath: ['.env'],
       isGlobal: true,
@@ -231,6 +248,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
         };
       },
     }),
+    LoaderCreatorModule,
     ScalarsModule,
     AuthenticationModule,
     AuthorizationModule,
@@ -242,6 +260,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     RolesModule,
     KonfigModule,
     AdminContributorsModule,
+    AdminUsersModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
@@ -261,7 +280,6 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
-    IpfsLogModule,
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,
@@ -276,6 +294,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     WhiteboardIntegrationModule,
     FileIntegrationModule,
     PlatformSettingsModule,
+    TemplateApplierModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

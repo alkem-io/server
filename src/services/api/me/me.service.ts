@@ -40,20 +40,32 @@ export class MeService {
     );
     const results: CommunityInvitationResult[] = [];
     for (const invitation of invitations) {
-      if (!invitation.community) {
+      if (!invitation.roleSet) {
         throw new EntityNotFoundException(
           `Community not found for invitation ${invitation.id}`,
           LogContext.COMMUNITY
         );
       }
       const space =
-        await this.communityResolverService.getSpaceForCommunityOrFail(
-          invitation.community.id
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          invitation.roleSet.id
         );
+      if (!space.profile || !space.context) {
+        throw new EntityNotFoundException(
+          `Missing entities on Space loaded for Invitation ${invitation.id}`,
+          LogContext.COMMUNITY
+        );
+      }
       results.push({
         id: `${invitation.id}`,
         invitation: invitation,
-        space: space,
+        spacePendingMembershipInfo: {
+          id: space.id,
+          level: space.level,
+          profile: space.profile,
+          context: space.context,
+          communityGuidelines: space.community?.guidelines,
+        },
       });
     }
     return results;
@@ -67,20 +79,32 @@ export class MeService {
       await this.rolesService.getCommunityApplicationsForUser(userId, states);
     const results: CommunityApplicationResult[] = [];
     for (const application of applications) {
-      if (!application.community) {
+      if (!application.roleSet) {
         throw new EntityNotFoundException(
           `Community not found for application ${application.id}`,
           LogContext.COMMUNITY
         );
       }
       const space =
-        await this.communityResolverService.getSpaceForCommunityOrFail(
-          application.community.id
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          application.roleSet.id
         );
+      if (!space.profile || !space.context) {
+        throw new EntityNotFoundException(
+          `Missing entities on Space loaded for Application ${application.id}`,
+          LogContext.COMMUNITY
+        );
+      }
       results.push({
         id: `${application.id}`,
         application: application,
-        space: space,
+        spacePendingMembershipInfo: {
+          id: space.id,
+          level: space.level,
+          profile: space.profile,
+          context: space.context,
+          communityGuidelines: space.community?.guidelines,
+        },
       });
     }
     return results;

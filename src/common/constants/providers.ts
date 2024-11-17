@@ -2,10 +2,6 @@ export const SUBSCRIPTION_DISCUSSION_UPDATED =
   'alkemio-subscriptions-discussion-updated';
 export const SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED =
   'alkemio-subscriptions-vritual-contributor-updated';
-export const SUBSCRIPTION_WHITEBOARD_CONTENT =
-  'alkemio-subscriptions-whiteboard-content';
-export const SUBSCRIPTION_WHITEBOARD_SAVED =
-  'alkemio-subscriptions-whiteboard-saved';
 export const SUBSCRIPTION_CALLOUT_POST_CREATED =
   'alkemio-subscriptions-callout-post-created';
 export const SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL =
@@ -21,6 +17,10 @@ export const VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER =
   'virtual-contributor-engine-community-manager';
 export const VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT =
   'virtual-contributor-engine-expert';
+export const VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC =
+  'virtual-contributor-engine-generic';
+export const VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT =
+  'virtual-contributor-engine-openai-assistant';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
 export const REDIS_LOCK_SERVICE = 'redis-lock-service';

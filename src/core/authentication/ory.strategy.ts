@@ -6,12 +6,12 @@ import { Strategy, ExtractJwt } from 'passport-jwt';
 import { AuthenticationService } from './authentication.service';
 import { passportJwtSecret } from 'jwks-rsa';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
-import { KratosPayload } from './kratos.payload';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
 import { SessionExpiredException } from '@common/exceptions/session.expired.exception';
 import { AlkemioConfig } from '@src/types';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
