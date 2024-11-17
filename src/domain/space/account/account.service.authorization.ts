@@ -145,9 +145,6 @@ export class AccountAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    const clonedAccountAuth =
-      await this.getClonedAccountAuthExtendedForChildEntities(account);
-
     for (const space of account.spaces) {
       const spaceAuthorizations =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
@@ -178,6 +175,10 @@ export class AccountAuthorizationService {
         account.authorization
       );
     updatedAuthorizations.push(...storageAggregatorAuthorizations);
+
+    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
+    const clonedAccountAuth =
+      await this.getClonedAccountAuthExtendedForChildEntities(account);
 
     for (const vc of account.virtualContributors) {
       const updatedVcAuthorizations =
@@ -282,7 +283,6 @@ export class AccountAuthorizationService {
     accountHostManage.cascade = true;
     newRules.push(accountHostManage);
 
-    // If the user is a beta tester or part of VC campaign then can create the resources
     const createSpace = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_SPACE],
       [...hostCredentials],
