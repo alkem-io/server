@@ -197,7 +197,8 @@ export class SpaceResolverMutations {
     const displayName = subspace.profile.displayName;
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        subspace.id
+        subspace.id,
+        space.authorization // Important, and will be stored
       );
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);

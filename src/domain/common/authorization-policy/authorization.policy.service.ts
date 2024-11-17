@@ -151,7 +151,7 @@ export class AuthorizationPolicyService {
     return authorization;
   }
 
-  reset(
+  public reset(
     authorizationPolicy: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     if (!authorizationPolicy) {

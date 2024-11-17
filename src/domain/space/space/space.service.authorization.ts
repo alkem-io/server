@@ -25,6 +25,7 @@ import {
   CREDENTIAL_RULE_SUBSPACE_ADMINS,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
+  CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
 } from '@common/constants';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
@@ -38,12 +39,13 @@ import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
-import { ILicense } from '@domain/common/license/license.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 
 @Injectable()
 export class SpaceAuthorizationService {
   constructor(
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentAuthorizationService: AgentAuthorizationService,
     private roleSetService: RoleSetService,
@@ -60,31 +62,20 @@ export class SpaceAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    spaceID: string
+    spaceID: string,
+    providedParentAuthorization?: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
-    // Space needs to know whether to use the provided parent authorization policy or not
-    // Three key scenarios a) space (L0) in account, space in subspace, space in Template
-    // For both a + b the space currently picks up the account authorization, which is not
-    // correct as the account is just where the space is hosted, the account owner(s) etc
-    // should not automatically have any rights in the spaces there.
-    // TBD: rights of account need discussion. They should be able to take hosting related
-    // actions like being able to remove licenses or de-activating it, but not set admins
-    // or automatically see inside the spaces.
-    // For scenario a, the space should pick up a base space authorization. Or just use
-    // the passed in base space authorization, which the account service supplies?
-    // For scenario b, if the subspace is private then it should also pick up the same
-    // base authorization.
-    // For scenario c, the space should use the passed in parent authorization
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
+        authorization: {
+          parentAuthorizationPolicy: true,
+        },
         parentSpace: {
-          authorization: true,
           community: {
             roleSet: true,
           },
         },
         agent: true,
-        authorization: true,
         community: {
           roleSet: true,
         },
@@ -94,18 +85,13 @@ export class SpaceAuthorizationService {
         storageAggregator: true,
         subspaces: true,
         templatesManager: true,
-        license: {
-          entitlements: true,
-        },
       },
     });
     if (
       !space.authorization ||
       !space.community ||
       !space.community.roleSet ||
-      !space.subspaces ||
-      !space.license ||
-      !space.license.entitlements
+      !space.subspaces
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
@@ -113,69 +99,74 @@ export class SpaceAuthorizationService {
       );
     }
 
-    // Get the root space agent for licensing related logic
-    const spaceLicense = space.license;
-
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const spaceVisibility = space.visibility;
-
-    // Allow the parent admins to also delete subspaces
-    let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
-    if (space.parentSpace) {
-      const parentSpaceCommunity = space.parentSpace.community;
-      if (!parentSpaceCommunity || !parentSpaceCommunity.roleSet) {
-        throw new RelationshipNotFoundException(
-          `Unable to load Space with parent RoleSet in auth reset: ${space.id} `,
-          LogContext.SPACES
-        );
-      }
-
-      const spaceSettings = this.spaceSettingsService.getSettings(
-        space.settingsStr
-      );
-      parentSpaceAdminCredentialCriterias =
-        await this.roleSetService.getCredentialsForRole(
-          parentSpaceCommunity.roleSet,
-          CommunityRoleType.ADMIN,
-          spaceSettings
-        );
-    }
-
-    space.authorization = this.authorizationPolicyService.reset(
-      space.authorization
-    );
-
     const spaceSettings = this.spaceSettingsService.getSettings(
       space.settingsStr
     );
-    const privateSpace =
-      spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE;
+    const isPrivate = spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE;
 
-    // Choose what authorization to inherit from
-    let parentAuthorization: IAuthorizationPolicy | undefined;
-    if (space.level === SpaceLevel.SPACE || privateSpace) {
-      const accountAuthorization = await this.getAccountAuthorization(space);
-      parentAuthorization = accountAuthorization;
-    } else {
-      if (!space.parentSpace || !space.parentSpace.authorization) {
-        throw new EntityNotInitializedException(
-          `Parent authorization not found on subspace auth reset: ${space.id} `,
-          LogContext.SPACES
-        );
-      }
-      parentAuthorization = space.parentSpace.authorization;
+    // Store the provided parent authorization so that later resets can happen
+    // without having access to it.
+    // Note: reset does not remove this setting.
+    if (providedParentAuthorization) {
+      space.authorization.parentAuthorizationPolicy =
+        providedParentAuthorization;
     }
 
-    space.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        space.authorization,
-        parentAuthorization
-      );
-
-    space.authorization = await this.extendPlatformSettingsAdmin(
-      space.authorization
-    );
+    // Note: later will need additional logic here for Templates
+    // Allow the parent admins to also delete subspaces
+    let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
+    space.authorization.anonymousReadAccess = false;
+    switch (space.level) {
+      case SpaceLevel.SPACE:
+        space.authorization = this.resetToLevelZeroSpaceAuthorization(
+          space.authorization
+        );
+        if (!isPrivate) {
+          space.authorization.anonymousReadAccess = true;
+        }
+        break;
+      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.OPPORTUNITY:
+        if (isPrivate) {
+          // Key: private get the base space authorization setup, that is then extended
+          space.authorization = this.resetToLevelZeroSpaceAuthorization(
+            space.authorization
+          );
+          space.authorization = await this.extendPrivateSubspaceAdmins(
+            space.authorization,
+            space.community.roleSet,
+            spaceSettings
+          );
+        } else {
+          // Pick up the parent authorization
+          const parentAuthorization =
+            this.getParentAuthorizationPolicyOrFail(space);
+          space.authorization =
+            this.authorizationPolicyService.inheritParentAuthorization(
+              space.authorization,
+              parentAuthorization
+            );
+          space.authorization.anonymousReadAccess = true;
+        }
+        // For subspace, the parent space admins credentials should be allowed to delete
+        const parentSpaceCommunity = space.parentSpace?.community;
+        if (!parentSpaceCommunity || !parentSpaceCommunity.roleSet) {
+          throw new RelationshipNotFoundException(
+            `Unable to load Space with parent RoleSet in auth reset: ${space.id} `,
+            LogContext.SPACES
+          );
+        }
+        parentSpaceAdminCredentialCriterias =
+          await this.roleSetService.getCredentialsForRole(
+            parentSpaceCommunity.roleSet,
+            CommunityRoleType.ADMIN,
+            spaceSettings
+          );
+        break;
+    }
 
     let spaceMembershipAllowed = true;
     // Extend rules depending on the Visibility
@@ -188,23 +179,6 @@ export class SpaceAuthorizationService {
           spaceSettings,
           parentSpaceAdminCredentialCriterias
         );
-
-        //
-        if (privateSpace) {
-          space.authorization.anonymousReadAccess = false;
-          if (space.level !== SpaceLevel.SPACE) {
-            space.authorization = await this.extendPrivateSubspaceAdmins(
-              space.authorization,
-              space.community.roleSet,
-              spaceSettings
-            );
-          }
-        } else {
-          // Public space. Inherit from parent, or if top level directly
-          if (space.level === SpaceLevel.SPACE) {
-            space.authorization.anonymousReadAccess = true;
-          }
-        }
 
         break;
       case SpaceVisibility.ARCHIVED:
@@ -224,7 +198,6 @@ export class SpaceAuthorizationService {
     // propagate authorization rules for child entities
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
-      spaceLicense,
       spaceSettings,
       spaceMembershipAllowed
     );
@@ -233,7 +206,8 @@ export class SpaceAuthorizationService {
     // Finally propagate to child spaces
     for (const subspace of space.subspaces) {
       const updatedSubspaceAuthorizations = await this.applyAuthorizationPolicy(
-        subspace.id
+        subspace.id,
+        space.authorization
       );
       this.logger.verbose?.(
         `Subspace (${subspace.id}) auth reset: saving ${updatedSubspaceAuthorizations.length} authorizations`,
@@ -247,24 +221,22 @@ export class SpaceAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private async getAccountAuthorization(
+  private getParentAuthorizationPolicyOrFail(
     space: ISpace
-  ): Promise<IAuthorizationPolicy> {
-    const account =
-      await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
-    const accountAuthorization = account?.authorization;
-    if (!accountAuthorization) {
+  ): IAuthorizationPolicy | never {
+    // This will either pick up the one that was passed in or the stored reference
+    const parentAuthorization = space.authorization?.parentAuthorizationPolicy;
+    if (!parentAuthorization) {
       throw new RelationshipNotFoundException(
-        `Coulnd't find authorization for space: ${space.id} `,
+        `Space auth reset: Non L0 or private Space found without a parent Authorization set: ${space.id} `,
         LogContext.SPACES
       );
     }
-    return accountAuthorization;
+    return parentAuthorization;
   }
 
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
-    spaceLicense: ILicense,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicy[]> {
@@ -529,22 +501,28 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  private async extendPlatformSettingsAdmin(
-    authorization: IAuthorizationPolicy | undefined
-  ): Promise<IAuthorizationPolicy> {
-    if (!authorization) {
-      throw new EntityNotInitializedException(
-        'Authorization definition not found for account',
-        LogContext.ACCOUNT
+  private resetToLevelZeroSpaceAuthorization(
+    authorizationPolicy: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    let updatedAuthorization =
+      this.authorizationPolicyService.reset(authorizationPolicy);
+    updatedAuthorization.anonymousReadAccess = false;
+    updatedAuthorization =
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+        updatedAuthorization
       );
-    }
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global admins to manage platform settings
+    // Allow global admins to manage platform settings + reset auth / license
+    // TBD: to allow account admins to some settings?
     const platformSettings =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
+          AuthorizationPrivilege.LICENSE_RESET,
+          AuthorizationPrivilege.PLATFORM_ADMIN,
+        ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
@@ -554,8 +532,17 @@ export class SpaceAuthorizationService {
     platformSettings.cascade = false;
     newRules.push(platformSettings);
 
+    // Allow Global Spaces Read to view Spaces
+    const globalSpacesReader =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_SPACES_READER],
+        CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+      );
+    newRules.push(globalSpacesReader);
+
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
+      updatedAuthorization,
       newRules
     );
   }
