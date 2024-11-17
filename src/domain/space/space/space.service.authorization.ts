@@ -93,8 +93,7 @@ export class SpaceAuthorizationService {
       !space.community ||
       !space.community.roleSet ||
       !space.subspaces ||
-      !space.license ||
-      !space.license.entitlements
+      !space.license
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
