@@ -85,6 +85,7 @@ export class SpaceAuthorizationService {
         storageAggregator: true,
         subspaces: true,
         templatesManager: true,
+        license: true,
       },
     });
     if (
@@ -118,7 +119,6 @@ export class SpaceAuthorizationService {
     // Note: later will need additional logic here for Templates
     // Allow the parent admins to also delete subspaces
     let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
-    space.authorization.anonymousReadAccess = false;
     switch (space.level) {
       case SpaceLevel.SPACE:
         space.authorization = this.resetToLevelZeroSpaceAuthorization(
@@ -514,15 +514,11 @@ export class SpaceAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global admins to manage platform settings + reset auth / license
-    // TBD: to allow account admins to some settings?
+    // Allow global admins to manage platform settings
+    // Later: to allow account admins to some settings?
     const platformSettings =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.AUTHORIZATION_RESET,
-          AuthorizationPrivilege.LICENSE_RESET,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
-        ],
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
