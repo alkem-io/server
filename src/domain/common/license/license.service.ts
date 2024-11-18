@@ -180,7 +180,7 @@ export class LicenseService {
       e => e.type === childEntitlement.type
     );
     if (!parentEntitlement) {
-      throw new RelationshipNotFoundException(
+      throw new EntityNotFoundException(
         `Parent entitlement not found: ${childEntitlement.type}`,
         LogContext.LICENSE
       );
@@ -194,7 +194,7 @@ export class LicenseService {
     license: ILicense | undefined
   ): ILicenseEntitlement[] | never {
     if (!license) {
-      throw new RelationshipNotFoundException(
+      throw new EntityNotFoundException(
         'Unable to load Entitlements for License',
         LogContext.LICENSE
       );
