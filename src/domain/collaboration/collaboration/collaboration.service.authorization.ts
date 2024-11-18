@@ -15,8 +15,6 @@ import {
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
-  CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE,
-  POLICY_RULE_COLLABORATION_WHITEBOARD_CONTRIBUTORS_CREATE,
 } from '@common/constants';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
@@ -233,15 +231,6 @@ export class CollaborationAuthorizationService {
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
-    const saveAsTemplateRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.SAVE_AS_TEMPLATE],
-        adminCriterias,
-        CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE
-      );
-
-    saveAsTemplateRule.cascade = false;
-    newRules.push(saveAsTemplateRule);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -304,14 +293,6 @@ export class CollaborationAuthorizationService {
         POLICY_RULE_CALLOUT_CONTRIBUTE
       );
       privilegeRules.push(createCalloutPrivilege);
-
-      const createWhiteboardRtContributePrivilege =
-        new AuthorizationPolicyRulePrivilege(
-          [AuthorizationPrivilege.CREATE_WHITEBOARD_RT],
-          AuthorizationPrivilege.CONTRIBUTE,
-          POLICY_RULE_COLLABORATION_WHITEBOARD_CONTRIBUTORS_CREATE
-        );
-      privilegeRules.push(createWhiteboardRtContributePrivilege);
     }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
