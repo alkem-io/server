@@ -131,8 +131,4 @@ export class ChatGuidanceService {
       infer: true,
     });
   }
-
-  private getGuidanceRoomDisplayNameForUser(agentInfo: AgentInfo) {
-    return `${agentInfo.communicationID}-guidance`;
-  }
 }
