@@ -4,7 +4,7 @@ import { UpdateNotificationStateInput } from './dto/in.app.notification.state.up
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
 @Resolver()
-export class InAppNotificationResolverMutaitons {
+export class InAppNotificationResolverMutations {
   constructor(
     private readonly inAppNotificationReader: InAppNotificationReader
   ) {}
