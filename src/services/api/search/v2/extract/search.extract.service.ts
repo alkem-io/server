@@ -85,7 +85,11 @@ export class SearchExtractService {
       onlyPublicResults
     );
     // the main search query built using query DSL
-    const query = buildSearchQuery(terms, searchData.searchInSpaceFilter);
+    const query = buildSearchQuery(
+      terms,
+      searchData.searchInSpaceFilter,
+      onlyPublicResults
+    );
     // used with function_score to boost results based on visibility
     const functions = functionScoreFunctions;
 
