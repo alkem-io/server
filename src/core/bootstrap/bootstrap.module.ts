@@ -19,14 +19,16 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
-import { LicensingModule } from '@platform/licensing/licensing.module';
+import { LicenseModule } from '@domain/common/license/license.module';
 import { LicensePlanModule } from '@platform/license-plan/license.plan.module';
+import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
 
 @Module({
   imports: [
     AiServerModule,
     AgentModule,
     AuthorizationPolicyModule,
+    LicenseModule,
     ContributorModule,
     SpaceModule,
     OrganizationModule,
@@ -43,7 +45,7 @@ import { LicensePlanModule } from '@platform/license-plan/license.plan.module';
     TemplatesSetModule,
     TemplatesManagerModule,
     TemplateDefaultModule,
-    LicensingModule,
+    LicensingFrameworkModule,
     LicensePlanModule,
   ],
   providers: [BootstrapService],

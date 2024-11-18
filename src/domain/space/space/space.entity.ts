@@ -20,6 +20,7 @@ import { Agent } from '@domain/agent/agent/agent.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Profile } from '@domain/common/profile';
 import { TemplatesManager } from '@domain/template/templates-manager';
+import { License } from '@domain/common/license/license.entity';
 import { SpaceLevel } from '@common/enums/space.level';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
@@ -117,6 +118,14 @@ export class Space extends NameableEntity implements ISpace {
   })
   @JoinColumn()
   templatesManager?: TemplatesManager;
+
+  @OneToOne(() => License, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  license?: License;
 
   constructor() {
     super();

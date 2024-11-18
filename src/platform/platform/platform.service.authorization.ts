@@ -22,11 +22,11 @@ import {
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
+import { LicensingFrameworkAuthorizationService } from '@platform/licensing-framework/licensing.framework.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -38,7 +38,7 @@ export class PlatformAuthorizationService {
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private libraryAuthorizationService: LibraryAuthorizationService,
-    private licensingAuthorizationService: LicensingAuthorizationService,
+    private licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService
   ) {}
 
@@ -50,7 +50,7 @@ export class PlatformAuthorizationService {
         forum: true,
         library: true,
         storageAggregator: true,
-        licensing: true,
+        licensingFramework: true,
         templatesManager: true,
       },
     });
@@ -61,7 +61,7 @@ export class PlatformAuthorizationService {
       !platform.library ||
       !platform.forum ||
       !platform.storageAggregator ||
-      !platform.licensing ||
+      !platform.licensingFramework ||
       !platform.templatesManager
     )
       throw new RelationshipNotFoundException(
@@ -137,8 +137,8 @@ export class PlatformAuthorizationService {
     updatedAuthorizations.push(...storageAuthorizations);
 
     const platformLicensingAuthorizations =
-      await this.licensingAuthorizationService.applyAuthorizationPolicy(
-        platform.licensing,
+      await this.licensingFrameworkAuthorizationService.applyAuthorizationPolicy(
+        platform.licensingFramework,
         platform.authorization
       );
     updatedAuthorizations.push(...platformLicensingAuthorizations);

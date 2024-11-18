@@ -18,7 +18,6 @@ import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { OrganizationRoleModule } from '../organization-role/organization.role.module';
@@ -52,7 +51,6 @@ import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.cr
     OrganizationResolverQueries,
     OrganizationResolverMutations,
     OrganizationResolverFields,
-    OrganizationStorageAggregatorLoaderCreator,
   ],
   exports: [OrganizationService, OrganizationAuthorizationService],
 })

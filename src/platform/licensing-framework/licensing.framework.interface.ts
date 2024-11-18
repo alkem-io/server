@@ -4,7 +4,7 @@ import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 import { ILicensePolicy } from '@platform/license-policy/license.policy.interface';
 
 @ObjectType('Licensing')
-export abstract class ILicensing extends IAuthorizable {
+export abstract class ILicensingFramework extends IAuthorizable {
   plans!: ILicensePlan[];
 
   licensePolicy!: ILicensePolicy;

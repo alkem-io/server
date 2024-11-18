@@ -153,7 +153,7 @@ export class CommunityService {
     return community;
   }
 
-  async removeCommunity(communityID: string): Promise<boolean> {
+  async removeCommunityOrFail(communityID: string): Promise<boolean | never> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
       relations: {
@@ -192,7 +192,7 @@ export class CommunityService {
       community.communication.id
     );
 
-    await this.roleSetService.removeRoleSet(community.roleSet.id);
+    await this.roleSetService.removeRoleSetOrFail(community.roleSet.id);
 
     await this.communityGuidelinesService.deleteCommunityGuidelines(
       community.guidelines.id

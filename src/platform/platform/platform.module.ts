@@ -13,10 +13,10 @@ import { PlatformAuthorizationService } from './platform.service.authorization';
 import { KonfigModule } from '@platform/configuration/config/config.module';
 import { MetadataModule } from '@platform/metadata/metadata.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { LicensingModule } from '@platform/licensing/licensing.module';
 import { ForumModule } from '@platform/forum/forum.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
+import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
 
 @Module({
   imports: [
@@ -28,7 +28,7 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
     StorageAggregatorModule,
     KonfigModule,
     MetadataModule,
-    LicensingModule,
+    LicensingFrameworkModule,
     PlatformInvitationModule,
     TemplatesManagerModule,
     TypeOrmModule.forFeature([Platform]),

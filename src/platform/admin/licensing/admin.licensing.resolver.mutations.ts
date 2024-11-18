@@ -6,26 +6,30 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
-import { LicensingService } from '@platform/licensing/licensing.service';
-import { ILicensing } from '@platform/licensing/licensing.interface';
 import { AdminLicensingService } from './admin.licensing.service';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
-import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
+import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
+import { SpaceLicenseService } from '@domain/space/space/space.service.license';
+import { SpaceService } from '@domain/space/space/space.service';
+import { AccountService } from '@domain/space/account/account.service';
 
 @Resolver()
 export class AdminLicensingResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private spaceAuthorizationService: SpaceAuthorizationService,
-    private accountAuthorizationService: AccountAuthorizationService,
-    private licensingService: LicensingService,
+    private spaceService: SpaceService,
+    private spaceLicenseService: SpaceLicenseService,
+    private accountService: AccountService,
+    private accountLicenseService: AccountLicenseService,
+    private licensingFrameworkService: LicensingFrameworkService,
+    private licenseService: LicenseService,
     private adminLicensingService: AdminLicensingService
   ) {}
 
@@ -38,13 +42,14 @@ export class AdminLicensingResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: AssignLicensePlanToAccount
   ): Promise<IAccount> {
-    let licensing: ILicensing | undefined;
+    let licensing: ILicensingFramework | undefined;
     if (planData.licensingID) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         planData.licensingID
       );
     } else {
-      licensing = await this.licensingService.getDefaultLicensingOrFail();
+      licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
     }
 
     this.authorizationService.grantAccessOrFail(
@@ -58,12 +63,13 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
-    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
-    const updatedAuthorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return account;
+    const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
+
+    return this.accountService.getAccountOrFail(account.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -75,13 +81,14 @@ export class AdminLicensingResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: AssignLicensePlanToSpace
   ): Promise<ISpace> {
-    let licensing: ILicensing | undefined;
+    let licensing: ILicensingFramework | undefined;
     if (planData.licensingID) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         planData.licensingID
       );
     } else {
-      licensing = await this.licensingService.getDefaultLicensingOrFail();
+      licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
     }
 
     this.authorizationService.grantAccessOrFail(
@@ -95,12 +102,13 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
-    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
-    const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return space;
+    const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
+      space.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
+
+    return this.spaceService.getSpaceOrFail(space.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -112,13 +120,14 @@ export class AdminLicensingResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: RevokeLicensePlanFromAccount
   ): Promise<IAccount> {
-    let licensing: ILicensing | undefined;
+    let licensing: ILicensingFramework | undefined;
     if (planData.licensingID) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         planData.licensingID
       );
     } else {
-      licensing = await this.licensingService.getDefaultLicensingOrFail();
+      licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
     }
 
     this.authorizationService.grantAccessOrFail(
@@ -133,11 +142,13 @@ export class AdminLicensingResolverMutations {
         planData,
         licensing.id
       );
-    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
-    const updatedAuthorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    return account;
+
+    const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
+
+    return this.accountService.getAccountOrFail(account.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -149,13 +160,14 @@ export class AdminLicensingResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: RevokeLicensePlanFromSpace
   ): Promise<ISpace> {
-    let licensing: ILicensing | undefined;
+    let licensing: ILicensingFramework | undefined;
     if (planData.licensingID) {
-      licensing = await this.licensingService.getLicensingOrFail(
+      licensing = await this.licensingFrameworkService.getLicensingOrFail(
         planData.licensingID
       );
     } else {
-      licensing = await this.licensingService.getDefaultLicensingOrFail();
+      licensing =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
     }
 
     this.authorizationService.grantAccessOrFail(
@@ -169,9 +181,37 @@ export class AdminLicensingResolverMutations {
       planData,
       licensing.id
     );
-    const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    return space;
+
+    const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
+      space.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
+    return this.spaceService.getSpaceOrFail(space.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description: 'Reset all license plans on Accounts',
+  })
+  @Profiling.api
+  async resetLicenseOnAccounts(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<void> {
+    const licensing =
+      await this.licensingFrameworkService.getDefaultLicensingOrFail();
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      licensing.authorization,
+      AuthorizationPrivilege.GRANT,
+      'reset licenses on accounts'
+    );
+
+    const accounts = await this.adminLicensingService.getAllAccounts();
+    for (const account of accounts) {
+      const updatedLicenses =
+        await this.accountLicenseService.applyLicensePolicy(account.id);
+      await this.licenseService.saveAll(updatedLicenses);
+    }
   }
 }
