@@ -182,7 +182,9 @@ export class SearchResultService {
     const subspaceIds = rawSearchResults.map(hit => hit.result.id);
 
     const subspaces = await this.entityManager.find(Space, {
-      where: { id: In(subspaceIds) },
+      where: {
+        id: In(subspaceIds),
+      },
       relations: { parentSpace: true },
     });
 
