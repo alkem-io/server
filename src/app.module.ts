@@ -82,6 +82,7 @@ import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
+import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
 import { InAppNotificationReaderModule } from '@domain/in-app-notification-reader/in.app.notification.reader.module';
@@ -248,6 +249,7 @@ import { InAppNotificationReaderModule } from '@domain/in-app-notification-reade
         };
       },
     }),
+    LoaderCreatorModule,
     ScalarsModule,
     AuthenticationModule,
     AuthorizationModule,

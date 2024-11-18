@@ -183,7 +183,7 @@ export class RegistrationService {
     const account = await this.userService.getAccount(user);
 
     user = await this.userService.deleteUser(deleteData);
-    await this.accountService.deleteAccount(account);
+    await this.accountService.deleteAccountOrFail(account);
     return user;
   }
 
@@ -206,7 +206,7 @@ export class RegistrationService {
 
     organization =
       await this.organizationService.deleteOrganization(deleteData);
-    await this.accountService.deleteAccount(account);
+    await this.accountService.deleteAccountOrFail(account);
     organization.id = organizationID;
     return organization;
   }

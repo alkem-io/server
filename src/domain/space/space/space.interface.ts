@@ -9,6 +9,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IAccount } from '../account/account.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ITemplatesManager } from '@domain/template/templates-manager';
+import { ILicense } from '@domain/common/license/license.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 
 @ObjectType('Space')
@@ -55,4 +56,5 @@ export class ISpace extends INameable {
   levelZeroSpaceID!: string;
 
   templatesManager?: ITemplatesManager;
+  license?: ILicense;
 }

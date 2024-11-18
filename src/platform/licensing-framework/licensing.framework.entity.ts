@@ -1,12 +1,15 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
-import { ILicensing } from './licensing.interface';
+import { ILicensingFramework } from './licensing.framework.interface';
 import { LicensePolicy } from '@platform/license-policy/license.policy.entity';
 import { LicensePlan } from '@platform/license-plan/license.plan.entity';
 
 @Entity()
-export class Licensing extends AuthorizableEntity implements ILicensing {
-  @OneToMany(() => LicensePlan, licensePlan => licensePlan.licensing, {
+export class LicensingFramework
+  extends AuthorizableEntity
+  implements ILicensingFramework
+{
+  @OneToMany(() => LicensePlan, licensePlan => licensePlan.licensingFramework, {
     eager: true,
     cascade: true,
   })

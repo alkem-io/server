@@ -54,7 +54,7 @@ export class ConversionResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `convert challenge to space: ${agentInfo.email}`
     );
-    let space = await this.conversionService.convertChallengeToSpace(
+    let space = await this.conversionService.convertChallengeToSpaceOrFail(
       convertChallengeToSpaceData,
       agentInfo
     );
@@ -83,10 +83,11 @@ export class ConversionResolverMutations {
       AuthorizationPrivilege.CREATE,
       `convert opportunity to challenge: ${agentInfo.email}`
     );
-    let subspace = await this.conversionService.convertOpportunityToChallenge(
-      convertOpportunityToChallengeData.subsubspaceID,
-      agentInfo
-    );
+    let subspace =
+      await this.conversionService.convertOpportunityToChallengeOrFail(
+        convertOpportunityToChallengeData.subsubspaceID,
+        agentInfo
+      );
     subspace = await this.spaceService.save(subspace);
     const subspaceAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);

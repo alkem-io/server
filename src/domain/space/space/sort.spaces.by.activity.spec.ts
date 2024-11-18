@@ -42,6 +42,7 @@ const createTestSpace = (id: string): ISpace => {
       virtualContributors: [],
       innovationHubs: [],
       innovationPacks: [],
+      externalSubscriptionID: '',
       spaces: [],
       type: AccountType.ORGANIZATION,
     },
