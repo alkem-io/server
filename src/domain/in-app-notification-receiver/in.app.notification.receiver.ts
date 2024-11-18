@@ -1,21 +1,10 @@
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { NotificationEventType } from '@alkemio/notifications-lib';
+import { InAppNotificationPayload } from '@alkemio/notifications-lib';
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
 import { InAppNotificationState } from '../in-app-notification/in.app.notification.state';
 
-type InAppNotificationEvent = {
-  /** UTC */
-  triggeredAt: Date;
-  type: NotificationEventType;
-  triggeredByID?: string;
-  resourceID?: string;
-  category: string; // todo type
-  receiverID: string;
-  contributorID?: string;
-  // action: string; // todo type ???
-};
 // todo: use this service in the controller
 @Injectable()
 export class InAppNotificationReceiver {
@@ -24,11 +13,16 @@ export class InAppNotificationReceiver {
     private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
   ) {}
 
-  public async store(events: InAppNotificationEvent[]) {
-    const entities = events.map(event =>
+  public async store<T extends InAppNotificationPayload>(notifications: T[]) {
+    const entities = notifications.map(notification =>
       InAppNotificationEntity.create({
-        ...event,
+        triggeredAt: notification.triggeredAt,
+        type: notification.type,
         state: InAppNotificationState.UNREAD,
+        category: notification.category,
+        receiverID: notification.receiverID,
+        triggeredByID: notification.triggeredByID,
+        payload: notification,
       })
     );
     await this.inAppNotificationRepo.save(entities, {

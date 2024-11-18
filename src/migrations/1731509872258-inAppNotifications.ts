@@ -13,10 +13,9 @@ export class InAppNotifications1731509872258 implements MigrationInterface {
                  \`type\` varchar(128) NOT NULL,
                   \`state\` varchar(128) NOT NULL,
                    \`triggeredByID\` char(36) NULL COMMENT 'The contributor who triggered the event, if applicable.',
-                    \`resourceID\` char(36) NULL COMMENT 'The affected resource. Different entity based on the notification. Not a contributor.',
-                     \`category\` varchar(128) NOT NULL,
-                      \`receiverID\` char(36) NOT NULL COMMENT 'The contributor of Who is the receiver of this notification',
-                       \`contributorID\` char(36) NULL COMMENT 'Main contributor in the event, if applicable. Different from triggeredBy',
+                    \`category\` varchar(128) NOT NULL,
+                     \`receiverID\` char(36) NOT NULL COMMENT 'The contributor who is the receiver of this notification',
+                      \`payload\` json NOT NULL COMMENT 'Holds the original notification payload as it was received',
                        PRIMARY KEY (\`id\`)
              ) ENGINE=InnoDB
          `);
