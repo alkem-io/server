@@ -282,10 +282,24 @@ export class AccountAuthorizationService {
     accountHostManage.cascade = true;
     newRules.push(accountHostManage);
 
+    const vcCampaignCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.VC_CAMPAIGN,
+      resourceID: '',
+    };
+
+    const betaTesterCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.BETA_TESTER,
+      resourceID: '',
+    };
+
+    const createResourcesUnderAccountCredentials = [
+      vcCampaignCredential,
+      betaTesterCredential,
+    ];
     // If the user is a beta tester or part of VC campaign then can create the resources
     const createSpace = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_SPACE],
-      [...hostCredentials],
+      createResourcesUnderAccountCredentials,
       CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
     );
     createSpace.cascade = false;
@@ -293,7 +307,7 @@ export class AccountAuthorizationService {
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
-      [...hostCredentials],
+      createResourcesUnderAccountCredentials,
       CREDENTIAL_RULE_PLATFORM_CREATE_VC
     );
     createVC.cascade = false;
@@ -302,7 +316,7 @@ export class AccountAuthorizationService {
     const createInnovationPack =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.CREATE_INNOVATION_PACK],
-        [...hostCredentials],
+        createResourcesUnderAccountCredentials,
         CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK
       );
     createInnovationPack.cascade = false;
