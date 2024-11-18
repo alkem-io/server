@@ -70,7 +70,7 @@ export class SearchExtractService {
 
   public async search(
     searchData: SearchInput,
-    onlyPublicResults: boolean
+    excludeDemoSpaces: boolean
   ): Promise<ISearchResult[] | never> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
@@ -82,14 +82,13 @@ export class SearchExtractService {
     const terms = filteredTerms.join(' ');
     const indicesToSearchOn = this.getIndices(
       searchData.typesFilter,
-      onlyPublicResults
+      excludeDemoSpaces
     );
     // the main search query built using query DSL
-    const query = buildSearchQuery(
-      terms,
-      searchData.searchInSpaceFilter,
-      onlyPublicResults
-    );
+    const query = buildSearchQuery(terms, {
+      spaceIdFilter: searchData.searchInSpaceFilter,
+      excludeDemoSpaces,
+    });
     // used with function_score to boost results based on visibility
     const functions = functionScoreFunctions;
 
