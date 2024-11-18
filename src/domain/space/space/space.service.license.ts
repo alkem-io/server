@@ -62,10 +62,11 @@ export class SpaceLicenseService {
 
     // Ensure always applying from a clean state
     space.license = this.licenseService.reset(space.license);
+    const rootLevelSpaceAgent = agent ?? space.agent;
 
     space.license = await this.extendLicensePolicy(
       space.license,
-      agent ?? space.agent
+      rootLevelSpaceAgent
     );
 
     updatedLicenses.push(space.license);
@@ -86,7 +87,7 @@ export class SpaceLicenseService {
     for (const subspace of space.subspaces) {
       const subspaceLicenses = await this.applyLicensePolicy(
         subspace.id,
-        space.agent
+        rootLevelSpaceAgent
       );
       updatedLicenses.push(...subspaceLicenses);
     }
