@@ -32,9 +32,8 @@ import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dt
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/notification.dto.input.community.invitation.vc';
 import { NotificationInputSpaceCreated } from './dto/notification.dto.input.space.created';
 import { InAppNotificationReceiver } from '@domain/in-app-notification-receiver/in.app.notification.receiver';
-import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
-const hardcodedInAppReceiverID = 'd1858413-540d-48d6-ad56-59d2773480d6';
+const hardcodedInAppReceiverID = '75792ef5-3ca0-40f4-8f6b-6bfd39cccd2a';
 
 @Injectable()
 export class NotificationAdapter {

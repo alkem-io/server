@@ -3,13 +3,12 @@ import { NotificationEventType } from '@alkemio/notifications-lib';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { InAppNotification } from '../in.app.notification.interface';
-import { InAppNotificationBase } from './in.app.notification.base';
+import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
 @ObjectType('InAppNotificationUserMentioned', {
   implements: () => InAppNotification,
 })
-// todo: implement InAppNotificationBase
-export class InAppNotificationUserMentioned extends InAppNotificationBase {
+export class InAppNotificationUserMentioned implements InAppNotification {
   type!: NotificationEventType.COMMUNICATION_USER_MENTION;
   @Field(() => CommunityContributorType, {
     nullable: false,
@@ -22,5 +21,10 @@ export class InAppNotificationUserMentioned extends InAppNotificationBase {
     description: 'The contributor that mentioned the receiver.',
   })
   triggeredBy?: IContributor;
-  // !! the receiver is the mentioned Contributor
+  // inherited
+  id!: string;
+  category!: string;
+  receiver!: IContributor;
+  state!: InAppNotificationState;
+  triggeredAt!: Date;
 }

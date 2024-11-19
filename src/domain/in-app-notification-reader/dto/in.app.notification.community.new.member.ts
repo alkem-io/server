@@ -2,16 +2,14 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { NotificationEventType } from '@alkemio/notifications-lib';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { ICommunity } from '@domain/community/community';
 import { InAppNotification } from '../in.app.notification.interface';
-import { InAppNotificationBase } from './in.app.notification.base';
 import { ISpace } from '@domain/space/space/space.interface';
+import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
 @ObjectType('InAppNotificationCommunityNewMember', {
   implements: () => InAppNotification,
 })
-// todo: implement InAppNotificationBase
-export class InAppNotificationCommunityNewMember extends InAppNotificationBase {
+export class InAppNotificationCommunityNewMember implements InAppNotification {
   type!: NotificationEventType.COMMUNITY_NEW_MEMBER;
   // overwrite the description
   @Field(() => IContributor, {
@@ -37,4 +35,10 @@ export class InAppNotificationCommunityNewMember extends InAppNotificationBase {
     description: 'The Space that was joined.',
   })
   space!: ISpace;
+  // inherited
+  id!: string;
+  category!: string;
+  receiver!: IContributor;
+  state!: InAppNotificationState;
+  triggeredAt!: Date;
 }

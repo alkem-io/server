@@ -3,13 +3,14 @@ import { NotificationEventType } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout';
 import { ISpace } from '@domain/space/space/space.interface';
 import { InAppNotification } from '../in.app.notification.interface';
-import { InAppNotificationBase } from './in.app.notification.base';
+import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
 @ObjectType('InAppNotificationCalloutPublished', {
   implements: () => InAppNotification,
 })
-// todo: implement InAppNotificationBase
-export abstract class InAppNotificationCalloutPublished extends InAppNotificationBase {
+export abstract class InAppNotificationCalloutPublished
+  implements InAppNotification
+{
   type!: NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED;
   @Field(() => ICallout, {
     nullable: false,
@@ -22,4 +23,9 @@ export abstract class InAppNotificationCalloutPublished extends InAppNotificatio
     description: 'Where the callout is located.',
   })
   space!: ISpace;
+  // inherited
+  category!: string;
+  id!: string;
+  state!: InAppNotificationState;
+  triggeredAt!: Date;
 }

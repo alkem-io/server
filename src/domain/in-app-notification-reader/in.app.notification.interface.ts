@@ -13,7 +13,6 @@ import { InAppNotificationCommunityNewMember } from './dto/in.app.notification.c
   isAbstract: true,
   description: 'An in-app notification type. To not be queried directly',
   resolveType(inAppNotification: InAppNotification) {
-    // todo type
     switch (inAppNotification.type) {
       case NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED:
         return InAppNotificationCalloutPublished;
@@ -36,6 +35,12 @@ export class InAppNotification {
     nullable: false,
   })
   id!: string;
+  // todo: graphql enum
+  @Field(() => String, {
+    nullable: false,
+    description: 'The user that triggered this Activity.',
+  })
+  type!: NotificationEventType;
 
   @Field(() => Date, {
     nullable: false,
@@ -43,41 +48,18 @@ export class InAppNotification {
   })
   triggeredAt!: Date;
   // todo: graphql enum
-  @Field(() => String, {
-    nullable: false,
-    description: 'The user that triggered this Activity.',
-  })
-  type!: NotificationEventType;
-  // todo: graphql enum
   @Field(() => InAppNotificationState, {
     nullable: false,
     description: 'The user that triggered this Activity.',
   })
   state!: InAppNotificationState;
-
-  @Field(() => IContributor, {
-    nullable: true,
-    description: 'The contributor that triggered this notification.',
-  })
-  triggeredBy?: IContributor;
   // todo: graphql enum
   @Field(() => String, {
     nullable: false,
     description: 'The contributor that triggered this notification.',
   })
   category!: string;
-
-  @Field(() => IContributor, {
-    nullable: true,
-    description: 'The contributor is the main actor in the notification.',
-  })
-  actor?: IContributor;
-
-  @Field(() => IContributor, {
-    nullable: false,
-    description: 'The contributor that should receive this notification.',
-  })
-  receiver!: IContributor;
-  // the type and name to be resolved in the concrete class
-  resourceID?: string;
+  // exposed via the interface field resolver
+  triggeredBy?: IContributor;
+  receiver?: IContributor;
 }

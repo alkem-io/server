@@ -34,24 +34,25 @@ export class InAppNotificationBuilder {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async build(
-    data: InAppNotificationEntity[]
-  ): Promise<InAppNotification[]> {
-    const baseNotifications = await this.baseNotification(data);
-    const groups = groupBy(baseNotifications, 'type') as {
-      [K in NotificationEventType]?: NotificationTypeMap[K][];
-    };
-    // todo: visitor pattern, instead of using logic to determine the proper builder for the type
-    const promises = await Promise.all([
-      await this.calloutPublished(groups.collaborationCalloutPublished ?? []),
-      await this.userMentioned(groups.communicationUserMention ?? []),
-      await this.communityNewMember(groups.communityNewMember ?? []),
-    ]);
+  // public async build(
+  //   data: InAppNotificationEntity[]
+  // ): Promise<InAppNotification[]> {
+  //   const baseNotifications = await this.baseNotification(data);
+  //   const groups = groupBy(baseNotifications, 'type') as {
+  //     [K in NotificationEventType]?: NotificationTypeMap[K][];
+  //   };
+  //   // todo: visitor pattern, instead of using logic to determine the proper builder for the type
+  //   /*    const promises = await Promise.all([
+  //     await this.calloutPublished(groups.collaborationCalloutPublished ?? []),
+  //     await this.userMentioned(groups.communicationUserMention ?? []),
+  //     await this.communityNewMember(groups.communityNewMember ?? []),
+  //   ]);
+  //
+  //   return promises.flat(1);*/
+  //   return baseNotifications;
+  // }
 
-    return promises.flat(1);
-  }
-
-  private async calloutPublished(
+  /*  private async calloutPublished(
     data: InAppNotificationOfType<NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED>[]
   ): Promise<InAppNotificationCalloutPublished[]> {
     if (!data.length) {
@@ -283,85 +284,67 @@ export class InAppNotificationBuilder {
     return notifications.filter(
       (x): x is InAppNotificationCommunityNewMember => !!x
     );
-  }
+  }*/
 
-  private async baseNotification(notifications: InAppNotificationEntity[]) {
-    // on a later stage the entity has to be chosen conditionally
-    const triggeredBys = await this.manager.findBy(User, {
-      id: In(notifications.map(notification => notification.triggeredByID)),
-    });
-    const actors = await this.manager.findBy(User, {
-      id: In(notifications.map(notification => notification.contributorID)),
-    });
-    // on a later stage the entity has to be chosen conditionally
-    const receivers = await this.manager.findBy(User, {
-      id: In(notifications.map(notification => notification.receiverID)),
-    });
-
-    const allNotifications = notifications.map<InAppNotification | undefined>(
-      event => {
-        const triggeredBy = triggeredBys.find(
-          user => user.id === event.triggeredByID
-        );
-
-        if (!triggeredBy && event.triggeredByID) {
-          this.logger.warn(
-            {
-              message:
-                'Unable to find contributor who triggered the notification',
-              triggeredBy: event.triggeredByID,
-              inAppNotification: event.id,
-            },
-            LogContext.IN_APP_NOTIFICATION
-          );
-          return;
-        }
-
-        const contributor = actors.find(
-          user => user.id === event.contributorID
-        );
-
-        if (!contributor && event.contributorID) {
-          this.logger.warn(
-            {
-              message:
-                'Unable to find contributor who is the actor in the notification',
-              contributorID: event.contributorID,
-              inAppNotification: event.id,
-            },
-            LogContext.IN_APP_NOTIFICATION
-          );
-        }
-
-        const receiver = receivers.find(user => user.id === event.receiverID);
-
-        if (!receiver) {
-          this.logger.warn(
-            {
-              message:
-                'Unable to find contributor who received the notification',
-              receiver: event.receiverID,
-              inAppNotification: event.id,
-            },
-            LogContext.IN_APP_NOTIFICATION
-          );
-          return;
-        }
-
-        return {
-          id: event.id,
-          triggeredAt: event.triggeredAt,
-          type: event.type,
-          state: event.state,
-          category: event.category,
-          resourceID: event.resourceID,
-          triggeredBy,
-          receiver,
-          actor: contributor,
-        };
-      }
-    );
-    // return only the notifications that were successfully built
-    return allNotifications.filter((i): i is InAppNotification => !!i);
-  }
+  // private async baseNotification(
+  //   notifications: InAppNotificationEntity[]
+  // ): Promise<InAppNotification[]> {
+  //   // on a later stage the entity has to be chosen conditionally
+  //   // const triggeredBys = await this.manager.findBy(User, {
+  //   //   id: In(notifications.map(notification => notification.triggeredByID)),
+  //   // });
+  //   // // on a later stage the entity has to be chosen conditionally
+  //   // const receivers = await this.manager.findBy(User, {
+  //   //   id: In(notifications.map(notification => notification.receiverID)),
+  //   // });
+  //
+  //   // const allNotifications = notifications.map<InAppNotification | undefined>(
+  //   //   event => {
+  //   //     const triggeredBy = triggeredBys.find(
+  //   //       user => user.id === event.triggeredByID
+  //   //     );
+  //   //
+  //   //     if (!triggeredBy && event.triggeredByID) {
+  //   //       this.logger.warn(
+  //   //         {
+  //   //           message:
+  //   //             'Unable to find contributor who triggered the notification',
+  //   //           triggeredBy: event.triggeredByID,
+  //   //           inAppNotification: event.id,
+  //   //         },
+  //   //         LogContext.IN_APP_NOTIFICATION
+  //   //       );
+  //   //       return;
+  //   //     }
+  //   //
+  //   //     const receiver = receivers.find(user => user.id === event.receiverID);
+  //   //
+  //   //     if (!receiver) {
+  //   //       this.logger.warn(
+  //   //         {
+  //   //           message:
+  //   //             'Unable to find contributor who received the notification',
+  //   //           receiver: event.receiverID,
+  //   //           inAppNotification: event.id,
+  //   //         },
+  //   //         LogContext.IN_APP_NOTIFICATION
+  //   //       );
+  //   //       return;
+  //   //     }
+  //   //
+  //   //     return {
+  //   //       id: event.id,
+  //   //       triggeredAt: event.triggeredAt,
+  //   //       type: event.type,
+  //   //       state: event.state,
+  //   //       category: event.category,
+  //   //       triggeredBy,
+  //   //       receiver,
+  //   //     };
+  //   //   }
+  //   // );
+  //   // return only the notifications that were successfully built
+  //   // return allNotifications.filter((i): i is InAppNotification => !!i);
+  //   return notifications;
+  // }
 }

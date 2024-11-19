@@ -6,6 +6,8 @@ import {
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../common/entity/base-entity/base.alkemio.entity';
 import { InAppNotificationState } from './in.app.notification.state';
+import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 // todo: use json
 // todo: comments
@@ -48,7 +50,4 @@ export class InAppNotificationEntity extends BaseAlkemioEntity {
     comment: 'Holds the original notification payload as it was received',
   })
   payload!: InAppNotificationPayload;
-  // todo: remove
-  resourceID?: string;
-  contributorID?: string;
 }
