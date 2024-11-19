@@ -429,14 +429,5 @@ export class AiServerService {
         event.response
       );
     }
-    if (
-      isInputValidForAction(event.original, InvocationResultAction.POST_MESSAGE)
-    ) {
-      this.roomControllerService.postMessage(
-        resultHandler.roomDetails!,
-        event.response
-      );
-    }
-    // event.original.interactionID
   }
 }

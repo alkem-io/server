@@ -221,20 +221,20 @@ export class PlatformAuthorizationService {
   }
 
   private async createCredentialRuleInteractiveGuidance(): Promise<IAuthorizationPolicyRuleCredential> {
-    const userGuidanceChatAccessCredential = {
+    const userChatGuidanceAccessCredential = {
       type: AuthorizationCredential.GLOBAL_REGISTERED,
       resourceID: '',
     };
 
-    const userGuidanceChatAccessPrivilegeRule =
+    const userChatGuidanceAccessPrivilegeRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
-        [userGuidanceChatAccessCredential],
+        [userChatGuidanceAccessCredential],
         CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
       );
-    userGuidanceChatAccessPrivilegeRule.cascade = false;
+    userChatGuidanceAccessPrivilegeRule.cascade = false;
 
-    return userGuidanceChatAccessPrivilegeRule;
+    return userChatGuidanceAccessPrivilegeRule;
   }
 
   private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {

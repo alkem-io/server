@@ -1,11 +1,17 @@
 import { UUID } from '@domain/common/scalars';
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, registerEnumType } from '@nestjs/graphql';
+import { IsNotEmpty, ValidateIf } from 'class-validator';
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
   POST_MESSAGE = 'postMessage',
 }
+
+registerEnumType(InvocationResultAction, {
+  name: 'InvocationResultAction',
+  description: 'Available actions for handling AI engines invocation results.',
+});
 
 @InputType()
 export class RoomDetails {
@@ -40,11 +46,21 @@ export class ResultHandler {
       'The action that should be taken with the result of the invocation',
   })
   action!: InvocationResultAction;
+
   @Field(() => RoomDetails, {
     nullable: true,
     description: 'The context needed for the result handler',
   })
-  roomDetails?: RoomDetails = undefined;
+  roomDetails?: RoomDetails;
+
+  @ValidateIf(handler => handler.action === InvocationResultAction.POST_REPLY)
+  @IsNotEmpty({
+    message:
+      'roomDetails with roomID, threadID and communicationID is required when action is POST_REPLY',
+  })
+  validateRoomDetails() {
+    return this.roomDetails && this.roomDetails.threadID;
+  }
 }
 
 @InputType()

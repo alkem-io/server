@@ -12,7 +12,6 @@ import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
-import { ChatGuidanceModule } from '../chat-guidance/chat.guidance.module';
 
 @Module({
   imports: [
@@ -20,7 +19,6 @@ import { ChatGuidanceModule } from '../chat-guidance/chat.guidance.module';
     ApplicationModule,
     InvitationModule,
     UserModule,
-    ChatGuidanceModule,
     ContributorModule,
     SpaceModule,
     RolesModule,

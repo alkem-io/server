@@ -15,6 +15,7 @@ import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.t
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver()
 export class ChatGuidanceResolverMutations {
@@ -29,6 +30,45 @@ export class ChatGuidanceResolverMutations {
     private userService: UserService,
     private guidanceReporterService: GuidanceReporterService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IMessageAnswerToQuestion, {
+    nullable: true,
+    description: 'Create a guidance chat room.',
+  })
+  async createChatGuidanceRoom(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IRoom | undefined> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
+      `Access interactive guidance: ${agentInfo.email}`
+    );
+    if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
+      return undefined;
+    }
+
+    const user = await this.userService.getUserOrFail(agentInfo.userID, {
+      relations: { authorization: true, guidanceRoom: true },
+    });
+    if (user.guidanceRoom) {
+      // Return current room if it exists
+      return user.guidanceRoom;
+    }
+
+    const roomCreated =
+      await this.chatGuidanceService.createGuidanceRoom(agentInfo);
+
+    if (roomCreated) {
+      const roomAuthorization =
+        this.roomAuthorizationService.applyAuthorizationPolicy(
+          roomCreated,
+          user.authorization
+        );
+      await this.authorizationPolicyService.saveAll([roomAuthorization]);
+    }
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IMessageAnswerToQuestion, {
@@ -54,24 +94,12 @@ export class ChatGuidanceResolverMutations {
       //   sources: [],
       // };
     }
-    const { room, roomCreated } = await this.chatGuidanceService.askQuestion(
+    const { success } = await this.chatGuidanceService.askQuestion(
       chatData,
       agentInfo
     );
 
-    if (roomCreated) {
-      // TODO!!: Do something with the authorization, probably we want to give permissions to the
-      // owner user and to the VC to send messages to this room, for now this is just inheriting the user authorization
-      // which is probably not even correct
-      const user = await this.userService.getUserOrFail(agentInfo.userID);
-      const roomAuthorization =
-        this.roomAuthorizationService.applyAuthorizationPolicy(
-          room,
-          user.authorization
-        );
-      await this.authorizationPolicyService.saveAll([roomAuthorization]);
-    }
-    return { result: true };
+    return { result: success };
   }
 
   @UseGuards(GraphqlGuard)

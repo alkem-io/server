@@ -12,5 +12,4 @@ export class MeQueryResults {
   applications!: IApplication[];
   spaceMembershipsHierarchical!: CommunityMembershipResult[];
   spaceMembershipsFlat!: CommunityMembershipResult[];
-  guidanceRoomID!: string;
 }

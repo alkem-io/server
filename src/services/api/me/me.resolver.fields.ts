@@ -17,14 +17,12 @@ import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
-import { ChatGuidanceService } from '../chat-guidance/chat.guidance.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
   constructor(
     private meService: MeService,
-    private userService: UserService,
-    private chatGuidanceService: ChatGuidanceService
+    private userService: UserService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -142,18 +140,5 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(agentInfo, limit);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => String, {
-    nullable: true,
-    description:
-      'Get the room ID for the current user to be able to communicate with the AI guidance service.',
-  })
-  async guidanceRoomID(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string | undefined> {
-    const room = await this.chatGuidanceService.getGuidanceRoom(agentInfo);
-    return room?.id;
   }
 }
