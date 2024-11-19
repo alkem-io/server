@@ -58,7 +58,7 @@ export class ResultHandler {
     message:
       'roomDetails with roomID, threadID and communicationID is required when action is POST_REPLY',
   })
-  validateRoomDetails() {
+  validateRoomDetails?() {
     return this.roomDetails && this.roomDetails.threadID;
   }
 }

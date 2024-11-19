@@ -1,9 +1,9 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
 
 @InputType()
 export class ChatGuidanceAnswerRelevanceInput {
-  @Field(() => UUID, {
+  // Message id is not a UUID, it's the id of the message in Matrix
+  @Field(() => String, {
     nullable: false,
     description: 'The answer id.',
   })

@@ -12,6 +12,7 @@ import { VirtualContributorService } from '@domain/community/virtual-contributor
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { UserService } from '@domain/community/user/user.service';
+import { IMessageGuidanceQuestionResult } from '@domain/communication/message.guidance.question.result/message.guidance.question.result.interface';
 
 export class ChatGuidanceService {
   constructor(
@@ -63,12 +64,14 @@ export class ChatGuidanceService {
   public async askQuestion(
     chatData: ChatGuidanceInput,
     agentInfo: AgentInfo
-  ): Promise<{
-    success: boolean;
-  }> {
+  ): Promise<IMessageGuidanceQuestionResult> {
     const room = await this.userService.getGuidanceRoom(agentInfo.userID);
     if (!room) {
-      return { success: false };
+      return {
+        success: false,
+        error: 'No guidance room found',
+        question: chatData.question,
+      };
     }
     const guidanceVc =
       await this.virtualContributorService.getVirtualContributorOrFail(
@@ -80,7 +83,7 @@ export class ChatGuidanceService {
         }
       );
 
-    await this.communicationAdapter.sendMessage({
+    const message = await this.communicationAdapter.sendMessage({
       roomID: room.externalRoomID,
       senderCommunicationsID: agentInfo.communicationID,
       message: chatData.question,
@@ -102,7 +105,9 @@ export class ChatGuidanceService {
     });
 
     return {
+      id: message.id,
       success: true,
+      question: chatData.question,
     };
   }
 

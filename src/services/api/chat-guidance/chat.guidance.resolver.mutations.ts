@@ -11,7 +11,7 @@ import { ChatGuidanceService } from './chat.guidance.service';
 import { ChatGuidanceAnswerRelevanceInput } from './dto/chat.guidance.relevance.dto';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { IMessageGuidanceQuestionResult } from '@domain/communication/message.guidance.question.result/message.guidance.question.result.interface';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -32,7 +32,7 @@ export class ChatGuidanceResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IMessageAnswerToQuestion, {
+  @Mutation(() => IRoom, {
     nullable: true,
     description: 'Create a guidance chat room.',
   })
@@ -71,14 +71,14 @@ export class ChatGuidanceResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IMessageAnswerToQuestion, {
+  @Mutation(() => IMessageGuidanceQuestionResult, {
     nullable: false,
     description: 'Ask the chat engine for guidance.',
   })
   async askChatGuidanceQuestion(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('chatData') chatData: ChatGuidanceInput
-  ): Promise<{ result: boolean }> {
+  ): Promise<IMessageGuidanceQuestionResult> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
@@ -87,19 +87,13 @@ export class ChatGuidanceResolverMutations {
     );
 
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
-      return { result: false };
-      // return {
-      //   answer: 'guidance engine not enabled',
-      //   question: chatData.question,
-      //   sources: [],
-      // };
+      return {
+        success: false,
+        error: 'Guidance Engine not enabled',
+        question: chatData.question,
+      };
     }
-    const { success } = await this.chatGuidanceService.askQuestion(
-      chatData,
-      agentInfo
-    );
-
-    return { result: success };
+    return this.chatGuidanceService.askQuestion(chatData, agentInfo);
   }
 
   @UseGuards(GraphqlGuard)
