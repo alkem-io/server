@@ -68,6 +68,7 @@ export class ChatGuidanceResolverMutations {
         );
       await this.authorizationPolicyService.saveAll([roomAuthorization]);
     }
+    return roomCreated;
   }
 
   @UseGuards(GraphqlGuard)
