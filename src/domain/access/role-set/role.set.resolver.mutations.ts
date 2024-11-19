@@ -201,10 +201,10 @@ export class RoleSetResolverMutations {
       `assign virtual community role: ${roleSet.id}`
     );
 
-    // Also require ACCOUNT_VIRTUAL_CONTRIBUTOR entitlement for the RoleSet
+    // Also require SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement for the RoleSet
     this.licenseService.isEntitlementEnabledOrFail(
       roleSet.license,
-      LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
+      LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
     );
 
     await this.roleSetService.assignVirtualToRole(
