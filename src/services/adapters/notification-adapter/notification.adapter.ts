@@ -33,7 +33,7 @@ import { NotificationInputCommunityInvitationVirtualContributor } from './dto/no
 import { NotificationInputSpaceCreated } from './dto/notification.dto.input.space.created';
 import { InAppNotificationReceiver } from '@domain/in-app-notification-receiver/in.app.notification.receiver';
 
-const hardcodedInAppReceiverID = '75792ef5-3ca0-40f4-8f6b-6bfd39cccd2a';
+const hardcodedInAppReceiverID = '235e4a7d-966e-4dfe-8fed-0a27bf0620b5';
 
 @Injectable()
 export class NotificationAdapter {
@@ -60,12 +60,13 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(event, payload);
     await this.inAppNotificationReceiver.store([
       {
-        triggeredAt: new Date(),
         type: event,
-        triggeredByID: eventData.triggeredBy,
-        resourceID: eventData.callout.id,
+        triggeredAt: new Date(),
+        triggeredByID: payload.triggeredBy,
         category: 'N/A',
         receiverID: hardcodedInAppReceiverID,
+        calloutID: payload.callout.id,
+        spaceID: payload.space.id,
       },
     ]);
   }
@@ -259,12 +260,17 @@ export class NotificationAdapter {
       this.notificationsClient.emit<number>(event, payload);
       this.inAppNotificationReceiver.store([
         {
-          triggeredAt: new Date(),
           type: event,
-          triggeredByID: eventData.triggeredBy,
-          category: 'N/A',
           receiverID: hardcodedInAppReceiverID,
-          // receiverID: eventData.mentionedEntityID,
+          triggeredAt: new Date(),
+          triggeredByID: payload.triggeredBy,
+          category: 'N/A',
+          comment: '',
+          contributorType: payload.mentionedUser.type as any,
+          commentOrigin: {
+            type: 'callout',
+            url: '',
+          },
         },
       ]);
     }
@@ -410,13 +416,13 @@ export class NotificationAdapter {
     this.notificationsClient.emit(event, payload);
     this.inAppNotificationReceiver.store([
       {
-        triggeredAt: new Date(),
         type: event,
-        category: 'N/A',
-        triggeredByID: eventData.triggeredBy,
-        resourceID: eventData.community.id,
         receiverID: hardcodedInAppReceiverID,
-        contributorID: eventData.contributorID,
+        triggeredAt: new Date(),
+        triggeredByID: payload.triggeredBy,
+        category: 'N/A',
+        newMemberID: payload.contributor.id,
+        spaceID: payload.space.id,
       },
     ]);
   }

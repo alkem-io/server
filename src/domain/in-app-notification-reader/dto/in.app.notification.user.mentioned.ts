@@ -1,5 +1,8 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { NotificationEventType } from '@alkemio/notifications-lib';
+import { ObjectType } from '@nestjs/graphql';
+import {
+  InAppNotificationPayload,
+  NotificationEventType,
+} from '@alkemio/notifications-lib';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { InAppNotification } from '../in.app.notification.interface';
@@ -10,21 +13,15 @@ import { InAppNotificationState } from '@domain/in-app-notification/in.app.notif
 })
 export class InAppNotificationUserMentioned implements InAppNotification {
   type!: NotificationEventType.COMMUNICATION_USER_MENTION;
-  @Field(() => CommunityContributorType, {
-    nullable: false,
-    description: 'The type of contributor that was mentioned.',
-  })
-  contributorType!: CommunityContributorType;
-  // overwrite the description
-  @Field(() => IContributor, {
-    nullable: true,
-    description: 'The contributor that mentioned the receiver.',
-  })
-  triggeredBy?: IContributor;
-  // inherited
+  // fields resolved by a concrete resolver
+  contributorType?: CommunityContributorType;
+  comment?: string;
+  // inherited, resolved by the interface resolvers
   id!: string;
   category!: string;
   receiver!: IContributor;
+  triggeredBy?: IContributor;
   state!: InAppNotificationState;
   triggeredAt!: Date;
+  payload!: InAppNotificationPayload;
 }

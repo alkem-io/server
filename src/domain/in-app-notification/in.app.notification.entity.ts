@@ -3,11 +3,11 @@ import {
   InAppNotificationPayload,
   NotificationEventType,
 } from '@alkemio/notifications-lib';
+// type InAppNotificationPayload = Record<string, any>;
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../common/entity/base-entity/base.alkemio.entity';
 import { InAppNotificationState } from './in.app.notification.state';
 
-// todo: use json
 // todo: comments
 @Entity('in_app_notification')
 export class InAppNotificationEntity extends BaseAlkemioEntity {

@@ -15,25 +15,8 @@ export class InAppNotificationReader {
     private readonly inAppNotificationBuilder: InAppNotificationBuilder
   ) {}
 
-  public async getNotifications(
-    receiverID?: string
-  ): Promise<InAppNotification[]> {
-    const rawNotifications = await this.getRawNotifications(receiverID);
-    return rawNotifications.map(this.mapEntityToGraphQL);
-  }
-
-  private mapEntityToGraphQL(
-    entity: InAppNotificationEntity
-  ): InAppNotification {
-    return {
-      receiver: {} as any, // to be resolve on demand by a field resolver
-      id: entity.id,
-      type: entity.type,
-      triggeredAt: entity.triggeredAt,
-      state: entity.state,
-      category: entity.category,
-      // receiver and triggeredBy will be resolved by GraphQL field resolver
-    };
+  public getNotifications(receiverID?: string): Promise<InAppNotification[]> {
+    return this.getRawNotifications(receiverID);
   }
 
   private getRawNotifications(

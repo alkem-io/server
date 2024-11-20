@@ -1,7 +1,11 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { NotificationEventType } from '@alkemio/notifications-lib';
+import {
+  NotificationEventType,
+  InAppNotificationPayload,
+} from '@alkemio/notifications-lib';
+// type InAppNotificationPayload = Record<string, any>;
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
@@ -62,4 +66,6 @@ export class InAppNotification {
   // exposed via the interface field resolver
   triggeredBy?: IContributor;
   receiver?: IContributor;
+  //
+  payload!: InAppNotificationPayload;
 }

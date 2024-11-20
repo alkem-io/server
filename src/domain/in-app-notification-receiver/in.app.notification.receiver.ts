@@ -2,6 +2,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { InAppNotificationPayload } from '@alkemio/notifications-lib';
+// type InAppNotificationPayload = Record<string, any>;
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
 import { InAppNotificationState } from '../in-app-notification/in.app.notification.state';
 
