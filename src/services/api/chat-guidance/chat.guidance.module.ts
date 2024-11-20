@@ -11,6 +11,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { PlatformModule } from '@platform/platform/platform.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     VirtualContributorModule,
     RoomModule,
     UserModule,
+    PlatformModule,
   ],
   providers: [ChatGuidanceService, ChatGuidanceResolverMutations],
   exports: [ChatGuidanceService, ChatGuidanceResolverMutations],

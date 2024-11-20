@@ -1,12 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IAnswerToQuestionSource } from './message.answer.to.question.source.interface';
 
 @ObjectType('MessageAnswerQuestion', {
   description: 'A detailed answer to a question, typically from an AI service.',
 })
-export class IMessageAnswerToQuestion {
-  // TODO: REMOVE??
-
+export class IMessageGuidanceQuestionResult {
   @Field(() => String, {
     nullable: true,
     description: 'The id of the answer; null if an error was returned',
@@ -14,26 +11,21 @@ export class IMessageAnswerToQuestion {
   id?: string;
 
   @Field(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The original question',
   })
   question!: string;
 
-  @Field(() => [IAnswerToQuestionSource], {
-    nullable: true,
-    description: 'The sources used to answer the question',
-  })
-  sources?: IAnswerToQuestionSource[];
-
   @Field(() => String, {
     nullable: true,
-    description: 'The answer to the question',
+    description: 'Error message if an error occurred',
   })
-  answer!: string;
+  error?: string;
 
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Message sent OK',
+    description:
+      'Message successfully sent. If false, error will have the reason.',
   })
-  result!: boolean;
+  success!: boolean;
 }

@@ -7,6 +7,7 @@ import { Forum } from '@platform/forum/forum.entity';
 import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
 import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
 import { LicensingFramework } from '@platform/licensing-framework/licensing.framework.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
@@ -59,4 +60,12 @@ export class Platform extends AuthorizableEntity implements IPlatform {
     }
   )
   platformInvitations!: PlatformInvitation[];
+
+  @OneToOne(() => VirtualContributor, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  guidanceVirtualContributor?: VirtualContributor;
 }

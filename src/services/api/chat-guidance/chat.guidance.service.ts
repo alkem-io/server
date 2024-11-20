@@ -12,6 +12,8 @@ import { VirtualContributorService } from '@domain/community/virtual-contributor
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { UserService } from '@domain/community/user/user.service';
+import { IMessageGuidanceQuestionResult } from '@domain/communication/message.guidance.question.result/message.guidance.question.result.interface';
+import { PlatformService } from '@platform/platform/platform.service';
 
 export class ChatGuidanceService {
   constructor(
@@ -23,23 +25,15 @@ export class ChatGuidanceService {
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private userService: UserService,
+    private platformService: PlatformService,
     private virtualContributorService: VirtualContributorService
   ) {}
 
-  private guidanceVcId = '00724d82-4f6f-427e-ae05-7054591da820' as const; // f68419ec-dc31-4663-9b4d-5dfecc90446e
-
   public async createGuidanceRoom(agentInfo: AgentInfo): Promise<IRoom> {
+    const guidanceVc =
+      await this.platformService.getGuidanceVirtualContributorOrFail();
     const room = await this.userService.createGuidanceRoom(agentInfo.userID);
 
-    const guidanceVc =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        this.guidanceVcId,
-        {
-          relations: {
-            aiPersona: true,
-          },
-        }
-      );
     await this.communicationAdapter.addUserToRoom(
       room.externalRoomID,
       agentInfo.communicationID
@@ -63,24 +57,19 @@ export class ChatGuidanceService {
   public async askQuestion(
     chatData: ChatGuidanceInput,
     agentInfo: AgentInfo
-  ): Promise<{
-    success: boolean;
-  }> {
+  ): Promise<IMessageGuidanceQuestionResult> {
     const room = await this.userService.getGuidanceRoom(agentInfo.userID);
     if (!room) {
-      return { success: false };
+      return {
+        success: false,
+        error: 'No guidance room found',
+        question: chatData.question,
+      };
     }
     const guidanceVc =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        this.guidanceVcId,
-        {
-          relations: {
-            aiPersona: true,
-          },
-        }
-      );
+      await this.platformService.getGuidanceVirtualContributorOrFail();
 
-    await this.communicationAdapter.sendMessage({
+    const message = await this.communicationAdapter.sendMessage({
       roomID: room.externalRoomID,
       senderCommunicationsID: agentInfo.communicationID,
       message: chatData.question,
@@ -102,7 +91,9 @@ export class ChatGuidanceService {
     });
 
     return {
+      id: message.id,
       success: true,
+      question: chatData.question,
     };
   }
 
