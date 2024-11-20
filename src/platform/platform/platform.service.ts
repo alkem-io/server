@@ -21,6 +21,7 @@ import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @Injectable()
 export class PlatformService {
@@ -130,6 +131,24 @@ export class PlatformService {
     }
 
     return storageAggregator;
+  }
+
+  async getGuidanceVirtualContributorOrFail(): Promise<IVirtualContributor> {
+    const platform = await this.getPlatformOrFail({
+      relations: {
+        guidanceVirtualContributor: {
+          aiPersona: true,
+        },
+      },
+    });
+    const guidanceVC = platform.guidanceVirtualContributor;
+    if (!guidanceVC) {
+      throw new EntityNotFoundException(
+        'Unable to find Virtual Contributor for Guidance on Platform',
+        LogContext.PLATFORM
+      );
+    }
+    return guidanceVC;
   }
 
   async getLicensingFramework(
