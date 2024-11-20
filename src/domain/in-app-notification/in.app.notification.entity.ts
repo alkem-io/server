@@ -6,8 +6,6 @@ import {
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../common/entity/base-entity/base.alkemio.entity';
 import { InAppNotificationState } from './in.app.notification.state';
-import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 // todo: use json
 // todo: comments
