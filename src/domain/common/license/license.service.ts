@@ -112,6 +112,35 @@ export class LicenseService {
     return this.getEntitlementsFromLicenseOrFail(license);
   }
 
+  public async getMyLicensePrivilegesOrFail(
+    licenseInput: ILicense
+  ): Promise<LicenseEntitlementType[] | never> {
+    let license = licenseInput;
+    if (!license.entitlements) {
+      license = await this.getLicenseOrFail(licenseInput.id, {
+        relations: {
+          entitlements: true,
+        },
+      });
+    }
+    const entitlements = this.getEntitlementsFromLicenseOrFail(license);
+    const availableEntitlements = (
+      await Promise.all(
+        entitlements.map(async entitlement => ({
+          entitlement,
+          isAvailable:
+            await this.licenseEntitlementService.isEntitlementAvailable(
+              entitlement.id
+            ),
+        }))
+      )
+    )
+      .filter(({ isAvailable }) => isAvailable)
+      .map(({ entitlement }) => entitlement.type);
+
+    return availableEntitlements;
+  }
+
   public reset(license: ILicense): ILicense {
     const entitlements = this.getEntitlementsFromLicenseOrFail(license);
     for (const entitlement of entitlements) {

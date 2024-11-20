@@ -27,7 +27,7 @@ export class SpaceLicenseService {
 
   async applyLicensePolicy(
     spaceID: string,
-    agent?: IAgent
+    level0SpaceAgent?: IAgent
   ): Promise<ILicense[]> {
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
@@ -62,7 +62,7 @@ export class SpaceLicenseService {
 
     // Ensure always applying from a clean state
     space.license = this.licenseService.reset(space.license);
-    const rootLevelSpaceAgent = agent ?? space.agent;
+    const rootLevelSpaceAgent = level0SpaceAgent ?? space.agent;
 
     space.license = await this.extendLicensePolicy(
       space.license,

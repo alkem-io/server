@@ -18,7 +18,6 @@ export enum AuthorizationPrivilege {
   CREATE_MESSAGE_REPLY = 'create-message-reply',
   CREATE_MESSAGE_REACTION = 'create-message-reaction',
   CREATE_WHITEBOARD = 'create-whiteboard',
-  CREATE_WHITEBOARD_RT = 'create-whiteboard-rt',
   CREATE_SPACE = 'create-space',
   CREATE_SUBSPACE = 'create-subspace',
   CREATE_ORGANIZATION = 'create-organization',
@@ -42,7 +41,6 @@ export enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
   UPDATE_CONTENT = 'update-content',
-  SAVE_AS_TEMPLATE = 'save-as-template',
   TRANSFER_RESOURCE = 'transfer-resource',
 }
 
