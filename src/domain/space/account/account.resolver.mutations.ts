@@ -301,6 +301,10 @@ export class AccountResolverMutations {
     const accountAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     await this.authorizationPolicyService.saveAll(accountAuthorizations);
+    const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
     return await this.accountService.getAccountOrFail(account.id);
   }
 
