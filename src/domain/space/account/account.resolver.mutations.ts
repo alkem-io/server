@@ -85,7 +85,7 @@ export class AccountResolverMutations {
       }
     );
 
-    this.validateSoftLicenseLimitOrFail(
+    await this.validateSoftLicenseLimitOrFail(
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_SPACE,
@@ -149,7 +149,7 @@ export class AccountResolverMutations {
       }
     );
 
-    this.validateSoftLicenseLimitOrFail(
+    await this.validateSoftLicenseLimitOrFail(
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_INNOVATION_HUB,
@@ -192,7 +192,7 @@ export class AccountResolverMutations {
       }
     );
 
-    this.validateSoftLicenseLimitOrFail(
+    await this.validateSoftLicenseLimitOrFail(
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
@@ -252,7 +252,7 @@ export class AccountResolverMutations {
       }
     );
 
-    this.validateSoftLicenseLimitOrFail(
+    await this.validateSoftLicenseLimitOrFail(
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_INNOVATION_PACK,
@@ -301,6 +301,10 @@ export class AccountResolverMutations {
     const accountAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     await this.authorizationPolicyService.saveAll(accountAuthorizations);
+    const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
     return await this.accountService.getAccountOrFail(account.id);
   }
 
@@ -554,7 +558,7 @@ export class AccountResolverMutations {
     );
   }
 
-  private validateSoftLicenseLimitOrFail(
+  private async validateSoftLicenseLimitOrFail(
     account: IAccount,
     agentInfo: AgentInfo,
     authorizationPrivilege: AuthorizationPrivilege,
@@ -581,16 +585,14 @@ export class AccountResolverMutations {
       authorizationPrivilege,
       `create ${licenseType} on account: ${account.id}`
     );
-    const isEntitleMentEnabled = this.licenseService.isEntitlementAvailable(
-      license,
-      licenseType
-    );
+    const isEntitlementEnabled =
+      await this.licenseService.isEntitlementAvailable(license, licenseType);
     const isPlatformAdmin = this.authorizationService.isAccessGranted(
       agentInfo,
       authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN
     );
-    if (!isPlatformAdmin && !isEntitleMentEnabled) {
+    if (!isPlatformAdmin && !isEntitlementEnabled) {
       const entitlementLimit = this.licenseService.getEntitlementLimit(
         license,
         licenseType
