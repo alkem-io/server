@@ -1,6 +1,6 @@
 import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
-import { LicenseCredential } from '@common/enums/license.credential';
-import { LicensePlanType } from '@common/enums/license.plan.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 
@@ -37,11 +37,11 @@ export class CreateLicensePlanInput {
   })
   isFree!: boolean;
 
-  @Field(() => LicensePlanType, {
+  @Field(() => LicensingCredentialBasedPlanType, {
     nullable: false,
     description: 'The type of this License Plan.',
   })
-  type!: LicensePlanType;
+  type!: LicensingCredentialBasedPlanType;
 
   @Field(() => Boolean, {
     description: 'Is there a trial period enabled',
@@ -61,11 +61,11 @@ export class CreateLicensePlanInput {
   })
   requiresContactSupport!: boolean;
 
-  @Field(() => LicenseCredential, {
+  @Field(() => LicensingCredentialBasedCredentialType, {
     description: 'The credential to represent this plan',
     nullable: false,
   })
-  licenseCredential!: LicenseCredential;
+  licenseCredential!: LicensingCredentialBasedCredentialType;
 
   @Field(() => Boolean, {
     description: 'Assign this plan to all new User accounts',

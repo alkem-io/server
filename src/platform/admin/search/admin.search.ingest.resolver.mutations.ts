@@ -10,9 +10,8 @@ import { SearchIngestService } from '@services/api/search/v2/ingest/search.inges
 import { TaskService } from '@services/task';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';
-import { LicenseManagerService } from '@core/license-manager';
+import { LicensingWingbackSubscriptionService } from '@core/licensing-wingback-subscription';
 import { randomUUID } from 'crypto';
-import { ChatGuidanceAnswerRelevanceInput } from '@services/api/chat-guidance/dto/chat.guidance.relevance.dto';
 
 @Resolver()
 export class AdminSearchIngestResolverMutations {
@@ -22,13 +21,13 @@ export class AdminSearchIngestResolverMutations {
     private searchIngestService: SearchIngestService,
     private taskService: TaskService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    private licenseManagerService: LicenseManagerService
+    private licenseManagerService: LicensingWingbackSubscriptionService
   ) {}
   // todo: remove
   @UseGuards(GraphqlGuard)
   @Mutation(() => String)
   public async adminCreateLicenseCostumer() {
-    const res = await this.licenseManagerService.createCostumer({
+    const res = await this.licenseManagerService.createCustomer({
       name: `Test User ${randomUUID()}`,
       emails: {
         main: `main${randomUUID()}@alkem.io`,

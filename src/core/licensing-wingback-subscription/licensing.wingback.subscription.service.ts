@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { LICENSE_MANAGER } from '@common/constants';
-import { CreateCostumer, LicenseManager } from './license.manager';
+import { CreateCustomer } from './type/licensing.wingback.subscription..type.create.customer';
+import { LicenseManager } from './licensing.wingback.subscription.interface';
 
 @Injectable()
-export class LicenseManagerService {
+export class LicensingWingbackSubscriptionService {
   constructor(
     @Inject(LICENSE_MANAGER) private readonly licenseManager: LicenseManager
   ) {}
@@ -13,7 +14,7 @@ export class LicenseManagerService {
    * @param data
    * @throws {Error} if the request fails
    */
-  public createCostumer(data: CreateCostumer): Promise<{ id: string } | never> {
+  public createCustomer(data: CreateCustomer): Promise<{ id: string } | never> {
     return this.licenseManager.createCustomer(data);
   }
 

@@ -11,11 +11,11 @@ import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { LicensePolicy } from '@platform/license-policy';
 import { IAgent, ICredential } from '@domain/agent';
-import { ILicensePolicyCredentialRule } from './license.policy.rule.credential.interface';
+import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.rule.credential.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
-export class LicenseEngineService {
+export class LicensingCredentialBasedService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -51,7 +51,8 @@ export class LicenseEngineService {
     agent: IAgent,
     licensePolicy?: ILicensePolicy | undefined
   ): Promise<boolean> {
-    const policy = await this.getLicensePolicyOrFail(licensePolicy);
+    const policy =
+      await this.getLicensingCredentialBasedPolicyOrFail(licensePolicy);
     const credentials = await this.getCredentialsFromAgent(agent);
 
     const credentialRules = this.convertCredentialRulesStr(
@@ -86,7 +87,7 @@ export class LicenseEngineService {
     return credentials;
   }
 
-  private async getLicensePolicyOrFail(
+  private async getLicensingCredentialBasedPolicyOrFail(
     licensePolicy?: ILicensePolicy | undefined
   ): Promise<ILicensePolicy> {
     let policy = licensePolicy;
@@ -100,7 +101,8 @@ export class LicenseEngineService {
     agent: IAgent,
     licensePolicy?: ILicensePolicy
   ): Promise<LicenseEntitlementType[]> {
-    const policy = await this.getLicensePolicyOrFail(licensePolicy);
+    const policy =
+      await this.getLicensingCredentialBasedPolicyOrFail(licensePolicy);
     const credentials = await this.getCredentialsFromAgent(agent);
 
     const grantedEntitlements: LicenseEntitlementType[] = [];
@@ -125,7 +127,9 @@ export class LicenseEngineService {
     return uniquePrivileges;
   }
 
-  convertCredentialRulesStr(rulesStr: string): ILicensePolicyCredentialRule[] {
+  convertCredentialRulesStr(
+    rulesStr: string
+  ): ILicensingCredentialBasedPolicyCredentialRule[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
       return JSON.parse(rulesStr);

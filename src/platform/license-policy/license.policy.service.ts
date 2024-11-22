@@ -5,10 +5,10 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { ILicensePolicy } from './license.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicensePolicy } from './license.policy.entity';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensingCredentialBasedService } from '@core/licensing-credential-based/licensing.credential.based.service';
 import { LogContext } from '@common/enums/logging.context';
-import { ILicensePolicyCredentialRule } from '@core/license-engine';
-import { LicenseCredential } from '@common/enums/license.credential';
+import { ILicensingCredentialBasedPolicyCredentialRule } from '@core/licensing-credential-based';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
@@ -16,16 +16,16 @@ export class LicensePolicyService {
   constructor(
     @InjectRepository(LicensePolicy)
     private licensePolicyRepository: Repository<LicensePolicy>,
-    private licenseEngineService: LicenseEngineService,
+    private licenseEngineService: LicensingCredentialBasedService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   createCredentialRule(
     grantedEntitlements: LicenseEntitlementType[],
-    credentialType: LicenseCredential,
+    credentialType: LicensingCredentialBasedCredentialType,
     name: string
-  ): ILicensePolicyCredentialRule {
+  ): ILicensingCredentialBasedPolicyCredentialRule {
     return {
       grantedEntitlements: grantedEntitlements,
       credentialType,
@@ -57,7 +57,9 @@ export class LicensePolicyService {
     return await this.licensePolicyRepository.save(licensePolicy);
   }
 
-  getCredentialRules(license: ILicensePolicy): ILicensePolicyCredentialRule[] {
+  getCredentialRules(
+    license: ILicensePolicy
+  ): ILicensingCredentialBasedPolicyCredentialRule[] {
     const rules = this.licenseEngineService.convertCredentialRulesStr(
       license.credentialRulesStr
     );

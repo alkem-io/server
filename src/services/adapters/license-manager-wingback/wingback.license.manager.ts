@@ -3,14 +3,12 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, map } from 'rxjs';
 import { AlkemioConfig } from '@src/types';
-import {
-  CreateCostumer,
-  LicenseManager,
-  UpdateCostumer,
-} from 'src/core/license-manager';
+import { CreateCustomer } from '@core/licensing-wingback-subscription';
 import { WingbackEntitlement } from '@services/adapters/license-manager-wingback/types/entitlement';
+import { LicenseManager } from '@core/licensing-wingback-subscription/licensing.wingback.subscription.interface';
+import { UpdateCostumer } from '@core/licensing-wingback-subscription/type/licensing.wingback.subscription..type.update.customer';
 
-export interface CreateWingbackCustomer extends CreateCostumer {}
+export interface CreateWingbackCustomer extends CreateCustomer {}
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
 export class WingbackLicenseManager implements LicenseManager {
@@ -106,21 +104,21 @@ export class WingbackLicenseManager implements LicenseManager {
   }
 
   activateCustomer(customerId: string): Promise<boolean> {
-    throw new Error('Method not implemented');
+    throw new Error(`Method not implemented: ${customerId}`);
   }
 
   getCostumer(customerId: string): Promise<unknown> {
-    throw new Error('Method not implemented');
+    throw new Error(`Method not implemented: ${customerId}`);
   }
 
   inactivateCustomer(customerId: string): Promise<boolean> {
-    throw new Error('Method not implemented');
+    throw new Error(`Method not implemented: ${customerId}`);
   }
 
   updateCostumer<TPayload extends UpdateCostumer>(
     data: TPayload
   ): Promise<unknown> {
-    throw new Error('Method not implemented');
+    throw new Error(`Method not implemented: ${data}`);
   }
 
   private sendPost<TResult, TInput = unknown>(
@@ -139,6 +137,7 @@ export class WingbackLicenseManager implements LicenseManager {
     return firstValueFrom(request$);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private sendGet<TResult, TInput = unknown>(path: string): Promise<TResult> {
     const request$ = this.httpService
       .get<TResult>(`${this.endpoint}${path}`, {

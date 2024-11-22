@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { LicenseCredential } from '@common/enums/license.credential';
-import { LicensePlanType } from '@common/enums/license.plan.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
 import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
 
 @ObjectType('LicensePlan')
@@ -26,11 +26,11 @@ export abstract class ILicensePlan extends IBaseAlkemio {
   })
   sortOrder!: number;
 
-  @Field(() => LicensePlanType, {
+  @Field(() => LicensingCredentialBasedPlanType, {
     nullable: false,
     description: 'The type of this License Plan.',
   })
-  type!: LicensePlanType;
+  type!: LicensingCredentialBasedPlanType;
 
   @Field(() => Number, {
     nullable: true,
@@ -62,11 +62,11 @@ export abstract class ILicensePlan extends IBaseAlkemio {
   })
   requiresContactSupport!: boolean;
 
-  @Field(() => LicenseCredential, {
+  @Field(() => LicensingCredentialBasedCredentialType, {
     description: 'The credential to represent this plan',
     nullable: false,
   })
-  licenseCredential!: LicenseCredential;
+  licenseCredential!: LicensingCredentialBasedCredentialType;
 
   @Field(() => Boolean, {
     description: 'Assign this plan to all new User accounts',

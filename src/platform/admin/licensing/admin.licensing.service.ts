@@ -11,7 +11,7 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { IAccount } from '@domain/space/account/account.interface';
-import { LicensePlanType } from '@common/enums/license.plan.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
 import { ValidationException } from '@common/exceptions';
 import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
 import { EntityManager } from 'typeorm';
@@ -39,8 +39,9 @@ export class AdminLicensingService {
         licensePlanData.licensePlanID
       );
     const isLicensePlanTypeForSpaces =
-      licensePlan.type === LicensePlanType.SPACE_FEATURE_FLAG ||
-      licensePlan.type === LicensePlanType.SPACE_PLAN;
+      licensePlan.type ===
+        LicensingCredentialBasedPlanType.SPACE_FEATURE_FLAG ||
+      licensePlan.type === LicensingCredentialBasedPlanType.SPACE_PLAN;
     if (!isLicensePlanTypeForSpaces) {
       throw new ValidationException(
         `License Plan is not for Spaces: ${licensePlan.type}`,
@@ -82,8 +83,9 @@ export class AdminLicensingService {
         licensePlanData.licensePlanID
       );
     const isLicensePlanTypeForSpaces =
-      licensePlan.type === LicensePlanType.SPACE_FEATURE_FLAG ||
-      licensePlan.type === LicensePlanType.SPACE_PLAN;
+      licensePlan.type ===
+        LicensingCredentialBasedPlanType.SPACE_FEATURE_FLAG ||
+      licensePlan.type === LicensingCredentialBasedPlanType.SPACE_PLAN;
     if (!isLicensePlanTypeForSpaces) {
       throw new ValidationException(
         `License Plan is not for Spaces: ${licensePlan.type}`,
@@ -125,8 +127,9 @@ export class AdminLicensingService {
         licensePlanData.licensePlanID
       );
     const isLicensePlanTypeForAccounts =
-      licensePlan.type === LicensePlanType.ACCOUNT_PLAN ||
-      licensePlan.type === LicensePlanType.ACCOUNT_FEATURE_FLAG;
+      licensePlan.type === LicensingCredentialBasedPlanType.ACCOUNT_PLAN ||
+      licensePlan.type ===
+        LicensingCredentialBasedPlanType.ACCOUNT_FEATURE_FLAG;
     if (!isLicensePlanTypeForAccounts) {
       throw new ValidationException(
         `License Plan is not for Accounts: ${licensePlan.type}`,
@@ -167,8 +170,9 @@ export class AdminLicensingService {
         licensePlanData.licensePlanID
       );
     const isLicensePlanTypeForAccounts =
-      licensePlan.type === LicensePlanType.ACCOUNT_PLAN ||
-      licensePlan.type === LicensePlanType.ACCOUNT_FEATURE_FLAG;
+      licensePlan.type === LicensingCredentialBasedPlanType.ACCOUNT_PLAN ||
+      licensePlan.type ===
+        LicensingCredentialBasedPlanType.ACCOUNT_FEATURE_FLAG;
     if (!isLicensePlanTypeForAccounts) {
       throw new ValidationException(
         `License Plan is not for Accounts: ${licensePlan.type}`,

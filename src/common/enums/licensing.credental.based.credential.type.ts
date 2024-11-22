@@ -1,7 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 // Credentials to be added later:
-export enum LicenseCredential {
+export enum LicensingCredentialBasedCredentialType {
   SPACE_LICENSE_FREE = 'space-license-free',
   SPACE_LICENSE_PLUS = 'space-license-plus',
   SPACE_LICENSE_PREMIUM = 'space-license-premium',
@@ -12,6 +12,6 @@ export enum LicenseCredential {
   ACCOUNT_LICENSE_PLUS = 'account-license-plus',
 }
 
-registerEnumType(LicenseCredential, {
-  name: 'LicenseCredential',
+registerEnumType(LicensingCredentialBasedCredentialType, {
+  name: 'LicensingCredentialBasedCredentialType',
 });

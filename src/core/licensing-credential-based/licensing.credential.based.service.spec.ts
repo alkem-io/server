@@ -2,19 +2,23 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { LicenseEngineService } from './license.engine.service';
+import { LicensingCredentialBasedService } from './licensing.credential.based.service';
 
-describe('License.engineService', () => {
-  let service: LicenseEngineService;
+describe('LicensingCredentialBased.Service', () => {
+  let service: LicensingCredentialBasedService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LicenseEngineService, MockCacheManager, MockWinstonProvider],
+      providers: [
+        LicensingCredentialBasedService,
+        MockCacheManager,
+        MockWinstonProvider,
+      ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get(LicenseEngineService);
+    service = module.get(LicensingCredentialBasedService);
   });
 
   it('should be defined', () => {

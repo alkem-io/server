@@ -16,7 +16,7 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 import { AccountHostModule } from '../account.host/account.host.module';
-import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { LicensingCredentialBasedModule } from '@core/licensing-credential-based/licensing.credential.based.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
@@ -39,7 +39,7 @@ import { LicensingFrameworkModule } from '@platform/licensing-framework/licensin
     PlatformAuthorizationPolicyModule,
     LicensingFrameworkModule,
     LicenseIssuerModule,
-    LicenseEngineModule,
+    LicensingCredentialBasedModule,
     LicenseModule,
     SpaceModule,
     InnovationHubModule,

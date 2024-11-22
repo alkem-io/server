@@ -5,13 +5,13 @@ import { LicensePolicyResolverFields } from './license.policy.resolver.fields';
 
 import { LicensePolicyService } from './license.policy.service';
 import { LicensePolicyAuthorizationService } from './license.policy.service.authorization';
-import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { LicensingCredentialBasedModule } from '@core/licensing-credential-based/licensing.credential.based.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
-    LicenseEngineModule,
+    LicensingCredentialBasedModule,
     TypeOrmModule.forFeature([LicensePolicy]),
   ],
   providers: [

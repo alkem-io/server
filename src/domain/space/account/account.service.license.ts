@@ -8,7 +8,7 @@ import {
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensingCredentialBasedService } from '@core/licensing-credential-based/licensing.credential.based.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { IAccount } from './account.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -19,7 +19,7 @@ export class AccountLicenseService {
   constructor(
     private licenseService: LicenseService,
     private accountService: AccountService,
-    private licenseEngineService: LicenseEngineService,
+    private licenseEngineService: LicensingCredentialBasedService,
     private spaceLicenseService: SpaceLicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}

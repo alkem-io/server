@@ -1,8 +1,8 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ILicensePlan } from './license.plan.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { LicenseCredential } from '@common/enums/license.credential';
-import { LicensePlanType } from '@common/enums/license.plan.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
 import { ENUM_LENGTH } from '@common/constants';
 import { LicensingFramework } from '@platform/licensing-framework/licensing.framework.entity';
 
@@ -40,10 +40,10 @@ export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
   requiresContactSupport!: boolean;
 
   @Column('text', { nullable: false })
-  licenseCredential!: LicenseCredential;
+  licenseCredential!: LicensingCredentialBasedCredentialType;
 
   @Column('varchar', { nullable: false, length: ENUM_LENGTH })
-  type!: LicensePlanType;
+  type!: LicensingCredentialBasedPlanType;
 
   @Column('boolean', { nullable: false, default: false })
   assignToNewOrganizationAccounts!: boolean;

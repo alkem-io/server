@@ -1,20 +1,24 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILicensePolicy } from './license.policy.interface';
 import { LicensePolicyService } from './license.policy.service';
-import { ILicensePolicyCredentialRule } from '@core/license-engine';
+import { ILicensingCredentialBasedPolicyCredentialRule } from '@core/licensing-credential-based';
 
 @Resolver(() => ILicensePolicy)
 export class LicensePolicyResolverFields {
   constructor(private licensePolicyService: LicensePolicyService) {}
 
-  @ResolveField('credentialRules', () => [ILicensePolicyCredentialRule], {
-    nullable: false,
-    description:
-      'The set of credential rules that are contained by this License Policy.',
-  })
+  @ResolveField(
+    'credentialRules',
+    () => [ILicensingCredentialBasedPolicyCredentialRule],
+    {
+      nullable: false,
+      description:
+        'The set of credential rules that are contained by this License Policy.',
+    }
+  )
   credentialRules(
     @Parent() license: ILicensePolicy
-  ): ILicensePolicyCredentialRule[] {
+  ): ILicensingCredentialBasedPolicyCredentialRule[] {
     return this.licensePolicyService.getCredentialRules(license);
   }
 }

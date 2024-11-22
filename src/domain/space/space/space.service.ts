@@ -62,11 +62,11 @@ import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AccountHostService } from '../account.host/account.host.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { LicenseCredential } from '@common/enums/license.credential';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
+import { LicensingCredentialBasedService } from '@core/licensing-credential-based/licensing.credential.based.service';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { IAccount } from '../account/account.interface';
-import { LicensePlanType } from '@common/enums/license.plan.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -106,7 +106,7 @@ export class SpaceService {
     private templatesManagerService: TemplatesManagerService,
     private collaborationService: CollaborationService,
     private licensingFrameworkService: LicensingFrameworkService,
-    private licenseEngineService: LicenseEngineService,
+    private licenseEngineService: LicensingCredentialBasedService,
     private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -917,12 +917,12 @@ export class SpaceService {
     const subscriptions: ISpaceSubscription[] = [];
     for (const credential of space.agent.credentials) {
       if (
-        Object.values(LicenseCredential).includes(
-          credential.type as LicenseCredential
+        Object.values(LicensingCredentialBasedCredentialType).includes(
+          credential.type as LicensingCredentialBasedCredentialType
         )
       ) {
         subscriptions.push({
-          name: credential.type as LicenseCredential,
+          name: credential.type as LicensingCredentialBasedCredentialType,
           expires: credential.expires,
         });
       }
@@ -1319,7 +1319,9 @@ export class SpaceService {
           ),
         };
       })
-      .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
+      .filter(
+        item => item.plan?.type === LicensingCredentialBasedPlanType.SPACE_PLAN
+      )
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0]?.subscription;
   }
 

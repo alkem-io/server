@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
-import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
 
 @InputType()
 export class UpdateLicensePlanInput extends UpdateBaseAlkemioInput {
@@ -46,11 +46,11 @@ export class UpdateLicensePlanInput extends UpdateBaseAlkemioInput {
   })
   requiresContactSupport?: boolean;
 
-  @Field(() => LicenseCredential, {
+  @Field(() => LicensingCredentialBasedCredentialType, {
     description: 'The credential to represent this plan',
     nullable: true,
   })
-  licenseCredential?: LicenseCredential;
+  licenseCredential?: LicensingCredentialBasedCredentialType;
 
   @Field(() => Boolean, {
     description: 'Assign this plan to all new User accounts',
