@@ -9,7 +9,6 @@ import { NotificationAdapter } from './notification.adapter';
 import { NotificationPayloadBuilder } from './notification.payload.builder';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
-import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
 
 @Module({
   imports: [
@@ -18,7 +17,6 @@ import { InAppNotificationReceiverModule } from '@domain/in-app-notification-rec
     UrlGeneratorModule,
     TypeOrmModule.forFeature([Post, Whiteboard, Community]),
     ContributorLookupModule,
-    InAppNotificationReceiverModule, // todo remote later
   ],
   providers: [NotificationAdapter, NotificationPayloadBuilder],
   exports: [NotificationAdapter],

@@ -12,7 +12,6 @@ import {
   InAppNotificationCommunityNewMemberResolverFields,
   InAppNotificationUserMentionedResolverFields,
 } from './field-resolvers';
-import { InAppNotificationReceiverController } from '../in-app-notification-receiver/in.app.notification.receiver.controller';
 
 @Module({
   imports: [
@@ -32,6 +31,5 @@ import { InAppNotificationReceiverController } from '../in-app-notification-rece
     InAppNotificationUserMentionedResolverFields,
   ],
   exports: [InAppNotificationReader],
-  controllers: [InAppNotificationReceiverController],
 })
 export class InAppNotificationReaderModule {}

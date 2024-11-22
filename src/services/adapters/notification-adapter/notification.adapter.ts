@@ -31,9 +31,6 @@ import { NotificationInputPlatformInvitation } from './dto/notification.dto.inpu
 import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/notification.dto.input.community.invitation.vc';
 import { NotificationInputSpaceCreated } from './dto/notification.dto.input.space.created';
-import { InAppNotificationReceiver } from '@domain/in-app-notification-receiver/in.app.notification.receiver';
-
-const hardcodedInAppReceiverID = '235e4a7d-966e-4dfe-8fed-0a27bf0620b5';
 
 @Injectable()
 export class NotificationAdapter {
@@ -41,8 +38,7 @@ export class NotificationAdapter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private notificationPayloadBuilder: NotificationPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
-    private inAppNotificationReceiver: InAppNotificationReceiver // todo: remove later
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   public async calloutPublished(
@@ -58,17 +54,17 @@ export class NotificationAdapter {
       );
 
     this.notificationsClient.emit<number>(event, payload);
-    await this.inAppNotificationReceiver.store([
-      {
-        type: event,
-        triggeredAt: new Date(),
-        triggeredByID: payload.triggeredBy,
-        category: 'N/A',
-        receiverID: hardcodedInAppReceiverID,
-        calloutID: payload.callout.id,
-        spaceID: payload.space.id,
-      },
-    ]);
+    // await this.inAppNotificationReceiver.store([
+    //   {
+    //     type: event,
+    //     triggeredAt: new Date(),
+    //     triggeredByID: payload.triggeredBy,
+    //     category: 'N/A',
+    //     receiverID: hardcodedInAppReceiverID,
+    //     calloutID: payload.callout.id,
+    //     spaceID: payload.space.id,
+    //   },
+    // ]);
   }
 
   public async postCreated(
@@ -258,21 +254,21 @@ export class NotificationAdapter {
 
     if (payload) {
       this.notificationsClient.emit<number>(event, payload);
-      this.inAppNotificationReceiver.store([
-        {
-          type: event,
-          receiverID: hardcodedInAppReceiverID,
-          triggeredAt: new Date(),
-          triggeredByID: payload.triggeredBy,
-          category: 'N/A',
-          comment: '',
-          contributorType: payload.mentionedUser.type as any,
-          commentOrigin: {
-            type: 'callout',
-            url: '',
-          },
-        },
-      ]);
+      // this.inAppNotificationReceiver.store([
+      //   {
+      //     type: event,
+      //     receiverID: hardcodedInAppReceiverID,
+      //     triggeredAt: new Date(),
+      //     triggeredByID: payload.triggeredBy,
+      //     category: 'N/A',
+      //     comment: '',
+      //     contributorType: payload.mentionedUser.type as any,
+      //     commentOrigin: {
+      //       type: 'callout',
+      //       url: '',
+      //     },
+      //   },
+      // ]);
     }
   }
 
@@ -414,17 +410,17 @@ export class NotificationAdapter {
         eventData.community
       );
     this.notificationsClient.emit(event, payload);
-    this.inAppNotificationReceiver.store([
-      {
-        type: event,
-        receiverID: hardcodedInAppReceiverID,
-        triggeredAt: new Date(),
-        triggeredByID: payload.triggeredBy,
-        category: 'N/A',
-        newMemberID: payload.contributor.id,
-        spaceID: payload.space.id,
-      },
-    ]);
+    // this.inAppNotificationReceiver.store([
+    //   {
+    //     type: event,
+    //     receiverID: hardcodedInAppReceiverID,
+    //     triggeredAt: new Date(),
+    //     triggeredByID: payload.triggeredBy,
+    //     category: 'N/A',
+    //     newMemberID: payload.contributor.id,
+    //     spaceID: payload.space.id,
+    //   },
+    // ]);
   }
 
   public async platformGlobalRoleChanged(

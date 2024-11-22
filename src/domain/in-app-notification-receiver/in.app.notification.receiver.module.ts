@@ -8,6 +8,5 @@ import { InAppNotificationReceiverController } from './in.app.notification.recei
   imports: [TypeOrmModule.forFeature([InAppNotificationEntity])],
   providers: [InAppNotificationReceiver],
   controllers: [InAppNotificationReceiverController],
-  exports: [InAppNotificationReceiver], //todo what to export
 })
 export class InAppNotificationReceiverModule {}

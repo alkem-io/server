@@ -1,13 +1,13 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { ObjectType } from '@nestjs/graphql';
 import {
   InAppNotificationPayload,
   NotificationEventType,
 } from '@alkemio/notifications-lib';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { InAppNotification } from '../in.app.notification.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
+import { InAppNotification } from '../in.app.notification.interface';
 
 @ObjectType('InAppNotificationCommunityNewMember', {
   implements: () => InAppNotification,
