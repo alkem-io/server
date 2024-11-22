@@ -20,7 +20,7 @@ export class LicenseResolverFields {
   }
 
   @ResolveField('myLicensePrivileges', () => [LicenseEntitlementType], {
-    nullable: false,
+    nullable: true,
     description: 'The set of License Entitlements on that entity.',
   })
   async myLicensePrivileges(
