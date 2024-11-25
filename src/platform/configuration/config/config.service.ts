@@ -5,6 +5,7 @@ import { IAuthenticationProviderConfig } from './authentication/providers/authen
 import { IOryConfig } from './authentication/providers/ory/ory.config.interface';
 import { PlatformFeatureFlagName } from '@common/enums/platform.feature.flag.name';
 import { AlkemioConfig } from '@src/types';
+import { VisualTypeConstraints } from '@domain/common/visual/visual.constraints';
 
 @Injectable()
 export class KonfigService {
@@ -31,6 +32,7 @@ export class KonfigService {
     const fileConfig = this.configService.get('storage.file', {
       infer: true,
     });
+    const visualTypeConstraints = new VisualTypeConstraints();
     return {
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
@@ -119,6 +121,7 @@ export class KonfigService {
         submitPII: sentry?.submit_pii,
         environment: sentry?.environment,
       },
+      visualTypeConstraints,
       apm: {
         rumEnabled: apm?.rumEnabled,
         endpoint: apm?.endpoint,
