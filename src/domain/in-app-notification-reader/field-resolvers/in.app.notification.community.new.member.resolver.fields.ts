@@ -4,6 +4,10 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { InAppNotificationCommunityNewMember } from '../dto/in.app.notification.community.new.member';
 import { InAppNotification } from '../in.app.notification.interface';
+import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Loader } from '@core/dataloader/decorators';
+import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
 
 @Resolver(() => InAppNotificationCommunityNewMember)
 export class InAppNotificationCommunityNewMemberResolverFields {
@@ -11,24 +15,32 @@ export class InAppNotificationCommunityNewMemberResolverFields {
     nullable: false,
     description: 'The type of the Contributor that joined.',
   })
-  public contributorType(@Parent() notification: InAppNotification) {
-    return null; // todo dataloader
+  public contributorType(
+    @Parent() { payload }: InAppNotificationCommunityNewMember
+  ) {
+    return payload.type as unknown as CommunityContributorType; // todo this might be wrong - the types dont match
   }
 
   @ResolveField(() => IContributor, {
-    nullable: false, // false
+    nullable: false,
     description: 'The Contributor that joined.',
   })
   // todo: rename?
-  public actor(@Parent() notification: InAppNotification) {
-    return null; // todo dataloader
+  public actor(
+    @Parent() { payload }: InAppNotificationCommunityNewMember,
+    @Loader(ContributorLoaderCreator) loader: ILoader<IContributor>
+  ) {
+    return loader.load(payload.newMemberID);
   }
 
   @ResolveField(() => ISpace, {
     nullable: false,
     description: 'The Space that was joined.',
   })
-  public space(@Parent() notification: InAppNotification) {
-    return null; // todo dataloader
+  public space(
+    @Parent() { payload }: InAppNotificationCommunityNewMember,
+    @Loader(SpaceLoaderCreator) loader: ILoader<ISpace>
+  ) {
+    return loader.load(payload.spaceID);
   }
 }

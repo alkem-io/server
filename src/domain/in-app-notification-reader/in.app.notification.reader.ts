@@ -2,7 +2,6 @@ import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationEntity } from '@domain/in-app-notification/in.app.notification.entity';
-import { InAppNotificationBuilder } from '@domain/in-app-notification-reader/in.app.notification.builder';
 import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 
@@ -11,8 +10,7 @@ import { InAppNotificationState } from '@domain/in-app-notification/in.app.notif
 export class InAppNotificationReader {
   constructor(
     @InjectRepository(InAppNotificationEntity)
-    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>,
-    private readonly inAppNotificationBuilder: InAppNotificationBuilder
+    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
   ) {}
 
   public getNotifications(receiverID?: string): Promise<InAppNotification[]> {

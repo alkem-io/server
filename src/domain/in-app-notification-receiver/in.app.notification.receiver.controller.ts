@@ -1,4 +1,7 @@
-import { CompressedInAppNotificationPayload } from '@alkemio/notifications-lib';
+import {
+  CompressedInAppNotificationPayload,
+  InAppNotificationPayload,
+} from '@alkemio/notifications-lib';
 import { Controller, Inject, LoggerService } from '@nestjs/common';
 import {
   Ctx,
@@ -18,9 +21,10 @@ export class InAppNotificationReceiverController {
     private readonly logger: LoggerService,
     private readonly inAppNotificationReceiver: InAppNotificationReceiver
   ) {}
-  @EventPattern('in-app-notification-receive', Transport.RMQ)
+  @EventPattern('in-app-notification-incoming', Transport.RMQ)
   public receive(
-    @Payload() data: CompressedInAppNotificationPayload[],
+    @Payload()
+    data: CompressedInAppNotificationPayload<InAppNotificationPayload>[],
     @Ctx() context: RmqContext
   ) {
     this.logger.verbose?.(

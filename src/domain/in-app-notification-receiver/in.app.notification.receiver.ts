@@ -21,7 +21,7 @@ export class InAppNotificationReceiver {
   ) {}
 
   public async decompressAndStore(
-    compressedPayload: CompressedInAppNotificationPayload[]
+    compressedPayload: CompressedInAppNotificationPayload<InAppNotificationPayload>[]
   ) {
     // decompress
     const notifications = compressedPayload.flatMap(x =>
@@ -57,7 +57,7 @@ export class InAppNotificationReceiver {
 }
 
 const decompressInAppNotifications = (
-  data: CompressedInAppNotificationPayload
+  data: CompressedInAppNotificationPayload<InAppNotificationPayload>
 ): InAppNotificationPayload[] => {
   const { receiverIDs, ...rest } = data;
   return receiverIDs.map(receiverID => ({

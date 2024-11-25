@@ -1,6 +1,6 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { ObjectType } from '@nestjs/graphql';
 import {
-  InAppNotificationPayload,
+  InAppNotificationCalloutPublishedPayload,
   NotificationEventType,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout';
@@ -23,5 +23,5 @@ export abstract class InAppNotificationCalloutPublished
   id!: string;
   state!: InAppNotificationState;
   triggeredAt!: Date;
-  payload!: InAppNotificationPayload;
+  payload!: InAppNotificationCalloutPublishedPayload;
 }

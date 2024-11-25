@@ -1,6 +1,6 @@
 import { ObjectType } from '@nestjs/graphql';
 import {
-  InAppNotificationPayload,
+  InAppNotificationCommunityNewMemberPayload,
   NotificationEventType,
 } from '@alkemio/notifications-lib';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
@@ -25,5 +25,5 @@ export class InAppNotificationCommunityNewMember implements InAppNotification {
   state!: InAppNotificationState;
   triggeredAt!: Date;
   triggeredBy?: IContributor;
-  payload!: InAppNotificationPayload;
+  payload!: InAppNotificationCommunityNewMemberPayload;
 }
