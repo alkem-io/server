@@ -19,11 +19,11 @@ export class LicenseResolverFields {
     return await this.licenseService.getEntitlements(license);
   }
 
-  @ResolveField('myLicensePrivileges', () => [LicenseEntitlementType], {
+  @ResolveField('availableEntitlements', () => [LicenseEntitlementType], {
     nullable: true,
-    description: 'The set of License Entitlements on that entity.',
+    description: 'The set of License Entitlement Types on that entity.',
   })
-  async myLicensePrivileges(
+  async availableEntitlements(
     @Parent() license: ILicense
   ): Promise<LicenseEntitlementType[]> {
     return await this.licenseService.getMyLicensePrivilegesOrFail(license);
