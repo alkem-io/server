@@ -13,4 +13,14 @@ export class InAppNotificationUserMentionedResolverFields {
   ): CommunityContributorType {
     return payload.contributorType as unknown as CommunityContributorType; // todo this might be wrong - the types dont match
   }
+
+  @ResolveField(() => String, {
+    nullable: false,
+    description: 'The comment that the contributor was mentioned in.',
+  })
+  public comment(
+    @Parent() { payload }: InAppNotificationUserMentioned
+  ): string {
+    return payload.comment;
+  }
 }

@@ -3,7 +3,6 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { ISpace } from '@domain/space/space/space.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { InAppNotificationCommunityNewMember } from '../dto/in.app.notification.community.new.member';
-import { InAppNotification } from '../in.app.notification.interface';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
@@ -18,7 +17,7 @@ export class InAppNotificationCommunityNewMemberResolverFields {
   public contributorType(
     @Parent() { payload }: InAppNotificationCommunityNewMember
   ) {
-    return payload.type as unknown as CommunityContributorType; // todo this might be wrong - the types dont match
+    return payload.contributorType;
   }
 
   @ResolveField(() => IContributor, {
