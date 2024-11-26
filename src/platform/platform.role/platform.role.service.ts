@@ -45,12 +45,12 @@ export class PlatformRoleService {
         LogContext.PLATFORM
       );
     }
+    platformInvitationData.createdBy = agentInfo.userID;
     const platformInvitation =
       await this.platformInvitationService.createPlatformInvitation(
         platformInvitationData
       );
     platformInvitation.platform = platform;
-    platformInvitation.createdBy = agentInfo.userID;
     return await this.platformInvitationService.save(platformInvitation);
   }
 

@@ -25,7 +25,10 @@ export class SpaceLicenseService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async applyLicensePolicy(spaceID: string): Promise<ILicense[]> {
+  async applyLicensePolicy(
+    spaceID: string,
+    level0SpaceAgent?: IAgent
+  ): Promise<ILicense[]> {
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
         agent: {
@@ -59,8 +62,12 @@ export class SpaceLicenseService {
 
     // Ensure always applying from a clean state
     space.license = this.licenseService.reset(space.license);
+    const rootLevelSpaceAgent = level0SpaceAgent ?? space.agent;
 
-    space.license = await this.extendLicensePolicy(space.license, space.agent);
+    space.license = await this.extendLicensePolicy(
+      space.license,
+      rootLevelSpaceAgent
+    );
 
     updatedLicenses.push(space.license);
 
@@ -78,7 +85,10 @@ export class SpaceLicenseService {
     updatedLicenses.push(...collaborationLicenses);
 
     for (const subspace of space.subspaces) {
-      const subspaceLicenses = await this.applyLicensePolicy(subspace.id);
+      const subspaceLicenses = await this.applyLicensePolicy(
+        subspace.id,
+        rootLevelSpaceAgent
+      );
       updatedLicenses.push(...subspaceLicenses);
     }
 

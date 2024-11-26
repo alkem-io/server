@@ -23,7 +23,7 @@ export class Search2Service {
     searchData: SearchInput,
     agentInfo: AgentInfo
   ): Promise<ISearchResults> {
-    const onlyPublicResults = !agentInfo.email;
+    const excludeDemoSpaces = !agentInfo.email;
     if (
       searchData.searchInSpaceFilter &&
       !isUUID(searchData.searchInSpaceFilter)
@@ -45,7 +45,7 @@ export class Search2Service {
     }
     const searchResults = await this.searchExtractService.search(
       searchData,
-      onlyPublicResults
+      excludeDemoSpaces
     );
     return this.searchResultService.resolveSearchResults(
       searchResults,
