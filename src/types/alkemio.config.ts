@@ -102,6 +102,7 @@ export type AlkemioConfig = {
     database: {
       host: string;
       port: number;
+      timezone: string;
       username: string;
       password: string;
       schema: string;
