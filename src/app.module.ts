@@ -139,6 +139,7 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
+          timezone: 'Z',
           charset: dbOptions.charset,
           username: dbOptions.username,
           password: dbOptions.password,
