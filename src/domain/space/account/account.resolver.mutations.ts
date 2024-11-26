@@ -43,6 +43,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { AccountLicenseResetInput } from './dto/account.dto.reset.license';
 import { AccountLicenseService } from './account.service.license';
+import { SpaceLicenseService } from '../space/space.service.license';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -61,6 +62,7 @@ export class AccountResolverMutations {
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
+    private spaceLicenseService: SpaceLicenseService,
     private notificationAdapter: NotificationAdapter,
     private temporaryStorageService: TemporaryStorageService,
     private licenseService: LicenseService
@@ -85,7 +87,7 @@ export class AccountResolverMutations {
       }
     );
 
-    this.validateSoftLicenseLimitOrFail(
+    await this.validateSoftLicenseLimitOrFail(
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_SPACE,
@@ -101,6 +103,11 @@ export class AccountResolverMutations {
     const spaceAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     await this.authorizationPolicyService.saveAll(spaceAuthorizations);
+
+    const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
+      space.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
 
     space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
@@ -149,7 +156,7 @@ export class AccountResolverMutations {
       }
     );
 
-    this.validateSoftLicenseLimitOrFail(
+    await this.validateSoftLicenseLimitOrFail(
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_INNOVATION_HUB,
@@ -192,7 +199,7 @@ export class AccountResolverMutations {
       }
     );
 
-    this.validateSoftLicenseLimitOrFail(
+    await this.validateSoftLicenseLimitOrFail(
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
@@ -252,7 +259,7 @@ export class AccountResolverMutations {
       }
     );
 
-    this.validateSoftLicenseLimitOrFail(
+    await this.validateSoftLicenseLimitOrFail(
       account,
       agentInfo,
       AuthorizationPrivilege.CREATE_INNOVATION_PACK,
@@ -301,6 +308,10 @@ export class AccountResolverMutations {
     const accountAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     await this.authorizationPolicyService.saveAll(accountAuthorizations);
+    const updatedLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
     return await this.accountService.getAccountOrFail(account.id);
   }
 
@@ -554,7 +565,7 @@ export class AccountResolverMutations {
     );
   }
 
-  private validateSoftLicenseLimitOrFail(
+  private async validateSoftLicenseLimitOrFail(
     account: IAccount,
     agentInfo: AgentInfo,
     authorizationPrivilege: AuthorizationPrivilege,
@@ -581,16 +592,14 @@ export class AccountResolverMutations {
       authorizationPrivilege,
       `create ${licenseType} on account: ${account.id}`
     );
-    const isEntitleMentEnabled = this.licenseService.isEntitlementAvailable(
-      license,
-      licenseType
-    );
+    const isEntitlementEnabled =
+      await this.licenseService.isEntitlementAvailable(license, licenseType);
     const isPlatformAdmin = this.authorizationService.isAccessGranted(
       agentInfo,
       authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN
     );
-    if (!isPlatformAdmin && !isEntitleMentEnabled) {
+    if (!isPlatformAdmin && !isEntitlementEnabled) {
       const entitlementLimit = this.licenseService.getEntitlementLimit(
         license,
         licenseType

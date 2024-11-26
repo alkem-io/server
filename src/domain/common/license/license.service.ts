@@ -112,6 +112,35 @@ export class LicenseService {
     return this.getEntitlementsFromLicenseOrFail(license);
   }
 
+  public async getMyLicensePrivilegesOrFail(
+    licenseInput: ILicense
+  ): Promise<LicenseEntitlementType[] | never> {
+    let license = licenseInput;
+    if (!license.entitlements) {
+      license = await this.getLicenseOrFail(licenseInput.id, {
+        relations: {
+          entitlements: true,
+        },
+      });
+    }
+    const entitlements = this.getEntitlementsFromLicenseOrFail(license);
+    const availableEntitlements = (
+      await Promise.all(
+        entitlements.map(async entitlement => ({
+          entitlement,
+          isAvailable:
+            await this.licenseEntitlementService.isEntitlementAvailable(
+              entitlement.id
+            ),
+        }))
+      )
+    )
+      .filter(({ isAvailable }) => isAvailable)
+      .map(({ entitlement }) => entitlement.type);
+
+    return availableEntitlements;
+  }
+
   public reset(license: ILicense): ILicense {
     const entitlements = this.getEntitlementsFromLicenseOrFail(license);
     for (const entitlement of entitlements) {
@@ -180,7 +209,7 @@ export class LicenseService {
       e => e.type === childEntitlement.type
     );
     if (!parentEntitlement) {
-      throw new RelationshipNotFoundException(
+      throw new EntityNotFoundException(
         `Parent entitlement not found: ${childEntitlement.type}`,
         LogContext.LICENSE
       );
@@ -194,7 +223,7 @@ export class LicenseService {
     license: ILicense | undefined
   ): ILicenseEntitlement[] | never {
     if (!license) {
-      throw new RelationshipNotFoundException(
+      throw new EntityNotFoundException(
         'Unable to load Entitlements for License',
         LogContext.LICENSE
       );
@@ -216,7 +245,7 @@ export class LicenseService {
       entitlement => entitlement.type === type
     );
     if (!entitlement) {
-      throw new RelationshipNotFoundException(
+      throw new EntityNotFoundException(
         `Unable to find entitlement of type ${type} in Entitlements for License: ${JSON.stringify(entitlements)}`,
         LogContext.LICENSE
       );
