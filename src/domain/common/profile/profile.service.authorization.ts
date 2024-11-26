@@ -121,12 +121,12 @@ export class ProfileAuthorizationService {
     }
 
     const storageBucketAuthorizations =
-      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );
     updatedAuthorizations.push(...storageBucketAuthorizations);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    return [];
+
+    return updatedAuthorizations;
   }
 }
