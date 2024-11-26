@@ -99,7 +99,6 @@ export class AccountAuthorizationService {
     account.authorization = await this.authorizationPolicyService.save(
       account.authorization
     );
-    updatedAuthorizations.push(account.authorization);
 
     const childUpdatedAuthorizations =
       await this.applyAuthorizationPolicyForChildEntities(account);
