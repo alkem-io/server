@@ -4,8 +4,9 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import {
   NotificationEventType,
   InAppNotificationPayload,
+  InAppNotificationCategory,
 } from '@alkemio/notifications-lib';
-// type InAppNotificationPayload = Record<string, any>;
+
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
@@ -39,8 +40,8 @@ export class InAppNotification {
     nullable: false,
   })
   id!: string;
-  // todo: graphql enum
-  @Field(() => String, {
+
+  @Field(() => NotificationEventType, {
     nullable: false,
     description: 'The user that triggered this Activity.',
   })
@@ -51,18 +52,18 @@ export class InAppNotification {
     description: 'When (UTC) was the notification sent.',
   })
   triggeredAt!: Date;
-  // todo: graphql enum
+
   @Field(() => InAppNotificationState, {
     nullable: false,
     description: 'The user that triggered this Activity.',
   })
   state!: InAppNotificationState;
-  // todo: graphql enum
-  @Field(() => String, {
+
+  @Field(() => InAppNotificationCategory, {
     nullable: false,
-    description: 'The contributor that triggered this notification.',
+    description: 'Which category (role) is this notification targeted to.',
   })
-  category!: string;
+  category!: InAppNotificationCategory;
   // exposed via the interface field resolver
   triggeredBy?: IContributor;
   receiver?: IContributor;

@@ -13,7 +13,7 @@ export class InAppNotifications1731509872258 implements MigrationInterface {
                  \`type\` varchar(128) NOT NULL,
                   \`state\` varchar(128) NOT NULL,
                    \`triggeredByID\` char(36) NULL COMMENT 'The contributor who triggered the event, if applicable.',
-                    \`category\` varchar(128) NOT NULL,
+                    \`category\` varchar(128) NOT NULL COMMENT 'Which category (role) is this notification targeted to.',
                      \`receiverID\` char(36) NOT NULL COMMENT 'The contributor who is the receiver of this notification',
                       \`payload\` json NOT NULL COMMENT 'Holds the original notification payload as it was received',
                        PRIMARY KEY (\`id\`)

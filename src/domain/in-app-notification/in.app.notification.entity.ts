@@ -1,14 +1,13 @@
 import { Column, Entity } from 'typeorm';
 import {
+  InAppNotificationCategory,
   InAppNotificationPayload,
   NotificationEventType,
 } from '@alkemio/notifications-lib';
-// type InAppNotificationPayload = Record<string, any>;
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../common/entity/base-entity/base.alkemio.entity';
 import { InAppNotificationState } from './in.app.notification.state';
 
-// todo: comments
 @Entity('in_app_notification')
 export class InAppNotificationEntity extends BaseAlkemioEntity {
   @Column({ type: 'datetime', comment: 'UTC', nullable: false })
@@ -23,9 +22,9 @@ export class InAppNotificationEntity extends BaseAlkemioEntity {
   @Column('varchar', {
     length: ENUM_LENGTH,
     nullable: false,
-    comment: '', //todo comment
+    comment: 'Which category (role) is this notification targeted to.',
   })
-  category!: string; // todo type
+  category!: InAppNotificationCategory;
 
   @Column('char', {
     length: UUID_LENGTH,
@@ -40,8 +39,6 @@ export class InAppNotificationEntity extends BaseAlkemioEntity {
     comment: 'The contributor who triggered the event, if applicable.',
   })
   triggeredByID?: string;
-
-  // action: string; // todo type ???
 
   @Column('json', {
     nullable: false,

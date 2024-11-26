@@ -2,6 +2,7 @@ import { ObjectType } from '@nestjs/graphql';
 import {
   InAppNotificationCalloutPublishedPayload,
   NotificationEventType,
+  InAppNotificationCategory,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -19,7 +20,7 @@ export abstract class InAppNotificationCalloutPublished
   callout!: ICallout;
   space!: ISpace;
   // inherited, resolved by the interface resolvers
-  category!: string;
+  category!: InAppNotificationCategory;
   id!: string;
   state!: InAppNotificationState;
   triggeredAt!: Date;

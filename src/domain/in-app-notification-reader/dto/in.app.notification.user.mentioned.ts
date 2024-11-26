@@ -2,6 +2,7 @@ import { ObjectType } from '@nestjs/graphql';
 import {
   InAppNotificationContributorMentionedPayload,
   NotificationEventType,
+  InAppNotificationCategory,
 } from '@alkemio/notifications-lib';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
@@ -18,7 +19,7 @@ export class InAppNotificationUserMentioned implements InAppNotification {
   comment?: string;
   // inherited, resolved by the interface resolvers
   id!: string;
-  category!: string;
+  category!: InAppNotificationCategory;
   receiver!: IContributor;
   triggeredBy?: IContributor;
   state!: InAppNotificationState;
