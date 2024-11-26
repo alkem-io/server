@@ -54,6 +54,7 @@ export enum AuthorizationPolicyType {
   LIBRARY = 'library',
   IN_MEMORY = 'in-memory',
   LICENSING = 'licensing',
+  LICENSE = 'license',
   LICENSE_POLICY = 'license-policy',
   UNKNOWN = 'unknown',
   AI_PERSONA_SERVICE = 'ai-persona-service',

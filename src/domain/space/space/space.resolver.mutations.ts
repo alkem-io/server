@@ -20,6 +20,8 @@ import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platfor
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SpaceLicenseService } from './space.service.license';
+import { LicenseService } from '@domain/common/license/license.service';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -32,7 +34,9 @@ export class SpaceResolverMutations {
     private spaceAuthorizationService: SpaceAuthorizationService,
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
     private subspaceCreatedSubscription: PubSubEngine,
-    private namingReporter: NameReporterService
+    private namingReporter: NameReporterService,
+    private spaceLicenseService: SpaceLicenseService,
+    private licenseService: LicenseService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -102,7 +106,7 @@ export class SpaceResolverMutations {
       AuthorizationPrivilege.DELETE,
       `deleteSpace: ${space.nameID}`
     );
-    return await this.spaceService.deleteSpace(deleteData);
+    return await this.spaceService.deleteSpaceOrFail(deleteData);
   }
 
   @UseGuards(GraphqlGuard)
@@ -226,6 +230,19 @@ export class SpaceResolverMutations {
       SubscriptionType.SUBSPACE_CREATED,
       subspaceCreatedEvent
     );
+
+    const level0Space = await this.spaceService.getSpaceOrFail(
+      subspace.levelZeroSpaceID,
+      {
+        relations: { agent: { credentials: true } },
+      }
+    );
+
+    const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
+      subspace.id,
+      level0Space.agent
+    );
+    await this.licenseService.saveAll(updatedLicenses);
 
     return this.spaceService.getSpaceOrFail(subspace.id);
   }

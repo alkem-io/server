@@ -6,6 +6,7 @@ import { IApplication } from '@domain/access/application/application.interface';
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { IRole } from '../role/role.interface';
 import { CommunityRoleType } from '@common/enums/community.role';
+import { ILicense } from '@domain/common/license/license.interface';
 
 @ObjectType('RoleSet')
 export abstract class IRoleSet extends IAuthorizable {
@@ -25,4 +26,6 @@ export abstract class IRoleSet extends IAuthorizable {
   applicationForm?: IForm;
 
   parentRoleSet?: IRoleSet;
+
+  license?: ILicense;
 }

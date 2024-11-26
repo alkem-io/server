@@ -38,10 +38,10 @@ export class ConversionService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async convertChallengeToSpace(
+  async convertChallengeToSpaceOrFail(
     conversionData: ConvertSubspaceToSpaceInput,
     agentInfo: AgentInfo
-  ): Promise<ISpace> {
+  ): Promise<ISpace | never> {
     // TODO: needs to create a new ACCOUNT etc. NOT TRUE!
     const subspace = await this.spaceService.getSpaceOrFail(
       conversionData.subspaceID,
@@ -208,19 +208,19 @@ export class ConversionService {
     // Now migrate all the child subsubspaces...
     const subsubspaces = await this.spaceService.getSubspaces(updatedSubspace);
     for (const subsubspace of subsubspaces) {
-      await this.convertOpportunityToChallenge(subsubspace.id, agentInfo);
+      await this.convertOpportunityToChallengeOrFail(subsubspace.id, agentInfo);
     }
     // Finally delete the Challenge
-    await this.spaceService.deleteSpace({
+    await this.spaceService.deleteSpaceOrFail({
       ID: updatedSubspace.id,
     });
     return space;
   }
 
-  async convertOpportunityToChallenge(
+  async convertOpportunityToChallengeOrFail(
     subsubspaceID: string,
     agentInfo: AgentInfo
-  ): Promise<ISpace> {
+  ): Promise<ISpace | never> {
     const subsubspace = await this.spaceService.getSpaceOrFail(subsubspaceID, {
       relations: {
         parentSpace: {
@@ -394,7 +394,7 @@ export class ConversionService {
     // Save both + then re-assign the roles
     await this.spaceService.save(subspace);
     const updatedOpportunity = await this.spaceService.save(subsubspace);
-    await this.spaceService.deleteSpace({ ID: updatedOpportunity.id });
+    await this.spaceService.deleteSpaceOrFail({ ID: updatedOpportunity.id });
 
     // Assign users to roles in new challenge
     await this.assignContributors(

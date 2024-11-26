@@ -32,6 +32,7 @@ import { TemplateModule } from '@domain/template/template/template.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
+import { LicenseModule } from '@domain/common/license/license.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
     CommunityGuidelinesModule,
     VirtualContributorModule,
     RoleSetModule,
+    LicenseModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

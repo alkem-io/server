@@ -19,19 +19,24 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
-import { LicensingService } from '@platform/licensing/licensing.service';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
 
 @Injectable()
 export class AccountHostService {
   constructor(
     private agentService: AgentService,
     private licenseIssuerService: LicenseIssuerService,
-    private licensingService: LicensingService,
+    private licensingFrameworkService: LicensingFrameworkService,
+    private licenseService: LicenseService,
     private storageAggregatorService: StorageAggregatorService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
@@ -55,6 +60,48 @@ export class AccountHostService {
       type: AgentType.ACCOUNT,
     });
 
+    account.license = await this.licenseService.createLicense({
+      type: LicenseType.ACCOUNT,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+      ],
+    });
+
     return await this.accountRepository.save(account);
   }
 
@@ -65,7 +112,7 @@ export class AccountHostService {
     const account = await this.getAccount(accountID, options);
     if (!account)
       throw new EntityNotFoundException(
-        `Unable to find Account with ID: ${accountID}`,
+        `Unable to find Account on Host with ID: ${accountID}`,
         LogContext.ACCOUNT
       );
     return account;
@@ -88,11 +135,12 @@ export class AccountHostService {
     licensePlanID?: string
   ): Promise<IAgent> {
     const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
+      await this.licensingFrameworkService.getDefaultLicensingOrFail();
     const licensePlansToAssign: ILicensePlan[] = [];
-    const licensePlans = await this.licensingService.getLicensePlans(
-      licensingFramework.id
-    );
+    const licensePlans =
+      await this.licensingFrameworkService.getLicensePlansOrFail(
+        licensingFramework.id
+      );
     for (const plan of licensePlans) {
       if (type === AccountType.USER && plan.assignToNewUserAccounts) {
         licensePlansToAssign.push(plan);
@@ -108,10 +156,11 @@ export class AccountHostService {
         plan => plan.id === licensePlanID
       );
       if (!licensePlanAlreadyAssigned) {
-        const additionalPlan = await this.licensingService.getLicensePlanOrFail(
-          licensingFramework.id,
-          licensePlanID
-        );
+        const additionalPlan =
+          await this.licensingFrameworkService.getLicensePlanOrFail(
+            licensingFramework.id,
+            licensePlanID
+          );
 
         licensePlansToAssign.push(additionalPlan);
       }

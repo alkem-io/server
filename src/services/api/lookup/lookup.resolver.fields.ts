@@ -65,6 +65,8 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseService } from '@domain/common/license/license.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -98,7 +100,8 @@ export class LookupResolverFields {
     private guidelinesService: CommunityGuidelinesService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
-    private roleSetService: RoleSetService
+    private roleSetService: RoleSetService,
+    private licenseService: LicenseService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -706,5 +709,18 @@ export class LookupResolverFields {
     );
 
     return guidelines;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ILicense, {
+    nullable: true,
+    description: 'Lookup the specified License',
+  })
+  async license(
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ILicense> {
+    const license = await this.licenseService.getLicenseOrFail(id);
+
+    return license;
   }
 }

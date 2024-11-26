@@ -33,9 +33,10 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { IAccount } from '../account/account.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -105,7 +106,6 @@ export class SpaceResolverFields {
     return this.spaceService.activeSubscription(space);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
@@ -119,15 +119,18 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @ResolveField('licensePrivileges', () => [LicensePrivilege], {
-    nullable: true,
-    description:
-      'The privileges granted based on the License credentials held by this Space.',
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('license', () => ILicense, {
+    nullable: false,
+    description: 'The License operating on this Space.',
   })
-  async licensePrivileges(
-    @Parent() space: ISpace
-  ): Promise<LicensePrivilege[]> {
-    return this.spaceService.getLicensePrivileges(space);
+  async license(
+    @Parent() space: ISpace,
+    @Loader(LicenseLoaderCreator, { parentClassRef: Space })
+    loader: ILoader<ILicense>
+  ): Promise<ILicense> {
+    return loader.load(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

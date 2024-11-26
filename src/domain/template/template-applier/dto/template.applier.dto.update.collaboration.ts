@@ -16,6 +16,7 @@ export class UpdateCollaborationFromTemplateInput {
   collaborationTemplateID!: string;
 
   @Field(() => Boolean, {
+    nullable: true,
     description: 'Add the Callouts from the Collaboration Template',
   })
   addCallouts = false;

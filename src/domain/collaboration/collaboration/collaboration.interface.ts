@@ -4,6 +4,7 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { ILicense } from '@domain/common/license/license.interface';
 
 @ObjectType('Collaboration')
 export abstract class ICollaboration extends IAuthorizable {
@@ -16,6 +17,8 @@ export abstract class ICollaboration extends IAuthorizable {
   innovationFlow?: IInnovationFlow;
 
   groupsStr!: string;
+
+  license?: ILicense;
 
   @Field(() => Boolean, {
     nullable: false,
