@@ -17,6 +17,7 @@ export class InAppNotificationUserMentioned implements InAppNotification {
   // fields resolved by a concrete resolver
   contributorType?: CommunityContributorType;
   comment?: string;
+  commentUrl?: string;
   // inherited, resolved by the interface resolvers
   id!: string;
   category!: InAppNotificationCategory;
