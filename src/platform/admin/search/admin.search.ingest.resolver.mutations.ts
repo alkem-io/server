@@ -26,7 +26,7 @@ export class AdminSearchIngestResolverMutations {
   // todo: remove
   @UseGuards(GraphqlGuard)
   @Mutation(() => String)
-  public async adminCreateLicenseCostumer() {
+  public async adminCreateLicenseCustomer() {
     const res = await this.licenseManagerService.createCustomer({
       name: `Test User ${randomUUID()}`,
       emails: {
@@ -46,10 +46,10 @@ export class AdminSearchIngestResolverMutations {
   // todo: remove
   @UseGuards(GraphqlGuard)
   @Mutation(() => String)
-  public async adminGetCostumerEntitlements(
-    @Args('costumerID') costumerId: string
+  public async adminGetCustomerEntitlements(
+    @Args('customerID') customerId: string
   ) {
-    const result = await this.licenseManagerService.getEntitlements(costumerId);
+    const result = await this.licenseManagerService.getEntitlements(customerId);
     return JSON.stringify(result, null, 2);
   }
 

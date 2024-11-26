@@ -5,13 +5,15 @@ import { firstValueFrom, map } from 'rxjs';
 import { AlkemioConfig } from '@src/types';
 import { CreateCustomer } from '@core/licensing-wingback-subscription';
 import { WingbackEntitlement } from '@services/adapters/license-manager-wingback/types/entitlement';
-import { LicenseManager } from '@core/licensing-wingback-subscription/licensing.wingback.subscription.interface';
-import { UpdateCostumer } from '@core/licensing-wingback-subscription/type/licensing.wingback.subscription..type.update.customer';
+import { LicensingWingbackSubscriptionManager } from '@core/licensing-wingback-subscription/licensing.wingback.subscription.interface';
+import { UpdateCustomer } from '@core/licensing-wingback-subscription/type/licensing.wingback.subscription.type.update.customer';
 
 export interface CreateWingbackCustomer extends CreateCustomer {}
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
-export class WingbackLicenseManager implements LicenseManager {
+export class WingbackLicenseManager
+  implements LicensingWingbackSubscriptionManager
+{
   private readonly apiKey: string;
   private readonly endpoint: string;
 
@@ -107,7 +109,7 @@ export class WingbackLicenseManager implements LicenseManager {
     throw new Error(`Method not implemented: ${customerId}`);
   }
 
-  getCostumer(customerId: string): Promise<unknown> {
+  getCustomer(customerId: string): Promise<unknown> {
     throw new Error(`Method not implemented: ${customerId}`);
   }
 
@@ -115,7 +117,7 @@ export class WingbackLicenseManager implements LicenseManager {
     throw new Error(`Method not implemented: ${customerId}`);
   }
 
-  updateCostumer<TPayload extends UpdateCostumer>(
+  updateCustomer<TPayload extends UpdateCustomer>(
     data: TPayload
   ): Promise<unknown> {
     throw new Error(`Method not implemented: ${data}`);

@@ -1,16 +1,16 @@
 import { CreateCustomer } from './type/licensing.wingback.subscription..type.create.customer';
-import { UpdateCostumer } from './type/licensing.wingback.subscription..type.update.customer';
+import { UpdateCustomer } from './type/licensing.wingback.subscription.type.update.customer';
 
 // todo: improve types
-export interface LicenseManager {
+export interface LicensingWingbackSubscriptionManager {
   // customer
   createCustomer<TPayload extends CreateCustomer>(
     data: TPayload
   ): Promise<{ id: string }>;
-  updateCostumer<TPayload extends UpdateCostumer>(
+  updateCustomer<TPayload extends UpdateCustomer>(
     data: TPayload
   ): Promise<unknown>; // todo
-  getCostumer(customerId: string): Promise<unknown>; // todo
+  getCustomer(customerId: string): Promise<unknown>; // todo
   activateCustomer(customerId: string): Promise<boolean>;
   inactivateCustomer(customerId: string): Promise<boolean>;
   // contract
