@@ -22,7 +22,7 @@ export class InAppNotificationReader {
   ): Promise<InAppNotificationEntity[]> {
     return this.inAppNotificationRepo.find({
       where: { receiverID },
-      // order: { triggeredAt: 'desc' },
+      order: { triggeredAt: 'desc' },
     });
   }
 
