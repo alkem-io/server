@@ -20,7 +20,7 @@ import { IForum } from '@platform/forum/forum.interface';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
-import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
+import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 
 @Injectable()
 export class PlatformService {

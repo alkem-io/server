@@ -5,9 +5,9 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { ILicensePolicy } from './license.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicensePolicy } from './license.policy.entity';
-import { LicensingCredentialBasedService } from '@core/licensing-credential-based/licensing.credential.based.service';
+import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
 import { LogContext } from '@common/enums/logging.context';
-import { ILicensingCredentialBasedPolicyCredentialRule } from '@core/licensing-credential-based';
+import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 

@@ -1,7 +1,7 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILicensePolicy } from './license.policy.interface';
 import { LicensePolicyService } from './license.policy.service';
-import { ILicensingCredentialBasedPolicyCredentialRule } from '@core/licensing-credential-based';
+import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
 
 @Resolver(() => ILicensePolicy)
 export class LicensePolicyResolverFields {

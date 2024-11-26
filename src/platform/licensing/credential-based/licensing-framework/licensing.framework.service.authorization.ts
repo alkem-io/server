@@ -12,7 +12,7 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { LicensePolicyAuthorizationService } from '@platform/license-policy/license.policy.service.authorization';
+import { LicensePolicyAuthorizationService } from '@platform/licensing/credential-based/license-policy/license.policy.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_LICENSE_MANAGER } from '@common/constants/authorization/credential.rule.constants';
 

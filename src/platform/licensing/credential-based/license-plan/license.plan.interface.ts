@@ -2,7 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
-import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
+import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 
 @ObjectType('LicensePlan')
 export abstract class ILicensePlan extends IBaseAlkemio {

@@ -7,8 +7,8 @@ import { LicensingFrameworkResolverFields } from './licensing.framework.resolver
 import { LicensingFrameworkResolverMutations } from './licensing.framework.resolver.mutations';
 import { LicensingFrameworkService } from './licensing.framework.service';
 import { LicensingFrameworkAuthorizationService } from './licensing.framework.service.authorization';
-import { LicensePlanModule } from '@platform/license-plan/license.plan.module';
-import { LicensePolicyModule } from '@platform/license-policy/license.policy.module';
+import { LicensePlanModule } from '@platform/licensing/credential-based/license-plan/license.plan.module';
+import { LicensePolicyModule } from '@platform/licensing/credential-based/license-policy/license.policy.module';
 
 @Module({
   imports: [

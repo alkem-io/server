@@ -5,8 +5,8 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { ILicensingFramework } from './licensing.framework.interface';
 import { LicensingFrameworkService } from './licensing.framework.service';
-import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
-import { ILicensePolicy } from '@platform/license-policy';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy';
 
 @Resolver(() => ILicensingFramework)
 export class LicensingFrameworkResolverFields {

@@ -57,8 +57,8 @@ import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-defini
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
 import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
-import { LicensePlanService } from '@platform/license-plan/license.plan.service';
-import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 
 @Injectable()
 export class BootstrapService {

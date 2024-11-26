@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 

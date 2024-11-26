@@ -5,11 +5,11 @@ import {
   ForbiddenException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ILicensePolicy } from '@platform/license-policy/license.policy.interface';
+import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
 import { ForbiddenLicensePolicyException } from '@common/exceptions/forbidden.license.policy.exception';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { LicensePolicy } from '@platform/license-policy';
+import { LicensePolicy } from '@platform/licensing/credential-based/license-policy';
 import { IAgent, ICredential } from '@domain/agent';
 import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.rule.credential.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';

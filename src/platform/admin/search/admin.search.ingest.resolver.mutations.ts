@@ -10,7 +10,7 @@ import { SearchIngestService } from '@services/api/search/v2/ingest/search.inges
 import { TaskService } from '@services/task';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';
-import { LicensingWingbackSubscriptionService } from '@core/licensing-wingback-subscription';
+import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription';
 import { randomUUID } from 'crypto';
 
 @Resolver()

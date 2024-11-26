@@ -3,10 +3,10 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, map } from 'rxjs';
 import { AlkemioConfig } from '@src/types';
-import { CreateCustomer } from '@core/licensing-wingback-subscription';
-import { WingbackEntitlement } from '@services/adapters/license-manager-wingback/types/entitlement';
-import { LicensingWingbackSubscriptionManager } from '@core/licensing-wingback-subscription/licensing.wingback.subscription.interface';
-import { UpdateCustomer } from '@core/licensing-wingback-subscription/type/licensing.wingback.subscription.type.update.customer';
+import { CreateCustomer } from '@platform/licensing/wingback-subscription';
+import { WingbackEntitlement } from '@services/external/wingback/types/entitlement';
+import { LicensingWingbackSubscriptionManager } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.interface';
+import { UpdateCustomer } from '@platform/licensing/wingback-subscription/type/licensing.wingback.subscription.type.update.customer';
 
 export interface CreateWingbackCustomer extends CreateCustomer {}
 // https://docs.wingback.com/dev/api-reference/introduction

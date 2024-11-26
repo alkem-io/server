@@ -4,7 +4,7 @@ import { AdminSearchIngestResolverMutations } from '@platform/admin/search/admin
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { TaskModule } from '@services/task';
-import { LicenseManagerModule } from '@core/licensing-wingback-subscription';
+import { LicenseManagerModule } from '@platform/licensing/wingback-subscription';
 
 @Module({
   imports: [

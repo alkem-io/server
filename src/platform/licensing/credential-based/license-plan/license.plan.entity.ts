@@ -4,7 +4,7 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
 import { ENUM_LENGTH } from '@common/constants';
-import { LicensingFramework } from '@platform/licensing-framework/licensing.framework.entity';
+import { LicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.entity';
 
 @Entity()
 export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {

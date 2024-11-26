@@ -3,7 +3,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
-import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
+import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -13,7 +13,7 @@ import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.l
 import { IAccount } from '@domain/space/account/account.interface';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
 import { ValidationException } from '@common/exceptions';
-import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 
