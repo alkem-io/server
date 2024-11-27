@@ -126,7 +126,7 @@ export class ProfileAuthorizationService {
         profile.authorization
       );
     updatedAuthorizations.push(...storageBucketAuthorizations);
-
-    return updatedAuthorizations;
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return [];
   }
 }
