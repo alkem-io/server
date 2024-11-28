@@ -12,24 +12,23 @@ reviews:
   path_instructions:
     - path: "src/**/*.{ts,js}"
       instructions: |
-        Review the TypeScript/JavaScript code for NestJS best practices, dependency injection, module structure, and potential bugs.
+        Review the TypeScript code to ensure it adheres to the NestJS coding standards and best practices.
+        This includes proper use of modules, services, controllers, and decorators.
+        Also, ensure the code follows the Express.js style guide.
+        Pay attention to the use of middleware, routing, error handling, and data validation.
+        The code should also conform to the ESLint rules configured in the codebase.
+        Highlight any deviations and suggest appropriate corrections.
+        Using repository patterns is encouraged.
+        Avoid complaining about lack of error handling as the the project uses global exception handlers.
+        Refer to the design overview located in the docs directory as Markdown files for better undersanding.
 
-        **Context Files (Do Not Review):**
-        - `docs/design.md`
-        - `src/core/error-handling/graphql.exception.filter.ts`
-        - `src/core/error-handling/http.exception.filter.ts`
-        - `src/core/error-handling/rest.error.response.ts`
-        - `src/core/error-handling/unhandled.exception.filter.ts`
-
-        **Guidelines:**
-        - Our project uses global exception handlers (`UnhandledExceptionFilter`), so avoid suggesting additional `try/catch` blocks unless handling specific cases.
-        - Refer to the design overview in the context files for better understanding.
     - path: "src/**/*.spec.ts"
       instructions: "Review the unit tests, ensuring proper NestJS testing techniques (using TestingModule, mocks, etc.). Check for completeness and coverage."
     - path: "manifests/**/*.{yaml,yml}"
       instructions: "Review the kubernetes manifests used in Github workflows."
     - path: "**/Dockerfile"
       instructions: "Review the Dockerfile for best practices in building, optimizing, and running a NestJS application."
+
     - path: "**/quickstart-services.yml"
       instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
     - path: "**/quickstart-services-ai.yml"
@@ -38,7 +37,23 @@ reviews:
       instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
     - path: "**/quickstart-services-kratos-debug.yml"
       instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
+
     - path: "**/*.md"
       instructions: "Ensure the documentation is clear, concise, and up-to-date, with accurate instructions for running the NestJS application in Docker."
 chat:
   auto_reply: true
+
+
+        # Review the TypeScript/JavaScript code for NestJS best practices, dependency injection, module structure, and potential bugs.
+
+        # **Context Files (Do Not Review):**
+        # - `docs/design.md`
+        # - `src/core/error-handling/graphql.exception.filter.ts`
+        # - `src/core/error-handling/http.exception.filter.ts`
+        # - `src/core/error-handling/rest.error.response.ts`
+        # - `src/core/error-handling/unhandled.exception.filter.ts`
+
+        # **Guidelines:**
+        # - Our project uses global exception handlers (`UnhandledExceptionFilter`), so avoid suggesting additional `try/catch` blocks unless handling specific cases.
+        # - Refer to the design overview in the context files for better understanding.
+
