@@ -133,6 +133,7 @@ export class AiPersonaService {
     agentInfo: AgentInfo,
     contextSpaceID: string
   ): Promise<IMessageAnswerToQuestion> {
+    this.validatePersona(aiPersona);
     this.logger.verbose?.(
       `Asking question to AI Persona from user ${agentInfo.userID} + with context ${contextSpaceID}`,
       LogContext.PLATFORM
@@ -145,5 +146,11 @@ export class AiPersonaService {
     };
 
     return await this.aiServerAdapter.askQuestion(input);
+  }
+
+  private validatePersona(persona: IAiPersona) {
+    if (!persona) {
+      throw new Error('Persona not found');
+    }
   }
 }
