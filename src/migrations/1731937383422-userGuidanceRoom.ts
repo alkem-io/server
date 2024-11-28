@@ -25,8 +25,6 @@ export class UserGuidanceRoom1731937383422 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_8e78677ceea32e003ff23d463dd\` FOREIGN KEY (\`guidanceVirtualContributorId\`) REFERENCES \`virtual_contributor\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-
-    // TODO: Maybe add a new Virtual Contributor for guidance here? or will be set manually in the platform
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
