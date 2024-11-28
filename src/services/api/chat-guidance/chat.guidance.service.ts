@@ -14,6 +14,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { UserService } from '@domain/community/user/user.service';
 import { IMessageGuidanceQuestionResult } from '@domain/communication/message.guidance.question.result/message.guidance.question.result.interface';
 import { PlatformService } from '@platform/platform/platform.service';
+import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
 
 export class ChatGuidanceService {
   constructor(
@@ -76,13 +77,14 @@ export class ChatGuidanceService {
     });
 
     this.aiServerAdapter.invoke({
+      operation: InvocationOperation.QUERY,
       message: chatData.question,
       aiPersonaServiceID: guidanceVc.aiPersona.aiPersonaServiceID,
       userID: agentInfo.userID,
       displayName: 'Guidance',
       language: chatData.language,
       resultHandler: {
-        action: InvocationResultAction.POST_REPLY,
+        action: InvocationResultAction.POST_MESSAGE,
         roomDetails: {
           roomID: room.id,
           communicationID: guidanceVc.communicationID,
@@ -111,10 +113,19 @@ export class ChatGuidanceService {
     return true;
   }
 
-  public async ingest(agentInfo: AgentInfo): Promise<boolean> {
-    return this.guidanceEngineAdapter.sendIngest({
-      userId: agentInfo.userID,
+  public async ingest() {
+    const guidanceVc =
+      await this.platformService.getGuidanceVirtualContributorOrFail();
+    this.aiServerAdapter.invoke({
+      operation: InvocationOperation.INGEST,
+      message: 'ingest',
+      aiPersonaServiceID: guidanceVc.aiPersona.aiPersonaServiceID,
+      displayName: '',
+      resultHandler: {
+        action: InvocationResultAction.NONE,
+      },
     });
+    return true;
   }
 
   public isGuidanceEngineEnabled(): boolean {

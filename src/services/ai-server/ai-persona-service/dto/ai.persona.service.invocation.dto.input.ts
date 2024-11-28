@@ -1,11 +1,21 @@
 import { UUID } from '@domain/common/scalars';
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { Field, InputType, registerEnumType } from '@nestjs/graphql';
-import { IsNotEmpty, ValidateIf } from 'class-validator';
+// import { IsNotEmpty, ValidateIf } from 'class-validator';
+
+export enum InvocationOperation {
+  QUERY = 'query',
+  INGEST = 'ingest',
+}
+registerEnumType(InvocationOperation, {
+  name: 'InvocationOperation',
+  description: 'Available operations for the engine to execute.',
+});
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
   POST_MESSAGE = 'postMessage',
+  NONE = 'none',
 }
 
 registerEnumType(InvocationResultAction, {
@@ -53,14 +63,14 @@ export class ResultHandler {
   })
   roomDetails?: RoomDetails;
 
-  @ValidateIf(handler => handler.action === InvocationResultAction.POST_REPLY)
-  @IsNotEmpty({
-    message:
-      'roomDetails with roomID, threadID and communicationID is required when action is POST_REPLY',
-  })
-  validateRoomDetails?() {
-    return this.roomDetails && this.roomDetails.threadID;
-  }
+  // @ValidateIf(handler => handler.action === InvocationResultAction.POST_REPLY)
+  // @IsNotEmpty({
+  //   message:
+  //     'roomDetails with roomID, threadID and communicationID is required when action is POST_REPLY',
+  // })
+  // validateRoomDetails() {
+  //   return this.roomDetails && this.roomDetails.threadID;
+  // }
 }
 
 @InputType()
@@ -125,5 +135,10 @@ export class AiPersonaServiceInvocationInput {
   })
   resultHandler!: ResultHandler;
 
+  @Field(() => InvocationOperation, {
+    nullable: true,
+    description: 'Operation we want the engine to execute - defaults to Query',
+  })
+  operation?: InvocationOperation = InvocationOperation.QUERY;
   language?: string;
 }

@@ -3,6 +3,8 @@ import { Field, InputType } from '@nestjs/graphql';
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
+  POST_MESSAGE = 'postMessage',
+  NONE = 'none',
 }
 
 @InputType()

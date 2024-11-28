@@ -166,6 +166,7 @@ export class AiPersonaServiceService {
     );
 
     const input: AiPersonaEngineAdapterInvocationInput = {
+      operation: invocationInput.operation,
       engine: aiPersonaService.engine,
       prompt: aiPersonaService.prompt,
       userID: invocationInput.userID,

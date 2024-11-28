@@ -6,6 +6,7 @@ import { IExternalConfig } from '@services/ai-server/ai-persona-service/dto/exte
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
   POST_MESSAGE = 'postMessage',
+  NONE = 'none',
 }
 export class RoomDetails {
   roomID!: string;

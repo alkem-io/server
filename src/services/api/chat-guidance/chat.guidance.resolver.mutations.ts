@@ -132,7 +132,7 @@ export class ChatGuidanceResolverMutations {
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
       return false;
     }
-    return this.chatGuidanceService.ingest(agentInfo);
+    return this.chatGuidanceService.ingest();
   }
 
   @UseGuards(GraphqlGuard)
