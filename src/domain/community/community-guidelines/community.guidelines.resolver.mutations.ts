@@ -61,7 +61,7 @@ export class CommunityGuidelinesResolverMutations {
       agentInfo,
       communityGuidelines.authorization,
       AuthorizationPrivilege.UPDATE,
-      `updateCommunityGuidelines: ${communityGuidelines.id}`
+      `removeCommunityGuidelinesContent: ${communityGuidelines.id}`
     );
 
     return await this.communityGuidelinesService.eraseContent(
