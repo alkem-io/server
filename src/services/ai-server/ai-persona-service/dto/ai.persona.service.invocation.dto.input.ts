@@ -1,7 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { Field, InputType, registerEnumType } from '@nestjs/graphql';
-import { IsNotEmpty, ValidateIf } from 'class-validator';
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
@@ -51,15 +50,6 @@ export class ResultHandler {
     description: 'The context needed for the result handler',
   })
   roomDetails?: RoomDetails;
-
-  @ValidateIf(handler => handler.action === InvocationResultAction.POST_REPLY)
-  @IsNotEmpty({
-    message:
-      'roomDetails with roomID, threadID and communicationID is required when action is POST_REPLY',
-  })
-  validateRoomDetails() {
-    return this.roomDetails && this.roomDetails.threadID;
-  }
 }
 
 @InputType()
