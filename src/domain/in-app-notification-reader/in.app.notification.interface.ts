@@ -1,15 +1,12 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
+import { InAppNotificationPayload } from '@alkemio/notifications-lib';
 import { UUID } from '@domain/common/scalars';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import {
-  NotificationEventType,
-  InAppNotificationPayload,
-  InAppNotificationCategory,
-} from '@alkemio/notifications-lib';
-
+import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
+import { NotificationEventType } from '@domain/in-app-notification/notification.event.type';
+import { InAppNotificationCategory } from '@domain/in-app-notification/in.app.notification.category';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
-import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 import { InAppNotificationCalloutPublished } from './dto/in.app.notification.callout.published';
 import { InAppNotificationUserMentioned } from './dto/in.app.notification.user.mentioned';
 import { InAppNotificationCommunityNewMember } from './dto/in.app.notification.community.new.member';
@@ -43,7 +40,7 @@ export class InAppNotification {
 
   @Field(() => NotificationEventType, {
     nullable: false,
-    description: 'The user that triggered this Activity.',
+    description: 'The type of the notification',
   })
   type!: NotificationEventType;
 
@@ -55,7 +52,7 @@ export class InAppNotification {
 
   @Field(() => InAppNotificationState, {
     nullable: false,
-    description: 'The user that triggered this Activity.',
+    description: 'The current state of the notification',
   })
   state!: InAppNotificationState;
 
