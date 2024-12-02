@@ -11,7 +11,19 @@ reviews:
     - "!**/dist/**"          # Exclude build files
   path_instructions:
     - path: "src/**/*.{ts,js}"
-      instructions: "Review the TypeScript/JavaScript code for NestJS best practices, dependency injection, module structure, and potential bugs. Ensure that the code adheres to TypeScript's typing system and modern standards."
+      instructions: |
+        Review the TypeScript/JavaScript code for NestJS best practices, dependency injection, module structure, and potential bugs.
+
+        **Context Files (Do Not Review):**
+        - `docs/design.md`
+        - `src/core/error-handling/graphql.exception.filter.ts`
+        - `src/core/error-handling/http.exception.filter.ts`
+        - `src/core/error-handling/rest.error.response.ts`
+        - `src/core/error-handling/unhandled.exception.filter.ts`
+
+        **Guidelines:**
+        - Our project uses global exception handlers (`UnhandledExceptionFilter`), so avoid suggesting additional `try/catch` blocks unless handling specific cases.
+        - Refer to the design overview in the context files for better understanding.
     - path: "src/**/*.spec.ts"
       instructions: "Review the unit tests, ensuring proper NestJS testing techniques (using TestingModule, mocks, etc.). Check for completeness and coverage."
     - path: "manifests/**/*.{yaml,yml}"
