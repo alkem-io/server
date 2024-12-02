@@ -22,7 +22,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { VisualType } from '@common/enums/visual.type';
-import { VISUAL_CONSTRAINTS } from './visual.constraints';
+import { DEFAULT_VISUAL_CONSTRAINTS } from './visual.constraints';
 
 @Injectable()
 export class VisualService {
@@ -190,7 +190,7 @@ export class VisualService {
     return this.createVisual(
       {
         name: VisualType.BANNER,
-        ...VISUAL_CONSTRAINTS[VisualType.BANNER],
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.BANNER],
       },
       uri
     );
@@ -200,7 +200,7 @@ export class VisualService {
     return this.createVisual(
       {
         name: VisualType.CARD,
-        ...VISUAL_CONSTRAINTS[VisualType.CARD],
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.CARD],
       },
       uri
     );
@@ -210,7 +210,7 @@ export class VisualService {
     return this.createVisual(
       {
         name: VisualType.BANNER_WIDE,
-        ...VISUAL_CONSTRAINTS[VisualType.BANNER_WIDE],
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.BANNER_WIDE],
       },
       uri
     );
@@ -219,7 +219,7 @@ export class VisualService {
   public createVisualAvatar(): IVisual {
     return this.createVisual({
       name: VisualType.AVATAR,
-      ...VISUAL_CONSTRAINTS[VisualType.AVATAR],
+      ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
     });
   }
 }

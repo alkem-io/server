@@ -1,6 +1,6 @@
 import {
   VisualConstraints,
-  VISUAL_CONSTRAINTS,
+  DEFAULT_VISUAL_CONSTRAINTS,
 } from '@domain/common/visual/visual.constraints';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
@@ -13,9 +13,9 @@ export class ConfigurationResolverFields {
     nullable: false,
     description: 'Visual constraints for the given type',
   })
-  visualConstraints(
+  defaultVisualTypeConstraints(
     @Args('type', { type: () => VisualType }) visualTypeInput: VisualType
   ): VisualConstraints {
-    return VISUAL_CONSTRAINTS[visualTypeInput];
+    return DEFAULT_VISUAL_CONSTRAINTS[visualTypeInput];
   }
 }

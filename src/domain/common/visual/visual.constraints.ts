@@ -9,7 +9,7 @@ export const VISUAL_ALLOWED_TYPES = [
   'image/webp',
 ] as const;
 
-export const VISUAL_CONSTRAINTS = {
+export const DEFAULT_VISUAL_CONSTRAINTS = {
   [VisualType.AVATAR]: {
     minWidth: 190,
     maxWidth: 410,
@@ -75,32 +75,4 @@ export class VisualConstraints {
     description: 'Allowed file types.',
   })
   allowedTypes!: typeof VISUAL_ALLOWED_TYPES;
-}
-
-@ObjectType('VisualTypeConstraints')
-export class VisualTypeConstraints {
-  @Field(() => VisualConstraints, {
-    nullable: false,
-    description: 'Avatar visual dimensions',
-  })
-  public avatar: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.AVATAR];
-
-  @Field(() => VisualConstraints, {
-    nullable: false,
-    description: 'Banner visual dimensions',
-  })
-  public banner: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.BANNER];
-
-  @Field(() => VisualConstraints, {
-    nullable: false,
-    description: 'Card visual dimensions',
-  })
-  public card: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.CARD];
-
-  @Field(() => VisualConstraints, {
-    nullable: false,
-    description: 'BannerWide visual dimensions',
-  })
-  public bannerWide: VisualConstraints =
-    VISUAL_CONSTRAINTS[VisualType.BANNER_WIDE];
 }

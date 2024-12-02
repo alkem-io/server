@@ -6,7 +6,6 @@ import { IApmConfig } from './apm';
 import { IGeoConfig } from './integrations';
 import { IStorageConfig } from './storage';
 import { IPlatformFeatureFlag } from '../feature-flag/platform.feature.flag.interface';
-import { VisualConstraints } from '@domain/common/visual/visual.constraints';
 
 @ObjectType('Config')
 export abstract class IConfig {
@@ -40,12 +39,6 @@ export abstract class IConfig {
       'Elastic APM (RUM & performance monitoring) related configuration.',
   })
   apm?: IApmConfig;
-
-  @Field(() => VisualConstraints, {
-    nullable: false,
-    description: 'Visual constraints for different visual types',
-  })
-  visualConstraints?: VisualConstraints;
 
   @Field(() => IStorageConfig, {
     nullable: false,
