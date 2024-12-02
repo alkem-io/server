@@ -19,10 +19,10 @@ export class StorageBucketAuthorizationService {
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     storageBucket: IStorageBucket,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy[] {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!storageBucket.documents) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to reset auth for StorageBucket ${storageBucket.id} `,
@@ -49,14 +49,15 @@ export class StorageBucketAuthorizationService {
     // Cascade down
     for (const document of storageBucket.documents) {
       const documentAuthorizations =
-        this.documentAuthorizationService.applyAuthorizationPolicy(
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
           document,
           storageBucket.authorization
         );
       updatedAuthorizations.push(...documentAuthorizations);
     }
 
-    return updatedAuthorizations;
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return [];
   }
 
   private appendPrivilegeRules(
