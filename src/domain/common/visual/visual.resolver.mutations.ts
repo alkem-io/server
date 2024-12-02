@@ -104,7 +104,7 @@ export class VisualResolverMutations {
     await this.documentService.saveDocument(visualDocument);
     // Ensure authorization is updated
     const documentAuthorizations =
-      this.documentAuthorizationService.applyAuthorizationPolicy(
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
         visualDocument,
         storageBucket.authorization
       );
