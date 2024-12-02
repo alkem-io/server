@@ -52,7 +52,7 @@ export class StorageAggregatorAuthorizationService {
     updatedAuthorizations.push(storageAggregator.authorization);
 
     const bucketAuthorizations =
-      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         storageAggregator.directStorage,
         storageAggregator.authorization
       );
