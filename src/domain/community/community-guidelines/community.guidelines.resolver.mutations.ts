@@ -45,7 +45,7 @@ export class CommunityGuidelinesResolverMutations {
   }
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunityGuidelines, {
-    description: 'Updates the CommunityGuidelines.',
+    description: 'Empties the CommunityGuidelines.', // Update mutation doesn't allow empty values. And we cannot really delete the entity, but this will leave it empty.
   })
   @Profiling.api
   async removeCommunityGuidelinesContent(
