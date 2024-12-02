@@ -78,7 +78,7 @@ export class AdminSearchContributorsMutations {
     }
 
     const authorizations =
-      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );
