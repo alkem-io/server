@@ -196,10 +196,18 @@ export class AuthorizationPolicyService {
   }
 
   async saveAll(authorizationPolicies: IAuthorizationPolicy[]): Promise<void> {
-    this.logger.verbose?.(
-      `Saving ${authorizationPolicies.length} authorization policies`,
-      LogContext.AUTH
-    );
+    if (authorizationPolicies.length > 500)
+      this.logger.warn?.(
+        `Saving ${authorizationPolicies.length} authorization policies of type ${authorizationPolicies[0].type}`,
+        LogContext.AUTH
+      );
+    else {
+      this.logger.verbose?.(
+        `Saving ${authorizationPolicies.length} authorization policies`,
+        LogContext.AUTH
+      );
+    }
+
     await this.authorizationPolicyRepository.save(authorizationPolicies, {
       chunk: this.authChunkSize,
     });

@@ -118,7 +118,7 @@ export class AdminWhiteboardService {
               );
             document = await this.documentService.saveDocument(document);
             const documentAuthorizations =
-              this.documentAuthorizationService.applyAuthorizationPolicy(
+              await this.documentAuthorizationService.applyAuthorizationPolicy(
                 document,
                 profile.storageBucket.authorization
               );
