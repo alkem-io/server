@@ -43,6 +43,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { AccountLicenseResetInput } from './dto/account.dto.reset.license';
 import { AccountLicenseService } from './account.service.license';
+import { SpaceLicenseService } from '../space/space.service.license';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -61,6 +62,7 @@ export class AccountResolverMutations {
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
+    private spaceLicenseService: SpaceLicenseService,
     private notificationAdapter: NotificationAdapter,
     private temporaryStorageService: TemporaryStorageService,
     private licenseService: LicenseService
@@ -101,6 +103,11 @@ export class AccountResolverMutations {
     const spaceAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     await this.authorizationPolicyService.saveAll(spaceAuthorizations);
+
+    const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
+      space.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
 
     space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {

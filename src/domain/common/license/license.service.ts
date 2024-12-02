@@ -124,16 +124,21 @@ export class LicenseService {
       });
     }
     const entitlements = this.getEntitlementsFromLicenseOrFail(license);
-
-    return entitlements
-      .filter(entitlement => entitlement.enabled)
-      .filter(
-        async entitlement =>
-          await this.licenseEntitlementService.isEntitlementAvailable(
-            entitlement.id
-          )
+    const availableEntitlements = (
+      await Promise.all(
+        entitlements.map(async entitlement => ({
+          entitlement,
+          isAvailable:
+            await this.licenseEntitlementService.isEntitlementAvailable(
+              entitlement.id
+            ),
+        }))
       )
-      .map(entitlement => entitlement.type);
+    )
+      .filter(({ isAvailable }) => isAvailable)
+      .map(({ entitlement }) => entitlement.type);
+
+    return availableEntitlements;
   }
 
   public reset(license: ILicense): ILicense {
