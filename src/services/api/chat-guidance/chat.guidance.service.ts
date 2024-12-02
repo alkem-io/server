@@ -1,14 +1,10 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ConfigService } from '@nestjs/config';
-import { GuidanceEngineAdapter } from '@services/adapters/chat-guidance-adapter/guidance.engine.adapter';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
 import { AlkemioConfig } from '@src/types';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { InvocationResultAction } from '@services/ai-server/ai-persona-service/dto';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -18,16 +14,12 @@ import { InvocationOperation } from '@common/enums/ai.persona.invocation.operati
 
 export class ChatGuidanceService {
   constructor(
-    private guidanceEngineAdapter: GuidanceEngineAdapter,
     private configService: ConfigService<AlkemioConfig, true>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private aiServerAdapter: AiServerAdapter,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private userService: UserService,
-    private platformService: PlatformService,
-    private virtualContributorService: VirtualContributorService
+    private platformService: PlatformService
   ) {}
 
   public async createGuidanceRoom(agentInfo: AgentInfo): Promise<IRoom> {

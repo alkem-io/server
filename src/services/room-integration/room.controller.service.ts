@@ -64,7 +64,8 @@ export class RoomControllerService {
       communicationID,
       {
         roomID: room.externalRoomID,
-        message: this.convertResultToMessage(response),
+        // this second argument (sourcesLable = true) should be part of the resultHandler and not hardcoded here
+        message: this.convertResultToMessage(response, true),
       }
     );
 
@@ -75,7 +76,10 @@ export class RoomControllerService {
     );
   }
 
-  private convertResultToMessage(result: InvokeEngineResponse): string {
+  private convertResultToMessage(
+    result: InvokeEngineResponse,
+    sourcesLabel = false
+  ): string {
     this.logger.verbose?.(
       `Converting result to room message: ${JSON.stringify(result)}`,
       LogContext.COMMUNICATION
@@ -83,7 +87,7 @@ export class RoomControllerService {
     let answer = result.result;
 
     if (result.sources) {
-      answer += '\n##### Sources:';
+      answer += sourcesLabel ? '\n##### Sources:' : '';
       answer +=
         '\n' +
         result.sources

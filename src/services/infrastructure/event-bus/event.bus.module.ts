@@ -78,11 +78,13 @@ import amqplib from 'amqplib';
               name: 'virtual-contributor-engine-expert',
               exchange: eventBusConfig.exchange,
               routingKey: 'expert',
+              durable: true,
             },
             {
               name: 'virtual-contributor-engine-guidance',
               exchange: eventBusConfig.exchange,
               routingKey: 'guidance',
+              durable: true,
             },
           ],
         };
