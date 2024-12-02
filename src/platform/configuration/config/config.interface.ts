@@ -6,7 +6,7 @@ import { IApmConfig } from './apm';
 import { IGeoConfig } from './integrations';
 import { IStorageConfig } from './storage';
 import { IPlatformFeatureFlag } from '../feature-flag/platform.feature.flag.interface';
-import { VisualTypeConstraints } from '@domain/common/visual/visual.constraints';
+import { VisualConstraints } from '@domain/common/visual/visual.constraints';
 
 @ObjectType('Config')
 export abstract class IConfig {
@@ -41,11 +41,11 @@ export abstract class IConfig {
   })
   apm?: IApmConfig;
 
-  @Field(() => VisualTypeConstraints, {
+  @Field(() => VisualConstraints, {
     nullable: false,
     description: 'Visual constraints for different visual types',
   })
-  visualTypeConstraints?: VisualTypeConstraints;
+  visualConstraints?: VisualConstraints;
 
   @Field(() => IStorageConfig, {
     nullable: false,
