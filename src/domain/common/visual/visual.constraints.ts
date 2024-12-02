@@ -77,30 +77,30 @@ export class VisualConstraints {
   allowedTypes!: typeof VISUAL_ALLOWED_TYPES;
 }
 
-@ObjectType('VisualTypeContraints')
+@ObjectType('VisualTypeConstraints')
 export class VisualTypeConstraints {
   @Field(() => VisualConstraints, {
     nullable: false,
     description: 'Avatar visual dimensions',
   })
-  public Avatar: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.AVATAR];
+  public avatar: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.AVATAR];
 
   @Field(() => VisualConstraints, {
     nullable: false,
     description: 'Banner visual dimensions',
   })
-  public Banner: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.BANNER];
+  public banner: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.BANNER];
 
   @Field(() => VisualConstraints, {
     nullable: false,
     description: 'Card visual dimensions',
   })
-  public Card: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.CARD];
+  public card: VisualConstraints = VISUAL_CONSTRAINTS[VisualType.CARD];
 
   @Field(() => VisualConstraints, {
     nullable: false,
     description: 'BannerWide visual dimensions',
   })
-  public BannerWide: VisualConstraints =
+  public bannerWide: VisualConstraints =
     VISUAL_CONSTRAINTS[VisualType.BANNER_WIDE];
 }
