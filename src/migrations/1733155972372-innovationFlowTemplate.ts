@@ -46,7 +46,7 @@ export class InnovationFlowTemplate1733155972372 implements MigrationInterface {
       profileId: string;
       authorizationId: string;
     }[] = await queryRunner.query(
-      `SELECT id, authoizationId, profileId FROM innovation_flow WHERE id = ?`,
+      `SELECT id, authorizationId, profileId FROM innovation_flow WHERE id = ?`,
       [innovationFlowId]
     );
     if (innovationFlow) {
@@ -113,7 +113,8 @@ export class InnovationFlowTemplate1733155972372 implements MigrationInterface {
         authorizationId: string;
         tagsetId: string;
       }[] = await queryRunner.query(
-        `SELECT id, authorizationId, tagsetId FROM document where storageBucketId = ${storageBucketId};`
+        `SELECT id, authorizationId, tagsetId FROM document where storageBucketId = ?`,
+        [storageBucketId]
       );
       for (const document of documents) {
         // delete the tagset
