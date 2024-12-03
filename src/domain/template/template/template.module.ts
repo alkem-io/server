@@ -11,7 +11,6 @@ import { CommunityGuidelinesModule } from '@domain/community/community-guideline
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { TemplateResolverFields } from './template.resolver.fields';
-import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
@@ -24,7 +23,6 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     CommunityGuidelinesModule,
     CalloutModule,
     WhiteboardModule,
-    InnovationFlowModule,
     InputCreatorModule,
     StorageAggregatorResolverModule,
     CollaborationModule,

@@ -19,7 +19,6 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateType } from '@common/enums/template.type';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
@@ -27,7 +26,6 @@ import { ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { randomUUID } from 'crypto';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -42,7 +40,6 @@ import { InputCreatorService } from '@services/api/input-creator/input.creator.s
 export class TemplateService {
   constructor(
     private profileService: ProfileService,
-    private innovationFlowService: InnovationFlowService,
     private communityGuidelinesService: CommunityGuidelinesService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private inputCreatorService: InputCreatorService,
@@ -393,7 +390,6 @@ export class TemplateService {
         communityGuidelines: true,
         callout: true,
         whiteboard: true,
-        innovationFlow: true,
         collaboration: true,
       },
     });
@@ -446,18 +442,6 @@ export class TemplateService {
         }
         await this.collaborationService.deleteCollaborationOrFail(
           template.collaboration.id
-        );
-        break;
-      }
-      case TemplateType.INNOVATION_FLOW: {
-        if (!template.innovationFlow) {
-          throw new RelationshipNotFoundException(
-            `Unable to load InnovationFlow on Template: ${templateInput.id} `,
-            LogContext.TEMPLATES
-          );
-        }
-        await this.innovationFlowService.deleteInnovationFlow(
-          template.innovationFlow.id
         );
         break;
       }
@@ -612,20 +596,6 @@ export class TemplateService {
     return template.collaboration;
   }
 
-  public async getInnovationFlow(templateID: string): Promise<IInnovationFlow> {
-    const template = await this.getTemplateOrFail(templateID, {
-      relations: {
-        innovationFlow: true,
-      },
-    });
-    if (!template.innovationFlow) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Template with InnovationFlow: ${template.id} `,
-        LogContext.TEMPLATES
-      );
-    }
-    return template.innovationFlow;
-  }
   public async isTemplateInUseInTemplateDefault(
     templateID: string
   ): Promise<boolean> {

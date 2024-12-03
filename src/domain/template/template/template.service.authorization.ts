@@ -12,7 +12,6 @@ import { CalloutAuthorizationService } from '@domain/collaboration/callout/callo
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { InnovationFlowAuthorizationService } from '@domain/collaboration/innovation-flow/innovation.flow.service.authorization';
 
 @Injectable()
 export class TemplateAuthorizationService {
@@ -23,8 +22,7 @@ export class TemplateAuthorizationService {
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private collaborationAuthorizationService: CollaborationAuthorizationService,
-    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService
+    private collaborationAuthorizationService: CollaborationAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -51,10 +49,6 @@ export class TemplateAuthorizationService {
           },
           whiteboard: true,
           collaboration: {
-            authorization: true,
-          },
-          innovationFlow: {
-            profile: true,
             authorization: true,
           },
         },
@@ -146,21 +140,6 @@ export class TemplateAuthorizationService {
         updatedAuthorizations.push(...collaborationAuthorizations);
         break;
       }
-      case TemplateType.INNOVATION_FLOW: {
-        if (!template.innovationFlow) {
-          throw new RelationshipNotFoundException(
-            `Unable to load InnovationFlow on Template of that type: ${template.id} `,
-            LogContext.TEMPLATES
-          );
-        }
-        const innovationFlowAuthorizations =
-          await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-            template.innovationFlow,
-            template.authorization
-          );
-        updatedAuthorizations.push(...innovationFlowAuthorizations);
-        break;
-      }
       case TemplateType.POST: {
         break;
       }
@@ -170,22 +149,6 @@ export class TemplateAuthorizationService {
           LogContext.TEMPLATES
         );
       }
-    }
-
-    if (template.type == TemplateType.INNOVATION_FLOW) {
-      if (!template.innovationFlow) {
-        throw new RelationshipNotFoundException(
-          `Unable to load InnovationFlow on Template of that type: ${template.id} `,
-          LogContext.TEMPLATES
-        );
-      }
-      // Cascade
-      const innovationFlowAuthorizations =
-        await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-          template.innovationFlow,
-          template.authorization
-        );
-      updatedAuthorizations.push(...innovationFlowAuthorizations);
     }
 
     return updatedAuthorizations;
