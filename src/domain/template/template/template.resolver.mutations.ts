@@ -12,6 +12,7 @@ import { DeleteTemplateInput } from './dto/template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions/validation.exception';
+import { template } from 'lodash';
 
 @Resolver()
 export class TemplateResolverMutations {
@@ -44,6 +45,43 @@ export class TemplateResolverMutations {
     );
     return await this.templateService.updateTemplate(template, updateData);
   }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ITemplate, {
+    description: 'Updates the specified Template.',
+  })
+  async updateCollaborationTemplate(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('updateData')
+    updateData: UpdateCollaborationTemplateInput
+  ): Promise<ITemplate> {
+    const template = await this.templateService.getTemplateOrFail(
+      updateData.ID,
+      {
+        relations: { profile: true },
+      }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      template.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update template: ${template.id}`
+    );
+    return await this.templateService.updateTemplate(template, updateData);
+  }
+  /*
+  updateCOllaborationTemplate{
+    update privilege on the template
+    read privilege on the source
+
+    check that it is collab template
+    delete all the callouts on the template
+    repla
+    clone callouts from the source collaboration
+
+    logic in template updateCollaborationFromTemplate
+  }
+    */
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {

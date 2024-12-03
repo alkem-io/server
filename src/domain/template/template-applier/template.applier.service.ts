@@ -82,6 +82,7 @@ export class TemplateApplierService {
       return await this.collaborationService.save(targetCollaboration);
     }
   }
+
   private ensureCalloutsInValidGroupsAndStates(
     targetCollaboration: ICollaboration
   ) {
