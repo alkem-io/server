@@ -12,12 +12,14 @@ import { DeleteTemplateInput } from './dto/template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { template } from 'lodash';
+import { UpdateTemplateFromCollaborationInput } from './dto/template.dto.update.from.collaboration';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Resolver()
 export class TemplateResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private collaborationService: CollaborationService,
     private templateService: TemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -48,17 +50,18 @@ export class TemplateResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {
-    description: 'Updates the specified Template.',
+    description:
+      'Updates the specified Collaboration Template using the provided Collaboration.',
   })
-  async updateCollaborationTemplate(
+  async updateTemplateFromCollaboration(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData')
-    updateData: UpdateCollaborationTemplateInput
+    updateData: UpdateTemplateFromCollaborationInput
   ): Promise<ITemplate> {
     const template = await this.templateService.getTemplateOrFail(
-      updateData.ID,
+      updateData.templateID,
       {
-        relations: { profile: true },
+        relations: { collaboration: true },
       }
     );
     await this.authorizationService.grantAccessOrFail(
@@ -67,21 +70,23 @@ export class TemplateResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update template: ${template.id}`
     );
-    return await this.templateService.updateTemplate(template, updateData);
-  }
-  /*
-  updateCOllaborationTemplate{
-    update privilege on the template
-    read privilege on the source
 
-    check that it is collab template
-    delete all the callouts on the template
-    repla
-    clone callouts from the source collaboration
-
-    logic in template updateCollaborationFromTemplate
+    const sourceCollaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        updateData.collaborationID
+      );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      sourceCollaboration.authorization,
+      AuthorizationPrivilege.READ,
+      `read source collaboration for template: ${sourceCollaboration.id}`
+    );
+    return await this.templateService.updateTemplateFromCollaboration(
+      template,
+      updateData,
+      agentInfo.userID
+    );
   }
-    */
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {

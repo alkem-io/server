@@ -13,6 +13,8 @@ import { WhiteboardModule } from '@domain/common/whiteboard';
 import { TemplateResolverFields } from './template.resolver.fields';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
     CalloutModule,
     WhiteboardModule,
     InnovationFlowModule,
+    InputCreatorModule,
+    StorageAggregatorResolverModule,
     CollaborationModule,
     TypeOrmModule.forFeature([Template]),
   ],
