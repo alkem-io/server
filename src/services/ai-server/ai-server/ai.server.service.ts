@@ -40,11 +40,43 @@ import { SubscriptionPublishService } from '@services/subscriptions/subscription
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { InvokeEngineResult } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-import { InvocationResultAction } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
+import {
+  InvocationResultAction,
+  RoomDetails,
+} from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
+import { RoomService } from '@domain/communication/room/room.service';
+import { IMessage } from '@domain/communication/message/message.interface';
 
 @Injectable()
 export class AiServerService {
+  private INVOKE_ENGINE_RESULT_HANDLERS = {
+    [InvocationResultAction.NONE]: () => {},
+    [InvocationResultAction.POST_REPLY]: (event: InvokeEngineResult) => {
+      if (
+        isInputValidForAction(event.original, InvocationResultAction.POST_REPLY)
+      ) {
+        this.roomControllerService.postReply(
+          event.original.resultHandler.roomDetails!,
+          event.response
+        );
+      }
+    },
+    [InvocationResultAction.POST_MESSAGE]: (event: InvokeEngineResult) => {
+      if (
+        isInputValidForAction(
+          event.original,
+          InvocationResultAction.POST_MESSAGE
+        )
+      ) {
+        this.roomControllerService.postMessage(
+          event.original.resultHandler.roomDetails!,
+          event.response
+        );
+      }
+    },
+  };
+
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaServiceService: AiPersonaServiceService,
@@ -52,6 +84,7 @@ export class AiServerService {
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     private vcInteractionService: VcInteractionService,
     private communicationAdapter: CommunicationAdapter,
+    private roomService: RoomService,
     private subscriptionPublishService: SubscriptionPublishService,
     private config: ConfigService<AlkemioConfig, true>,
     private roomControllerService: RoomControllerService,
@@ -182,14 +215,16 @@ export class AiServerService {
 
     const HISTORY_ENABLED_ENGINES = new Set<AiPersonaEngine>([
       AiPersonaEngine.EXPERT,
+      AiPersonaEngine.GUIDANCE,
     ]);
-    const loadHistory =
-      HISTORY_ENABLED_ENGINES.has(personaService.engine) &&
-      isInputValidForAction(invocationInput, InvocationResultAction.POST_REPLY);
 
     // history should be loaded trough the GQL API of the collaboration server
     let history: InteractionMessage[] = [];
-    if (loadHistory) {
+
+    if (
+      HISTORY_ENABLED_ENGINES.has(personaService.engine) &&
+      invocationInput.resultHandler.roomDetails
+    ) {
       const historyLimit = parseInt(
         this.config.get<number>(
           'platform.virtual_contributors.history_length',
@@ -200,77 +235,52 @@ export class AiServerService {
       );
 
       history = await this.getLastNInteractionMessages(
-        invocationInput.resultHandler.roomDetails!.vcInteractionID,
+        invocationInput.resultHandler.roomDetails,
         historyLimit
       );
     }
 
     return this.aiPersonaServiceService.invoke(invocationInput, history);
   }
+
   async getLastNInteractionMessages(
-    interactionID: string | undefined,
+    roomDetails: RoomDetails,
+    // interactionID: string | undefined,
     limit: number = 10
   ): Promise<InteractionMessage[]> {
-    if (!interactionID) {
-      return [];
+    let roomMessages: IMessage[] = [];
+    const room = await this.roomService.getRoomOrFail(roomDetails.roomID);
+    if (roomDetails.threadID) {
+      roomMessages = await this.roomService.getMessagesInThread(
+        room,
+        roomDetails.threadID
+      );
+    } else {
+      roomMessages = await this.roomService.getMessages(room);
     }
-    const interaction = await this.vcInteractionService.getVcInteractionOrFail(
-      interactionID,
-      {
-        relations: {
-          room: true,
-        },
-      }
-    );
-
-    const room = await this.communicationAdapter.getCommunityRoom(
-      interaction.room.externalRoomID
-    );
 
     const messages: InteractionMessage[] = [];
 
-    for (let i = room.messages.length - 1; i >= 0; i--) {
-      const message = room.messages[i];
-      // try to skip this check and use Matrix to filter by Room and Thread
-      if (
-        message.threadID === interaction.threadID ||
-        message.id === interaction.threadID
-      ) {
-        let role = MessageSenderRole.HUMAN;
+    for (let i = roomMessages.length - 1; i >= 0; i--) {
+      const message = roomMessages[i];
+      let role = MessageSenderRole.HUMAN;
 
-        // try to set the assistant role for the replies of the specific persona/vc
-        if (message.sender.startsWith('@virtualcontributor')) {
-          role = MessageSenderRole.ASSISTANT;
-        }
+      // try to set the assistant role for the replies of the specific persona/vc
+      if (message.sender.startsWith('@virtualcontributor')) {
+        role = MessageSenderRole.ASSISTANT;
+      }
 
-        messages.unshift({
-          content: message.message,
-          role,
-        });
-        if (messages.length === limit) {
-          break;
-        }
+      messages.unshift({
+        content: message.message,
+        role,
+      });
+      if (messages.length === limit) {
+        break;
       }
     }
 
     return messages;
   }
-  // TODO: send over the original question / answer? Send over the whole thread?
-  // public async askFollowUpQuestion(
-  //   questionInput: AiPersonaServiceQuestionInput
-  // ): Promise<IMessageAnswerToQuestion> {
-  //   if (
-  //     questionInput.contextID &&
-  //     !(await this.isContextLoaded(questionInput.contextID))
-  //   ) {
-  //     this.eventBus.publish(
-  //       new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
-  //     );
-  //   }
-
-  //   return this.aiPersonaServiceService.askQuestion(questionInput);
-  // }
-
   private getContextCollectionID(contextID: string): string {
     return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
   }
@@ -419,16 +429,9 @@ export class AiServerService {
 
   public async handleInvokeEngineResult(event: InvokeEngineResult) {
     const resultHandler = event.original.resultHandler;
-    //TODO use some sort of a factory when adding the next handler and DO NOT extend
-    //this with elseif or switch
-    if (
-      isInputValidForAction(event.original, InvocationResultAction.POST_REPLY)
-    ) {
-      this.roomControllerService.postReply(
-        resultHandler.roomDetails!,
-        event.response
-        // event.original.interactionID
-      );
+    const handler = this.INVOKE_ENGINE_RESULT_HANDLERS[resultHandler.action];
+    if (handler) {
+      handler(event);
     }
   }
 }

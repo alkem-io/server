@@ -22,10 +22,12 @@ import { TemplateDefaultModule } from '@domain/template/template-default/templat
 import { LicenseModule } from '@domain/common/license/license.module';
 import { LicensePlanModule } from '@platform/license-plan/license.plan.module';
 import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
+import { AiPersonaServiceModule } from '@services/ai-server/ai-persona-service/ai.persona.service.module';
 
 @Module({
   imports: [
     AiServerModule,
+    AiPersonaServiceModule,
     AgentModule,
     AuthorizationPolicyModule,
     LicenseModule,

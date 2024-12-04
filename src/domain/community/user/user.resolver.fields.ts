@@ -32,6 +32,7 @@ import { AuthenticationType } from '@common/enums/authentication.type';
 import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { Identity } from '@ory/kratos-client';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -268,6 +269,31 @@ export class UserResolverFields {
     }
 
     return result;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IRoom, {
+    nullable: true,
+    description: 'Guidance Chat Room for this user',
+  })
+  async guidanceRoom(
+    @Parent() user: User,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IRoom | undefined> {
+    const { guidanceRoom } = await this.userService.getUserOrFail(user.id, {
+      relations: { guidanceRoom: true },
+    });
+    if (!guidanceRoom) {
+      return undefined;
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      guidanceRoom.authorization,
+      AuthorizationPrivilege.READ,
+      `guidance Room: ${guidanceRoom.id}`
+    );
+    return guidanceRoom;
   }
 
   /**

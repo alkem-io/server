@@ -10,6 +10,12 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { ChatGuidanceService } from './chat.guidance.service';
 import { ChatGuidanceAnswerRelevanceInput } from './dto/chat.guidance.relevance.dto';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
+import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
+import { IMessageGuidanceQuestionResult } from '@domain/communication/message.guidance.question.result/message.guidance.question.result.interface';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
+import { UserService } from '@domain/community/user/user.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver()
 export class ChatGuidanceResolverMutations {
@@ -18,9 +24,78 @@ export class ChatGuidanceResolverMutations {
     private readonly logger: LoggerService,
     private chatGuidanceService: ChatGuidanceService,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private roomAuthorizationService: RoomAuthorizationService,
+    private userService: UserService,
     private guidanceReporterService: GuidanceReporterService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IRoom, {
+    nullable: true,
+    description: 'Create a guidance chat room.',
+  })
+  async createChatGuidanceRoom(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IRoom | undefined> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
+      `Access interactive guidance: ${agentInfo.email}`
+    );
+    if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
+      return undefined;
+    }
+
+    const user = await this.userService.getUserOrFail(agentInfo.userID, {
+      relations: { authorization: true, guidanceRoom: true },
+    });
+    if (user.guidanceRoom) {
+      // Return current room if it exists
+      return user.guidanceRoom;
+    }
+
+    const roomCreated =
+      await this.chatGuidanceService.createGuidanceRoom(agentInfo);
+
+    if (roomCreated) {
+      const roomAuthorization =
+        this.roomAuthorizationService.applyAuthorizationPolicy(
+          roomCreated,
+          user.authorization
+        );
+      await this.authorizationPolicyService.saveAll([roomAuthorization]);
+    }
+    return roomCreated;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IMessageGuidanceQuestionResult, {
+    nullable: false,
+    description: 'Ask the chat engine for guidance.',
+  })
+  async askChatGuidanceQuestion(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('chatData') chatData: ChatGuidanceInput
+  ): Promise<IMessageGuidanceQuestionResult> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
+      `Access interactive guidance: ${agentInfo.email}`
+    );
+
+    if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
+      return {
+        success: false,
+        error: 'Guidance Engine not enabled',
+        question: chatData.question,
+      };
+    }
+    return this.chatGuidanceService.askQuestion(chatData, agentInfo);
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
@@ -30,7 +105,7 @@ export class ChatGuidanceResolverMutations {
   async resetChatGuidance(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
@@ -48,7 +123,7 @@ export class ChatGuidanceResolverMutations {
   })
   @Profiling.api
   async ingest(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -57,7 +132,7 @@ export class ChatGuidanceResolverMutations {
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
       return false;
     }
-    return this.chatGuidanceService.ingest(agentInfo);
+    return this.chatGuidanceService.ingest();
   }
 
   @UseGuards(GraphqlGuard)
