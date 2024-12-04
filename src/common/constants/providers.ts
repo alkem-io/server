@@ -11,16 +11,6 @@ export const SUBSCRIPTION_SUBSPACE_CREATED =
 export const SUBSCRIPTION_ACTIVITY_CREATED =
   'alkemio-subscriptions-activity-created';
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
-export const VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE =
-  'virtual-contributor-engine-guidance';
-export const VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER =
-  'virtual-contributor-engine-community-manager';
-export const VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT =
-  'virtual-contributor-engine-expert';
-export const VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC =
-  'virtual-contributor-engine-generic';
-export const VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT =
-  'virtual-contributor-engine-openai-assistant';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
 export const REDIS_LOCK_SERVICE = 'redis-lock-service';
