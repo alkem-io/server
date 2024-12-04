@@ -14,6 +14,7 @@ import { TemplateResolverFields } from './template.resolver.fields';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     CommunityGuidelinesModule,
     CalloutModule,
     WhiteboardModule,
+    InnovationFlowModule,
     InputCreatorModule,
     StorageAggregatorResolverModule,
     CollaborationModule,

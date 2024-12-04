@@ -35,6 +35,7 @@ import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { UpdateTemplateFromCollaborationInput } from './dto/template.dto.update.from.collaboration';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 
 @Injectable()
 export class TemplateService {
@@ -43,6 +44,7 @@ export class TemplateService {
     private communityGuidelinesService: CommunityGuidelinesService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private inputCreatorService: InputCreatorService,
+    private innovationFlowService: InnovationFlowService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
     private collaborationService: CollaborationService,
