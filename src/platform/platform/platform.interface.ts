@@ -1,4 +1,5 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILibrary } from '@library/library/library.interface';
@@ -16,6 +17,7 @@ export abstract class IPlatform extends IAuthorizable {
   configuration?: IConfig;
   metadata?: IMetadata;
   storageAggregator!: IStorageAggregator;
+  guidanceVirtualContributor?: IVirtualContributor;
   licensingFramework?: ILicensingFramework;
   platformInvitations!: IPlatformInvitation[];
   templatesManager?: ITemplatesManager;

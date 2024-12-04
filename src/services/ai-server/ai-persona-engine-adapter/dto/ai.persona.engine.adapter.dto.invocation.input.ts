@@ -5,10 +5,12 @@ import { IExternalConfig } from '@services/ai-server/ai-persona-service/dto/exte
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',
+  POST_MESSAGE = 'postMessage',
+  NONE = 'none',
 }
 export class RoomDetails {
   roomID!: string;
-  threadID!: string;
+  threadID?: string;
   communicationID!: string;
 }
 
@@ -31,4 +33,5 @@ export interface AiPersonaEngineAdapterInvocationInput
   externalMetadata: ExternalMetadata;
   resultHandler: ResultHandler;
   personaServiceID: string;
+  language?: string;
 }

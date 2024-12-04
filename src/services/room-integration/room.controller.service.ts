@@ -4,6 +4,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 // import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
+import { InvokeEngineResponse } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
@@ -21,6 +22,9 @@ export class RoomControllerService {
     message: any //TODO type this properly with the implementation of the rest of the engines
     // vcInteractionID?: string
   ) {
+    if (!threadID) {
+      return;
+    }
     const room = await this.roomService.getRoomOrFail(roomID);
     const answerMessage = await this.roomService.sendMessageReply(
       room,
@@ -50,8 +54,32 @@ export class RoomControllerService {
     );
   }
 
-  //TODO type the result when all engine services are migrated
-  private convertResultToMessage(result: any): string {
+  public async postMessage(
+    { roomID, communicationID }: RoomDetails,
+    response: InvokeEngineResponse
+  ) {
+    const room = await this.roomService.getRoomOrFail(roomID);
+    const answerMessage = await this.roomService.sendMessage(
+      room,
+      communicationID,
+      {
+        roomID: room.externalRoomID,
+        // this second argument (sourcesLable = true) should be part of the resultHandler and not hardcoded here
+        message: this.convertResultToMessage(response, true),
+      }
+    );
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room,
+      MutationType.CREATE,
+      answerMessage
+    );
+  }
+
+  private convertResultToMessage(
+    result: InvokeEngineResponse,
+    sourcesLabel = false
+  ): string {
     this.logger.verbose?.(
       `Converting result to room message: ${JSON.stringify(result)}`,
       LogContext.COMMUNICATION
@@ -59,12 +87,15 @@ export class RoomControllerService {
     let answer = result.result;
 
     if (result.sources) {
-      answer = `${answer}\n${result.sources
-        .map(
-          ({ title, uri }: { title: string; uri: string }) =>
-            `- [${title}](${uri})`
-        )
-        .join('\n')}`;
+      answer += sourcesLabel ? '\n##### Sources:' : '';
+      answer +=
+        '\n' +
+        result.sources
+          .map(
+            ({ title, uri }: { title: string; uri: string }) =>
+              `- [${title || uri}](${uri})`
+          )
+          .join('\n');
     }
     return answer;
   }
