@@ -293,8 +293,24 @@ export class TemplateService {
     }
     const sourceCollaboration =
       await this.collaborationService.getCollaborationOrFail(
-        templateData.collaborationID
+        templateData.collaborationID,
+        {
+          relations: {
+            innovationFlow: true,
+            callouts: true,
+          },
+        }
       );
+
+    if (
+      templateInput.collaboration.callouts &&
+      templateInput.collaboration.callouts.length > 0
+    ) {
+      for (const callout of templateInput.collaboration.callouts) {
+        await this.calloutService.deleteCallout(callout.id);
+      }
+      templateInput.collaboration.callouts = [];
+    }
 
     templateInput.collaboration =
       await this.updateCollaborationFromCollaboration(
@@ -304,7 +320,6 @@ export class TemplateService {
         userID
       );
 
-    await this.collaborationService.save(templateInput.collaboration);
     return await this.getTemplateOrFail(templateInput.id);
   }
 
