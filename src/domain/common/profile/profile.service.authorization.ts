@@ -121,7 +121,7 @@ export class ProfileAuthorizationService {
     }
 
     const storageBucketAuthorizations =
-      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );

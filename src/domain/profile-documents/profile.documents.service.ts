@@ -81,7 +81,7 @@ export class ProfileDocumentsService {
       await this.documentService.saveDocument(newDoc);
 
       const authorizations =
-        this.documentAuthorizationService.applyAuthorizationPolicy(
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
           newDoc,
           storageBucketToCheck.authorization
         );
