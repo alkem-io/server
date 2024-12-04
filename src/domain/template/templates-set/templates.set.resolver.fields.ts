@@ -86,34 +86,6 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('innovationFlowTemplates', () => [ITemplate], {
-    nullable: false,
-    description: 'The InnovationFlowTemplates in this TemplatesSet.',
-  })
-  async innovationFlowTemplates(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<ITemplate[]> {
-    return this.templatesSetService.getTemplatesOfType(
-      templatesSet,
-      TemplateType.INNOVATION_FLOW
-    );
-  }
-  @UseGuards(GraphqlGuard)
-  @ResolveField('innovationFlowTemplatesCount', () => Float, {
-    nullable: false,
-    description:
-      'The total number of InnovationFlowTemplates in this TemplatesSet.',
-  })
-  async innovationFlowTemplatesCount(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<number> {
-    return this.templatesSetService.getTemplatesCountForType(
-      templatesSet.id,
-      TemplateType.INNOVATION_FLOW
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
   @ResolveField('communityGuidelinesTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The CommunityGuidelines in this TemplatesSet.',
