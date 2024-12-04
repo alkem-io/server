@@ -273,6 +273,24 @@ export class ProfileService {
     return await this.referenceService.save(newReference);
   }
 
+  async deleteAllReferencesFromProfile(profileId: string): Promise<void> {
+    const profile = await this.getProfileOrFail(profileId, {
+      relations: { references: true },
+    });
+
+    if (!profile.references)
+      throw new EntityNotInitializedException(
+        'References not defined',
+        LogContext.COMMUNITY
+      );
+
+    for (const reference of profile.references) {
+      await this.referenceService.deleteReference({
+        ID: reference.id,
+      });
+    }
+  }
+
   async getProfileOrFail(
     profileID: string,
     options?: FindOneOptions<Profile>

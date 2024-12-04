@@ -160,30 +160,6 @@ export class TemplatesSetService {
     return await this.createTemplate(templatesSet, templateInput);
   }
 
-  async addTemplates(
-    templatesSet: ITemplatesSet,
-    templateInputs: CreateTemplateInput[],
-    innovationFlowTemplateInputs: CreateTemplateInput[],
-    storageAggregator: IStorageAggregator
-  ): Promise<ITemplatesSet> {
-    for (const templateDefault of templateInputs) {
-      const template = await this.templateService.createTemplate(
-        templateDefault,
-        storageAggregator
-      );
-      templatesSet.templates.push(template);
-    }
-
-    for (const innovationFlowTemplateDefault of innovationFlowTemplateInputs) {
-      const innovationFlowTemplate = await this.templateService.createTemplate(
-        innovationFlowTemplateDefault,
-        storageAggregator
-      );
-      templatesSet.templates.push(innovationFlowTemplate);
-    }
-    return await this.save(templatesSet);
-  }
-
   private async getStorageAggregator(
     templatesSet: ITemplatesSet
   ): Promise<IStorageAggregator> {
@@ -219,10 +195,10 @@ export class TemplatesSetService {
         TemplateType.POST
       );
 
-    const innovationFlowsCount =
+    const collaborationTemplatesCount =
       await this.templateService.getCountInTemplatesSet(
         templatesSetID,
-        TemplateType.INNOVATION_FLOW
+        TemplateType.COLLABORATION
       );
 
     const calloutTemplatesCount =
@@ -240,7 +216,7 @@ export class TemplatesSetService {
     return (
       whiteboardTemplatesCount +
       postTemplatesCount +
-      innovationFlowsCount +
+      collaborationTemplatesCount +
       calloutTemplatesCount +
       communityGuidelinesTemplatesCount
     );
