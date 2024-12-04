@@ -187,6 +187,22 @@ export class PlatformRoleService {
     return result;
   }
 
+  public async getPlatformRolesForUser(
+    userID: string
+  ): Promise<PlatformRole[]> {
+    const result: PlatformRole[] = [];
+    const agent = await this.userService.getAgent(userID);
+    const roles: PlatformRole[] = Object.values(PlatformRole) as PlatformRole[];
+    for (const role of roles) {
+      const hasAgentRole = await this.isInRole(agent, role);
+      if (hasAgentRole) {
+        result.push(role);
+      }
+    }
+
+    return result;
+  }
+
   private async isInRole(agent: IAgent, role: PlatformRole): Promise<boolean> {
     const membershipCredential = this.getCredentialForRole(role);
 

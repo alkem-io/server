@@ -7,6 +7,8 @@ import {
   InAppNotificationPayload,
 } from '@alkemio/notifications-lib';
 import { LogContext } from '@common/enums';
+import { PlatformRoleService } from '@platform/platform.role/platform.role.service';
+import { PlatformRole } from '@common/enums/platform.role';
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
 import { InAppNotificationState } from '../in-app-notification/in.app.notification.state';
 
@@ -17,7 +19,8 @@ export class InAppNotificationReceiver {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(InAppNotificationEntity)
-    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
+    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>,
+    private platformRoleService: PlatformRoleService
   ) {}
 
   public async decompressAndStore(
@@ -31,8 +34,27 @@ export class InAppNotificationReceiver {
       `Decompressed ${notifications.length} in-app notifications`,
       LogContext.IN_APP_NOTIFICATION
     );
+    // filter out notifications that are not for beta users
+    const receiverSet = new Set(
+      notifications.map(({ receiverID }) => receiverID)
+    );
+    // get all beta tester receivers
+    const betaTesterReceivers: string[] = [];
+    for (const receiverID of Array.from(receiverSet)) {
+      const roles =
+        await this.platformRoleService.getPlatformRolesForUser(receiverID);
+      if (roles.includes(PlatformRole.BETA_TESTER)) {
+        betaTesterReceivers.push(receiverID);
+      }
+    }
+    const notificationsForBetaUsers: InAppNotificationPayload[] =
+      notifications.filter(x => betaTesterReceivers.includes(x.receiverID));
     // store
-    return this.store(notifications);
+    this.logger.verbose?.(
+      `Storing ${notificationsForBetaUsers.length} in-app notifications for beta users only`,
+      LogContext.IN_APP_NOTIFICATION
+    );
+    return this.store(notificationsForBetaUsers);
   }
 
   private async store(
