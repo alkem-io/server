@@ -5,7 +5,6 @@ import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
 
@@ -29,6 +28,5 @@ export abstract class ITemplate extends INameable {
   communityGuidelines?: ICommunityGuidelines;
   callout?: ICallout;
   whiteboard?: IWhiteboard;
-  innovationFlow?: IInnovationFlow;
   collaboration?: ICollaboration;
 }

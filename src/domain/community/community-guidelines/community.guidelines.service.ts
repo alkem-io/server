@@ -78,6 +78,25 @@ export class CommunityGuidelinesService {
     return await this.communityGuidelinesRepository.save(communityGuidelines);
   }
 
+  async eraseContent(
+    communityGuidelines: ICommunityGuidelines
+  ): Promise<ICommunityGuidelines> {
+    communityGuidelines.profile = await this.profileService.updateProfile(
+      communityGuidelines.profile,
+      {
+        displayName: '',
+        description: '',
+      }
+    );
+
+    await this.profileService.deleteAllReferencesFromProfile(
+      communityGuidelines.profile.id
+    );
+    communityGuidelines.profile.references = [];
+
+    return await this.communityGuidelinesRepository.save(communityGuidelines);
+  }
+
   async deleteCommunityGuidelines(
     communityGuidelinesID: string
   ): Promise<ICommunityGuidelines> {

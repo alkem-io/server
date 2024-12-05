@@ -4,7 +4,6 @@ import { TemplateService } from './template.service';
 import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { IProfile } from '@domain/common/profile';
@@ -22,7 +21,7 @@ export class TemplateResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description: 'The Profile for this InnovationFlow.',
+    description: 'The Profile for this Template.',
   })
   async profile(
     @Parent() template: ITemplate,
@@ -30,20 +29,6 @@ export class TemplateResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(template.id);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('innovationFlow', () => IInnovationFlow, {
-    nullable: true,
-    description: 'The Innovation Flow.',
-  })
-  async innovationFlow(
-    @Parent() template: ITemplate
-  ): Promise<IInnovationFlow | undefined> {
-    if (template.type !== TemplateType.INNOVATION_FLOW) {
-      return undefined;
-    }
-    return this.templateService.getInnovationFlow(template.id);
   }
 
   @UseGuards(GraphqlGuard)
