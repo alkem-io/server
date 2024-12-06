@@ -24,6 +24,7 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { User } from '@domain/community/user/user.entity';
 import { Platform } from '@platform/platform/platform.entity';
 import { TemplatesManager } from '@domain/template/templates-manager';
+import { Template } from '@domain/template/template/template.entity';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -283,13 +284,35 @@ export class StorageAggregatorResolverService {
         storageAggregator: true,
       },
     });
-    if (!space || !space.storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to retrieve storage aggregator for collaborationID: ${collaborationID}`,
-        LogContext.STORAGE_AGGREGATOR
-      );
+    if (space) {
+      if (!space.storageAggregator) {
+        throw new EntityNotFoundException(
+          `Unable to retrieve storage aggregator for space through collaborationID: ${collaborationID}`,
+          LogContext.STORAGE_AGGREGATOR
+        );
+      }
+      return space.storageAggregator.id;
     }
-    return space.storageAggregator.id;
+    // If not found on Space, try with Collaboration templates
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        collaboration: {
+          id: collaborationID,
+        },
+      },
+      relations: {
+        templatesSet: true,
+      },
+    });
+    if (template && template.templatesSet) {
+      return (
+        await this.getStorageAggregatorForTemplatesSet(template.templatesSet.id)
+      ).id;
+    }
+    throw new EntityNotFoundException(
+      `Unable to retrieve storage aggregator for collaborationID: ${collaborationID}`,
+      LogContext.STORAGE_AGGREGATOR
+    );
   }
 
   private async getStorageAggregatorIdForCalendar(

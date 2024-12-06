@@ -4,12 +4,8 @@ import { TemplateApplierResolverMutations } from './template.applier.resolver.mu
 import { TemplateModule } from '../template/template.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
-import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
-import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
-import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 
 @Module({
   imports: [
@@ -17,11 +13,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     AuthorizationModule,
     TemplateModule,
     CollaborationModule,
-    InnovationFlowModule,
-    InputCreatorModule,
-    StorageAggregatorResolverModule,
     CalloutModule,
-    NamingModule,
   ],
   providers: [TemplateApplierService, TemplateApplierResolverMutations],
   exports: [],

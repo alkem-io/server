@@ -1,10 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AiServerAdapterAskQuestionInput } from './dto/ai.server.adapter.dto.ask.question';
+import { AiServerAdapterInvocationInput } from './dto/ai.server.adapter.dto.invocation';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { LogContext } from '@common/enums';
 
@@ -62,14 +61,10 @@ export class AiServerAdapter {
     return this.aiServer.createAiPersonaService(personaServiceData);
   }
 
-  async askQuestion(
-    questionInput: AiServerAdapterAskQuestionInput
-  ): Promise<IMessageAnswerToQuestion> {
-    const vcInteractionID = questionInput.vcInteractionID;
-    return this.aiServer.askQuestion({
-      ...questionInput,
-      externalMetadata: questionInput.externalMetadata || {},
-      interactionID: vcInteractionID,
+  invoke(invocationInput: AiServerAdapterInvocationInput): Promise<void> {
+    return this.aiServer.invoke({
+      ...invocationInput,
+      externalMetadata: invocationInput.externalMetadata || {},
     });
   }
 }

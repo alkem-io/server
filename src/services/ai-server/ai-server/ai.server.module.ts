@@ -1,6 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiServer } from './ai.server.entity';
 import { AiServerResolverFields } from './ai.server.resolver.fields';
@@ -15,6 +15,8 @@ import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.int
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { RoomIntegrationModule } from '@services/room-integration/room.integration.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
     VcInteractionModule,
     CommunicationAdapterModule,
     SubscriptionServiceModule,
+    RoomIntegrationModule,
+    forwardRef(() => RoomModule),
   ],
   providers: [
     AiServerResolverQueries,
