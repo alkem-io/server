@@ -58,9 +58,12 @@ export class ContributorService {
     lastName?: string
   ): Promise<void> {
     let avatarURL: string | undefined = undefined;
-    if (profileData.avatarURL && this.isValidHttpUrl(profileData.avatarURL)) {
+    const avatarUrl = profileData.visuals?.find(
+      visual => visual.name === VisualType.AVATAR
+    )?.uri;
+    if (avatarUrl && this.isValidHttpUrl(avatarUrl)) {
       // Avatar has been explicitly set
-      avatarURL = profileData.avatarURL;
+      avatarURL = avatarUrl;
     } else if (agentInfo && this.isValidHttpUrl(agentInfo.avatarURL)) {
       // Pick up the avatar from the user request context
       avatarURL = agentInfo.avatarURL;

@@ -66,6 +66,7 @@ import { AccountType } from '@common/enums/account.type';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomType } from '@common/enums/room.type';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class UserService {
@@ -335,7 +336,12 @@ export class UserService {
       lastName: agentInfo.lastName,
       accountUpn: email,
       profileData: {
-        avatarURL: agentInfo.avatarURL,
+        visuals: [
+          {
+            name: VisualType.AVATAR,
+            uri: agentInfo.avatarURL,
+          },
+        ],
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     };
