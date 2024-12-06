@@ -7,8 +7,8 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AiPersonaService } from './ai.persona.service.entity';
 import { IAiPersonaService } from './ai.persona.service.interface';
 import {
-  CreateAiPersonaServiceInput as CreateAiPersonaServiceInput,
-  DeleteAiPersonaServiceInput as DeleteAiPersonaServiceInput,
+  CreateAiPersonaServiceInput,
+  DeleteAiPersonaServiceInput,
 } from './dto';
 import { UpdateAiPersonaServiceInput } from './dto/ai.persona.service.dto.update';
 import { AiPersonaServiceInvocationInput } from './dto/ai.persona.service.invocation.dto.input';
