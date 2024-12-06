@@ -32,12 +32,19 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TemplateDefault } from '../template-default/template.default.entity';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { UpdateTemplateFromCollaborationInput } from './dto/template.dto.update.from.collaboration';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 
 @Injectable()
 export class TemplateService {
   constructor(
     private profileService: ProfileService,
     private communityGuidelinesService: CommunityGuidelinesService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private inputCreatorService: InputCreatorService,
+    private innovationFlowService: InnovationFlowService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
     private collaborationService: CollaborationService,
@@ -271,6 +278,126 @@ export class TemplateService {
     }
 
     return await this.templateRepository.save(template);
+  }
+
+  public async updateTemplateFromCollaboration(
+    templateInput: ITemplate,
+    templateData: UpdateTemplateFromCollaborationInput,
+    userID: string
+  ): Promise<ITemplate> {
+    if (!templateInput.collaboration) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Collaboration on Template: ${templateInput.id} `,
+        LogContext.TEMPLATES
+      );
+    }
+    const sourceCollaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        templateData.collaborationID,
+        {
+          relations: {
+            innovationFlow: true,
+            callouts: true,
+          },
+        }
+      );
+
+    if (
+      templateInput.collaboration.callouts &&
+      templateInput.collaboration.callouts.length > 0
+    ) {
+      for (const callout of templateInput.collaboration.callouts) {
+        await this.calloutService.deleteCallout(callout.id);
+      }
+      templateInput.collaboration.callouts = [];
+    }
+
+    templateInput.collaboration =
+      await this.updateCollaborationFromCollaboration(
+        sourceCollaboration,
+        templateInput.collaboration,
+        true,
+        userID
+      );
+
+    return await this.getTemplateOrFail(templateInput.id);
+  }
+
+  public async updateCollaborationFromCollaboration(
+    sourceCollaboration: ICollaboration,
+    targetCollaboration: ICollaboration,
+    addCallouts: boolean,
+    userID: string
+  ): Promise<ICollaboration> {
+    if (
+      !sourceCollaboration.innovationFlow ||
+      !targetCollaboration.innovationFlow ||
+      !sourceCollaboration.callouts ||
+      !targetCollaboration.callouts
+    ) {
+      throw new RelationshipNotFoundException(
+        `Template cannot be applied on uninitialized collaboration sourceCollaboration.i:'${sourceCollaboration.id}' TargetCollaboration.id='${targetCollaboration.id}'`,
+        LogContext.TEMPLATES
+      );
+    }
+    const newStatesStr = sourceCollaboration.innovationFlow.states;
+    targetCollaboration.innovationFlow =
+      await this.innovationFlowService.updateInnovationFlowStates(
+        targetCollaboration.innovationFlow.id,
+        newStatesStr
+      );
+
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
+        targetCollaboration.id
+      );
+    if (addCallouts) {
+      const calloutsFromSourceCollaboration =
+        await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
+          sourceCollaboration.callouts ?? []
+        );
+
+      const newCallouts = await this.collaborationService.addCallouts(
+        targetCollaboration,
+        calloutsFromSourceCollaboration,
+        storageAggregator,
+        userID
+      );
+      targetCollaboration.callouts?.push(...newCallouts);
+      this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
+
+      // Need to save before applying authorization policy to get the callout ids
+      return await this.collaborationService.save(targetCollaboration);
+    } else {
+      this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
+      return await this.collaborationService.save(targetCollaboration);
+    }
+  }
+
+  private ensureCalloutsInValidGroupsAndStates(
+    targetCollaboration: ICollaboration
+  ) {
+    // We don't have callouts or we don't have innovationFlow, can't do anything
+    if (!targetCollaboration.innovationFlow || !targetCollaboration.callouts) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Callouts or InnovationFlow ${targetCollaboration.id} `,
+        LogContext.TEMPLATES
+      );
+    }
+
+    const validGroupNames =
+      targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
+        tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
+      )?.allowedValues;
+    const validFlowStates = this.innovationFlowService
+      .getStates(targetCollaboration.innovationFlow)
+      ?.map(state => state.displayName);
+
+    this.collaborationService.moveCalloutsToDefaultGroupAndState(
+      validGroupNames ?? [],
+      validFlowStates ?? [],
+      targetCollaboration.callouts
+    );
   }
 
   async delete(templateInput: ITemplate): Promise<ITemplate> {
