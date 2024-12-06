@@ -59,6 +59,10 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicensePlanService } from '@platform/license-plan/license.plan.service';
 import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/ai.persona.service.service';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 
 @Injectable()
 export class BootstrapService {
@@ -82,6 +86,7 @@ export class BootstrapService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
+    private aiPersonaServiceService: AiPersonaServiceService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesManagerService: TemplatesManagerService,
     private templatesSetService: TemplatesSetService,
@@ -113,6 +118,7 @@ export class BootstrapService {
       await this.ensurePlatformTemplatesArePresent();
       await this.ensureOrganizationSingleton();
       await this.ensureSpaceSingleton();
+      await this.ensureGuidanceChat();
       await this.ensureSsiPopulated();
       // reset auth as last in the actions
       // await this.ensureSpaceNamesInElastic();
@@ -522,6 +528,46 @@ export class BootstrapService {
       await this.licenseService.saveAll(accountEntitlements);
 
       return this.spaceService.getSpaceOrFail(space.id);
+    }
+  }
+
+  private async ensureGuidanceChat() {
+    const platform = await this.platformService.getPlatformOrFail({
+      relations: { guidanceVirtualContributor: true },
+    });
+    if (!platform.guidanceVirtualContributor?.id) {
+      const aiPersonaService =
+        await this.aiPersonaServiceService.createAiPersonaService({
+          bodyOfKnowledgeID: '',
+          bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.NONE,
+          engine: AiPersonaEngine.GUIDANCE,
+          dataAccessMode: AiPersonaDataAccessMode.NONE,
+          prompt: [],
+          externalConfig: undefined,
+        });
+
+      // Get admin account:
+      const hostOrganization =
+        await this.organizationService.getOrganizationOrFail(
+          DEFAULT_HOST_ORG_NAMEID
+        );
+      const account =
+        await this.organizationService.getAccount(hostOrganization);
+
+      // Create the VC
+      const vc = await this.accountService.createVirtualContributorOnAccount({
+        accountID: account.id,
+        aiPersona: {
+          aiPersonaServiceID: aiPersonaService.id,
+        },
+        profileData: {
+          displayName: 'Guidance',
+          description: 'Guidance Virtual Contributor',
+        },
+      });
+
+      platform.guidanceVirtualContributor = vc;
+      await this.platformService.savePlatform(platform);
     }
   }
 }

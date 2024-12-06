@@ -10,7 +10,7 @@ import { GuidanceEngineQueryResponse } from './dto/guidance.engine.dto.question.
 import { Source } from './source.type';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
 import { VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE } from '@common/constants';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { IMessageGuidanceQuestionResult } from '@domain/communication/message.guidance.question.result/message.guidance.question.result.interface';
 
 enum GuidanceEngineEventType {
   QUERY = 'query',
@@ -33,7 +33,7 @@ export class GuidanceEngineAdapter {
 
   public async sendQuery(
     eventData: GuidanceEngineQueryInput
-  ): Promise<IMessageAnswerToQuestion> {
+  ): Promise<IMessageGuidanceQuestionResult> {
     let responseData: GuidanceEngineQueryResponse | undefined;
 
     try {
@@ -47,7 +47,8 @@ export class GuidanceEngineAdapter {
       this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
       // not a real answer; just return an error
       return {
-        answer: errorMessage,
+        success: false,
+        error: errorMessage,
         question: eventData.question,
       };
     }
@@ -79,7 +80,8 @@ export class GuidanceEngineAdapter {
       this.logger.error(errorMessage, err?.stack, LogContext.CHAT_GUIDANCE);
       // not a real answer; just return an error
       return {
-        answer: errorMessage,
+        success: false,
+        error: errorMessage,
         question: eventData.question,
       };
     }
@@ -92,9 +94,8 @@ export class GuidanceEngineAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<GuidanceEngineBaseResponse>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<GuidanceEngineBaseResponse>(response);
 
       return responseData.result === successfulResetResponse;
     } catch (err: any) {
@@ -116,9 +117,8 @@ export class GuidanceEngineAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<GuidanceEngineBaseResponse>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<GuidanceEngineBaseResponse>(response);
       return responseData.result === successfulIngestionResponse;
     } catch (err: any) {
       this.logger.error(

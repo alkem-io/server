@@ -3,6 +3,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IVisual } from './visual.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { ALT_TEXT_LENGTH, URI_LENGTH } from '@common/constants';
+import { VISUAL_ALLOWED_TYPES } from './visual.constraints';
 
 @Entity()
 export class Visual extends AuthorizableEntity implements IVisual {
@@ -42,21 +43,11 @@ export class Visual extends AuthorizableEntity implements IVisual {
 
   constructor() {
     super();
-    this.allowedTypes = this.createDefaultAllowedTypes();
+    this.allowedTypes = [...VISUAL_ALLOWED_TYPES];
     this.minHeight = 0;
     this.maxHeight = 0;
     this.minWidth = 0;
     this.maxWidth = 0;
     this.aspectRatio = 1;
-  }
-
-  private createDefaultAllowedTypes(): string[] {
-    return [
-      'image/png',
-      'image/jpeg',
-      'image/jpg',
-      'image/svg+xml',
-      'image/webp',
-    ];
   }
 }

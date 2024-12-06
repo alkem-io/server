@@ -9,18 +9,17 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { IProfile } from '@domain/common/profile';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MutationType } from '@common/enums/subscriptions/mutation.type';
 import { LogContext } from '@common/enums/logging.context';
-import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { RoomService } from './room.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { VirtualContributorQuestionInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.question.input';
-import { MessageService } from '../message/message.service';
+import {
+  InvocationResultAction,
+  VirtualContributorInvocationInput,
+} from '@domain/community/virtual-contributor/dto';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
@@ -35,8 +34,6 @@ export class RoomServiceMentions {
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
     private roomService: RoomService,
-    private messageService: MessageService,
-    private subscriptionPublishService: SubscriptionPublishService,
     private virtualContributorService: VirtualContributorService,
     private contributorLookupService: ContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -49,7 +46,7 @@ export class RoomServiceMentions {
       room.type as RoomType
     );
 
-    // The ID of the actual community where the question is being asked
+    // The ID of the actual community where the vc is being invoced
     const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
       community.roleSet.id
     );
@@ -58,7 +55,7 @@ export class RoomServiceMentions {
 
   public async processVirtualContributorMentions(
     mentions: Mention[],
-    question: string,
+    message: string,
     threadID: string,
     agentInfo: AgentInfo,
     room: IRoom
@@ -87,9 +84,9 @@ export class RoomServiceMentions {
         });
       }
 
-      await this.askQuestionToVirtualContributor(
+      await this.invokeVirtualContributor(
         vcMention.id,
-        question,
+        message,
         threadID,
         agentInfo,
         contextSpaceID,
@@ -99,9 +96,9 @@ export class RoomServiceMentions {
     }
   }
 
-  public async askQuestionToVirtualContributor(
+  public async invokeVirtualContributor(
     uuid: string,
-    question: string,
+    message: string,
     threadID: string,
     agentInfo: AgentInfo,
     contextSpaceID: string,
@@ -124,40 +121,23 @@ export class RoomServiceMentions {
       );
     }
 
-    const vcQuestion: VirtualContributorQuestionInput = {
+    const vcInput: VirtualContributorInvocationInput = {
       virtualContributorID: virtualContributor.id,
-      question: question,
+      message,
       contextSpaceID,
       userID: agentInfo.userID,
-      threadID,
+      resultHandler: {
+        action: InvocationResultAction.POST_REPLY,
+        roomDetails: {
+          roomID: room.id,
+          threadID,
+          communicationID: virtualContributor.communicationID,
+          vcInteractionID: vcInteraction?.id,
+        },
+      },
     };
 
-    if (vcInteraction) {
-      vcQuestion.vcInteractionID = vcInteraction.id;
-    }
-
-    const result = await this.virtualContributorService.askQuestion(vcQuestion);
-
-    const simpleAnswer =
-      this.messageService.convertAnswerToSimpleMessage(result);
-
-    const answerData: RoomSendMessageReplyInput = {
-      message: simpleAnswer,
-      roomID: room.id,
-      threadID: threadID,
-    };
-    const answerMessage = await this.roomService.sendMessageReply(
-      room,
-      virtualContributor.communicationID,
-      answerData,
-      'virtualContributor'
-    );
-
-    this.subscriptionPublishService.publishRoomEvent(
-      room,
-      MutationType.CREATE,
-      answerMessage
-    );
+    await this.virtualContributorService.invoke(vcInput);
   }
 
   public processNotificationMentions(
