@@ -86,6 +86,7 @@ import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.mo
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
+import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 
 @Module({
   imports: [
@@ -266,6 +267,7 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
     AdminSearchIngestModule,
     AdminLicensingModule,
     LicensingWingbackSubscriptionModule,
+    WingbackManagerModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
