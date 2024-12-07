@@ -3,17 +3,13 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, map } from 'rxjs';
 import { AlkemioConfig } from '@src/types';
-import { CreateCustomer } from '@platform/licensing/wingback-subscription';
-import { WingbackEntitlement } from '@services/external/wingback/types/entitlement';
-import { LicensingWingbackSubscriptionManager } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.interface';
-import { UpdateCustomer } from '@platform/licensing/wingback-subscription/type/licensing.wingback.subscription.type.update.customer';
+import { UpdateCustomer } from '@services/external/wingback/types/wingback.type.update.customer';
+import { WingbackEntitlement } from './types/wingback.type.entitlement';
+import { CreateCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
 
-export interface CreateWingbackCustomer extends CreateCustomer {}
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
-export class WingbackLicenseManager
-  implements LicensingWingbackSubscriptionManager
-{
+export class WingbackManager {
   private readonly apiKey: string;
   private readonly endpoint: string;
 
@@ -29,9 +25,7 @@ export class WingbackLicenseManager
   }
 
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#1-create-a-new-customer-in-wingback-backend
-  public async createCustomer(
-    data: CreateWingbackCustomer
-  ): Promise<{ id: string }> {
+  public async createCustomer(data: CreateCustomer): Promise<{ id: string }> {
     return this.sendPost<string>('/v1/c/customer', data).then(response => ({
       id: response,
     }));
@@ -69,6 +63,7 @@ export class WingbackLicenseManager
     //         console.error('Error creating payment session:', error);
     //       });
   }
+
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#3-subscribe-the-customer-to-a-plan-backend
   public assignPlan(): Promise<void> {
     throw new Error('Method not implemented');
@@ -98,6 +93,7 @@ export class WingbackLicenseManager
     //     });
     // })
   }
+
   // https://docs.wingback.com/dev/api-reference/entitlement/get_c_entitlement_customerid_access
   public getEntitlements(customerId: string): Promise<WingbackEntitlement[]> {
     return this.sendGet<WingbackEntitlement[]>(

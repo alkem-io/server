@@ -1,4 +1,4 @@
-import { WingbackFeature } from './wingback.feature';
+import { WingbackFeature } from './wingback.type.feature';
 
 export type WingbackEntitlement = {
   customer: {

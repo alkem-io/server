@@ -1,5 +1,5 @@
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
@@ -10,8 +10,6 @@ import { SearchIngestService } from '@services/api/search/v2/ingest/search.inges
 import { TaskService } from '@services/task';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';
-import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription';
-import { randomUUID } from 'crypto';
 
 @Resolver()
 export class AdminSearchIngestResolverMutations {
@@ -20,38 +18,8 @@ export class AdminSearchIngestResolverMutations {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private searchIngestService: SearchIngestService,
     private taskService: TaskService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    private licenseManagerService: LicensingWingbackSubscriptionService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {}
-  // todo: remove
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String)
-  public async adminCreateLicenseCustomer() {
-    const res = await this.licenseManagerService.createCustomer({
-      name: `Test User ${randomUUID()}`,
-      emails: {
-        main: `main${randomUUID()}@alkem.io`,
-        secondary: `secondary${randomUUID()}@alkem.io`,
-      },
-      tax_details: {
-        vat_id: 'vat_id',
-      },
-      notes: 'notes',
-      customer_reference: `your-internal-user-id-${randomUUID()}`,
-      contracts: [],
-    });
-    return res.id;
-  }
-
-  // todo: remove
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String)
-  public async adminGetCustomerEntitlements(
-    @Args('customerID') customerId: string
-  ) {
-    const result = await this.licenseManagerService.getEntitlements(customerId);
-    return JSON.stringify(result, null, 2);
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => String, {

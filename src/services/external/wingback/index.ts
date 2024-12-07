@@ -1,2 +1,2 @@
-export * from './wingback.license.manager';
-export * from './wingback.license.manager.module';
+export * from './wingback.manager';
+export * from './wingback.manager.module';

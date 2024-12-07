@@ -1,10 +1,15 @@
 import { Module } from '@nestjs/common';
-import { WingbackLicenseManagerModule } from '@services/external/wingback';
+import { WingbackManagerModule } from '@services/external/wingback';
 import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { LicensingWingbackSubscriptionServiceResolverMutations } from './licensing.wingback.subscription.resolver.mutations';
 
 @Module({
-  imports: [WingbackLicenseManagerModule],
-  providers: [LicensingWingbackSubscriptionService],
+  imports: [WingbackManagerModule, PlatformAuthorizationPolicyModule],
+  providers: [
+    LicensingWingbackSubscriptionService,
+    LicensingWingbackSubscriptionServiceResolverMutations,
+  ],
   exports: [LicensingWingbackSubscriptionService],
 })
-export class LicenseManagerModule {}
+export class LicensingWingbackSubscriptionModule {}
