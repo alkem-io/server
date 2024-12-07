@@ -551,7 +551,7 @@ export class CommunicationAdapter {
       return responseData.rooms.map(room => {
         return {
           ...room,
-          messages: room.messages.map(message => {
+          messages: (room.messages || []).map(message => {
             return {
               ...message,
               senderType: 'user',

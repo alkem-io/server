@@ -1,6 +1,7 @@
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Injectable } from '@nestjs/common';
 import { IEventPublisher } from '@nestjs/cqrs';
+import { InvokeEngine } from './messages/invoke.engine';
 
 @Injectable()
 export class Publisher implements IEventPublisher {
@@ -11,10 +12,13 @@ export class Publisher implements IEventPublisher {
   }
 
   publish<T extends object>(event: T): any {
-    // throw new Error(JSON.stringify(event));
+    let routingKey = event.constructor.name;
+    if (event instanceof InvokeEngine) {
+      routingKey = event.input.engine;
+    }
     this.amqpConnection.publish(
       'event-bus',
-      event.constructor.name,
+      routingKey,
       JSON.stringify({ type: event.constructor.name, ...event })
     );
   }
