@@ -35,6 +35,7 @@ export type AlkemioConfig = {
   };
   licensing: {
     wingback: {
+      enabled: boolean;
       key: string;
       endpoint: string;
     };

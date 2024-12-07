@@ -1,31 +1,39 @@
 import { ConfigService } from '@nestjs/config';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, map } from 'rxjs';
 import { AlkemioConfig } from '@src/types';
 import { UpdateCustomer } from '@services/external/wingback/types/wingback.type.update.customer';
 import { WingbackEntitlement } from './types/wingback.type.entitlement';
 import { CreateCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
 export class WingbackManager {
   private readonly apiKey: string;
   private readonly endpoint: string;
+  private readonly enabled: boolean;
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
-    private readonly httpService: HttpService
+    private readonly httpService: HttpService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     const config = this.configService.get('licensing.wingback', {
       infer: true,
     });
     this.apiKey = config.key;
     this.endpoint = config.endpoint;
+    this.enabled = config.enabled;
   }
 
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#1-create-a-new-customer-in-wingback-backend
   public async createCustomer(data: CreateCustomer): Promise<{ id: string }> {
+    if (!this.enabled) {
+      this.logger.warn('Wingback is not enabled');
+      return { id: '' };
+    }
     return this.sendPost<string>('/v1/c/customer', data).then(response => ({
       id: response,
     }));

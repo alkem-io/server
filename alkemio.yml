@@ -87,8 +87,9 @@ search:
 
 licensing:
   wingback:
-    key: ${WINGBACK_API_KEY}
-    endpoint: ${WINGBACK_API_ENDPOINT}
+    enabled: ${LICENSING_WINGBACK_ENABLED}:false
+    key: ${LICENSING_WINGBACK_API_KEY}
+    endpoint: ${LICENSING_WINGBACK_API_ENDPOINT}
 
 ## identity ##
 
