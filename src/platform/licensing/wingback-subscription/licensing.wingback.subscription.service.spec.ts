@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
 
-describe('LicenseManagerService', () => {
+describe('LicensingWingbackSubscriptionService', () => {
   let service: LicensingWingbackSubscriptionService;
 
   beforeEach(async () => {
