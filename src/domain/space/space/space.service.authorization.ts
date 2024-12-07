@@ -121,7 +121,7 @@ export class SpaceAuthorizationService {
     // Allow the parent admins to also delete subspaces
     let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
     switch (space.level) {
-      case SpaceLevel.SPACE:
+      case SpaceLevel.SPACE: {
         space.authorization = this.resetToLevelZeroSpaceAuthorization(
           space.authorization
         );
@@ -129,8 +129,9 @@ export class SpaceAuthorizationService {
           space.authorization.anonymousReadAccess = true;
         }
         break;
+      }
       case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.OPPORTUNITY: {
         if (isPrivate) {
           // Key: private get the base space authorization setup, that is then extended
           space.authorization = this.resetToLevelZeroSpaceAuthorization(
@@ -167,6 +168,7 @@ export class SpaceAuthorizationService {
             spaceSettings
           );
         break;
+      }
     }
 
     let spaceMembershipAllowed = true;
