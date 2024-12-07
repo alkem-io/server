@@ -6,7 +6,6 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { Callout } from '@domain/collaboration/callout';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 
@@ -32,14 +31,6 @@ export class Template extends NameableEntity implements ITemplate {
 
   @Column('text', { nullable: true })
   postDefaultDescription?: string;
-
-  @OneToOne(() => InnovationFlow, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  innovationFlow?: InnovationFlow;
 
   @OneToOne(() => CommunityGuidelines, {
     eager: false,

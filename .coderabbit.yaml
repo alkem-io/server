@@ -11,7 +11,26 @@ reviews:
     - "!**/dist/**"          # Exclude build files
   path_instructions:
     - path: "src/**/*.{ts,js}"
-      instructions: "Review the TypeScript/JavaScript code for NestJS best practices, dependency injection, module structure, and potential bugs. Ensure that the code adheres to TypeScript's typing system and modern standards."
+      instructions: |
+        Review the TypeScript/JavaScript code for NestJS best practices, dependency injection, module structure, and potential bugs.
+
+        **Context Files (Do Not Review):**
+        - `docs/Design.md` - Design overview of the project
+        - `docs/Pagination.md` - Pagination design overview
+        - `docs/Developing.md` - Development setup overview
+        - `docs/graphql-typeorm-usage.md` - overview of GraphQL and TypeORM usage and how they are used together with NestJS in the project
+        - `docs/database-definitions.md` - guidelines for creating TypeORM entity defnitions
+        - `src/core/error-handling/graphql.exception.filter.ts` - GraphQL error handling
+        - `src/core/error-handling/http.exception.filter.ts` - HTTP error handling
+        - `src/core/error-handling/rest.error.response.ts` - REST error response
+        - `src/core/error-handling/unhandled.exception.filter.ts` - Global exception handler
+
+        **Guidelines:**
+        - Our project uses global exception handlers (`UnhandledExceptionFilter`), so avoid suggesting additional `try/catch` blocks unless handling specific cases.
+        - Use NestJS latest documentation from `https://docs.nestjs.com/` for reference on NestJS best practices.
+        - Use TypeORM latest documentation from `https://typeorm.io/` for reference on TypeORM best practices.
+        - Refer to the design overview in the context files for better understanding.
+
     - path: "src/**/*.spec.ts"
       instructions: "Review the unit tests, ensuring proper NestJS testing techniques (using TestingModule, mocks, etc.). Check for completeness and coverage."
     - path: "manifests/**/*.{yaml,yml}"

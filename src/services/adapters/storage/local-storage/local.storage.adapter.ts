@@ -13,6 +13,7 @@ import {
 import { StorageService } from '../storage.service.interface';
 import { StorageServiceType } from '../storage.service.type';
 import { AlkemioConfig } from '@src/types';
+import { StorageDisabledException } from '@common/exceptions/storage/storage.disabled.exception';
 
 const writeFileAsync = promisify(writeFile);
 const readFileAsync = promisify(readFile);
@@ -20,9 +21,11 @@ const unlinkAsync = promisify(unlink);
 
 @Injectable()
 export class LocalStorageAdapter implements StorageService {
+  private readonly enabled: boolean;
   private readonly storagePath: string;
 
   constructor(private configService: ConfigService<AlkemioConfig, true>) {
+    this.enabled = this.configService.get('storage.enabled', { infer: true });
     const pathFromConfig = this.configService.get(
       'storage.local_storage.path',
       { infer: true }
@@ -36,10 +39,24 @@ export class LocalStorageAdapter implements StorageService {
   }
 
   public save(data: Buffer) {
+    if (!this.enabled) {
+      throw new StorageDisabledException(
+        'Storage is currently disabled',
+        LogContext.LOCAL_STORAGE
+      );
+    }
+
     return this.saveFromBuffer(data);
   }
 
   public async read(fileName: string): Promise<Buffer> | never {
+    if (!this.enabled) {
+      throw new StorageDisabledException(
+        'Storage is currently disabled',
+        LogContext.LOCAL_STORAGE
+      );
+    }
+
     const filePath = this.getFilePath(fileName);
     try {
       return await readFileAsync(filePath);
@@ -58,6 +75,13 @@ export class LocalStorageAdapter implements StorageService {
   }
 
   public async delete(fileName: string): Promise<void> | never {
+    if (!this.enabled) {
+      throw new StorageDisabledException(
+        'Storage is currently disabled',
+        LogContext.LOCAL_STORAGE
+      );
+    }
+
     const filePath = this.getFilePath(fileName);
 
     try {
@@ -77,6 +101,13 @@ export class LocalStorageAdapter implements StorageService {
   }
 
   public exists(fileName: string): boolean {
+    if (!this.enabled) {
+      throw new StorageDisabledException(
+        'Storage is currently disabled',
+        LogContext.LOCAL_STORAGE
+      );
+    }
+
     const filePath = this.getFilePath(fileName);
     return existsSync(filePath);
   }

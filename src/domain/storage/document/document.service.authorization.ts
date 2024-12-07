@@ -15,10 +15,10 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 export class DocumentAuthorizationService {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     document: IDocument,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy[] {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!document.tagset || !document.tagset.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to find entities required to reset auth for Document ${document.id} `,
@@ -44,7 +44,8 @@ export class DocumentAuthorizationService {
       );
     updatedAuthorizations.push(document.tagset.authorization);
 
-    return updatedAuthorizations;
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return [];
   }
 
   private appendCredentialRules(document: IDocument): IAuthorizationPolicy {

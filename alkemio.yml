@@ -282,6 +282,9 @@ communications:
 ## storage ##
 # Alkemio uses multiple types of persistent storage, including SQL database, postgres database, file storage, redis.
 storage:
+  #
+  enabled: ${STORAGE_ENABLED}:true
+  #
   file:
     # 20MB
     max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520

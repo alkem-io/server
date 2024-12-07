@@ -3,9 +3,25 @@ import { AiPersonaEngineAdapterInputBase } from './ai.persona.engine.adapter.dto
 import { InteractionMessage } from '@services/ai-server/ai-persona-service/dto/interaction.message';
 import { IExternalConfig } from '@services/ai-server/ai-persona-service/dto/external.config';
 
-export interface AiPersonaEngineAdapterQueryInput
+export enum InvocationResultAction {
+  POST_REPLY = 'postReply',
+  POST_MESSAGE = 'postMessage',
+  NONE = 'none',
+}
+export class RoomDetails {
+  roomID!: string;
+  threadID?: string;
+  communicationID!: string;
+}
+
+export class ResultHandler {
+  action!: InvocationResultAction;
+  roomDetails?: RoomDetails = undefined;
+}
+
+export interface AiPersonaEngineAdapterInvocationInput
   extends AiPersonaEngineAdapterInputBase {
-  question: string;
+  message: string;
   prompt?: string[];
   contextID?: string;
   bodyOfKnowledgeID: string;
@@ -15,4 +31,7 @@ export interface AiPersonaEngineAdapterQueryInput
   displayName: string;
   externalConfig: IExternalConfig;
   externalMetadata: ExternalMetadata;
+  resultHandler: ResultHandler;
+  personaServiceID: string;
+  language?: string;
 }

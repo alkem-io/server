@@ -102,6 +102,7 @@ export type AlkemioConfig = {
     };
   };
   storage: {
+    enabled: boolean;
     file: {
       max_file_size: number;
     };

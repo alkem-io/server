@@ -13,10 +13,12 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
+import {
+  AiServerAdapterInvocationInput,
+  InvocationResultAction,
+} from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
@@ -127,23 +129,26 @@ export class AiPersonaService {
     return await this.aiPersonaRepository.save(aiPersona);
   }
 
-  public async askQuestion(
+  public invoke(
     aiPersona: IAiPersona,
-    question: string,
+    message: string,
     agentInfo: AgentInfo,
     contextSpaceID: string
-  ): Promise<IMessageAnswerToQuestion> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Asking question to AI Persona from user ${agentInfo.userID} + with context ${contextSpaceID}`,
       LogContext.PLATFORM
     );
 
-    const input: AiServerAdapterAskQuestionInput = {
-      question: question,
+    const input: AiServerAdapterInvocationInput = {
+      message,
       displayName: '',
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
+      resultHandler: {
+        action: InvocationResultAction.POST_REPLY,
+      },
     };
 
-    return await this.aiServerAdapter.askQuestion(input);
+    return this.aiServerAdapter.invoke(input);
   }
 }
