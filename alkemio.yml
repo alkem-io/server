@@ -296,7 +296,7 @@ storage:
     # MySQL username.
     username: 'root'
 
-    # The timezone in which typeorm will interpret the dates.
+    # The timezone in which typeorm will interpret the dates. Default is Z for UTC
     timezone: ${TYPEORM_TIMEZONE}:Z
 
     # MySQL password.
