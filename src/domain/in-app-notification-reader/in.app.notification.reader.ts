@@ -49,22 +49,12 @@ export class InAppNotificationReader {
     ID: string,
     state: InAppNotificationState
   ): Promise<InAppNotificationState> {
-    const notification = await this.inAppNotificationRepo.findOne({
-      where: {
-        id: ID!,
-      },
-    });
-    if (!notification) {
-      throw new EntityNotFoundException(
-        'Notification not found',
-        LogContext.IN_APP_NOTIFICATION,
-        { id: ID }
-      );
-    }
-    notification.state = state;
+    const notification = await this.getRawNotificationOrFail(ID);
 
-    const updatedNotification =
-      await this.inAppNotificationRepo.save(notification);
+    const updatedNotification = await this.inAppNotificationRepo.save({
+      ...notification,
+      state,
+    });
 
     return updatedNotification.state;
   }
