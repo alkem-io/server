@@ -55,7 +55,11 @@ export class InAppNotificationReader {
       },
     });
     if (!notification) {
-      throw new Error('Notification not found');
+      throw new EntityNotFoundException(
+        'Notification not found',
+        LogContext.IN_APP_NOTIFICATION,
+        { id: ID }
+      );
     }
     notification.state = state;
 

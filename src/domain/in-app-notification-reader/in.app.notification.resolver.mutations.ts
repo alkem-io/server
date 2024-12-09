@@ -2,12 +2,12 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 import { GraphqlGuard } from '@core/authorization';
-import { InAppNotificationReader } from './in.app.notification.reader';
-import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { BaseException } from '@common/exceptions/base.exception';
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
+import { ForbiddenException } from '@common/exceptions';
+import { InAppNotificationReader } from './in.app.notification.reader';
+import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
 
 @Resolver()
 export class InAppNotificationResolverMutations {
@@ -27,10 +27,9 @@ export class InAppNotificationResolverMutations {
       notificationData.ID
     );
     if (notification.receiverID !== agentInfo.userID) {
-      throw new BaseException(
+      throw new ForbiddenException(
         'Users can only update their own notifications',
         LogContext.IN_APP_NOTIFICATION,
-        AlkemioErrorStatus.FORBIDDEN,
         { notificationId: notificationData.ID }
       );
     }
