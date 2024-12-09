@@ -323,7 +323,7 @@ services:
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
     hostname: virtual-contributor-engine-guidance
-    image: alkemio/virtual-contributor-engine-guidance:v0.7.1
+    image: alkemio/virtual-contributor-engine-guidance:v0.8.2
     platform: linux/x86_64
     restart: always
     volumes:
@@ -339,6 +339,11 @@ services:
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - RABBITMQ_QUEUE=virtual-contributor-engine-guidance
+      - RABBITMQ_EVENT_BUS_EXCHANGE
+      - RABBITMQ_RESULT_QUEUE
+      - RABBITMQ_RESULT_ROUTING_KEY
+      - AZURE_MISTRAL_ENDPOINT
+      - AZURE_MISTRAL_API_KEY
       - ENVIRONMENT=dev
       - EMBEDDINGS_DEPLOYMENT_NAME
       - AZURE_OPENAI_API_KEY
@@ -396,7 +401,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor-engine-expert:v0.5.0
+    image: alkemio/virtual-contributor-engine-expert:v0.10.0
     platform: linux/x86_64
     restart: always
     volumes:
@@ -412,6 +417,11 @@ services:
       - RABBITMQ_PASSWORD
       - RABBITMQ_PORT
       - RABBITMQ_QUEUE=virtual-contributor-engine-expert
+      - RABBITMQ_EVENT_BUS_EXCHANGE
+      - RABBITMQ_RESULT_QUEUE
+      - RABBITMQ_RESULT_ROUTING_KEY
+      - AZURE_MISTRAL_ENDPOINT
+      - AZURE_MISTRAL_API_KEY
       - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
       - AUTH_ADMIN_EMAIL

@@ -64,6 +64,8 @@ import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomType } from '@common/enums/room.type';
 
 @Injectable()
 export class UserService {
@@ -136,6 +138,8 @@ export class UserService {
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.USER
       );
+    // Do not create the guidance room here, it will be created on demand
+
     user.profile = await this.profileService.createProfile(
       profileData,
       ProfileType.USER,
@@ -372,6 +376,7 @@ export class UserService {
         agent: true,
         preferenceSet: true,
         storageAggregator: true,
+        guidanceRoom: true,
       },
     });
 
@@ -408,6 +413,10 @@ export class UserService {
 
     if (user.storageAggregator) {
       await this.storageAggregatorService.delete(user.storageAggregator.id);
+    }
+
+    if (user.guidanceRoom) {
+      await this.roomService.deleteRoom(user.guidanceRoom);
     }
 
     if (deleteData.deleteIdentity) {
@@ -832,6 +841,39 @@ export class UserService {
     }
 
     return storageAggregator;
+  }
+
+  async getGuidanceRoom(userID: string): Promise<IRoom | undefined> {
+    const userWithGuidanceRoom = await this.getUserOrFail(userID, {
+      relations: {
+        guidanceRoom: true,
+      },
+    });
+    return userWithGuidanceRoom.guidanceRoom;
+  }
+
+  public async createGuidanceRoom(userId: string): Promise<IRoom> {
+    const user = await this.getUserOrFail(userId, {
+      relations: {
+        guidanceRoom: true,
+      },
+    });
+
+    if (user.guidanceRoom) {
+      throw new Error(
+        `Guidance room already exists for user with ID: ${userId}`
+      );
+    }
+
+    const room = await this.roomService.createRoom(
+      `${user.communicationID}-guidance`,
+      RoomType.GUIDANCE
+    );
+
+    user.guidanceRoom = room;
+    await this.save(user);
+
+    return room;
   }
 
   private tryRegisterUserCommunication(

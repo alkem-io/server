@@ -11,4 +11,4 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
   providers: [],
   exports: [],
 })
-export class MessageAnswerToQuestionModule {}
+export class MessageGuidanceQuestionResultModule {}

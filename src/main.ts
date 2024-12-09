@@ -14,6 +14,8 @@ import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { INestApplication } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
+import { renderGraphiQL } from 'graphql-helix';
+import { Request, Response } from 'express';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
@@ -70,6 +72,16 @@ const bootstrap = async () => {
       limit: max_json_payload_size,
     })
   );
+
+  // Serve the GraphiQL interface at '/graphiql'
+  app.use('/graphiql', (_req: Request, res: Response) => {
+    res.send(
+      renderGraphiQL({
+        endpoint: '/graphql',
+        //subscriptionsEndpoint: '/graphql',
+      })
+    );
+  });
 
   await app.listen(port);
 

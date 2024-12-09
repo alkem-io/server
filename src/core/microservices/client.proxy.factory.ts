@@ -6,12 +6,6 @@ import { AlkemioConfig } from '@src/types';
 
 const QUEUE_CONTEXT_MAP: { [key in MessagingQueue]?: LogContext } = {
   [MessagingQueue.AUTH_RESET]: LogContext.AUTH,
-  [MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT]:
-    LogContext.VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
-  [MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC]:
-    LogContext.VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
-  [MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT]:
-    LogContext.VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
 };
 
 export const clientProxyFactory = (queue: MessagingQueue, durable = true) => {

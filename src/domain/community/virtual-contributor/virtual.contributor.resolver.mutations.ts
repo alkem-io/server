@@ -11,7 +11,7 @@ import {
   DeleteVirtualContributorInput,
   UpdateVirtualContributorInput,
 } from './dto';
-import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowlege';
+import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowledge';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @ObjectType('MigrateEmbeddings')
