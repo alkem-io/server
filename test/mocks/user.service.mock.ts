@@ -19,7 +19,7 @@ export const MockUserService: ValueProvider<PublicPart<UserService>> = {
     getUsers: jest.fn(),
     getPaginatedUsers: jest.fn(),
     updateUser: jest.fn(),
-    getAgent: jest.fn(),
+    getAgentOrFail: jest.fn(),
     getProfile: jest.fn(),
     usersWithCredentials: jest.fn(),
     countUsersWithCredentials: jest.fn(),

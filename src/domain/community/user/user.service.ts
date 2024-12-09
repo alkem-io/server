@@ -758,7 +758,7 @@ export class UserService {
     return await this.save(user);
   }
 
-  async getAgent(userID: string): Promise<IAgent> {
+  async getAgentOrFail(userID: string): Promise<IAgent> {
     const userWithAgent = await this.getUserOrFail(userID, {
       relations: { agent: true },
     });

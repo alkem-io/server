@@ -191,7 +191,7 @@ export class PlatformRoleService {
     userID: string
   ): Promise<PlatformRole[]> {
     const result: PlatformRole[] = [];
-    const agent = await this.userService.getAgent(userID);
+    const agent = await this.userService.getAgentOrFail(userID);
     const roles: PlatformRole[] = Object.values(PlatformRole) as PlatformRole[];
     for (const role of roles) {
       const hasAgentRole = await this.isInRole(agent, role);
