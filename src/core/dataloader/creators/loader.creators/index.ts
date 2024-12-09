@@ -24,3 +24,7 @@ export * from './collaboration/collaboration.timeline.loader.creator';
 export * from './journey/journey.collaboration.loader.creator';
 export * from './journey/journey.context.loader.creator';
 export * from './journey/journey.community.loader.creator';
+
+export * from './in-app-notification/contributor.loader.creator';
+export * from './in-app-notification/callout.loader.creator';
+export * from './in-app-notification/space.loader.creator';

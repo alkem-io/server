@@ -148,7 +148,7 @@ export class OrganizationRoleService {
     assignData: AssignOrganizationRoleToUserInput
   ): Promise<IUser> {
     const userID = assignData.userID;
-    const agent = await this.userService.getAgent(userID);
+    const agent = await this.userService.getAgentOrFail(userID);
     const organization =
       await this.contributorLookupService.getOrganizationOrFail(
         assignData.organizationID
@@ -174,7 +174,7 @@ export class OrganizationRoleService {
     const organizationID = removeData.organizationID;
     const organization =
       await this.contributorLookupService.getOrganizationOrFail(organizationID);
-    const agent = await this.userService.getAgent(removeData.userID);
+    const agent = await this.userService.getAgentOrFail(removeData.userID);
 
     if (validationRoles) {
       if (removeData.role === OrganizationRole.OWNER) {
