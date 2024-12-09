@@ -141,7 +141,6 @@ import { InAppNotificationReceiverModule } from '@domain/in-app-notification-rec
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
-          timezone: dbOptions.timezone,
           charset: dbOptions.charset,
           username: dbOptions.username,
           password: dbOptions.password,
