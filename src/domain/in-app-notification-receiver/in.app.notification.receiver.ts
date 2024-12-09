@@ -39,11 +39,14 @@ export class InAppNotificationReceiver {
     );
     // get all beta tester receivers
     const betaTesterReceivers: string[] = [];
-    for (const receiverID of Array.from(receiverSet)) {
-      const roles =
-        await this.platformRoleService.getPlatformRolesForUser(receiverID);
+    const usersWithRoles =
+      await this.platformRoleService.getPlatformRolesForUsers(
+        Array.from(receiverSet)
+      );
+    for (const userID in usersWithRoles) {
+      const roles = usersWithRoles[userID];
       if (roles.includes(PlatformRole.BETA_TESTER)) {
-        betaTesterReceivers.push(receiverID);
+        betaTesterReceivers.push(userID);
       }
     }
     const notificationsForBetaUsers: InAppNotificationPayload[] =

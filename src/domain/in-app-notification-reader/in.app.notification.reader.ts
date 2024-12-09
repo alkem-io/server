@@ -14,7 +14,7 @@ export class InAppNotificationReader {
     private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
   ) {}
 
-  public async getRawNotification(
+  public async getRawNotificationOrFail(
     ID: string
   ): Promise<InAppNotificationEntity> {
     const notification = await this.inAppNotificationRepo.findOne({

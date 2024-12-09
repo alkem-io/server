@@ -23,9 +23,10 @@ export class InAppNotificationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('notificationData') notificationData: UpdateNotificationStateInput
   ): Promise<InAppNotificationState> {
-    const notification = await this.inAppNotificationReader.getRawNotification(
-      notificationData.ID
-    );
+    const notification =
+      await this.inAppNotificationReader.getRawNotificationOrFail(
+        notificationData.ID
+      );
     if (notification.receiverID !== agentInfo.userID) {
       throw new ForbiddenException(
         'Users can only update their own notifications',
