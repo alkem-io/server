@@ -13,7 +13,7 @@ import { InAppNotification } from '@domain/in-app-notification-reader/in.app.not
  * @constructor
  */
 export function InAppNotificationBase() {
-  return class extends Object implements InAppNotification {
+  return class implements InAppNotification {
     id!: string;
     type!: NotificationEventType;
     triggeredAt!: Date;
