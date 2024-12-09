@@ -22,7 +22,6 @@ export class InAppNotificationResolverQueries {
     @Args('receiverID', { type: () => UUID, nullable: false })
     receiverID: string
   ) {
-    // todo: some other auth
     if (receiverID !== agentInfo.userID) {
       throw new ForbiddenException(
         'Users can only view their own notifications',

@@ -14,6 +14,7 @@ import { InAppNotification } from '@domain/in-app-notification-reader/in.app.not
  */
 export function InAppNotificationBase() {
   return class implements InAppNotification {
+    // resolved by the interface resolvers
     id!: string;
     type!: NotificationEventType;
     triggeredAt!: Date;

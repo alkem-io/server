@@ -9,22 +9,16 @@ import { CommunityContributorType } from '@common/enums/community.contributor.ty
 import { ISpace } from '@domain/space/space/space.interface';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 import { InAppNotification } from '../in.app.notification.interface';
+import { InAppNotificationBase } from '@domain/in-app-notification-reader/dto/in.app.notification.base';
 
 @ObjectType('InAppNotificationCommunityNewMember', {
   implements: () => InAppNotification,
 })
-export class InAppNotificationCommunityNewMember implements InAppNotification {
+export class InAppNotificationCommunityNewMember extends InAppNotificationBase() {
   type!: NotificationEventType.COMMUNITY_NEW_MEMBER;
+  payload!: InAppNotificationCommunityNewMemberPayload;
   // fields resolved by a concrete resolver
   contributorType?: CommunityContributorType;
   actor?: IContributor;
   space?: ISpace;
-  // inherited, resolved by the interface resolvers
-  id!: string;
-  category!: InAppNotificationCategory;
-  receiver!: IContributor;
-  state!: InAppNotificationState;
-  triggeredAt!: Date;
-  triggeredBy?: IContributor;
-  payload!: InAppNotificationCommunityNewMemberPayload;
 }
