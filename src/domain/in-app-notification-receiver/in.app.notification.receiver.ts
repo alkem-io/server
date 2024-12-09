@@ -12,7 +12,6 @@ import { PlatformRole } from '@common/enums/platform.role';
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
 import { InAppNotificationState } from '../in-app-notification/in.app.notification.state';
 
-// todo: use this service in the controller
 @Injectable()
 export class InAppNotificationReceiver {
   constructor(

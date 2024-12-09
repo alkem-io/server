@@ -54,17 +54,6 @@ export class NotificationAdapter {
       );
 
     this.notificationsClient.emit<number>(event, payload);
-    // await this.inAppNotificationReceiver.store([
-    //   {
-    //     type: event,
-    //     triggeredAt: new Date(),
-    //     triggeredByID: payload.triggeredBy,
-    //     category: 'N/A',
-    //     receiverID: hardcodedInAppReceiverID,
-    //     calloutID: payload.callout.id,
-    //     spaceID: payload.space.id,
-    //   },
-    // ]);
   }
 
   public async postCreated(
@@ -254,21 +243,6 @@ export class NotificationAdapter {
 
     if (payload) {
       this.notificationsClient.emit<number>(event, payload);
-      // this.inAppNotificationReceiver.store([
-      //   {
-      //     type: event,
-      //     receiverID: hardcodedInAppReceiverID,
-      //     triggeredAt: new Date(),
-      //     triggeredByID: payload.triggeredBy,
-      //     category: 'N/A',
-      //     comment: '',
-      //     contributorType: payload.mentionedUser.type as any,
-      //     commentOrigin: {
-      //       type: 'callout',
-      //       url: '',
-      //     },
-      //   },
-      // ]);
     }
   }
 
@@ -410,17 +384,6 @@ export class NotificationAdapter {
         eventData.community
       );
     this.notificationsClient.emit(event, payload);
-    // this.inAppNotificationReceiver.store([
-    //   {
-    //     type: event,
-    //     receiverID: hardcodedInAppReceiverID,
-    //     triggeredAt: new Date(),
-    //     triggeredByID: payload.triggeredBy,
-    //     category: 'N/A',
-    //     newMemberID: payload.contributor.id,
-    //     spaceID: payload.space.id,
-    //   },
-    // ]);
   }
 
   public async platformGlobalRoleChanged(
