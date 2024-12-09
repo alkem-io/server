@@ -4,14 +4,33 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationEntity } from '@domain/in-app-notification/in.app.notification.entity';
 import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
+import { EntityNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
-// todo: use this service in the controller
 @Injectable()
 export class InAppNotificationReader {
   constructor(
     @InjectRepository(InAppNotificationEntity)
     private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
   ) {}
+
+  public async getRawNotification(
+    ID: string
+  ): Promise<InAppNotificationEntity> {
+    const notification = await this.inAppNotificationRepo.findOne({
+      where: { id: ID },
+    });
+
+    if (!notification) {
+      throw new EntityNotFoundException(
+        'Notification with this ID not found',
+        LogContext.IN_APP_NOTIFICATION,
+        { id: ID }
+      );
+    }
+
+    return notification;
+  }
 
   public getNotifications(receiverID?: string): Promise<InAppNotification[]> {
     return this.getRawNotifications(receiverID);
