@@ -197,6 +197,15 @@ export class AiPersonaServiceService {
     });
   }
 
+  public async invokeIngestAll(): Promise<void> {
+    const aiPersonaServiceIDs = (
+      await this.aiPersonaServiceRepository.find({
+        select: ['id'],
+      })
+    ).map(aiPersonaService => aiPersonaService.id);
+    return this.aiPersonaEngineAdapter.invokeIngestAll(aiPersonaServiceIDs);
+  }
+
   private encryptExternalConfig(
     config: IExternalConfig | undefined
   ): IExternalConfig {

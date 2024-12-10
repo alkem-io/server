@@ -23,6 +23,7 @@ import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorizat
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
 import { RoleChangeType } from '@alkemio/notifications-lib';
+import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/ai.persona.service.service';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
@@ -36,7 +37,8 @@ export class AdminAuthorizationResolverMutations {
     private adminAuthorizationService: AdminAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private authResetService: AuthResetService
+    private authResetService: AuthResetService,
+    private aiPersonaServiceService: AiPersonaServiceService
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
@@ -194,6 +196,26 @@ export class AdminAuthorizationResolverMutations {
     return this.adminAuthorizationService.resetAuthorizationPolicy(
       authorizationID
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description: 'Ingest All Virtual Contributors.',
+  })
+  public async invokeIngestAllVcs(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<void> {
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `reset authorization on platform: ${agentInfo.email}`
+    );
+
+    return this.aiPersonaServiceService.invokeIngestAll();
   }
 
   private async notifyPlatformGlobalRoleChange(
