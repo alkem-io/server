@@ -260,7 +260,7 @@ export class StorageBucketService {
     }
   }
 
-  public async addDocumentToBucket(
+  public async addDocumentToStorageBucketOrFail(
     storageBucket: IStorageBucket,
     document: IDocument
   ): Promise<IDocument> | never {
@@ -275,12 +275,12 @@ export class StorageBucketService {
     return this.documentService.save(document);
   }
 
-  public async addDocumentToBucketOrFail(
+  public async addDocumentToStorageBucketByIdOrFail(
     storageBucketId: string,
     document: IDocument
   ): Promise<IDocument> | never {
     const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
-    return this.addDocumentToBucket(storageBucket, document);
+    return this.addDocumentToStorageBucketOrFail(storageBucket, document);
   }
 
   public async size(storage: IStorageBucket): Promise<number> {

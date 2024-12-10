@@ -301,7 +301,7 @@ export class ProfileService {
         temporaryLocation: false,
       });
       storageBucketToCheck.documents.push(newDoc);
-      await this.storageBucketService.addDocumentToBucket(
+      await this.storageBucketService.addDocumentToStorageBucketOrFail(
         storageBucketToCheck,
         newDoc
       );

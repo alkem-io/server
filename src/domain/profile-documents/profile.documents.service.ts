@@ -74,7 +74,7 @@ export class ProfileDocumentsService {
         size: docInContent.size,
         temporaryLocation: false,
       });
-      await this.storageBucketService.addDocumentToBucketOrFail(
+      await this.storageBucketService.addDocumentToStorageBucketByIdOrFail(
         storageBucketToCheck.id,
         newDoc
       );
