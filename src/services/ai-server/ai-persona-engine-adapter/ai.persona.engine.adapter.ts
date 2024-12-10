@@ -9,8 +9,6 @@ import { AiPersonaEngineAdapterInputBase } from './dto/ai.persona.engine.adapter
 import { AiPersonaEngineAdapterBaseResponse } from './dto/ai.persona.engine.adapter.dto.base.response';
 import { EventBus } from '@nestjs/cqrs';
 import { InvokeEngine } from '@services/infrastructure/event-bus/messages/invoke.engine';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
 
 enum AiPersonaEngineEventType {
   QUERY = 'query',
@@ -77,20 +75,6 @@ export class AiPersonaEngineAdapter {
         LogContext.AI_PERSONA_SERVICE_ENGINE
       );
       return false;
-    }
-  }
-
-  public async invokeIngestAll(aiPersonaEngineIDs: string[]): Promise<void> {
-    for (const aiPersonaEngineID of aiPersonaEngineIDs) {
-      const eventData: AiPersonaEngineAdapterInputBase = {
-        engine: AiPersonaEngine.EXPERT,
-        operation: InvocationOperation.INGEST,
-        userID: aiPersonaEngineID,
-      };
-      this.virtualContributorEngineCommunityManager.send(
-        { cmd: AiPersonaEngineEventType.INGEST },
-        eventData
-      );
     }
   }
 }
