@@ -80,7 +80,7 @@ export class CalloutFramingService {
       const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
       whiteboard.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboard.profileData.displayName}`,
+          `${whiteboard.profile.displayName}`,
           reservedNameIDs
         );
       calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(

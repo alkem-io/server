@@ -55,10 +55,12 @@ export class CreateProfileInput {
   @Type(() => CreateTagsetInput)
   tagsets?: CreateTagsetInput[];
 
-  @Field({
+  @Field(() => [CreateVisualOnProfileInput], {
     nullable: true,
     description: 'The visuals URLs',
   })
   @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVisualOnProfileInput)
   visuals?: CreateVisualOnProfileInput[];
 }

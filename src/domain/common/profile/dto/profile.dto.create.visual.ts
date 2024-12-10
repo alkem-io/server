@@ -2,11 +2,14 @@ import { VisualType } from '@common/enums/visual.type';
 import { InputType, Field, ObjectType } from '@nestjs/graphql';
 
 @InputType()
-@ObjectType('CreateVisualOnProfile')
+@ObjectType('CreateVisualOnProfileData')
 export class CreateVisualOnProfileInput {
-  @Field(() => VisualType, { nullable: true })
-  name?: string;
+  @Field(() => VisualType, {
+    nullable: false,
+    description: 'The type of visual.',
+  })
+  name!: VisualType;
 
-  @Field(() => String, { nullable: true })
-  uri?: string;
+  @Field(() => String, { nullable: false })
+  uri!: string;
 }

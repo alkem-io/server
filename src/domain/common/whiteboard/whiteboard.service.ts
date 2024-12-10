@@ -53,7 +53,7 @@ export class WhiteboardService {
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
     whiteboard.profile = this.profileService.createProfile(
-      whiteboardData.profileData,
+      whiteboardData.profile,
       ProfileType.WHITEBOARD,
       storageAggregator
     );

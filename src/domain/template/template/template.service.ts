@@ -169,7 +169,7 @@ export class TemplateService {
         }
         template.whiteboard = await this.whiteboardService.createWhiteboard(
           {
-            profileData: {
+            profile: {
               displayName: 'Whiteboard Template',
             },
             nameID: randomUUID().slice(0, 8),
