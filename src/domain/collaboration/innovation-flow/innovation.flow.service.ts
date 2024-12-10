@@ -88,7 +88,8 @@ export class InnovationFlowService {
 
     this.profileService.addVisualOnProfile(
       innovationFlow.profile,
-      VisualType.CARD
+      VisualType.CARD,
+      innovationFlowData.profile.visuals
     );
 
     const convertedStates =

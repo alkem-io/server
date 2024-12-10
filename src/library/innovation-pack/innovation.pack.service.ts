@@ -54,7 +54,8 @@ export class InnovationPackService {
     );
     await this.profileService.addVisualOnProfile(
       innovationPack.profile,
-      VisualType.CARD
+      VisualType.CARD,
+      innovationPackData.profileData.visuals
     );
 
     innovationPack.listedInStore = true;

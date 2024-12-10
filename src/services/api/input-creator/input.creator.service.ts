@@ -1,6 +1,6 @@
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { LogContext } from '@common/enums/logging.context';
-import { VisualType } from '@common/enums/visual.type';
+import { validateAndConvertVisualTypeName } from '@common/enums/visual.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
@@ -303,18 +303,11 @@ export class InputCreatorService {
     return result;
   }
 
-  private validateAndConvertVisualTypeName(name: string): VisualType {
-    if (Object.values(VisualType).includes(name as VisualType)) {
-      return name as VisualType;
-    } else {
-      throw new Error(`Invalid VisualType: ${name}`);
-    }
-  }
   private buildCreateVisualOnProfileInputFromVisual(
     visual: IVisual
   ): CreateVisualOnProfileInput {
     return {
-      name: this.validateAndConvertVisualTypeName(visual.name),
+      name: validateAndConvertVisualTypeName(visual.name),
       uri: visual.uri,
     };
   }

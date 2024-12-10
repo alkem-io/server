@@ -77,9 +77,8 @@ export class TemplateService {
     this.profileService.addVisualOnProfile(
       template.profile,
       VisualType.CARD,
-      templateData.visualUri
+      templateData.profileData.visuals
     );
-
     switch (template.type) {
       case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {

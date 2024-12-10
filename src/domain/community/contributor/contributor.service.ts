@@ -58,15 +58,16 @@ export class ContributorService {
     lastName?: string
   ): Promise<void> {
     let avatarURL: string | undefined = undefined;
-    const avatarUrl = profileData.visuals?.find(
+    const avatarUrlFromProfile = profileData.visuals?.find(
       visual => visual.name === VisualType.AVATAR
     )?.uri;
-    if (avatarUrl && this.isValidHttpUrl(avatarUrl)) {
+    const avatarUrlFromAgent = agentInfo?.avatarURL;
+    if (avatarUrlFromProfile && this.isValidHttpUrl(avatarUrlFromProfile)) {
       // Avatar has been explicitly set
-      avatarURL = avatarUrl;
-    } else if (agentInfo && this.isValidHttpUrl(agentInfo.avatarURL)) {
+      avatarURL = avatarUrlFromProfile;
+    } else if (avatarUrlFromAgent && this.isValidHttpUrl(avatarUrlFromAgent)) {
       // Pick up the avatar from the user request context
-      avatarURL = agentInfo.avatarURL;
+      avatarURL = avatarUrlFromAgent;
     } else {
       // Generate a random avatar
       let avatarFirstName = profileData.displayName;
@@ -78,11 +79,12 @@ export class ContributorService {
         lastName
       );
     }
-    this.profileService.addVisualOnProfile(
-      profile,
-      VisualType.AVATAR,
-      avatarURL
-    );
+    this.profileService.addVisualOnProfile(profile, VisualType.AVATAR, [
+      {
+        name: VisualType.AVATAR,
+        uri: avatarURL,
+      },
+    ]);
   }
 
   public async ensureAvatarIsStoredInLocalStorageBucket(

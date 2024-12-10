@@ -8,7 +8,7 @@ export class CreateTemplateBaseInput extends CreateNameableInput {
   @IsOptional()
   tags?: string[];
 
-  @Field(() => String, { nullable: true })
-  @IsOptional()
-  visualUri?: string;
+  // @Field(() => String, { nullable: true })
+  // @IsOptional()
+  // visualUri?: string;  // Remove//!!
 }

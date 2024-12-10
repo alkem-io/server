@@ -246,9 +246,21 @@ export class SpaceService {
     });
 
     // add the visuals
-    this.profileService.addVisualOnProfile(space.profile, VisualType.AVATAR);
-    this.profileService.addVisualOnProfile(space.profile, VisualType.BANNER);
-    this.profileService.addVisualOnProfile(space.profile, VisualType.CARD);
+    this.profileService.addVisualOnProfile(
+      space.profile,
+      VisualType.AVATAR,
+      spaceData.profileData.visuals
+    );
+    this.profileService.addVisualOnProfile(
+      space.profile,
+      VisualType.BANNER,
+      spaceData.profileData.visuals
+    );
+    this.profileService.addVisualOnProfile(
+      space.profile,
+      VisualType.CARD,
+      spaceData.profileData.visuals
+    );
 
     space.levelZeroSpaceID = '';
     // save the collaboration and all it's template sets

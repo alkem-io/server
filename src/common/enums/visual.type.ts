@@ -10,3 +10,11 @@ export enum VisualType {
 registerEnumType(VisualType, {
   name: 'VisualType',
 });
+
+export function validateAndConvertVisualTypeName(name: string): VisualType {
+  if (Object.values(VisualType).includes(name as VisualType)) {
+    return name as VisualType;
+  } else {
+    throw new Error(`Invalid VisualType: ${name}`);
+  }
+}

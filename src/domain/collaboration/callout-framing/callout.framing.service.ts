@@ -90,7 +90,8 @@ export class CalloutFramingService {
       );
       this.profileService.addVisualOnProfile(
         calloutFraming.whiteboard.profile,
-        VisualType.BANNER
+        VisualType.BANNER,
+        whiteboard.profile.visuals
       );
     }
 

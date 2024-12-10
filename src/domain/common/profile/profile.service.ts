@@ -30,6 +30,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.select.tagset.value';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 
 @Injectable()
 export class ProfileService {
@@ -191,7 +192,7 @@ export class ProfileService {
   public addVisualOnProfile(
     profile: IProfile,
     visualType: VisualType,
-    url?: string
+    visualsData?: CreateVisualOnProfileInput[]
   ): IProfile {
     if (!profile.visuals) {
       throw new EntityNotInitializedException(
@@ -219,8 +220,9 @@ export class ProfileService {
           `Unable to recognise type of visual requested: ${visualType}`
         );
     }
-    if (url) {
-      visual.uri = url;
+    const providedVisual = visualsData?.find(v => v.name === visualType);
+    if (providedVisual) {
+      visual.uri = providedVisual.uri; //!! Re upload this visual to this entity's current storage bucket
     }
 
     profile.visuals.push(visual);

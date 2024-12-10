@@ -102,7 +102,8 @@ export class InnovationHubService {
 
     await this.profileService.addVisualOnProfile(
       hub.profile,
-      VisualType.BANNER_WIDE
+      VisualType.BANNER_WIDE,
+      createData.profileData.visuals
     );
 
     return await this.save(hub);

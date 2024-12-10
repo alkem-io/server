@@ -54,7 +54,8 @@ export class CommunityGuidelinesService {
 
     this.profileService.addVisualOnProfile(
       communityGuidelines.profile,
-      VisualType.CARD
+      VisualType.CARD,
+      communityGuidelinesData.profile.visuals
     );
 
     return communityGuidelines;
