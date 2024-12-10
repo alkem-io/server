@@ -52,7 +52,7 @@ export class WhiteboardService {
     whiteboard.createdBy = userID;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
-    whiteboard.profile = this.profileService.createProfile(
+    whiteboard.profile = await this.profileService.createProfile(
       whiteboardData.profile ?? {
         displayName: 'Whiteboard',
       },
