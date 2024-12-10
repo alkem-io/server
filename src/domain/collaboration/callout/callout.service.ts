@@ -418,7 +418,7 @@ export class CalloutService {
     } else {
       whiteboardData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboardData.profile.displayName}`,
+          `${whiteboardData.profile?.displayName ?? 'Whiteboard'}`,
           reservedNameIDs
         );
     }

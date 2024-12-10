@@ -74,7 +74,7 @@ export class TemplateService {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
-    this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualOnProfile(
       template.profile,
       VisualType.CARD,
       templateData.profileData.visuals

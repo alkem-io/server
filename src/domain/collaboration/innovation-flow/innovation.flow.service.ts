@@ -86,7 +86,7 @@ export class InnovationFlowService {
       storageAggregator
     );
 
-    this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualOnProfile(
       innovationFlow.profile,
       VisualType.CARD,
       innovationFlowData.profile.visuals

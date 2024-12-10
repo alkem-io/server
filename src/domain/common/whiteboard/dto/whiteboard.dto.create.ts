@@ -8,10 +8,10 @@ import { NameID } from '@domain/common/scalars';
 @InputType()
 @ObjectType('CreateWhiteboardData')
 export class CreateWhiteboardInput {
-  @Field(() => CreateProfileInput, { nullable: false })
+  @Field(() => CreateProfileInput, { nullable: true })
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
-  profile!: CreateProfileInput;
+  profile?: CreateProfileInput;
 
   @Field(() => NameID, {
     nullable: true,

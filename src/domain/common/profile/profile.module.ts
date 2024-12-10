@@ -14,6 +14,7 @@ import { LocationModule } from '@domain/common/location';
 import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
+import { DocumentModule } from '@domain/storage/document/document.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
     VisualModule,
     LocationModule,
     StorageBucketModule,
+    DocumentModule,
     UrlGeneratorModule,
   ],
   providers: [

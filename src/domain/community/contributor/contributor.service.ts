@@ -79,7 +79,7 @@ export class ContributorService {
         lastName
       );
     }
-    this.profileService.addVisualOnProfile(profile, VisualType.AVATAR, [
+    await this.profileService.addVisualOnProfile(profile, VisualType.AVATAR, [
       {
         name: VisualType.AVATAR,
         uri: avatarURL,

@@ -7,7 +7,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import { AlkemioErrorStatus, LogContext, ProfileType } from '@common/enums';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
@@ -31,6 +31,9 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.select.tagset.value';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { BaseException } from '@common/exceptions/base.exception';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 
 @Injectable()
 export class ProfileService {
@@ -41,6 +44,8 @@ export class ProfileService {
     private tagsetTemplateService: TagsetTemplateService,
     private referenceService: ReferenceService,
     private visualService: VisualService,
+    private documentService: DocumentService,
+    private documentAuthorizationService: DocumentAuthorizationService,
     private locationService: LocationService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
@@ -189,11 +194,11 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  public addVisualOnProfile(
+  public async addVisualOnProfile(
     profile: IProfile,
     visualType: VisualType,
     visualsData?: CreateVisualOnProfileInput[]
-  ): IProfile {
+  ): Promise<IProfile> {
     if (!profile.visuals) {
       throw new EntityNotInitializedException(
         `No visuals found on profile: ${profile.id}`,
@@ -222,11 +227,95 @@ export class ProfileService {
     }
     const providedVisual = visualsData?.find(v => v.name === visualType);
     if (providedVisual) {
-      visual.uri = providedVisual.uri; //!! Re upload this visual to this entity's current storage bucket
+      const url = await this.reuploadVisualToProfile(
+        providedVisual.uri,
+        profile
+      );
+      if (url) {
+        visual.uri = url;
+      } else {
+        //!! log that the visual has been ignored
+        console.log(`Visual with URL '${providedVisual.uri}' ignored`);
+      }
     }
 
     profile.visuals.push(visual);
     return profile;
+  }
+
+  /***
+   * Checks if a url is living under the storage bucket
+   * of a profile and re-uploads it if not there
+   */
+  public async reuploadVisualToProfile(
+    fileUrl: string,
+    profile: IProfile
+  ): Promise<string | undefined> {
+    // if outside Alkemio - skip
+    if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
+      return undefined;
+    }
+
+    const storageBucketToCheck = profile.storageBucket;
+
+    if (!storageBucketToCheck) {
+      throw new EntityNotInitializedException(
+        `Storage bucket not initialized on Profile: '${profile.id}'`,
+        LogContext.PROFILE
+      );
+    }
+
+    if (!storageBucketToCheck.documents) {
+      throw new EntityNotInitializedException(
+        `Documents not initialized on storage bucket: '${storageBucketToCheck.id}'`,
+        LogContext.PROFILE
+      );
+    }
+
+    const docInContent = await this.documentService.getDocumentFromURL(fileUrl);
+
+    if (!docInContent) {
+      throw new BaseException(
+        `File with URL '${fileUrl}' not found`,
+        LogContext.COLLABORATION,
+        AlkemioErrorStatus.NOT_FOUND
+      );
+    }
+
+    const docInThisBucket = storageBucketToCheck.documents.find(
+      doc => doc.id === docInContent.id
+    );
+
+    if (docInThisBucket) {
+      return undefined;
+    }
+
+    if (!docInThisBucket) {
+      // if not in this bucket - create it inside it
+      const newDoc = await this.documentService.createDocument({
+        createdBy: docInContent.createdBy,
+        displayName: docInContent.displayName,
+        externalID: docInContent.externalID,
+        mimeType: docInContent.mimeType,
+        size: docInContent.size,
+        temporaryLocation: false,
+      });
+      await this.storageBucketService.addDocumentToBucketOrFail(
+        storageBucketToCheck.id,
+        newDoc
+      );
+      await this.documentService.saveDocument(newDoc);
+
+      const authorizations =
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          newDoc,
+          storageBucketToCheck.authorization
+        );
+      await this.authorizationPolicyService.saveAll(authorizations);
+      return this.documentService.getPubliclyAccessibleURL(newDoc);
+    }
+
+    return undefined;
   }
 
   async addTagsetOnProfile(

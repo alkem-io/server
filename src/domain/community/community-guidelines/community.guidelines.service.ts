@@ -52,7 +52,7 @@ export class CommunityGuidelinesService {
       storageAggregator
     );
 
-    this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualOnProfile(
       communityGuidelines.profile,
       VisualType.CARD,
       communityGuidelinesData.profile.visuals

@@ -41,12 +41,12 @@ export class PostService {
       ProfileType.POST,
       storageAggregator
     );
-    this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualOnProfile(
       post.profile,
       VisualType.BANNER,
       postInput.profileData.visuals
     );
-    this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualOnProfile(
       post.profile,
       VisualType.CARD,
       postInput.profileData.visuals
