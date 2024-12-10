@@ -28,7 +28,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -567,7 +567,14 @@ export class UserService {
     return user;
   }
 
-  async getUsers(args: UsersQueryArgs): Promise<IUser[]> {
+  public getUsers(ids: string[], options?: FindManyOptions<User>) {
+    return this.userRepository.find({
+      ...options,
+      where: { id: In(ids) },
+    });
+  }
+
+  async getUsersForQuery(args: UsersQueryArgs): Promise<IUser[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
 
@@ -764,7 +771,7 @@ export class UserService {
     return await this.save(user);
   }
 
-  async getAgent(userID: string): Promise<IAgent> {
+  async getAgentOrFail(userID: string): Promise<IAgent> {
     const userWithAgent = await this.getUserOrFail(userID, {
       relations: { agent: true },
     });

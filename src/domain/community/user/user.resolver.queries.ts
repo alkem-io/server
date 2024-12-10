@@ -42,7 +42,7 @@ export class UserResolverQueries {
       AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
-    return await this.userService.getUsers(args);
+    return await this.userService.getUsersForQuery(args);
   }
 
   @UseGuards(GraphqlGuard)
