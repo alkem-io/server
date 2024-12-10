@@ -23,7 +23,7 @@ import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorizat
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
 import { RoleChangeType } from '@alkemio/notifications-lib';
-import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/ai.persona.service.service';
+import { AiPersonaService } from '@domain/community/ai-persona/ai.persona.service';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
@@ -38,7 +38,7 @@ export class AdminAuthorizationResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private authResetService: AuthResetService,
-    private aiPersonaServiceService: AiPersonaServiceService
+    private aiPersonaService: AiPersonaService
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
@@ -199,12 +199,12 @@ export class AdminAuthorizationResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Ingest All Virtual Contributors.',
+  @Mutation(() => Boolean, {
+    description: 'Refresh the Bodies of Knowledge on All VCs',
   })
-  public async invokeIngestAllVcs(
+  public async refreshAllBodiesOfKnowledge(
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<void> {
+  ): Promise<boolean> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
 
@@ -215,7 +215,7 @@ export class AdminAuthorizationResolverMutations {
       `reset authorization on platform: ${agentInfo.email}`
     );
 
-    return this.aiPersonaServiceService.invokeIngestAll();
+    return this.aiPersonaService.refreshAllBodiesOfKnowledge();
   }
 
   private async notifyPlatformGlobalRoleChange(

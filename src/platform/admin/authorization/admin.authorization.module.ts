@@ -11,7 +11,7 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { AiPersonaServiceModule } from '@services/ai-server/ai-persona-service/ai.persona.service.module';
+import { AiPersonaModule } from '@domain/community/ai-persona/ai.persona.module';
 
 @Module({
   imports: [
@@ -24,7 +24,7 @@ import { AiPersonaServiceModule } from '@services/ai-server/ai-persona-service/a
     PlatformAuthorizationPolicyModule,
     NotificationAdapterModule,
     AuthResetModule,
-    AiPersonaServiceModule,
+    AiPersonaModule,
   ],
   providers: [
     AdminAuthorizationService,
