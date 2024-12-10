@@ -279,17 +279,8 @@ export class StorageBucketService {
     storageBucketId: string,
     document: IDocument
   ): Promise<IDocument> | never {
-    const storage = await this.getStorageBucketOrFail(storageBucketId);
-
-    this.validateMimeTypes(storage, document.mimeType);
-    this.validateSize(storage, document.size);
-    document.storageBucket = storage;
-
-    this.logger.verbose?.(
-      `Added document '${document.externalID}' on storage bucket: ${storage.id}`,
-      LogContext.STORAGE_BUCKET
-    );
-    return this.documentService.save(document);
+    const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
+    return this.addDocumentToBucket(storageBucket, document);
   }
 
   public async size(storage: IStorageBucket): Promise<number> {
