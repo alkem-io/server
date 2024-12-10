@@ -234,8 +234,9 @@ export class ProfileService {
       if (url) {
         visual.uri = url;
       } else {
-        //!! log that the visual has been ignored
-        console.log(`Visual with URL '${providedVisual.uri}' ignored`);
+        this.logger.warn(
+          `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
+        );
       }
     }
 
@@ -287,35 +288,25 @@ export class ProfileService {
     );
 
     if (docInThisBucket) {
-      return undefined;
-    }
-
-    if (!docInThisBucket) {
+      // It should be just `fileUrl` but rewrite it just in case
+      return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
+    } else {
       // if not in this bucket - create it inside it
       const newDoc = await this.documentService.createDocument({
         createdBy: docInContent.createdBy,
         displayName: docInContent.displayName,
-        externalID: docInContent.externalID,
+        externalID: docInContent.externalID, // Point to the same content
         mimeType: docInContent.mimeType,
         size: docInContent.size,
         temporaryLocation: false,
       });
-      await this.storageBucketService.addDocumentToBucketOrFail(
-        storageBucketToCheck.id,
+      storageBucketToCheck.documents.push(newDoc);
+      await this.storageBucketService.addDocumentToBucket(
+        storageBucketToCheck,
         newDoc
       );
-      await this.documentService.saveDocument(newDoc);
-
-      const authorizations =
-        await this.documentAuthorizationService.applyAuthorizationPolicy(
-          newDoc,
-          storageBucketToCheck.authorization
-        );
-      await this.authorizationPolicyService.saveAll(authorizations);
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
-
-    return undefined;
   }
 
   async addTagsetOnProfile(

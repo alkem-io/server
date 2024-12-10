@@ -121,7 +121,16 @@ export class InputCreatorService {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(collaborationID, {
         relations: {
-          callouts: true,
+          callouts: {
+            framing: {
+              profile: true,
+              whiteboard: {
+                profile: {
+                  visuals: true,
+                },
+              },
+            },
+          },
           innovationFlow: {
             profile: true,
           },

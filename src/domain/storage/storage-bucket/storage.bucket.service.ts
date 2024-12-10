@@ -260,6 +260,21 @@ export class StorageBucketService {
     }
   }
 
+  public async addDocumentToBucket(
+    storageBucket: IStorageBucket,
+    document: IDocument
+  ): Promise<IDocument> | never {
+    this.validateMimeTypes(storageBucket, document.mimeType);
+    this.validateSize(storageBucket, document.size);
+    document.storageBucket = storageBucket;
+
+    this.logger.verbose?.(
+      `Added document '${document.externalID}' on storage bucket: ${storageBucket.id}`,
+      LogContext.STORAGE_BUCKET
+    );
+    return this.documentService.save(document);
+  }
+
   public async addDocumentToBucketOrFail(
     storageBucketId: string,
     document: IDocument
