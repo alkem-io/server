@@ -35,6 +35,7 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { BaseException } from '@common/exceptions/base.exception';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { CreateReferenceInput } from '../reference';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class ProfileService {
@@ -75,7 +76,7 @@ export class ProfileService {
     });
     profile.description = await this.reuploadDocumentsInMarkdownProfile(
       profile.description ?? '',
-      profile
+      profile.storageBucket
     );
     profile.visuals = [];
     profile.location = this.locationService.createLocation(
@@ -95,12 +96,18 @@ export class ProfileService {
     references: CreateReferenceInput[] | undefined,
     profile: IProfile
   ) {
+    if (!profile.storageBucket) {
+      throw new EntityNotInitializedException(
+        `Storage bucket not initialized on profile: ${profile.id}`,
+        LogContext.PROFILE
+      );
+    }
     const newReferences = [];
     for (const reference of references ?? []) {
       const newReference = this.referenceService.createReference(reference);
-      const newUrl = await this.reuploadFileOnProfile(
+      const newUrl = await this.reuploadFileOnStorageBucket(
         newReference.uri,
-        profile
+        profile.storageBucket
       );
       if (newUrl) {
         newReference.uri = newUrl;
@@ -218,9 +225,9 @@ export class ProfileService {
     visualsData: CreateVisualOnProfileInput[] | undefined,
     visualTypes: VisualType[]
   ): Promise<IProfile> {
-    if (!profile.visuals) {
+    if (!profile.visuals || !profile.storageBucket) {
       throw new EntityNotInitializedException(
-        `No visuals found on profile: ${profile.id}`,
+        `No visuals or no storageBucket found on profile: ${profile.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -247,9 +254,9 @@ export class ProfileService {
       }
       const providedVisual = visualsData?.find(v => v.name === visualType);
       if (providedVisual) {
-        const url = await this.reuploadFileOnProfile(
+        const url = await this.reuploadFileOnStorageBucket(
           providedVisual.uri,
-          profile,
+          profile.storageBucket,
           true
         );
         if (url) {
@@ -268,11 +275,13 @@ export class ProfileService {
   /***
    * Checks if a url is living under the storage bucket
    * of a profile and re-uploads it if not there
+   * @param fileUrl The url of the file to check
+   * @param storageBucket The StorageBucket in which the file should be
+   * @param alkemioRequired If true, the file must be inside Alkemio and if a fileUrl passed is outside Alkemio function will return undefined
    */
-  private async reuploadFileOnProfile(
+  private async reuploadFileOnStorageBucket(
     fileUrl: string,
-    profile: IProfile,
-    // If true, the file must be inside Alkemio and if a fileUrl passed is outside Alkemio, function will return undefined
+    storageBucket: IStorageBucket,
     alkemioRequired: boolean = false
   ): Promise<string | undefined> {
     if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
@@ -283,17 +292,10 @@ export class ProfileService {
         return fileUrl;
       }
     }
-    const storageBucketToCheck = profile.storageBucket;
-    if (!storageBucketToCheck) {
-      throw new EntityNotInitializedException(
-        `Storage bucket not initialized on Profile: '${profile.id}'`,
-        LogContext.PROFILE
-      );
-    }
 
-    if (!storageBucketToCheck.documents) {
+    if (!storageBucket.documents) {
       throw new EntityNotInitializedException(
-        `Documents not initialized on storage bucket: '${storageBucketToCheck.id}'`,
+        `Documents not initialized on storage bucket: '${storageBucket.id}'`,
         LogContext.PROFILE
       );
     }
@@ -308,7 +310,7 @@ export class ProfileService {
       );
     }
 
-    const docInThisBucket = storageBucketToCheck.documents.find(
+    const docInThisBucket = storageBucket.documents.find(
       doc => doc.id === docInContent.id
     );
 
@@ -317,9 +319,9 @@ export class ProfileService {
       return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
     } else if (docInContent.temporaryLocation) {
       // If it was temporary just move the document to the new bucket
-      docInContent.storageBucket = storageBucketToCheck;
+      docInContent.storageBucket = storageBucket;
       docInContent.temporaryLocation = false;
-      storageBucketToCheck.documents.push(docInContent);
+      storageBucket.documents.push(docInContent);
       this.documentService.save(docInContent);
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
@@ -332,9 +334,9 @@ export class ProfileService {
         size: docInContent.size,
         temporaryLocation: false,
       });
-      storageBucketToCheck.documents.push(newDoc);
+      storageBucket.documents.push(newDoc);
       await this.storageBucketService.addDocumentToStorageBucketOrFail(
-        storageBucketToCheck,
+        storageBucket,
         newDoc
       );
       return this.documentService.getPubliclyAccessibleURL(newDoc);
@@ -343,7 +345,7 @@ export class ProfileService {
 
   private async reuploadDocumentsInMarkdownProfile(
     markdown: string,
-    profile: IProfile
+    storageBucket: IStorageBucket
   ): Promise<string> {
     const baseUrl = this.documentService.getDocumentsBaseUrlPath() + '/';
     const escapedBaseUrl = baseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -354,7 +356,10 @@ export class ProfileService {
     const matches = markdown.match(regex);
     if (matches?.length) {
       for (const match of matches) {
-        const newUrl = await this.reuploadFileOnProfile(match, profile);
+        const newUrl = await this.reuploadFileOnStorageBucket(
+          match,
+          storageBucket
+        );
         if (newUrl) {
           markdown = markdown.replace(match, newUrl);
         }
