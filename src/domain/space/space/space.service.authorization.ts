@@ -151,7 +151,8 @@ export class SpaceAuthorizationService {
               space.authorization,
               parentAuthorization
             );
-          space.authorization.anonymousReadAccess = true;
+          space.authorization.anonymousReadAccess =
+            parentAuthorization.anonymousReadAccess;
         }
         // For subspace, the parent space admins credentials should be allowed to delete
         const parentSpaceCommunity = space.parentSpace?.community;
