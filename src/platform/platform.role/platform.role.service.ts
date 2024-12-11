@@ -19,7 +19,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { PlatformService } from '@platform/platform/platform.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AccountService } from '@domain/space/account/account.service';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 
 @Injectable()
 export class PlatformRoleService {

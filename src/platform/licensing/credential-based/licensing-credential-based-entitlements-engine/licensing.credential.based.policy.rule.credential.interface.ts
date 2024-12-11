@@ -1,4 +1,4 @@
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { Field, ObjectType } from '@nestjs/graphql';
 

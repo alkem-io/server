@@ -1,6 +1,6 @@
 import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
-import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 

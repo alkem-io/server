@@ -1,8 +1,8 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ILicensePlan } from './license.plan.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
-import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
 import { ENUM_LENGTH } from '@common/constants';
 import { LicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.entity';
 

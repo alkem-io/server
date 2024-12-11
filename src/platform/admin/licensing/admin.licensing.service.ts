@@ -11,7 +11,7 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { IAccount } from '@domain/space/account/account.interface';
-import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credental.based.plan.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
 import { ValidationException } from '@common/exceptions';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { EntityManager } from 'typeorm';

@@ -35,7 +35,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AccountHostService } from '../account.host/account.host.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicenseService } from '@domain/common/license/license.service';
 
 @Injectable()

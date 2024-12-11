@@ -8,7 +8,7 @@ import { LicensePolicy } from './license.policy.entity';
 import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
 import { LogContext } from '@common/enums/logging.context';
 import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credental.based.credential.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 @Injectable()
