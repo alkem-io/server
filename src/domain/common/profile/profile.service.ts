@@ -34,6 +34,7 @@ import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { BaseException } from '@common/exceptions/base.exception';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { CreateReferenceInput } from '../reference';
 
 @Injectable()
 export class ProfileService {
@@ -54,11 +55,11 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  public createProfile(
+  public async createProfile(
     profileData: CreateProfileInput,
     profileType: ProfileType,
     storageAggregator: IStorageAggregator
-  ): IProfile {
+  ): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
@@ -72,16 +73,15 @@ export class ProfileService {
     profile.storageBucket = this.storageBucketService.createStorageBucket({
       storageAggregator: storageAggregator,
     });
-
+    profile.description = await this.reuploadDocumentsInMarkdownProfile(
+      profile.description ?? '',
+      profile
+    );
     profile.visuals = [];
     profile.location = this.locationService.createLocation(
       profileData?.location
     );
-
-    const newReferences = profileData?.referencesData?.map(
-      this.referenceService.createReference
-    );
-    profile.references = newReferences ?? [];
+    this.createReferencesOnProfile(profileData?.referencesData, profile);
 
     const tagsetsFromInput = profileData?.tagsets?.map(tagsetData =>
       this.tagsetService.createTagsetWithName([], tagsetData)
@@ -89,6 +89,25 @@ export class ProfileService {
     profile.tagsets = tagsetsFromInput ?? [];
 
     return profile;
+  }
+
+  private async createReferencesOnProfile(
+    references: CreateReferenceInput[] | undefined,
+    profile: IProfile
+  ) {
+    const newReferences = [];
+    for (const reference of references ?? []) {
+      const newReference = this.referenceService.createReference(reference);
+      const newUrl = await this.reuploadFileOnProfile(
+        newReference.uri,
+        profile
+      );
+      if (newUrl) {
+        newReference.uri = newUrl;
+      }
+      newReferences.push(newReference);
+    }
+    profile.references = newReferences;
   }
 
   async updateProfile(
@@ -194,10 +213,10 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  public async addVisualOnProfile(
+  public async addVisualsOnProfile(
     profile: IProfile,
-    visualType: VisualType,
-    visualsData?: CreateVisualOnProfileInput[]
+    visualsData: CreateVisualOnProfileInput[] | undefined,
+    visualTypes: VisualType[]
   ): Promise<IProfile> {
     if (!profile.visuals) {
       throw new EntityNotInitializedException(
@@ -206,41 +225,43 @@ export class ProfileService {
       );
     }
     let visual: IVisual;
-    switch (visualType) {
-      case VisualType.AVATAR:
-        visual = this.visualService.createVisualAvatar();
-        break;
-      case VisualType.BANNER:
-        visual = this.visualService.createVisualBanner();
-        break;
-      case VisualType.CARD:
-        visual = this.visualService.createVisualCard();
-        break;
-      case VisualType.BANNER_WIDE:
-        visual = this.visualService.createVisualBannerWide();
-        break;
+    for (const visualType of visualTypes) {
+      switch (visualType) {
+        case VisualType.AVATAR:
+          visual = this.visualService.createVisualAvatar();
+          break;
+        case VisualType.BANNER:
+          visual = this.visualService.createVisualBanner();
+          break;
+        case VisualType.CARD:
+          visual = this.visualService.createVisualCard();
+          break;
+        case VisualType.BANNER_WIDE:
+          visual = this.visualService.createVisualBannerWide();
+          break;
 
-      default:
-        throw new Error(
-          `Unable to recognise type of visual requested: ${visualType}`
-        );
-    }
-    const providedVisual = visualsData?.find(v => v.name === visualType);
-    if (providedVisual) {
-      const url = await this.reuploadVisualToProfile(
-        providedVisual.uri,
-        profile
-      );
-      if (url) {
-        visual.uri = url;
-      } else {
-        this.logger.warn(
-          `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
-        );
+        default:
+          throw new Error(
+            `Unable to recognise type of visual requested: ${visualTypes}`
+          );
       }
+      const providedVisual = visualsData?.find(v => v.name === visualType);
+      if (providedVisual) {
+        const url = await this.reuploadFileOnProfile(
+          providedVisual.uri,
+          profile,
+          true
+        );
+        if (url) {
+          visual.uri = url;
+        } else {
+          this.logger.warn(
+            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
+          );
+        }
+      }
+      profile.visuals.push(visual);
     }
-
-    profile.visuals.push(visual);
     return profile;
   }
 
@@ -248,17 +269,21 @@ export class ProfileService {
    * Checks if a url is living under the storage bucket
    * of a profile and re-uploads it if not there
    */
-  public async reuploadVisualToProfile(
+  private async reuploadFileOnProfile(
     fileUrl: string,
-    profile: IProfile
+    profile: IProfile,
+    // If true, the file must be inside Alkemio and if a fileUrl passed is outside Alkemio, function will return undefined
+    alkemioRequired: boolean = false
   ): Promise<string | undefined> {
-    // if outside Alkemio - skip
     if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
-      return undefined;
+      // If image is not inside Alkemio just return url (or undefined if image needs to be inside Alkemio, but never refetch it)
+      if (alkemioRequired) {
+        return undefined;
+      } else {
+        return fileUrl;
+      }
     }
-
     const storageBucketToCheck = profile.storageBucket;
-
     if (!storageBucketToCheck) {
       throw new EntityNotInitializedException(
         `Storage bucket not initialized on Profile: '${profile.id}'`,
@@ -290,6 +315,13 @@ export class ProfileService {
     if (docInThisBucket) {
       // It should be just `fileUrl` but rewrite it just in case
       return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
+    } else if (docInContent.temporaryLocation) {
+      // If it was temporary just move the document to the new bucket
+      docInContent.storageBucket = storageBucketToCheck;
+      docInContent.temporaryLocation = false;
+      storageBucketToCheck.documents.push(docInContent);
+      this.documentService.save(docInContent);
+      return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
       // if not in this bucket - create it inside it
       const newDoc = await this.documentService.createDocument({
@@ -307,6 +339,29 @@ export class ProfileService {
       );
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
+  }
+
+  private async reuploadDocumentsInMarkdownProfile(
+    markdown: string,
+    profile: IProfile
+  ): Promise<string> {
+    const baseUrl = this.documentService.getDocumentsBaseUrlPath() + '/';
+    const escapedBaseUrl = baseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const uuidPattern =
+      '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+    const regex = new RegExp(`${escapedBaseUrl}(${uuidPattern})`, 'g');
+
+    const matches = markdown.match(regex);
+    if (matches?.length) {
+      for (const match of matches) {
+        const newUrl = await this.reuploadFileOnProfile(match, profile);
+        if (newUrl) {
+          markdown = markdown.replace(match, newUrl);
+        }
+      }
+    }
+
+    return markdown;
   }
 
   async addTagsetOnProfile(

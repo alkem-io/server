@@ -188,7 +188,9 @@ export class DocumentService {
 
     const documentID = url.substring(documentsBaseUrlPath.length + 1);
     try {
-      return await this.getDocumentOrFail(documentID);
+      return await this.getDocumentOrFail(documentID, {
+        relations: { storageBucket: true },
+      });
     } catch (error: any) {
       this.logger.error(
         `Unable to find document '${documentID}': ${error}`,

@@ -79,11 +79,14 @@ export class ContributorService {
         lastName
       );
     }
-    await this.profileService.addVisualOnProfile(profile, VisualType.AVATAR, [
+    const avatarVisual = [
       {
         name: VisualType.AVATAR,
         uri: avatarURL,
       },
+    ];
+    await this.profileService.addVisualsOnProfile(profile, avatarVisual, [
+      VisualType.AVATAR,
     ]);
   }
 

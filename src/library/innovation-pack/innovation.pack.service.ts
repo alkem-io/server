@@ -52,10 +52,10 @@ export class InnovationPackService {
       ProfileType.INNOVATION_PACK,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       innovationPack.profile,
-      VisualType.CARD,
-      innovationPackData.profileData.visuals
+      innovationPackData.profileData.visuals,
+      [VisualType.CARD]
     );
 
     innovationPack.listedInStore = true;

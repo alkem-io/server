@@ -246,20 +246,10 @@ export class SpaceService {
     });
 
     // add the visuals
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       space.profile,
-      VisualType.AVATAR,
-      spaceData.profileData.visuals
-    );
-    await this.profileService.addVisualOnProfile(
-      space.profile,
-      VisualType.BANNER,
-      spaceData.profileData.visuals
-    );
-    await this.profileService.addVisualOnProfile(
-      space.profile,
-      VisualType.CARD,
-      spaceData.profileData.visuals
+      spaceData.profileData.visuals,
+      [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
     );
 
     space.levelZeroSpaceID = '';

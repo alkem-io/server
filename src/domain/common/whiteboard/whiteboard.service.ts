@@ -52,17 +52,17 @@ export class WhiteboardService {
     whiteboard.createdBy = userID;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
-    whiteboard.profile = this.profileService.createProfile(
+    whiteboard.profile = await this.profileService.createProfile(
       whiteboardData.profile ?? {
         displayName: 'Whiteboard',
       },
       ProfileType.WHITEBOARD,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       whiteboard.profile,
-      VisualType.CARD,
-      whiteboardData.profile?.visuals
+      whiteboardData.profile?.visuals,
+      [VisualType.CARD]
     );
     await this.profileService.addTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,

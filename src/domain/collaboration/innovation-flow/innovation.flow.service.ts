@@ -86,10 +86,10 @@ export class InnovationFlowService {
       storageAggregator
     );
 
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       innovationFlow.profile,
-      VisualType.CARD,
-      innovationFlowData.profile.visuals
+      innovationFlowData.profile.visuals,
+      [VisualType.CARD]
     );
 
     const convertedStates =
