@@ -12,8 +12,8 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
-import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
 import { Account } from '../account/account.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
@@ -28,7 +28,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 
 @Injectable()
 export class AccountHostService {

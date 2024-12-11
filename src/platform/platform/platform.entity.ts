@@ -6,7 +6,7 @@ import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.ag
 import { Forum } from '@platform/forum/forum.entity';
 import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
 import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
-import { LicensingFramework } from '@platform/licensing-framework/licensing.framework.entity';
+import { LicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Entity()

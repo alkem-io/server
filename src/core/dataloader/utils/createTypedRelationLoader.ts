@@ -5,6 +5,7 @@ import {
   FindOptionsSelect,
 } from 'typeorm';
 import { Type } from '@nestjs/common';
+import { EntityNotFoundException } from '@common/exceptions';
 import { DataLoaderCreatorOptions } from '../creators/base';
 import { ILoader } from '../loader.interface';
 import { findByBatchIds } from './findByBatchIds';
@@ -12,14 +13,14 @@ import { selectOptionsFromFields } from './selectOptionsFromFields';
 
 export const createTypedRelationDataLoader = <
   TParent extends { id: string } & { [key: string]: any }, // todo better type,
-  TResult
+  TResult,
 >(
   manager: EntityManager,
   parentClassRef: Type<TParent>,
   relations: FindOptionsRelations<TParent>,
   name: string,
   options?: DataLoaderCreatorOptions<TResult, TParent>
-): ILoader<TResult> => {
+): ILoader<TResult | null | EntityNotFoundException> => {
   const { fields, ...restOptions } = options ?? {};
 
   const topRelation = <keyof TResult>Object.keys(relations)[0];

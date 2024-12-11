@@ -85,6 +85,12 @@ search:
   # The dash at the end is MANDATORY
   index_pattern: ${ELASTIC_SEARCH_INDEX_PATTERN}:alkemio-data-
 
+licensing:
+  wingback:
+    enabled: ${LICENSING_WINGBACK_ENABLED}:false
+    key: ${LICENSING_WINGBACK_API_KEY}
+    endpoint: ${LICENSING_WINGBACK_API_ENDPOINT}
+
 ## identity ##
 
 # Defines all authentication and authorization configuration.

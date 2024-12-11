@@ -13,7 +13,7 @@ import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { IForum } from '@platform/forum';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
-import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
+import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
