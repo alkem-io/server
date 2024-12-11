@@ -3,6 +3,7 @@ import { createParamDecorator, ExecutionContext, Type } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../creators/base';
+import { GraphQLResolveInfo } from 'graphql/type/definition';
 
 export function Loader<TParent, TReturn>(
   creatorRef: Type<DataLoaderCreator<TReturn>>,
@@ -17,11 +18,14 @@ export function Loader<TParent, TReturn>(
         GqlExecutionContext.create(context).getContext<IGraphQLContext>();
       // as the default behaviour we resolve to null if the field is nullable
       if (options.resolveToNull === undefined) {
-        const info = context.getArgByIndex(3);
-        const fieldName = info.fieldName;
-        const field = info.parentType.getFields()[fieldName];
+        const info: GraphQLResolveInfo = context.getArgByIndex(3);
 
-        options.resolveToNull = !isNonNullType(field.type);
+        if (info) {
+          const fieldName = info.fieldName;
+          const field = info.parentType.getFields()[fieldName];
+
+          options.resolveToNull = !isNonNullType(field.type);
+        }
       }
 
       return ctx[DATA_LOADER_CTX_INJECT_TOKEN].get(innerCreatorRef, options);
