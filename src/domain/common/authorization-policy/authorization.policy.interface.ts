@@ -12,6 +12,8 @@ export abstract class IAuthorizationPolicy extends IBaseAlkemio {
   verifiedCredentialRules!: string;
   privilegeRules!: string;
 
+  parentAuthorizationPolicy?: IAuthorizationPolicy;
+
   @Field(() => AuthorizationPolicyType, {
     nullable: true,
     description:
