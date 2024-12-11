@@ -2,7 +2,10 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorBaseOptions,
+} from '@core/dataloader/creators/base';
 import { createBatchLoader } from '@core/dataloader/utils';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization';
@@ -14,12 +17,12 @@ export class CommunityTypeLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create() {
-    return createBatchLoader(
-      this.constructor.name,
-      'CommunityContributorType',
-      this.communityTypeInBatch
-    );
+  create(options?: DataLoaderCreatorBaseOptions<any, any>) {
+    return createBatchLoader(this.communityTypeInBatch, {
+      name: this.constructor.name,
+      loadedTypeName: 'CommunityContributorType',
+      resolveToNull: options?.resolveToNull,
+    });
   }
 
   private async communityTypeInBatch(
