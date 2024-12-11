@@ -6,7 +6,16 @@ describe('LicensingWingbackSubscriptionService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LicensingWingbackSubscriptionService],
+      providers: [
+        LicensingWingbackSubscriptionService,
+        {
+          provide: WingbackManager,
+          useValue: {
+            createCustomer: jest.fn(),
+            getEntitlements: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<LicensingWingbackSubscriptionService>(
