@@ -275,7 +275,7 @@ export class LookupResolverFields {
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
         authorizationPolicyID
       );
-    const agent = await this.userService.getAgent(userID);
+    const agent = await this.userService.getAgentOrFail(userID);
     return this.authorizationService.getGrantedPrivileges(
       agent.credentials || [],
       [],

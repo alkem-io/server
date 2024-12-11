@@ -85,6 +85,8 @@ import { TemplateApplierModule } from '@domain/template/template-applier/templat
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
+import { InAppNotificationReaderModule } from '@domain/in-app-notification-reader/in.app.notification.reader.module';
+import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
 
 @Module({
   imports: [
@@ -282,7 +284,6 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
-    ExcalidrawServerModule,
     ChatGuidanceModule,
     VirtualContributorModule,
     InputCreatorModule,
@@ -296,6 +297,8 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
     FileIntegrationModule,
     PlatformSettingsModule,
     TemplateApplierModule,
+    InAppNotificationReaderModule,
+    InAppNotificationReceiverModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
