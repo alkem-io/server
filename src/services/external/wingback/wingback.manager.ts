@@ -104,6 +104,10 @@ export class WingbackManager {
 
   // https://docs.wingback.com/dev/api-reference/entitlement/get_c_entitlement_customerid_access
   public getEntitlements(customerId: string): Promise<WingbackEntitlement[]> {
+    if (!this.enabled) {
+      this.logger.warn('Wingback is not enabled');
+      return Promise.resolve([]);
+    }
     return this.sendGet<WingbackEntitlement[]>(
       `/v1/c/entitlement/${customerId}/access`
     );
