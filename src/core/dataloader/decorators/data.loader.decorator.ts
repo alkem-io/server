@@ -1,9 +1,9 @@
 import { isNonNullType } from 'graphql/type';
+import { GraphQLResolveInfo } from 'graphql/type/definition';
 import { createParamDecorator, ExecutionContext, Type } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../creators/base';
-import { GraphQLResolveInfo } from 'graphql/type/definition';
 
 export function Loader<TParent, TReturn>(
   creatorRef: Type<DataLoaderCreator<TReturn>>,
