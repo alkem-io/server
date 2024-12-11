@@ -12,14 +12,14 @@ import { selectOptionsFromFields } from './selectOptionsFromFields';
 
 export const createTypedRelationDataLoader = <
   TParent extends { id: string } & { [key: string]: any }, // todo better type,
-  TResult
+  TResult,
 >(
   manager: EntityManager,
   parentClassRef: Type<TParent>,
   relations: FindOptionsRelations<TParent>,
   name: string,
   options?: DataLoaderCreatorOptions<TResult, TParent>
-): ILoader<TResult> => {
+): ILoader<TResult | null> => {
   const { fields, ...restOptions } = options ?? {};
 
   const topRelation = <keyof TResult>Object.keys(relations)[0];
@@ -33,9 +33,9 @@ export const createTypedRelationDataLoader = <
       : fields
     : { id: true };
 
-  return new DataLoader<string, TResult>(
+  return new DataLoader<string, TResult | null>(
     keys =>
-      findByBatchIds<TParent, TResult>(
+      findByBatchIds<TParent, TResult | null>(
         manager,
         parentClassRef,
         keys as string[],

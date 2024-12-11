@@ -11,7 +11,7 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
   classRef: Type<TResult>,
   name: string,
   options?: DataLoaderCreatorOptions<TResult, TResult>
-): ILoader<TResult> => {
+): ILoader<TResult | null> => {
   const { fields, ...restOptions } = options ?? {};
   // if fields ia specified, select specific fields, otherwise select all fields
   const selectOptions = fields
@@ -23,7 +23,7 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
       : fields
     : undefined;
 
-  return new DataLoader<string, TResult>(
+  return new DataLoader<string, TResult | null>(
     keys =>
       findByBatchIdsSimple(manager, classRef, keys as string[], {
         ...restOptions,
