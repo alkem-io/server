@@ -213,10 +213,10 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  public async addVisualOnProfile(
+  public async addVisualsOnProfile(
     profile: IProfile,
-    visualType: VisualType,
-    visualsData?: CreateVisualOnProfileInput[]
+    visualsData: CreateVisualOnProfileInput[] | undefined,
+    visualTypes: VisualType[]
   ): Promise<IProfile> {
     if (!profile.visuals) {
       throw new EntityNotInitializedException(
@@ -225,42 +225,43 @@ export class ProfileService {
       );
     }
     let visual: IVisual;
-    switch (visualType) {
-      case VisualType.AVATAR:
-        visual = this.visualService.createVisualAvatar();
-        break;
-      case VisualType.BANNER:
-        visual = this.visualService.createVisualBanner();
-        break;
-      case VisualType.CARD:
-        visual = this.visualService.createVisualCard();
-        break;
-      case VisualType.BANNER_WIDE:
-        visual = this.visualService.createVisualBannerWide();
-        break;
+    for (const visualType of visualTypes) {
+      switch (visualType) {
+        case VisualType.AVATAR:
+          visual = this.visualService.createVisualAvatar();
+          break;
+        case VisualType.BANNER:
+          visual = this.visualService.createVisualBanner();
+          break;
+        case VisualType.CARD:
+          visual = this.visualService.createVisualCard();
+          break;
+        case VisualType.BANNER_WIDE:
+          visual = this.visualService.createVisualBannerWide();
+          break;
 
-      default:
-        throw new Error(
-          `Unable to recognise type of visual requested: ${visualType}`
-        );
-    }
-    const providedVisual = visualsData?.find(v => v.name === visualType);
-    if (providedVisual) {
-      const url = await this.reuploadFileOnProfile(
-        providedVisual.uri,
-        profile,
-        true
-      );
-      if (url) {
-        visual.uri = url;
-      } else {
-        this.logger.warn(
-          `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
-        );
+        default:
+          throw new Error(
+            `Unable to recognise type of visual requested: ${visualTypes}`
+          );
       }
+      const providedVisual = visualsData?.find(v => v.name === visualType);
+      if (providedVisual) {
+        const url = await this.reuploadFileOnProfile(
+          providedVisual.uri,
+          profile,
+          true
+        );
+        if (url) {
+          visual.uri = url;
+        } else {
+          this.logger.warn(
+            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
+          );
+        }
+      }
+      profile.visuals.push(visual);
     }
-
-    profile.visuals.push(visual);
     return profile;
   }
 

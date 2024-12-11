@@ -41,15 +41,10 @@ export class PostService {
       ProfileType.POST,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       post.profile,
-      VisualType.BANNER,
-      postInput.profileData.visuals
-    );
-    await this.profileService.addVisualOnProfile(
-      post.profile,
-      VisualType.CARD,
-      postInput.profileData.visuals
+      postInput.profileData.visuals,
+      [VisualType.BANNER, VisualType.CARD]
     );
     await this.profileService.addTagsetOnProfile(post.profile, {
       name: TagsetReservedName.DEFAULT,

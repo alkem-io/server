@@ -74,10 +74,10 @@ export class TemplateService {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       template.profile,
-      VisualType.CARD,
-      templateData.profileData.visuals
+      templateData.profileData.visuals,
+      [VisualType.CARD]
     );
     switch (template.type) {
       case TemplateType.POST: {

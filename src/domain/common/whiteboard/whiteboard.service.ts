@@ -59,10 +59,10 @@ export class WhiteboardService {
       ProfileType.WHITEBOARD,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       whiteboard.profile,
-      VisualType.CARD,
-      whiteboardData.profile?.visuals
+      whiteboardData.profile?.visuals,
+      [VisualType.CARD]
     );
     await this.profileService.addTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,

@@ -88,10 +88,10 @@ export class CalloutFramingService {
         storageAggregator,
         userID
       );
-      await this.profileService.addVisualOnProfile(
+      await this.profileService.addVisualsOnProfile(
         calloutFraming.whiteboard.profile,
-        VisualType.BANNER,
-        whiteboard.profile?.visuals
+        whiteboard.profile?.visuals,
+        [VisualType.BANNER]
       );
     }
 
