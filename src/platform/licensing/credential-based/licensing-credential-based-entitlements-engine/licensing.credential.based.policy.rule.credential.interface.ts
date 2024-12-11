@@ -11,5 +11,5 @@ export abstract class ILicensingCredentialBasedPolicyCredentialRule {
   grantedEntitlements!: LicenseEntitlementType[];
 
   @Field(() => String, { nullable: true })
-  name!: string;
+  name?: string;
 }

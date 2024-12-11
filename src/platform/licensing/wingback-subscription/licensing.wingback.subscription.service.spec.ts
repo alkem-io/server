@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
+import { WingbackManager } from '@services/external/wingback';
 
 describe('LicensingWingbackSubscriptionService', () => {
   let service: LicensingWingbackSubscriptionService;
