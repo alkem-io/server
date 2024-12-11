@@ -15,6 +15,6 @@ export abstract class InAppNotificationCalloutPublished extends InAppNotificatio
   type!: NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED;
   payload!: InAppNotificationCalloutPublishedPayload;
   // fields resolved by a concrete resolver
-  callout!: ICallout;
-  space!: ISpace;
+  callout?: ICallout;
+  space?: ISpace;
 }

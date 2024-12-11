@@ -21,24 +21,26 @@ export class InAppNotificationCommunityNewMemberResolverFields {
   }
 
   @ResolveField(() => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The Contributor that joined.',
   })
   // todo: rename?
   public actor(
     @Parent() { payload }: InAppNotificationCommunityNewMember,
-    @Loader(ContributorLoaderCreator) loader: ILoader<IContributor>
+    @Loader(ContributorLoaderCreator, { resolveToNull: true })
+    loader: ILoader<IContributor>
   ) {
     return loader.load(payload.newMemberID);
   }
 
   @ResolveField(() => ISpace, {
-    nullable: false,
+    nullable: true,
     description: 'The Space that was joined.',
   })
   public space(
     @Parent() { payload }: InAppNotificationCommunityNewMember,
-    @Loader(SpaceLoaderCreator) loader: ILoader<ISpace>
+    @Loader(SpaceLoaderCreator, { resolveToNull: true })
+    loader: ILoader<ISpace>
   ) {
     return loader.load(payload.spaceID);
   }

@@ -16,7 +16,7 @@ export class InAppNotificationCommunityNewMember extends InAppNotificationBase()
   type!: NotificationEventType.COMMUNITY_NEW_MEMBER;
   payload!: InAppNotificationCommunityNewMemberPayload;
   // fields resolved by a concrete resolver
-  contributorType?: CommunityContributorType;
+  contributorType!: CommunityContributorType;
   actor?: IContributor;
   space?: ISpace;
 }

@@ -14,7 +14,7 @@ export class InAppNotificationUserMentioned extends InAppNotificationBase() {
   type!: NotificationEventType.COMMUNICATION_USER_MENTION;
   payload!: InAppNotificationContributorMentionedPayload;
   // fields resolved by a concrete resolver
-  contributorType?: CommunityContributorType;
-  comment?: string;
-  commentUrl?: string;
+  contributorType!: CommunityContributorType;
+  comment!: string;
+  commentUrl!: string;
 }
