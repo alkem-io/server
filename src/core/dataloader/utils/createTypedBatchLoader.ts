@@ -2,6 +2,7 @@ import DataLoader from 'dataloader';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ILoader } from '../loader.interface';
+import { sorOutputByKeys } from '@core/dataloader/utils/sort.output.by.keys';
 
 export const createBatchLoader = <TResult extends { id: string }>(
   name: string, // for debugging purposes
@@ -12,15 +13,16 @@ export const createBatchLoader = <TResult extends { id: string }>(
   // the provided batch function does not necessarily complete this requirement
   // so we create a wrapper function that executes the batch function and ensure the output length
   // by either returning the original output (if the length matches) or filling the missing values with errors
-  const loadAndEnsureOutputLength = async (keys: readonly string[]) => {
-    const output = await batchLoadFn(keys);
-    if (output.length == keys.length) {
+  const loadAndEnsureOutputLengthAndOrder = async (keys: readonly string[]) => {
+    const unsortedOutput = await batchLoadFn(keys);
+    const sortedOutput = sorOutputByKeys(unsortedOutput, keys);
+    if (sortedOutput.length == keys.length) {
       // length is ensured
-      return output;
+      return sortedOutput;
     }
     // maps each returned result to its id
     const resultsById = new Map<string, TResult>(
-      output.map<[string, TResult]>(result => [result.id, result])
+      sortedOutput.map<[string, TResult]>(result => [result.id, result])
     );
     // ensure the result length matches the input length
     return keys.map(
@@ -37,7 +39,7 @@ export const createBatchLoader = <TResult extends { id: string }>(
   };
 
   return new DataLoader<string, TResult>(
-    keys => loadAndEnsureOutputLength(keys),
+    keys => loadAndEnsureOutputLengthAndOrder(keys),
     {
       cache: true,
       name,

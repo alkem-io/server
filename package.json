@@ -87,7 +87,7 @@
     "class-validator": "0.14.0",
     "cookie-parser": "^1.4.6",
     "cross-env": "^7.0.3",
-    "dataloader": "^2.2.2",
+    "dataloader": "^2.2.3",
     "graphql": "^16.9.0",
     "graphql-amqp-subscriptions": "^2.0.0",
     "graphql-helix": "^1.13.0",
