@@ -101,7 +101,7 @@ export class AccountResolverMutations {
     space = await this.spaceService.save(space);
 
     const spaceAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(spaceAuthorizations);
 
     const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
@@ -424,7 +424,7 @@ export class AccountResolverMutations {
     space = await this.spaceService.save(space);
 
     const spaceAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(spaceAuthorizations);
     // TODO: check if still needed later
     return await this.spaceService.getSpaceOrFail(space.id);
