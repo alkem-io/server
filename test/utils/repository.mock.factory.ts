@@ -4,12 +4,15 @@ import { MockType } from './mock.type';
 
 export const repositoryMockFactory: () => MockType<
   Repository<BaseAlkemioEntity>
-> = jest.fn(() => ({
-  findOne: jest.fn(entity => entity),
-  findOneOrFail: jest.fn(entity => entity),
-  find: jest.fn(entity => entity),
-  save: jest.fn(),
-  remove: jest.fn(),
-  count: jest.fn(),
-  createQueryBuilder: jest.fn(),
-}));
+> = jest.fn(() => {
+  const methods = Object.getOwnPropertyNames(Repository.prototype).filter(
+    method => method !== 'constructor'
+  );
+
+  const mock: any = {};
+  methods.forEach(method => {
+    mock[method] = jest.fn();
+  });
+
+  return mock;
+});

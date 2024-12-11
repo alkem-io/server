@@ -78,6 +78,29 @@ export class AiPersonaService {
     return await this.aiPersonaRepository.save(aiPersona);
   }
 
+  async refreshAllBodiesOfKnowledge(): Promise<boolean> {
+    try {
+      const allAiPersonaIDs = (
+        await this.aiPersonaRepository.find({
+          select: ['aiPersonaServiceID'],
+        })
+      ).map(persona => persona.aiPersonaServiceID);
+
+      for (const personaID of allAiPersonaIDs) {
+        this.aiServerAdapter.refreshBodyOfKnowledge(personaID);
+      }
+    } catch (error: unknown) {
+      this.logger.error(
+        `Error refreshing all bodies of knowledge: ${error}`,
+        error,
+        LogContext.PLATFORM
+      );
+      return false;
+    }
+
+    return true;
+  }
+
   async deleteAiPersona(deleteData: DeleteAiPersonaInput): Promise<IAiPersona> {
     const personaID = deleteData.ID;
 
