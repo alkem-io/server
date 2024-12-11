@@ -83,9 +83,10 @@ export class InAppNotificationReceiver {
 const decompressInAppNotifications = (
   data: CompressedInAppNotificationPayload<InAppNotificationPayload>
 ): InAppNotificationPayload[] => {
-  const { receiverIDs, ...rest } = data;
+  const { receiverIDs, triggeredAt, ...rest } = data;
   return receiverIDs.map(receiverID => ({
     ...rest,
+    triggeredAt: new Date(triggeredAt),
     receiverID,
   }));
 };
