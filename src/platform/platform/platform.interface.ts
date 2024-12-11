@@ -7,7 +7,7 @@ import { ObjectType } from '@nestjs/graphql';
 import { IConfig } from '@platform/configuration/config/config.interface';
 import { IForum } from '@platform/forum';
 import { IPlatformInvitation } from '@platform/invitation';
-import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
+import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IMetadata } from '@platform/metadata/metadata.interface';
 
 @ObjectType('Platform')

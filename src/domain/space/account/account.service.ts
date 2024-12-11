@@ -35,7 +35,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AccountHostService } from '../account.host/account.host.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
-import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicenseService } from '@domain/common/license/license.service';
 
 @Injectable()
@@ -367,12 +367,12 @@ export class AccountService {
     const subscriptions: IAccountSubscription[] = [];
     for (const credential of account.agent.credentials) {
       if (
-        Object.values(LicenseCredential).includes(
-          credential.type as LicenseCredential
+        Object.values(LicensingCredentialBasedCredentialType).includes(
+          credential.type as LicensingCredentialBasedCredentialType
         )
       ) {
         subscriptions.push({
-          name: credential.type as LicenseCredential,
+          name: credential.type as LicensingCredentialBasedCredentialType,
           expires: credential.expires,
         });
       }

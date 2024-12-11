@@ -7,7 +7,7 @@ import {
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceService } from './space.service';
@@ -19,7 +19,7 @@ export class SpaceLicenseService {
   constructor(
     private licenseService: LicenseService,
     private spaceService: SpaceService,
-    private licenseEngineService: LicenseEngineService,
+    private licenseEngineService: LicensingCredentialBasedService,
     private roleSetLicenseService: RoleSetLicenseService,
     private collaborationLicenseService: CollaborationLicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

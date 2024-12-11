@@ -1,10 +1,10 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InAppNotifications1733732413139 implements MigrationInterface {
-    name = 'InAppNotifications1733732413139'
+  name = 'InAppNotifications1733732413139';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`CREATE TABLE \`in_app_notification\` (
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`CREATE TABLE \`in_app_notification\` (
             \`id\` char(36) NOT NULL,
              \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
               \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -19,10 +19,9 @@ export class InAppNotifications1733732413139 implements MigrationInterface {
                        PRIMARY KEY (\`id\`)
              ) ENGINE=InnoDB
          `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP TABLE \`in_app_notification\``);
-    }
-
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP TABLE \`in_app_notification\``);
+  }
 }
