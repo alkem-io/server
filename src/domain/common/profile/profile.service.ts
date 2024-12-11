@@ -315,6 +315,13 @@ export class ProfileService {
     if (docInThisBucket) {
       // It should be just `fileUrl` but rewrite it just in case
       return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
+    } else if (docInContent.temporaryLocation) {
+      // If it was temporary just move the document to the new bucket
+      docInContent.storageBucket = storageBucketToCheck;
+      docInContent.temporaryLocation = false;
+      storageBucketToCheck.documents.push(docInContent);
+      this.documentService.save(docInContent);
+      return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
       // if not in this bucket - create it inside it
       const newDoc = await this.documentService.createDocument({
