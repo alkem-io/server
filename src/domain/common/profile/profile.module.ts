@@ -15,6 +15,7 @@ import { TagsetTemplateModule } from '../tagset-template/tagset.template.module'
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { DocumentModule } from '@domain/storage/document/document.module';
+import { ProfileVisualsService } from './profile.visuals.service';
 
 @Module({
   imports: [
@@ -33,9 +34,15 @@ import { DocumentModule } from '@domain/storage/document/document.module';
   providers: [
     ProfileResolverMutations,
     ProfileService,
+    ProfileVisualsService,
     ProfileAuthorizationService,
     ProfileResolverFields,
   ],
-  exports: [ProfileService, ProfileAuthorizationService, ProfileResolverFields],
+  exports: [
+    ProfileService,
+    ProfileVisualsService,
+    ProfileAuthorizationService,
+    ProfileResolverFields,
+  ],
 })
 export class ProfileModule {}
