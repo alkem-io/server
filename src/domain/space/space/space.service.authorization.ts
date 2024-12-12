@@ -196,6 +196,9 @@ export class SpaceAuthorizationService {
     space.authorization = this.appendPrivilegeRuleReadAbout(
       space.authorization
     );
+    space.authorization = this.appendPrivilegeRuleCreateSubspace(
+      space.authorization
+    );
 
     // Save before proparagating to child entities
     space.authorization = await this.authorizationPolicyService.save(
@@ -353,31 +356,12 @@ export class SpaceAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private extendPrivilegeRuleCreateSubspace(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    // Ensure that CREATE also allows CREATE_CHALLENGE
-    const createSubspacePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_SUBSPACE],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_SPACE_CREATE_SUBSPACE
-    );
-    this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      [createSubspacePrivilege]
-    );
-
-    return authorization;
-  }
-
   private async extendAuthorizationPolicyLocal(
     authorization: IAuthorizationPolicy,
     roleSet: IRoleSet,
     spaceSettings: ISpaceSettings,
     deletionCredentialCriterias: ICredentialDefinition[]
   ): Promise<IAuthorizationPolicy> {
-    this.extendPrivilegeRuleCreateSubspace(authorization);
-
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     if (deletionCredentialCriterias.length !== 0) {
@@ -565,5 +549,22 @@ export class SpaceAuthorizationService {
       authorization,
       [createVCPrivilege]
     );
+  }
+
+  private appendPrivilegeRuleCreateSubspace(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    // Ensure that CREATE also allows CREATE_CHALLENGE
+    const createSubspacePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_SUBSPACE],
+      AuthorizationPrivilege.CREATE,
+      POLICY_RULE_SPACE_CREATE_SUBSPACE
+    );
+    this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      [createSubspacePrivilege]
+    );
+
+    return authorization;
   }
 }
