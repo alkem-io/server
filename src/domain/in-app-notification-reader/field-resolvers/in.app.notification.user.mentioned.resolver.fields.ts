@@ -33,4 +33,14 @@ export class InAppNotificationUserMentionedResolverFields {
   ): string {
     return payload.commentOrigin.url;
   }
+
+  @ResolveField(() => String, {
+    nullable: false,
+    description: 'The comment that the contributor was mentioned in.',
+  })
+  public commentOriginName(
+    @Parent() { payload }: InAppNotificationUserMentioned
+  ): string {
+    return payload.commentOrigin.displayName;
+  }
 }
