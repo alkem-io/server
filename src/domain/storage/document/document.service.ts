@@ -179,7 +179,10 @@ export class DocumentService {
     return `${documentsBaseUrlPath}/${document.id}`;
   }
 
-  public async getDocumentFromURL(url: string): Promise<IDocument | undefined> {
+  public async getDocumentFromURL(
+    url: string,
+    options?: FindOneOptions<Document>
+  ): Promise<IDocument | undefined> {
     const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
 
     if (!this.isAlkemioDocumentURL(url)) {
@@ -188,9 +191,7 @@ export class DocumentService {
 
     const documentID = url.substring(documentsBaseUrlPath.length + 1);
     try {
-      return await this.getDocumentOrFail(documentID, {
-        relations: { storageBucket: true },
-      });
+      return await this.getDocumentOrFail(documentID, options);
     } catch (error: any) {
       this.logger.error(
         `Unable to find document '${documentID}': ${error}`,

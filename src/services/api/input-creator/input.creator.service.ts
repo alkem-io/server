@@ -307,18 +307,12 @@ export class InputCreatorService {
     const result: CreateVisualOnProfileInput[] = [];
     if (!visuals) return result;
     for (const visual of visuals) {
-      result.push(this.buildCreateVisualOnProfileInputFromVisual(visual));
+      result.push({
+        name: validateAndConvertVisualTypeName(visual.name),
+        uri: visual.uri,
+      });
     }
     return result;
-  }
-
-  private buildCreateVisualOnProfileInputFromVisual(
-    visual: IVisual
-  ): CreateVisualOnProfileInput {
-    return {
-      name: validateAndConvertVisualTypeName(visual.name),
-      uri: visual.uri,
-    };
   }
 
   public buildCreateTagsetInputFromTagset(tagset: ITagset): CreateTagsetInput {

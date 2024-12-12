@@ -5,6 +5,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
 import { AlkemioErrorStatus, LogContext, ProfileType } from '@common/enums';
@@ -33,7 +34,6 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { BaseException } from '@common/exceptions/base.exception';
-import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { CreateReferenceInput } from '../reference';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
@@ -47,7 +47,6 @@ export class ProfileService {
     private referenceService: ReferenceService,
     private visualService: VisualService,
     private documentService: DocumentService,
-    private documentAuthorizationService: DocumentAuthorizationService,
     private locationService: LocationService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
@@ -248,8 +247,9 @@ export class ProfileService {
           break;
 
         default:
-          throw new Error(
-            `Unable to recognise type of visual requested: ${visualTypes}`
+          throw new NotSupportedException(
+            `Unable to recognise type of visual requested: ${visualTypes}`,
+            LogContext.PROFILE
           );
       }
       const providedVisual = visualsData?.find(v => v.name === visualType);
@@ -300,7 +300,12 @@ export class ProfileService {
       );
     }
 
-    const docInContent = await this.documentService.getDocumentFromURL(fileUrl);
+    const docInContent = await this.documentService.getDocumentFromURL(
+      fileUrl,
+      {
+        relations: { storageBucket: true },
+      }
+    );
 
     if (!docInContent) {
       throw new BaseException(
