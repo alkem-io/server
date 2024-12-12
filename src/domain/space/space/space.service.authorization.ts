@@ -26,6 +26,7 @@ import {
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
+  POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
@@ -122,7 +123,7 @@ export class SpaceAuthorizationService {
     let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
     switch (space.level) {
       case SpaceLevel.SPACE: {
-        space.authorization = this.resetToLevelZeroSpaceAuthorization(
+        space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
           space.authorization
         );
         if (!isPrivate) {
@@ -134,7 +135,7 @@ export class SpaceAuthorizationService {
       case SpaceLevel.OPPORTUNITY: {
         if (isPrivate) {
           // Key: private get the base space authorization setup, that is then extended
-          space.authorization = this.resetToLevelZeroSpaceAuthorization(
+          space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
             space.authorization
           );
           space.authorization = await this.extendPrivateSubspaceAdmins(
@@ -191,6 +192,10 @@ export class SpaceAuthorizationService {
         spaceMembershipAllowed = false;
         break;
     }
+
+    space.authorization = this.appendPrivilegeRuleReadAbout(
+      space.authorization
+    );
 
     // Save before proparagating to child entities
     space.authorization = await this.authorizationPolicyService.save(
@@ -505,7 +510,7 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  private resetToLevelZeroSpaceAuthorization(
+  private resetToPrivateLevelZeroSpaceAuthorization(
     authorizationPolicy: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     let updatedAuthorization =
@@ -544,6 +549,21 @@ export class SpaceAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       updatedAuthorization,
       newRules
+    );
+  }
+
+  private appendPrivilegeRuleReadAbout(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.READ_ABOUT],
+      AuthorizationPrivilege.READ,
+      POLICY_RULE_READ_ABOUT
+    );
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      [createVCPrivilege]
     );
   }
 }
