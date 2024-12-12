@@ -36,7 +36,8 @@ export class InAppNotificationUserMentionedResolverFields {
 
   @ResolveField(() => String, {
     nullable: false,
-    description: 'The comment that the contributor was mentioned in.',
+    description:
+      'The display name of the resource where the comment was created.',
   })
   public commentOriginName(
     @Parent() { payload }: InAppNotificationUserMentioned
