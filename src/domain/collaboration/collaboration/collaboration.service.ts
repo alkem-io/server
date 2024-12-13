@@ -420,11 +420,10 @@ export class CollaborationService {
     }
     if (!calloutData.sortOrder) {
       calloutData.sortOrder =
-        1 +
-        Math.max(
+        Math.min(
           ...collaboration.callouts.map(callout => callout.sortOrder),
           0 // Needed in case there are no callouts. In that case the first callout will have sortOrder = 1
-        );
+        ) - 1;
     }
 
     const reservedNameIDs =

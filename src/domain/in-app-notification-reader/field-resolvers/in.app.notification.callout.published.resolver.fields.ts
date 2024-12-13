@@ -12,23 +12,25 @@ import { ILoader } from '@core/dataloader/loader.interface';
 @Resolver(() => InAppNotificationCalloutPublished)
 export class InAppNotificationCalloutPublishedResolverFields {
   @ResolveField(() => ICallout, {
-    nullable: false,
+    nullable: true,
     description: 'The Callout that was published.',
   })
   public callout(
     @Parent() { payload }: InAppNotificationCalloutPublished,
-    @Loader(CalloutLoaderCreator) loader: ILoader<ICallout>
+    @Loader(CalloutLoaderCreator, { resolveToNull: true })
+    loader: ILoader<ICallout>
   ) {
     return loader.load(payload.calloutID);
   }
 
   @ResolveField(() => ISpace, {
-    nullable: false,
+    nullable: true,
     description: 'Where the callout is located.',
   })
   public space(
     @Parent() { payload }: InAppNotificationCalloutPublished,
-    @Loader(SpaceLoaderCreator) loader: ILoader<ISpace>
+    @Loader(SpaceLoaderCreator, { resolveToNull: true })
+    loader: ILoader<ISpace>
   ) {
     return loader.load(payload.spaceID);
   }

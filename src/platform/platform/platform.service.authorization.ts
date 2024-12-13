@@ -26,7 +26,7 @@ import { ForumAuthorizationService } from '@platform/forum/forum.service.authori
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
-import { LicensingFrameworkAuthorizationService } from '@platform/licensing-framework/licensing.framework.service.authorization';
+import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {

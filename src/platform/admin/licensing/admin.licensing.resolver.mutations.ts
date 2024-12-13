@@ -14,8 +14,8 @@ import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.lic
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
-import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
-import { ILicensingFramework } from '@platform/licensing-framework/licensing.framework.interface';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
+import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { SpaceLicenseService } from '@domain/space/space/space.service.license';
 import { SpaceService } from '@domain/space/space/space.service';
 import { AccountService } from '@domain/space/account/account.service';

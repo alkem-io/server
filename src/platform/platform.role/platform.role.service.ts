@@ -19,7 +19,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { PlatformService } from '@platform/platform/platform.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AccountService } from '@domain/space/account/account.service';
-import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 
 @Injectable()
 export class PlatformRoleService {
@@ -99,7 +99,7 @@ export class PlatformRoleService {
       const accountAgent = await this.accountService.getAgent(user.accountID);
 
       const accountLicenseCredential: ICredentialDefinition = {
-        type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
       await this.agentService.grantCredential({
@@ -147,7 +147,7 @@ export class PlatformRoleService {
       // Also assign the user account a license plan
       const accountAgent = await this.accountService.getAgent(user.accountID);
       const accountLicenseCredential: ICredentialDefinition = {
-        type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
       await this.agentService.revokeCredential({
