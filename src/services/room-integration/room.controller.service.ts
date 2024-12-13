@@ -1,10 +1,13 @@
 import { LogContext } from '@common/enums';
 import { MutationType } from '@common/enums/subscriptions';
 import { RoomService } from '@domain/communication/room/room.service';
-// import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
+import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
-import { InvokeEngineResponse } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
+import {
+  InvokeEngineResponse,
+  InvokeEngineResult,
+} from '@services/infrastructure/event-bus/messages/invoke.engine.result';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
@@ -13,15 +16,14 @@ export class RoomControllerService {
   constructor(
     private roomService: RoomService,
     private subscriptionPublishService: SubscriptionPublishService,
-    // private vcInteractionService: VcInteractionService,
+    private vcInteractionService: VcInteractionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async postReply(
-    { roomID, threadID, communicationID }: RoomDetails,
-    message: any //TODO type this properly with the implementation of the rest of the engines
-    // vcInteractionID?: string
-  ) {
+  public async postReply(event: InvokeEngineResult) {
+    const { roomID, threadID, communicationID, vcInteractionID }: RoomDetails =
+      event.original.resultHandler.roomDetails!;
+
     if (!threadID) {
       return;
     }
@@ -31,21 +33,22 @@ export class RoomControllerService {
       communicationID,
       {
         roomID: room.externalRoomID,
-        message: this.convertResultToMessage(message),
+        message: this.convertResultToMessage(event.response),
         threadID,
       },
       'virtualContributor'
     );
 
-    //TODO fix me with the openai assistant engine
-    // if (vcInteractionID) {
-    //   const vcInteraction =
-    //     await this.vcInteractionService.getVcInteractionOrFail(vcInteractionID);
-    //   if (!vcInteraction.externalMetadata.threadId && response.threadId) {
-    //     vcInteraction.externalMetadata.threadId = response.threadId;
-    //     await this.vcInteractionService.save(vcInteraction);
-    //   }
-    // }
+    const externalThreadId = event.response.threadId;
+
+    if (vcInteractionID && externalThreadId) {
+      const vcInteraction =
+        await this.vcInteractionService.getVcInteractionOrFail(vcInteractionID);
+      if (!vcInteraction.externalMetadata.threadId) {
+        vcInteraction.externalMetadata.threadId = externalThreadId;
+        await this.vcInteractionService.save(vcInteraction);
+      }
+    }
 
     this.subscriptionPublishService.publishRoomEvent(
       room,
@@ -54,10 +57,10 @@ export class RoomControllerService {
     );
   }
 
-  public async postMessage(
-    { roomID, communicationID }: RoomDetails,
-    response: InvokeEngineResponse
-  ) {
+  public async postMessage(event: InvokeEngineResult) {
+    const { roomID, communicationID }: RoomDetails =
+      event.original.resultHandler.roomDetails!;
+    const response: InvokeEngineResponse = event.response;
     const room = await this.roomService.getRoomOrFail(roomID);
     const answerMessage = await this.roomService.sendMessage(
       room,
