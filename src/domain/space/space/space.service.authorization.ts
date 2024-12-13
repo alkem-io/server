@@ -119,8 +119,7 @@ export class SpaceAuthorizationService {
     }
 
     // Note: later will need additional logic here for Templates
-    // Allow the parent admins to also delete subspaces
-    let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
+    let parentSpaceRoleSet: IRoleSet | undefined;
     switch (space.level) {
       case SpaceLevel.SPACE: {
         space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
@@ -163,12 +162,7 @@ export class SpaceAuthorizationService {
             LogContext.SPACES
           );
         }
-        parentSpaceAdminCredentialCriterias =
-          await this.roleSetService.getCredentialsForRole(
-            parentSpaceCommunity.roleSet,
-            CommunityRoleType.ADMIN,
-            spaceSettings
-          );
+        parentSpaceRoleSet = parentSpaceCommunity.roleSet;
         break;
       }
     }
@@ -182,7 +176,7 @@ export class SpaceAuthorizationService {
           space.authorization,
           space.community.roleSet,
           spaceSettings,
-          parentSpaceAdminCredentialCriterias
+          parentSpaceRoleSet
         );
 
         break;
@@ -360,19 +354,29 @@ export class SpaceAuthorizationService {
     authorization: IAuthorizationPolicy,
     roleSet: IRoleSet,
     spaceSettings: ISpaceSettings,
-    deletionCredentialCriterias: ICredentialDefinition[]
+    parentSpaceRoleSet: IRoleSet | undefined
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    if (deletionCredentialCriterias.length !== 0) {
-      const deleteSubspaces =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.DELETE],
-          deletionCredentialCriterias,
-          CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE
+    // Allow the parent admins to also delete subspaces
+    if (parentSpaceRoleSet) {
+      const parentRoleSetAdminCredentials =
+        await this.roleSetService.getCredentialsForRole(
+          parentSpaceRoleSet,
+          CommunityRoleType.ADMIN,
+          spaceSettings
         );
-      deleteSubspaces.cascade = false;
-      newRules.push(deleteSubspaces);
+
+      if (parentRoleSetAdminCredentials.length !== 0) {
+        const deleteSubspaces =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.DELETE],
+            parentRoleSetAdminCredentials,
+            CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE
+          );
+        deleteSubspaces.cascade = false;
+        newRules.push(deleteSubspaces);
+      }
     }
 
     const memberCriteras = await this.roleSetService.getCredentialsForRole(
