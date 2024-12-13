@@ -28,7 +28,7 @@ export class InAppNotificationCommunityNewMemberResolverFields {
   public actor(
     @Parent() { payload }: InAppNotificationCommunityNewMember,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IContributor>
+    loader: ILoader<IContributor | null>
   ) {
     return loader.load(payload.newMemberID);
   }
@@ -40,7 +40,7 @@ export class InAppNotificationCommunityNewMemberResolverFields {
   public space(
     @Parent() { payload }: InAppNotificationCommunityNewMember,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace>
+    loader: ILoader<ISpace | null>
   ) {
     return loader.load(payload.spaceID);
   }
