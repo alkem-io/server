@@ -42,6 +42,7 @@ export class SpaceResolverFields {
   constructor(private spaceService: SpaceService) {}
 
   // Check authorization inside the field resolver directly on the Community
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: false,
@@ -54,12 +55,6 @@ export class SpaceResolverFields {
   ): Promise<ICommunity> {
     const community = await loader.load(space.id);
     // Do not check for READ access here, rely on per field check on resolver in Community
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   community.authorization,
-    //   AuthorizationPrivilege.READ,
-    //   `read community on space: ${community.id}`
-    // );
     return community;
   }
 
@@ -94,6 +89,7 @@ export class SpaceResolverFields {
     return this.spaceService.activeSubscription(space);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
