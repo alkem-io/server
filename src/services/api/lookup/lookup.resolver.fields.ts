@@ -109,17 +109,14 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified Space',
   })
-  async space(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ISpace> {
+  async space(@Args('ID', { type: () => UUID }) id: string): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.READ_ABOUT,
-      `lookup Space: ${space.id}`
-    );
+    // this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   space.authorization,
+    //   AuthorizationPrivilege.READ_ABOUT,
+    //   `lookup Space: ${space.id}`
+    // );
 
     return space;
   }
@@ -150,7 +147,6 @@ export class LookupResolverFields {
     description: 'Lookup the specified RoleSet',
   })
   async roleSet(
-    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IRoleSet> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(id);
@@ -500,7 +496,7 @@ export class LookupResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
-      AuthorizationPrivilege.READ_ABOUT,
+      AuthorizationPrivilege.READ,
       `lookup Context: ${context.id}`
     );
 
@@ -539,7 +535,7 @@ export class LookupResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
-      AuthorizationPrivilege.READ_ABOUT,
+      AuthorizationPrivilege.READ,
       `lookup Profile: ${profile.id}`
     );
 

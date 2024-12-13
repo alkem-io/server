@@ -27,6 +27,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -285,6 +286,27 @@ export class AuthorizationPolicyService {
     for (const additionalRule of privilegeRules) {
       existingRules.push(additionalRule);
     }
+    auth.privilegeRules = JSON.stringify(existingRules);
+    return auth;
+  }
+
+  public appendPrivilegeAuthorizationRuleMapping(
+    authorization: IAuthorizationPolicy | undefined,
+    sourcePrivilege: AuthorizationPrivilege,
+    grantedPrivileges: AuthorizationPrivilege[],
+    name: string
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+    const existingRules = this.authorizationService.convertPrivilegeRulesStr(
+      auth.privilegeRules
+    );
+    const newPrivilegeRule = new AuthorizationPolicyRulePrivilege(
+      grantedPrivileges,
+      sourcePrivilege,
+      name
+    );
+    existingRules.push(newPrivilegeRule);
+
     auth.privilegeRules = JSON.stringify(existingRules);
     return auth;
   }

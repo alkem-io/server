@@ -29,7 +29,6 @@ import {
   CREDENTIAL_RULE_SPACE_MEMBERS_READ_ABOUT_SUBSPACES,
 } from '@common/constants';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -181,12 +180,22 @@ export class SpaceAuthorizationService {
         break;
     }
 
-    space.authorization = this.appendPrivilegeRuleReadAbout(
-      space.authorization
-    );
-    space.authorization = this.appendPrivilegeRuleCreateSubspace(
-      space.authorization
-    );
+    // If can READ, then can of course READ_ABOUT
+    space.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        space.authorization,
+        AuthorizationPrivilege.READ,
+        [AuthorizationPrivilege.READ_ABOUT],
+        POLICY_RULE_READ_ABOUT
+      );
+    // Ensure that CREATE also allows CREATE_CHALLENGE
+    space.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        space.authorization,
+        AuthorizationPrivilege.CREATE,
+        [AuthorizationPrivilege.CREATE_SUBSPACE],
+        POLICY_RULE_SPACE_CREATE_SUBSPACE
+      );
 
     // Save before proparagating to child entities
     space.authorization = await this.authorizationPolicyService.save(
@@ -350,6 +359,7 @@ export class SpaceAuthorizationService {
             parentRoleSetMemberCredentials,
             CREDENTIAL_RULE_SPACE_MEMBERS_READ_ABOUT_SUBSPACES
           );
+        readAboutSubspaces.cascade = true; // means whole tree under context + profile have READ_ABOUT
         clonedAuthorization =
           this.authorizationPolicyService.appendCredentialAuthorizationRules(
             clonedAuthorization,
@@ -543,37 +553,5 @@ export class SpaceAuthorizationService {
       updatedAuthorization,
       newRules
     );
-  }
-
-  private appendPrivilegeRuleReadAbout(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    const readAboutPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.READ_ABOUT],
-      AuthorizationPrivilege.READ,
-      POLICY_RULE_READ_ABOUT
-    );
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      [readAboutPrivilege]
-    );
-  }
-
-  private appendPrivilegeRuleCreateSubspace(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    // Ensure that CREATE also allows CREATE_CHALLENGE
-    const createSubspacePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_SUBSPACE],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_SPACE_CREATE_SUBSPACE
-    );
-    this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      [createSubspacePrivilege]
-    );
-
-    return authorization;
   }
 }
