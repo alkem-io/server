@@ -501,7 +501,7 @@ export class LookupResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.READ_ABOUT,
       `lookup Context: ${context.id}`
     );
 
@@ -540,7 +540,7 @@ export class LookupResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.READ_ABOUT,
       `lookup Profile: ${profile.id}`
     );
 

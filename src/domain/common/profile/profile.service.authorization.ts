@@ -6,6 +6,9 @@ import { VisualAuthorizationService } from '../visual/visual.service.authorizati
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
 
 @Injectable()
 export class ProfileAuthorizationService {
@@ -91,6 +94,9 @@ export class ProfileAuthorizationService {
         profile.authorization,
         parentAuthorization
       );
+    profile.authorization = this.appendPrivilegeRuleReadAbout(
+      profile.authorization
+    );
     updatedAuthorizations.push(profile.authorization);
 
     for (const reference of profile.references) {
@@ -128,5 +134,20 @@ export class ProfileAuthorizationService {
     updatedAuthorizations.push(...storageBucketAuthorizations);
 
     return updatedAuthorizations;
+  }
+
+  private appendPrivilegeRuleReadAbout(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const readAboutPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.READ_ABOUT],
+      AuthorizationPrivilege.READ,
+      POLICY_RULE_READ_ABOUT
+    );
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      [readAboutPrivilege]
+    );
   }
 }

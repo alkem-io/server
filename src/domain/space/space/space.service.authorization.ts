@@ -22,13 +22,12 @@ import {
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_SPACE_ADMINS,
   CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
-  CREDENTIAL_RULE_SUBSPACE_ADMINS,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
   POLICY_RULE_READ_ABOUT,
+  CREDENTIAL_RULE_SPACE_MEMBERS_READ_ABOUT_SUBSPACES,
 } from '@common/constants';
-import { EntityNotInitializedException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -137,11 +136,6 @@ export class SpaceAuthorizationService {
           space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
             space.authorization
           );
-          space.authorization = await this.extendPrivateSubspaceAdmins(
-            space.authorization,
-            space.community.roleSet,
-            spaceSettings
-          );
         } else {
           // Pick up the parent authorization
           const parentAuthorization =
@@ -205,7 +199,8 @@ export class SpaceAuthorizationService {
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
       spaceSettings,
-      spaceMembershipAllowed
+      spaceMembershipAllowed,
+      parentSpaceRoleSet
     );
     updatedAuthorizations.push(...childAuthorzations);
 
@@ -244,7 +239,8 @@ export class SpaceAuthorizationService {
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
     spaceSettings: ISpaceSettings,
-    spaceMembershipAllowed: boolean
+    spaceMembershipAllowed: boolean,
+    parentSpaceRoleSet: IRoleSet | undefined
   ): Promise<IAuthorizationPolicy[]> {
     if (
       !space.authorization ||
@@ -324,14 +320,44 @@ export class SpaceAuthorizationService {
       updatedAuthorizations.push(...templatesManagerAuthorizations);
     }
 
-    /// For fields that always should be available
-    // Clone the authorization policy
-    const clonedAuthorization =
+    /// For fields that should either be either always readable for about
+    let clonedAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         space.authorization
       );
-    // To ensure that profile + context on a space are always publicly visible, even for private subspaces
-    clonedAuthorization.anonymousReadAccess = true;
+    switch (space.level) {
+      case SpaceLevel.SPACE: {
+        clonedAuthorization.anonymousReadAccess = true;
+        break;
+      }
+      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.OPPORTUNITY: {
+        if (!parentSpaceRoleSet) {
+          throw new RelationshipNotFoundException(
+            `Subspace found without parent RoleSet in auth reset: ${space.id} `,
+            LogContext.SPACES
+          );
+        }
+        const parentRoleSetMemberCredentials =
+          await this.roleSetService.getCredentialsForRoleWithParents(
+            parentSpaceRoleSet,
+            CommunityRoleType.MEMBER,
+            spaceSettings
+          );
+        const readAboutSubspaces =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.READ_ABOUT],
+            parentRoleSetMemberCredentials,
+            CREDENTIAL_RULE_SPACE_MEMBERS_READ_ABOUT_SUBSPACES
+          );
+        clonedAuthorization =
+          this.authorizationPolicyService.appendCredentialAuthorizationRules(
+            clonedAuthorization,
+            [readAboutSubspaces]
+          );
+        break;
+      }
+    }
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
@@ -358,8 +384,8 @@ export class SpaceAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow the parent admins to also delete subspaces
     if (parentSpaceRoleSet) {
+      // Allow the parent admins to also delete subspaces
       const parentRoleSetAdminCredentials =
         await this.roleSetService.getCredentialsForRole(
           parentSpaceRoleSet,
@@ -377,6 +403,25 @@ export class SpaceAuthorizationService {
         deleteSubspaces.cascade = false;
         newRules.push(deleteSubspaces);
       }
+
+      // Allow members of parent to read about the space
+      const parentRoleSetMemberCredentials =
+        await this.roleSetService.getCredentialsForRoleWithParents(
+          parentSpaceRoleSet,
+          CommunityRoleType.MEMBER,
+          spaceSettings
+        );
+
+      if (parentRoleSetMemberCredentials.length !== 0) {
+        const readAboutSubspaces =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.DELETE],
+            parentRoleSetAdminCredentials,
+            CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE
+          );
+        readAboutSubspaces.cascade = false;
+        newRules.push(readAboutSubspaces);
+      }
     }
 
     const memberCriteras = await this.roleSetService.getCredentialsForRole(
@@ -391,11 +436,12 @@ export class SpaceAuthorizationService {
     );
     newRules.push(spaceMember);
 
-    const spaceAdminCriterias = await this.roleSetService.getCredentialsForRole(
-      roleSet,
-      CommunityRoleType.ADMIN,
-      spaceSettings
-    );
+    const spaceAdminCriterias =
+      await this.roleSetService.getCredentialsForRoleWithParents(
+        roleSet,
+        CommunityRoleType.ADMIN,
+        spaceSettings
+      );
     const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
       [
         AuthorizationPrivilege.CREATE,
@@ -457,47 +503,6 @@ export class SpaceAuthorizationService {
     return memberCriteria;
   }
 
-  private async extendPrivateSubspaceAdmins(
-    authorization: IAuthorizationPolicy | undefined,
-    roleSet: IRoleSet,
-    spaceSettings: ISpaceSettings
-  ): Promise<IAuthorizationPolicy> {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${JSON.stringify(roleSet)}`,
-        LogContext.SPACES
-      );
-    const rules: IAuthorizationPolicyRuleCredential[] = [];
-    const credentials =
-      await this.roleSetService.getCredentialsForRoleWithParents(
-        roleSet,
-        CommunityRoleType.ADMIN,
-        spaceSettings
-      );
-
-    const spaceAdminCriteria = [...credentials];
-    const subspaceSpaceAdmins =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.DELETE,
-        ],
-        spaceAdminCriteria,
-        CREDENTIAL_RULE_SUBSPACE_ADMINS
-      );
-    rules.push(subspaceSpaceAdmins);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      rules
-    );
-
-    return authorization;
-  }
-
   private resetToPrivateLevelZeroSpaceAuthorization(
     authorizationPolicy: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
@@ -543,7 +548,7 @@ export class SpaceAuthorizationService {
   private appendPrivilegeRuleReadAbout(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
-    const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
+    const readAboutPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.READ_ABOUT],
       AuthorizationPrivilege.READ,
       POLICY_RULE_READ_ABOUT
@@ -551,7 +556,7 @@ export class SpaceAuthorizationService {
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
-      [createVCPrivilege]
+      [readAboutPrivilege]
     );
   }
 

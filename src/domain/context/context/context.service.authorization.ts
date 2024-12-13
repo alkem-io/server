@@ -4,6 +4,9 @@ import { IContext } from '@domain/context/context';
 import { EcosystemModelAuthorizationService } from '@domain/context/ecosystem-model/ecosystem-model.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
 @Injectable()
 export class ContextAuthorizationService {
   constructor(
@@ -23,6 +26,9 @@ export class ContextAuthorizationService {
         context.authorization,
         parentAuthorization
       );
+    context.authorization = this.appendPrivilegeRuleReadAbout(
+      context.authorization
+    );
     updatedAuthorizations.push(context.authorization);
 
     // cascade
@@ -36,5 +42,20 @@ export class ContextAuthorizationService {
     updatedAuthorizations.push(...ecosystemAuthorizations);
 
     return updatedAuthorizations;
+  }
+
+  private appendPrivilegeRuleReadAbout(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const readAboutPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.READ_ABOUT],
+      AuthorizationPrivilege.READ,
+      POLICY_RULE_READ_ABOUT
+    );
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      [readAboutPrivilege]
+    );
   }
 }
