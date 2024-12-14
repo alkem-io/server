@@ -123,12 +123,16 @@ export class SpaceAuthorizationService {
         space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
           space.authorization
         );
-        if (!isPrivate) {
-          space.authorization =
-            this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
-              space.authorization
-            );
+        let anonymousAccessPrivilege = AuthorizationPrivilege.READ;
+        if (isPrivate) {
+          anonymousAccessPrivilege = AuthorizationPrivilege.READ_ABOUT;
         }
+        space.authorization =
+          this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+            space.authorization,
+            anonymousAccessPrivilege
+          );
+
         break;
       }
       case SpaceLevel.CHALLENGE:
@@ -337,8 +341,9 @@ export class SpaceAuthorizationService {
     switch (space.level) {
       case SpaceLevel.SPACE: {
         clonedAuthorization =
-          this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
-            clonedAuthorization
+          this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+            clonedAuthorization,
+            AuthorizationPrivilege.READ
           );
         break;
       }

@@ -3,6 +3,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ICommunityGuidelines } from './community.guidelines.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Injectable()
 export class CommunityGuidelinesAuthorizationService {
@@ -28,8 +29,9 @@ export class CommunityGuidelinesAuthorizationService {
       );
     // All content on community guidelines is public
     communityGuidelines.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
-        communityGuidelines.authorization
+      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+        communityGuidelines.authorization,
+        AuthorizationPrivilege.READ
       );
     updatedAuthorizations.push(communityGuidelines.authorization);
 

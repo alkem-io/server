@@ -257,20 +257,21 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
-  public appendCredentialRuleAnonymousReadAccess(
-    authorization: IAuthorizationPolicy | undefined
+  public appendCredentialRuleAnonymousAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
     const rules = this.authorizationService.convertCredentialRulesStr(
       auth.credentialRules
     );
     const newRule = this.createCredentialRuleUsingTypesOnly(
-      [AuthorizationPrivilege.READ],
+      [privilege],
       [
         AuthorizationCredential.GLOBAL_ANONYMOUS,
         AuthorizationCredential.GLOBAL_REGISTERED,
       ],
-      'Anonymous Read Access'
+      `Anonymous agent granted '${privilege}' access`
     );
     rules.push(newRule);
     auth.credentialRules = JSON.stringify(rules);

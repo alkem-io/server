@@ -68,8 +68,9 @@ export class DiscussionAuthorizationService {
       case ForumDiscussionPrivacy.PUBLIC:
         // To ensure that the discussion + discussion profile is visible for non-authenticated users
         discussion.authorization =
-          this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
-            discussion.authorization
+          this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+            discussion.authorization,
+            AuthorizationPrivilege.READ
           );
         break;
       case ForumDiscussionPrivacy.AUTHENTICATED:
