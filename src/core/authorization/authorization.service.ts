@@ -1,6 +1,5 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   EntityNotInitializedException,
@@ -15,6 +14,7 @@ import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.poli
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { IAuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege.interface';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class AuthorizationService {
@@ -183,7 +183,7 @@ export class AuthorizationService {
   }
 
   getGrantedPrivileges(
-    credentials: ICredential[],
+    credentials: ICredentialDefinition[],
     verifiedCredentials: IVerifiedCredential[],
     authorization: IAuthorizationPolicy
   ) {
@@ -236,7 +236,7 @@ export class AuthorizationService {
   }
 
   private isCredentialMatch(
-    credential: ICredential,
+    credential: ICredentialDefinition,
     credentialRule: IAuthorizationPolicyRuleCredential
   ): boolean {
     const criterias = credentialRule.criterias;
