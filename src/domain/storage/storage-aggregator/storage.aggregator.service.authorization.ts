@@ -48,7 +48,10 @@ export class StorageAggregatorAuthorizationService {
         storageAggregator.authorization,
         parentAuthorization
       );
-    storageAggregator.authorization.anonymousReadAccess = true;
+    storageAggregator.authorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+        storageAggregator.authorization
+      );
     updatedAuthorizations.push(storageAggregator.authorization);
 
     const bucketAuthorizations =

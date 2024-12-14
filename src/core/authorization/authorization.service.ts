@@ -54,9 +54,7 @@ export class AuthorizationService {
     } has credentials '${JSON.stringify(
       agentInfo.credentials,
       this.replacer
-    )}'; authorization definition: anonymousAccess=${
-      authorization?.anonymousReadAccess
-    } & rules: ${authorization?.credentialRules}`;
+    )}'; authorization definition: rules: ${authorization?.credentialRules}`;
     this.logger.debug?.(msg, LogContext.AUTH_POLICY);
   }
 
@@ -106,16 +104,6 @@ export class AuthorizationService {
         'Authorization: no definition provided',
         LogContext.AUTH_POLICY
       );
-    }
-    if (
-      authorization.anonymousReadAccess &&
-      privilegeRequired === AuthorizationPrivilege.READ
-    ) {
-      this.logger.verbose?.(
-        `Granted privilege '${privilegeRequired}' using rule 'AnonymousReadAccess'`,
-        LogContext.AUTH_POLICY
-      );
-      return true;
     }
 
     // Keep track of all the granted privileges via Credential rules so can use with Privilege rules
@@ -188,10 +176,6 @@ export class AuthorizationService {
     authorization: IAuthorizationPolicy
   ) {
     const grantedPrivileges: AuthorizationPrivilege[] = [];
-
-    if (authorization.anonymousReadAccess) {
-      grantedPrivileges.push(AuthorizationPrivilege.READ);
-    }
 
     const credentialRules = this.convertCredentialRulesStr(
       authorization.credentialRules

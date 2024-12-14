@@ -42,11 +42,14 @@ export class InnovationHubAuthorizationService {
 
     // Clone the authorization policy + allow anonymous read access to ensure
     // pages are visible / loadable by all users
-    const clonedAuthorization =
+    let clonedAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         parentAuthorization
       );
-    clonedAuthorization.anonymousReadAccess = true;
+    clonedAuthorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+        clonedAuthorization
+      );
 
     hub.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(

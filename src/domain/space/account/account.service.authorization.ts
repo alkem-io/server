@@ -85,7 +85,10 @@ export class AccountAuthorizationService {
     account.authorization = this.authorizationPolicyService.reset(
       account.authorization
     );
-    account.authorization.anonymousReadAccess = false;
+    account.authorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+        account.authorization
+      );
     account.authorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         account.authorization
@@ -222,7 +225,10 @@ export class AccountAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible. TODO: work through the logic on this
-    authorization.anonymousReadAccess = true;
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+        authorization
+      );
 
     // Allow global admins to reset authorization, manage platform settings
     // and transfer resources
@@ -308,7 +314,7 @@ export class AccountAuthorizationService {
     newRules.push(createInnovationPack);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
+      updatedAuthorization,
       newRules
     );
   }

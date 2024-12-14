@@ -27,7 +27,10 @@ export class CommunityGuidelinesAuthorizationService {
         parentAuthorization
       );
     // All content on community guidelines is public
-    communityGuidelines.authorization.anonymousReadAccess = true;
+    communityGuidelines.authorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+        communityGuidelines.authorization
+      );
     updatedAuthorizations.push(communityGuidelines.authorization);
 
     const profileAuthorizations =

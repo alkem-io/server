@@ -111,9 +111,6 @@ export class RoleSetAuthorizationService {
       );
     }
 
-    // always false
-    roleSet.authorization.anonymousReadAccess = false;
-
     updatedAuthorizations.push(roleSet.authorization);
 
     for (const application of roleSet.applications) {

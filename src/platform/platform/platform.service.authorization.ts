@@ -127,7 +127,10 @@ export class PlatformAuthorizationService {
       );
     platformStorageAuth =
       this.extendStorageAuthorizationPolicy(platformStorageAuth);
-    platformStorageAuth.anonymousReadAccess = true;
+    platformStorageAuth =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+        platformStorageAuth
+      );
 
     const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
@@ -180,14 +183,15 @@ export class PlatformAuthorizationService {
     newRules.push(communicationRules);
 
     // Set globally visible to replicate what already
-    authorization.anonymousReadAccess = true;
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+        authorization
+      );
 
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      updatedAuthorization,
       newRules
     );
-
-    return authorization;
   }
 
   private extendStorageAuthorizationPolicy(

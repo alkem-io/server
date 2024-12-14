@@ -124,7 +124,10 @@ export class SpaceAuthorizationService {
           space.authorization
         );
         if (!isPrivate) {
-          space.authorization.anonymousReadAccess = true;
+          space.authorization =
+            this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+              space.authorization
+            );
         }
         break;
       }
@@ -144,8 +147,6 @@ export class SpaceAuthorizationService {
               space.authorization,
               parentAuthorization
             );
-          space.authorization.anonymousReadAccess =
-            parentAuthorization.anonymousReadAccess;
         }
         // For subspace, the parent space admins credentials should be allowed to delete
         const parentSpaceCommunity = space.parentSpace?.community;
@@ -174,8 +175,7 @@ export class SpaceAuthorizationService {
 
         break;
       case SpaceVisibility.ARCHIVED:
-        // ensure it has visibility privilege set to private
-        space.authorization.anonymousReadAccess = false;
+        // ensure it has visibility privilege set to priva
         spaceMembershipAllowed = false;
         break;
     }
@@ -336,7 +336,10 @@ export class SpaceAuthorizationService {
       );
     switch (space.level) {
       case SpaceLevel.SPACE: {
-        clonedAuthorization.anonymousReadAccess = true;
+        clonedAuthorization =
+          this.authorizationPolicyService.appendCredentialRuleAnonymousReadAccess(
+            clonedAuthorization
+          );
         break;
       }
       case SpaceLevel.CHALLENGE:
@@ -518,7 +521,6 @@ export class SpaceAuthorizationService {
   ): IAuthorizationPolicy {
     let updatedAuthorization =
       this.authorizationPolicyService.reset(authorizationPolicy);
-    updatedAuthorization.anonymousReadAccess = false;
     updatedAuthorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         updatedAuthorization
