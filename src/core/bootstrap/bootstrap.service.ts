@@ -57,8 +57,8 @@ import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-defini
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
 import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
-import { LicensePlanService } from '@platform/license-plan/license.plan.service';
-import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/ai.persona.service.service';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
@@ -520,7 +520,7 @@ export class BootstrapService {
 
       const space = await this.accountService.createSpaceOnAccount(spaceInput);
       const spaceAuthorizations =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
       await this.authorizationPolicyService.saveAll(spaceAuthorizations);
 
       const accountEntitlements =

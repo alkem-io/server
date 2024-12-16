@@ -7,8 +7,8 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AiPersonaService } from './ai.persona.service.entity';
 import { IAiPersonaService } from './ai.persona.service.interface';
 import {
-  CreateAiPersonaServiceInput as CreateAiPersonaServiceInput,
-  DeleteAiPersonaServiceInput as DeleteAiPersonaServiceInput,
+  CreateAiPersonaServiceInput,
+  DeleteAiPersonaServiceInput,
 } from './dto';
 import { UpdateAiPersonaServiceInput } from './dto/ai.persona.service.dto.update';
 import { AiPersonaServiceInvocationInput } from './dto/ai.persona.service.invocation.dto.input';
@@ -190,11 +190,12 @@ export class AiPersonaServiceService {
   }
 
   public async ingest(aiPersonaService: IAiPersonaService): Promise<boolean> {
+    return true;
     // Todo: ???
-    return this.aiPersonaEngineAdapter.sendIngest({
-      engine: AiPersonaEngine.EXPERT,
-      userID: aiPersonaService.id, // TODO: clearly wrong, just getting code to compile
-    });
+    // return this.aiPersonaEngineAdapter.sendIngest({
+    //   engine: AiPersonaEngine.EXPERT,
+    //   userID: aiPersonaService.id, // TODO: clearly wrong, just getting code to compile
+    // });
   }
 
   private encryptExternalConfig(

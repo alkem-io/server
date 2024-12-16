@@ -5,7 +5,6 @@ export enum TemplateType {
   POST = 'post',
   WHITEBOARD = 'whiteboard',
   COMMUNITY_GUIDELINES = 'community-guidelines',
-  INNOVATION_FLOW = 'innovation-flow',
   COLLABORATION = 'collaboration',
 }
 

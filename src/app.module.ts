@@ -61,7 +61,6 @@ import {
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
-import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
 import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
@@ -85,6 +84,10 @@ import { TemplateApplierModule } from '@domain/template/template-applier/templat
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
+import { InAppNotificationReaderModule } from '@domain/in-app-notification-reader/in.app.notification.reader.module';
+import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
+import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
+import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 
 @Module({
   imports: [
@@ -139,6 +142,7 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
+          timezone: dbOptions.timezone,
           charset: dbOptions.charset,
           username: dbOptions.username,
           password: dbOptions.password,
@@ -264,6 +268,8 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
+    LicensingWingbackSubscriptionModule,
+    WingbackManagerModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
@@ -281,7 +287,6 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
-    ExcalidrawServerModule,
     ChatGuidanceModule,
     VirtualContributorModule,
     InputCreatorModule,
@@ -295,6 +300,8 @@ import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
     FileIntegrationModule,
     PlatformSettingsModule,
     TemplateApplierModule,
+    InAppNotificationReaderModule,
+    InAppNotificationReceiverModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

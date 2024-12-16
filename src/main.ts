@@ -14,6 +14,8 @@ import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { INestApplication } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
+import { renderGraphiQL } from 'graphql-helix';
+import { Request, Response } from 'express';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
@@ -71,6 +73,16 @@ const bootstrap = async () => {
     })
   );
 
+  // Serve the GraphiQL interface at '/graphiql'
+  app.use('/graphiql', (_req: Request, res: Response) => {
+    res.send(
+      renderGraphiQL({
+        endpoint: '/graphql',
+        //subscriptionsEndpoint: '/graphql',
+      })
+    );
+  });
+
   await app.listen(port);
 
   const connectionOptions = configService.get(
@@ -83,6 +95,7 @@ const bootstrap = async () => {
   connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
   await app.startAllMicroservices();
 };
 

@@ -56,10 +56,7 @@ export class AiServerService {
       if (
         isInputValidForAction(event.original, InvocationResultAction.POST_REPLY)
       ) {
-        this.roomControllerService.postReply(
-          event.original.resultHandler.roomDetails!,
-          event.response
-        );
+        this.roomControllerService.postReply(event);
       }
     },
     [InvocationResultAction.POST_MESSAGE]: (event: InvokeEngineResult) => {
@@ -69,10 +66,7 @@ export class AiServerService {
           InvocationResultAction.POST_MESSAGE
         )
       ) {
-        this.roomControllerService.postMessage(
-          event.original.resultHandler.roomDetails!,
-          event.response
-        );
+        this.roomControllerService.postMessage(event);
       }
     },
   };
@@ -216,6 +210,7 @@ export class AiServerService {
     const HISTORY_ENABLED_ENGINES = new Set<AiPersonaEngine>([
       AiPersonaEngine.EXPERT,
       AiPersonaEngine.GUIDANCE,
+      AiPersonaEngine.GENERIC_OPENAI,
     ]);
 
     // history should be loaded trough the GQL API of the collaboration server
@@ -422,8 +417,8 @@ export class AiServerService {
       engine: aiPersonaService.engine,
       userID: '',
     };
-    const result =
-      await this.aiPersonaEngineAdapter.sendIngest(ingestAdapterInput);
+    const result = true;
+    // await this.aiPersonaEngineAdapter.sendIngest(ingestAdapterInput);
     return result;
   }
 

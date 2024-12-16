@@ -85,6 +85,12 @@ search:
   # The dash at the end is MANDATORY
   index_pattern: ${ELASTIC_SEARCH_INDEX_PATTERN}:alkemio-data-
 
+licensing:
+  wingback:
+    enabled: ${LICENSING_WINGBACK_ENABLED}:false
+    key: ${LICENSING_WINGBACK_API_KEY}
+    endpoint: ${LICENSING_WINGBACK_API_ENDPOINT}
+
 ## identity ##
 
 # Defines all authentication and authorization configuration.
@@ -277,6 +283,9 @@ communications:
 ## storage ##
 # Alkemio uses multiple types of persistent storage, including SQL database, postgres database, file storage, redis.
 storage:
+  #
+  enabled: ${STORAGE_ENABLED}:true
+  #
   file:
     # 20MB
     max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
@@ -292,6 +301,9 @@ storage:
 
     # MySQL username.
     username: 'root'
+
+    # The timezone in which typeorm will interpret the dates. Default is Z for UTC
+    timezone: ${TYPEORM_TIMEZONE}:Z
 
     # MySQL password.
     password: ${MYSQL_ROOT_PASSWORD}:toor

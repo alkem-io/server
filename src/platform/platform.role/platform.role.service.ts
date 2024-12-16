@@ -19,7 +19,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { PlatformService } from '@platform/platform/platform.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AccountService } from '@domain/space/account/account.service';
-import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 
 @Injectable()
 export class PlatformRoleService {
@@ -99,7 +99,7 @@ export class PlatformRoleService {
       const accountAgent = await this.accountService.getAgent(user.accountID);
 
       const accountLicenseCredential: ICredentialDefinition = {
-        type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
       await this.agentService.grantCredential({
@@ -147,7 +147,7 @@ export class PlatformRoleService {
       // Also assign the user account a license plan
       const accountAgent = await this.accountService.getAgent(user.accountID);
       const accountLicenseCredential: ICredentialDefinition = {
-        type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
       await this.agentService.revokeCredential({
@@ -185,6 +185,47 @@ export class PlatformRoleService {
     }
 
     return result;
+  }
+
+  public async getPlatformRolesForUser(
+    userID: string
+  ): Promise<PlatformRole[]> {
+    const result: PlatformRole[] = [];
+    const agent = await this.userService.getAgentOrFail(userID);
+    const roles: PlatformRole[] = Object.values(PlatformRole) as PlatformRole[];
+    for (const role of roles) {
+      const hasAgentRole = await this.isInRole(agent, role);
+      if (hasAgentRole) {
+        result.push(role);
+      }
+    }
+
+    return result;
+  }
+
+  public async getPlatformRolesForUsers(
+    userIDs: string[]
+  ): Promise<{ [userID: string]: PlatformRole[] }> {
+    // Retrieve all agents for the provided user IDs in a single query
+    const usersWithAgents = await this.userService.getUsers(userIDs, {
+      relations: { agent: true },
+    });
+
+    // Initialize a result map to store roles for each user
+    const userRolesMap: { [userID: string]: PlatformRole[] } = {};
+
+    // Iterate over each agent and determine their roles
+    for (const { id: userID, agent } of usersWithAgents) {
+      const roles: PlatformRole[] = [];
+      for (const platformRole of Object.values(PlatformRole)) {
+        if (await this.isInRole(agent, platformRole)) {
+          roles.push(platformRole);
+        }
+      }
+      userRolesMap[userID] = roles;
+    }
+
+    return userRolesMap;
   }
 
   private async isInRole(agent: IAgent, role: PlatformRole): Promise<boolean> {

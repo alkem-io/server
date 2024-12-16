@@ -97,7 +97,7 @@ export class RoomServiceMentions {
   }
 
   public async invokeVirtualContributor(
-    uuid: string,
+    virtualContributorID: string,
     message: string,
     threadID: string,
     agentInfo: AgentInfo,
@@ -106,11 +106,14 @@ export class RoomServiceMentions {
     vcInteraction: IVcInteraction | undefined = undefined
   ) {
     const virtualContributor =
-      await this.virtualContributorService.getVirtualContributor(uuid, {
-        relations: {
-          aiPersona: true,
-        },
-      });
+      await this.virtualContributorService.getVirtualContributor(
+        virtualContributorID,
+        {
+          relations: {
+            aiPersona: true,
+          },
+        }
+      );
 
     const virtualPersona = virtualContributor?.aiPersona;
 

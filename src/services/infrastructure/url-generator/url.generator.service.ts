@@ -549,19 +549,6 @@ export class UrlGeneratorService {
       return await this.getJourneyUrlPath('collaborationId', collaboration.id);
     }
 
-    const template = await this.entityManager.findOne(Template, {
-      where: {
-        innovationFlow: {
-          id: innovationFlow.id,
-        },
-      },
-      relations: {
-        profile: true,
-      },
-    });
-    if (template) {
-      return await this.getTemplateUrlPathOrFail(template.profile.id);
-    }
     throw new EntityNotFoundException(
       `Unable to find innovationFlow for profile: ${profileID}`,
       LogContext.URL_GENERATOR

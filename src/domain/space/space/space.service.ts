@@ -62,11 +62,11 @@ import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AccountHostService } from '../account.host/account.host.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { LicenseCredential } from '@common/enums/license.credential';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { IAccount } from '../account/account.interface';
-import { LicensePlanType } from '@common/enums/license.plan.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -77,13 +77,13 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
-import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { getDiff, hasOnlyAllowedFields } from '@common/utils';
-import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -106,7 +106,7 @@ export class SpaceService {
     private templatesManagerService: TemplatesManagerService,
     private collaborationService: CollaborationService,
     private licensingFrameworkService: LicensingFrameworkService,
-    private licenseEngineService: LicenseEngineService,
+    private licenseEngineService: LicensingCredentialBasedService,
     private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -917,12 +917,12 @@ export class SpaceService {
     const subscriptions: ISpaceSubscription[] = [];
     for (const credential of space.agent.credentials) {
       if (
-        Object.values(LicenseCredential).includes(
-          credential.type as LicenseCredential
+        Object.values(LicensingCredentialBasedCredentialType).includes(
+          credential.type as LicensingCredentialBasedCredentialType
         )
       ) {
         subscriptions.push({
-          name: credential.type as LicenseCredential,
+          name: credential.type as LicensingCredentialBasedCredentialType,
           expires: credential.expires,
         });
       }
@@ -1319,7 +1319,9 @@ export class SpaceService {
           ),
         };
       })
-      .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
+      .filter(
+        item => item.plan?.type === LicensingCredentialBasedPlanType.SPACE_PLAN
+      )
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0]?.subscription;
   }
 

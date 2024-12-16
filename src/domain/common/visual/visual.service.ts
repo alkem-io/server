@@ -14,7 +14,6 @@ import { getImageDimensions, streamToBuffer } from '@common/utils';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
-import { avatarMinImageSize, avatarMaxImageSize } from './avatar.constants';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { ReadStream } from 'fs';
 import { IDocument } from '@domain/storage/document/document.interface';
@@ -22,6 +21,8 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { VisualType } from '@common/enums/visual.type';
+import { DEFAULT_VISUAL_CONSTRAINTS } from './visual.constraints';
 
 @Injectable()
 export class VisualService {
@@ -188,12 +189,8 @@ export class VisualService {
   public createVisualBanner(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: 'banner',
-        minWidth: 384,
-        maxWidth: 1536,
-        minHeight: 64,
-        maxHeight: 256,
-        aspectRatio: 6,
+        name: VisualType.BANNER,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.BANNER],
       },
       uri
     );
@@ -202,12 +199,8 @@ export class VisualService {
   public createVisualCard(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: 'card',
-        minWidth: 307,
-        maxWidth: 410,
-        minHeight: 192,
-        maxHeight: 256,
-        aspectRatio: 1.6,
+        name: VisualType.CARD,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.CARD],
       },
       uri
     );
@@ -216,12 +209,8 @@ export class VisualService {
   public createVisualBannerWide(uri?: string): IVisual {
     return this.createVisual(
       {
-        name: 'bannerWide',
-        minWidth: 640,
-        maxWidth: 2560,
-        minHeight: 64,
-        maxHeight: 256,
-        aspectRatio: 10,
+        name: VisualType.BANNER_WIDE,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.BANNER_WIDE],
       },
       uri
     );
@@ -229,12 +218,8 @@ export class VisualService {
 
   public createVisualAvatar(): IVisual {
     return this.createVisual({
-      name: 'avatar',
-      minWidth: avatarMinImageSize,
-      maxWidth: avatarMaxImageSize,
-      minHeight: avatarMinImageSize,
-      maxHeight: avatarMaxImageSize,
-      aspectRatio: 1,
+      name: VisualType.AVATAR,
+      ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
     });
   }
 }

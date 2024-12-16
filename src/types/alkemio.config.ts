@@ -33,6 +33,13 @@ export type AlkemioConfig = {
     max_results: number;
     index_pattern: string;
   };
+  licensing: {
+    wingback: {
+      enabled: boolean;
+      key: string;
+      endpoint: string;
+    };
+  };
   identity: {
     authentication: {
       api_access_enabled: boolean;
@@ -96,12 +103,14 @@ export type AlkemioConfig = {
     };
   };
   storage: {
+    enabled: boolean;
     file: {
       max_file_size: number;
     };
     database: {
       host: string;
       port: number;
+      timezone: string;
       username: string;
       password: string;
       schema: string;
