@@ -1,12 +1,12 @@
-import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('AccountSubscription')
 export abstract class IAccountSubscription {
-  @Field(() => LicenseCredential, {
+  @Field(() => LicensingCredentialBasedCredentialType, {
     description: 'The name of the Subscription.',
   })
-  name!: LicenseCredential;
+  name!: LicensingCredentialBasedCredentialType;
 
   @Field(() => Date, {
     nullable: true,

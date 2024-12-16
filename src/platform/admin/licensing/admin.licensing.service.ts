@@ -3,7 +3,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
-import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
+import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -11,9 +11,9 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { IAccount } from '@domain/space/account/account.interface';
-import { LicensePlanType } from '@common/enums/license.plan.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
 import { ValidationException } from '@common/exceptions';
-import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 
@@ -39,8 +39,9 @@ export class AdminLicensingService {
         licensePlanData.licensePlanID
       );
     const isLicensePlanTypeForSpaces =
-      licensePlan.type === LicensePlanType.SPACE_FEATURE_FLAG ||
-      licensePlan.type === LicensePlanType.SPACE_PLAN;
+      licensePlan.type ===
+        LicensingCredentialBasedPlanType.SPACE_FEATURE_FLAG ||
+      licensePlan.type === LicensingCredentialBasedPlanType.SPACE_PLAN;
     if (!isLicensePlanTypeForSpaces) {
       throw new ValidationException(
         `License Plan is not for Spaces: ${licensePlan.type}`,
@@ -82,8 +83,9 @@ export class AdminLicensingService {
         licensePlanData.licensePlanID
       );
     const isLicensePlanTypeForSpaces =
-      licensePlan.type === LicensePlanType.SPACE_FEATURE_FLAG ||
-      licensePlan.type === LicensePlanType.SPACE_PLAN;
+      licensePlan.type ===
+        LicensingCredentialBasedPlanType.SPACE_FEATURE_FLAG ||
+      licensePlan.type === LicensingCredentialBasedPlanType.SPACE_PLAN;
     if (!isLicensePlanTypeForSpaces) {
       throw new ValidationException(
         `License Plan is not for Spaces: ${licensePlan.type}`,
@@ -125,8 +127,9 @@ export class AdminLicensingService {
         licensePlanData.licensePlanID
       );
     const isLicensePlanTypeForAccounts =
-      licensePlan.type === LicensePlanType.ACCOUNT_PLAN ||
-      licensePlan.type === LicensePlanType.ACCOUNT_FEATURE_FLAG;
+      licensePlan.type === LicensingCredentialBasedPlanType.ACCOUNT_PLAN ||
+      licensePlan.type ===
+        LicensingCredentialBasedPlanType.ACCOUNT_FEATURE_FLAG;
     if (!isLicensePlanTypeForAccounts) {
       throw new ValidationException(
         `License Plan is not for Accounts: ${licensePlan.type}`,
@@ -167,8 +170,9 @@ export class AdminLicensingService {
         licensePlanData.licensePlanID
       );
     const isLicensePlanTypeForAccounts =
-      licensePlan.type === LicensePlanType.ACCOUNT_PLAN ||
-      licensePlan.type === LicensePlanType.ACCOUNT_FEATURE_FLAG;
+      licensePlan.type === LicensingCredentialBasedPlanType.ACCOUNT_PLAN ||
+      licensePlan.type ===
+        LicensingCredentialBasedPlanType.ACCOUNT_FEATURE_FLAG;
     if (!isLicensePlanTypeForAccounts) {
       throw new ValidationException(
         `License Plan is not for Accounts: ${licensePlan.type}`,

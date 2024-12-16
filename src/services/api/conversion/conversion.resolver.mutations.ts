@@ -16,6 +16,8 @@ import { SpaceAuthorizationService } from '@domain/space/space/space.service.aut
 import { ConvertSubsubspaceToSubspaceInput } from './dto/convert.dto.subsubspace.to.subspace.input';
 import { SpaceService } from '@domain/space/space/space.service';
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Resolver()
 export class ConversionResolverMutations {
@@ -60,7 +62,7 @@ export class ConversionResolverMutations {
     );
     space = await this.spaceService.save(space);
     const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     return this.spaceService.getSpaceOrFail(space.id);
@@ -89,9 +91,35 @@ export class ConversionResolverMutations {
         agentInfo
       );
     subspace = await this.spaceService.save(subspace);
+
+    const parentAuthorization = await this.getParentSpaceAuthorization(
+      subspace.id
+    );
     const subspaceAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        subspace.id,
+        parentAuthorization
+      );
     await this.authorizationPolicyService.saveAll(subspaceAuthorizations);
     return await this.spaceService.getSpaceOrFail(subspace.id);
+  }
+
+  private async getParentSpaceAuthorization(
+    subspaceID: string
+  ): Promise<IAuthorizationPolicy | never> {
+    const subspace = await this.spaceService.getSpaceOrFail(subspaceID, {
+      relations: {
+        parentSpace: {
+          authorization: true,
+        },
+      },
+    });
+    if (!subspace.parentSpace || !subspace.parentSpace.authorization) {
+      throw new RelationshipNotFoundException(
+        `Unable to load parent space authorization for subspace: ${subspaceID}`,
+        LogContext.CONVERSION
+      );
+    }
+    return subspace.parentSpace.authorization;
   }
 }

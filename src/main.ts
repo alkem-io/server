@@ -95,6 +95,7 @@ const bootstrap = async () => {
   connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
   await app.startAllMicroservices();
 };
 
