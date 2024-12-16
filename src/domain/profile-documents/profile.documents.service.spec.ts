@@ -1,18 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ProfileVisualsService } from './profile.visuals.service';
+import { ProfileDocumentsService } from './profile.documents.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { uniqueId } from 'lodash';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
-import { IAuthorizationPolicy } from '../authorization-policy';
+import { IAuthorizationPolicy } from '../common/authorization-policy';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IDocument } from '@domain/storage/document';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 
 const ALKEMIO_URL = 'https://alkem.io';
+const ALKEMIO_DOCUMENT_URL = `${ALKEMIO_URL}/api/private/rest/storage/document`;
 const EXAMPLE_DOCUMENT_UUID = '88bd49d1-871d-479a-94b5-d905c93a97de';
-const EXAMPLE_ALKEMIO_DOCUMENT_URL = `${ALKEMIO_URL}/api/private/rest/storage/document/${EXAMPLE_DOCUMENT_UUID}`;
+const EXAMPLE_ALKEMIO_DOCUMENT_URL = `${ALKEMIO_DOCUMENT_URL}/${EXAMPLE_DOCUMENT_UUID}`;
 
 const mockAuth = (
   type: AuthorizationPolicyType,
@@ -39,7 +41,8 @@ const mockStorageBucket = (props?: Partial<IStorageBucket>): IStorageBucket => {
 
 const mockDocument = (
   storageBucket: IStorageBucket,
-  props?: Partial<IDocument>
+  props?: Partial<IDocument>,
+  addToStorageBucket: boolean = true
 ): IDocument => {
   const doc = {
     id: uniqueId(),
@@ -59,36 +62,47 @@ const mockDocument = (
     ...props,
     storageBucket,
   };
-  storageBucket.documents.push(doc);
+  if (addToStorageBucket) {
+    storageBucket.documents.push(doc);
+  }
   return doc;
 };
 
-describe('ProfileVisualsService', () => {
-  let service: ProfileVisualsService;
+describe('ProfileDocumentsService', () => {
+  let service: ProfileDocumentsService;
   let documentService: DocumentService;
   let storageBucketService: StorageBucketService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ProfileVisualsService,
+        ProfileDocumentsService,
         {
           provide: DocumentService,
           useValue: {
-            //getDocumentsBaseUrlPath: jest.fn(),
+            getDocumentsBaseUrlPath: jest.fn(),
             isAlkemioDocumentURL: jest.fn(),
             getDocumentFromURL: jest.fn(),
             getPubliclyAccessibleURL: jest.fn(),
+            createDocument: jest.fn(),
           },
         },
         {
           provide: StorageBucketService,
-          useValue: {},
+          useValue: {
+            addDocumentToStorageBucketOrFail: jest.fn(),
+          },
+        },
+        {
+          provide: DocumentAuthorizationService,
+          useValue: {
+            applyAuthorizationPolicy: jest.fn(),
+          },
         },
       ],
     }).compile();
 
-    service = module.get<ProfileVisualsService>(ProfileVisualsService);
+    service = module.get<ProfileDocumentsService>(ProfileDocumentsService);
     documentService = module.get<DocumentService>(DocumentService);
     storageBucketService =
       module.get<StorageBucketService>(StorageBucketService);
@@ -159,7 +173,7 @@ describe('ProfileVisualsService', () => {
       mockDocument(storageBucketDestination);
       // the doc
       const doc = mockDocument(storageBucketOrigin, {
-        temporaryLocation: false,
+        temporaryLocation: true,
       });
       mockDocument(storageBucketOrigin);
       mockDocument(storageBucketDestination);
@@ -192,7 +206,7 @@ describe('ProfileVisualsService', () => {
       mockDocument(storageBucketDestination);
       // the doc
       const doc = mockDocument(storageBucketOrigin, {
-        temporaryLocation: true,
+        temporaryLocation: false,
       });
       mockDocument(storageBucketOrigin);
       mockDocument(storageBucketDestination);
@@ -203,6 +217,17 @@ describe('ProfileVisualsService', () => {
       jest
         .spyOn(documentService, 'getPubliclyAccessibleURL')
         .mockReturnValue(resultUrl);
+
+      const newDocMock = mockDocument(storageBucketDestination, {
+        ...doc,
+        id: uniqueId(),
+      });
+      jest
+        .spyOn(documentService, 'createDocument')
+        .mockResolvedValue(newDocMock);
+      jest
+        .spyOn(storageBucketService, 'addDocumentToStorageBucketOrFail')
+        .mockResolvedValue(newDocMock);
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -216,154 +241,65 @@ describe('ProfileVisualsService', () => {
       const newDoc = storageBucketDestination.documents[3];
       expect(newDoc.storageBucket).toBe(storageBucketDestination);
       expect(newDoc.id === doc.id).toBe(false);
-      expect(newDoc.externalID === doc.externalID).toBe(true);
+      expect(newDoc.externalID).toBe(doc.externalID);
       expect(newDoc.temporaryLocation).toBe(false);
-      expect(newDoc.displayName === doc.displayName).toBe(true);
-    });
-    /*
-  describe('reuploadDocumentsInMarkdownProfile', () => {
-    it('should replace document URLs in markdown', async () => {
-      const markdown = `Some text with a document URL: ${ALKEMIO_URL}/private/http://example.com/doc/1234  and another one with an alkemio url: `;
-      const storageBucket: IStorageBucket = {
-        id: 'bucket1',
-        documents: [],
-        allowedMimeTypes: [],
-        maxFileSize: 2000,
-      };
-      const newUrl = 'http://newurl.com/doc/1234';
-
-      jest
-        .spyOn(documentService, 'getDocumentsBaseUrlPath')
-        .mockReturnValue(ALKEMIO_URL);
-      jest
-        .spyOn(service, 'reuploadFileOnStorageBucket')
-        .mockResolvedValue(newUrl);
-
-      const result = await service.reuploadDocumentsInMarkdownProfile(
-        markdown,
-        storageBucket
-      );
-
-      expect(result).toContain(newUrl);
-    });
-  });
-
-  describe('reuploadFileOnStorageBucket', () => {
-    it('should return undefined if alkemioRequired is true and URL is not an Alkemio document', async () => {
-      const fileUrl = 'http://external.com/doc/1234';
-      const storageBucket: IStorageBucket = {
-        id: 'bucket1',
-        documents: [],
-        allowedMimeTypes: [],
-        maxFileSize: 2000,
-      };
-
-      jest
-        .spyOn(documentService, 'isAlkemioDocumentURL')
-        .mockReturnValue(false);
-
-      const result = await service.reuploadFileOnStorageBucket(
-        fileUrl,
-        storageBucket,
-        true
-      );
-
-      expect(result).toBeUndefined();
+      expect(newDoc.displayName).toBe(doc.displayName);
     });
 
-    it('should throw EntityNotInitializedException if documents are not initialized', async () => {
-      const fileUrl = 'http://example.com/doc/1234';
-      const storageBucket: IStorageBucket = {
-        id: 'bucket1',
-        documents: [],
-        allowedMimeTypes: [],
-        maxFileSize: 2000,
-      };
+    describe('reuploadDocumentsInMarkdownProfile', () => {
+      it('should leave markdown as is if no document urls', async () => {
+        const markdown =
+          'Some text with an external URL: https://example.com/test/image.png\n\nMarkdown Link asf dsa [link](https://example.com/test/image2.png) fdsafdsa dsdsfdsfsd dsa d fda <img src="http://example.com/test/image3.png" alt="image in html"/> <a href="https://alkem.io" />';
+        const storageBucketDestination = mockStorageBucket();
 
-      await expect(
-        service.reuploadFileOnStorageBucket(fileUrl, storageBucket, false)
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
+        jest
+          .spyOn(documentService, 'getDocumentsBaseUrlPath')
+          .mockReturnValue(ALKEMIO_DOCUMENT_URL);
 
-    it('should reupload file and return new URL', async () => {
-      const fileUrl = 'http://example.com/doc/1234';
-      const storageBucket: IStorageBucket = {
-        id: 'bucket1',
-        documents: [],
-        allowedMimeTypes: [],
-        maxFileSize: 2000,
-      };
-      const newUrl = 'http://newurl.com/doc/1234';
+        const result = await service.reuploadDocumentsInMarkdownProfile(
+          markdown,
+          storageBucketDestination
+        );
 
-      jest.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
-      jest.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue({
-        id: 'doc1',
-        storageBucket,
-        tagset,
-        displayName,
-        createdBy,
+        expect(result).toBe(markdown);
       });
-      jest
-        .spyOn(storageBucketService, 'uploadDocument')
-        .mockResolvedValue(newUrl);
 
-      const result = await service.reuploadFileOnStorageBucket(
-        fileUrl,
-        storageBucket,
-        false
-      );
+      it('should replace alkemio document urls from documents when not in the same StorageBucket', async () => {
+        const markdown = `Some text with a document URL: ${EXAMPLE_ALKEMIO_DOCUMENT_URL} and another one with an alkemio url fdsafdsa  [${EXAMPLE_ALKEMIO_DOCUMENT_URL}](${EXAMPLE_ALKEMIO_DOCUMENT_URL}) dsdsfdsfsd dsa d fda`;
+        const resultUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
+        const markdownResult = `Some text with a document URL: ${resultUrl} and another one with an alkemio url fdsafdsa  [${resultUrl}](${resultUrl}) dsdsfdsfsd dsa d fda`;
 
-      expect(result).toBe(newUrl);
+        const storageBucketDestination = mockStorageBucket();
+        const doc = mockDocument(storageBucketDestination);
+
+        jest
+          .spyOn(documentService, 'getDocumentsBaseUrlPath')
+          .mockReturnValue(ALKEMIO_DOCUMENT_URL);
+
+        jest
+          .spyOn(documentService, 'isAlkemioDocumentURL')
+          .mockReturnValue(true);
+        jest
+          .spyOn(documentService, 'getDocumentFromURL')
+          .mockResolvedValue(doc);
+
+        jest
+          .spyOn(documentService, 'getPubliclyAccessibleURL')
+          .mockReturnValue(resultUrl);
+
+        jest.spyOn(documentService, 'createDocument').mockResolvedValue(doc);
+        jest
+          .spyOn(storageBucketService, 'addDocumentToStorageBucketOrFail')
+          .mockResolvedValue(doc);
+
+        const result = await service.reuploadDocumentsInMarkdownProfile(
+          markdown,
+          storageBucketDestination
+        );
+
+        expect(result).toBe(markdownResult);
+        expect(storageBucketDestination.documents).toHaveLength(1);
+      });
     });
-
-    it('should handle NotFoundException when document is not found', async () => {
-      const fileUrl = 'http://example.com/doc/1234';
-      const storageBucket: IStorageBucket = {
-        id: 'bucket1',
-        documents: [],
-        allowedMimeTypes: [],
-        maxFileSize: 2000,
-      };
-
-      jest.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
-      jest
-        .spyOn(documentService, 'getDocumentFromURL')
-        .mockRejectedValue(new NotFoundException());
-
-      await expect(
-        service.reuploadFileOnStorageBucket(fileUrl, storageBucket, false)
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('reuploadDocumentsInMarkdownProfile', () => {
-    it('should replace multiple document URLs in markdown', async () => {
-      const markdown = `Some text with a document URL: ${ALKEMIO_URL}/private/http://example.com/doc/1234 and another one: ${ALKEMIO_URL}/private/http://example.com/doc/5678`;
-      const storageBucket: IStorageBucket = {
-        id: 'bucket1',
-        documents: [],
-        allowedMimeTypes: [],
-        maxFileSize: 2000,
-      };
-      const newUrl1 = 'http://newurl.com/doc/1234';
-      const newUrl2 = 'http://newurl.com/doc/5678';
-
-      jest
-        .spyOn(documentService, 'getDocumentsBaseUrlPath')
-        .mockReturnValue(ALKEMIO_URL);
-      jest
-        .spyOn(service, 'reuploadFileOnStorageBucket')
-        .mockResolvedValueOnce(newUrl1)
-        .mockResolvedValueOnce(newUrl2);
-
-      const result = await service.reuploadDocumentsInMarkdownProfile(
-        markdown,
-        storageBucket
-      );
-
-      expect(result).toContain(newUrl1);
-      expect(result).toContain(newUrl2);
-    });
-  */
   });
 });

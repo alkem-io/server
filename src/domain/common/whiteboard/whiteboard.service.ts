@@ -245,6 +245,12 @@ export class WhiteboardService {
         },
       }
     );
+    if (!profile.storageBucket) {
+      throw new EntityNotInitializedException(
+        'Profile: no definition of StorageBucket',
+        LogContext.PROFILE
+      );
+    }
 
     for (const [, file] of files) {
       if (!file.url) {
@@ -252,12 +258,13 @@ export class WhiteboardService {
       }
 
       const newDocUrl =
-        await this.profileDocumentsService.reuploadDocumentToProfile(
+        await this.profileDocumentsService.reuploadFileOnStorageBucket(
           file.url,
-          profile
+          profile.storageBucket,
+          true
         );
 
-      if (!newDocUrl) {
+      if (!newDocUrl || newDocUrl === file.url) {
         continue;
       }
 

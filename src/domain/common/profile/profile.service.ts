@@ -33,7 +33,7 @@ import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.se
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 import { CreateReferenceInput } from '../reference';
-import { ProfileVisualsService } from './profile.visuals.service';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 
 @Injectable()
 export class ProfileService {
@@ -45,7 +45,7 @@ export class ProfileService {
     private referenceService: ReferenceService,
     private visualService: VisualService,
     private locationService: LocationService,
-    private profileVisualsService: ProfileVisualsService,
+    private profileDocumentsService: ProfileDocumentsService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -72,7 +72,7 @@ export class ProfileService {
       storageAggregator: storageAggregator,
     });
     profile.description =
-      await this.profileVisualsService.reuploadDocumentsInMarkdownProfile(
+      await this.profileDocumentsService.reuploadDocumentsInMarkdownProfile(
         profile.description ?? '',
         profile.storageBucket
       );
@@ -104,7 +104,7 @@ export class ProfileService {
     for (const reference of references ?? []) {
       const newReference = this.referenceService.createReference(reference);
       const newUrl =
-        await this.profileVisualsService.reuploadFileOnStorageBucket(
+        await this.profileDocumentsService.reuploadFileOnStorageBucket(
           newReference.uri,
           profile.storageBucket,
           false
@@ -256,7 +256,7 @@ export class ProfileService {
       const providedVisual = visualsData?.find(v => v.name === visualType);
       if (providedVisual) {
         const url =
-          await this.profileVisualsService.reuploadFileOnStorageBucket(
+          await this.profileDocumentsService.reuploadFileOnStorageBucket(
             providedVisual.uri,
             profile.storageBucket,
             true
