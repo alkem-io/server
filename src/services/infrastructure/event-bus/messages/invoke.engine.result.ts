@@ -24,6 +24,7 @@ export class InvokeEngineResponse {
   knowledgeLanguage!: string;
   originalResult!: string;
   sources!: Source[];
+  threadId?: string;
 
   constructor(data: Partial<InvokeEngineResponse>) {
     Object.assign(this, data);
