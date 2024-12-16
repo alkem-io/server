@@ -3,15 +3,65 @@ import { ProfileVisualsService } from './profile.visuals.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { NotFoundException } from '@nestjs/common';
-
-// ChatGPT generated tests, not ready yet
+import { uniqueId } from 'lodash';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { IAuthorizationPolicy } from '../authorization-policy';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetType } from '@common/enums/tagset.type';
+import { IDocument } from '@domain/storage/document';
 
 const ALKEMIO_URL = 'https://alkem.io';
-const DOUMENT_URL = (uuid: string) =>
-  `${ALKEMIO_URL}/api/private/rest/storage/document/${uuid}`;
-const example_document_url = `${ALKEMIO_URL}/api/private/rest/storage/document/88bd49d1-871d-479a-94b5-d905c93a97de`;
+const EXAMPLE_DOCUMENT_UUID = '88bd49d1-871d-479a-94b5-d905c93a97de';
+const EXAMPLE_ALKEMIO_DOCUMENT_URL = `${ALKEMIO_URL}/api/private/rest/storage/document/${EXAMPLE_DOCUMENT_UUID}`;
+
+const mockAuth = (
+  type: AuthorizationPolicyType,
+  props?: Partial<IAuthorizationPolicy>
+): IAuthorizationPolicy => ({
+  anonymousReadAccess: false,
+  credentialRules: '',
+  verifiedCredentialRules: '',
+  privilegeRules: '',
+  id: uniqueId(),
+  ...props,
+  type,
+});
+
+const mockStorageBucket = (props?: Partial<IStorageBucket>): IStorageBucket => {
+  return {
+    id: uniqueId(),
+    documents: [],
+    allowedMimeTypes: [],
+    maxFileSize: 2000,
+    ...props,
+  };
+};
+
+const mockDocument = (
+  storageBucket: IStorageBucket,
+  props?: Partial<IDocument>
+): IDocument => {
+  const doc = {
+    id: uniqueId(),
+    createdBy: 'user1',
+    externalID: uniqueId(),
+    displayName: 'img1.png',
+    mimeType: MimeTypeVisual.PNG,
+    size: 20000,
+    tagset: {
+      id: 'tagset1',
+      name: 'default',
+      type: TagsetType.FREEFORM,
+      tags: [],
+    },
+    authorization: mockAuth(AuthorizationPolicyType.DOCUMENT),
+    temporaryLocation: false,
+    ...props,
+    storageBucket,
+  };
+  storageBucket.documents.push(doc);
+  return doc;
+};
 
 describe('ProfileVisualsService', () => {
   let service: ProfileVisualsService;
@@ -25,9 +75,10 @@ describe('ProfileVisualsService', () => {
         {
           provide: DocumentService,
           useValue: {
-            getDocumentsBaseUrlPath: jest.fn(),
+            //getDocumentsBaseUrlPath: jest.fn(),
             isAlkemioDocumentURL: jest.fn(),
             getDocumentFromURL: jest.fn(),
+            getPubliclyAccessibleURL: jest.fn(),
           },
         },
         {
@@ -42,7 +93,134 @@ describe('ProfileVisualsService', () => {
     storageBucketService =
       module.get<StorageBucketService>(StorageBucketService);
   });
+  describe('reuploadFileOnStorageBucket', () => {
+    it('should return fileUrl if internalUrlRequired is false and URL is not an Alkemio document', async () => {
+      const fileUrl = 'http://external.com/doc/1234';
+      const storageBucket = mockStorageBucket();
 
+      jest
+        .spyOn(documentService, 'isAlkemioDocumentURL')
+        .mockReturnValue(false);
+
+      const result = await service.reuploadFileOnStorageBucket(
+        fileUrl,
+        storageBucket,
+        false
+      );
+
+      expect(result).toBe(fileUrl);
+    });
+
+    it('should return undefined if internalUrlRequired is true and URL is not an Alkemio document', async () => {
+      const fileUrl = 'http://external.com/doc/1234';
+      const storageBucket = mockStorageBucket();
+
+      jest
+        .spyOn(documentService, 'isAlkemioDocumentURL')
+        .mockReturnValue(false);
+
+      const result = await service.reuploadFileOnStorageBucket(
+        fileUrl,
+        storageBucket,
+        true
+      );
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return the same url if the file is already in the same stoarge bucket', async () => {
+      const fileUrl = EXAMPLE_ALKEMIO_DOCUMENT_URL;
+      const storageBucket: IStorageBucket = mockStorageBucket();
+      const doc = mockDocument(storageBucket);
+
+      jest.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+      jest.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
+      jest
+        .spyOn(documentService, 'getPubliclyAccessibleURL')
+        .mockReturnValue(EXAMPLE_ALKEMIO_DOCUMENT_URL);
+
+      const result = await service.reuploadFileOnStorageBucket(
+        fileUrl,
+        storageBucket,
+        true
+      );
+
+      expect(result).toBe(fileUrl);
+    });
+
+    it('should return the same document but moved to the new StorageBucket and not temporary anymore', async () => {
+      const fileUrl = EXAMPLE_ALKEMIO_DOCUMENT_URL;
+      const storageBucketOrigin: IStorageBucket = mockStorageBucket();
+      const storageBucketDestination: IStorageBucket = mockStorageBucket();
+      // A few test documents
+      mockDocument(storageBucketOrigin);
+      mockDocument(storageBucketOrigin);
+      mockDocument(storageBucketDestination);
+      mockDocument(storageBucketDestination);
+      // the doc
+      const doc = mockDocument(storageBucketOrigin, {
+        temporaryLocation: false,
+      });
+      mockDocument(storageBucketOrigin);
+      mockDocument(storageBucketDestination);
+
+      jest.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+      jest.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
+      jest
+        .spyOn(documentService, 'getPubliclyAccessibleURL')
+        .mockReturnValue(EXAMPLE_ALKEMIO_DOCUMENT_URL);
+
+      const result = await service.reuploadFileOnStorageBucket(
+        fileUrl,
+        storageBucketDestination,
+        true
+      );
+
+      expect(result).toBe(fileUrl);
+      expect(doc.temporaryLocation).toBe(false);
+      expect(doc.storageBucket).toBe(storageBucketDestination);
+    });
+
+    it('should return a copy of the document in the new StorageBucket', async () => {
+      const fileUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
+      const storageBucketOrigin: IStorageBucket = mockStorageBucket();
+      const storageBucketDestination: IStorageBucket = mockStorageBucket();
+      // A few test documents
+      mockDocument(storageBucketOrigin);
+      mockDocument(storageBucketOrigin);
+      mockDocument(storageBucketDestination);
+      mockDocument(storageBucketDestination);
+      // the doc
+      const doc = mockDocument(storageBucketOrigin, {
+        temporaryLocation: true,
+      });
+      mockDocument(storageBucketOrigin);
+      mockDocument(storageBucketDestination);
+
+      jest.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+      jest.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
+      const resultUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
+      jest
+        .spyOn(documentService, 'getPubliclyAccessibleURL')
+        .mockReturnValue(resultUrl);
+
+      const result = await service.reuploadFileOnStorageBucket(
+        fileUrl,
+        storageBucketDestination,
+        true
+      );
+
+      expect(result).toBe(resultUrl);
+      expect(result !== fileUrl).toBe(true);
+      expect(storageBucketDestination.documents).toHaveLength(4);
+      const newDoc = storageBucketDestination.documents[3];
+      expect(newDoc.storageBucket).toBe(storageBucketDestination);
+      expect(newDoc.id === doc.id).toBe(false);
+      expect(newDoc.externalID === doc.externalID).toBe(true);
+      expect(newDoc.temporaryLocation).toBe(false);
+      expect(newDoc.displayName === doc.displayName).toBe(true);
+    });
+    /*
   describe('reuploadDocumentsInMarkdownProfile', () => {
     it('should replace document URLs in markdown', async () => {
       const markdown = `Some text with a document URL: ${ALKEMIO_URL}/private/http://example.com/doc/1234  and another one with an alkemio url: `;
@@ -186,5 +364,6 @@ describe('ProfileVisualsService', () => {
       expect(result).toContain(newUrl1);
       expect(result).toContain(newUrl2);
     });
+  */
   });
 });

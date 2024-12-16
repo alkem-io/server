@@ -17,20 +17,22 @@ export class ProfileVisualsService {
     storageBucket: IStorageBucket
   ): Promise<string> {
     const baseUrl = this.documentService.getDocumentsBaseUrlPath() + '/';
-    const escapedBaseUrl = baseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedBaseUrl = this.escapeRegExp(baseUrl);
     const uuidPattern =
-      '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
-    const regex = new RegExp(`${escapedBaseUrl}(${uuidPattern})`, 'g');
+      '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
+    const regex = new RegExp(`${escapedBaseUrl}(${uuidPattern})`, 'ig');
 
     const matches = markdown.match(regex);
     if (matches?.length) {
       for (const match of matches) {
         const newUrl = await this.reuploadFileOnStorageBucket(
           match,
-          storageBucket
+          storageBucket,
+          false
         );
         if (newUrl) {
-          markdown = markdown.replace(match, newUrl);
+          markdown = this.replaceAll(markdown, match, newUrl);
         }
       }
     }
@@ -43,16 +45,17 @@ export class ProfileVisualsService {
    * of a profile and re-uploads it if not there
    * @param fileUrl The url of the file to check
    * @param storageBucket The StorageBucket in which the file should be
-   * @param alkemioRequired If true, the file must be inside Alkemio and if a fileUrl passed is outside Alkemio function will return undefined
+   * @param internalUrlRequired If true, the file must be inside Alkemio: if the url passed is outside Alkemio will return undefined.
+   *                            If false, the file can be outside Alkemio: if the url passed is outside Alkemio will return the same url (never download it)
    */
   public async reuploadFileOnStorageBucket(
     fileUrl: string,
     storageBucket: IStorageBucket,
-    alkemioRequired: boolean = false
+    internalUrlRequired: boolean = false
   ): Promise<string | undefined> {
     if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
       // If image is not inside Alkemio just return url (or undefined if image needs to be inside Alkemio, but never refetch it)
-      if (alkemioRequired) {
+      if (internalUrlRequired) {
         return undefined;
       } else {
         return fileUrl;
@@ -92,12 +95,11 @@ export class ProfileVisualsService {
       docInContent.storageBucket = storageBucket;
       docInContent.temporaryLocation = false;
       storageBucket.documents.push(docInContent);
-      this.documentService.save(docInContent);
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
       // if not in this bucket - create it inside it
       const newDoc = await this.documentService.createDocument({
-        createdBy: docInContent.createdBy,
+        createdBy: docInContent.createdBy, // TODO: This should be the current user
         displayName: docInContent.displayName,
         externalID: docInContent.externalID, // Point to the same content
         mimeType: docInContent.mimeType,
@@ -111,5 +113,15 @@ export class ProfileVisualsService {
       );
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
+  }
+
+  private escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private replaceAll(str: string, search: string, replace: string): string {
+    const escapedSearch = this.escapeRegExp(search);
+    const regexMatch = new RegExp(escapedSearch, 'g');
+    return str.replace(regexMatch, replace);
   }
 }

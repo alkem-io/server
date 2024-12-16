@@ -267,12 +267,14 @@ export class StorageBucketService {
     this.validateMimeTypes(storageBucket, document.mimeType);
     this.validateSize(storageBucket, document.size);
     document.storageBucket = storageBucket;
-
+    if (!storageBucket.documents.includes(document)) {
+      storageBucket.documents.push(document);
+    }
     this.logger.verbose?.(
       `Added document '${document.externalID}' on storage bucket: ${storageBucket.id}`,
       LogContext.STORAGE_BUCKET
     );
-    return this.documentService.save(document);
+    return document;
   }
 
   public async addDocumentToStorageBucketByIdOrFail(

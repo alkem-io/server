@@ -80,7 +80,7 @@ export class ProfileService {
     profile.location = this.locationService.createLocation(
       profileData?.location
     );
-    this.createReferencesOnProfile(profileData?.referencesData, profile);
+    await this.createReferencesOnProfile(profileData?.referencesData, profile);
 
     const tagsetsFromInput = profileData?.tagsets?.map(tagsetData =>
       this.tagsetService.createTagsetWithName([], tagsetData)
@@ -106,7 +106,8 @@ export class ProfileService {
       const newUrl =
         await this.profileVisualsService.reuploadFileOnStorageBucket(
           newReference.uri,
-          profile.storageBucket
+          profile.storageBucket,
+          false
         );
       if (newUrl) {
         newReference.uri = newUrl;
