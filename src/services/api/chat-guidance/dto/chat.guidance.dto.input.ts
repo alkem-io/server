@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { languageType } from '@services/adapters/chat-guidance-adapter/dto/guidance.engine.dto.query';
+// import { languageType } from '@services/adapters/chat-guidance-adapter/dto/guidance.engine.dto.query';
 
 @InputType()
 export class ChatGuidanceInput {
@@ -13,5 +13,5 @@ export class ChatGuidanceInput {
     nullable: true,
     description: 'The language of the answer.',
   })
-  language?: languageType;
+  language?: string;
 }
