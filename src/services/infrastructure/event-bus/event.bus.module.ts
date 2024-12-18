@@ -86,6 +86,18 @@ import amqplib from 'amqplib';
               routingKey: 'guidance',
               durable: true,
             },
+            {
+              name: 'virtual-contributor-engine-generic',
+              exchange: eventBusConfig.exchange,
+              routingKey: 'generic-openai',
+              durable: true,
+            },
+            {
+              name: 'virtual-contributor-engine-openai-assistant',
+              exchange: eventBusConfig.exchange,
+              routingKey: 'openai-assistant',
+              durable: true,
+            },
           ],
         };
       },
