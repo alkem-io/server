@@ -18,6 +18,7 @@ export class LicensingWingbackSubscriptionService {
   public getEntitlements(
     customerId: string
   ): Promise<Record<string, unknown>[]> {
+    // TODO: return LicensingGrantedEntitlement[]
     return this.wingbackManager.getEntitlements(customerId);
   }
 }

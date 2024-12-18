@@ -26,6 +26,7 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
 import { LicenseModule } from '@domain/common/license/license.module';
 import { AccountLicenseService } from './account.service.license';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
+import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
     LicensingFrameworkModule,
     LicenseIssuerModule,
     LicensingCredentialBasedModule,
+    LicensingWingbackSubscriptionModule,
     LicenseModule,
     SpaceModule,
     InnovationHubModule,
