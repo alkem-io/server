@@ -126,7 +126,7 @@ export class AgentInfoService {
     // construct the agent info object needed for isAccessGranted
     let credentials: ICredentialDefinition[] = [];
 
-    if (credentials.length !== 0) {
+    if (user.agent.credentials.length !== 0) {
       credentials = user.agent.credentials.map(c => {
         return {
           type: c.type,

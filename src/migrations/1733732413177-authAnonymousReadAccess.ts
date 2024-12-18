@@ -1,9 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AuthAnonymousReadAccess1733732413139
+export class AuthAnonymousReadAccess1733732413177
   implements MigrationInterface
 {
-  name = 'AuthAnonymousReadAccess1733732413139';
+  name = 'AuthAnonymousReadAccess1733732413177';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
