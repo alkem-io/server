@@ -19,12 +19,13 @@ export class InAppNotificationResolverFields {
   }
 
   @ResolveField(() => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The Contributor who triggered the notification.',
   })
   public triggeredBy(
     @Parent() { payload }: InAppNotification,
-    @Loader(ContributorLoaderCreator) loader: ILoader<IContributor>
+    @Loader(ContributorLoaderCreator, { resolveToNull: true })
+    loader: ILoader<IContributor | null>
   ) {
     return loader.load(payload.triggeredByID);
   }

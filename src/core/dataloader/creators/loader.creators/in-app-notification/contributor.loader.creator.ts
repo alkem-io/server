@@ -32,26 +32,23 @@ export class ContributorLoaderCreator
 
   private contributorsInBatch = async (
     keys: ReadonlyArray<string>
-  ): Promise<(User | Organization | VirtualContributor)[]> => {
-    // do when we actually need all contributors
-    // const a = await this.manager.query(`
-    //   SELECT \`user\`.\`id\`, 'User' AS \`type\`
-    //   FROM \`user\`
-    //   WHERE \`user\`.\`id\` IN (${strKeys})
-    //
-    //   UNION
-    //
-    //   SELECT \`vc\`.\`id\`, 'VirtualContributor' AS \`type\`
-    //   FROM \`virtual_contributor\` \`vc\`
-    //   WHERE \`vc\`.\`id\` IN (${strKeys})
-    //
-    //   UNION
-    //
-    //   SELECT \`organization\`.\`id\`, 'Organization' AS \`type\`
-    //   FROM \`organization\`
-    //   WHERE \`organization\`.\`id\` IN (${strKeys});
-    // `);
+  ): Promise<IContributor[]> => {
+    const contributors: IContributor[] = [];
 
-    return this.manager.findBy(User, { id: In(keys) });
+    let result: IContributor[] = await this.manager.findBy(User, {
+      id: In(keys),
+    });
+    contributors.push(...result);
+
+    if (contributors.length !== keys.length) {
+      result = await this.manager.findBy(Organization, { id: In(keys) });
+      contributors.push(...result);
+    }
+    if (contributors.length !== keys.length) {
+      result = await this.manager.findBy(VirtualContributor, { id: In(keys) });
+      contributors.push(...result);
+    }
+
+    return contributors;
   };
 }
