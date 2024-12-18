@@ -186,55 +186,41 @@ export class AuthorizationService {
     credentials: ICredential[],
     verifiedCredentials: IVerifiedCredential[],
     authorization: IAuthorizationPolicy
-  ) {
-    const grantedPrivileges: AuthorizationPrivilege[] = [];
+  ): AuthorizationPrivilege[] {
+    const grantedPrivileges = new Set<AuthorizationPrivilege>();
 
     if (authorization.anonymousReadAccess) {
-      grantedPrivileges.push(AuthorizationPrivilege.READ);
+      grantedPrivileges.add(AuthorizationPrivilege.READ);
     }
 
     const credentialRules = this.convertCredentialRulesStr(
       authorization.credentialRules
     );
-    for (const rule of credentialRules) {
-      for (const credential of credentials) {
+    credentialRules.forEach(rule => {
+      credentials.forEach(credential => {
         if (this.isCredentialMatch(credential, rule)) {
-          for (const privilege of rule.grantedPrivileges) {
-            grantedPrivileges.push(privilege);
-          }
+          rule.grantedPrivileges.forEach(privilege =>
+            grantedPrivileges.add(privilege)
+          );
         }
-      }
-    }
+      });
+    });
 
     const verifiedCredentialRules = this.convertVerifiedCredentialRulesStr(
       authorization.verifiedCredentialRules
     );
-    for (const rule of verifiedCredentialRules) {
-      for (const credential of verifiedCredentials) {
+    verifiedCredentialRules.forEach(rule => {
+      verifiedCredentials.forEach(credential => {
         if (this.isVerifiedCredentialMatch(credential, rule)) {
-          for (const privilege of rule.grantedPrivileges) {
-            grantedPrivileges.push(privilege);
-          }
+          rule.grantedPrivileges.forEach(privilege =>
+            grantedPrivileges.add(privilege)
+          );
         }
-      }
-    }
+      });
+    });
 
-    const privilegeRules = this.convertPrivilegeRulesStr(
-      authorization.privilegeRules
-    );
-    for (const rule of privilegeRules) {
-      if (grantedPrivileges.includes(rule.sourcePrivilege)) {
-        grantedPrivileges.push(...rule.grantedPrivileges);
-      }
-    }
-
-    const uniquePrivileges = grantedPrivileges.filter(
-      (item, i, ar) => ar.indexOf(item) === i
-    );
-
-    return uniquePrivileges;
+    return Array.from(grantedPrivileges);
   }
-
   private isCredentialMatch(
     credential: ICredential,
     credentialRule: IAuthorizationPolicyRuleCredential
@@ -246,17 +232,12 @@ export class AuthorizationService {
         LogContext.AUTH
       );
     }
-    for (const criteria of criterias) {
-      if (credential.type === criteria.type) {
-        if (
-          criteria.resourceID === '' ||
-          credential.resourceID === criteria.resourceID
-        ) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return criterias.some(
+      criteria =>
+        credential.type === criteria.type &&
+        (criteria.resourceID === '' ||
+          credential.resourceID === criteria.resourceID)
+    );
   }
 
   private isVerifiedCredentialMatch(
