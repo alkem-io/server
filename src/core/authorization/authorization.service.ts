@@ -13,7 +13,6 @@ import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.
 import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
-import { IAuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege.interface';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 @Injectable()
@@ -87,7 +86,10 @@ export class AuthorizationService {
         'Authorization: no definition provided',
         LogContext.AUTH_POLICY
       );
-    if (authorization.credentialRules === '') {
+    if (
+      Array.isArray(authorization.credentialRules) &&
+      authorization.credentialRules.length === 0
+    ) {
       throw new AuthorizationInvalidPolicyException(
         `AuthorizationPolicy without credential rules provided: ${authorization.id}, type: ${authorization.type}`,
         LogContext.AUTH
@@ -121,9 +123,7 @@ export class AuthorizationService {
     // Keep track of all the granted privileges via Credential rules so can use with Privilege rules
     const grantedPrivileges: AuthorizationPrivilege[] = [];
 
-    const credentialRules = this.convertCredentialRulesStr(
-      authorization.credentialRules
-    );
+    const credentialRules = authorization.credentialRules;
     for (const rule of credentialRules) {
       for (const credential of agentInfo.credentials) {
         if (this.isCredentialMatch(credential, rule)) {
@@ -141,9 +141,7 @@ export class AuthorizationService {
       }
     }
     const verifiedCredentialRules: IAuthorizationPolicyRuleVerifiedCredential[] =
-      this.convertVerifiedCredentialRulesStr(
-        authorization.verifiedCredentialRules
-      );
+      authorization.verifiedCredentialRules;
     for (const rule of verifiedCredentialRules) {
       for (const verifiedCredential of agentInfo.verifiedCredentials) {
         const isMatch = this.isVerifiedCredentialMatch(
@@ -165,9 +163,7 @@ export class AuthorizationService {
       }
     }
 
-    const privilegeRules = this.convertPrivilegeRulesStr(
-      authorization.privilegeRules
-    );
+    const privilegeRules = authorization.privilegeRules;
     for (const rule of privilegeRules) {
       if (grantedPrivileges.includes(rule.sourcePrivilege)) {
         if (rule.grantedPrivileges.includes(privilegeRequired)) {
@@ -193,9 +189,8 @@ export class AuthorizationService {
       grantedPrivileges.add(AuthorizationPrivilege.READ);
     }
 
-    const credentialRules = this.convertCredentialRulesStr(
-      authorization.credentialRules
-    );
+    const credentialRules = authorization.credentialRules || [];
+
     credentialRules.forEach(rule => {
       credentials.forEach(credential => {
         if (this.isCredentialMatch(credential, rule)) {
@@ -206,9 +201,8 @@ export class AuthorizationService {
       });
     });
 
-    const verifiedCredentialRules = this.convertVerifiedCredentialRulesStr(
-      authorization.verifiedCredentialRules
-    );
+    const verifiedCredentialRules = authorization.verifiedCredentialRules || [];
+
     verifiedCredentialRules.forEach(rule => {
       verifiedCredentials.forEach(credential => {
         if (this.isVerifiedCredentialMatch(credential, rule)) {
@@ -256,44 +250,5 @@ export class AuthorizationService {
       }
     }
     return false;
-  }
-
-  convertCredentialRulesStr(
-    rulesStr: string
-  ): IAuthorizationPolicyRuleCredential[] {
-    if (!rulesStr || rulesStr.length == 0) return [];
-    try {
-      return JSON.parse(rulesStr);
-    } catch (error: any) {
-      const msg = `Unable to convert rules to json: ${error}`;
-      this.logger.error(msg, error?.stack, LogContext.AUTH);
-      throw new ForbiddenException(msg, LogContext.AUTH);
-    }
-  }
-
-  convertVerifiedCredentialRulesStr(
-    rulesStr: string
-  ): IAuthorizationPolicyRuleVerifiedCredential[] {
-    if (!rulesStr || rulesStr.length == 0) return [];
-    try {
-      return JSON.parse(rulesStr);
-    } catch (error: any) {
-      const msg = `Unable to convert rules to json: ${error}`;
-      this.logger.error(msg, error?.stack, LogContext.AUTH);
-      throw new ForbiddenException(msg, LogContext.AUTH);
-    }
-  }
-
-  convertPrivilegeRulesStr(
-    rulesStr: string
-  ): IAuthorizationPolicyRulePrivilege[] {
-    if (!rulesStr || rulesStr.length == 0) return [];
-    try {
-      return JSON.parse(rulesStr);
-    } catch (error: any) {
-      const msg = `Unable to convert privilege rules to json: ${error}`;
-      this.logger.error(msg, error?.stack, LogContext.AUTH);
-      throw new ForbiddenException(msg, LogContext.AUTH);
-    }
   }
 }
