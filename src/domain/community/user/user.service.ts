@@ -66,6 +66,9 @@ import { AccountType } from '@common/enums/account.type';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomType } from '@common/enums/room.type';
+import { IUserSettings } from '../user.settings/user.settings.interface';
+import { UserSettingsService } from '../user.settings/user.settings.service';
+import { UpdateUserSettingsEntityInput } from '../user.settings/dto/user.settings.dto.update';
 
 @Injectable()
 export class UserService {
@@ -81,6 +84,7 @@ export class UserService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
     private accountHostService: AccountHostService,
+    private userSettingsService: UserSettingsService,
     private contributorService: ContributorService,
     private kratosService: KratosService,
     @InjectRepository(User)
@@ -126,6 +130,9 @@ export class UserService {
       accountUpn: userData.accountUpn ?? userData.email,
     });
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
+    user.settingsStr = this.userSettingsService.serializeSettings(
+      this.getDefaultUserSettings()
+    );
 
     if (!user.serviceProfile) {
       user.serviceProfile = false;
@@ -219,6 +226,37 @@ export class UserService {
     return user;
   }
 
+  private getDefaultUserSettings(): IUserSettings {
+    const settings: IUserSettings = {
+      communication: {
+        allowOtherUsersToSendMessages: true,
+      },
+      privacy: {
+        // Note: not currently used but will be near term.
+        contributionRolesPubliclyVisible: true,
+      },
+    };
+    return settings;
+  }
+
+  public getSettings(user: IUser): IUserSettings {
+    return this.userSettingsService.getSettings(user.settingsStr);
+  }
+
+  public async updateUserSettings(
+    user: IUser,
+    settingsData: UpdateUserSettingsEntityInput
+  ): Promise<IUser> {
+    const settings = this.userSettingsService.getSettings(user.settingsStr);
+    const updatedSettings = this.userSettingsService.updateSettings(
+      settings,
+      settingsData
+    );
+    user.settingsStr =
+      this.userSettingsService.serializeSettings(updatedSettings);
+    return await this.save(user);
+  }
+
   private async extendProfileDataWithReferences(
     profileData?: CreateProfileInput
   ): Promise<CreateProfileInput> {
@@ -296,7 +334,6 @@ export class UserService {
     defaults.set(UserPreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
     // messaging & mentions
     defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MESSAGE, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
 

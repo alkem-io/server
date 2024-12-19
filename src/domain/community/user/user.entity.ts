@@ -30,6 +30,9 @@ export class User extends ContributorBase implements IUser {
   @Generated('increment')
   rowId!: number;
 
+  @Column('text')
+  settingsStr: string = '';
+
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   accountUpn!: string;
 

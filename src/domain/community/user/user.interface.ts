@@ -12,6 +12,8 @@ export class IUser extends IContributorBase implements IContributor {
   accountID!: string;
   rowId!: number;
 
+  settingsStr!: string;
+
   @Field(() => String, {
     description:
       'The unique personal identifier (upn) for the account associated with this user profile',

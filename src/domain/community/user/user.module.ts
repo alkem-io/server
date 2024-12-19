@@ -19,17 +19,18 @@ import { PreferenceModule } from '@domain/common/preference';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
+import { UserSettingsModule } from '../user.settings/user.settings.module';
 
 @Module({
   imports: [
     ProfileModule,
+    UserSettingsModule,
     NotificationAdapterModule,
     CommunicationAdapterModule,
     AgentModule,
@@ -43,7 +44,6 @@ import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
     PlatformAuthorizationPolicyModule,
     PreferenceModule,
     PreferenceSetModule,
-    MessagingModule,
     StorageAggregatorModule,
     StorageBucketModule,
     DocumentModule,
