@@ -9,11 +9,11 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { IAccount } from './account.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceLicenseService } from '../space/space.service.license';
 import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
+import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 
 @Injectable()
 export class AccountLicenseService {
@@ -83,94 +83,50 @@ export class AccountLicenseService {
         LogContext.LICENSE
       );
     }
+
+    // First check the credential based licensing based on the Agent held credentials
     for (const entitlement of license.entitlements) {
-      switch (entitlement.type) {
-        case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
-          const createSpaceEntitlement =
-            await this.licensingCredentialBasedService.getEntitlementIfGranted(
-              LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-              accountAgent
-            );
-          if (createSpaceEntitlement) {
-            entitlement.limit = createSpaceEntitlement.limit;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_SPACE_PLUS:
-          const createSpacePLusEntitlement =
-            await this.licensingCredentialBasedService.getEntitlementIfGranted(
-              LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
-              accountAgent
-            );
-          if (createSpacePLusEntitlement) {
-            entitlement.limit = createSpacePLusEntitlement.limit;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
-          const createSpacePremiumEntitlement =
-            await this.licensingCredentialBasedService.getEntitlementIfGranted(
-              LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
-              accountAgent
-            );
-          if (createSpacePremiumEntitlement) {
-            entitlement.limit = createSpacePremiumEntitlement.limit;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
-          const createVirtualContributorEntitlement =
-            await this.licensingCredentialBasedService.getEntitlementIfGranted(
-              LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-              accountAgent
-            );
-          if (createVirtualContributorEntitlement) {
-            entitlement.limit = createVirtualContributorEntitlement.limit;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
-          const createInnovationHubEntitlement =
-            await this.licensingCredentialBasedService.getEntitlementIfGranted(
-              LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
-              accountAgent
-            );
-          if (createInnovationHubEntitlement) {
-            entitlement.limit = createInnovationHubEntitlement.limit;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
-          const createInnovationPackEntitlement =
-            await this.licensingCredentialBasedService.getEntitlementIfGranted(
-              LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-              accountAgent
-            );
-          if (createInnovationPackEntitlement) {
-            entitlement.limit = createInnovationPackEntitlement.limit;
-            entitlement.enabled = true;
-          }
-          break;
-        default:
-          throw new EntityNotInitializedException(
-            `Unknown entitlement type for license: ${entitlement.type}`,
-            LogContext.LICENSE
-          );
-      }
+      await this.checkAndAssignGrantedEntitlement(entitlement, accountAgent);
     }
 
+    // Then check the Wingback subscription service for any granted entitlements
     if (account.externalSubscriptionID) {
-      // TODO: get subscription details from the WingBack api + set the entitlements accordingly
-      const wingbackLicenseEntitlements =
+      const wingbackGrantedLicenseEntitlements =
         await this.licensingWingbackSubscriptionService.getEntitlements(
           account.externalSubscriptionID
         );
       this.logger.verbose?.(
-        `Invoking external subscription service for account ${account.id}, entitlements ${wingbackLicenseEntitlements}`,
+        `Invoking external subscription service for account ${account.id}, entitlements ${wingbackGrantedLicenseEntitlements}`,
         LogContext.ACCOUNT
       );
+      for (const entitlement of license.entitlements) {
+        const wingbackGrantedEntitlement =
+          wingbackGrantedLicenseEntitlements.find(
+            e => e.type === entitlement.type
+          );
+        // Note: for now overwrite the credential based entitlements with the Wingback entitlements
+        if (wingbackGrantedEntitlement) {
+          entitlement.limit = wingbackGrantedEntitlement.limit;
+          entitlement.enabled = true;
+        }
+      }
     }
 
     return license;
+  }
+
+  private async checkAndAssignGrantedEntitlement(
+    entitlement: ILicenseEntitlement,
+    accountAgent: IAgent
+  ): Promise<void> {
+    const grantedEntitlement =
+      await this.licensingCredentialBasedService.getEntitlementIfGranted(
+        entitlement.type,
+        accountAgent
+      );
+    if (grantedEntitlement) {
+      entitlement.limit = grantedEntitlement.limit;
+      entitlement.enabled = true;
+    }
   }
 }
