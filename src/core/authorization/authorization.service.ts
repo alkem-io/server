@@ -86,10 +86,7 @@ export class AuthorizationService {
         'Authorization: no definition provided',
         LogContext.AUTH_POLICY
       );
-    if (
-      Array.isArray(authorization.credentialRules) &&
-      authorization.credentialRules.length === 0
-    ) {
+    if (authorization.credentialRules.length === 0) {
       throw new AuthorizationInvalidPolicyException(
         `AuthorizationPolicy without credential rules provided: ${authorization.id}, type: ${authorization.type}`,
         LogContext.AUTH

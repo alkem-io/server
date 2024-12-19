@@ -353,15 +353,13 @@ export class AuthorizationPolicyService {
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
-    const rules = authorization.credentialRules;
-    return rules;
+    return authorization.credentialRules;
   }
 
   getVerifiedCredentialRules(
     authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleVerifiedCredential[] {
-    const result = authorization.verifiedCredentialRules;
-    return result;
+  ): IAuthorizationPolicyRuleVerifiedCredential[] | undefined {
+    return authorization.verifiedCredentialRules;
   }
 
   getPrivilegeRules(
