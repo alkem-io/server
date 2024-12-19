@@ -18,8 +18,6 @@ import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { IPreference } from '@domain/common/preference';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -32,14 +30,14 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
+import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
-    private groupService: UserGroupService,
-    private preferenceSetService: PreferenceSetService
+    private groupService: UserGroupService
   ) {}
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -106,6 +104,15 @@ export class OrganizationResolverFields {
     }
 
     return userGroup;
+  }
+
+  @ResolveField('settings', () => IOrganizationSettings, {
+    nullable: false,
+    description: 'The settings for this Organization.',
+  })
+  @UseGuards(GraphqlGuard)
+  settings(@Parent() organization: IOrganization): IOrganizationSettings {
+    return this.organizationService.getSettings(organization);
   }
 
   @UseGuards(GraphqlGuard)
@@ -206,30 +213,5 @@ export class OrganizationResolverFields {
   @Profiling.api
   async metrics(@Parent() organization: Organization) {
     return await this.organizationService.getMetrics(organization);
-  }
-
-  @ResolveField('preferences', () => [IPreference], {
-    nullable: false,
-    description: 'The preferences for this Organization',
-  })
-  @UseGuards(GraphqlGuard)
-  async preferences(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IPreference[]> {
-    // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `read preferences on org: ${organization.id}`
-    );
-    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
-      organization.id
-    );
-    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 }

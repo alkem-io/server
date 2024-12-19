@@ -10,7 +10,6 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganization } from './organization.interface';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
-import { PreferenceSet } from '@domain/common/preference-set';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { UUID_LENGTH } from '@common/constants';
@@ -22,6 +21,9 @@ export class Organization
 {
   @Column('char', { length: UUID_LENGTH, nullable: false })
   accountID!: string;
+
+  @Column('text')
+  settingsStr: string = '';
 
   @Column({
     unique: true,
@@ -54,14 +56,6 @@ export class Organization
   })
   @JoinColumn()
   verification!: OrganizationVerification;
-
-  @OneToOne(() => PreferenceSet, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  preferenceSet?: PreferenceSet;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,
