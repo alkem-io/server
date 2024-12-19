@@ -74,12 +74,12 @@ export class UserOrgSettings1734636338402 implements MigrationInterface {
       preferenceSetId: string;
     }[] = await queryRunner.query(`SELECT id, preferenceSetId FROM \`user\``);
     for (const user of users) {
-      const [userPreferenceSet]: {
+      const [userPreferenceDefinition]: {
         id: string;
         authorizationId: string;
       }[] = await queryRunner.query(
-        `SELECT id, authorizationId FROM preference_set WHERE id = ?`,
-        [user.preferenceSetId]
+        `SELECT id FROM preference_definition WHERE type = ?`,
+        ['NotificationCommunicationMention']
       );
 
       const [userPreference]: {
@@ -87,8 +87,8 @@ export class UserOrgSettings1734636338402 implements MigrationInterface {
         authorizationId: string;
         value: string;
       }[] = await queryRunner.query(
-        `SELECT id, authorizationId, value FROM preference WHERE preferenceSetId = ? and type = ?`,
-        [user.preferenceSetId, 'NotificationCommunicationMention']
+        `SELECT id, authorizationId, value FROM preference WHERE preferenceSetId = ? and preferenceDefinitionId = ?`,
+        [user.preferenceSetId, userPreferenceDefinition.id]
       );
 
       // create the settings object
