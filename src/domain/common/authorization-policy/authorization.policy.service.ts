@@ -358,7 +358,7 @@ export class AuthorizationPolicyService {
 
   getVerifiedCredentialRules(
     authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleVerifiedCredential[] | undefined {
+  ): IAuthorizationPolicyRuleVerifiedCredential[] {
     return authorization.verifiedCredentialRules;
   }
 
