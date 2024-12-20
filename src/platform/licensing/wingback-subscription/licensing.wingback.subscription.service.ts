@@ -4,6 +4,7 @@ import { WingbackManager } from '@services/external/wingback/wingback.manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { LicensingGrantedEntitlement } from '../dto/licensing.dto.granted.entitlement';
+import { toLicensingGrantedEntitlements } from '@services/external/wingback/util/to.licensing.granted.entitlements';
 
 @Injectable()
 export class LicensingWingbackSubscriptionService {
@@ -25,14 +26,9 @@ export class LicensingWingbackSubscriptionService {
   public async getEntitlements(
     customerId: string
   ): Promise<LicensingGrantedEntitlement[]> {
-    const entitlements: LicensingGrantedEntitlement[] = [];
     const wingbackEntitlements =
       await this.wingbackManager.getEntitlements(customerId);
-    // Todo: map the wingback entitlements to the entitlements that are understood within Alkemio Licensing
-    this.logger.verbose?.(
-      `Wingback entitlements: ${JSON.stringify(wingbackEntitlements)}`,
-      LogContext.LICENSE
-    );
-    return entitlements;
+    // Todo: map the incoming external entitlements to Alkemio entitlements
+    return toLicensingGrantedEntitlements(wingbackEntitlements);
   }
 }

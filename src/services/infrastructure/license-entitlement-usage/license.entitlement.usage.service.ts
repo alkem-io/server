@@ -23,6 +23,7 @@ export class LicenseEntitlementUsageService {
     licenseID: string,
     entitlementType: LicenseEntitlementType
   ): Promise<number> {
+    // todo: optimize based on the type; too much is fetched
     const account = await this.entityManager.findOne(Account, {
       loadEagerRelations: false,
       where: {

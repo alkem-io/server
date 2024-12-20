@@ -38,8 +38,7 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
     const res = await this.licensingWingbackSubscriptionService.createCustomer({
       name: `Test User ${randomUUID()}`,
       emails: {
-        main: `main${randomUUID()}@alkem.io`,
-        secondary: `secondary${randomUUID()}@alkem.io`,
+        invoice: `main${randomUUID()}@alkem.io`,
       },
       tax_details: {
         vat_id: 'vat_id',

@@ -7,6 +7,7 @@ import { UpdateCustomer } from '@services/external/wingback/types/wingback.type.
 import { WingbackEntitlement } from './types/wingback.type.entitlement';
 import { CreateCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WingbackFeature } from '@services/external/wingback/types/wingback.type.feature';
 
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
@@ -31,12 +32,12 @@ export class WingbackManager {
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#1-create-a-new-customer-in-wingback-backend
   public async createCustomer(data: CreateCustomer): Promise<{ id: string }> {
     if (!this.enabled) {
-      this.logger.warn('Wingback is not enabled');
-      return { id: '' };
+      throw new Error('Wingback is not enabled');
     }
-    return this.sendPost<string>('/v1/c/customer', data).then(response => ({
-      id: response,
-    }));
+
+    const response = await this.sendPost<string>('/v1/c/customer', data);
+
+    return { id: response };
   }
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#2-collect-payment-information
   public triggerPaymentSession(): Promise<void> {
@@ -103,14 +104,15 @@ export class WingbackManager {
   }
 
   // https://docs.wingback.com/dev/api-reference/entitlement/get_c_entitlement_customerid_access
-  public getEntitlements(customerId: string): Promise<WingbackEntitlement[]> {
+  public async getEntitlements(customerId: string): Promise<WingbackFeature[]> {
     if (!this.enabled) {
-      this.logger.warn('Wingback is not enabled');
-      return Promise.resolve([]);
+      throw new Error('Wingback is not enabled');
     }
-    return this.sendGet<WingbackEntitlement[]>(
+    const entitlements = await this.sendGet<WingbackEntitlement[]>(
       `/v1/c/entitlement/${customerId}/access`
     );
+
+    return entitlements[0].plan.features;
   }
 
   activateCustomer(customerId: string): Promise<boolean> {
