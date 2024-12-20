@@ -91,7 +91,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Space ',
+    description: 'Lookup myPrivileges on the specified Space',
   })
   async space(
     @CurrentUser() agentInfo: AgentInfo,
@@ -106,7 +106,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Account ',
+    description: 'Lookup myPrivileges on the specified Account',
   })
   async account(
     @CurrentUser() agentInfo: AgentInfo,
@@ -121,7 +121,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified RoleSet ',
+    description: 'Lookup myPrivileges on the specified RoleSet',
   })
   async roleSet(
     @CurrentUser() agentInfo: AgentInfo,
@@ -136,7 +136,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Document ',
+    description: 'Lookup myPrivileges on the specified Document',
   })
   async document(
     @CurrentUser() agentInfo: AgentInfo,
@@ -151,7 +151,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'A particular VirtualContributor ',
+    description: 'A particular VirtualContributor',
   })
   async virtualContributor(
     @CurrentUser() agentInfo: AgentInfo,
@@ -167,7 +167,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified User',
+    description: 'Lookup myPrivileges on the specified User',
   })
   async user(
     @CurrentUser() agentInfo: AgentInfo,
@@ -182,7 +182,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified StorageAggregator ',
+    description: 'Lookup myPrivileges on the specified StorageAggregator',
   })
   async storageAggregator(
     @CurrentUser() agentInfo: AgentInfo,
@@ -198,7 +198,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified InnovationPack ',
+    description: 'Lookup myPrivileges on the specified InnovationPack',
   })
   async innovationPack(
     @CurrentUser() agentInfo: AgentInfo,
@@ -214,7 +214,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified StorageBucket ',
+    description: 'Lookup myPrivileges on the specified StorageBucket',
   })
   async storageBucket(
     @CurrentUser() agentInfo: AgentInfo,
@@ -230,7 +230,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified InnovationHub ',
+    description: 'Lookup myPrivileges on the specified InnovationHub',
   })
   async innovationHub(
     @CurrentUser() agentInfo: AgentInfo,
@@ -246,7 +246,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Application ',
+    description: 'Lookup myPrivileges on the specified Application',
   })
   async application(
     @CurrentUser() agentInfo: AgentInfo,
@@ -261,7 +261,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Invitation ',
+    description: 'Lookup myPrivileges on the specified Invitation',
   })
   async invitation(
     @CurrentUser() agentInfo: AgentInfo,
@@ -276,7 +276,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Community ',
+    description: 'Lookup myPrivileges on the specified Community',
   })
   async community(
     @CurrentUser() agentInfo: AgentInfo,
@@ -291,7 +291,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Collaboration ',
+    description: 'Lookup myPrivileges on the specified Collaboration',
   })
   async collaboration(
     @CurrentUser() agentInfo: AgentInfo,
@@ -307,7 +307,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified CalendarEvent ',
+    description: 'Lookup myPrivileges on the specified CalendarEvent',
   })
   async calendarEvent(
     @CurrentUser() agentInfo: AgentInfo,
@@ -323,7 +323,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Calendar ',
+    description: 'Lookup myPrivileges on the specified Calendar',
   })
   async calendar(
     @CurrentUser() agentInfo: AgentInfo,
@@ -338,7 +338,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Context ',
+    description: 'Lookup myPrivileges on the specified Context',
   })
   async context(
     @CurrentUser() agentInfo: AgentInfo,
@@ -353,7 +353,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Whiteboard ',
+    description: 'Lookup myPrivileges on the specified Whiteboard',
   })
   async whiteboard(
     @CurrentUser() agentInfo: AgentInfo,
@@ -368,7 +368,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Profile ',
+    description: 'Lookup myPrivileges on the specified Profile',
   })
   async profile(
     @CurrentUser() agentInfo: AgentInfo,
@@ -383,7 +383,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Callout ',
+    description: 'Lookup myPrivileges on the specified Callout',
   })
   async callout(
     @CurrentUser() agentInfo: AgentInfo,
@@ -398,7 +398,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Post ',
+    description: 'Lookup myPrivileges on the specified Post',
   })
   async post(
     @CurrentUser() agentInfo: AgentInfo,
@@ -413,7 +413,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Room ',
+    description: 'Lookup myPrivileges on the specified Room',
   })
   async room(
     @CurrentUser() agentInfo: AgentInfo,
@@ -428,7 +428,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified InnovationFlow ',
+    description: 'Lookup myPrivileges on the specified InnovationFlow',
   })
   async innovationFlow(
     @CurrentUser() agentInfo: AgentInfo,
@@ -444,7 +444,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Template ',
+    description: 'Lookup myPrivileges on the specified Template',
   })
   async template(
     @CurrentUser() agentInfo: AgentInfo,
@@ -459,7 +459,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified TemplatesSet ',
+    description: 'Lookup myPrivileges on the specified TemplatesSet',
   })
   async templatesSet(
     @CurrentUser() agentInfo: AgentInfo,
@@ -475,7 +475,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified TemplatesManager ',
+    description: 'Lookup myPrivileges on the specified TemplatesManager',
   })
   async templatesManager(
     @CurrentUser() agentInfo: AgentInfo,
@@ -491,7 +491,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified Community guidelines ',
+    description: 'Lookup myPrivileges on the specified Community guidelines',
   })
   async communityGuidelines(
     @CurrentUser() agentInfo: AgentInfo,
@@ -507,7 +507,7 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup myPrivileges onthe specified License ',
+    description: 'Lookup myPrivileges on the specified License',
   })
   async license(
     @CurrentUser() agentInfo: AgentInfo,
