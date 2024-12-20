@@ -264,7 +264,7 @@ export class NamingService {
     }
     // Directly parse the settings string to avoid the need to load the settings service
     const roleSet = space.community.roleSet;
-    const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
+    const spaceSettings: ISpaceSettings = space.settings;
     return { roleSet, spaceSettings };
   }
 
@@ -295,7 +295,7 @@ export class NamingService {
 
     // Directly parse the settings string to avoid the need to load the settings service
     const roleSet = space.community.roleSet;
-    const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
+    const spaceSettings: ISpaceSettings = space.settings;
 
     return { roleSet: roleSet, spaceSettings };
   }
