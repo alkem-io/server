@@ -426,7 +426,6 @@ export class LookupResolverFields {
     return community;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICollaboration, {
     nullable: true,
     description: 'Lookup the specified Collaboration',
@@ -437,12 +436,6 @@ export class LookupResolverFields {
   ): Promise<ICollaboration> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      collaboration.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Collaboration: ${collaboration.id}`
-    );
 
     return collaboration;
   }
