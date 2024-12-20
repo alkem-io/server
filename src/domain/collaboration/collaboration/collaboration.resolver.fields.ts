@@ -94,8 +94,6 @@ export class CollaborationResolverFields {
     return tagsetTemplateSet.tagsetTemplates;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this Collaboration.',
