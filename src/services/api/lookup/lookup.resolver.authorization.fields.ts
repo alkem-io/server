@@ -107,7 +107,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!account.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Account with ID ${id} `,
         LogContext.API
       );
     }
@@ -128,7 +128,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!roleSet.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for RoleSet with ID ${id} `,
         LogContext.API
       );
     }
@@ -171,7 +171,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!virtualContributor.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Document with ID ${id} `,
+        `Unable to load Authorization for VirtualContributor with ID ${id} `,
         LogContext.API
       );
     }
@@ -181,7 +181,7 @@ export class LookupAuthorizationResolverFields {
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'A particular User',
+    description: 'Lookup the specified User',
   })
   async userAuthorization(
     @Args('ID', { type: () => UUID, nullable: false }) id: string
@@ -192,7 +192,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!user.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for User with ID ${id} `,
         LogContext.API
       );
     }
@@ -214,7 +214,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!storageAggregator.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for StorageAggregator with ID ${id} `,
         LogContext.API
       );
     }
@@ -236,7 +236,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!innovationPack.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for InnovationPack with ID ${id} `,
         LogContext.API
       );
     }
@@ -258,7 +258,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!storageBucket.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for StorageBucket with ID ${id} `,
         LogContext.API
       );
     }
@@ -280,7 +280,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!innovationHub.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for InnovationHub with ID ${id} `,
         LogContext.API
       );
     }
@@ -301,7 +301,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!application.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Application with ID ${id} `,
         LogContext.API
       );
     }
@@ -322,7 +322,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!invitation.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Invitation with ID ${id} `,
         LogContext.API
       );
     }
@@ -343,7 +343,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!community.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Community with ID ${id} `,
         LogContext.API
       );
     }
@@ -365,7 +365,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!collaboration.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Collaboration with ID ${id} `,
         LogContext.API
       );
     }
@@ -387,7 +387,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!calendarEvent.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for CalendarEvent with ID ${id} `,
         LogContext.API
       );
     }
@@ -408,7 +408,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!calendar.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Calendar with ID ${id} `,
         LogContext.API
       );
     }
@@ -429,7 +429,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!context.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Context with ID ${id} `,
         LogContext.API
       );
     }
@@ -449,7 +449,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!whiteboard.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Whiteboard with ID ${id} `,
         LogContext.API
       );
     }
@@ -470,7 +470,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!profile.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Profile with ID ${id} `,
         LogContext.API
       );
     }
@@ -491,7 +491,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!callout.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Callout with ID ${id} `,
         LogContext.API
       );
     }
@@ -512,7 +512,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!post.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Post with ID ${id} `,
         LogContext.API
       );
     }
@@ -533,7 +533,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!room.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Room with ID ${id} `,
         LogContext.API
       );
     }
@@ -555,7 +555,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!innovationFlow.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for InnovationFlow with ID ${id} `,
         LogContext.API
       );
     }
@@ -576,7 +576,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!template.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Template with ID ${id} `,
         LogContext.API
       );
     }
@@ -598,7 +598,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!templatesSet.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for TemplatesSet with ID ${id} `,
         LogContext.API
       );
     }
@@ -620,7 +620,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!templatesManager.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for TemplatesManager with ID ${id} `,
         LogContext.API
       );
     }
@@ -642,7 +642,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!guidelines.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for Community with ID ${id} `,
         LogContext.API
       );
     }
@@ -663,7 +663,7 @@ export class LookupAuthorizationResolverFields {
 
     if (!license.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
+        `Unable to load Authorization for License with ID ${id} `,
         LogContext.API
       );
     }
