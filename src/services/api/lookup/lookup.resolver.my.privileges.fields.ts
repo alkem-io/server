@@ -16,7 +16,6 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UserService } from '@domain/community/user/user.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
@@ -89,7 +88,7 @@ export class LookupMyPrivilegesResolverFields {
     );
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Space',
   })
@@ -104,7 +103,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, space);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Account',
   })
@@ -119,7 +118,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, account);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified RoleSet',
   })
@@ -134,7 +133,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, roleSet);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Document',
   })
@@ -149,7 +148,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, document);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'A particular VirtualContributor',
   })
@@ -165,7 +164,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, virtualContributor);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified User',
   })
@@ -180,7 +179,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, user);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified StorageAggregator',
   })
@@ -196,7 +195,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, storageAggregator);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified InnovationPack',
   })
@@ -212,7 +211,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationPack);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified StorageBucket',
   })
@@ -228,7 +227,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, storageBucket);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified InnovationHub',
   })
@@ -244,7 +243,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationHub);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Application',
   })
@@ -259,7 +258,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, application);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Invitation',
   })
@@ -274,7 +273,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, invitation);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Community',
   })
@@ -289,7 +288,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, community);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Collaboration',
   })
@@ -305,7 +304,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, collaboration);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified CalendarEvent',
   })
@@ -321,7 +320,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, calendarEvent);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Calendar',
   })
@@ -336,7 +335,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, calendar);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Context',
   })
@@ -351,7 +350,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, context);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Whiteboard',
   })
@@ -366,7 +365,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, whiteboard);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Profile',
   })
@@ -381,7 +380,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, profile);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Callout',
   })
@@ -396,7 +395,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, callout);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Post',
   })
@@ -411,7 +410,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, post);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Room',
   })
@@ -426,7 +425,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, room);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified InnovationFlow',
   })
@@ -442,7 +441,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationFlow);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Template',
   })
@@ -457,7 +456,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, template);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified TemplatesSet',
   })
@@ -473,7 +472,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, templatesSet);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified TemplatesManager',
   })
@@ -489,7 +488,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, templatesManager);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified Community guidelines',
   })
@@ -505,7 +504,7 @@ export class LookupMyPrivilegesResolverFields {
     return this.getMyPrivilegesOnAuthorizable(agentInfo, guidelines);
   }
 
-  @ResolveField(() => IAuthorizationPolicy, {
+  @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
     description: 'Lookup myPrivileges on the specified License',
   })
