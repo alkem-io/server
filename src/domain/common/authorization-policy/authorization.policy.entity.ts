@@ -18,9 +18,6 @@ export class AuthorizationPolicy
   @Column('text')
   verifiedCredentialRules: string;
 
-  @Column()
-  anonymousReadAccess: boolean;
-
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: AuthorizationPolicyType;
 
@@ -36,7 +33,6 @@ export class AuthorizationPolicy
 
   constructor(type: AuthorizationPolicyType) {
     super();
-    this.anonymousReadAccess = false;
     this.credentialRules = '';
     this.verifiedCredentialRules = '';
     this.privilegeRules = '';

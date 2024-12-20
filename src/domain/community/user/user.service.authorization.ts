@@ -130,12 +130,16 @@ export class UserAuthorizationService {
     updatedAuthorizations.push(user.authorization);
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedAnonymousReadAccessAuthorization =
+    let clonedAnonymousReadAccessAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         user.authorization
       );
     // To ensure that profile + context on a space are always publicly visible, even for private spaces
-    clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
+    clonedAnonymousReadAccessAuthorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+        clonedAnonymousReadAccessAuthorization,
+        AuthorizationPrivilege.READ
+      );
 
     // cascade
     const profileAuthorizations =

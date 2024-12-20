@@ -5,6 +5,7 @@ export enum AuthorizationCredential {
   GLOBAL_ADMIN = 'global-admin', // able to do everything, god mode
   GLOBAL_SUPPORT = 'global-support', // able to manage platform level information, can per space have admin rights
   GLOBAL_LICENSE_MANAGER = 'global-license-manager', // able to manage platform level information, can per space have admin rights
+  GLOBAL_ANONYMOUS = 'global-anonymous', // credential issued to all non-authenticated interactions
   GLOBAL_REGISTERED = 'global-registered', // credential issued to all registered users
   GLOBAL_COMMUNITY_READ = 'global-community-read', // able to view all details of the top level community
   GLOBAL_SPACES_READER = 'global-spaces-read', // able to view all details of the top level community

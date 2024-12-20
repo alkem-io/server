@@ -123,9 +123,16 @@ export class SpaceAuthorizationService {
         space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
           space.authorization
         );
-        if (!isPrivate) {
-          space.authorization.anonymousReadAccess = true;
+        let anonymousAccessPrivilege = AuthorizationPrivilege.READ;
+        if (isPrivate) {
+          anonymousAccessPrivilege = AuthorizationPrivilege.READ_ABOUT;
         }
+        space.authorization =
+          this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+            space.authorization,
+            anonymousAccessPrivilege
+          );
+
         break;
       }
       case SpaceLevel.CHALLENGE:
@@ -144,8 +151,6 @@ export class SpaceAuthorizationService {
               space.authorization,
               parentAuthorization
             );
-          space.authorization.anonymousReadAccess =
-            parentAuthorization.anonymousReadAccess;
         }
         // For subspace, the parent space admins credentials should be allowed to delete
         const parentSpaceCommunity = space.parentSpace?.community;
@@ -174,8 +179,7 @@ export class SpaceAuthorizationService {
 
         break;
       case SpaceVisibility.ARCHIVED:
-        // ensure it has visibility privilege set to private
-        space.authorization.anonymousReadAccess = false;
+        // ensure it has visibility privilege set to priva
         spaceMembershipAllowed = false;
         break;
     }
@@ -336,7 +340,11 @@ export class SpaceAuthorizationService {
       );
     switch (space.level) {
       case SpaceLevel.SPACE: {
-        clonedAuthorization.anonymousReadAccess = true;
+        clonedAuthorization =
+          this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+            clonedAuthorization,
+            AuthorizationPrivilege.READ
+          );
         break;
       }
       case SpaceLevel.CHALLENGE:
@@ -518,7 +526,6 @@ export class SpaceAuthorizationService {
   ): IAuthorizationPolicy {
     let updatedAuthorization =
       this.authorizationPolicyService.reset(authorizationPolicy);
-    updatedAuthorization.anonymousReadAccess = false;
     updatedAuthorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         updatedAuthorization

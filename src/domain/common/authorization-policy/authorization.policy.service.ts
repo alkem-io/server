@@ -47,7 +47,6 @@ export class AuthorizationPolicyService {
 
   public authorizationSelectOptions: FindOptionsSelect<AuthorizationPolicy> = {
     id: true,
-    anonymousReadAccess: true,
     credentialRules: true,
     privilegeRules: true,
     verifiedCredentialRules: true,
@@ -258,6 +257,27 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
+  public appendCredentialRuleAnonymousAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+    const rules = this.authorizationService.convertCredentialRulesStr(
+      auth.credentialRules
+    );
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [
+        AuthorizationCredential.GLOBAL_ANONYMOUS,
+        AuthorizationCredential.GLOBAL_REGISTERED,
+      ],
+      `Anonymous agent granted '${privilege}' access`
+    );
+    rules.push(newRule);
+    auth.credentialRules = JSON.stringify(rules);
+    return auth;
+  }
+
   appendCredentialAuthorizationRules(
     authorization: IAuthorizationPolicy | undefined,
     additionalRules: IAuthorizationPolicyRuleCredential[]
@@ -329,15 +349,6 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
-  setAnonymousAccess(
-    authorization: IAuthorizationPolicy | undefined,
-    newValue: boolean
-  ): IAuthorizationPolicy {
-    const auth = this.validateAuthorization(authorization);
-    auth.anonymousReadAccess = newValue;
-    return auth;
-  }
-
   inheritParentAuthorization(
     childAuthorization: IAuthorizationPolicy | undefined,
     parentAuthorization: IAuthorizationPolicy | undefined
@@ -356,9 +367,8 @@ export class AuthorizationPolicyService {
     }
     const parent = this.validateAuthorization(parentAuthorization);
     const resetAuthPolicy = this.reset(child);
-    // (a) Inherit the visibility
-    resetAuthPolicy.anonymousReadAccess = parent.anonymousReadAccess;
-    // (b) Inherit the credential rules
+
+    // (a) Inherit the credential rules
     const inheritedRules = this.authorizationService.convertCredentialRulesStr(
       parent.credentialRules
     );
@@ -370,7 +380,7 @@ export class AuthorizationPolicyService {
     }
     resetAuthPolicy.credentialRules = JSON.stringify(newRules);
 
-    // (c) Inherit the verified credential rules
+    // (b) Inherit the verified credential rules
     const inheritedVCRules =
       this.authorizationService.convertVerifiedCredentialRulesStr(
         parent.verifiedCredentialRules
