@@ -34,7 +34,6 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -84,9 +83,17 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
+
+type SpaceSortingData = {
+  id: string;
+  subspacesCount: number;
+  visibility: SpaceVisibility;
+  accessModeIsPublic: boolean;
+};
 
 @Injectable()
 export class SpaceService {
@@ -152,8 +159,8 @@ export class SpaceService {
     space.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.SPACE
     );
-    space.settingsStr = this.spaceSettingsService.serializeSettings(
-      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
+    space.settings = this.spaceDefaultsService.getDefaultSpaceSettings(
+      spaceData.type
     );
 
     const storageAggregator =
@@ -588,51 +595,37 @@ export class SpaceService {
   }
 
   private sortSpacesDefault(spacesData: Space[]): string[] {
-    const sortedSpaces = spacesData.sort((a, b) => {
-      const visibilityA = a.visibility;
-      const visibilityB = b.visibility;
+    const spacesDataForSorting: SpaceSortingData[] = [];
+    for (const space of spacesData) {
+      const settings = space.settings;
+      let subspacesCount = 0;
+      if (space.subspaces) {
+        subspacesCount = this.getSubspaceAndSubsubspacesCount(space.subspaces);
+      }
+      const spaceSortingData: SpaceSortingData = {
+        id: space.id,
+        visibility: space.visibility,
+        accessModeIsPublic: settings.privacy.mode === SpacePrivacyMode.PUBLIC,
+        subspacesCount,
+      };
+      spacesDataForSorting.push(spaceSortingData);
+    }
+    const sortedSpaces = spacesDataForSorting.sort((a, b) => {
       if (
-        visibilityA !== visibilityB &&
-        (visibilityA === SpaceVisibility.DEMO ||
-          visibilityB === SpaceVisibility.DEMO)
+        a.visibility !== b.visibility &&
+        (a.visibility === SpaceVisibility.DEMO ||
+          b.visibility === SpaceVisibility.DEMO)
       )
-        return visibilityA === SpaceVisibility.DEMO ? 1 : -1;
+        return a.visibility === SpaceVisibility.DEMO ? 1 : -1;
 
-      if (
-        a.authorization?.anonymousReadAccess === true &&
-        b.authorization?.anonymousReadAccess === false
-      )
-        return -1;
-      if (
-        a.authorization?.anonymousReadAccess === false &&
-        b.authorization?.anonymousReadAccess === true
-      )
-        return 1;
+      if (a.accessModeIsPublic && !b.accessModeIsPublic) return -1;
+      if (!a.accessModeIsPublic && b.accessModeIsPublic) return 1;
 
-      if (!a.subspaces && b.subspaces) return 1;
-      if (a.subspaces && !b.subspaces) return -1;
-      if (!a.subspaces && !b.subspaces) return 0;
-
-      // Shouldn't get there
-      if (!a.subspaces || !b.subspaces)
-        throw new ValidationException(
-          `Critical error when comparing Spaces! Critical error when loading Subspaces for Space ${a} and Space ${b}`,
-          LogContext.SPACES
-        );
-
-      const subspacesCountA = this.getSubspaceAndSubsubspacesCount(
-        a?.subspaces
-      );
-      const subspacesCountB = this.getSubspaceAndSubsubspacesCount(
-        b?.subspaces
-      );
-
-      if (subspacesCountA > subspacesCountB) return -1;
-      if (subspacesCountA < subspacesCountB) return 1;
+      if (a.subspacesCount > b.subspacesCount) return -1;
+      if (a.subspacesCount < b.subspacesCount) return 1;
 
       return 0;
     });
-
     const sortedIDs: string[] = [];
     for (const space of sortedSpaces) {
       sortedIDs.push(space.id);
@@ -831,10 +824,25 @@ export class SpaceService {
   ): Promise<boolean> {
     const space = await this.spaceRepository.findOneOrFail({
       where: { id: spaceId },
-      select: { id: true, settingsStr: true },
+      select: {
+        id: true,
+        settings: {
+          collaboration: {
+            allowEventsFromSubspaces: true,
+            allowMembersToCreateCallouts: true,
+            allowMembersToCreateSubspaces: true,
+            inheritMembershipRights: true,
+          },
+          membership: {
+            allowSubspaceAdminsToInviteMembers: true,
+            policy: true,
+          },
+          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
+        },
+      },
     });
 
-    const originalSettings = this.getSettings(space as ISpace);
+    const originalSettings = space.settings;
     // compare the new values from the incoming update request with the original settings
     const difference = getDiff(settingsData, originalSettings);
     // if there is no difference, then no need to update the authorization policy
@@ -1172,10 +1180,6 @@ export class SpaceService {
     return subspace;
   }
 
-  public getSettings(space: ISpace): ISpaceSettings {
-    return this.spaceSettingsService.getSettings(space.settingsStr);
-  }
-
   private async setRoleSetHierarchyForSubspace(
     parentCommunity: ICommunity,
     childCommunity: ICommunity | undefined
@@ -1204,13 +1208,12 @@ export class SpaceService {
     space: ISpace,
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
-    const settings = this.spaceSettingsService.getSettings(space.settingsStr);
+    const settings = space.settings;
     const updatedSettings = this.spaceSettingsService.updateSettings(
       settings,
       settingsData
     );
-    space.settingsStr =
-      this.spaceSettingsService.serializeSettings(updatedSettings);
+    space.settings = updatedSettings;
     return await this.save(space);
   }
 

@@ -625,7 +625,19 @@ export class SearchResultService {
         id: true,
         type: true,
         level: true,
-        settingsStr: true,
+        settings: {
+          collaboration: {
+            allowEventsFromSubspaces: true,
+            allowMembersToCreateCallouts: true,
+            allowMembersToCreateSubspaces: true,
+            inheritMembershipRights: true,
+          },
+          membership: {
+            allowSubspaceAdminsToInviteMembers: true,
+            policy: true,
+          },
+          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
+        },
         visibility: true,
         collaboration: {
           id: true,
