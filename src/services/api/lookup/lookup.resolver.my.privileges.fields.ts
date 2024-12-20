@@ -1,8 +1,6 @@
 import { Args, Resolver } from '@nestjs/graphql';
 import { ResolveField } from '@nestjs/graphql';
-import { LookupQueryResults } from './dto/lookup.query.results';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ContextService } from '@domain/context/context/context.service';
@@ -18,8 +16,6 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UserService } from '@domain/community/user/user.service';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -36,14 +32,18 @@ import { TemplatesManagerService } from '@domain/template/templates-manager/temp
 import { LicenseService } from '@domain/common/license/license.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
+import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges.results';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 
-@Resolver(() => LookupQueryResults)
-export class LookupAuthorizationResolverFields {
+@Resolver(() => LookupMyPrivilegesQueryResults)
+export class LookupMyPrivilegesResolverFields {
   constructor(
-    private accountService: AccountService,
-    private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private accountService: AccountService,
     private communityService: CommunityService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
@@ -73,600 +73,450 @@ export class LookupAuthorizationResolverFields {
     private licenseService: LicenseService
   ) {}
 
+  private getMyPrivilegesOnAuthorizable(
+    agentInfo: AgentInfo,
+    authorizable: IAuthorizable
+  ): AuthorizationPrivilege[] {
+    if (!authorizable.authorization) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Authorization for ${authorizable.constructor.name} with ID ${authorizable.id}`,
+        LogContext.API
+      );
+    }
+    return this.authorizationPolicyService.getAgentPrivileges(
+      agentInfo,
+      authorizable.authorization
+    );
+  }
+
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Space Authorization',
+    description: 'Lookup myPrivileges onthe specified Space ',
   })
-  async spaceAuthorization(
+  async space(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const space = await this.spaceService.getSpaceOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!space.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Space with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return space.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, space);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Account Authorization',
+    description: 'Lookup myPrivileges onthe specified Account ',
   })
-  async accountAuthorization(
+  async account(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const account = await this.accountService.getAccountOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!account.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Account with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return account.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, account);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified RoleSet Authorization',
+    description: 'Lookup myPrivileges onthe specified RoleSet ',
   })
-  async roleSetAuthorization(
+  async roleSet(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!roleSet.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for RoleSet with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return roleSet.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, roleSet);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Document Authorization',
+    description: 'Lookup myPrivileges onthe specified Document ',
   })
-  async documentAuthorization(
+  async document(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const document = await this.documentService.getDocumentOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!document.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Document with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return document.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, document);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'A particular VirtualContributor Authorization',
+    description: 'A particular VirtualContributor ',
   })
-  async virtualContributorAuthorization(
+  async virtualContributor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributorOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!virtualContributor.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for VirtualContributor with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return virtualContributor.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, virtualContributor);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified User',
+    description: 'Lookup myPrivileges onthe specified User',
   })
-  async userAuthorization(
+  async user(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const user = await this.userService.getUserOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!user.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for User with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return user.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, user);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified StorageAggregator Authorization',
+    description: 'Lookup myPrivileges onthe specified StorageAggregator ',
   })
-  async storageAggregatorAuthorization(
+  async storageAggregator(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const storageAggregator =
       await this.storageAggregatorService.getStorageAggregatorOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!storageAggregator.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for StorageAggregator with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return storageAggregator.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, storageAggregator);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified InnovationPack Authorization',
+    description: 'Lookup myPrivileges onthe specified InnovationPack ',
   })
-  async innovationPackAuthorization(
+  async innovationPack(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const innovationPack =
       await this.innovationPackService.getInnovationPackOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!innovationPack.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for InnovationPack with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return innovationPack.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationPack);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified StorageBucket Authorization',
+    description: 'Lookup myPrivileges onthe specified StorageBucket ',
   })
-  async storageBucketAuthorization(
+  async storageBucket(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!storageBucket.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for StorageBucket with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return storageBucket.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, storageBucket);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified InnovationHub Authorization',
+    description: 'Lookup myPrivileges onthe specified InnovationHub ',
   })
-  async innovationHubAuthorization(
+  async innovationHub(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!innovationHub.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for InnovationHub with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return innovationHub.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationHub);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Application Authorization',
+    description: 'Lookup myPrivileges onthe specified Application ',
   })
-  async applicationAuthorization(
+  async application(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const application = await this.applicationService.getApplicationOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!application.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Application with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return application.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, application);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Invitation Authorization',
+    description: 'Lookup myPrivileges onthe specified Invitation ',
   })
-  async invitationAuthorization(
+  async invitation(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const invitation = await this.invitationService.getInvitationOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!invitation.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Invitation with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return invitation.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, invitation);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Community Authorization',
+    description: 'Lookup myPrivileges onthe specified Community ',
   })
-  async communityAuthorization(
+  async community(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const community = await this.communityService.getCommunityOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!community.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Community with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return community.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, community);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Collaboration Authorization',
+    description: 'Lookup myPrivileges onthe specified Collaboration ',
   })
-  async collaborationAuthorization(
+  async collaboration(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!collaboration.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Collaboration with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return collaboration.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, collaboration);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified CalendarEvent Authorization',
+    description: 'Lookup myPrivileges onthe specified CalendarEvent ',
   })
-  async calendarEventAuthorization(
+  async calendarEvent(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const calendarEvent =
       await this.calendarEventService.getCalendarEventOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!calendarEvent.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for CalendarEvent with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return calendarEvent.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, calendarEvent);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Calendar Authorization',
+    description: 'Lookup myPrivileges onthe specified Calendar ',
   })
-  async calendarAuthorization(
+  async calendar(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const calendar = await this.calendarService.getCalendarOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!calendar.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Calendar with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return calendar.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, calendar);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Context Authorization',
+    description: 'Lookup myPrivileges onthe specified Context ',
   })
-  async contextAuthorization(
+  async context(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const context = await this.contextService.getContextOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!context.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Context with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return context.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, context);
   }
+
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Whiteboard Authorization',
+    description: 'Lookup myPrivileges onthe specified Whiteboard ',
   })
-  async whiteboardAuthorization(
+  async whiteboard(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!whiteboard.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Whiteboard with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return whiteboard.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, whiteboard);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Profile Authorization',
+    description: 'Lookup myPrivileges onthe specified Profile ',
   })
-  async profileAuthorization(
+  async profile(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const profile = await this.profileService.getProfileOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!profile.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Profile with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return profile.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, profile);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Callout Authorization',
+    description: 'Lookup myPrivileges onthe specified Callout ',
   })
-  async calloutAuthorization(
+  async callout(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const callout = await this.calloutService.getCalloutOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!callout.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Callout with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return callout.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, callout);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Post Authorization',
+    description: 'Lookup myPrivileges onthe specified Post ',
   })
-  async postAuthorization(
+  async post(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const post = await this.postService.getPostOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!post.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Post with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return post.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, post);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Room Authorization',
+    description: 'Lookup myPrivileges onthe specified Room ',
   })
-  async roomAuthorization(
+  async room(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const room = await this.roomService.getRoomOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!room.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Room with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return room.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, room);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified InnovationFlow Authorization',
+    description: 'Lookup myPrivileges onthe specified InnovationFlow ',
   })
-  async innovationFlowAuthorization(
+  async innovationFlow(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!innovationFlow.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for InnovationFlow with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return innovationFlow.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, innovationFlow);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Template Authorization',
+    description: 'Lookup myPrivileges onthe specified Template ',
   })
-  async templateAuthorization(
+  async template(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const template = await this.templateService.getTemplateOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!template.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Template with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return template.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, template);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified TemplatesSet Authorization',
+    description: 'Lookup myPrivileges onthe specified TemplatesSet ',
   })
-  async templatesSetAuthorization(
+  async templatesSet(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       id,
       { relations: { authorization: true } }
     );
 
-    if (!templatesSet.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for TemplatesSet with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return templatesSet.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, templatesSet);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified TemplatesManager Authorization',
+    description: 'Lookup myPrivileges onthe specified TemplatesManager ',
   })
-  async templatesManagerAuthorization(
+  async templatesManager(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const templatesManager =
       await this.templatesManagerService.getTemplatesManagerOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!templatesManager.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for TemplatesManager with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return templatesManager.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, templatesManager);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified Community guidelines Authorization',
+    description: 'Lookup myPrivileges onthe specified Community guidelines ',
   })
-  async communityGuidelinesAuthorization(
+  async communityGuidelines(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const guidelines =
       await this.guidelinesService.getCommunityGuidelinesOrFail(id, {
         relations: { authorization: true },
       });
 
-    if (!guidelines.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for Community with ID ${id} `,
-        LogContext.API
-      );
-    }
-
-    return guidelines.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, guidelines);
   }
 
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
-    description: 'Lookup the specified License Authorization',
+    description: 'Lookup myPrivileges onthe specified License ',
   })
-  async licenseAuthorization(
+  async license(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<AuthorizationPrivilege[]> {
     const license = await this.licenseService.getLicenseOrFail(id, {
       relations: { authorization: true },
     });
 
-    if (!license.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Authorization for License with ID ${id} `,
-        LogContext.API
-      );
-    }
-    return license.authorization;
+    return this.getMyPrivilegesOnAuthorizable(agentInfo, license);
   }
 }
