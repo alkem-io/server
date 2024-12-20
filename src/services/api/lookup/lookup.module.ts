@@ -33,6 +33,7 @@ import { TemplatesSetModule } from '@domain/template/templates-set/templates.set
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { LookupMyPrivilegesResolverFields } from './lookup.resolver.my.privileges.fields';
 
 @Module({
   imports: [
@@ -68,7 +69,12 @@ import { LicenseModule } from '@domain/common/license/license.module';
     RoleSetModule,
     LicenseModule,
   ],
-  providers: [LookupService, LookupResolverQueries, LookupResolverFields],
+  providers: [
+    LookupService,
+    LookupResolverQueries,
+    LookupResolverFields,
+    LookupMyPrivilegesResolverFields,
+  ],
   exports: [LookupService],
 })
 export class LookupModule {}

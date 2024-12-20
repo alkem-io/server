@@ -251,7 +251,7 @@ export class SpaceResolverFields {
   })
   @UseGuards(GraphqlGuard)
   settings(@Parent() space: ISpace): ISpaceSettings {
-    return this.spaceService.getSettings(space);
+    return space.settings;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
