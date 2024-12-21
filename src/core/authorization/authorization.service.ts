@@ -210,6 +210,17 @@ export class AuthorizationService {
       });
     });
 
+    const initialGrantedPrivileges = Array.from(grantedPrivileges);
+
+    const privilegeRules = authorization.privilegeRules || [];
+    for (const rule of privilegeRules) {
+      if (initialGrantedPrivileges.includes(rule.sourcePrivilege)) {
+        for (const privilege of rule.grantedPrivileges) {
+          grantedPrivileges.add(privilege);
+        }
+      }
+    }
+
     return Array.from(grantedPrivileges);
   }
   private isCredentialMatch(
