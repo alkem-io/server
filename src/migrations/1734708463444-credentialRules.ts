@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CredentialRules1734531789437 implements MigrationInterface {
-  name = 'CredentialRules1734531789437';
+export class CredentialRules1734708463444 implements MigrationInterface {
+  name = 'CredentialRules1734708463444';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Clean up existing data
