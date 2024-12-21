@@ -322,7 +322,7 @@ export class UserService {
     defaults.set(PreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER, 'true');
     defaults.set(PreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
     // messaging & mentions
-    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_MESSAGE, 'true');
     defaults.set(PreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
     defaults.set(PreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
 
