@@ -14,14 +14,16 @@ export class OrganizationSettingsService {
     updateData: UpdateOrganizationSettingsEntityInput
   ): IOrganizationSettings {
     if (updateData.privacy) {
-      if (updateData.privacy.contributionRolesPubliclyVisible) {
+      if (updateData.privacy.contributionRolesPubliclyVisible !== undefined) {
         settings.privacy.contributionRolesPubliclyVisible =
           updateData.privacy.contributionRolesPubliclyVisible;
       }
     }
-    if (updateData.membership?.allowUsersMatchingDomainToJoin) {
-      settings.membership.allowUsersMatchingDomainToJoin =
-        updateData.membership.allowUsersMatchingDomainToJoin;
+    if (updateData.membership) {
+      if (updateData.membership.allowUsersMatchingDomainToJoin !== undefined) {
+        settings.membership.allowUsersMatchingDomainToJoin =
+          updateData.membership.allowUsersMatchingDomainToJoin;
+      }
     }
     return settings;
   }

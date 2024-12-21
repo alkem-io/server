@@ -14,14 +14,18 @@ export class UserSettingsService {
     updateData: UpdateUserSettingsEntityInput
   ): IUserSettings {
     if (updateData.privacy) {
-      if (updateData.privacy.contributionRolesPubliclyVisible) {
+      if (updateData.privacy.contributionRolesPubliclyVisible !== undefined) {
         settings.privacy.contributionRolesPubliclyVisible =
           updateData.privacy.contributionRolesPubliclyVisible;
       }
     }
-    if (updateData.communication?.allowOtherUsersToSendMessages) {
-      settings.communication.allowOtherUsersToSendMessages =
-        updateData.communication.allowOtherUsersToSendMessages;
+    if (updateData.communication) {
+      if (
+        updateData.communication.allowOtherUsersToSendMessages !== undefined
+      ) {
+        settings.communication.allowOtherUsersToSendMessages =
+          updateData.communication.allowOtherUsersToSendMessages;
+      }
     }
     return settings;
   }
