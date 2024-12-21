@@ -112,7 +112,7 @@ export class OrganizationResolverFields {
   })
   @UseGuards(GraphqlGuard)
   settings(@Parent() organization: IOrganization): IOrganizationSettings {
-    return this.organizationService.getSettings(organization);
+    return organization.settings;
   }
 
   @UseGuards(GraphqlGuard)

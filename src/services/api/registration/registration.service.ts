@@ -67,7 +67,7 @@ export class RegistrationService {
       return false;
     }
 
-    const orgSettings = this.organizationService.getSettings(org);
+    const orgSettings = org.settings;
 
     const orgMatchDomain =
       orgSettings.membership.allowUsersMatchingDomainToJoin;

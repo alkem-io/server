@@ -11,10 +11,10 @@ export class UserOrgSettings1734636338402 implements MigrationInterface {
       `DROP INDEX \`REL_58fd47c4a6ac8df9fe2bcaed87\` ON \`organization\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`organization\` ADD \`settingsStr\` text NOT NULL`
+      `ALTER TABLE \`organization\` ADD \`settings\` json NOT NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user\` ADD \`settingsStr\` text NOT NULL`
+      `ALTER TABLE \`user\` ADD \`settings\` json NOT NULL`
     );
 
     //

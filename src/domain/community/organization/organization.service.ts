@@ -96,10 +96,7 @@ export class OrganizationService {
     organization.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ORGANIZATION
     );
-    organization.settingsStr =
-      this.organizationSettingsService.serializeSettings(
-        this.getDefaultOrganizationSettings()
-      );
+    organization.settings = this.getDefaultOrganizationSettings();
 
     organization.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -220,15 +217,10 @@ export class OrganizationService {
     organization: IOrganization,
     settingsData: UpdateOrganizationSettingsEntityInput
   ): Promise<IOrganization> {
-    const settings = this.organizationSettingsService.getSettings(
-      organization.settingsStr
-    );
-    const updatedSettings = this.organizationSettingsService.updateSettings(
-      settings,
+    organization.settings = this.organizationSettingsService.updateSettings(
+      organization.settings,
       settingsData
     );
-    organization.settingsStr =
-      this.organizationSettingsService.serializeSettings(updatedSettings);
     return await this.save(organization);
   }
 
@@ -373,12 +365,6 @@ export class OrganizationService {
   public async getAccount(organization: IOrganization): Promise<IAccount> {
     return await this.accountHostService.getAccountOrFail(
       organization.accountID
-    );
-  }
-
-  public getSettings(organization: IOrganization): IOrganizationSettings {
-    return this.organizationSettingsService.getSettings(
-      organization.settingsStr
     );
   }
 

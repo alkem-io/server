@@ -13,6 +13,7 @@ import { OrganizationVerification } from '../organization-verification/organizat
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { UUID_LENGTH } from '@common/constants';
+import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
 
 @Entity()
 export class Organization
@@ -22,8 +23,8 @@ export class Organization
   @Column('char', { length: UUID_LENGTH, nullable: false })
   accountID!: string;
 
-  @Column('text')
-  settingsStr: string = '';
+  @Column('json', { nullable: false })
+  settings!: IOrganizationSettings;
 
   @Column({
     unique: true,

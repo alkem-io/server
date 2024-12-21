@@ -9,19 +9,6 @@ export class UserSettingsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public getSettings(settingsStr: string): IUserSettings {
-    const states: IUserSettings = this.deserializeSettings(settingsStr);
-    return states;
-  }
-
-  public serializeSettings(settings: IUserSettings): string {
-    return JSON.stringify(settings);
-  }
-
-  private deserializeSettings(settingsStr: string): IUserSettings {
-    return JSON.parse(settingsStr);
-  }
-
   public updateSettings(
     settings: IUserSettings,
     updateData: UpdateUserSettingsEntityInput

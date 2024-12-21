@@ -130,9 +130,7 @@ export class UserService {
       accountUpn: userData.accountUpn ?? userData.email,
     });
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
-    user.settingsStr = this.userSettingsService.serializeSettings(
-      this.getDefaultUserSettings()
-    );
+    user.settings = this.getDefaultUserSettings();
 
     if (!user.serviceProfile) {
       user.serviceProfile = false;
@@ -239,21 +237,15 @@ export class UserService {
     return settings;
   }
 
-  public getSettings(user: IUser): IUserSettings {
-    return this.userSettingsService.getSettings(user.settingsStr);
-  }
-
   public async updateUserSettings(
     user: IUser,
     settingsData: UpdateUserSettingsEntityInput
   ): Promise<IUser> {
-    const settings = this.userSettingsService.getSettings(user.settingsStr);
-    const updatedSettings = this.userSettingsService.updateSettings(
-      settings,
+    user.settings = this.userSettingsService.updateSettings(
+      user.settings,
       settingsData
     );
-    user.settingsStr =
-      this.userSettingsService.serializeSettings(updatedSettings);
+
     return await this.save(user);
   }
 

@@ -9,19 +9,6 @@ export class OrganizationSettingsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public getSettings(settingsStr: string): IOrganizationSettings {
-    const states: IOrganizationSettings = this.deserializeSettings(settingsStr);
-    return states;
-  }
-
-  public serializeSettings(settings: IOrganizationSettings): string {
-    return JSON.stringify(settings);
-  }
-
-  private deserializeSettings(settingsStr: string): IOrganizationSettings {
-    return JSON.parse(settingsStr);
-  }
-
   public updateSettings(
     settings: IOrganizationSettings,
     updateData: UpdateOrganizationSettingsEntityInput

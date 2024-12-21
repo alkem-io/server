@@ -74,7 +74,7 @@ export class UserResolverFields {
   })
   @UseGuards(GraphqlGuard)
   settings(@Parent() user: IUser): IUserSettings {
-    return this.userService.getSettings(user);
+    return user.settings;
   }
 
   @ResolveField('agent', () => IAgent, {
@@ -225,9 +225,7 @@ export class UserResolverFields {
       `user: ${agentInfo.email} can contact user: ${user.email}`
     );
 
-    const settings = this.userService.getSettings(user);
-
-    return settings.communication.allowOtherUsersToSendMessages;
+    return user.settings.communication.allowOtherUsersToSendMessages;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
