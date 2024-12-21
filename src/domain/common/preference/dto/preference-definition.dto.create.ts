@@ -1,4 +1,4 @@
-import { UserPreferenceType } from '@common/enums';
+import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceValueType } from '@common/enums/preference.value.type';
 
 export class CreatePreferenceDefinitionInput {
@@ -6,5 +6,5 @@ export class CreatePreferenceDefinitionInput {
   displayName!: string;
   description!: string;
   valueType!: PreferenceValueType;
-  type!: UserPreferenceType;
+  type!: PreferenceType;
 }

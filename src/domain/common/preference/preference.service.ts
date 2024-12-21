@@ -7,11 +7,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@src/common/exceptions';
-import {
-  LogContext,
-  PreferenceValueType,
-  UserPreferenceType,
-} from '@src/common/enums';
+import { LogContext, PreferenceValueType } from '@src/common/enums';
 import { PreferenceDefinition } from './preference.definition.entity';
 import { IPreferenceDefinition } from './preference.definition.interface';
 import { Preference } from './preference.entity';
@@ -19,9 +15,9 @@ import { IPreference } from './preference.interface';
 import { getDefaultPreferenceValue, validateValue } from './utils';
 import { CreatePreferenceDefinitionInput } from './dto/preference-definition.dto.create';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { PreferenceType } from '@common/enums/preference.type';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { PreferenceType } from '@common/enums/preference.type';
 
 @Injectable()
 export class PreferenceService {
@@ -64,7 +60,7 @@ export class PreferenceService {
   async definitionExists(
     group: string,
     valueType: PreferenceValueType,
-    type: UserPreferenceType
+    type: PreferenceType
   ) {
     const res = await this.definitionRepository.findOneBy({
       group,
