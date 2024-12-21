@@ -49,7 +49,7 @@ export class UserOrgSettings1734636338402 implements MigrationInterface {
       );
       // update the organization settingsStr
       await queryRunner.query(
-        `UPDATE \`organization\` SET settingsStr = ? WHERE id = ?`,
+        `UPDATE \`organization\` SET settings = ? WHERE id = ?`,
         [JSON.stringify(settings), organization.id]
       );
       // Delete the preference set and preferences
@@ -97,10 +97,10 @@ export class UserOrgSettings1734636338402 implements MigrationInterface {
         userPreference.value
       );
       // update the organization settingsStr
-      await queryRunner.query(
-        `UPDATE \`user\` SET settingsStr = ? WHERE id = ?`,
-        [JSON.stringify(settings), user.id]
-      );
+      await queryRunner.query(`UPDATE \`user\` SET settings = ? WHERE id = ?`, [
+        JSON.stringify(settings),
+        user.id,
+      ]);
       // Delete the preference set and preferences
       await queryRunner.query(
         `DELETE FROM preference WHERE preferenceSetId = ?`,
