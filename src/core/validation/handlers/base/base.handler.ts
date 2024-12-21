@@ -83,6 +83,14 @@ import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto
 import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
 import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
 import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
+import { UpdateOrganizationSettingsEntityInput } from '@domain/community/organization.settings/dto/organization.settings.dto.update';
+import { UpdateOrganizationSettingsMembershipInput } from '@domain/community/organization.settings/dto/organization.settings.membership.dto.update';
+import { UpdateOrganizationSettingsPrivacyInput } from '@domain/community/organization.settings/dto/organization.settings.privacy.dto.update';
+import { UpdateUserSettingsEntityInput } from '@domain/community/user.settings';
+import { UpdateUserSettingsInput } from '@domain/community/user/dto/user.dto.update.settings';
+import { UpdateUserSettingsCommunicationInput } from '@domain/community/user.settings/dto/user.settings.communications.dto.update';
+import { UpdateUserSettingsPrivacyInput } from '@domain/community/user.settings/dto/user.settings.privacy.dto.update';
+import { UpdateOrganizationSettingsInput } from '@domain/community/organization/dto/organization.dto.update.settings';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -150,6 +158,14 @@ export class BaseHandler extends AbstractHandler {
       UpdateEcosystemModelInput,
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
+      UpdateOrganizationSettingsInput,
+      UpdateOrganizationSettingsEntityInput,
+      UpdateOrganizationSettingsMembershipInput,
+      UpdateOrganizationSettingsPrivacyInput,
+      UpdateUserSettingsEntityInput,
+      UpdateUserSettingsInput,
+      UpdateUserSettingsCommunicationInput,
+      UpdateUserSettingsPrivacyInput,
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
