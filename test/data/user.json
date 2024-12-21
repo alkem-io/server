@@ -10,7 +10,14 @@
     "serviceProfile": false,
     "id": "b69f82a1-bc7d-486c-85f9-e7ac6e689f4e",
     "accountID": "777f82a1-bc7d-486c-85f9-e7ac6e689f4e",
-    "settingsStr": "",
+    "settings": {
+      "privacy": {
+        "contributionRolesPubliclyVisible": true
+      },
+      "communication": {
+        "allowOtherUsersToSendMessages": true
+      }
+    },
     "profile": {
       "id": "08c6ec54-524a-4d7f-9f58-a4c50f0c0496",
       "tagline": "",
