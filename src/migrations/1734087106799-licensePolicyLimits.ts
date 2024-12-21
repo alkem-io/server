@@ -82,7 +82,7 @@ const licenseCredentialRules: CredentialRule[] = [
         limit: 1,
       },
     ],
-    name: 'Space Save As Templatet',
+    name: 'Space Save As Template',
   },
   {
     credentialType: LicenseCredential.SPACE_LICENSE_FREE,
