@@ -22,6 +22,7 @@ import { Profile } from '@domain/common/profile';
 import { TemplatesManager } from '@domain/template/templates-manager';
 import { License } from '@domain/common/license/license.entity';
 import { SpaceLevel } from '@common/enums/space.level';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
   @OneToOne(() => Profile, {
@@ -85,8 +86,8 @@ export class Space extends NameableEntity implements ISpace {
   @JoinColumn()
   agent?: Agent;
 
-  @Column('text')
-  settingsStr: string = '';
+  @Column('json', { nullable: true })
+  settings: ISpaceSettings;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,
@@ -130,5 +131,6 @@ export class Space extends NameableEntity implements ISpace {
   constructor() {
     super();
     this.nameID = '';
+    this.settings = {} as ISpaceSettings;
   }
 }

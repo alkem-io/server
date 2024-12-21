@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class LicensePolicyLimits1734087106799 implements MigrationInterface {
+export class LicensePolicyLimits1734708463555 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     const [licensePolicy]: {
       id: string;
@@ -82,7 +82,7 @@ const licenseCredentialRules: CredentialRule[] = [
         limit: 1,
       },
     ],
-    name: 'Space Save As Templatet',
+    name: 'Space Save As Template',
   },
   {
     credentialType: LicenseCredential.SPACE_LICENSE_FREE,

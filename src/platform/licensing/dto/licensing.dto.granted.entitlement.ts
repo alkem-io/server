@@ -8,6 +8,6 @@ export class LicensingGrantedEntitlement {
   })
   type!: LicenseEntitlementType;
 
-  @Field(() => Number, { nullable: true })
+  @Field(() => Number, { nullable: false })
   limit!: number;
 }

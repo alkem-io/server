@@ -67,6 +67,7 @@ import { TemplatesManagerService } from '@domain/template/templates-manager/temp
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
+import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges.results';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -143,6 +144,15 @@ export class LookupResolverFields {
     );
 
     return account;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => LookupMyPrivilegesQueryResults, {
+    nullable: true,
+    description: 'Lookup myPrivileges on the specified entity.',
+  })
+  myPrivileges(): LookupMyPrivilegesQueryResults {
+    return {} as LookupMyPrivilegesQueryResults;
   }
 
   @UseGuards(GraphqlGuard)
@@ -426,7 +436,6 @@ export class LookupResolverFields {
     return community;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICollaboration, {
     nullable: true,
     description: 'Lookup the specified Collaboration',
@@ -437,12 +446,6 @@ export class LookupResolverFields {
   ): Promise<ICollaboration> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      collaboration.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Collaboration: ${collaboration.id}`
-    );
 
     return collaboration;
   }

@@ -54,10 +54,7 @@ export class CalendarResolverFields {
       calendar.id
     );
 
-    const spaceSettings = this.spaceSettingsService.getSettings(
-      space.settingsStr
-    );
-
+    const spaceSettings = space.settings;
     const shouldSubspaceEventsBubble =
       spaceSettings.collaboration.allowEventsFromSubspaces;
 
