@@ -12,14 +12,15 @@ export class AuthorizationPolicy
   extends BaseAlkemioEntity
   implements IAuthorizationPolicy
 {
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'json', nullable: false })
   credentialRules: AuthorizationPolicyRuleCredential[];
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'json', nullable: false })
   privilegeRules: AuthorizationPolicyRulePrivilege[];
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'json', nullable: false })
   verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[];
+
   @Column()
   anonymousReadAccess: boolean;
 
