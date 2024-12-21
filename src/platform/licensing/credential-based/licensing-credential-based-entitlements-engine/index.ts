@@ -1,1 +1,1 @@
-export * from './licensing.credential.based.policy.rule.credential.interface';
+export * from './licensing.credential.based.policy.credential.rule.interface';
