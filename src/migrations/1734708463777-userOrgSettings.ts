@@ -102,10 +102,9 @@ export class UserOrgSettings1734636338402 implements MigrationInterface {
         user.id,
       ]);
       // Delete the preference set and preferences
-      await queryRunner.query(
-        `DELETE FROM preference WHERE preferenceSetId = ?`,
-        [user.preferenceSetId]
-      );
+      await queryRunner.query(`DELETE FROM preference WHERE id = ?`, [
+        userPreference.id,
+      ]);
 
       // and the authorization policy
       await queryRunner.query(`DELETE FROM authorization_policy WHERE id = ?`, [
