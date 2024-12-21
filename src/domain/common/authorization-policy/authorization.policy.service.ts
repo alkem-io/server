@@ -160,9 +160,9 @@ export class AuthorizationPolicyService {
         LogContext.AUTH
       );
     }
-    authorizationPolicy.credentialRules = '';
-    authorizationPolicy.verifiedCredentialRules = '';
-    authorizationPolicy.privilegeRules = '';
+    authorizationPolicy.credentialRules = [];
+    authorizationPolicy.verifiedCredentialRules = [];
+    authorizationPolicy.privilegeRules = [];
     return authorizationPolicy;
   }
 
@@ -241,9 +241,7 @@ export class AuthorizationPolicyService {
     name: string
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
-    const rules = this.authorizationService.convertCredentialRulesStr(
-      auth.credentialRules
-    );
+    const rules = auth.credentialRules;
     const newRule = new AuthorizationPolicyRuleCredential(
       grantedPrivileges,
       {
@@ -253,7 +251,7 @@ export class AuthorizationPolicyService {
       name
     );
     rules.push(newRule);
-    auth.credentialRules = JSON.stringify(rules);
+    auth.credentialRules = rules;
     return auth;
   }
 
@@ -262,9 +260,7 @@ export class AuthorizationPolicyService {
     privilege: AuthorizationPrivilege
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
-    const rules = this.authorizationService.convertCredentialRulesStr(
-      auth.credentialRules
-    );
+
     const newRule = this.createCredentialRuleUsingTypesOnly(
       [privilege],
       [
@@ -273,8 +269,7 @@ export class AuthorizationPolicyService {
       ],
       `Anonymous agent granted '${privilege}' access`
     );
-    rules.push(newRule);
-    auth.credentialRules = JSON.stringify(rules);
+    auth.credentialRules.push(newRule);
     return auth;
   }
 
@@ -284,14 +279,12 @@ export class AuthorizationPolicyService {
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
-    const existingRules = this.authorizationService.convertCredentialRulesStr(
-      auth.credentialRules
-    );
+    const existingRules = auth.credentialRules;
     for (const additionalRule of additionalRules) {
       existingRules.push(additionalRule);
     }
 
-    auth.credentialRules = JSON.stringify(existingRules);
+    auth.credentialRules = existingRules;
     return auth;
   }
 
@@ -300,13 +293,11 @@ export class AuthorizationPolicyService {
     privilegeRules: IAuthorizationPolicyRulePrivilege[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
-    const existingRules = this.authorizationService.convertPrivilegeRulesStr(
-      auth.privilegeRules
-    );
+    const existingRules = auth.privilegeRules;
     for (const additionalRule of privilegeRules) {
       existingRules.push(additionalRule);
     }
-    auth.privilegeRules = JSON.stringify(existingRules);
+    auth.privilegeRules = existingRules;
     return auth;
   }
 
@@ -317,9 +308,7 @@ export class AuthorizationPolicyService {
     name: string
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
-    const existingRules = this.authorizationService.convertPrivilegeRulesStr(
-      auth.privilegeRules
-    );
+    const existingRules = auth.privilegeRules;
     const newPrivilegeRule = new AuthorizationPolicyRulePrivilege(
       grantedPrivileges,
       sourcePrivilege,
@@ -327,7 +316,7 @@ export class AuthorizationPolicyService {
     );
     existingRules.push(newPrivilegeRule);
 
-    auth.privilegeRules = JSON.stringify(existingRules);
+    auth.privilegeRules = existingRules;
     return auth;
   }
 
@@ -337,15 +326,12 @@ export class AuthorizationPolicyService {
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
-    const existingRules =
-      this.authorizationService.convertVerifiedCredentialRulesStr(
-        auth.verifiedCredentialRules
-      );
+    const existingRules = auth.verifiedCredentialRules;
     for (const additionalRule of additionalRules) {
       existingRules.push(additionalRule);
     }
 
-    auth.verifiedCredentialRules = JSON.stringify(existingRules);
+    auth.verifiedCredentialRules = existingRules;
     return auth;
   }
 
@@ -369,27 +355,24 @@ export class AuthorizationPolicyService {
     const resetAuthPolicy = this.reset(child);
 
     // (a) Inherit the credential rules
-    const inheritedRules = this.authorizationService.convertCredentialRulesStr(
-      parent.credentialRules
-    );
+    const inheritedRules = parent.credentialRules;
+
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     for (const inheritedRule of inheritedRules) {
       if (inheritedRule.cascade) {
         newRules.push(inheritedRule);
       }
     }
-    resetAuthPolicy.credentialRules = JSON.stringify(newRules);
+    resetAuthPolicy.credentialRules = newRules;
 
     // (b) Inherit the verified credential rules
-    const inheritedVCRules =
-      this.authorizationService.convertVerifiedCredentialRulesStr(
-        parent.verifiedCredentialRules
-      );
+    const inheritedVCRules = parent.verifiedCredentialRules;
+
     const newVcRules: IAuthorizationPolicyRuleVerifiedCredential[] = [];
     for (const inheritedVcRule of inheritedVCRules) {
       newVcRules.push(inheritedVcRule);
     }
-    resetAuthPolicy.verifiedCredentialRules = JSON.stringify(newVcRules);
+    resetAuthPolicy.verifiedCredentialRules = newVcRules;
 
     return resetAuthPolicy;
   }
@@ -397,28 +380,19 @@ export class AuthorizationPolicyService {
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
-    const rules = this.authorizationService.convertCredentialRulesStr(
-      authorization.credentialRules
-    );
-    return rules;
+    return authorization.credentialRules;
   }
 
   getVerifiedCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleVerifiedCredential[] {
-    const result = this.authorizationService.convertVerifiedCredentialRulesStr(
-      authorization.verifiedCredentialRules
-    );
-    return result;
+    return authorization.verifiedCredentialRules;
   }
 
   getPrivilegeRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRulePrivilege[] {
-    const result = this.authorizationService.convertPrivilegeRulesStr(
-      authorization.privilegeRules
-    );
-    return result;
+    return authorization.privilegeRules ?? [];
   }
 
   getAgentPrivileges(

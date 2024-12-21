@@ -34,7 +34,6 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -88,6 +87,13 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
+
+type SpaceSortingData = {
+  id: string;
+  subspacesCount: number;
+  visibility: SpaceVisibility;
+  accessModeIsPublic: boolean;
+};
 
 @Injectable()
 export class SpaceService {
@@ -153,8 +159,8 @@ export class SpaceService {
     space.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.SPACE
     );
-    space.settingsStr = this.spaceSettingsService.serializeSettings(
-      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
+    space.settings = this.spaceDefaultsService.getDefaultSpaceSettings(
+      spaceData.type
     );
 
     const storageAggregator =
@@ -591,7 +597,7 @@ export class SpaceService {
   private sortSpacesDefault(spacesData: Space[]): string[] {
     const spacesDataForSorting: SpaceSortingData[] = [];
     for (const space of spacesData) {
-      const settings = this.getSettings(space);
+      const settings = space.settings;
       let subspacesCount = 0;
       if (space.subspaces) {
         subspacesCount = this.getSubspaceAndSubsubspacesCount(space.subspaces);
@@ -620,7 +626,6 @@ export class SpaceService {
 
       return 0;
     });
-
     const sortedIDs: string[] = [];
     for (const space of sortedSpaces) {
       sortedIDs.push(space.id);
@@ -819,10 +824,25 @@ export class SpaceService {
   ): Promise<boolean> {
     const space = await this.spaceRepository.findOneOrFail({
       where: { id: spaceId },
-      select: { id: true, settingsStr: true },
+      select: {
+        id: true,
+        settings: {
+          collaboration: {
+            allowEventsFromSubspaces: true,
+            allowMembersToCreateCallouts: true,
+            allowMembersToCreateSubspaces: true,
+            inheritMembershipRights: true,
+          },
+          membership: {
+            allowSubspaceAdminsToInviteMembers: true,
+            policy: true,
+          },
+          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
+        },
+      },
     });
 
-    const originalSettings = this.getSettings(space as ISpace);
+    const originalSettings = space.settings;
     // compare the new values from the incoming update request with the original settings
     const difference = getDiff(settingsData, originalSettings);
     // if there is no difference, then no need to update the authorization policy
@@ -1160,10 +1180,6 @@ export class SpaceService {
     return subspace;
   }
 
-  public getSettings(space: ISpace): ISpaceSettings {
-    return this.spaceSettingsService.getSettings(space.settingsStr);
-  }
-
   private async setRoleSetHierarchyForSubspace(
     parentCommunity: ICommunity,
     childCommunity: ICommunity | undefined
@@ -1192,13 +1208,12 @@ export class SpaceService {
     space: ISpace,
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
-    const settings = this.spaceSettingsService.getSettings(space.settingsStr);
+    const settings = space.settings;
     const updatedSettings = this.spaceSettingsService.updateSettings(
       settings,
       settingsData
     );
-    space.settingsStr =
-      this.spaceSettingsService.serializeSettings(updatedSettings);
+    space.settings = updatedSettings;
     return await this.save(space);
   }
 
@@ -1475,10 +1490,3 @@ export class SpaceService {
     return metrics;
   }
 }
-
-type SpaceSortingData = {
-  id: string;
-  subspacesCount: number;
-  visibility: SpaceVisibility;
-  accessModeIsPublic: boolean;
-};
