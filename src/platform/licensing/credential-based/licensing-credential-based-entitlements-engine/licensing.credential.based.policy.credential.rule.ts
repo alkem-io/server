@@ -1,16 +1,16 @@
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.rule.credential.interface';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.credential.rule.interface';
+import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 
 export class LicensingCredentialBasedPolicyCredentialRule
   implements ILicensingCredentialBasedPolicyCredentialRule
 {
   credentialType: LicensingCredentialBasedCredentialType;
-  grantedEntitlements: LicenseEntitlementType[];
+  grantedEntitlements: LicensingGrantedEntitlement[];
   name: string;
 
   constructor(
-    grantedEntitlements: LicenseEntitlementType[],
+    grantedEntitlements: LicensingGrantedEntitlement[],
     credentialType: LicensingCredentialBasedCredentialType,
     name: string
   ) {

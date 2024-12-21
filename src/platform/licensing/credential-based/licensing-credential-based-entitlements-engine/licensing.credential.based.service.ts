@@ -11,8 +11,9 @@ import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { LicensePolicy } from '@platform/licensing/credential-based/license-policy';
 import { IAgent, ICredential } from '@domain/agent';
-import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.rule.credential.interface';
+import { ILicensingCredentialBasedPolicyCredentialRule } from './licensing.credential.based.policy.credential.rule.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 
 @Injectable()
 export class LicensingCredentialBasedService {
@@ -61,9 +62,10 @@ export class LicensingCredentialBasedService {
     for (const credentialRule of credentialRules) {
       for (const credential of credentials) {
         if (credential.type === credentialRule.credentialType) {
-          if (
-            credentialRule.grantedEntitlements.includes(entitlementRequired)
-          ) {
+          const grantedEntitlement = credentialRule.grantedEntitlements.find(
+            ge => ge.type === entitlementRequired
+          );
+          if (grantedEntitlement) {
             this.logger.verbose?.(
               `[CredentialRule] Granted privilege '${entitlementRequired}' using rule '${credentialRule.name}'`,
               LogContext.LICENSE
@@ -74,6 +76,37 @@ export class LicensingCredentialBasedService {
       }
     }
     return false;
+  }
+
+  public async getEntitlementIfGranted(
+    entitlementRequired: LicenseEntitlementType,
+    agent: IAgent,
+    licensePolicy?: ILicensePolicy | undefined
+  ): Promise<LicensingGrantedEntitlement | undefined> {
+    const policy =
+      await this.getLicensingCredentialBasedPolicyOrFail(licensePolicy);
+    const credentials = await this.getCredentialsFromAgent(agent);
+
+    const credentialRules = this.convertCredentialRulesStr(
+      policy.credentialRulesStr
+    );
+    for (const credentialRule of credentialRules) {
+      for (const credential of credentials) {
+        if (credential.type === credentialRule.credentialType) {
+          const grantedEntitlement = credentialRule.grantedEntitlements.find(
+            ge => ge.type === entitlementRequired
+          );
+          if (grantedEntitlement) {
+            this.logger.verbose?.(
+              `[CredentialRule] Granted privilege '${entitlementRequired}' using rule '${credentialRule.name}'`,
+              LogContext.LICENSE
+            );
+            return grantedEntitlement;
+          }
+        }
+      }
+    }
+    return undefined;
   }
 
   private async getCredentialsFromAgent(agent: IAgent): Promise<ICredential[]> {
@@ -114,7 +147,9 @@ export class LicensingCredentialBasedService {
       for (const credential of credentials) {
         if (rule.credentialType === credential.type) {
           for (const entitlement of rule.grantedEntitlements) {
-            grantedEntitlements.push(entitlement);
+            if (entitlement.limit > 0) {
+              grantedEntitlements.push(entitlement.type);
+            }
           }
         }
       }
