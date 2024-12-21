@@ -11,6 +11,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { ILicense } from '@domain/common/license/license.interface';
 import { SpaceLevel } from '@common/enums/space.level';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
 @ObjectType('Space')
 export class ISpace extends INameable {
@@ -46,7 +47,7 @@ export class ISpace extends INameable {
   context?: IContext;
   community?: ICommunity;
 
-  settingsStr!: string;
+  settings!: ISpaceSettings;
 
   storageAggregator?: IStorageAggregator;
 
