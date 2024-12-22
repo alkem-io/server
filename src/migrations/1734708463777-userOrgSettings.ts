@@ -79,7 +79,7 @@ export class UserOrgSettings1734636338402 implements MigrationInterface {
         authorizationId: string;
       }[] = await queryRunner.query(
         `SELECT id FROM preference_definition WHERE type = ?`,
-        ['NotificationCommunicationMention']
+        ['NotificationCommunicationMessage']
       );
 
       const [userPreference]: {
@@ -119,7 +119,7 @@ export class UserOrgSettings1734636338402 implements MigrationInterface {
     );
     await queryRunner.query(
       `DELETE FROM preference_definition WHERE type = ?`,
-      ['NotificationCommunicationMention']
+      ['NotificationCommunicationMessage']
     );
 
     await queryRunner.query(
