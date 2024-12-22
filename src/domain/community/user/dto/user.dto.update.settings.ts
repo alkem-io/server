@@ -1,3 +1,4 @@
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { UpdateUserSettingsEntityInput } from '@domain/community/user.settings/dto/user.settings.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
@@ -5,7 +6,7 @@ import { ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateUserSettingsInput {
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: false,
     description:
       'The identifier for the User whose settings are to be updated.',
