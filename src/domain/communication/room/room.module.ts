@@ -12,7 +12,6 @@ import { RoomResolverFields } from './room.resolver.fields';
 import { RoomResolverMutations } from './room.resolver.mutations';
 import { RoomService } from './room.service';
 import { RoomAuthorizationService } from './room.service.authorization';
-import { MessagingModule } from '../messaging/messaging.module';
 import { Room } from './room.entity';
 import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
@@ -33,7 +32,6 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
     AuthorizationPolicyModule,
     NamingModule,
     CommunicationAdapterModule,
-    MessagingModule,
     MessageModule,
     VcInteractionModule,
     VirtualContributorModule,

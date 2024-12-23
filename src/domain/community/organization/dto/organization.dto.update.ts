@@ -1,14 +1,14 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UUID_NAMEID } from '@domain/common/scalars';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 @InputType()
 export class UpdateOrganizationInput extends UpdateContributorInput {
   // Override the type of entry accepted
-  @Field(() => UUID_NAMEID, {
+  @Field(() => UUID, {
     nullable: false,
-    description: 'The ID or NameID of the Organization to update.',
+    description: 'The ID of the Organization to update.',
   })
   ID!: string;
 

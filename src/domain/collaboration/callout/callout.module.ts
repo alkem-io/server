@@ -12,7 +12,6 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
@@ -39,7 +38,6 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     EntityResolverModule,
     ContributorLookupModule,
     NamingModule,
-    MessagingModule,
     ReferenceModule,
     CalloutFramingModule,
     CalloutContributionModule,

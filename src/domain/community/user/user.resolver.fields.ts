@@ -15,7 +15,6 @@ import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import {
@@ -33,6 +32,7 @@ import { UserAuthenticationResult } from './dto/roles.dto.authentication.result'
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { Identity } from '@ory/kratos-client';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IUserSettings } from '../user.settings/user.settings.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -40,7 +40,6 @@ export class UserResolverFields {
     private authorizationService: AuthorizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
-    private messagingService: MessagingService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -67,6 +66,15 @@ export class UserResolverFields {
       `read profile on User: ${profile.displayName} with current user being: ${agentInfo.userID}`
     );
     return profile;
+  }
+
+  @ResolveField('settings', () => IUserSettings, {
+    nullable: false,
+    description: 'The settings for this User.',
+  })
+  @UseGuards(GraphqlGuard)
+  settings(@Parent() user: IUser): IUserSettings {
+    return user.settings;
   }
 
   @ResolveField('agent', () => IAgent, {
@@ -217,13 +225,7 @@ export class UserResolverFields {
       `user: ${agentInfo.email} can contact user: ${user.email}`
     );
 
-    const preferenceSet = await this.userService.getPreferenceSetOrFail(
-      user.id
-    );
-
-    return await this.messagingService.isContactableWithDirectMessage(
-      preferenceSet
-    );
+    return user.settings.communication.allowOtherUsersToSendMessages;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

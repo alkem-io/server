@@ -1,4 +1,4 @@
-import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -33,7 +33,6 @@ import { DirectRoomResult } from './dto/user.dto.communication.room.direct.resul
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -66,6 +65,10 @@ import { AccountType } from '@common/enums/account.type';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomType } from '@common/enums/room.type';
+import { IUserSettings } from '../user.settings/user.settings.interface';
+import { UserSettingsService } from '../user.settings/user.settings.service';
+import { UpdateUserSettingsEntityInput } from '../user.settings/dto/user.settings.dto.update';
+import { PreferenceType } from '@common/enums/preference.type';
 
 @Injectable()
 export class UserService {
@@ -81,6 +84,7 @@ export class UserService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
     private accountHostService: AccountHostService,
+    private userSettingsService: UserSettingsService,
     private contributorService: ContributorService,
     private kratosService: KratosService,
     @InjectRepository(User)
@@ -126,6 +130,7 @@ export class UserService {
       accountUpn: userData.accountUpn ?? userData.email,
     });
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
+    user.settings = this.getDefaultUserSettings();
 
     if (!user.serviceProfile) {
       user.serviceProfile = false;
@@ -219,6 +224,31 @@ export class UserService {
     return user;
   }
 
+  private getDefaultUserSettings(): IUserSettings {
+    const settings: IUserSettings = {
+      communication: {
+        allowOtherUsersToSendMessages: true,
+      },
+      privacy: {
+        // Note: not currently used but will be near term.
+        contributionRolesPubliclyVisible: true,
+      },
+    };
+    return settings;
+  }
+
+  public async updateUserSettings(
+    user: IUser,
+    settingsData: UpdateUserSettingsEntityInput
+  ): Promise<IUser> {
+    user.settings = this.userSettingsService.updateSettings(
+      user.settings,
+      settingsData
+    );
+
+    return await this.save(user);
+  }
+
   private async extendProfileDataWithReferences(
     profileData?: CreateProfileInput
   ): Promise<CreateProfileInput> {
@@ -258,58 +288,48 @@ export class UserService {
 
   private createPreferenceDefaults(): Map<PreferenceType, string> {
     const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN,
+      PreferenceType.NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN,
       'true'
     );
 
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
+      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
       'true'
     );
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED_ADMIN,
+      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED_ADMIN,
       'true'
     );
 
-    defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_SUBMITTED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_SUBMITTED, 'true');
 
-    defaults.set(UserPreferenceType.NOTIFICATION_WHITEBOARD_CREATED, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_POST_CREATED, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_POST_CREATED_ADMIN, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_POST_COMMENT_CREATED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_WHITEBOARD_CREATED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_POST_CREATED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_POST_CREATED_ADMIN, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_POST_COMMENT_CREATED, 'true');
 
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER,
+      PreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER,
       'true'
     );
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
+      PreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
       'true'
     );
-    defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER,
-      'true'
-    );
-    defaults.set(UserPreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
     // messaging & mentions
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MESSAGE, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
 
-    defaults.set(
-      UserPreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED,
-      'false'
-    );
-    defaults.set(
-      UserPreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT,
-      'true'
-    );
+    defaults.set(PreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED, 'false');
+    defaults.set(PreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT, 'true');
 
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMENT_REPLY, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMENT_REPLY, 'true');
 
     return defaults;
   }
