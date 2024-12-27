@@ -12,7 +12,6 @@ import {
 import { OrganizationService } from './organization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
-import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
@@ -38,8 +37,7 @@ export class OrganizationAuthorizationService {
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -54,9 +52,6 @@ export class OrganizationAuthorizationService {
           agent: true,
           groups: true,
           verification: true,
-          preferenceSet: {
-            preferences: true,
-          },
         },
       }
     );
@@ -65,9 +60,7 @@ export class OrganizationAuthorizationService {
       !organization.storageAggregator ||
       !organization.agent ||
       !organization.groups ||
-      !organization.verification ||
-      !organization.preferenceSet ||
-      !organization.preferenceSet.preferences
+      !organization.verification
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for organization: ${organization.id} `,
@@ -132,13 +125,6 @@ export class OrganizationAuthorizationService {
         organization.id
       );
     updatedAuthorizations.push(verificationAuthorization);
-
-    const preferenceSetAuthorizations =
-      this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-        organization.preferenceSet,
-        organization.authorization
-      );
-    updatedAuthorizations.push(...preferenceSetAuthorizations);
 
     return updatedAuthorizations;
   }

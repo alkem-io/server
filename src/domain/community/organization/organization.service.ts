@@ -29,10 +29,6 @@ import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { IPreferenceSet } from '@domain/common/preference-set';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { PreferenceType } from '@common/enums/preference.type';
 import { PaginationArgs } from '@core/pagination';
 import { OrganizationFilterInput } from '@core/filtering';
 import { IPaginatedType } from '@core/pagination/paginated.type';
@@ -56,6 +52,9 @@ import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { OrganizationSettingsService } from '../organization.settings/organization.settings.service';
+import { UpdateOrganizationSettingsEntityInput } from '../organization.settings/dto/organization.settings.dto.update';
 
 @Injectable()
 export class OrganizationService {
@@ -64,11 +63,11 @@ export class OrganizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
     private organizationRoleService: OrganizationRoleService,
+    private organizationSettingsService: OrganizationSettingsService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     private namingService: NamingService,
-    private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
     private contributorService: ContributorService,
     @InjectRepository(Organization)
@@ -97,6 +96,7 @@ export class OrganizationService {
     organization.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ORGANIZATION
     );
+    organization.settings = this.getDefaultOrganizationSettings();
 
     organization.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -156,12 +156,6 @@ export class OrganizationService {
       });
     }
 
-    organization.preferenceSet =
-      await this.preferenceSetService.createPreferenceSet(
-        PreferenceDefinitionSet.ORGANIZATION,
-        this.createPreferenceDefaults()
-      );
-
     organization = await this.save(organization);
 
     const userID = agentInfo ? agentInfo.userID : '';
@@ -171,6 +165,19 @@ export class OrganizationService {
     );
 
     return await this.getOrganizationOrFail(organization.id);
+  }
+
+  private getDefaultOrganizationSettings(): IOrganizationSettings {
+    const settings: IOrganizationSettings = {
+      membership: {
+        allowUsersMatchingDomainToJoin: false,
+      },
+      privacy: {
+        // Note: not currently used but will be near term.
+        contributionRolesPubliclyVisible: true,
+      },
+    };
+    return settings;
   }
 
   async checkNameIdOrFail(nameID: string) {
@@ -204,6 +211,17 @@ export class OrganizationService {
         `Organization: the provided displayName is already taken: ${newDisplayName}`,
         LogContext.COMMUNITY
       );
+  }
+
+  public async updateOrganizationSettings(
+    organization: IOrganization,
+    settingsData: UpdateOrganizationSettingsEntityInput
+  ): Promise<IOrganization> {
+    organization.settings = this.organizationSettingsService.updateSettings(
+      organization.settings,
+      settingsData
+    );
+    return await this.save(organization);
   }
 
   async updateOrganization(
@@ -251,7 +269,6 @@ export class OrganizationService {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
       relations: {
-        preferenceSet: true,
         profile: true,
         agent: true,
         verification: true,
@@ -302,12 +319,6 @@ export class OrganizationService {
     if (organization.verification) {
       await this.organizationVerificationService.delete(
         organization.verification.id
-      );
-    }
-
-    if (organization.preferenceSet) {
-      await this.preferenceSetService.deletePreferenceSet(
-        organization.preferenceSet.id
       );
     }
 
@@ -508,26 +519,6 @@ export class OrganizationService {
     return groups;
   }
 
-  async getPreferenceSetOrFail(orgId: string): Promise<IPreferenceSet> {
-    const orgWithPreferences = await this.getOrganizationOrFail(orgId, {
-      relations: {
-        preferenceSet: {
-          preferences: true,
-        },
-      },
-    });
-    const preferenceSet = orgWithPreferences.preferenceSet;
-
-    if (!preferenceSet) {
-      throw new EntityNotFoundException(
-        `Unable to find preferenceSet for organization with nameID: ${orgWithPreferences.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return preferenceSet;
-  }
-
   async getStorageAggregatorOrFail(
     organizationID: string
   ): Promise<IStorageAggregator> {
@@ -614,16 +605,6 @@ export class OrganizationService {
       );
     }
     return organization.verification;
-  }
-
-  createPreferenceDefaults(): Map<PreferenceType, string> {
-    const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(
-      PreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN,
-      'false'
-    );
-
-    return defaults;
   }
 
   async getOrganizationByDomain(domain: string): Promise<IOrganization | null> {

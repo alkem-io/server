@@ -491,7 +491,7 @@ services:
   # virtual_contributor_engine_generic:
   #   container_name: alkemio_dev_virtual_contributor_engine_generic
   #   hostname: virtual-contributor-engine-generic
-  #   image: alkemio/virtual-contributor-engine-generic:v0.3.1
+  #   image: alkemio/virtual-contributor-engine-generic:v0.4.1
   #   platform: linux/x86_64
   #   restart: always
   #   volumes:
@@ -521,7 +521,7 @@ services:
   # virtual_contributor_engine_openai_assistant:
   #   container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
   #   hostname: virtual-contributor-engine-openai-assistant
-  #   image: alkemio/virtual-contributor-engine-openai-assistant:v0.1.1
+  #   image: alkemio/virtual-contributor-engine-openai-assistant:v0.2.1
   #   platform: linux/x86_64
   #   restart: always
   #   volumes:
