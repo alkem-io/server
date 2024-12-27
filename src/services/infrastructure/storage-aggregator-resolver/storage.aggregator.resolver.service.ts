@@ -255,6 +255,40 @@ export class StorageAggregatorResolverService {
     );
   }
 
+  public async getStorageAggregatorForCalloutsSet(
+    calloutsSetID: string
+  ): Promise<IStorageAggregator> {
+    if (!isUUID(calloutsSetID)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided to find the StorageAggregator of a calloutsSet',
+        LogContext.STORAGE_AGGREGATOR,
+        { provided: calloutsSetID }
+      );
+    }
+
+    // First try on Space
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            id: calloutsSetID,
+          },
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    if (space && space.storageAggregator) {
+      return this.getStorageAggregatorOrFail(space.storageAggregator.id);
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to retrieve storage aggregator to use for TemplatesSet ${calloutsSetID}`,
+      LogContext.STORAGE_AGGREGATOR
+    );
+  }
+
   public async getStorageAggregatorForCollaboration(
     collaborationID: string
   ): Promise<IStorageAggregator> {
@@ -373,8 +407,10 @@ export class StorageAggregatorResolverService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: calloutId,
+          calloutsSet: {
+            callouts: {
+              id: calloutId,
+            },
           },
         },
       },

@@ -69,8 +69,10 @@ export class TemplateResolverMutations {
           templatesSet: true,
           collaboration: {
             innovationFlow: true,
-            callouts: true,
-            tagsetTemplateSet: true,
+            calloutsSet: {
+              callouts: true,
+              tagsetTemplateSet: true,
+            },
           },
         },
       }

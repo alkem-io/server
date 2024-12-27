@@ -1,29 +1,22 @@
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { ICallout } from '../callout/callout.interface';
-import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Loader } from '@core/dataloader/decorators';
 import {
   CollaborationTimelineLoaderCreator,
   LicenseLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
-import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { ILicense } from '@domain/common/license/license.interface';
+import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
+import { CollaborationCalloutsSetLoaderCreator } from '@core/dataloader/creators/loader.creators/collaboration/collaboration.callouts.set.loader.creator';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -37,33 +30,6 @@ export class CollaborationResolverFields {
   @Profiling.api
   async innovationFlow(@Parent() collabotation: ICollaboration) {
     return await this.collaborationService.getInnovationFlow(collabotation.id);
-  }
-
-  @ResolveField('groups', () => [ICalloutGroup], {
-    nullable: false,
-    description: 'The set of CalloutGroups in use in this Collaboration.',
-  })
-  groups(@Parent() collaboration: ICollaboration): ICalloutGroup[] {
-    return this.collaborationService.getGroups(collaboration);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('callouts', () => [ICallout], {
-    nullable: false,
-    description: 'The list of Callouts for this Collaboration object.',
-  })
-  @Profiling.api
-  async callouts(
-    @Parent() collaboration: Collaboration,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true }) args: CollaborationArgsCallouts
-  ) {
-    return await this.collaborationService.getCalloutsFromCollaboration(
-      collaboration,
-      args,
-      agentInfo
-    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -80,18 +46,16 @@ export class CollaborationResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('tagsetTemplates', () => [ITagsetTemplate], {
-    nullable: true,
-    description: 'The tagset templates on this Collaboration.',
+  @ResolveField('calloutsSet', () => ICalloutsSet, {
+    nullable: false,
+    description: 'The calloutsSet with Callouts in use by this Space',
   })
-  @Profiling.api
-  async tagsetTemplates(
-    @Parent() collaboration: Collaboration
-  ): Promise<ITagsetTemplate[]> {
-    const tagsetTemplateSet =
-      await this.collaborationService.getTagsetTemplatesSet(collaboration.id);
-    return tagsetTemplateSet.tagsetTemplates;
+  @UseGuards(GraphqlGuard)
+  async calloutsSet(
+    @Parent() collaboration: ICollaboration,
+    @Loader(CollaborationCalloutsSetLoaderCreator) loader: ILoader<ICalloutsSet>
+  ): Promise<ICalloutsSet> {
+    return loader.load(collaboration.id);
   }
 
   @ResolveField('license', () => ILicense, {

@@ -32,7 +32,6 @@ import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
-import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
@@ -91,6 +90,7 @@ import { UpdateUserSettingsInput } from '@domain/community/user/dto/user.dto.upd
 import { UpdateUserSettingsCommunicationInput } from '@domain/community/user.settings/dto/user.settings.communications.dto.update';
 import { UpdateUserSettingsPrivacyInput } from '@domain/community/user.settings/dto/user.settings.privacy.dto.update';
 import { UpdateOrganizationSettingsInput } from '@domain/community/organization/dto/organization.dto.update.settings';
+import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -169,7 +169,7 @@ export class BaseHandler extends AbstractHandler {
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
-      CreateCalloutOnCollaborationInput,
+      CreateCalloutOnCalloutsSetInput,
     ];
 
     if (types.includes(metatype)) {

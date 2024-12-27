@@ -3,6 +3,7 @@ import { registerEnumType } from '@nestjs/graphql';
 export enum AuthorizationPolicyType {
   AGENT = 'agent',
   CALLOUT = 'callout',
+  CALLOUTS_SET = 'callouts-set',
   CALLOUT_CONTRIBUTION = 'callout-contribution',
   CALLOUT_FRAMING = 'callout-framing',
   COLLABORATION = 'collaboration',

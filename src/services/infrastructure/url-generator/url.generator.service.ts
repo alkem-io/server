@@ -633,7 +633,7 @@ export class UrlGeneratorService {
         id: calloutID,
       },
       relations: {
-        collaboration: true,
+        calloutsSet: true,
       },
     });
 
@@ -644,10 +644,23 @@ export class UrlGeneratorService {
       );
     }
 
-    if (callout.collaboration) {
+    if (callout.calloutsSet) {
+      const collaboration = await this.entityManager.findOne(Collaboration, {
+        where: {
+          calloutsSet: {
+            id: callout.calloutsSet.id,
+          },
+        },
+      });
+      if (!collaboration) {
+        throw new EntityNotFoundException(
+          `Unable to find collaboration for callouts set where id: ${callout.calloutsSet.id}`,
+          LogContext.URL_GENERATOR
+        );
+      }
       const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
         'collaborationId',
-        callout.collaboration.id
+        collaboration.id
       );
       return `${collaborationJourneyUrlPath}/${this.PATH_COLLABORATION}/${callout.nameID}`;
     }

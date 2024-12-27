@@ -9,7 +9,6 @@ import {
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Room } from '@domain/communication/room/room.entity';
 import { CalloutFraming } from '../callout-framing/callout.framing.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
@@ -21,6 +20,7 @@ import {
   NAMEID_MAX_LENGTH_SCHEMA,
   UUID_LENGTH,
 } from '@common/constants';
+import { CalloutsSet } from '../callouts-set/callouts.set.entity';
 
 @Entity()
 export class Callout extends AuthorizableEntity implements ICallout {
@@ -77,12 +77,12 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @JoinColumn()
   comments!: Room;
 
-  @ManyToOne(() => Collaboration, collaboration => collaboration.callouts, {
+  @ManyToOne(() => CalloutsSet, calloutsSet => calloutsSet.callouts, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  collaboration?: Collaboration;
+  calloutsSet?: CalloutsSet;
 
   @Column('int', { nullable: false })
   sortOrder!: number;

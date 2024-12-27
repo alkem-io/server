@@ -7,7 +7,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { AuthorizationCredential } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -25,6 +24,7 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { CalloutsSetAuthorizationService } from '../callouts-set/callouts.set.service.authorization';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -33,7 +33,7 @@ export class CollaborationAuthorizationService {
     private roleSetService: RoleSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private timelineAuthorizationService: TimelineAuthorizationService,
-    private calloutAuthorizationService: CalloutAuthorizationService,
+    private calloutsSetAuthorizationService: CalloutsSetAuthorizationService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
@@ -49,7 +49,7 @@ export class CollaborationAuthorizationService {
         collaborationInput.id,
         {
           relations: {
-            callouts: true,
+            calloutsSet: true,
             innovationFlow: {
               profile: true,
             },
@@ -60,7 +60,7 @@ export class CollaborationAuthorizationService {
           },
         }
       );
-    if (!collaboration.callouts || !collaboration.innovationFlow) {
+    if (!collaboration.calloutsSet || !collaboration.innovationFlow) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
         LogContext.SPACES
@@ -111,7 +111,7 @@ export class CollaborationAuthorizationService {
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     if (
-      !collaboration.callouts ||
+      !collaboration.calloutsSet ||
       !collaboration.innovationFlow ||
       !collaboration.innovationFlow.profile ||
       !collaboration.license ||
@@ -124,16 +124,15 @@ export class CollaborationAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    for (const callout of collaboration.callouts) {
-      const updatedCalloutAuthorizations =
-        await this.calloutAuthorizationService.applyAuthorizationPolicy(
-          callout.id,
-          collaboration.authorization,
-          roleSet,
-          spaceSettings
-        );
-      updatedAuthorizations.push(...updatedCalloutAuthorizations);
-    }
+    const updatedCalloutsSetAuthorizations =
+      await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(
+        collaboration.calloutsSet,
+        collaboration.authorization,
+        roleSet,
+        spaceSettings
+      );
+
+    updatedAuthorizations.push(...updatedCalloutsSetAuthorizations);
 
     const licenseAuthorization =
       this.licenseAuthorizationService.applyAuthorizationPolicy(

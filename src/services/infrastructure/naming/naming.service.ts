@@ -78,13 +78,13 @@ export class NamingService {
     return discussions?.map(discussion => discussion.nameID) || [];
   }
 
-  public async getReservedNameIDsInCollaboration(
-    collaborationID: string
+  public async getReservedNameIDsInCalloutsSet(
+    calloutsSetID: string
   ): Promise<string[]> {
     const callouts = await this.entityManager.find(Callout, {
       where: {
-        collaboration: {
-          id: collaborationID,
+        calloutsSet: {
+          id: calloutsSetID,
         },
       },
       select: {
@@ -275,8 +275,10 @@ export class NamingService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: calloutID,
+          calloutsSet: {
+            callouts: {
+              id: calloutID,
+            },
           },
         },
       },

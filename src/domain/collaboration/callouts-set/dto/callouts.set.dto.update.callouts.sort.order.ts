@@ -2,9 +2,9 @@ import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
-export class UpdateCollaborationCalloutsSortOrderInput {
+export class UpdateCalloutsSortOrderInput {
   @Field(() => UUID, { nullable: false })
-  collaborationID!: string;
+  calloutsSetID!: string;
 
   @Field(() => [UUID_NAMEID], {
     name: 'calloutIDs',
