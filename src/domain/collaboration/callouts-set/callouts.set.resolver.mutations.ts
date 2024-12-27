@@ -74,9 +74,9 @@ export class CalloutsSetResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
-    description: 'Create a new Callout on the Collaboration.',
+    description: 'Create a new Callout on the CalloutsSet.',
   })
-  async createCalloutOnCollaboration(
+  async createCalloutOnCalloutsSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('calloutData') calloutData: CreateCalloutOnCalloutsSetInput
   ): Promise<ICallout> {
@@ -88,7 +88,7 @@ export class CalloutsSetResolverMutations {
       agentInfo,
       calloutsSet.authorization,
       AuthorizationPrivilege.CREATE_CALLOUT,
-      `create callout on collaboration: ${calloutsSet.id}`
+      `create callout on callouts Set: ${calloutsSet.id}`
     );
 
     const callout = await this.calloutsSetService.createCalloutOnCalloutsSet(
