@@ -9,6 +9,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { Loader } from '@core/dataloader/decorators';
 import {
   CollaborationTimelineLoaderCreator,
+  CollaborationCalloutsSetLoaderCreator,
   LicenseLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -16,7 +17,6 @@ import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
-import { CollaborationCalloutsSetLoaderCreator } from '@core/dataloader/creators/loader.creators/collaboration/collaboration.callouts.set.loader.creator';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
