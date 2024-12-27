@@ -11,6 +11,8 @@ import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module'
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { CollaborationLicenseService } from './collaboration.service.license';
+import { CalloutsSetModule } from '../callouts-set/callouts.set.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { CollaborationLicenseService } from './collaboration.service.license';
     TimelineModule,
     InnovationFlowModule,
     LicenseModule,
+    CalloutsSetModule,
+    NamingModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
   providers: [
