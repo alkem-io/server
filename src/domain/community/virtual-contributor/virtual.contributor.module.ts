@@ -15,12 +15,12 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { VirtualContributorResolverSubscriptions } from './virtual.contributor.resolver.subscriptions';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
-import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.interaction.module';
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
+import { VirtualContributorLookupModule } from '../virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 
 @Module({
   imports: [
@@ -34,11 +34,11 @@ import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.bas
     KnowledgeBaseModule,
     AiServerAdapterModule,
     CommunicationAdapterModule,
-    AccountHostModule,
+    VirtualContributorLookupModule,
+    AccountLookupModule,
     TypeOrmModule.forFeature([VirtualContributor]),
     PlatformAuthorizationPolicyModule,
     SubscriptionServiceModule,
-    VcInteractionModule,
   ],
   providers: [
     VirtualContributorService,

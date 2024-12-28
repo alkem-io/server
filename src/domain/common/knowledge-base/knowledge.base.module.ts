@@ -7,7 +7,6 @@ import { KnowledgeBaseAuthorizationService } from './knowledge.base.service.auth
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { KnowledgeBaseResolverFields } from './knowledge.base.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 
 @Module({
@@ -16,7 +15,6 @@ import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.s
     AuthorizationPolicyModule,
     ProfileModule,
     CalloutsSetModule,
-    NamingModule,
     TypeOrmModule.forFeature([KnowledgeBase]),
   ],
   providers: [

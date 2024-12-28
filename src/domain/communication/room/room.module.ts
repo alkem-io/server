@@ -16,11 +16,11 @@ import { Room } from './room.entity';
 import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { MessageModule } from '../message/message.module';
 import { RoomServiceMentions } from './room.service.mentions';
 import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 
 @Module({
   imports: [
@@ -34,7 +34,7 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
     CommunicationAdapterModule,
     MessageModule,
     VcInteractionModule,
-    VirtualContributorModule,
+    VirtualContributorMessageModule,
     ContributorLookupModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,

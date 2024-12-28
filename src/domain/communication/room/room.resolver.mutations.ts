@@ -31,6 +31,7 @@ import { RoomServiceMentions } from './room.service.mentions';
 import { Mention } from '../messaging/mention.interface';
 import { IRoom } from './room.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -42,6 +43,7 @@ export class RoomResolverMutations {
     private roomServiceEvents: RoomServiceEvents,
     private roomServiceMentions: RoomServiceMentions,
     private subscriptionPublishService: SubscriptionPublishService,
+    private virtualContributorMessageService: VirtualContributorMessageService,
     private virtualContributorsService: VirtualContributorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -337,14 +339,15 @@ export class RoomResolverMutations {
               `VC Interaction found in thread ${messageData.threadID} in room ${room.id}`,
               LogContext.VIRTUAL_CONTRIBUTOR
             );
+            const contextSpaceID =
+              await this.roomServiceMentions.getSpaceIdForRoom(room);
+
             const vcMentioned =
               await this.virtualContributorsService.getVirtualContributorOrFail(
                 vcInteraction.virtualContributorID
               );
-            const contextSpaceID =
-              await this.roomServiceMentions.getSpaceIdForRoom(room);
 
-            await this.roomServiceMentions.invokeVirtualContributor(
+            await this.virtualContributorMessageService.invokeVirtualContributor(
               vcMentioned?.nameID,
               messageData.message,
               threadID,
@@ -435,7 +438,7 @@ export class RoomResolverMutations {
             const contextSpaceID =
               await this.roomServiceMentions.getSpaceIdForRoom(room);
 
-            await this.roomServiceMentions.invokeVirtualContributor(
+            await this.virtualContributorMessageService.invokeVirtualContributor(
               vcMentioned?.nameID,
               messageData.message,
               threadID,

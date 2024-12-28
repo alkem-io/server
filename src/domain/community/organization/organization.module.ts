@@ -22,10 +22,12 @@ import { OrganizationRoleModule } from '../organization-role/organization.role.m
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 import { OrganizationSettingsModule } from '../organization.settings/organization.settings.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 
 @Module({
   imports: [
     AccountHostModule,
+    AccountLookupModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

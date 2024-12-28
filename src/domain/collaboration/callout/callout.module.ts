@@ -22,7 +22,6 @@ import { CalloutContributionDefaultsModule } from '../callout-contribution-defau
 import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 import { PostModule } from '../post/post.module';
-import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
@@ -34,7 +33,6 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoomModule,
-    RoleSetModule,
     EntityResolverModule,
     ContributorLookupModule,
     NamingModule,

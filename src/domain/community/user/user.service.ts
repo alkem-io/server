@@ -53,7 +53,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
@@ -69,6 +68,8 @@ import { IUserSettings } from '../user.settings/user.settings.interface';
 import { UserSettingsService } from '../user.settings/user.settings.service';
 import { UpdateUserSettingsEntityInput } from '../user.settings/dto/user.settings.dto.update';
 import { PreferenceType } from '@common/enums/preference.type';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class UserService {
@@ -83,6 +84,7 @@ export class UserService {
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
+    private accountLookupService: AccountLookupService,
     private accountHostService: AccountHostService,
     private userSettingsService: UserSettingsService,
     private contributorService: ContributorService,
@@ -402,7 +404,7 @@ export class UserService {
 
     // TODO: give additional feedback?
     const accountHasResources =
-      await this.accountHostService.areResourcesInAccount(user.accountID);
+      await this.accountLookupService.areResourcesInAccount(user.accountID);
     if (accountHasResources) {
       throw new ForbiddenException(
         'Unable to delete User: account contains one or more resources',
@@ -454,7 +456,7 @@ export class UserService {
   }
 
   public async getAccount(user: IUser): Promise<IAccount> {
-    return await this.accountHostService.getAccountOrFail(user.accountID);
+    return await this.accountLookupService.getAccountOrFail(user.accountID);
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {

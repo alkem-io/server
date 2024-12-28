@@ -26,6 +26,7 @@ import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { UserSettingsModule } from '../user.settings/user.settings.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { UserSettingsModule } from '../user.settings/user.settings.module';
     CommunicationAdapterModule,
     AgentModule,
     AccountHostModule,
+    AccountLookupModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

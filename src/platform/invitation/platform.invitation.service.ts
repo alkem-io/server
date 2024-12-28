@@ -13,10 +13,10 @@ import { IPlatformInvitation } from './platform.invitation.interface';
 import { PlatformInvitation } from './platform.invitation.entity';
 import { CreatePlatformInvitationInput } from './dto/platform.invitation.dto.create';
 import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { PlatformRole } from '@common/enums/platform.role';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class PlatformInvitationService {
@@ -29,7 +29,7 @@ export class PlatformInvitationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(PlatformInvitation)
     private platformInvitationRepository: Repository<PlatformInvitation>,
-    private userLookupService: ContributorLookupService,
+    private userLookupService: UserLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 

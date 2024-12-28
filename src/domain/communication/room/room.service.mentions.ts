@@ -11,17 +11,11 @@ import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import { RoomService } from './room.service';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
-import {
-  InvocationResultAction,
-  VirtualContributorInvocationInput,
-} from '@domain/community/virtual-contributor/dto';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { EntityNotFoundException } from '@common/exceptions';
+import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 
 @Injectable()
 export class RoomServiceMentions {
@@ -34,8 +28,10 @@ export class RoomServiceMentions {
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
     private roomService: RoomService,
-    private virtualContributorService: VirtualContributorService,
-    private contributorLookupService: ContributorLookupService,
+    private virtualContributorMessageService: VirtualContributorMessageService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
+    private userLookupService: UserLookupService,
+    private organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -84,7 +80,7 @@ export class RoomServiceMentions {
         });
       }
 
-      await this.invokeVirtualContributor(
+      await this.virtualContributorMessageService.invokeVirtualContributor(
         vcMention.id,
         message,
         threadID,
@@ -94,53 +90,6 @@ export class RoomServiceMentions {
         vcInteraction
       );
     }
-  }
-
-  public async invokeVirtualContributor(
-    virtualContributorID: string,
-    message: string,
-    threadID: string,
-    agentInfo: AgentInfo,
-    contextSpaceID: string,
-    room: IRoom,
-    vcInteraction: IVcInteraction | undefined = undefined
-  ) {
-    const virtualContributor =
-      await this.virtualContributorService.getVirtualContributor(
-        virtualContributorID,
-        {
-          relations: {
-            aiPersona: true,
-          },
-        }
-      );
-
-    const virtualPersona = virtualContributor?.aiPersona;
-
-    if (!virtualPersona) {
-      throw new EntityNotInitializedException(
-        `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.id}`,
-        LogContext.VIRTUAL_CONTRIBUTOR
-      );
-    }
-
-    const vcInput: VirtualContributorInvocationInput = {
-      virtualContributorID: virtualContributor.id,
-      message,
-      contextSpaceID,
-      userID: agentInfo.userID,
-      resultHandler: {
-        action: InvocationResultAction.POST_REPLY,
-        roomDetails: {
-          roomID: room.id,
-          threadID,
-          communicationID: virtualContributor.communicationID,
-          vcInteractionID: vcInteraction?.id,
-        },
-      },
-    };
-
-    await this.virtualContributorService.invoke(vcInput);
   }
 
   public processNotificationMentions(
@@ -179,7 +128,7 @@ export class RoomServiceMentions {
       }
       if (match.groups?.type === MentionedEntityType.USER) {
         const user =
-          await this.contributorLookupService.getUserByNameIdOrFail(
+          await this.userLookupService.getUserByNameIdOrFail(
             contributorNamedID
           );
         result.push({
@@ -188,7 +137,7 @@ export class RoomServiceMentions {
         });
       } else if (match.groups?.type === MentionedEntityType.ORGANIZATION) {
         const organization =
-          await this.contributorLookupService.getOrganizationByNameIdOrFail(
+          await this.organizationLookupService.getOrganizationByNameIdOrFail(
             contributorNamedID
           );
         result.push({
@@ -199,7 +148,7 @@ export class RoomServiceMentions {
         match.groups?.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR
       ) {
         const virtualContributor =
-          await this.contributorLookupService.getVirtualContributorByNameIdOrFail(
+          await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
             contributorNamedID
           );
         result.push({
