@@ -5,33 +5,33 @@ export class CalloutsSet1735321009455 implements MigrationInterface {
   name = 'CalloutsSet1735321009455';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_9b1c5ee044611ac78249194ec35\``
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`collaboration\` DROP FOREIGN KEY \`FK_b7ece56376ac7ca0b9a56c33b3a\``
-    // );
-    // await queryRunner.query(
-    //   `DROP INDEX \`REL_b7ece56376ac7ca0b9a56c33b3\` ON \`collaboration\``
-    // );
-    // await queryRunner.query(`CREATE TABLE \`callouts_set\` (\`id\` char(36) NOT NULL,
-    //                                             \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    //                                             \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    //                                             \`version\` int NOT NULL,
-    //                                             \`groupsStr\` text NOT NULL,
-    //                                             \`authorizationId\` char(36) NULL,
-    //                                             \`tagsetTemplateSetId\` char(36) NULL,
-    //                                             UNIQUE INDEX \`REL_8f3fd7a83451183166aac4ad02\` (\`authorizationId\`),
-    //                                             UNIQUE INDEX \`REL_211515f7e21e93136a6b905e84\` (\`tagsetTemplateSetId\`),
-    //                                             PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_9b1c5ee044611ac78249194ec35\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` DROP FOREIGN KEY \`FK_b7ece56376ac7ca0b9a56c33b3a\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`REL_b7ece56376ac7ca0b9a56c33b3\` ON \`collaboration\``
+    );
+    await queryRunner.query(`CREATE TABLE \`callouts_set\` (\`id\` char(36) NOT NULL,
+                                                \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                                                \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+                                                \`version\` int NOT NULL,
+                                                \`groupsStr\` text NOT NULL,
+                                                \`authorizationId\` char(36) NULL,
+                                                \`tagsetTemplateSetId\` char(36) NULL,
+                                                UNIQUE INDEX \`REL_8f3fd7a83451183166aac4ad02\` (\`authorizationId\`),
+                                                UNIQUE INDEX \`REL_211515f7e21e93136a6b905e84\` (\`tagsetTemplateSetId\`),
+                                                PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
-    // await queryRunner.query(
-    //   `ALTER TABLE \`collaboration\` ADD \`calloutsSetId\` char(36) NULL`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` ADD \`calloutsSetId\` char(36) NULL`
+    );
 
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` ADD \`calloutsSetId\` char(36) NULL`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD \`calloutsSetId\` char(36) NULL`
+    );
 
     // Create calloutsSet for each collaboration
     const collaborations: {
