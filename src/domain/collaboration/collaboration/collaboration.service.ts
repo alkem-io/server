@@ -9,7 +9,6 @@ import {
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -27,20 +26,19 @@ import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
-import { IRoleSet } from '@domain/access/role-set';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
 
 @Injectable()
 export class CollaborationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutsSetService: CalloutsSetService,
-    private namingService: NamingService,
     private innovationFlowService: InnovationFlowService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
@@ -68,11 +66,22 @@ export class CollaborationService {
     collaboration.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COLLABORATION
     );
-    collaboration.calloutsSet = await this.calloutsSetService.createCalloutsSet(
-      collaborationData.calloutsSetData,
-      storageAggregator,
-      agentInfo
+    collaboration.calloutsSet = this.calloutsSetService.createCalloutsSet(
+      collaborationData.calloutsSetData
     );
+
+    const innovationFlowStatesTagsetInput =
+      this.createInnovationFlowStatesTagsetTemplateInput(
+        collaborationData.innovationFlowData
+      );
+    collaboration.calloutsSet.tagsetTemplateSet =
+      this.calloutsSetService.addTagsetTemplate(
+        collaboration.calloutsSet,
+        innovationFlowStatesTagsetInput
+      );
+
+    // save the calloutsSet with the tagsetTemplates so can use it in the innovation flow as a template for it's tags
+    await this.calloutsSetService.save(collaboration.calloutsSet);
 
     collaboration.isTemplate = collaborationData.isTemplate || false;
 
@@ -80,17 +89,7 @@ export class CollaborationService {
       collaboration.timeline = this.timelineService.createTimeline();
     }
 
-    const innovationFlowStatesTagsetInput =
-      this.createInnovationFlowStatesTagsetTemplateInput(
-        collaborationData.innovationFlowData
-      );
-    collaboration.calloutsSet.tagsetTemplateSet =
-      await this.calloutsSetService.addTagsetTemplate(
-        collaboration.calloutsSet.id,
-        innovationFlowStatesTagsetInput
-      );
-
-    collaboration.license = await this.licenseService.createLicense({
+    collaboration.license = this.licenseService.createLicense({
       type: LicenseType.COLLABORATION,
       entitlements: [
         {
@@ -124,13 +123,24 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
-
+    // Note: need to create the innovation flow after creation of
+    // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
     collaboration.innovationFlow =
       await this.innovationFlowService.createInnovationFlow(
         collaborationData.innovationFlowData,
         [statesTagsetTemplate],
         storageAggregator
       );
+
+    if (collaborationData.calloutsSetData.calloutsData) {
+      collaboration.calloutsSet.callouts =
+        await this.calloutsSetService.addCallouts(
+          collaboration.calloutsSet,
+          collaborationData.calloutsSetData.calloutsData,
+          storageAggregator,
+          agentInfo?.userID
+        );
+    }
 
     this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
       groupsTagsetTemplate.allowedValues,
@@ -325,45 +335,35 @@ export class CollaborationService {
     return innovationFlow;
   }
 
-  public async getPostsCount(collaboration: ICollaboration): Promise<number> {
+  public async getPostsCount(calloutsSet: ICalloutsSet): Promise<number> {
     const [result]: {
       postsCount: number;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as postsCount FROM \`collaboration\`
-      RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      SELECT COUNT(*) as postsCount FROM \`callouts_set\`
+      RIGHT JOIN \`callout\` ON \`callout\`.\`calloutsSetId\` = \`callouts_set\`.\`id\`
       RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}' AND \`callout\`.\`type\` = '${CalloutType.POST_COLLECTION}';
+      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}' AND \`callout\`.\`type\` = '${CalloutType.POST_COLLECTION}';
       `
     );
 
     return result.postsCount;
   }
 
-  public async getWhiteboardsCount(
-    collaboration: ICollaboration
-  ): Promise<number> {
+  public async getWhiteboardsCount(calloutsSet: ICalloutsSet): Promise<number> {
     const [result]: {
       whiteboardsCount: number;
     }[] = await this.entityManager.connection.query(
       `
       SELECT COUNT(*) as whiteboardsCount
-      FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      FROM \`callouts_set\` RIGHT JOIN \`callout\` ON \`callout\`.\`calloutsSetId\` = \`callouts_set\`.\`id\`
       RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}'
+      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}'
         AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
         AND \`callout\`.\`type\` = '${CalloutType.WHITEBOARD_COLLECTION}';
       `
     );
 
     return result.whiteboardsCount;
-  }
-
-  public async getRoleSet(collaborationID: string): Promise<IRoleSet> {
-    const { roleSet } =
-      await this.namingService.getRoleSetAndSettingsForCollaboration(
-        collaborationID
-      );
-    return roleSet;
   }
 }

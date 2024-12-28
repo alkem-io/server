@@ -60,11 +60,9 @@ export class CalloutsSetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createCalloutsSet(
-    calloutsSetData: CreateCalloutsSetInput,
-    storageAggregator: IStorageAggregator,
-    agentInfo?: AgentInfo
-  ): Promise<ICalloutsSet> {
+  public createCalloutsSet(
+    calloutsSetData: CreateCalloutsSetInput
+  ): ICalloutsSet {
     if (
       !calloutsSetData.calloutGroups ||
       !calloutsSetData.calloutsData ||
@@ -92,34 +90,10 @@ export class CalloutsSetService {
       calloutsSet,
       calloutsSetData.defaultCalloutGroupName
     );
-    calloutsSet.tagsetTemplateSet =
-      this.tagsetTemplateSetService.addTagsetTemplate(
-        calloutsSet.tagsetTemplateSet,
-        groupTagsetTemplateInput
-      );
-
-    // save the tagset template so can use it in the innovation flow as a template for it's tags
-    await this.tagsetTemplateSetService.save(calloutsSet.tagsetTemplateSet);
-
-    calloutsSet.callouts = await this.addCallouts(
+    calloutsSet.tagsetTemplateSet = this.addTagsetTemplate(
       calloutsSet,
-      calloutsSetData.calloutsData,
-      storageAggregator,
-      agentInfo?.userID
+      groupTagsetTemplateInput
     );
-
-    // Note: need to create the innovation flow after creation of
-    // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
-    const statesTagsetTemplate =
-      calloutsSet.tagsetTemplateSet.tagsetTemplates.find(
-        template => template.name === TagsetReservedName.FLOW_STATE
-      );
-    if (!statesTagsetTemplate) {
-      throw new EntityNotInitializedException(
-        `Unable to find states tagset template on calloutsSet ${calloutsSet.id}`,
-        LogContext.COLLABORATION
-      );
-    }
 
     return calloutsSet;
   }
@@ -140,20 +114,13 @@ export class CalloutsSetService {
     return calloutsSet;
   }
 
-  public async addTagsetTemplate(
-    calloutsSetID: string,
+  public addTagsetTemplate(
+    calloutsSet: ICalloutsSet,
     tagsetInput: CreateTagsetTemplateInput
-  ): Promise<ITagsetTemplateSet> {
-    const calloutsSet = await this.getCalloutsSetOrFail(calloutsSetID, {
-      relations: {
-        tagsetTemplateSet: {
-          tagsetTemplates: true,
-        },
-      },
-    });
+  ): ITagsetTemplateSet {
     if (!calloutsSet.tagsetTemplateSet) {
       throw new EntityNotInitializedException(
-        `Unable to load tagset template set for calloutsSet ${calloutsSetID}`,
+        `Unable to load tagset template set for calloutsSet ${calloutsSet.id}`,
         LogContext.COLLABORATION
       );
     }
@@ -376,7 +343,7 @@ export class CalloutsSetService {
 
     const tagsetTemplates = calloutsSet.tagsetTemplateSet.tagsetTemplates;
     const storageAggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
+      await this.storageAggregatorResolverService.getStorageAggregatorForCalloutsSet(
         calloutsSet.id
       );
     const callout = await this.calloutService.createCallout(

@@ -27,7 +27,7 @@ export class LicenseService {
     private readonly logger: LoggerService
   ) {}
 
-  async createLicense(licenseData: CreateLicenseInput): Promise<ILicense> {
+  createLicense(licenseData: CreateLicenseInput): ILicense {
     const license: ILicense = License.create(licenseData);
     license.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.LICENSE

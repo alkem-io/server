@@ -84,6 +84,7 @@ import { LicenseType } from '@common/enums/license.type';
 import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -170,7 +171,7 @@ export class SpaceService {
       );
     space.storageAggregator = storageAggregator;
 
-    space.license = await this.licenseService.createLicense({
+    space.license = this.licenseService.createLicense({
       type: LicenseType.SPACE,
       entitlements: [
         {
@@ -1413,6 +1414,25 @@ export class SpaceService {
     return collaboration;
   }
 
+  public async getCalloutsSetOrFail(
+    spaceId: string
+  ): Promise<ICalloutsSet> | never {
+    const subspaceWithCollaboration = await this.getSpaceOrFail(spaceId, {
+      relations: {
+        collaboration: {
+          calloutsSet: true,
+        },
+      },
+    });
+    const calloutsSet = subspaceWithCollaboration.collaboration?.calloutsSet;
+    if (!calloutsSet)
+      throw new RelationshipNotFoundException(
+        `Unable to load calloutsSet for sspace ${spaceId} `,
+        LogContext.COLLABORATION
+      );
+    return calloutsSet;
+  }
+
   public async getAgent(subspaceId: string): Promise<IAgent> {
     const subspaceWithContext = await this.getSpaceOrFail(subspaceId, {
       relations: { agent: true },
@@ -1427,14 +1447,14 @@ export class SpaceService {
   }
 
   public async getPostsCount(space: ISpace): Promise<number> {
-    const collaboration = await this.getCollaborationOrFail(space.id);
+    const calloutsSet = await this.getCalloutsSetOrFail(space.id);
 
-    return await this.collaborationService.getPostsCount(collaboration);
+    return await this.collaborationService.getPostsCount(calloutsSet);
   }
 
   public async getWhiteboardsCount(space: ISpace): Promise<number> {
-    const collaboration = await this.getCollaborationOrFail(space.id);
-    return await this.collaborationService.getWhiteboardsCount(collaboration);
+    const calloutsSet = await this.getCalloutsSetOrFail(space.id);
+    return await this.collaborationService.getWhiteboardsCount(calloutsSet);
   }
 
   async getSubspacesInSpaceCount(parentSpaceId: string): Promise<number> {

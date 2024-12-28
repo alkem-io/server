@@ -238,16 +238,16 @@ export class NamingService {
     return result;
   }
 
-  async getRoleSetAndSettingsForCollaboration(
-    collaborationID: string
-  ): Promise<{
+  async getRoleSetAndSettingsForCalloutsSet(calloutsSetID: string): Promise<{
     roleSet: IRoleSet;
     spaceSettings: ISpaceSettings;
   }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          id: collaborationID,
+          calloutsSet: {
+            id: calloutsSetID,
+          },
         },
       },
       relations: {
@@ -258,7 +258,7 @@ export class NamingService {
     });
     if (!space || !space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
-        `Unable to load all entities for space with collaboration ${collaborationID}`,
+        `Unable to load all entities for roleSet + settings for collaboration ${calloutsSetID}`,
         LogContext.COMMUNITY
       );
     }

@@ -4,17 +4,12 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { AuthorizationCredential } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import {
-  CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
-  POLICY_RULE_COLLABORATION_CREATE,
-  POLICY_RULE_CALLOUT_CONTRIBUTE,
-} from '@common/constants';
+import { CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS } from '@common/constants';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
@@ -86,11 +81,6 @@ export class CollaborationAuthorizationService {
           roleSet,
           spaceSettings
         );
-
-      collaboration.authorization = await this.appendPrivilegeRules(
-        collaboration.authorization,
-        spaceSettings
-      );
     }
     updatedAuthorizations.push(collaboration.authorization);
 
@@ -268,35 +258,6 @@ export class CollaborationAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
-    );
-  }
-
-  private async appendPrivilegeRules(
-    authorization: IAuthorizationPolicy,
-    spaceSettings: ISpaceSettings
-  ): Promise<IAuthorizationPolicy> {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_CALLOUT],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_COLLABORATION_CREATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    const collaborationSettings = spaceSettings.collaboration;
-    if (collaborationSettings.allowMembersToCreateCallouts) {
-      const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
-        [AuthorizationPrivilege.CREATE_CALLOUT],
-        AuthorizationPrivilege.CONTRIBUTE,
-        POLICY_RULE_CALLOUT_CONTRIBUTE
-      );
-      privilegeRules.push(createCalloutPrivilege);
-    }
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
     );
   }
 }

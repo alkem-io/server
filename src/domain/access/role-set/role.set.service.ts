@@ -106,7 +106,7 @@ export class RoleSetService {
       roleSetData.applicationForm
     );
 
-    roleSet.license = await this.licenseService.createLicense({
+    roleSet.license = this.licenseService.createLicense({
       type: LicenseType.ROLESET,
       entitlements: [
         {

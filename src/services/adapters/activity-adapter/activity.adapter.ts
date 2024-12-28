@@ -456,15 +456,18 @@ export class ActivityAdapter {
   private async getCollaborationIdForCallout(
     calloutID: string
   ): Promise<string> {
-    const collaboration = await this.collaborationRepository
-      .createQueryBuilder('collaboration')
-      .innerJoinAndSelect('collaboration.callouts', 'callout')
-      .where('callout.id = :id')
-      .setParameters({ id: `${calloutID}` })
-      .getOne();
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        calloutsSet: {
+          callouts: {
+            id: calloutID,
+          },
+        },
+      },
+    });
     if (!collaboration) {
       throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Whiteboard with ID: ${calloutID}`,
+        `Unable to identify Collaboration for Callout with ID: ${calloutID}`,
         LogContext.ACTIVITY
       );
     }
@@ -489,14 +492,19 @@ export class ActivityAdapter {
   }
 
   private async getCollaborationIdForPost(postID: string): Promise<string> {
-    const collaboration = await this.collaborationRepository
-      .createQueryBuilder('collaboration')
-      .leftJoinAndSelect('collaboration.callouts', 'callouts')
-      .leftJoinAndSelect('callouts.contributions', 'contributions')
-      .innerJoinAndSelect('contributions.post', 'post')
-      .where('post.id = :id')
-      .setParameters({ id: `${postID}` })
-      .getOne();
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        calloutsSet: {
+          callouts: {
+            contributions: {
+              post: {
+                id: postID,
+              },
+            },
+          },
+        },
+      },
+    });
     if (!collaboration) {
       throw new EntityNotFoundException(
         `Unable to identify Collaboration for Whiteboard with ID: ${postID}`,
@@ -509,14 +517,19 @@ export class ActivityAdapter {
   private async getCollaborationIdForWhiteboard(
     whiteboardID: string
   ): Promise<string> {
-    const collaboration = await this.collaborationRepository
-      .createQueryBuilder('collaboration')
-      .leftJoinAndSelect('collaboration.callouts', 'callouts')
-      .innerJoinAndSelect('callouts.contributions', 'contributions')
-      .innerJoinAndSelect('contributions.whiteboard', 'whiteboard')
-      .where('whiteboard.id = :id')
-      .setParameters({ id: `${whiteboardID}` })
-      .getOne();
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        calloutsSet: {
+          callouts: {
+            contributions: {
+              whiteboard: {
+                id: whiteboardID,
+              },
+            },
+          },
+        },
+      },
+    });
     if (!collaboration) {
       throw new EntityNotFoundException(
         `Unable to identify Collaboration for Whiteboard with ID: ${whiteboardID}`,
@@ -546,42 +559,39 @@ export class ActivityAdapter {
   private async getCollaborationIdWithCalloutIdForWhiteboard(
     whiteboardID: string
   ): Promise<{ collaborationID: string; calloutID: string }> {
-    const [contributionResult]: {
-      collaborationID: string;
-      calloutID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT \`callout\`.\`id\` as \`calloutID\`, \`collaboration\`.\`id\` as collaborationID FROM \`collaboration\`
-        LEFT JOIN \`callout\` on \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-        JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-        JOIN \`whiteboard\` on \`whiteboard\`.\`id\` = \`callout_contribution\`.\`whiteboardId\`
-        WHERE \`whiteboard\`.\`id\` = '${whiteboardID}'
-      `
-    );
-
-    if (!contributionResult) {
-      const [profileResult]: {
-        collaborationID: string;
-        calloutID: string;
-      }[] = await this.entityManager.connection.query(
-        `
-          SELECT \`callout\`.\`id\` as \`calloutID\`, \`collaboration\`.\`id\` as collaborationID FROM \`collaboration\`
-          LEFT JOIN \`callout\` on \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-          LEFT JOIN \`callout_framing\` on \`callout\`.\`framingId\` = \`callout_framing\`.\`id\`
-          WHERE \`callout_framing\`.\`whiteboardId\` = '${whiteboardID}'
-        `
+    const callout = await this.entityManager
+      .createQueryBuilder(Callout, 'callout')
+      .leftJoinAndSelect('callout.contributions', 'contributions')
+      .leftJoinAndSelect('callout.framing', 'framing')
+      .leftJoinAndSelect('framing.whiteboard', 'framingWhiteboard')
+      .leftJoinAndSelect('contributions.whiteboard', 'whiteboard')
+      .where('whiteboard.id = :whiteboardID', { whiteboardID })
+      .orWhere('framingWhiteboard.id = :whiteboardID', { whiteboardID })
+      .getOne();
+    if (!callout) {
+      throw new EntityNotFoundException(
+        `Unable to identify Callout for Whiteboard with ID: ${whiteboardID}`,
+        LogContext.ACTIVITY
       );
-
-      if (!profileResult) {
-        throw new EntityNotFoundException(
-          `Unable to identify Collaboration for Whiteboard with ID: ${whiteboardID}`,
-          LogContext.ACTIVITY
-        );
-      }
-      return profileResult;
     }
 
-    return contributionResult;
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        calloutsSet: {
+          callouts: {
+            id: callout.id,
+          },
+        },
+      },
+    });
+    if (!collaboration) {
+      throw new EntityNotFoundException(
+        `Unable to identify Collaboration for callout with ID: ${callout.id}`,
+        LogContext.ACTIVITY
+      );
+    }
+
+    return { collaborationID: collaboration.id, calloutID: callout.id };
   }
 
   private async getCommunityIdFromUpdates(updatesID: string) {

@@ -479,7 +479,7 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified CalloutsSet',
   })
-  async callloutsSet(
+  async calloutsSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalloutsSet> {

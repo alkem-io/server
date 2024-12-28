@@ -6,6 +6,12 @@ import { CalloutsSetService } from './callouts.set.service';
 import { ICalloutsSet } from './callouts.set.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import {
+  POLICY_RULE_CALLOUT_CONTRIBUTE,
+  POLICY_RULE_COLLABORATION_CREATE,
+} from '@common/constants';
 
 @Injectable()
 export class CalloutsSetAuthorizationService {
@@ -39,6 +45,12 @@ export class CalloutsSetAuthorizationService {
         parentAuthorization
       );
     updatedAuthorizations.push(calloutsSet.authorization);
+    if (roleSet && spaceSettings) {
+      calloutsSet.authorization = await this.appendPrivilegeRules(
+        calloutsSet.authorization,
+        spaceSettings
+      );
+    }
 
     if (calloutsSet.callouts) {
       for (const callout of calloutsSet.callouts) {
@@ -54,5 +66,34 @@ export class CalloutsSetAuthorizationService {
     }
 
     return updatedAuthorizations;
+  }
+
+  private async appendPrivilegeRules(
+    authorization: IAuthorizationPolicy,
+    spaceSettings: ISpaceSettings
+  ): Promise<IAuthorizationPolicy> {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_CALLOUT],
+      AuthorizationPrivilege.CREATE,
+      POLICY_RULE_COLLABORATION_CREATE
+    );
+    privilegeRules.push(createPrivilege);
+
+    const collaborationSettings = spaceSettings.collaboration;
+    if (collaborationSettings.allowMembersToCreateCallouts) {
+      const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
+        [AuthorizationPrivilege.CREATE_CALLOUT],
+        AuthorizationPrivilege.CONTRIBUTE,
+        POLICY_RULE_CALLOUT_CONTRIBUTE
+      );
+      privilegeRules.push(createCalloutPrivilege);
+    }
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }

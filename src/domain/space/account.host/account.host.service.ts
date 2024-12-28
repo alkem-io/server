@@ -60,7 +60,7 @@ export class AccountHostService {
       type: AgentType.ACCOUNT,
     });
 
-    account.license = await this.licenseService.createLicense({
+    account.license = this.licenseService.createLicense({
       type: LicenseType.ACCOUNT,
       entitlements: [
         {

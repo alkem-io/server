@@ -97,7 +97,7 @@ export class CalloutsSetResolverMutations {
     );
 
     const { roleSet: communityPolicy, spaceSettings } =
-      await this.namingService.getRoleSetAndSettingsForCollaboration(
+      await this.namingService.getRoleSetAndSettingsForCalloutsSet(
         calloutsSet.id
       );
     // callout needs to be saved to apply the authorization policy
