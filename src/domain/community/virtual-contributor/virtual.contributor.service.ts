@@ -48,6 +48,8 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
+import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
+import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -62,6 +64,7 @@ export class VirtualContributorService {
     private aiServerAdapter: AiServerAdapter,
     private accountHostService: AccountHostService,
     private vcInteractionService: VcInteractionService,
+    private knowledgeBaseService: KnowledgeBaseService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(VirtualContributor)
@@ -96,6 +99,12 @@ export class VirtualContributorService {
     virtualContributor.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
     );
+
+    virtualContributor.knowledgeBase =
+      this.knowledgeBaseService.createKnowledgeBase(
+        virtualContributorData.knowledgeBaseData,
+        storageAggregator
+      );
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );
@@ -240,13 +249,23 @@ export class VirtualContributorService {
         relations: {
           profile: true,
           agent: true,
+          knowledgeBase: true,
         },
       }
     );
 
-    if (virtualContributor.profile) {
-      await this.profileService.deleteProfile(virtualContributor.profile.id);
+    if (
+      !virtualContributor.profile ||
+      !virtualContributor.agent ||
+      !virtualContributor.knowledgeBase
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities for virtual: ${virtualContributor.id} `,
+        LogContext.COMMUNITY
+      );
     }
+
+    await this.profileService.deleteProfile(virtualContributor.profile.id);
 
     if (virtualContributor.authorization) {
       await this.authorizationPolicyService.delete(
@@ -254,9 +273,8 @@ export class VirtualContributorService {
       );
     }
 
-    if (virtualContributor.agent) {
-      await this.agentService.deleteAgent(virtualContributor.agent.id);
-    }
+    await this.agentService.deleteAgent(virtualContributor.agent.id);
+    await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
 
     const result = await this.virtualContributorRepository.remove(
       virtualContributor as VirtualContributor
@@ -519,6 +537,30 @@ export class VirtualContributorService {
     const hostCredentials =
       await this.accountHostService.getHostCredentials(account);
     return hostCredentials;
+  }
+
+  async getKnowledgeBaseOrFail(
+    virtualContributor: IVirtualContributor
+  ): Promise<IKnowledgeBase | never> {
+    if (virtualContributor.knowledgeBase) {
+      return virtualContributor.knowledgeBase;
+    }
+    const virtualContributorWithKnowledgeBase =
+      await this.getVirtualContributorOrFail(virtualContributor.id, {
+        relations: {
+          knowledgeBase: true,
+        },
+      });
+    const knowledgeBase = virtualContributorWithKnowledgeBase.knowledgeBase;
+
+    if (!knowledgeBase) {
+      throw new EntityNotFoundException(
+        `Unable to find knowledge base for VirtualContributor: ${virtualContributor.id}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    return knowledgeBase;
   }
 
   async getAiPersonaOrFail(

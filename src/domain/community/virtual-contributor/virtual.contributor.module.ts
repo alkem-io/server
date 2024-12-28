@@ -20,6 +20,7 @@ import { ContributorModule } from '../contributor/contributor.module';
 import { VirtualContributorResolverSubscriptions } from './virtual.contributor.resolver.subscriptions';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.interaction.module';
+import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.int
     ProfileModule,
     NamingModule,
     AiPersonaModule,
+    KnowledgeBaseModule,
     AiServerAdapterModule,
     CommunicationAdapterModule,
     AccountHostModule,

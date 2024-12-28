@@ -21,6 +21,7 @@ export * from './account/account.innovation.pack.loader.creator';
 export * from './account/account.loader.creator';
 export * from './collaboration/collaboration.timeline.loader.creator';
 export * from './collaboration/collaboration.callouts.set.loader.creator';
+export * from './collaboration/knowledge.base.callouts.set.loader.creator';
 
 export * from './journey/journey.collaboration.loader.creator';
 export * from './journey/journey.context.loader.creator';

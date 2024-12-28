@@ -13,6 +13,7 @@ export enum AuthorizationPolicyType {
   LINK = 'link',
   POST = 'post',
   WHITEBOARD = 'whiteboard',
+  KNOWLEDGE_BASE = 'knowledge-base',
   PREFERENCE = 'preference',
   PREFERENCE_SET = 'preference-set',
   PROFILE = 'profile',
