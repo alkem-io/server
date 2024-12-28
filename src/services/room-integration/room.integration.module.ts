@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { RoomControllerService } from './room.controller.service';
-import { RoomModule } from '@domain/communication/room/room.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.interaction.module';
+import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 
 @Module({
-  imports: [RoomModule, VcInteractionModule, SubscriptionServiceModule],
+  imports: [RoomLookupModule, VcInteractionModule, SubscriptionServiceModule],
   providers: [RoomControllerService],
   exports: [RoomControllerService],
 })

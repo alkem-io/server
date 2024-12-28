@@ -33,7 +33,6 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
@@ -56,7 +55,6 @@ export class VirtualContributorService {
     private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
-    private accountHostService: AccountHostService,
     private knowledgeBaseService: KnowledgeBaseService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private accountLookupService: AccountLookupService,

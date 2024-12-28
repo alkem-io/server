@@ -32,6 +32,7 @@ import { IRoom } from './room.interface';
 import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { RoomMentionsService } from '../room-mentions/room.mentions.service';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -41,6 +42,7 @@ export class RoomResolverMutations {
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
+    private roomLookupService: RoomLookupService,
     private roomMentionsService: RoomMentionsService,
     private subscriptionPublishService: SubscriptionPublishService,
     private virtualContributorMessageService: VirtualContributorMessageService,
@@ -78,7 +80,7 @@ export class RoomResolverMutations {
       messageData.message
     );
 
-    const message = await this.roomService.sendMessage(
+    const message = await this.roomLookupService.sendMessage(
       room,
       agentInfo.communicationID,
       messageData
@@ -283,7 +285,7 @@ export class RoomResolverMutations {
       threadID
     );
 
-    const reply = await this.roomService.sendMessageReply(
+    const reply = await this.roomLookupService.sendMessageReply(
       room,
       agentInfo.communicationID,
       messageData,

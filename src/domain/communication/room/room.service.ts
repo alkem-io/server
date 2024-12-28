@@ -12,11 +12,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IdentityResolverService } from '@services/infrastructure/entity-resolver/identity.resolver.service';
 import { RoomType } from '@common/enums/room.type';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
-import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
-import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
@@ -55,13 +53,6 @@ export class RoomService {
         `Not able to locate Room with the specified ID: ${roomID}`,
         LogContext.COMMUNICATION
       );
-    return room;
-  }
-
-  async findRoom(options?: FindOneOptions<Room>): Promise<Room | null> {
-    const room = await this.roomRepository.findOne({
-      ...options,
-    });
     return room;
   }
 
@@ -144,71 +135,6 @@ export class RoomService {
       );
     }
     return '';
-  }
-
-  async sendMessage(
-    room: IRoom,
-    communicationUserID: string,
-    messageData: RoomSendMessageInput
-  ): Promise<IMessage> {
-    // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
-      communicationUserID
-    );
-    const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        communicationUserID
-      );
-    const message = await this.communicationAdapter.sendMessage({
-      senderCommunicationsID: communicationUserID,
-      message: messageData.message,
-      roomID: room.externalRoomID,
-    });
-
-    message.sender = alkemioUserID!;
-    room.messagesCount = room.messagesCount + 1;
-    await this.save(room);
-    return message;
-  }
-
-  async sendMessageReply(
-    room: IRoom,
-    communicationUserID: string,
-    messageData: RoomSendMessageReplyInput,
-    senderType: 'user' | 'virtualContributor'
-  ): Promise<IMessage> {
-    // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
-      communicationUserID
-    );
-
-    const alkemioSenderID =
-      senderType === 'virtualContributor'
-        ? await this.identityResolverService.getContributorIDByCommunicationsID(
-            communicationUserID
-          )
-        : await this.identityResolverService.getUserIDByCommunicationsID(
-            communicationUserID
-          );
-    const message = await this.communicationAdapter.sendMessageReply(
-      {
-        senderCommunicationsID: communicationUserID,
-        message: messageData.message,
-        roomID: room.externalRoomID,
-        threadID: messageData.threadID,
-      },
-      senderType
-    );
-
-    message.sender = alkemioSenderID!;
-    message.senderType = senderType;
-
-    room.messagesCount = room.messagesCount + 1;
-    await this.save(room);
-
-    return message;
   }
 
   async addReactionToMessage(

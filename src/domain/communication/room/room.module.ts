@@ -21,6 +21,7 @@ import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { RoomMentionsModule } from '../room-mentions/room.mentions.module';
+import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { RoomMentionsModule } from '../room-mentions/room.mentions.module';
     VirtualContributorLookupModule,
     UserLookupModule,
     RoomMentionsModule,
+    RoomLookupModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
   ],

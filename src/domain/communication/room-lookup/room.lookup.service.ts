@@ -14,6 +14,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
 import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
+import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
+import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 
 interface MessageSender {
   id: string;
@@ -154,6 +156,71 @@ export class RoomLookupService {
     }
 
     return messages;
+  }
+
+  async sendMessage(
+    room: IRoom,
+    communicationUserID: string,
+    messageData: RoomSendMessageInput
+  ): Promise<IMessage> {
+    // Ensure the user is a member of room and group so can send
+    await this.communicationAdapter.addUserToRoom(
+      room.externalRoomID,
+      communicationUserID
+    );
+    const alkemioUserID =
+      await this.identityResolverService.getUserIDByCommunicationsID(
+        communicationUserID
+      );
+    const message = await this.communicationAdapter.sendMessage({
+      senderCommunicationsID: communicationUserID,
+      message: messageData.message,
+      roomID: room.externalRoomID,
+    });
+
+    message.sender = alkemioUserID!;
+    room.messagesCount = room.messagesCount + 1;
+    await this.roomRepository.save(room);
+    return message;
+  }
+
+  async sendMessageReply(
+    room: IRoom,
+    communicationUserID: string,
+    messageData: RoomSendMessageReplyInput,
+    senderType: 'user' | 'virtualContributor'
+  ): Promise<IMessage> {
+    // Ensure the user is a member of room and group so can send
+    await this.communicationAdapter.addUserToRoom(
+      room.externalRoomID,
+      communicationUserID
+    );
+
+    const alkemioSenderID =
+      senderType === 'virtualContributor'
+        ? await this.identityResolverService.getContributorIDByCommunicationsID(
+            communicationUserID
+          )
+        : await this.identityResolverService.getUserIDByCommunicationsID(
+            communicationUserID
+          );
+    const message = await this.communicationAdapter.sendMessageReply(
+      {
+        senderCommunicationsID: communicationUserID,
+        message: messageData.message,
+        roomID: room.externalRoomID,
+        threadID: messageData.threadID,
+      },
+      senderType
+    );
+
+    message.sender = alkemioSenderID!;
+    message.senderType = senderType;
+
+    room.messagesCount = room.messagesCount + 1;
+    await this.roomRepository.save(room);
+
+    return message;
   }
 
   private async identitySender(
