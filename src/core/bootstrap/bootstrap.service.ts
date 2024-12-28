@@ -568,6 +568,12 @@ export class BootstrapService {
           displayName: 'Guidance',
           description: 'Guidance Virtual Contributor',
         },
+        knowledgeBaseData: {
+          profile: {
+            displayName: 'Knowledge Base for Virtual Contributor',
+          },
+          calloutsSetData: {},
+        },
       });
 
       platform.guidanceVirtualContributor = vc;
