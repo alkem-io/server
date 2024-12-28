@@ -31,12 +31,13 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { IRoleSet } from './role.set.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 
 @Injectable()
 export class RoleSetAuthorizationService {
@@ -45,7 +46,8 @@ export class RoleSetAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
-    private virtualContributorService: VirtualContributorService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
+    private accountLookupService: AccountLookupService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
@@ -391,15 +393,17 @@ export class RoleSetAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const accountHostCredentials =
-      await this.virtualContributorService.getAccountHostCredentials(
+    const vcAccount =
+      await this.virtualContributorLookupService.getAccountOrFail(
         virtualContributorToBeRemoved
       );
+    const vcAccountHostCredentials =
+      await this.accountLookupService.getHostCredentials(vcAccount);
 
     const userSelfRemovalRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.GRANT],
-        accountHostCredentials,
+        vcAccountHostCredentials,
         CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL
       );
     newRules.push(userSelfRemovalRule);

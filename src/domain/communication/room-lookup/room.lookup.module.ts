@@ -6,6 +6,8 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
 
+// Module created to be able to avoid a circular dependency, but the proper solution is
+// a bigger refactoring...
 @Module({
   imports: [
     EntityResolverModule,

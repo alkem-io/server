@@ -22,6 +22,7 @@ import { VirtualContributorLookupModule } from '@domain/community/virtual-contri
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { RoomMentionsModule } from '../room-mentions/room.mentions.module';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
+import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { RoomLookupModule } from '../room-lookup/room.lookup.module';
     MessageModule,
     VcInteractionModule,
     VirtualContributorLookupModule,
+    VirtualContributorMessageModule,
     UserLookupModule,
     RoomMentionsModule,
     RoomLookupModule,
