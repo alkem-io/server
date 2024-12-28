@@ -30,6 +30,7 @@ import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields.public';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { RoleSetLicenseService } from './role.set.service.license';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { VirtualContributorLookupModule } from '@domain/community/virtual-contri
     ApplicationModule,
     PlatformInvitationModule,
     VirtualContributorLookupModule,
+    AccountLookupModule,
     AiServerAdapterModule,
     NotificationAdapterModule,
     ContributionReporterModule,

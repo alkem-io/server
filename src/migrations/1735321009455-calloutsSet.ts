@@ -33,6 +33,8 @@ export class CalloutsSet1735321009455 implements MigrationInterface {
       `ALTER TABLE \`callout\` ADD \`calloutsSetId\` char(36) NULL`
     );
 
+    // TODO: create definitions for KnowledgeBase, and add column for it to VC. Then iterate over all VCs and create empty KBs etc.
+
     // Create calloutsSet for each collaboration
     const collaborations: {
       id: string;
