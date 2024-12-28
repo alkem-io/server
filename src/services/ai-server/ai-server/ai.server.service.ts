@@ -27,8 +27,6 @@ import {
 import { EventBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { ChromaClient } from 'chromadb';
-import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import {
   InteractionMessage,
   MessageSenderRole,
@@ -45,8 +43,8 @@ import {
   RoomDetails,
 } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
-import { RoomService } from '@domain/communication/room/room.service';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 
 @Injectable()
 export class AiServerService {
@@ -76,9 +74,7 @@ export class AiServerService {
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
-    private vcInteractionService: VcInteractionService,
-    private communicationAdapter: CommunicationAdapter,
-    private roomService: RoomService,
+    private roomLookupService: RoomLookupService,
     private subscriptionPublishService: SubscriptionPublishService,
     private config: ConfigService<AlkemioConfig, true>,
     private roomControllerService: RoomControllerService,
@@ -244,14 +240,14 @@ export class AiServerService {
     limit: number = 10
   ): Promise<InteractionMessage[]> {
     let roomMessages: IMessage[] = [];
-    const room = await this.roomService.getRoomOrFail(roomDetails.roomID);
+    const room = await this.roomLookupService.getRoomOrFail(roomDetails.roomID);
     if (roomDetails.threadID) {
-      roomMessages = await this.roomService.getMessagesInThread(
+      roomMessages = await this.roomLookupService.getMessagesInThread(
         room,
         roomDetails.threadID
       );
     } else {
-      roomMessages = await this.roomService.getMessages(room);
+      roomMessages = await this.roomLookupService.getMessages(room);
     }
 
     const messages: InteractionMessage[] = [];

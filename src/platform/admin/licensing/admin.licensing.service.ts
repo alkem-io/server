@@ -7,7 +7,6 @@ import { LicenseIssuerService } from '@platform/licensing/credential-based/licen
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { IAccount } from '@domain/space/account/account.interface';
@@ -21,7 +20,6 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 @Injectable()
 export class AdminLicensingService {
   constructor(
-    private accountHostService: AccountHostService,
     private accountLookupService: AccountLookupService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseIssuerService: LicenseIssuerService,

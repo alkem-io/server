@@ -17,10 +17,10 @@ import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { MessageModule } from '../message/message.module';
-import { RoomServiceMentions } from './room.service.mentions';
 import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
-import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { RoomMentionsModule } from '../room-mentions/room.mentions.module';
 
 @Module({
   imports: [
@@ -34,8 +34,9 @@ import { VirtualContributorMessageModule } from '../virtual.contributor.message/
     CommunicationAdapterModule,
     MessageModule,
     VcInteractionModule,
-    VirtualContributorMessageModule,
-    ContributorLookupModule,
+    VirtualContributorLookupModule,
+    UserLookupModule,
+    RoomMentionsModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
   ],
@@ -46,13 +47,7 @@ import { VirtualContributorMessageModule } from '../virtual.contributor.message/
     RoomResolverMutations,
     RoomEventResolverSubscription,
     RoomServiceEvents,
-    RoomServiceMentions,
   ],
-  exports: [
-    RoomService,
-    RoomServiceEvents,
-    RoomAuthorizationService,
-    RoomServiceMentions,
-  ],
+  exports: [RoomService, RoomServiceEvents, RoomAuthorizationService],
 })
 export class RoomModule {}

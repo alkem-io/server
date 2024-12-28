@@ -4,21 +4,22 @@ import { IMessage } from '../message/message.interface';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { RoomType } from '@common/enums/room.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
-import { IRoom } from './room.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IProfile } from '@domain/common/profile';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { RoomService } from './room.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { IRoom } from '../room/room.interface';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
 
 @Injectable()
-export class RoomServiceMentions {
+export class RoomMentionsService {
   MENTION_REGEX_ALL = new RegExp(
     `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION}|${MentionedEntityType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
     'gm'
@@ -27,7 +28,7 @@ export class RoomServiceMentions {
   constructor(
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
-    private roomService: RoomService,
+    private roomLookupService: RoomLookupService,
     private virtualContributorMessageService: VirtualContributorMessageService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private userLookupService: UserLookupService,
@@ -49,6 +50,25 @@ export class RoomServiceMentions {
     return space.id;
   }
 
+  async getVcInteractionByThread(
+    roomID: string,
+    threadID: string
+  ): Promise<IVcInteraction | undefined> {
+    const room = await this.roomLookupService.getRoomOrFail(roomID, {
+      relations: {
+        vcInteractions: true,
+      },
+    });
+    if (!room.vcInteractions) {
+      throw new EntityNotFoundException(
+        `Not able to locate interactions for the room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    return room.vcInteractions.find(i => i.threadID === threadID);
+  }
+
   public async processVirtualContributorMentions(
     mentions: Mention[],
     message: string,
@@ -62,10 +82,7 @@ export class RoomServiceMentions {
     );
     // Only the first VC mention starts an interaction
     // check if interaction was not already created instead of hardcoded
-    let vcInteraction = await this.roomService.getVcInteractionByThread(
-      room.id,
-      threadID
-    );
+    let vcInteraction = await this.getVcInteractionByThread(room.id, threadID);
 
     for (const vcMention of vcMentions) {
       this.logger.verbose?.(
@@ -73,7 +90,7 @@ export class RoomServiceMentions {
         LogContext.VIRTUAL_CONTRIBUTOR
       );
       if (!vcInteraction) {
-        vcInteraction = await this.roomService.addVcInteractionToRoom({
+        vcInteraction = await this.roomLookupService.addVcInteractionToRoom({
           virtualContributorID: vcMention.id,
           roomID: room.id,
           threadID: threadID,

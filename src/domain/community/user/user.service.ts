@@ -70,6 +70,7 @@ import { UpdateUserSettingsEntityInput } from '../user.settings/dto/user.setting
 import { PreferenceType } from '@common/enums/preference.type';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 
 @Injectable()
 export class UserService {
@@ -79,6 +80,7 @@ export class UserService {
     private profileService: ProfileService,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
+    private roomLookupService: RoomLookupService,
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
@@ -916,7 +918,7 @@ export class UserService {
       user.communicationID
     );
 
-    await this.roomService.populateRoomsMessageSenders(communityRooms);
+    await this.roomLookupService.populateRoomsMessageSenders(communityRooms);
 
     return communityRooms;
   }
@@ -926,7 +928,7 @@ export class UserService {
       user.communicationID
     );
 
-    await this.roomService.populateRoomsMessageSenders(directRooms);
+    await this.roomLookupService.populateRoomsMessageSenders(directRooms);
 
     return directRooms;
   }

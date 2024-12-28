@@ -12,16 +12,14 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization';
 import { Account } from '../account/account.entity';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions } from 'typeorm';
 
 @Injectable()
 export class AccountLookupService {
   constructor(
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    @InjectRepository(Account)
-    private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -42,10 +40,11 @@ export class AccountLookupService {
     accountID: string,
     options?: FindOneOptions<Account>
   ): Promise<IAccount | null> {
-    return await this.accountRepository.findOne({
-      where: { id: accountID },
+    const account: IAccount | null = await this.entityManager.findOne(Account, {
       ...options,
+      where: { ...options?.where, id: accountID },
     });
+    return account;
   }
 
   public async getHostOrFail(account: IAccount): Promise<IContributor> {

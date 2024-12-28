@@ -17,16 +17,9 @@ import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.me
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
-import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
-import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
-import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-
-interface MessageSender {
-  id: string;
-  type: 'user' | 'virtualContributor' | 'unknown';
-}
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
 
 @Injectable()
 export class RoomService {
@@ -36,6 +29,7 @@ export class RoomService {
     private identityResolverService: IdentityResolverService,
     private communicationAdapter: CommunicationAdapter,
     private vcInteractionService: VcInteractionService,
+    private roomLookupService: RoomLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -97,11 +91,9 @@ export class RoomService {
   }
 
   async getMessages(room: IRoom): Promise<IMessage[]> {
-    const externalRoom = await this.communicationAdapter.getCommunityRoom(
-      room.externalRoomID
-    );
+    const messages = await this.roomLookupService.getMessages(room);
 
-    const messagesCount = externalRoom.messages.length;
+    const messagesCount = messages.length;
     if (messagesCount != room.messagesCount) {
       this.logger.warn(
         `Room (${room.id}) had a comment count of ${room.messagesCount} that is not synced with the messages count of ${messagesCount}`,
@@ -110,65 +102,7 @@ export class RoomService {
       room.messagesCount = messagesCount;
       await this.save(room);
     }
-    return await this.populateRoomMessageSenders(externalRoom.messages);
-  }
-
-  public async addVcInteractionToRoom(
-    interactionData: CreateVcInteractionInput
-  ): Promise<IVcInteraction> {
-    const room = await this.getRoomOrFail(interactionData.roomID, {
-      relations: {
-        vcInteractions: true,
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate interactions for the room: ${interactionData.roomID}`,
-        LogContext.COMMUNICATION
-      );
-    }
-
-    const interaction =
-      this.vcInteractionService.buildVcInteraction(interactionData);
-    room.vcInteractions.push(interaction);
-    await this.save(room);
-    return interaction;
-  }
-
-  async getVcInteractions(roomID: string): Promise<IVcInteraction[]> {
-    const room = await this.getRoomOrFail(roomID, {
-      relations: {
-        vcInteractions: {
-          room: true,
-        },
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate interactions for the room: ${roomID}`,
-        LogContext.COMMUNICATION
-      );
-    }
-    return room.vcInteractions;
-  }
-
-  async getVcInteractionByThread(
-    roomID: string,
-    threadID: string
-  ): Promise<IVcInteraction | undefined> {
-    const room = await this.getRoomOrFail(roomID, {
-      relations: {
-        vcInteractions: true,
-      },
-    });
-    if (!room.vcInteractions) {
-      throw new EntityNotFoundException(
-        `Not able to locate interactions for the room: ${roomID}`,
-        LogContext.COMMUNICATION
-      );
-    }
-
-    return room.vcInteractions.find(i => i.threadID === threadID);
+    return messages;
   }
 
   async removeRoomMessage(
@@ -184,107 +118,6 @@ export class RoomService {
     room.messagesCount = room.messagesCount - 1;
     await this.save(room);
     return messageData.messageID;
-  }
-
-  async populateRoomsMessageSenders(
-    rooms: CommunicationRoomResult[]
-  ): Promise<CommunicationRoomResult[]> {
-    for (const room of rooms) {
-      room.messages = await this.populateRoomMessageSenders(room.messages);
-    }
-
-    return rooms;
-  }
-
-  private async identitySender(
-    knownSendersMap: Map<string, MessageSender>,
-    matrixUserID: string
-  ): Promise<MessageSender> {
-    let messageSender = knownSendersMap.get(matrixUserID);
-    if (!messageSender) {
-      const alkemioUserID =
-        await this.identityResolverService.getUserIDByCommunicationsID(
-          matrixUserID
-        );
-      if (alkemioUserID) {
-        messageSender = {
-          id: alkemioUserID,
-          type: 'user',
-        };
-      } else {
-        const virtualContributorID =
-          await this.identityResolverService.getContributorIDByCommunicationsID(
-            matrixUserID
-          );
-        if (virtualContributorID) {
-          messageSender = {
-            id: virtualContributorID,
-            type: 'virtualContributor',
-          };
-        }
-      }
-      if (messageSender) {
-        knownSendersMap.set(matrixUserID, messageSender);
-      }
-    }
-    if (!messageSender) {
-      throw new Error(`Unable to identify sender for ${matrixUserID}`);
-    }
-    return messageSender;
-  }
-
-  async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
-    const knownSendersMap = new Map<string, MessageSender>();
-    for (const message of messages) {
-      const matrixUserID = message.sender;
-      let messageSender: MessageSender = { id: 'unknown', type: 'unknown' };
-      try {
-        messageSender = await this.identitySender(
-          knownSendersMap,
-          matrixUserID
-        );
-      } catch (error) {
-        this.logger.error(
-          `Unable to identify sender for message with id ${message.id}`,
-          error,
-          LogContext.COMMUNICATION
-        );
-      }
-
-      message.sender = messageSender.id;
-      message.senderType = messageSender.type;
-      if (message.reactions) {
-        message.reactions = await this.populateRoomReactionSenders(
-          message.reactions,
-          knownSendersMap
-        );
-      } else {
-        message.reactions = [];
-      }
-    }
-
-    return messages;
-  }
-
-  async populateRoomReactionSenders(
-    reactions: IMessageReaction[],
-    knownSendersMap: Map<string, MessageSender>
-  ): Promise<IMessageReaction[]> {
-    for (const reaction of reactions) {
-      const matrixUserID = reaction.sender;
-      try {
-        const reactionSender = await this.identitySender(
-          knownSendersMap,
-          matrixUserID
-        );
-
-        reaction.sender = reactionSender.id;
-      } catch (error) {
-        reaction.sender = 'unknown';
-      }
-    }
-
-    return reactions;
   }
 
   async initializeCommunicationRoom(room: IRoom): Promise<string> {
@@ -444,25 +277,6 @@ export class RoomService {
       );
 
     return alkemioUserID ?? '';
-  }
-
-  async getMessagesInThread(
-    room: IRoom,
-    threadID: string
-  ): Promise<IMessage[]> {
-    this.logger.verbose?.(
-      `Getting messages in thread ${threadID} for room ${room.id}`,
-      LogContext.COMMUNICATION
-    );
-    const roomResult = await this.communicationAdapter.getCommunityRoom(
-      room.externalRoomID
-    );
-    // First message in the thread provides the threadID, but it itself does not have the threadID set
-    const threadMessages = roomResult.messages.filter(
-      m => m.threadID === threadID || m.id === threadID
-    );
-
-    return threadMessages;
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
