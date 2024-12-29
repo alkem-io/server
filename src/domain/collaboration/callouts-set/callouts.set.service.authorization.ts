@@ -45,12 +45,10 @@ export class CalloutsSetAuthorizationService {
         parentAuthorization
       );
     updatedAuthorizations.push(calloutsSet.authorization);
-    if (roleSet && spaceSettings) {
-      calloutsSet.authorization = await this.appendPrivilegeRules(
-        calloutsSet.authorization,
-        spaceSettings
-      );
-    }
+    calloutsSet.authorization = await this.appendPrivilegeRules(
+      calloutsSet.authorization,
+      spaceSettings
+    );
 
     if (calloutsSet.callouts) {
       for (const callout of calloutsSet.callouts) {
@@ -70,7 +68,7 @@ export class CalloutsSetAuthorizationService {
 
   private async appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
-    spaceSettings: ISpaceSettings
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
@@ -81,14 +79,16 @@ export class CalloutsSetAuthorizationService {
     );
     privilegeRules.push(createPrivilege);
 
-    const collaborationSettings = spaceSettings.collaboration;
-    if (collaborationSettings.allowMembersToCreateCallouts) {
-      const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
-        [AuthorizationPrivilege.CREATE_CALLOUT],
-        AuthorizationPrivilege.CONTRIBUTE,
-        POLICY_RULE_CALLOUT_CONTRIBUTE
-      );
-      privilegeRules.push(createCalloutPrivilege);
+    if (spaceSettings) {
+      const collaborationSettings = spaceSettings.collaboration;
+      if (collaborationSettings.allowMembersToCreateCallouts) {
+        const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
+          [AuthorizationPrivilege.CREATE_CALLOUT],
+          AuthorizationPrivilege.CONTRIBUTE,
+          POLICY_RULE_CALLOUT_CONTRIBUTE
+        );
+        privilegeRules.push(createCalloutPrivilege);
+      }
     }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
