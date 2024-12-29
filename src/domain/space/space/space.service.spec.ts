@@ -24,6 +24,7 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -302,7 +303,8 @@ const getSubspacesMock = (
         calloutsSet: {
           id: '',
           callouts: [],
-          groupsStr: JSON.stringify([
+          type: CalloutsSetType.COLLABORATION,
+          groups: [
             {
               displayName: 'HOME',
               description: 'The Home page.',
@@ -319,7 +321,7 @@ const getSubspacesMock = (
               displayName: 'KNOWLEDGE',
               description: 'The knowledge page.',
             },
-          ]),
+          ],
           ...getEntityMock<CalloutsSet>(),
         },
         innovationFlow: {
@@ -404,7 +406,8 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         calloutsSet: {
           id: '',
           callouts: [],
-          groupsStr: JSON.stringify([
+          type: CalloutsSetType.COLLABORATION,
+          groups: [
             {
               displayName: 'HOME',
               description: 'The Home page.',
@@ -421,7 +424,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               displayName: 'KNOWLEDGE',
               description: 'The knowledge page.',
             },
-          ]),
+          ],
           ...getEntityMock<CalloutsSet>(),
         },
         innovationFlow: {
