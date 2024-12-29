@@ -69,7 +69,7 @@ export class CalloutsSetService {
       !calloutsSetData.defaultCalloutGroupName
     ) {
       throw new RelationshipNotFoundException(
-        'Unable to create Collaboration: missing required data',
+        'Unable to create CalloutsSet: missing required data',
         LogContext.COLLABORATION
       );
     }
@@ -245,7 +245,7 @@ export class CalloutsSetService {
     return callouts;
   }
 
-  public async getCalloutsOnCollaboration(
+  public async getCalloutsOnCalloutsSet(
     calloutsSet: ICalloutsSet,
     opts: {
       calloutIds?: string[];

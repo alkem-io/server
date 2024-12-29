@@ -43,6 +43,9 @@ import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.int
 import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 
 @Injectable()
 export class VirtualContributorService {
@@ -93,9 +96,12 @@ export class VirtualContributorService {
       AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
     );
 
+    const knowledgeBaseData = this.populateKnowledgeBaseDTO(
+      virtualContributorData.knowledgeBaseData
+    );
     virtualContributor.knowledgeBase =
       this.knowledgeBaseService.createKnowledgeBase(
-        virtualContributorData.knowledgeBaseData,
+        knowledgeBaseData,
         storageAggregator
       );
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
@@ -155,7 +161,56 @@ export class VirtualContributorService {
     return virtualContributor;
   }
 
-  async checkNameIdOrFail(nameID: string) {
+  private populateKnowledgeBaseDTO(
+    knowledgeBaseData?: CreateKnowledgeBaseInput
+  ): CreateKnowledgeBaseInput {
+    // Create default data for a knowledge base if not provided
+    let result = knowledgeBaseData;
+    if (!result) {
+      result = {
+        profile: {
+          displayName: '',
+        },
+        calloutsSetData: {},
+      };
+    }
+
+    if (!result.profile) {
+      result.profile = {
+        displayName: '',
+      };
+    }
+
+    if (!result.calloutsSetData) {
+      result.calloutsSetData = {};
+    }
+
+    if (result.profile.displayName === '') {
+      result.profile.displayName = 'Knowledge Base';
+    }
+
+    const defaultCalloutGroups: ICalloutGroup[] = [
+      {
+        displayName: CalloutGroupName.KNOWLEDGE,
+        description: 'Knowledge callouts for this VC',
+      },
+    ];
+
+    if (!result.calloutsSetData) {
+      result.calloutsSetData = {};
+    }
+    if (!result.calloutsSetData.calloutsData) {
+      result.calloutsSetData.calloutsData = [];
+    }
+
+    // Fix the groups for now
+    result.calloutsSetData.calloutGroups = defaultCalloutGroups;
+    result.calloutsSetData.defaultCalloutGroupName = CalloutGroupName.KNOWLEDGE;
+
+    return result;
+  }
+
+  private async checkNameIdOrFail(nameID: string) {
     const virtualCount = await this.virtualContributorRepository.countBy({
       nameID: nameID,
     });
@@ -166,7 +221,7 @@ export class VirtualContributorService {
       );
   }
 
-  async checkDisplayNameOrFail(
+  private async checkDisplayNameOrFail(
     newDisplayName?: string,
     existingDisplayName?: string
   ) {
@@ -188,7 +243,7 @@ export class VirtualContributorService {
       );
   }
 
-  async updateVirtualContributor(
+  public async updateVirtualContributor(
     virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const virtual = await this.getVirtualContributorOrFail(
