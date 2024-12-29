@@ -30,7 +30,6 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CalloutGroupsService } from '../callout-groups/callout.group.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CalloutsSetArgsCallouts } from './dto/callouts.set.args.callouts';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
@@ -38,7 +37,6 @@ import { compact, keyBy } from 'lodash';
 import { CreateCalloutsSetInput } from './dto/callouts.set.dto.create';
 import { Callout } from '../callout/callout.entity';
 import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
-import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
@@ -52,7 +50,6 @@ export class CalloutsSetService {
     private authorizationService: AuthorizationService,
     @InjectRepository(CalloutsSet)
     private calloutsSetRepository: Repository<CalloutsSet>,
-    private calloutGroupsService: CalloutGroupsService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private tagsetTemplateSetService: TagsetTemplateSetService,
     private calloutService: CalloutService,
@@ -66,7 +63,8 @@ export class CalloutsSetService {
     if (
       !calloutsSetData.calloutGroups ||
       !calloutsSetData.calloutsData ||
-      !calloutsSetData.defaultCalloutGroupName
+      !calloutsSetData.defaultCalloutGroupName ||
+      !calloutsSetData.type
     ) {
       throw new RelationshipNotFoundException(
         'Unable to create CalloutsSet: missing required data',
@@ -77,11 +75,10 @@ export class CalloutsSetService {
     calloutsSet.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUTS_SET
     );
+    calloutsSet.type = calloutsSetData.type;
     calloutsSet.callouts = [];
 
-    calloutsSet.groupsStr = this.calloutGroupsService.serializeGroups(
-      calloutsSetData.calloutGroups
-    );
+    calloutsSet.groups = calloutsSetData.calloutGroups;
 
     calloutsSet.tagsetTemplateSet =
       this.tagsetTemplateSetService.createTagsetTemplateSet();
@@ -196,7 +193,7 @@ export class CalloutsSetService {
   }
 
   public getCalloutGroupNames(calloutsSet: ICalloutsSet): string[] {
-    return this.calloutGroupsService.getGroupNames(calloutsSet.groupsStr);
+    return calloutsSet.groups.map(group => group.displayName);
   }
 
   public async addCallouts(
@@ -295,10 +292,6 @@ export class CalloutsSetService {
       defaultSelectedValue: defaultGroup,
     };
     return tagsetTemplateData;
-  }
-
-  public getGroups(calloutsSet: ICalloutsSet): ICalloutGroup[] {
-    return this.calloutGroupsService.getGroups(calloutsSet.groupsStr);
   }
 
   public async createCalloutOnCalloutsSet(
@@ -487,16 +480,14 @@ export class CalloutsSetService {
     // Single pass filter operation
     const groupNames: string[] = [];
     if (args.groups && args.groups.length) {
-      const allowedGroups = await this.calloutGroupsService.getGroups(
-        calloutsSet.groupsStr
-      );
-
       for (const group of args.groups) {
         // Validate that the groups are valid
-        const groupAllowed = allowedGroups.find(g => g.displayName === group);
+        const groupAllowed = calloutsSet.groups.find(
+          g => g.displayName === group
+        );
         if (!groupAllowed) {
           throw new ValidationException(
-            `Specified group not found: ${group}; allowed groups: ${allowedGroups
+            `Specified group not found: ${group}; allowed groups: ${calloutsSet.groups
               .map(g => g.displayName)
               .join(', ')}`,
             LogContext.COLLABORATION

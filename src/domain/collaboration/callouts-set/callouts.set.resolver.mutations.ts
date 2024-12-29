@@ -96,10 +96,6 @@ export class CalloutsSetResolverMutations {
       agentInfo.userID
     );
 
-    const { roleSet: communityPolicy, spaceSettings } =
-      await this.namingService.getRoleSetAndSettingsForCalloutsSet(
-        calloutsSet.id
-      );
     // callout needs to be saved to apply the authorization policy
     await this.calloutService.save(callout);
 
@@ -114,6 +110,10 @@ export class CalloutsSetResolverMutations {
       destinationStorageBucket
     );
 
+    const { roleSet: communityPolicy, spaceSettings } =
+      await this.namingService.getRoleSetAndSettingsForCalloutsSet(
+        calloutsSet.id
+      );
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,

@@ -33,6 +33,7 @@ import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.da
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Injectable()
 export class CollaborationService {
@@ -66,6 +67,7 @@ export class CollaborationService {
     collaboration.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COLLABORATION
     );
+    collaborationData.calloutsSetData.type = CalloutsSetType.COLLABORATION;
     collaboration.calloutsSet = this.calloutsSetService.createCalloutsSet(
       collaborationData.calloutsSetData
     );

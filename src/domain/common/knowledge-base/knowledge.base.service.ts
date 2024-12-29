@@ -43,7 +43,7 @@ export class KnowledgeBaseService {
     );
 
     knowledgeBase.calloutsSet = this.calloutsSetService.createCalloutsSet(
-      knowledgeBaseData.calloutsSetData || {}
+      knowledgeBaseData.calloutsSetData
     );
 
     // To consider also having the default tagset as a template tagset

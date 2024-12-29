@@ -8,7 +8,6 @@ import { CalloutsSetService } from './callouts.set.service';
 import { CalloutsSetAuthorizationService } from './callouts.set.service.authorization';
 import { CalloutsSetResolverMutations } from './callouts.set.resolver.mutations';
 import { CalloutsSetResolverFields } from './callouts.set.resolver.fields';
-import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
@@ -25,7 +24,6 @@ import { PostModule } from '../post/post.module';
     AuthorizationPolicyModule,
     AuthorizationModule,
     CalloutModule,
-    CalloutGroupsModule,
     TemporaryStorageModule,
     TagsetTemplateSetModule,
     StorageAggregatorResolverModule,

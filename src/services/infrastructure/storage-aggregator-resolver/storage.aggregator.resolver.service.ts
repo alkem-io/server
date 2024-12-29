@@ -25,6 +25,7 @@ import { User } from '@domain/community/user/user.entity';
 import { Platform } from '@platform/platform/platform.entity';
 import { TemplatesManager } from '@domain/template/templates-manager';
 import { Template } from '@domain/template/template/template.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -283,8 +284,27 @@ export class StorageAggregatorResolverService {
       return this.getStorageAggregatorOrFail(space.storageAggregator.id);
     }
 
+    // First try on Space
+    const vc = await this.entityManager.findOne(VirtualContributor, {
+      where: {
+        knowledgeBase: {
+          calloutsSet: {
+            id: calloutsSetID,
+          },
+        },
+      },
+      relations: {
+        account: {
+          storageAggregator: true,
+        },
+      },
+    });
+    if (vc && vc.account && vc.account.storageAggregator) {
+      return this.getStorageAggregatorOrFail(vc.account.storageAggregator.id);
+    }
+
     throw new EntityNotFoundException(
-      `Unable to retrieve storage aggregator to use for TemplatesSet ${calloutsSetID}`,
+      `Unable to retrieve storage aggregator to use for CalloutsSet ${calloutsSetID}`,
       LogContext.STORAGE_AGGREGATOR
     );
   }

@@ -9,7 +9,7 @@ import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/call
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
-import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
+import { ICalloutGroup } from '@domain/collaboration/callouts-set/dto/callout.group.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
@@ -128,10 +128,11 @@ export class InputCreatorService {
       );
     }
 
-    const calloutGroups: ICalloutGroup[] = JSON.parse(calloutsSet.groupsStr);
+    const calloutGroups: ICalloutGroup[] = calloutsSet.groups;
     const result: CreateCalloutsSetInput = {
       calloutsData: calloutInputs,
       calloutGroups,
+      type: calloutsSet.type,
       defaultCalloutGroupName: calloutGroups[0].displayName as CalloutGroupName,
     };
 

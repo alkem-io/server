@@ -45,7 +45,7 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
-import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
+import { ICalloutGroup } from '@domain/collaboration/callouts-set/dto/callout.group.interface';
 
 @Injectable()
 export class VirtualContributorService {
@@ -196,9 +196,6 @@ export class VirtualContributorService {
       },
     ];
 
-    if (!result.calloutsSetData) {
-      result.calloutsSetData = {};
-    }
     if (!result.calloutsSetData.calloutsData) {
       result.calloutsSetData.calloutsData = [];
     }

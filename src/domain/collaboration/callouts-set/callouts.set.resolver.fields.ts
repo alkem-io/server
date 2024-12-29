@@ -8,7 +8,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { CalloutsSetArgsCallouts } from './dto/callouts.set.args.callouts';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 
@@ -46,13 +45,5 @@ export class CalloutsSetResolverFields {
     const tagsetTemplateSet =
       await this.calloutsSetService.getTagsetTemplatesSet(calloutsSet.id);
     return tagsetTemplateSet.tagsetTemplates;
-  }
-
-  @ResolveField('groups', () => [ICalloutGroup], {
-    nullable: false,
-    description: 'The set of CalloutGroups in use in this CalloutsSet.',
-  })
-  groups(@Parent() calloutsSet: ICalloutsSet): ICalloutGroup[] {
-    return this.calloutsSetService.getGroups(calloutsSet);
   }
 }

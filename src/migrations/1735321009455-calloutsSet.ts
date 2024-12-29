@@ -19,7 +19,8 @@ export class CalloutsSet1735321009455 implements MigrationInterface {
                                                 \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                                                 \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                                 \`version\` int NOT NULL,
-                                                \`groupsStr\` text NOT NULL,
+                                                \`groups\` json NOT NULL,
+                                                \`type\` varchar(128) NOT NULL,
                                                 \`authorizationId\` char(36) NULL,
                                                 \`tagsetTemplateSetId\` char(36) NULL,
                                                 UNIQUE INDEX \`REL_8f3fd7a83451183166aac4ad02\` (\`authorizationId\`),
@@ -190,13 +191,14 @@ export class CalloutsSet1735321009455 implements MigrationInterface {
       'callouts-set'
     );
     await queryRunner.query(
-      `INSERT INTO callouts_set (id, version, authorizationId, tagsetTemplateSetId, groupsStr) VALUES
+      `INSERT INTO callouts_set (id, version, authorizationId, tagsetTemplateSetId, groups, type) VALUES
                     (
                     '${calloutsSetID}',
                     1,
                     '${calloutsSetAuthID}',
                     '${tagsetTemplateSetId}',
-                    '${groupsStr}')`
+                    '${groupsStr}',
+                    'collaboration')`
     );
     return calloutsSetID;
   }
