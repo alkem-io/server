@@ -14,9 +14,7 @@ export class CalloutsSet1735321009455 implements MigrationInterface {
     await queryRunner.query(
       `DROP INDEX \`REL_b7ece56376ac7ca0b9a56c33b3\` ON \`collaboration\``
     );
-    await queryRunner.query(
-      `DROP INDEX \`IDX_9e1ebbc0972fa354d33b67a1a0\` ON \`collaboration\``
-    );
+
     await queryRunner.query(`CREATE TABLE \`callouts_set\` (\`id\` char(36) NOT NULL,
                                                 \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                                                 \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
