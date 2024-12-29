@@ -132,7 +132,6 @@ export class InputCreatorService {
     const result: CreateCalloutsSetInput = {
       calloutsData: calloutInputs,
       calloutGroups,
-      type: calloutsSet.type,
       defaultCalloutGroupName: calloutGroups[0].displayName as CalloutGroupName,
     };
 

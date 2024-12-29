@@ -4,7 +4,6 @@ import { ICalloutGroup } from '@domain/collaboration/callouts-set/dto/callout.gr
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @InputType()
 @ObjectType('CreateCalloutsSetData')
@@ -17,8 +16,6 @@ export class CreateCalloutsSetInput {
   @IsOptional()
   @Type(() => CreateCalloutInput)
   calloutsData?: CreateCalloutInput[];
-
-  type?: CalloutsSetType;
 
   calloutGroups?: ICalloutGroup[];
 

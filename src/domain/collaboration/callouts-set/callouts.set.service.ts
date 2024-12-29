@@ -42,6 +42,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.interface';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Injectable()
 export class CalloutsSetService {
@@ -58,13 +59,13 @@ export class CalloutsSetService {
   ) {}
 
   public createCalloutsSet(
-    calloutsSetData: CreateCalloutsSetInput
+    calloutsSetData: CreateCalloutsSetInput,
+    type: CalloutsSetType
   ): ICalloutsSet {
     if (
       !calloutsSetData.calloutGroups ||
       !calloutsSetData.calloutsData ||
-      !calloutsSetData.defaultCalloutGroupName ||
-      !calloutsSetData.type
+      !calloutsSetData.defaultCalloutGroupName
     ) {
       throw new RelationshipNotFoundException(
         'Unable to create CalloutsSet: missing required data',
@@ -75,7 +76,7 @@ export class CalloutsSetService {
     calloutsSet.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUTS_SET
     );
-    calloutsSet.type = calloutsSetData.type;
+    calloutsSet.type = type;
     calloutsSet.callouts = [];
 
     calloutsSet.groups = calloutsSetData.calloutGroups;

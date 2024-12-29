@@ -67,9 +67,10 @@ export class CollaborationService {
     collaboration.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COLLABORATION
     );
-    collaborationData.calloutsSetData.type = CalloutsSetType.COLLABORATION;
+
     collaboration.calloutsSet = this.calloutsSetService.createCalloutsSet(
-      collaborationData.calloutsSetData
+      collaborationData.calloutsSetData,
+      CalloutsSetType.COLLABORATION
     );
 
     const innovationFlowStatesTagsetInput =

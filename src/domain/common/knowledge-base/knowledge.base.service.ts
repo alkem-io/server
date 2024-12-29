@@ -20,6 +20,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Injectable()
 export class KnowledgeBaseService {
@@ -43,7 +44,8 @@ export class KnowledgeBaseService {
     );
 
     knowledgeBase.calloutsSet = this.calloutsSetService.createCalloutsSet(
-      knowledgeBaseData.calloutsSetData
+      knowledgeBaseData.calloutsSetData,
+      CalloutsSetType.KNOWLEDGE_BASE
     );
 
     // To consider also having the default tagset as a template tagset
