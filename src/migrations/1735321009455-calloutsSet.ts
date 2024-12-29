@@ -191,7 +191,7 @@ export class CalloutsSet1735321009455 implements MigrationInterface {
       'callouts-set'
     );
     await queryRunner.query(
-      `INSERT INTO callouts_set (id, version, authorizationId, tagsetTemplateSetId, groups, type) VALUES
+      `INSERT INTO callouts_set (id, version, authorizationId, tagsetTemplateSetId, callouts_set.groups, type) VALUES
                     (
                     '${calloutsSetID}',
                     1,
