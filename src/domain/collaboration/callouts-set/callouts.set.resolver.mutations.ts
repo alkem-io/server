@@ -22,6 +22,9 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Resolver()
 export class CalloutsSetResolverMutations {
@@ -110,51 +113,59 @@ export class CalloutsSetResolverMutations {
       destinationStorageBucket
     );
 
-    const { roleSet: communityPolicy, spaceSettings } =
-      await this.namingService.getRoleSetAndSettingsForCalloutsSet(
-        calloutsSet.id
-      );
+    let roleSet: IRoleSet | undefined = undefined;
+    let spaceSettings: ISpaceSettings | undefined = undefined;
+    if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
+      const roleSetAndSettings =
+        await this.namingService.getRoleSetAndSettingsForCollaborationCalloutsSet(
+          calloutsSet.id
+        );
+      roleSet = roleSetAndSettings.roleSet;
+      spaceSettings = roleSetAndSettings.spaceSettings;
+    }
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,
         calloutsSet.authorization,
-        communityPolicy,
+        roleSet,
         spaceSettings
       );
     await this.authorizationPolicyService.saveAll(authorizations);
 
-    if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      if (calloutData.sendNotification) {
-        const notificationInput: NotificationInputCalloutPublished = {
+    if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
+      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (calloutData.sendNotification) {
+          const notificationInput: NotificationInputCalloutPublished = {
+            triggeredBy: agentInfo.userID,
+            callout: callout,
+          };
+          this.notificationAdapter.calloutPublished(notificationInput);
+        }
+
+        const activityLogInput: ActivityInputCalloutPublished = {
           triggeredBy: agentInfo.userID,
           callout: callout,
         };
-        this.notificationAdapter.calloutPublished(notificationInput);
+        this.activityAdapter.calloutPublished(activityLogInput);
       }
 
-      const activityLogInput: ActivityInputCalloutPublished = {
-        triggeredBy: agentInfo.userID,
-        callout: callout,
-      };
-      this.activityAdapter.calloutPublished(activityLogInput);
-    }
+      const levelZeroSpaceID =
+        await this.communityResolverService.getLevelZeroSpaceIdForCalloutsSet(
+          calloutsSet.id
+        );
 
-    const levelZeroSpaceID =
-      await this.communityResolverService.getLevelZeroSpaceIdForCalloutsSet(
-        calloutsSet.id
+      this.contributionReporter.calloutCreated(
+        {
+          id: callout.id,
+          name: callout.nameID,
+          space: levelZeroSpaceID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
       );
-
-    this.contributionReporter.calloutCreated(
-      {
-        id: callout.id,
-        name: callout.nameID,
-        space: levelZeroSpaceID,
-      },
-      {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      }
-    );
+    }
 
     return await this.calloutService.getCalloutOrFail(callout.id);
   }

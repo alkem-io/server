@@ -28,6 +28,7 @@ import { Community } from '@domain/community/community';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -645,24 +646,46 @@ export class UrlGeneratorService {
     }
 
     if (callout.calloutsSet) {
-      const collaboration = await this.entityManager.findOne(Collaboration, {
-        where: {
-          calloutsSet: {
-            id: callout.calloutsSet.id,
+      if (callout.calloutsSet.type === CalloutsSetType.COLLABORATION) {
+        const collaboration = await this.entityManager.findOne(Collaboration, {
+          where: {
+            calloutsSet: {
+              id: callout.calloutsSet.id,
+            },
           },
-        },
-      });
-      if (!collaboration) {
-        throw new EntityNotFoundException(
-          `Unable to find collaboration for callouts set where id: ${callout.calloutsSet.id}`,
-          LogContext.URL_GENERATOR
+        });
+        if (!collaboration) {
+          throw new EntityNotFoundException(
+            `Unable to find collaboration for callouts set where id: ${callout.calloutsSet.id}`,
+            LogContext.URL_GENERATOR
+          );
+        }
+        const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
+          'collaborationId',
+          collaboration.id
         );
+        return `${collaborationJourneyUrlPath}/${this.PATH_COLLABORATION}/${callout.nameID}`;
+      } else if (callout.calloutsSet.type === CalloutsSetType.KNOWLEDGE_BASE) {
+        const virtualContributor = await this.entityManager.findOne(
+          VirtualContributor,
+          {
+            where: {
+              knowledgeBase: {
+                calloutsSet: {
+                  id: callout.calloutsSet.id,
+                },
+              },
+            },
+          }
+        );
+        if (!virtualContributor) {
+          throw new EntityNotFoundException(
+            `Unable to find virtual contributor for callouts set where id: ${callout.calloutsSet.id}`,
+            LogContext.URL_GENERATOR
+          );
+        }
+        return this.generateUrlForVC(virtualContributor.nameID);
       }
-      const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
-        'collaborationId',
-        collaboration.id
-      );
-      return `${collaborationJourneyUrlPath}/${this.PATH_COLLABORATION}/${callout.nameID}`;
     }
 
     const template = await this.entityManager.findOne(Template, {

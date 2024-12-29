@@ -238,7 +238,9 @@ export class NamingService {
     return result;
   }
 
-  async getRoleSetAndSettingsForCalloutsSet(calloutsSetID: string): Promise<{
+  async getRoleSetAndSettingsForCollaborationCalloutsSet(
+    calloutsSetID: string
+  ): Promise<{
     roleSet: IRoleSet;
     spaceSettings: ISpaceSettings;
   }> {
