@@ -6,8 +6,6 @@ export const MockContributorLookupService: MockValueProvider<ContributorLookupSe
   {
     provide: ConfigService,
     useValue: {
-      getUserByNameIdOrFail: jest.fn(),
-      getOrganizationByNameIdOrFail: jest.fn(),
-      getVirtualContributorByNameIdOrFail: jest.fn(),
+      getContributorsManagedByUser: jest.fn(),
     },
   };
