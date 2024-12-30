@@ -15,7 +15,6 @@ import { AiPersonaServiceInvocationInput } from './dto/ai.persona.service.invoca
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { EventBus } from '@nestjs/cqrs';
 import { InteractionMessage } from './dto/interaction.message';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -187,15 +186,6 @@ export class AiPersonaServiceService {
     };
 
     return this.aiPersonaEngineAdapter.invoke(input);
-  }
-
-  public async ingest(aiPersonaService: IAiPersonaService): Promise<boolean> {
-    return true;
-    // Todo: ???
-    // return this.aiPersonaEngineAdapter.sendIngest({
-    //   engine: AiPersonaEngine.EXPERT,
-    //   userID: aiPersonaService.id, // TODO: clearly wrong, just getting code to compile
-    // });
   }
 
   private encryptExternalConfig(

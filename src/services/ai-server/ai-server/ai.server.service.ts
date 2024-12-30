@@ -12,8 +12,6 @@ import {
   IAiPersonaService,
 } from '@services/ai-server/ai-persona-service';
 import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
-import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
-import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
 import {
   CreateAiPersonaServiceInput,
   isInputValidForAction,
@@ -398,22 +396,6 @@ export class AiServerService {
     }
 
     return authorization;
-  }
-
-  public async ingestAiPersonaService(
-    ingestData: AiServerIngestAiPersonaServiceInput
-  ): Promise<boolean> {
-    const aiPersonaService =
-      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        ingestData.aiPersonaServiceID
-      );
-    const ingestAdapterInput: AiPersonaEngineAdapterInputBase = {
-      engine: aiPersonaService.engine,
-      userID: '',
-    };
-    const result = true;
-    // await this.aiPersonaEngineAdapter.sendIngest(ingestAdapterInput);
-    return result;
   }
 
   public async handleInvokeEngineResult(event: InvokeEngineResult) {

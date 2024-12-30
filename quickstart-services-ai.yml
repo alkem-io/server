@@ -488,57 +488,57 @@ services:
       - CHUNK_SIZE=1000
       - CHUNK_OVERLAP=100
 
-  # virtual_contributor_engine_generic:
-  #   container_name: alkemio_dev_virtual_contributor_engine_generic
-  #   hostname: virtual-contributor-engine-generic
-  #   image: alkemio/virtual-contributor-engine-generic:v0.4.1
-  #   platform: linux/x86_64
-  #   restart: always
-  #   volumes:
-  #     - /dev/shm:/dev/shm
-  #   networks:
-  #     - alkemio_dev_net
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: "service_healthy"
-  #   environment:
-  #     - RABBITMQ_HOST
-  #     - RABBITMQ_USER
-  #     - RABBITMQ_PASSWORD
-  #     - RABBITMQ_PORT
-  #     - RABBITMQ_QUEUE=virtual-contributor-engine-generic
-  #     - RABBITMQ_EVENT_BUS_EXCHANGE
-  #     - RABBITMQ_RESULT_QUEUE
-  #     - RABBITMQ_RESULT_ROUTING_KEY
-  #     - LOCAL_PATH=./
-  #     - LOG_LEVEL=DEBUG
-  #     - LANGCHAIN_TRACING_V2
-  #     - LANGCHAIN_ENDPOINT
-  #     - LANGCHAIN_API_KEY
-  #     - LANGCHAIN_PROJECT=virtual-contributor-engine-generic
-  #     - HISTORY_LENGTH=20
+  virtual_contributor_engine_generic:
+    container_name: alkemio_dev_virtual_contributor_engine_generic
+    hostname: virtual-contributor-engine-generic
+    image: alkemio/virtual-contributor-engine-generic:v0.4.1
+    platform: linux/x86_64
+    restart: always
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_PORT
+      - RABBITMQ_QUEUE=virtual-contributor-engine-generic
+      - RABBITMQ_EVENT_BUS_EXCHANGE
+      - RABBITMQ_RESULT_QUEUE
+      - RABBITMQ_RESULT_ROUTING_KEY
+      - LOCAL_PATH=./
+      - LOG_LEVEL=DEBUG
+      - LANGCHAIN_TRACING_V2
+      - LANGCHAIN_ENDPOINT
+      - LANGCHAIN_API_KEY
+      - LANGCHAIN_PROJECT=virtual-contributor-engine-generic
+      - HISTORY_LENGTH=20
 
-  # virtual_contributor_engine_openai_assistant:
-  #   container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
-  #   hostname: virtual-contributor-engine-openai-assistant
-  #   image: alkemio/virtual-contributor-engine-openai-assistant:v0.2.1
-  #   platform: linux/x86_64
-  #   restart: always
-  #   volumes:
-  #     - /dev/shm:/dev/shm
-  #   networks:
-  #     - alkemio_dev_net
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: "service_healthy"
-  #   environment:
-  #     - RABBITMQ_HOST
-  #     - RABBITMQ_USER
-  #     - RABBITMQ_PASSWORD
-  #     - RABBITMQ_PORT
-  #     - RABBITMQ_QUEUE=virtual-contributor-engine-openai-assistant
-  #     - RABBITMQ_EVENT_BUS_EXCHANGE
-  #     - RABBITMQ_RESULT_QUEUE
-  #     - RABBITMQ_RESULT_ROUTING_KEY
-  #     - LOCAL_PATH=./
-  #     - LOG_LEVEL=DEBUG
+  virtual_contributor_engine_openai_assistant:
+    container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
+    hostname: virtual-contributor-engine-openai-assistant
+    image: alkemio/virtual-contributor-engine-openai-assistant:v0.2.1
+    platform: linux/x86_64
+    restart: always
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_PORT
+      - RABBITMQ_QUEUE=virtual-contributor-engine-openai-assistant
+      - RABBITMQ_EVENT_BUS_EXCHANGE
+      - RABBITMQ_RESULT_QUEUE
+      - RABBITMQ_RESULT_ROUTING_KEY
+      - LOCAL_PATH=./
+      - LOG_LEVEL=DEBUG
