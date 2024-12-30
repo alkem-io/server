@@ -78,13 +78,13 @@ export class NamingService {
     return discussions?.map(discussion => discussion.nameID) || [];
   }
 
-  public async getReservedNameIDsInCollaboration(
-    collaborationID: string
+  public async getReservedNameIDsInCalloutsSet(
+    calloutsSetID: string
   ): Promise<string[]> {
     const callouts = await this.entityManager.find(Callout, {
       where: {
-        collaboration: {
-          id: collaborationID,
+        calloutsSet: {
+          id: calloutsSetID,
         },
       },
       select: {
@@ -238,8 +238,8 @@ export class NamingService {
     return result;
   }
 
-  async getRoleSetAndSettingsForCollaboration(
-    collaborationID: string
+  async getRoleSetAndSettingsForCollaborationCalloutsSet(
+    calloutsSetID: string
   ): Promise<{
     roleSet: IRoleSet;
     spaceSettings: ISpaceSettings;
@@ -247,7 +247,9 @@ export class NamingService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          id: collaborationID,
+          calloutsSet: {
+            id: calloutsSetID,
+          },
         },
       },
       relations: {
@@ -258,7 +260,7 @@ export class NamingService {
     });
     if (!space || !space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
-        `Unable to load all entities for space with collaboration ${collaborationID}`,
+        `Unable to load all entities for roleSet + settings for collaboration ${calloutsSetID}`,
         LogContext.COMMUNITY
       );
     }
@@ -275,8 +277,10 @@ export class NamingService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: calloutID,
+          calloutsSet: {
+            callouts: {
+              id: calloutID,
+            },
           },
         },
       },

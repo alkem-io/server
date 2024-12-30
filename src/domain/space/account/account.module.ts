@@ -27,10 +27,13 @@ import { LicenseModule } from '@domain/common/license/license.module';
 import { AccountLicenseService } from './account.service.license';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
+import { AccountLookupModule } from '../account.lookup/account.lookup.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 
 @Module({
   imports: [
     AccountHostModule,
+    AccountLookupModule,
     AgentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
@@ -47,6 +50,7 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
     InnovationHubModule,
     InnovationPackModule,
     VirtualContributorModule,
+    VirtualContributorLookupModule,
     NameReporterModule,
     NamingModule,
     TypeOrmModule.forFeature([Account]),

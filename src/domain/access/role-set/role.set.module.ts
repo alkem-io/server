@@ -11,7 +11,6 @@ import { FormModule } from '@domain/common/form/form.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { RoleModule } from '../role/role.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { UserModule } from '@domain/community/user/user.module';
@@ -30,6 +29,8 @@ import { CommunityCommunicationModule } from '@domain/community/community-commun
 import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields.public';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { RoleSetLicenseService } from './role.set.service.license';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 
 @Module({
   imports: [
@@ -46,7 +47,8 @@ import { RoleSetLicenseService } from './role.set.service.license';
     EntityResolverModule,
     ApplicationModule,
     PlatformInvitationModule,
-    VirtualContributorModule,
+    VirtualContributorLookupModule,
+    AccountLookupModule,
     AiServerAdapterModule,
     NotificationAdapterModule,
     ContributionReporterModule,

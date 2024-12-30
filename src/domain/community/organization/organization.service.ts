@@ -44,7 +44,6 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
@@ -55,10 +54,13 @@ import { OrganizationVerificationEnum } from '@common/enums/organization.verific
 import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
 import { OrganizationSettingsService } from '../organization.settings/organization.settings.service';
 import { UpdateOrganizationSettingsEntityInput } from '../organization.settings/dto/organization.settings.dto.update';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class OrganizationService {
   constructor(
+    private accountLookupService: AccountLookupService,
     private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
@@ -278,7 +280,7 @@ export class OrganizationService {
     });
     // TODO: give additional feedback?
     const accountHasResources =
-      await this.accountHostService.areResourcesInAccount(
+      await this.accountLookupService.areResourcesInAccount(
         organization.accountID
       );
     if (accountHasResources) {
@@ -363,7 +365,7 @@ export class OrganizationService {
   }
 
   public async getAccount(organization: IOrganization): Promise<IAccount> {
-    return await this.accountHostService.getAccountOrFail(
+    return await this.accountLookupService.getAccountOrFail(
       organization.accountID
     );
   }

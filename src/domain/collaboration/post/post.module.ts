@@ -10,8 +10,8 @@ import { PostResolverFields } from './post.resolver.fields';
 import { PostAuthorizationService } from './post.service.authorization';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { RoomModule } from '@domain/communication/room/room.module';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     RoomModule,
     RoleSetModule,
     VisualModule,
-    ContributorLookupModule,
+    UserLookupModule,
     ProfileModule,
     TypeOrmModule.forFeature([Post]),
   ],

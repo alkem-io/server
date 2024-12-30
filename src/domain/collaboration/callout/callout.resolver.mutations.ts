@@ -189,11 +189,11 @@ export class CalloutResolverMutations {
       contributionData.calloutID,
       {
         relations: {
-          collaboration: true,
+          calloutsSet: true,
         },
       }
     );
-    if (!callout.collaboration) {
+    if (!callout.calloutsSet) {
       throw new RelationshipNotFoundException(
         `Callout ${callout.id} has no collaboration relationship`,
         LogContext.COLLABORATION
@@ -208,8 +208,8 @@ export class CalloutResolverMutations {
 
     // Get the levelZeroSpaceID for the callout
     const levelZeroSpaceID =
-      await this.communityResolverService.getLevelZeroSpaceIdForCollaboration(
-        callout.collaboration.id
+      await this.communityResolverService.getLevelZeroSpaceIdForCalloutsSet(
+        callout.calloutsSet.id
       );
 
     if (callout.contributionPolicy.state === CalloutState.CLOSED) {

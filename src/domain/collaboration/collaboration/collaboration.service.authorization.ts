@@ -4,18 +4,12 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { AuthorizationCredential } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import {
-  CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
-  POLICY_RULE_COLLABORATION_CREATE,
-  POLICY_RULE_CALLOUT_CONTRIBUTE,
-} from '@common/constants';
+import { CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS } from '@common/constants';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
@@ -25,6 +19,7 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { CalloutsSetAuthorizationService } from '../callouts-set/callouts.set.service.authorization';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -33,7 +28,7 @@ export class CollaborationAuthorizationService {
     private roleSetService: RoleSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private timelineAuthorizationService: TimelineAuthorizationService,
-    private calloutAuthorizationService: CalloutAuthorizationService,
+    private calloutsSetAuthorizationService: CalloutsSetAuthorizationService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
@@ -49,7 +44,7 @@ export class CollaborationAuthorizationService {
         collaborationInput.id,
         {
           relations: {
-            callouts: true,
+            calloutsSet: true,
             innovationFlow: {
               profile: true,
             },
@@ -60,7 +55,7 @@ export class CollaborationAuthorizationService {
           },
         }
       );
-    if (!collaboration.callouts || !collaboration.innovationFlow) {
+    if (!collaboration.calloutsSet || !collaboration.innovationFlow) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
         LogContext.SPACES
@@ -86,11 +81,6 @@ export class CollaborationAuthorizationService {
           roleSet,
           spaceSettings
         );
-
-      collaboration.authorization = await this.appendPrivilegeRules(
-        collaboration.authorization,
-        spaceSettings
-      );
     }
     updatedAuthorizations.push(collaboration.authorization);
 
@@ -111,7 +101,7 @@ export class CollaborationAuthorizationService {
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     if (
-      !collaboration.callouts ||
+      !collaboration.calloutsSet ||
       !collaboration.innovationFlow ||
       !collaboration.innovationFlow.profile ||
       !collaboration.license ||
@@ -124,16 +114,15 @@ export class CollaborationAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    for (const callout of collaboration.callouts) {
-      const updatedCalloutAuthorizations =
-        await this.calloutAuthorizationService.applyAuthorizationPolicy(
-          callout.id,
-          collaboration.authorization,
-          roleSet,
-          spaceSettings
-        );
-      updatedAuthorizations.push(...updatedCalloutAuthorizations);
-    }
+    const updatedCalloutsSetAuthorizations =
+      await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(
+        collaboration.calloutsSet,
+        collaboration.authorization,
+        roleSet,
+        spaceSettings
+      );
+
+    updatedAuthorizations.push(...updatedCalloutsSetAuthorizations);
 
     const licenseAuthorization =
       this.licenseAuthorizationService.applyAuthorizationPolicy(
@@ -269,35 +258,6 @@ export class CollaborationAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
-    );
-  }
-
-  private async appendPrivilegeRules(
-    authorization: IAuthorizationPolicy,
-    spaceSettings: ISpaceSettings
-  ): Promise<IAuthorizationPolicy> {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_CALLOUT],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_COLLABORATION_CREATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    const collaborationSettings = spaceSettings.collaboration;
-    if (collaborationSettings.allowMembersToCreateCallouts) {
-      const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
-        [AuthorizationPrivilege.CREATE_CALLOUT],
-        AuthorizationPrivilege.CONTRIBUTE,
-        POLICY_RULE_CALLOUT_CONTRIBUTE
-      );
-      privilegeRules.push(createCalloutPrivilege);
-    }
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
     );
   }
 }

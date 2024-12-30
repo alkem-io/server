@@ -34,6 +34,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { LookupMyPrivilegesResolverFields } from './lookup.resolver.my.privileges.fields';
+import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { LookupMyPrivilegesResolverFields } from './lookup.resolver.my.privilege
     AuthorizationPolicyModule,
     CommunityModule,
     CollaborationModule,
+    CalloutsSetModule,
     ContextModule,
     TemplateModule,
     TemplatesSetModule,

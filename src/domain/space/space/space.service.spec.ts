@@ -23,6 +23,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -298,24 +300,30 @@ const getSubspacesMock = (
       collaboration: {
         id: '',
         isTemplate: false,
-        groupsStr: JSON.stringify([
-          {
-            displayName: 'HOME',
-            description: 'The Home page.',
-          },
-          {
-            displayName: 'COMMUNITY',
-            description: 'The Community page.',
-          },
-          {
-            displayName: 'SUBSPACES',
-            description: 'The Subspaces page.',
-          },
-          {
-            displayName: 'KNOWLEDGE',
-            description: 'The knowledge page.',
-          },
-        ]),
+        calloutsSet: {
+          id: '',
+          callouts: [],
+          type: CalloutsSetType.COLLABORATION,
+          groups: [
+            {
+              displayName: 'HOME',
+              description: 'The Home page.',
+            },
+            {
+              displayName: 'COMMUNITY',
+              description: 'The Community page.',
+            },
+            {
+              displayName: 'SUBSPACES',
+              description: 'The Subspaces page.',
+            },
+            {
+              displayName: 'KNOWLEDGE',
+              description: 'The knowledge page.',
+            },
+          ],
+          ...getEntityMock<CalloutsSet>(),
+        },
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -395,24 +403,30 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       collaboration: {
         id: '',
         isTemplate: false,
-        groupsStr: JSON.stringify([
-          {
-            displayName: 'HOME',
-            description: 'The Home page.',
-          },
-          {
-            displayName: 'COMMUNITY',
-            description: 'The Community page.',
-          },
-          {
-            displayName: 'SUBSPACES',
-            description: 'The Subspaces page.',
-          },
-          {
-            displayName: 'KNOWLEDGE',
-            description: 'The knowledge page.',
-          },
-        ]),
+        calloutsSet: {
+          id: '',
+          callouts: [],
+          type: CalloutsSetType.COLLABORATION,
+          groups: [
+            {
+              displayName: 'HOME',
+              description: 'The Home page.',
+            },
+            {
+              displayName: 'COMMUNITY',
+              description: 'The Community page.',
+            },
+            {
+              displayName: 'SUBSPACES',
+              description: 'The Subspaces page.',
+            },
+            {
+              displayName: 'KNOWLEDGE',
+              description: 'The knowledge page.',
+            },
+          ],
+          ...getEntityMock<CalloutsSet>(),
+        },
         innovationFlow: {
           id: '',
           states: JSON.stringify([

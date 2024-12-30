@@ -25,6 +25,7 @@ import { User } from '@domain/community/user/user.entity';
 import { Platform } from '@platform/platform/platform.entity';
 import { TemplatesManager } from '@domain/template/templates-manager';
 import { Template } from '@domain/template/template/template.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -255,6 +256,59 @@ export class StorageAggregatorResolverService {
     );
   }
 
+  public async getStorageAggregatorForCalloutsSet(
+    calloutsSetID: string
+  ): Promise<IStorageAggregator> {
+    if (!isUUID(calloutsSetID)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided to find the StorageAggregator of a calloutsSet',
+        LogContext.STORAGE_AGGREGATOR,
+        { provided: calloutsSetID }
+      );
+    }
+
+    // First try on Space
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            id: calloutsSetID,
+          },
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    if (space && space.storageAggregator) {
+      return this.getStorageAggregatorOrFail(space.storageAggregator.id);
+    }
+
+    // First try on Space
+    const vc = await this.entityManager.findOne(VirtualContributor, {
+      where: {
+        knowledgeBase: {
+          calloutsSet: {
+            id: calloutsSetID,
+          },
+        },
+      },
+      relations: {
+        account: {
+          storageAggregator: true,
+        },
+      },
+    });
+    if (vc && vc.account && vc.account.storageAggregator) {
+      return this.getStorageAggregatorOrFail(vc.account.storageAggregator.id);
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to retrieve storage aggregator to use for CalloutsSet ${calloutsSetID}`,
+      LogContext.STORAGE_AGGREGATOR
+    );
+  }
+
   public async getStorageAggregatorForCollaboration(
     collaborationID: string
   ): Promise<IStorageAggregator> {
@@ -373,8 +427,10 @@ export class StorageAggregatorResolverService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: calloutId,
+          calloutsSet: {
+            callouts: {
+              id: calloutId,
+            },
           },
         },
       },

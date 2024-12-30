@@ -1,31 +1,39 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RoomServiceMentions } from './room.service.mentions';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockWinstonProvider } from '@test/mocks';
 import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { testData } from '@test/utils/test-data';
 import { IUser } from '@domain/community/user/user.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 
 describe('RoomServiceMentions', () => {
-  let roomMentionsService: RoomServiceMentions;
-  let contributorLookupService: ContributorLookupService;
+  let roomMentionsService: RoomMentionsService;
+  let virtualContributorLookupService: VirtualContributorLookupService;
+  let userLookupService: UserLookupService;
+  let organizationLookupService: OrganizationLookupService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MockWinstonProvider,
-        RoomServiceMentions,
+        RoomMentionsService,
         MockContributorLookupService,
       ],
-      exports: [RoomServiceMentions],
+      exports: [RoomMentionsService],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
-    roomMentionsService = module.get(RoomServiceMentions);
-    contributorLookupService = module.get(ContributorLookupService);
+    roomMentionsService = module.get(RoomMentionsService);
+    virtualContributorLookupService = module.get(
+      VirtualContributorLookupService
+    );
+    userLookupService = module.get(UserLookupService);
+    organizationLookupService = module.get(OrganizationLookupService);
   });
 
   it.each([
@@ -109,15 +117,18 @@ describe('RoomServiceMentions', () => {
     const virtualContributor =
       testData.virtualContributor as IVirtualContributor;
     jest
-      .spyOn(contributorLookupService, 'getUserByNameIdOrFail')
+      .spyOn(userLookupService, 'getUserByNameIdOrFail')
       .mockResolvedValue(user);
 
     jest
-      .spyOn(contributorLookupService, 'getOrganizationByNameIdOrFail')
+      .spyOn(organizationLookupService, 'getOrganizationByNameIdOrFail')
       .mockResolvedValue(organization);
 
     jest
-      .spyOn(contributorLookupService, 'getVirtualContributorByNameIdOrFail')
+      .spyOn(
+        virtualContributorLookupService,
+        'getVirtualContributorByNameIdOrFail'
+      )
       .mockResolvedValue(virtualContributor);
 
     const result = await roomMentionsService.getMentionsFromText(text);

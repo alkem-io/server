@@ -16,11 +16,13 @@ import { Room } from './room.entity';
 import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { MessageModule } from '../message/message.module';
-import { RoomServiceMentions } from './room.service.mentions';
 import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { RoomMentionsModule } from '../room-mentions/room.mentions.module';
+import { RoomLookupModule } from '../room-lookup/room.lookup.module';
+import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 
 @Module({
   imports: [
@@ -34,8 +36,11 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
     CommunicationAdapterModule,
     MessageModule,
     VcInteractionModule,
-    VirtualContributorModule,
-    ContributorLookupModule,
+    VirtualContributorLookupModule,
+    VirtualContributorMessageModule,
+    UserLookupModule,
+    RoomMentionsModule,
+    RoomLookupModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
   ],
@@ -46,13 +51,7 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
     RoomResolverMutations,
     RoomEventResolverSubscription,
     RoomServiceEvents,
-    RoomServiceMentions,
   ],
-  exports: [
-    RoomService,
-    RoomServiceEvents,
-    RoomAuthorizationService,
-    RoomServiceMentions,
-  ],
+  exports: [RoomService, RoomServiceEvents, RoomAuthorizationService],
 })
 export class RoomModule {}
