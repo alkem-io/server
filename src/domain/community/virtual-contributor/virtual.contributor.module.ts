@@ -11,7 +11,6 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
@@ -21,6 +20,7 @@ import { SubscriptionServiceModule } from '@services/subscriptions/subscription-
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 import { VirtualContributorLookupModule } from '../virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { VirtualContributorDefaultsModule } from '../virtual-contributor-defaults/virtual.contributor.defaults.module';
 
 @Module({
   imports: [
@@ -29,12 +29,12 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
     AuthorizationModule,
     ContributorModule,
     ProfileModule,
-    NamingModule,
     AiPersonaModule,
     KnowledgeBaseModule,
     AiServerAdapterModule,
     CommunicationAdapterModule,
     VirtualContributorLookupModule,
+    VirtualContributorDefaultsModule,
     AccountLookupModule,
     TypeOrmModule.forFeature([VirtualContributor]),
     PlatformAuthorizationPolicyModule,

@@ -25,7 +25,6 @@ import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.cre
 import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput } from '../ai-persona/dto';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -43,9 +42,7 @@ import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.int
 import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
-import { ICalloutGroup } from '@domain/collaboration/callouts-set/dto/callout.group.interface';
+import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -55,12 +52,12 @@ export class VirtualContributorService {
     private profileService: ProfileService,
     private contributorService: ContributorService,
     private communicationAdapter: CommunicationAdapter,
-    private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
     private knowledgeBaseService: KnowledgeBaseService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private accountLookupService: AccountLookupService,
+    private virtualContributorDefaultsService: VirtualContributorDefaultsService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(VirtualContributor)
@@ -69,7 +66,7 @@ export class VirtualContributorService {
     private readonly logger: LoggerService
   ) {}
 
-  async createVirtualContributor(
+  public async createVirtualContributor(
     virtualContributorData: CreateVirtualContributorInput,
     storageAggregator: IStorageAggregator,
     agentInfo?: AgentInfo
@@ -80,9 +77,10 @@ export class VirtualContributorService {
         virtualContributorData.nameID.toLowerCase();
       await this.checkNameIdOrFail(virtualContributorData.nameID);
     } else {
-      virtualContributorData.nameID = await this.createVirtualContributorNameID(
-        virtualContributorData.profileData?.displayName || ''
-      );
+      virtualContributorData.nameID =
+        await this.virtualContributorDefaultsService.createVirtualContributorNameID(
+          virtualContributorData.profileData?.displayName || ''
+        );
     }
 
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
@@ -96,13 +94,16 @@ export class VirtualContributorService {
       AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
     );
 
-    const knowledgeBaseData = this.populateKnowledgeBaseDTO(
-      virtualContributorData.knowledgeBaseData
-    );
+    const knowledgeBaseData =
+      await this.virtualContributorDefaultsService.createKnowledgeBaseInput(
+        virtualContributorData.knowledgeBaseData,
+        virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType
+      );
     virtualContributor.knowledgeBase =
-      this.knowledgeBaseService.createKnowledgeBase(
+      await this.knowledgeBaseService.createKnowledgeBase(
         knowledgeBaseData,
-        storageAggregator
+        storageAggregator,
+        agentInfo?.userID
       );
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
@@ -111,7 +112,6 @@ export class VirtualContributorService {
       virtualContributor.communicationID = communicationID;
     }
 
-    this.logger.log(virtualContributorData);
     const aiPersonaInput: CreateAiPersonaInput = {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
@@ -149,6 +149,7 @@ export class VirtualContributorService {
       virtualContributor.profile.id,
       userID
     );
+
     // Reload to ensure have the updated avatar URL
     virtualContributor = await this.getVirtualContributorOrFail(
       virtualContributor.id
@@ -159,52 +160,6 @@ export class VirtualContributorService {
     );
 
     return virtualContributor;
-  }
-
-  private populateKnowledgeBaseDTO(
-    knowledgeBaseData?: CreateKnowledgeBaseInput
-  ): CreateKnowledgeBaseInput {
-    // Create default data for a knowledge base if not provided
-    let result = knowledgeBaseData;
-    if (!result) {
-      result = {
-        profile: {
-          displayName: '',
-        },
-        calloutsSetData: {},
-      };
-    }
-
-    if (!result.profile) {
-      result.profile = {
-        displayName: '',
-      };
-    }
-
-    if (!result.calloutsSetData) {
-      result.calloutsSetData = {};
-    }
-
-    if (result.profile.displayName === '') {
-      result.profile.displayName = 'Knowledge Base';
-    }
-
-    const defaultCalloutGroups: ICalloutGroup[] = [
-      {
-        displayName: CalloutGroupName.KNOWLEDGE,
-        description: 'Knowledge callouts for this VC',
-      },
-    ];
-
-    if (!result.calloutsSetData.calloutsData) {
-      result.calloutsSetData.calloutsData = [];
-    }
-
-    // Fix the groups for now
-    result.calloutsSetData.calloutGroups = defaultCalloutGroups;
-    result.calloutsSetData.defaultCalloutGroupName = CalloutGroupName.KNOWLEDGE;
-
-    return result;
   }
 
   private async checkNameIdOrFail(nameID: string) {
@@ -562,18 +517,6 @@ export class VirtualContributorService {
     }
 
     return aiPersona;
-  }
-
-  public async createVirtualContributorNameID(
-    displayName: string
-  ): Promise<string> {
-    const base = `${displayName}`;
-    const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
-    return this.namingService.createNameIdAvoidingReservedNameIDs(
-      base,
-      reservedNameIDs
-    );
   }
 
   async countVirtualContributorsWithCredentials(

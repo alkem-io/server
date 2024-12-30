@@ -32,10 +32,11 @@ export class KnowledgeBaseService {
     private knowledgeBaseRepository: Repository<KnowledgeBase>
   ) {}
 
-  public createKnowledgeBase(
+  public async createKnowledgeBase(
     knowledgeBaseData: CreateKnowledgeBaseInput,
-    storageAggregator: IStorageAggregator
-  ): IKnowledgeBase {
+    storageAggregator: IStorageAggregator,
+    userID: string | undefined
+  ): Promise<IKnowledgeBase> {
     const knowledgeBase: IKnowledgeBase =
       KnowledgeBase.create(knowledgeBaseData);
 
@@ -66,6 +67,16 @@ export class KnowledgeBaseService {
       ProfileType.KNOWLEDGE_BASE,
       storageAggregator
     );
+
+    if (knowledgeBaseData.calloutsSetData.calloutsData) {
+      knowledgeBase.calloutsSet.callouts =
+        await this.calloutsSetService.addCallouts(
+          knowledgeBase.calloutsSet,
+          knowledgeBaseData.calloutsSetData.calloutsData,
+          storageAggregator,
+          userID
+        );
+    }
 
     return knowledgeBase;
   }
