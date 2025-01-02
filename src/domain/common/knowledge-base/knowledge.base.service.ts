@@ -62,7 +62,7 @@ export class KnowledgeBaseService {
         [defaultTagset]
       );
 
-    knowledgeBase.profile = this.profileService.createProfile(
+    knowledgeBase.profile = await this.profileService.createProfile(
       knowledgeBaseData.profile,
       ProfileType.KNOWLEDGE_BASE,
       storageAggregator
