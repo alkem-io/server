@@ -5,12 +5,12 @@ import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
-import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto';
 import { CreateVirtualContributorOnAccountInput } from '@domain/space/account/dto/account.dto.create.virtual.contributor';
+import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
 
 export type temporaryDocumentDTO =
   | CreateContributionOnCalloutInput
-  | CreateCalloutOnCollaborationInput
+  | CreateCalloutOnCalloutsSetInput
   | CreateVirtualContributorOnAccountInput;
 export class TemporaryStorageService {
   private sampleDocumentURL =

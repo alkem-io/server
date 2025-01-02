@@ -23,6 +23,7 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
+import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -122,6 +123,20 @@ export class VirtualContributorResolverFields {
     @Parent() virtualContributor: VirtualContributor
   ): Promise<IAiPersona> {
     return this.virtualContributorService.getAiPersonaOrFail(
+      virtualContributor
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('knowledgeBase', () => IKnowledgeBase, {
+    nullable: true,
+    description: 'The KnowledgeBase being used by this virtual contributor',
+  })
+  @UseGuards(GraphqlGuard)
+  async knowledgeBase(
+    @Parent() virtualContributor: VirtualContributor
+  ): Promise<IKnowledgeBase> {
+    return this.virtualContributorService.getKnowledgeBaseOrFail(
       virtualContributor
     );
   }

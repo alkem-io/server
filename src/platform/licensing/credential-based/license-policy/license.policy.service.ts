@@ -9,7 +9,7 @@ import { LicensingCredentialBasedService } from '@platform/licensing/credential-
 import { LogContext } from '@common/enums/logging.context';
 import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 
 @Injectable()
 export class LicensePolicyService {
@@ -22,7 +22,7 @@ export class LicensePolicyService {
   ) {}
 
   createCredentialRule(
-    grantedEntitlements: LicenseEntitlementType[],
+    grantedEntitlements: LicensingGrantedEntitlement[],
     credentialType: LicensingCredentialBasedCredentialType,
     name: string
   ): ILicensingCredentialBasedPolicyCredentialRule {

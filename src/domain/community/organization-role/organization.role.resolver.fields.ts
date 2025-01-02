@@ -10,13 +10,13 @@ import { CurrentUser, Profiling } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { OrganizationRole } from '@common/enums/organization.role';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationRoleResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
-    private contributorLookupService: ContributorLookupService,
+    private organizationLookupService: OrganizationLookupService,
     private organizationRoleService: OrganizationRoleService
   ) {}
 
@@ -32,7 +32,7 @@ export class OrganizationRoleResolverFields {
   ): Promise<IUser[]> {
     // Reload to ensure the authorization is loaded
     const organization =
-      await this.contributorLookupService.getOrganizationOrFail(parent.id);
+      await this.organizationLookupService.getOrganizationOrFail(parent.id);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
@@ -55,7 +55,7 @@ export class OrganizationRoleResolverFields {
   ): Promise<IUser[]> {
     // Reload to ensure the authorization is loaded
     const organization =
-      await this.contributorLookupService.getOrganizationOrFail(parent.id);
+      await this.organizationLookupService.getOrganizationOrFail(parent.id);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
@@ -78,7 +78,7 @@ export class OrganizationRoleResolverFields {
   ): Promise<IUser[]> {
     // Reload to ensure the authorization is loaded
     const organization =
-      await this.contributorLookupService.getOrganizationOrFail(parent.id);
+      await this.organizationLookupService.getOrganizationOrFail(parent.id);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,

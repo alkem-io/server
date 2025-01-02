@@ -53,10 +53,12 @@ export class ConversionService {
           context: true,
           profile: true,
           collaboration: {
-            callouts: {
-              framing: {
-                profile: {
-                  tagsets: true,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  profile: {
+                    tagsets: true,
+                  },
                 },
               },
             },
@@ -71,7 +73,7 @@ export class ConversionService {
       !subspace.context ||
       !subspace.profile ||
       !subspace.collaboration ||
-      !subspace.collaboration.callouts ||
+      !subspace.collaboration.calloutsSet?.callouts ||
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
@@ -105,7 +107,9 @@ export class ConversionService {
       },
       level: SpaceLevel.SPACE,
       type: SpaceType.SPACE,
-      collaborationData: {},
+      collaborationData: {
+        calloutsSetData: {},
+      },
     };
     let space =
       await this.accountService.createSpaceOnAccount(createSpaceInput);
@@ -176,7 +180,7 @@ export class ConversionService {
     space.collaboration = challengeCollaboration;
     space.collaboration = spaceCollaboration;
     // Update display locations for callouts to use space locations
-    this.updateSpaceCalloutsGroups(space.collaboration.callouts);
+    this.updateSpaceCalloutsGroups(space.collaboration.calloutsSet?.callouts);
 
     // Swap the profiles
     const challengeProfile = space.profile;
@@ -233,10 +237,12 @@ export class ConversionService {
         profile: true,
         storageAggregator: true,
         collaboration: {
-          callouts: {
-            framing: {
-              profile: {
-                tagsets: true,
+          calloutsSet: {
+            callouts: {
+              framing: {
+                profile: {
+                  tagsets: true,
+                },
               },
             },
           },
@@ -252,7 +258,7 @@ export class ConversionService {
       !subsubspace.profile ||
       !subsubspace.collaboration ||
       !subsubspace.storageAggregator ||
-      !subsubspace.collaboration.callouts
+      !subsubspace.collaboration.calloutsSet?.callouts
     ) {
       throw new EntityNotInitializedException(
         `Unable to locate all entities on on Opportunity: ${subsubspace.id}`,
@@ -275,7 +281,9 @@ export class ConversionService {
     const subspaceData: CreateSubspaceInput = {
       spaceID: subsubspace.parentSpace.id,
       nameID: subspaceNameID,
-      collaborationData: {},
+      collaborationData: {
+        calloutsSetData: {},
+      },
       profileData: {
         displayName: subsubspace.profile.displayName,
       },
@@ -367,7 +375,9 @@ export class ConversionService {
     subspace.collaboration = opportunityCollaboration;
     subsubspace.collaboration = challengeCollaboration;
     // Update display locations for callouts to use space locations
-    this.updateChallengeCalloutGroups(subspace.collaboration.callouts);
+    this.updateChallengeCalloutGroups(
+      subspace.collaboration.calloutsSet?.callouts
+    );
 
     // Swap the profiles
     const opportunityProfile = subsubspace.profile;

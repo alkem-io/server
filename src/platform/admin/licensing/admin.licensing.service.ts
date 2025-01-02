@@ -7,7 +7,6 @@ import { LicenseIssuerService } from '@platform/licensing/credential-based/licen
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { IAccount } from '@domain/space/account/account.interface';
@@ -16,11 +15,12 @@ import { ValidationException } from '@common/exceptions';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 
 @Injectable()
 export class AdminLicensingService {
   constructor(
-    private accountHostService: AccountHostService,
+    private accountLookupService: AccountLookupService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseIssuerService: LicenseIssuerService,
     private spaceService: SpaceService,
@@ -137,7 +137,7 @@ export class AdminLicensingService {
       );
     }
     // Todo: assign the actual credential for the license plan
-    const account = await this.accountHostService.getAccountOrFail(
+    const account = await this.accountLookupService.getAccountOrFail(
       licensePlanData.accountID,
       {
         relations: {
@@ -181,7 +181,7 @@ export class AdminLicensingService {
     }
 
     // Todo: assign the actual credential for the license plan
-    const account = await this.accountHostService.getAccountOrFail(
+    const account = await this.accountLookupService.getAccountOrFail(
       licensePlanData.accountID,
       {
         relations: {

@@ -14,8 +14,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationVerificationModule } from '../organization-verification/organization.verification.module';
-import { PreferenceModule } from '@domain/common/preference';
-import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
@@ -23,24 +21,26 @@ import { ContributorModule } from '../contributor/contributor.module';
 import { OrganizationRoleModule } from '../organization-role/organization.role.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
+import { OrganizationSettingsModule } from '../organization.settings/organization.settings.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 
 @Module({
   imports: [
     AccountHostModule,
+    AccountLookupModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     ContributorModule,
     OrganizationVerificationModule,
     OrganizationRoleModule,
+    OrganizationSettingsModule,
     UserModule,
     UserGroupModule,
     EntityResolverModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
     ProfileModule,
-    PreferenceModule,
-    PreferenceSetModule,
     AvatarCreatorModule,
     StorageAggregatorModule,
     TypeOrmModule.forFeature([Organization]),

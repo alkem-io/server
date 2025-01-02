@@ -36,6 +36,7 @@ import { UpdateTemplateFromCollaborationInput } from './dto/template.dto.update.
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 
 @Injectable()
 export class TemplateService {
@@ -48,6 +49,7 @@ export class TemplateService {
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
     private collaborationService: CollaborationService,
+    private calloutsSetService: CalloutsSetService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @InjectEntityManager('default')
@@ -119,15 +121,19 @@ export class TemplateService {
         collaborationData.isTemplate = true;
 
         // Ensure that the collaboration has a default callouts setup
-        if (!collaborationData.calloutsData) {
-          collaborationData.calloutsData = [];
+        if (!collaborationData.calloutsSetData) {
+          collaborationData.calloutsSetData = {};
+        }
+        if (!collaborationData.calloutsSetData.calloutsData) {
+          collaborationData.calloutsSetData.calloutsData = [];
         }
         if (
-          !collaborationData.calloutGroups ||
-          !collaborationData.defaultCalloutGroupName
+          !collaborationData.calloutsSetData.calloutGroups ||
+          !collaborationData.calloutsSetData.defaultCalloutGroupName
         ) {
-          collaborationData.defaultCalloutGroupName = CalloutGroupName.HOME;
-          collaborationData.calloutGroups = [
+          collaborationData.calloutsSetData.defaultCalloutGroupName =
+            CalloutGroupName.HOME;
+          collaborationData.calloutsSetData.calloutGroups = [
             {
               displayName: CalloutGroupName.HOME,
               description: 'Home Callout Group',
@@ -147,7 +153,7 @@ export class TemplateService {
           };
         }
         // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
-        collaborationData.calloutsData.forEach(calloutData => {
+        collaborationData.calloutsSetData.calloutsData.forEach(calloutData => {
           calloutData.isTemplate = true;
           calloutData.enableComments = false;
         });
@@ -296,19 +302,22 @@ export class TemplateService {
         {
           relations: {
             innovationFlow: true,
-            callouts: true,
+            calloutsSet: {
+              callouts: true,
+            },
           },
         }
       );
 
     if (
-      templateInput.collaboration.callouts &&
-      templateInput.collaboration.callouts.length > 0
+      templateInput.collaboration.calloutsSet &&
+      templateInput.collaboration.calloutsSet.callouts &&
+      templateInput.collaboration.calloutsSet.callouts.length > 0
     ) {
-      for (const callout of templateInput.collaboration.callouts) {
+      for (const callout of templateInput.collaboration.calloutsSet.callouts) {
         await this.calloutService.deleteCallout(callout.id);
       }
-      templateInput.collaboration.callouts = [];
+      templateInput.collaboration.calloutsSet.callouts = [];
     }
 
     templateInput.collaboration =
@@ -331,8 +340,8 @@ export class TemplateService {
     if (
       !sourceCollaboration.innovationFlow ||
       !targetCollaboration.innovationFlow ||
-      !sourceCollaboration.callouts ||
-      !targetCollaboration.callouts
+      !sourceCollaboration.calloutsSet?.callouts ||
+      !targetCollaboration.calloutsSet?.callouts
     ) {
       throw new RelationshipNotFoundException(
         `Template cannot be applied on uninitialized collaboration sourceCollaboration.i:'${sourceCollaboration.id}' TargetCollaboration.id='${targetCollaboration.id}'`,
@@ -353,16 +362,16 @@ export class TemplateService {
     if (addCallouts) {
       const calloutsFromSourceCollaboration =
         await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
-          sourceCollaboration.callouts ?? []
+          sourceCollaboration.calloutsSet.callouts ?? []
         );
 
-      const newCallouts = await this.collaborationService.addCallouts(
-        targetCollaboration,
+      const newCallouts = await this.calloutsSetService.addCallouts(
+        targetCollaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
         userID
       );
-      targetCollaboration.callouts?.push(...newCallouts);
+      targetCollaboration.calloutsSet.callouts?.push(...newCallouts);
       this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
 
       // Need to save before applying authorization policy to get the callout ids
@@ -377,7 +386,10 @@ export class TemplateService {
     targetCollaboration: ICollaboration
   ) {
     // We don't have callouts or we don't have innovationFlow, can't do anything
-    if (!targetCollaboration.innovationFlow || !targetCollaboration.callouts) {
+    if (
+      !targetCollaboration.innovationFlow ||
+      !targetCollaboration.calloutsSet?.callouts
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to load Callouts or InnovationFlow ${targetCollaboration.id} `,
         LogContext.TEMPLATES
@@ -385,17 +397,17 @@ export class TemplateService {
     }
 
     const validGroupNames =
-      targetCollaboration.tagsetTemplateSet?.tagsetTemplates.find(
+      targetCollaboration.calloutsSet?.tagsetTemplateSet?.tagsetTemplates.find(
         tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
       )?.allowedValues;
     const validFlowStates = this.innovationFlowService
       .getStates(targetCollaboration.innovationFlow)
       ?.map(state => state.displayName);
 
-    this.collaborationService.moveCalloutsToDefaultGroupAndState(
+    this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
       validGroupNames ?? [],
       validFlowStates ?? [],
-      targetCollaboration.callouts
+      targetCollaboration.calloutsSet?.callouts
     );
   }
 

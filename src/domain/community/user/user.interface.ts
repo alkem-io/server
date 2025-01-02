@@ -4,6 +4,7 @@ import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IUserSettings } from '../user.settings/user.settings.interface';
 
 @ObjectType('User', {
   implements: () => [IContributor],
@@ -11,6 +12,8 @@ import { IRoom } from '@domain/communication/room/room.interface';
 export class IUser extends IContributorBase implements IContributor {
   accountID!: string;
   rowId!: number;
+
+  settings!: IUserSettings;
 
   @Field(() => String, {
     description:

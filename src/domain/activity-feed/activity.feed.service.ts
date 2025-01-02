@@ -144,9 +144,8 @@ export class ActivityFeedService {
       : spaceIds;
     // check if the Spaces exist;
     // a Space might not exist if it's deleted or broken/orphaned data was introduced
-    const successOrNonExistingSpaces = await this.spaceService.spacesExist(
-      filteredSpaceIds
-    );
+    const successOrNonExistingSpaces =
+      await this.spaceService.spacesExist(filteredSpaceIds);
     if (Array.isArray(successOrNonExistingSpaces)) {
       throw new EntityNotFoundException(
         `Spaces with the following identifiers not found: '${successOrNonExistingSpaces.join(
@@ -248,9 +247,8 @@ export class ActivityFeedService {
     const collaborationIds: string[] = [];
     for (const spaceId of spaceIds) {
       // filter the collaborations by read access
-      const collaboration = await this.spaceService.getCollaborationOrFail(
-        spaceId
-      );
+      const collaboration =
+        await this.spaceService.getCollaborationOrFail(spaceId);
       let childCollaborations: ICollaboration[] = [];
       try {
         this.authorizationService.grantAccessOrFail(

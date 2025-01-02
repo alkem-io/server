@@ -42,11 +42,13 @@ export class TemplateApplierResolverMutations {
         updateData.collaborationID,
         {
           relations: {
-            tagsetTemplateSet: true,
-            callouts: {
-              framing: {
-                profile: {
-                  tagsets: true,
+            calloutsSet: {
+              tagsetTemplateSet: true,
+              callouts: {
+                framing: {
+                  profile: {
+                    tagsets: true,
+                  },
                 },
               },
             },
@@ -78,19 +80,21 @@ export class TemplateApplierResolverMutations {
         targetCollaboration.id,
         {
           relations: {
-            callouts: true,
+            calloutsSet: {
+              callouts: true,
+            },
             authorization: true,
           },
         }
       );
-    if (!targetCollaboration.callouts) {
+    if (!targetCollaboration.calloutsSet?.callouts) {
       throw new RelationshipNotFoundException(
         `Unable to retrieve callouts for collaboration: ${targetCollaboration.id}`,
         LogContext.TEMPLATES
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
-    for (const callout of targetCollaboration.callouts) {
+    for (const callout of targetCollaboration.calloutsSet?.callouts) {
       const calloutAuthorizations =
         await this.calloutAuthorizationService.applyAuthorizationPolicy(
           callout.id,

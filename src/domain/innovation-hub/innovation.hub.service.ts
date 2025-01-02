@@ -19,8 +19,8 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 
 @Injectable()
 export class InnovationHubService {
@@ -31,7 +31,7 @@ export class InnovationHubService {
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly spaceService: SpaceService,
     private namingService: NamingService,
-    private accountHostService: AccountHostService
+    private accountLookupService: AccountLookupService
   ) {}
 
   public async createInnovationHub(
@@ -329,7 +329,7 @@ export class InnovationHubService {
         LogContext.LIBRARY
       );
     }
-    const provider = await this.accountHostService.getHost(
+    const provider = await this.accountLookupService.getHost(
       innovationHub.account
     );
     if (!provider) {
