@@ -32,7 +32,7 @@ export class ContributorLookupService {
     userID: string
   ): Promise<IContributor[]> {
     const contributorsManagedByUser: IContributor[] = [];
-    const user = await this.userLookupService.getUserByUuidOrFail(userID, {
+    const user = await this.userLookupService.getUserOrFail(userID, {
       relations: {
         agent: true,
       },

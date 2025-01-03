@@ -2,8 +2,6 @@ import { EntityManager } from 'typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { OrganizationService } from '@domain/community/organization/organization.service';
-import { UserService } from '@domain/community/user/user.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { IApplication } from '@domain/access/application';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
@@ -24,19 +22,21 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
 import { IRoleSet } from '@domain/access/role-set';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 export class RolesService {
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
-    private userService: UserService,
-    private virtualContributorService: VirtualContributorService,
+    private userLookupService: UserLookupService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private spaceFilterService: SpaceFilterService,
     private communityResolverService: CommunityResolverService,
     private authorizationService: AuthorizationService,
-    private organizationService: OrganizationService,
+    private organizationLookupService: OrganizationLookupService,
     private contributorLookupService: ContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -45,7 +45,9 @@ export class RolesService {
     membershipData: RolesUserInput
   ): Promise<ContributorRoles> {
     const contributorRoles = new ContributorRoles();
-    const user = await this.userService.getUserWithAgent(membershipData.userID);
+    const user = await this.userLookupService.getUserWithAgent(
+      membershipData.userID
+    );
 
     contributorRoles.id = membershipData.userID;
     contributorRoles.filter = membershipData.filter;
@@ -59,9 +61,10 @@ export class RolesService {
   ): Promise<ContributorRoles> {
     const contributorRoles = new ContributorRoles();
 
-    const { agent } = await this.organizationService.getOrganizationAndAgent(
-      membershipData.organizationID
-    );
+    const { agent } =
+      await this.organizationLookupService.getOrganizationAndAgent(
+        membershipData.organizationID
+      );
 
     contributorRoles.id = membershipData.organizationID;
     contributorRoles.filter = membershipData.filter;
@@ -75,7 +78,7 @@ export class RolesService {
   ): Promise<ContributorRoles> {
     const contributorRoles = new ContributorRoles();
     const vc =
-      await this.virtualContributorService.getVirtualContributorAndAgent(
+      await this.virtualContributorLookupService.getVirtualContributorAndAgent(
         membershipData.virtualContributorID
       );
 

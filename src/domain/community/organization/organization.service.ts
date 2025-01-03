@@ -22,7 +22,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { OrganizationVerificationService } from '../organization-verification/organization.verification.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { NVP } from '@domain/common/nvp/nvp.entity';
@@ -370,22 +369,6 @@ export class OrganizationService {
     );
   }
 
-  async getOrganizationAndAgent(
-    organizationID: string
-  ): Promise<{ organization: IOrganization; agent: IAgent }> {
-    const organization = await this.getOrganizationOrFail(organizationID, {
-      relations: { agent: true },
-    });
-
-    if (!organization.agent) {
-      throw new EntityNotInitializedException(
-        `Organization Agent not initialized: ${organizationID}`,
-        LogContext.AUTH
-      );
-    }
-    return { organization: organization, agent: organization.agent };
-  }
-
   async getOrganizations(args: ContributorQueryArgs): Promise<IOrganization[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
@@ -543,52 +526,6 @@ export class OrganizationService {
     }
 
     return storageAggregator;
-  }
-
-  async organizationsWithCredentials(
-    credentialCriteria: CredentialsSearchInput
-  ): Promise<IOrganization[]> {
-    const credResourceID = credentialCriteria.resourceID || '';
-    const organizationMatches = await this.organizationRepository
-      .createQueryBuilder('organization')
-      .leftJoinAndSelect('organization.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .getMany();
-
-    // reload to go through the normal loading path
-    const results: IOrganization[] = [];
-    for (const organization of organizationMatches) {
-      const loadedOrganization = await this.getOrganizationOrFail(
-        organization.id
-      );
-      results.push(loadedOrganization);
-    }
-    return results;
-  }
-
-  async countOrganizationsWithCredentials(
-    credentialCriteria: CredentialsSearchInput
-  ): Promise<number> {
-    const credResourceID = credentialCriteria.resourceID || '';
-    const organizationMatchesCount = await this.organizationRepository
-      .createQueryBuilder('organization')
-      .leftJoinAndSelect('organization.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .getCount();
-
-    return organizationMatchesCount;
   }
 
   async getVerification(

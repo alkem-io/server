@@ -8,7 +8,6 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { RemovePlatformRoleFromUserInput } from './dto/platform.dto.remove.role.user';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
@@ -20,11 +19,12 @@ import { PlatformService } from '@platform/platform/platform.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AccountService } from '@domain/space/account/account.service';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class PlatformRoleService {
   constructor(
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private accountService: AccountService,
     private agentService: AgentService,
     private platformService: PlatformService,
@@ -70,7 +70,7 @@ export class PlatformRoleService {
   public async assignPlatformRoleToUser(
     assignData: AssignPlatformRoleToUserInput
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(assignData.userID, {
+    const user = await this.userLookupService.getUserOrFail(assignData.userID, {
       relations: {
         agent: true,
       },
@@ -108,13 +108,13 @@ export class PlatformRoleService {
       });
     }
 
-    return await this.userService.getUserWithAgent(assignData.userID);
+    return await this.userLookupService.getUserWithAgent(assignData.userID);
   }
 
   public async removePlatformRoleFromUser(
     removeData: RemovePlatformRoleFromUserInput
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(removeData.userID, {
+    const user = await this.userLookupService.getUserOrFail(removeData.userID, {
       relations: {
         agent: true,
       },
@@ -156,12 +156,12 @@ export class PlatformRoleService {
       });
     }
 
-    return await this.userService.getUserWithAgent(removeData.userID);
+    return await this.userLookupService.getUserWithAgent(removeData.userID);
   }
 
   private async removeValidationSingleGlobalAdmin(): Promise<boolean> {
     // Check more than one
-    const globalAdmins = await this.userService.usersWithCredentials({
+    const globalAdmins = await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.GLOBAL_ADMIN,
     });
     if (globalAdmins.length < 2)
@@ -191,7 +191,7 @@ export class PlatformRoleService {
     userID: string
   ): Promise<PlatformRole[]> {
     const result: PlatformRole[] = [];
-    const agent = await this.userService.getAgentOrFail(userID);
+    const { agent } = await this.userLookupService.getUserAndAgent(userID);
     const roles: PlatformRole[] = Object.values(PlatformRole) as PlatformRole[];
     for (const role of roles) {
       const hasAgentRole = await this.isInRole(agent, role);
@@ -207,9 +207,8 @@ export class PlatformRoleService {
     userIDs: string[]
   ): Promise<{ [userID: string]: PlatformRole[] }> {
     // Retrieve all agents for the provided user IDs in a single query
-    const usersWithAgents = await this.userService.getUsers(userIDs, {
-      relations: { agent: true },
-    });
+    const usersWithAgents =
+      await this.userLookupService.getUsersWithAgent(userIDs);
 
     // Initialize a result map to store roles for each user
     const userRolesMap: { [userID: string]: PlatformRole[] } = {};

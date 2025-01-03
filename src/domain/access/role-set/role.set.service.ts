@@ -29,11 +29,9 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UserService } from '@domain/community/user/user.service';
 import { IInvitation } from '../invitation/invitation.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
@@ -59,6 +57,8 @@ import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class RoleSetService {
@@ -71,8 +71,8 @@ export class RoleSetService {
     private roleService: RoleService,
     private agentService: AgentService,
     private contributorService: ContributorService,
-    private userService: UserService,
-    private organizationService: OrganizationService,
+    private userLookupService: UserLookupService,
+    private organizationLookupService: OrganizationLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private communityResolverService: CommunityResolverService,
     private roleSetEventsService: RoleSetEventsService,
@@ -380,7 +380,7 @@ export class RoleSetService {
       roleSet,
       roleType
     );
-    return await this.userService.usersWithCredentials(
+    return await this.userLookupService.usersWithCredentials(
       {
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
@@ -413,7 +413,7 @@ export class RoleSetService {
       roleSet,
       roleType
     );
-    return await this.organizationService.organizationsWithCredentials({
+    return await this.organizationLookupService.organizationsWithCredentials({
       type: membershipCredential.type,
       resourceID: membershipCredential.resourceID,
     });
@@ -430,14 +430,16 @@ export class RoleSetService {
     );
 
     if (contributorType === CommunityContributorType.ORGANIZATION) {
-      return await this.organizationService.countOrganizationsWithCredentials({
-        type: membershipCredential.type,
-        resourceID: membershipCredential.resourceID,
-      });
+      return await this.organizationLookupService.countOrganizationsWithCredentials(
+        {
+          type: membershipCredential.type,
+          resourceID: membershipCredential.resourceID,
+        }
+      );
     }
 
     if (contributorType === CommunityContributorType.USER) {
-      return await this.userService.countUsersWithCredentials({
+      return await this.userLookupService.countUsersWithCredentials({
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
       });
@@ -500,7 +502,8 @@ export class RoleSetService {
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ): Promise<IUser> {
-    const { user, agent } = await this.userService.getUserAndAgent(userID);
+    const { user, agent } =
+      await this.userLookupService.getUserAndAgent(userID);
     const { isMember: hasMemberRoleInParent, parentRoleSet } =
       await this.isMemberInParentRoleSet(agent, roleSet.id);
     if (!hasMemberRoleInParent) {
@@ -546,7 +549,7 @@ export class RoleSetService {
       triggerNewMemberEvents
     );
 
-    return await this.userService.getUserOrFail(userID);
+    return await this.userLookupService.getUserOrFail(userID);
   }
 
   public async acceptInvitationToRoleSet(
@@ -756,7 +759,9 @@ export class RoleSetService {
     organizationID: string
   ): Promise<IOrganization> {
     const { organization, agent } =
-      await this.organizationService.getOrganizationAndAgent(organizationID);
+      await this.organizationLookupService.getOrganizationAndAgent(
+        organizationID
+      );
 
     organization.agent = await this.assignContributorAgentToRole(
       roleSet,
@@ -774,7 +779,8 @@ export class RoleSetService {
     userID: string,
     validatePolicyLimits = true
   ): Promise<IUser> {
-    const { user, agent } = await this.userService.getUserAndAgent(userID);
+    const { user, agent } =
+      await this.userLookupService.getUserAndAgent(userID);
 
     user.agent = await this.removeContributorFromRole(
       roleSet,
@@ -823,7 +829,9 @@ export class RoleSetService {
     validatePolicyLimits = true
   ): Promise<IOrganization> {
     const { organization, agent } =
-      await this.organizationService.getOrganizationAndAgent(organizationID);
+      await this.organizationLookupService.getOrganizationAndAgent(
+        organizationID
+      );
 
     organization.agent = await this.removeContributorFromRole(
       roleSet,
@@ -1112,7 +1120,7 @@ export class RoleSetService {
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
-    const { user, agent } = await this.userService.getUserAndAgent(
+    const { user, agent } = await this.userLookupService.getUserAndAgent(
       applicationData.userID
     );
     const roleSet = await this.getRoleSetOrFail(applicationData.roleSetID, {
@@ -1248,7 +1256,7 @@ export class RoleSetService {
     roleSetID: string
   ) {
     // Check if a user with the provided email address already exists or not
-    const isExistingUser = await this.userService.isRegisteredUser(email);
+    const isExistingUser = await this.userLookupService.isRegisteredUser(email);
     if (isExistingUser) {
       throw new RoleSetMembershipException(
         `User with the provided email address already exists: ${email}`,

@@ -13,7 +13,6 @@ import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
 import { UserService } from '@domain/community/user/user.service';
 import { ApplicationService } from '@domain/access/application/application.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { testData } from '@test/utils';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -36,13 +35,14 @@ import { AccountType } from '@common/enums/account.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
   let userService: UserService;
   let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
-  let organizationService: OrganizationService;
+  let organizationLookupService: OrganizationLookupService;
   let communityResolverService: CommunityResolverService;
 
   beforeAll(async () => {
@@ -69,7 +69,7 @@ describe('RolesService', () => {
     rolesService = moduleRef.get(RolesService);
     userService = moduleRef.get(UserService);
     applicationService = moduleRef.get(ApplicationService);
-    organizationService = moduleRef.get(OrganizationService);
+    organizationLookupService = moduleRef.get(OrganizationLookupService);
     communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
   });
@@ -184,7 +184,7 @@ describe('RolesService', () => {
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
       jest
-        .spyOn(organizationService, 'getOrganizationAndAgent')
+        .spyOn(organizationLookupService, 'getOrganizationAndAgent')
         .mockResolvedValue({
           organization: testData.organization as any,
           agent: testData.agent,

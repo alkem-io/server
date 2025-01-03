@@ -28,6 +28,7 @@ import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { UserSettingsModule } from '../user.settings/user.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
+import { UserLookupModule } from '../user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.
     AgentModule,
     AccountHostModule,
     AccountLookupModule,
+    UserLookupModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

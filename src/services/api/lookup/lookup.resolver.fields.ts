@@ -41,7 +41,6 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { UserService } from '@domain/community/user/user.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
@@ -70,6 +69,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges.results';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -100,7 +100,7 @@ export class LookupResolverFields {
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private guidelinesService: CommunityGuidelinesService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
@@ -228,7 +228,7 @@ export class LookupResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(id);
+    const user = await this.userLookupService.getUserOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
@@ -288,7 +288,7 @@ export class LookupResolverFields {
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
         authorizationPolicyID
       );
-    const agent = await this.userService.getAgentOrFail(userID);
+    const { agent } = await this.userLookupService.getUserAndAgent(userID);
     return this.authorizationService.getGrantedPrivileges(
       agent.credentials || [],
       [],

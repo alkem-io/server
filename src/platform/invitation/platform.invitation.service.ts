@@ -107,7 +107,7 @@ export class PlatformInvitationService {
   }
 
   async getCreatedBy(platformInvitation: IPlatformInvitation): Promise<IUser> {
-    const user = await this.userLookupService.getUserByUuidOrFail(
+    const user = await this.userLookupService.getUserOrFail(
       platformInvitation.createdBy
     );
     return user;

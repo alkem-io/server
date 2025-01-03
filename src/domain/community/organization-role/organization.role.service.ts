@@ -3,7 +3,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ForbiddenException } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { OrganizationRole } from '@common/enums/organization.role';
@@ -12,11 +11,12 @@ import { AssignOrganizationRoleToUserInput } from './dto/organization.role.dto.a
 import { RemoveOrganizationRoleFromUserInput } from './dto/organization.role.dto.remove.role.from.user';
 import { IOrganization } from '../organization/organization.interface';
 import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
 
 @Injectable()
 export class OrganizationRoleService {
   constructor(
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private agentService: AgentService,
     private organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -96,21 +96,21 @@ export class OrganizationRoleService {
   }
 
   async getAssociates(organization: IOrganization): Promise<IUser[]> {
-    return await this.userService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
       resourceID: organization.id,
     });
   }
 
   async getAdmins(organization: IOrganization): Promise<IUser[]> {
-    return await this.userService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.ORGANIZATION_ADMIN,
       resourceID: organization.id,
     });
   }
 
   async getOwners(organization: IOrganization): Promise<IUser[]> {
-    return await this.userService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.ORGANIZATION_OWNER,
       resourceID: organization.id,
     });
@@ -148,7 +148,7 @@ export class OrganizationRoleService {
     assignData: AssignOrganizationRoleToUserInput
   ): Promise<IUser> {
     const userID = assignData.userID;
-    const agent = await this.userService.getAgentOrFail(userID);
+    const { agent } = await this.userLookupService.getUserAndAgent(userID);
     const organization =
       await this.organizationLookupService.getOrganizationOrFail(
         assignData.organizationID
@@ -164,7 +164,7 @@ export class OrganizationRoleService {
       ...credential,
     });
 
-    return await this.userService.getUserWithAgent(userID);
+    return await this.userLookupService.getUserWithAgent(userID);
   }
 
   async removeOrganizationRoleFromUser(
@@ -176,11 +176,13 @@ export class OrganizationRoleService {
       await this.organizationLookupService.getOrganizationOrFail(
         organizationID
       );
-    const agent = await this.userService.getAgentOrFail(removeData.userID);
+    const { agent } = await this.userLookupService.getUserAndAgent(
+      removeData.userID
+    );
 
     if (validationRoles) {
       if (removeData.role === OrganizationRole.OWNER) {
-        const orgOwners = await this.userService.usersWithCredentials({
+        const orgOwners = await this.userLookupService.usersWithCredentials({
           type: AuthorizationCredential.ORGANIZATION_OWNER,
           resourceID: organizationID,
         });
@@ -202,6 +204,6 @@ export class OrganizationRoleService {
       ...credential,
     });
 
-    return await this.userService.getUserWithAgent(removeData.userID);
+    return await this.userLookupService.getUserWithAgent(removeData.userID);
   }
 }

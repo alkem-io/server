@@ -13,8 +13,6 @@ import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { RoleModule } from '../role/role.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { UserModule } from '@domain/community/user/user.module';
-import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RoleSetEventsService } from './role.set.service.events';
@@ -31,6 +29,9 @@ import { LicenseModule } from '@domain/common/license/license.module';
 import { RoleSetLicenseService } from './role.set.service.license';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -39,15 +40,16 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
     LicenseModule,
     FormModule,
     AgentModule,
+    UserLookupModule,
     UserModule,
-    OrganizationModule,
+    OrganizationLookupModule,
+    VirtualContributorLookupModule,
     ContributorModule,
     RoleModule,
     InvitationModule,
     EntityResolverModule,
     ApplicationModule,
     PlatformInvitationModule,
-    VirtualContributorLookupModule,
     AccountLookupModule,
     AiServerAdapterModule,
     NotificationAdapterModule,

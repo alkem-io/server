@@ -4,7 +4,6 @@ import { FindOneOptions, Repository, FindManyOptions } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   AuthorizationCredential,
@@ -30,12 +29,13 @@ import {
 } from './dto';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
 
 @Injectable()
 export class UserGroupService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private profileService: ProfileService,
     private agentService: AgentService,
     @InjectRepository(UserGroup)
@@ -163,7 +163,7 @@ export class UserGroupService {
   async assignUser(
     membershipData: AssignUserGroupMemberInput
   ): Promise<IUserGroup> {
-    const { user, agent } = await this.userService.getUserAndAgent(
+    const { user, agent } = await this.userLookupService.getUserAndAgent(
       membershipData.userID
     );
 
@@ -181,7 +181,7 @@ export class UserGroupService {
   async removeUser(
     membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
-    const { user, agent } = await this.userService.getUserAndAgent(
+    const { user, agent } = await this.userLookupService.getUserAndAgent(
       membershipData.userID
     );
 
@@ -244,7 +244,7 @@ export class UserGroupService {
   }
 
   async getMembers(groupID: string): Promise<IUser[]> {
-    return await this.userService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: groupID,
     });

@@ -23,6 +23,7 @@ import { LicenseModule } from '@domain/common/license/license.module';
 import { AiPersonaServiceModule } from '@services/ai-server/ai-persona-service/ai.persona.service.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { LicensePlanModule } from '@platform/licensing/credential-based/license-plan/license.plan.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { LicensePlanModule } from '@platform/licensing/credential-based/license-
     AccountModule,
     SpaceModule,
     UserModule,
+    UserLookupModule,
     AdminAuthorizationModule,
     PlatformModule,
     PlatformAuthorizationPolicyModule,

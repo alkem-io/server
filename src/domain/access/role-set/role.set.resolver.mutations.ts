@@ -23,7 +23,6 @@ import { ContributorService } from '@domain/community/contributor/contributor.se
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
@@ -67,6 +66,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -76,7 +76,7 @@ export class RoleSetResolverMutations {
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private notificationAdapter: NotificationAdapter,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private userAuthorizationService: UserAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private accountLookupService: AccountLookupService,
@@ -128,11 +128,13 @@ export class RoleSetResolverMutations {
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
-    const user = await this.userService.getUserOrFail(roleData.contributorID);
+    const user = await this.userLookupService.getUserOrFail(
+      roleData.contributorID
+    );
     const authorizations =
       await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.userService.getUserOrFail(roleData.contributorID);
+    return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -257,11 +259,13 @@ export class RoleSetResolverMutations {
     );
     // reset the user authorization policy so that their profile is not visible
     // to other community members
-    const user = await this.userService.getUserOrFail(roleData.contributorID);
+    const user = await this.userLookupService.getUserOrFail(
+      roleData.contributorID
+    );
     const authorizations =
       await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
     await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.userService.getUserOrFail(roleData.contributorID);
+    return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -395,7 +399,7 @@ export class RoleSetResolverMutations {
     );
 
     if (roleSet.parentRoleSet) {
-      const { agent } = await this.userService.getUserAndAgent(
+      const { agent } = await this.userLookupService.getUserAndAgent(
         agentInfo.userID
       );
       const userIsMemberInParent = await this.roleSetService.isInRole(
@@ -632,18 +636,13 @@ export class RoleSetResolverMutations {
       `create invitation external community: ${roleSet.id}`
     );
 
-    const existingUser = await this.userService.getUserByEmail(
-      invitationData.email,
-      {
-        relations: {
-          agent: true,
-        },
-      }
+    const existingUser = await this.userLookupService.isRegisteredUser(
+      invitationData.email
     );
 
     if (existingUser) {
       throw new RoleSetInvitationException(
-        `User already has a profile (${existingUser.email})`,
+        `User already has a profile (${invitationData.email})`,
         LogContext.COMMUNITY
       );
     }
