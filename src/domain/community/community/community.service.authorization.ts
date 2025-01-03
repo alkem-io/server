@@ -99,9 +99,9 @@ export class CommunityAuthorizationService {
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         community.roleSet.id,
         community.authorization,
-        spaceSettings,
         spaceMembershipAllowed,
-        isSubspace
+        isSubspace,
+        spaceSettings
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 

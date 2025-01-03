@@ -12,7 +12,7 @@ import { IInvitation } from '../invitation/invitation.interface';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { IApplication } from '../application/application.interface';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.invitation';
 import { ApplicationService } from '../application/application.service';
@@ -108,7 +108,7 @@ export class RoleSetResolverMutations {
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === CommunityRoleType.MEMBER) {
+    if (roleData.role === RoleType.MEMBER) {
       requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
     }
 
@@ -184,7 +184,7 @@ export class RoleSetResolverMutations {
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === CommunityRoleType.MEMBER) {
+    if (roleData.role === RoleType.MEMBER) {
       const sameAccount =
         await this.roleSetService.isCommunityAccountMatchingVcAccount(
           roleSet.id,
@@ -365,7 +365,7 @@ export class RoleSetResolverMutations {
 
     await this.roleSetService.assignUserToRole(
       roleSet,
-      CommunityRoleType.MEMBER,
+      RoleType.MEMBER,
       agentInfo.userID,
       agentInfo,
       true
@@ -405,7 +405,7 @@ export class RoleSetResolverMutations {
       const userIsMemberInParent = await this.roleSetService.isInRole(
         agent,
         roleSet.parentRoleSet,
-        CommunityRoleType.MEMBER
+        RoleType.MEMBER
       );
       if (!userIsMemberInParent) {
         throw new RoleSetMembershipException(
@@ -545,7 +545,7 @@ export class RoleSetResolverMutations {
     invitedContributor: IContributor,
     agentInfo: AgentInfo,
     invitedToParent: boolean,
-    extraRole?: CommunityRoleType,
+    extraRole?: RoleType,
     welcomeMessage?: string
   ): Promise<IInvitation> {
     const input: CreateInvitationInput = {

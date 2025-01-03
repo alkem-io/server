@@ -3,7 +3,7 @@ import { UUID } from '@domain/common/scalars';
 import { IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 
 @InputType()
 export class InviteNewContributorForRoleOnRoleSetInput extends CreatePlatformInvitationInput {
@@ -11,12 +11,12 @@ export class InviteNewContributorForRoleOnRoleSetInput extends CreatePlatformInv
   @MaxLength(UUID_LENGTH)
   roleSetID!: string;
 
-  @Field(() => CommunityRoleType, {
+  @Field(() => RoleType, {
     nullable: true,
     description:
       'An additional role to assign to the Contributors, in addition to the entry Role.',
   })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  roleSetExtraRole?: CommunityRoleType;
+  roleSetExtraRole?: RoleType;
 }

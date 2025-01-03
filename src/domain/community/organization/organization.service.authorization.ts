@@ -25,6 +25,7 @@ import {
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -37,6 +38,7 @@ export class OrganizationAuthorizationService {
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private roleSetAuthorizationService: RoleSetAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
@@ -52,6 +54,7 @@ export class OrganizationAuthorizationService {
           agent: true,
           groups: true,
           verification: true,
+          roleSet: true,
         },
       }
     );
@@ -102,6 +105,15 @@ export class OrganizationAuthorizationService {
         organization.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
+
+    const roleSetAuthorizations =
+      await this.roleSetAuthorizationService.applyAuthorizationPolicy(
+        organization.roleSet.id,
+        organization.authorization,
+        true,
+        false
+      );
+    updatedAuthorizations.push(...roleSetAuthorizations);
 
     const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(

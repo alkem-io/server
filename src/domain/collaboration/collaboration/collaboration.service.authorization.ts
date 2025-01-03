@@ -10,7 +10,7 @@ import { AuthorizationCredential } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS } from '@common/constants';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -170,7 +170,7 @@ export class CollaborationAuthorizationService {
     // add challenge members
     let contributorCriterias = await this.roleSetService.getCredentialsForRole(
       roleSet,
-      CommunityRoleType.MEMBER,
+      RoleType.MEMBER,
       spaceSettings
     );
     // optionally add space members
@@ -178,7 +178,7 @@ export class CollaborationAuthorizationService {
       contributorCriterias =
         await this.roleSetService.getCredentialsForRoleWithParents(
           roleSet,
-          CommunityRoleType.MEMBER,
+          RoleType.MEMBER,
           spaceSettings
         );
     }
@@ -213,7 +213,7 @@ export class CollaborationAuthorizationService {
 
     const adminCriterias = await this.roleSetService.getCredentialsForRole(
       roleSet,
-      CommunityRoleType.ADMIN,
+      RoleType.ADMIN,
       spaceSettings
     );
     adminCriterias.push({

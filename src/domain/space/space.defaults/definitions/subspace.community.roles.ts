@@ -1,10 +1,10 @@
 import { AuthorizationCredential } from '@common/enums';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 
 export const subspaceCommunityRoles: CreateRoleInput[] = [
   {
-    type: CommunityRoleType.MEMBER,
+    type: RoleType.MEMBER,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: true,
     credentialData: {
@@ -26,7 +26,7 @@ export const subspaceCommunityRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: CommunityRoleType.LEAD,
+    type: RoleType.LEAD,
     requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -48,7 +48,7 @@ export const subspaceCommunityRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: CommunityRoleType.ADMIN,
+    type: RoleType.ADMIN,
     requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {

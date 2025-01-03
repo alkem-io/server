@@ -6,6 +6,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ForbiddenException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
@@ -37,7 +38,6 @@ import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args'
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
@@ -55,6 +55,12 @@ import { OrganizationSettingsService } from '../organization.settings/organizati
 import { UpdateOrganizationSettingsEntityInput } from '../organization.settings/dto/organization.settings.dto.update';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { organizationRoles } from './definitions/organization.roles';
+import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
+import { RoleType } from '@common/enums/role.type';
+import { organizationApplicationForm } from './definitions/organization.role.application.form';
 
 @Injectable()
 export class OrganizationService {
@@ -71,6 +77,7 @@ export class OrganizationService {
     private namingService: NamingService,
     private storageAggregatorService: StorageAggregatorService,
     private contributorService: ContributorService,
+    private roleSetService: RoleSetService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -97,6 +104,14 @@ export class OrganizationService {
     organization.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ORGANIZATION
     );
+
+    const roleSetInput: CreateRoleSetInput = {
+      roles: organizationRoles,
+      applicationForm: organizationApplicationForm,
+      entryRoleType: RoleType.ASSOCIATE,
+    };
+    organization.roleSet =
+      await this.roleSetService.createRoleSet(roleSetInput);
     organization.settings = this.getDefaultOrganizationSettings();
 
     organization.storageAggregator =
@@ -145,15 +160,15 @@ export class OrganizationService {
       );
     // Assign the creating agent as both a member and admin
     if (agentInfo) {
-      await this.organizationRoleService.assignOrganizationRoleToUser({
+      await this.organizationRoleService.assignRoleToUser({
         organizationID: savedOrg.id,
         userID: agentInfo.userID,
-        role: OrganizationRole.ASSOCIATE,
+        role: RoleType.ASSOCIATE,
       });
-      await this.organizationRoleService.assignOrganizationRoleToUser({
+      await this.organizationRoleService.assignRoleToUser({
         organizationID: savedOrg.id,
         userID: agentInfo.userID,
-        role: OrganizationRole.ADMIN,
+        role: RoleType.ADMIN,
       });
     }
 
@@ -166,6 +181,23 @@ export class OrganizationService {
     );
 
     return await this.getOrganizationOrFail(organization.id);
+  }
+
+  public async getRoleSet(organization: IOrganization): Promise<IRoleSet> {
+    const organizationWithRoleSet = await this.getOrganizationOrFail(
+      organization.id,
+      {
+        relations: { roleSet: true },
+      }
+    );
+
+    if (!organizationWithRoleSet.roleSet) {
+      throw new EntityNotInitializedException(
+        `Unable to locate RoleSet for organization: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return organizationWithRoleSet.roleSet;
   }
 
   private getDefaultOrganizationSettings(): IOrganizationSettings {
@@ -275,8 +307,21 @@ export class OrganizationService {
         verification: true,
         groups: true,
         storageAggregator: true,
+        roleSet: true,
       },
     });
+
+    if (
+      !organization.roleSet ||
+      !organization.profile ||
+      !organization.verification ||
+      !organization.agent
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to delete org, missing relations: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     // TODO: give additional feedback?
     const accountHasResources =
       await this.accountLookupService.areResourcesInAccount(
@@ -291,9 +336,7 @@ export class OrganizationService {
 
     await this.organizationRoleService.removeAllRoles(organization);
 
-    if (organization.profile) {
-      await this.profileService.deleteProfile(organization.profile.id);
-    }
+    await this.profileService.deleteProfile(organization.profile.id);
 
     if (organization.storageAggregator) {
       await this.storageAggregatorService.delete(
@@ -313,15 +356,13 @@ export class OrganizationService {
       await this.authorizationPolicyService.delete(organization.authorization);
     }
 
-    if (organization.agent) {
-      await this.agentService.deleteAgent(organization.agent.id);
-    }
+    await this.agentService.deleteAgent(organization.agent.id);
 
-    if (organization.verification) {
-      await this.organizationVerificationService.delete(
-        organization.verification.id
-      );
-    }
+    await this.organizationVerificationService.delete(
+      organization.verification.id
+    );
+
+    await this.roleSetService.removeRoleSetOrFail(organization.roleSet.id);
 
     const result = await this.organizationRepository.remove(
       organization as Organization

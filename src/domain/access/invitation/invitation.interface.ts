@@ -3,7 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { IRoleSet } from '@domain/access/role-set';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 
 @ObjectType('Invitation')
 export class IInvitation extends IAuthorizable {
@@ -37,10 +37,10 @@ export class IInvitation extends IAuthorizable {
   })
   contributorType!: CommunityContributorType;
 
-  @Field(() => CommunityRoleType, {
+  @Field(() => RoleType, {
     nullable: true,
     description:
       'An additional role to assign to the Contributor, in addition to the entry Role.',
   })
-  extraRole?: CommunityRoleType;
+  extraRole?: RoleType;
 }

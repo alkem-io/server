@@ -8,11 +8,11 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RemoveOrganizationRoleFromUserInput } from './dto/organization.role.dto.remove.role.from.user';
 import { AssignOrganizationRoleToUserInput } from './dto/organization.role.dto.assign.role.to.user';
-import { OrganizationRole } from '@common/enums/organization.role';
 import { OrganizationRoleService } from './organization.role.service';
 import { IOrganization } from '../organization/organization.interface';
 import { OrganizationRoleAuthorizationService } from './organization.role.service.authorization';
 import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
+import { RoleType } from '@common/enums/role.type';
 
 @Resolver(() => IOrganization)
 export class OrganizationRoleResolverMutations {
@@ -43,9 +43,7 @@ export class OrganizationRoleResolverMutations {
       AuthorizationPrivilege.GRANT,
       `assign organization role to user: ${organization.id} - ${membershipData.role}`
     );
-    return await this.organizationRoleService.assignOrganizationRoleToUser(
-      membershipData
-    );
+    return await this.organizationRoleService.assignRoleToUser(membershipData);
   }
 
   @UseGuards(GraphqlGuard)
@@ -62,7 +60,7 @@ export class OrganizationRoleResolverMutations {
         membershipData.organizationID
       );
     let authorization = organization.authorization;
-    if (membershipData.role === OrganizationRole.ASSOCIATE) {
+    if (membershipData.role === RoleType.ASSOCIATE) {
       // Extend the authorization policy with a credential rule to assign the GRANT privilege
       // to the user specified in the incoming mutation. Then if it is the same user as is logged
       // in then the user will have the GRANT privilege + so can carry out the mutation
@@ -78,7 +76,7 @@ export class OrganizationRoleResolverMutations {
       AuthorizationPrivilege.GRANT,
       `remove user organization role from user: ${organization.id} - ${membershipData.role}`
     );
-    return await this.organizationRoleService.removeOrganizationRoleFromUser(
+    return await this.organizationRoleService.removeRoleFromUser(
       membershipData
     );
   }

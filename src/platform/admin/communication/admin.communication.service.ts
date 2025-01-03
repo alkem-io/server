@@ -13,7 +13,7 @@ import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication
 import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { ValidationException } from '@common/exceptions';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 
@@ -44,7 +44,7 @@ export class AdminCommunicationService {
     );
     const communityMembers = await this.roleSetService.getUsersWithRole(
       community.roleSet,
-      CommunityRoleType.MEMBER
+      RoleType.MEMBER
     );
     const communication = await this.communityService.getCommunication(
       community.id,
@@ -120,7 +120,7 @@ export class AdminCommunicationService {
     );
     const communityMembers = await this.roleSetService.getUsersWithRole(
       community.roleSet,
-      CommunityRoleType.MEMBER
+      RoleType.MEMBER
     );
     for (const communityMember of communityMembers) {
       await this.communicationService.addContributorToCommunications(

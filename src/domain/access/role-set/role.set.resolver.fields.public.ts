@@ -6,7 +6,7 @@ import { RoleSetService } from './role.set.service';
 import { IForm } from '@domain/common/form/form.interface';
 import { IRoleSet } from './role.set.interface';
 import { RoleSet } from './role.set.entity';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 import { IRole } from '../role/role.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -44,8 +44,8 @@ export class RoleSetResolverFieldsPublic {
   })
   async roleDefinition(
     @Parent() roleSet: RoleSet,
-    @Args('role', { type: () => CommunityRoleType, nullable: false })
-    role: CommunityRoleType
+    @Args('role', { type: () => RoleType, nullable: false })
+    role: RoleType
   ): Promise<IRole> {
     return await this.roleSetService.getRoleDefinition(roleSet, role);
   }
@@ -63,7 +63,7 @@ export class RoleSetResolverFieldsPublic {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('myRoles', () => [CommunityRoleType], {
+  @ResolveField('myRoles', () => [RoleType], {
     nullable: false,
     description:
       'The roles on this community for the currently logged in user.',
@@ -71,7 +71,7 @@ export class RoleSetResolverFieldsPublic {
   async myRoles(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() roleSet: IRoleSet
-  ): Promise<CommunityRoleType[]> {
+  ): Promise<RoleType[]> {
     return this.roleSetService.getRolesForAgentInfo(agentInfo, roleSet);
   }
 

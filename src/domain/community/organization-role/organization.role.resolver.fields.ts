@@ -9,8 +9,8 @@ import { IUser } from '@domain/community/user/user.interface';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { OrganizationRole } from '@common/enums/organization.role';
 import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
+import { RoleType } from '@common/enums/role.type';
 
 @Resolver(() => IOrganization)
 export class OrganizationRoleResolverFields {
@@ -90,7 +90,7 @@ export class OrganizationRoleResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('myRoles', () => [OrganizationRole], {
+  @ResolveField('myRoles', () => [RoleType], {
     nullable: true,
     description:
       'The roles on this Organization for the currently logged in user.',
@@ -99,7 +99,7 @@ export class OrganizationRoleResolverFields {
   async myRoles(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() organization: IOrganization
-  ): Promise<OrganizationRole[]> {
+  ): Promise<RoleType[]> {
     return this.organizationRoleService.getMyRoles(agentInfo, organization);
   }
 }

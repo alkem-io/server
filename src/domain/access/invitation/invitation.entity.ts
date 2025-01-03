@@ -5,7 +5,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ENUM_LENGTH, MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 @Entity()
 export class Invitation extends AuthorizableEntity implements IInvitation {
   // todo ID in migration is varchar - must be char(36)
@@ -43,5 +43,5 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
     length: ENUM_LENGTH,
     nullable: true,
   })
-  extraRole?: CommunityRoleType;
+  extraRole?: RoleType;
 }

@@ -1,4 +1,4 @@
-import { OrganizationRole } from '@common/enums/organization.role';
+import { RoleType } from '@common/enums/role.type';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
@@ -10,6 +10,6 @@ export class AssignOrganizationRoleToUserInput {
   @Field(() => UUID, { nullable: false })
   userID!: string;
 
-  @Field(() => OrganizationRole, { nullable: false })
-  role!: OrganizationRole;
+  @Field(() => RoleType, { nullable: false })
+  role!: RoleType;
 }

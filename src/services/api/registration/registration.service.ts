@@ -14,7 +14,6 @@ import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { ApplicationService } from '@domain/access/application/application.service';
-import { OrganizationRole } from '@common/enums/organization.role';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { PlatformRoleService } from '@platform/platform.role/platform.role.service';
 import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
@@ -22,6 +21,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AccountService } from '@domain/space/account/account.service';
 import { IOrganization } from '@domain/community/organization';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleType } from '@common/enums/role.type';
 
 export class RegistrationService {
   constructor(
@@ -91,10 +91,10 @@ export class RegistrationService {
       return false;
     }
 
-    await this.organizationRoleService.assignOrganizationRoleToUser({
+    await this.organizationRoleService.assignRoleToUser({
       organizationID: org.id,
       userID: user.id,
-      role: OrganizationRole.ASSOCIATE,
+      role: RoleType.ASSOCIATE,
     });
 
     this.logger.verbose?.(

@@ -32,12 +32,13 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleType } from '@common/enums/role.type';
 import { IRoleSet } from './role.set.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class RoleSetAuthorizationService {
@@ -55,9 +56,9 @@ export class RoleSetAuthorizationService {
   async applyAuthorizationPolicy(
     roleSetID: string,
     parentAuthorization: IAuthorizationPolicy,
-    spaceSettings: ISpaceSettings,
-    spaceMembershipAllowed: boolean,
-    isSubspace: boolean
+    entryRoleAllowed: boolean,
+    isSubspace: boolean,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
       relations: {
@@ -98,19 +99,21 @@ export class RoleSetAuthorizationService {
     roleSet.authorization = this.appendVerifiedCredentialRules(
       roleSet.authorization
     );
-    if (spaceMembershipAllowed) {
-      roleSet.authorization = this.extendRoleSetAuthorizationPolicySpace(
-        roleSet,
-        roleSet.authorization,
-        spaceSettings
-      );
-    }
-    if (isSubspace) {
-      roleSet.authorization = await this.extendAuthorizationPolicySubspace(
-        roleSet,
-        roleSet.authorization,
-        spaceSettings
-      );
+    if (roleSet.type === RoleSetType.SPACE && spaceSettings) {
+      if (entryRoleAllowed) {
+        roleSet.authorization = this.extendRoleSetAuthorizationPolicySpace(
+          roleSet,
+          roleSet.authorization,
+          spaceSettings
+        );
+      }
+      if (isSubspace) {
+        roleSet.authorization = await this.extendAuthorizationPolicySubspace(
+          roleSet,
+          roleSet.authorization,
+          spaceSettings
+        );
+      }
     }
 
     // always false
@@ -219,7 +222,7 @@ export class RoleSetAuthorizationService {
   private async extendAuthorizationPolicy(
     roleSet: IRoleSet,
     authorization: IAuthorizationPolicy | undefined,
-    spaceSettings: ISpaceSettings
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -234,34 +237,43 @@ export class RoleSetAuthorizationService {
       );
     newRules.push(globalAdminAddMembers);
 
-    const inviteMembersCriterias: ICredentialDefinition[] =
-      await this.roleSetService.getCredentialsForRoleWithParents(
-        roleSet,
-        CommunityRoleType.ADMIN,
-        spaceSettings
-      );
-    if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
-      // use the member credential to create subspace admin credential
-      const subspaceAdminCredential: ICredentialDefinition =
-        await this.roleSetService.getCredentialForRole(
-          roleSet,
-          CommunityRoleType.MEMBER
+    if (roleSet.type === RoleSetType.SPACE) {
+      if (!spaceSettings) {
+        throw new RelationshipNotFoundException(
+          `Missing space settings that are requried for role sets of type Space: ${roleSet.id}`,
+          LogContext.ROLES
         );
-      subspaceAdminCredential.type =
-        AuthorizationCredential.SPACE_SUBSPACE_ADMIN;
-      inviteMembersCriterias.push(subspaceAdminCredential);
+      }
+
+      const inviteMembersCriterias: ICredentialDefinition[] =
+        await this.roleSetService.getCredentialsForRoleWithParents(
+          roleSet,
+          RoleType.ADMIN,
+          spaceSettings
+        );
+      if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
+        // use the member credential to create subspace admin credential
+        const subspaceAdminCredential: ICredentialDefinition =
+          await this.roleSetService.getCredentialForRole(
+            roleSet,
+            RoleType.MEMBER
+          );
+        subspaceAdminCredential.type =
+          AuthorizationCredential.SPACE_SUBSPACE_ADMIN;
+        inviteMembersCriterias.push(subspaceAdminCredential);
+      }
+      const spaceAdminsInvite =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.COMMUNITY_INVITE,
+            AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT,
+          ],
+          inviteMembersCriterias,
+          CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS
+        );
+      spaceAdminsInvite.cascade = false;
+      newRules.push(spaceAdminsInvite);
     }
-    const spaceAdminsInvite =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.COMMUNITY_INVITE,
-          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT,
-        ],
-        inviteMembersCriterias,
-        CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS
-      );
-    spaceAdminsInvite.cascade = false;
-    newRules.push(spaceAdminsInvite);
 
     //
     const updatedAuthorization =
@@ -289,7 +301,7 @@ export class RoleSetAuthorizationService {
     const parentRoleSetCredential =
       await this.roleSetService.getDirectParentCredentialForRole(
         roleSet,
-        CommunityRoleType.MEMBER
+        RoleType.MEMBER
       );
 
     // Allow member of the parent roleSet to Apply
@@ -322,7 +334,7 @@ export class RoleSetAuthorizationService {
     const adminCredentials =
       await this.roleSetService.getCredentialsForRoleWithParents(
         roleSet,
-        CommunityRoleType.ADMIN,
+        RoleType.ADMIN,
         spaceSettings
       );
 

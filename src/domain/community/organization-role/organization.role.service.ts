@@ -5,13 +5,13 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { IUser } from '@domain/community/user/user.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { OrganizationRole } from '@common/enums/organization.role';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { AssignOrganizationRoleToUserInput } from './dto/organization.role.dto.assign.role.to.user';
-import { RemoveOrganizationRoleFromUserInput } from './dto/organization.role.dto.remove.role.from.user';
 import { IOrganization } from '../organization/organization.interface';
 import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
+import { RoleType } from '@common/enums/role.type';
+import { RemoveOrganizationRoleFromUserInput } from './dto/organization.role.dto.remove.role.from.user';
+import { AssignOrganizationRoleToUserInput } from './dto/organization.role.dto.assign.role.to.user';
 
 @Injectable()
 export class OrganizationRoleService {
@@ -26,11 +26,11 @@ export class OrganizationRoleService {
     // Start by removing all issued org owner credentials in case this causes issues
     const owners = await this.getOwners(organization);
     for (const owner of owners) {
-      await this.removeOrganizationRoleFromUser(
+      await this.removeRoleFromUser(
         {
           userID: owner.id,
           organizationID: organization.id,
-          role: OrganizationRole.OWNER,
+          role: RoleType.OWNER,
         },
         false
       );
@@ -39,26 +39,26 @@ export class OrganizationRoleService {
     // Remove all issued membership credentials
     const members = await this.getAssociates(organization);
     for (const member of members) {
-      await this.removeOrganizationRoleFromUser({
+      await this.removeRoleFromUser({
         userID: member.id,
         organizationID: organization.id,
-        role: OrganizationRole.ASSOCIATE,
+        role: RoleType.ASSOCIATE,
       });
     }
 
     // Remove all issued org admin credentials
     const admins = await this.getAdmins(organization);
     for (const admin of admins) {
-      await this.removeOrganizationRoleFromUser({
+      await this.removeRoleFromUser({
         userID: admin.id,
         organizationID: organization.id,
-        role: OrganizationRole.ADMIN,
+        role: RoleType.ADMIN,
       });
     }
   }
 
   private getCredentialForRole(
-    role: OrganizationRole,
+    role: RoleType,
     organizationID: string
   ): ICredentialDefinition {
     const result: ICredentialDefinition = {
@@ -66,13 +66,13 @@ export class OrganizationRoleService {
       resourceID: organizationID,
     };
     switch (role) {
-      case OrganizationRole.ASSOCIATE:
+      case RoleType.ASSOCIATE:
         result.type = AuthorizationCredential.ORGANIZATION_ASSOCIATE;
         break;
-      case OrganizationRole.ADMIN:
+      case RoleType.ADMIN:
         result.type = AuthorizationCredential.ORGANIZATION_ADMIN;
         break;
-      case OrganizationRole.OWNER:
+      case RoleType.OWNER:
         result.type = AuthorizationCredential.ORGANIZATION_OWNER;
         break;
 
@@ -119,10 +119,10 @@ export class OrganizationRoleService {
   async getMyRoles(
     agentInfo: AgentInfo,
     organization: IOrganization
-  ): Promise<OrganizationRole[]> {
+  ): Promise<RoleType[]> {
     // Note: this code can clearly be optimized so that we hit the db once, but
     // for a first pass this should be ok
-    const result: OrganizationRole[] = [];
+    const result: RoleType[] = [];
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
 
     const isAdmin = await this.agentService.hasValidCredential(agent.id, {
@@ -137,14 +137,14 @@ export class OrganizationRoleService {
       type: AuthorizationCredential.ORGANIZATION_OWNER,
       resourceID: organization.id,
     });
-    if (isOwner) result.push(OrganizationRole.OWNER);
-    if (isAdmin) result.push(OrganizationRole.ADMIN);
-    if (isAssociate) result.push(OrganizationRole.ASSOCIATE);
+    if (isOwner) result.push(RoleType.OWNER);
+    if (isAdmin) result.push(RoleType.ADMIN);
+    if (isAssociate) result.push(RoleType.ASSOCIATE);
 
     return result;
   }
 
-  async assignOrganizationRoleToUser(
+  async assignRoleToUser(
     assignData: AssignOrganizationRoleToUserInput
   ): Promise<IUser> {
     const userID = assignData.userID;
@@ -167,7 +167,7 @@ export class OrganizationRoleService {
     return await this.userLookupService.getUserWithAgent(userID);
   }
 
-  async removeOrganizationRoleFromUser(
+  async removeRoleFromUser(
     removeData: RemoveOrganizationRoleFromUserInput,
     validationRoles = true
   ): Promise<IUser> {
@@ -181,7 +181,7 @@ export class OrganizationRoleService {
     );
 
     if (validationRoles) {
-      if (removeData.role === OrganizationRole.OWNER) {
+      if (removeData.role === RoleType.OWNER) {
         const orgOwners = await this.userLookupService.usersWithCredentials({
           type: AuthorizationCredential.ORGANIZATION_OWNER,
           resourceID: organizationID,
