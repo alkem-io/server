@@ -1,7 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
@@ -16,20 +15,22 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { ApplicationService } from '@domain/access/application/application.service';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { PlatformRoleService } from '@platform/platform.role/platform.role.service';
-import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { IOrganization } from '@domain/community/organization';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleType } from '@common/enums/role.type';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { RelationshipNotFoundException } from '@common/exceptions';
 
 export class RegistrationService {
   constructor(
     private accountService: AccountService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
+    private organizationLookupService: OrganizationLookupService,
     private organizationService: OrganizationService,
-    private organizationRoleService: OrganizationRoleService,
     private platformInvitationService: PlatformInvitationService,
     private platformRoleService: PlatformRoleService,
     private invitationAuthorizationService: InvitationAuthorizationService,
@@ -56,8 +57,15 @@ export class RegistrationService {
   async assignUserToOrganizationByDomain(user: IUser): Promise<boolean> {
     const userEmailDomain = getEmailDomain(user.email);
 
-    const org =
-      await this.organizationService.getOrganizationByDomain(userEmailDomain);
+    const org = await this.organizationLookupService.getOrganizationByDomain(
+      userEmailDomain,
+      {
+        relations: {
+          roleSet: true,
+          verification: true,
+        },
+      }
+    );
 
     if (!org) {
       this.logger.verbose?.(
@@ -79,9 +87,14 @@ export class RegistrationService {
       return false;
     }
 
-    const verification = await this.organizationService.getVerification(org);
+    if (!org.verification || !org.roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load roleSet of Verification for Organization for matching user domain ${org.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     if (
-      verification.status !==
+      org.verification.status !==
       OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
     ) {
       this.logger.verbose?.(
@@ -91,11 +104,11 @@ export class RegistrationService {
       return false;
     }
 
-    await this.organizationRoleService.assignRoleToUser({
-      organizationID: org.id,
-      userID: user.id,
-      role: RoleType.ASSOCIATE,
-    });
+    await this.roleSetService.assignUserToRole(
+      org.roleSet,
+      RoleType.ASSOCIATE,
+      user.id
+    );
 
     this.logger.verbose?.(
       `User ${user.id} successfully added to Organization '${org.id}'`,
@@ -194,7 +207,9 @@ export class RegistrationService {
     }
 
     let organization =
-      await this.organizationService.getOrganizationOrFail(organizationID);
+      await this.organizationLookupService.getOrganizationOrFail(
+        organizationID
+      );
     const account = await this.organizationService.getAccount(organization);
 
     organization =

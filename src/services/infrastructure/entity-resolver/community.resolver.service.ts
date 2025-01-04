@@ -25,6 +25,27 @@ export class CommunityResolverService {
     private entityManager: EntityManager
   ) {}
 
+  public async getLevelZeroSpaceIdForRoleSet(
+    roleSetID: string
+  ): Promise<string> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          roleSet: {
+            id: roleSetID,
+          },
+        },
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for given roleSet id: ${roleSetID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return space.levelZeroSpaceID;
+  }
+
   public async getLevelZeroSpaceIdForCommunity(
     communityID: string
   ): Promise<string> {
@@ -102,11 +123,11 @@ export class CommunityResolverService {
     return space.levelZeroSpaceID;
   }
 
-  private async getAccountForCommunityOrFail(
-    communityID: string
+  private async getAccountForRoleSetOrFail(
+    roleSetID: string
   ): Promise<IAccount> {
     const levelZeroSpaceID =
-      await this.getLevelZeroSpaceIdForCommunity(communityID);
+      await this.getLevelZeroSpaceIdForRoleSet(roleSetID);
     const levelZeroSpace = await this.entityManager.findOne(Space, {
       where: {
         id: levelZeroSpaceID,
@@ -118,18 +139,18 @@ export class CommunityResolverService {
 
     if (!levelZeroSpace || !levelZeroSpace.account) {
       throw new EntityNotFoundException(
-        `Unable to find Account for given community id: ${communityID}`,
+        `Unable to find Account for given community id: ${roleSetID}`,
         LogContext.COMMUNITY
       );
     }
     return levelZeroSpace.account;
   }
 
-  public async isCommunityAccountMatchingVcAccount(
-    communityID: string,
+  public async isRoleSetAccountMatchingVcAccount(
+    roleSetID: string,
     virtualContributorID: string
   ): Promise<boolean> {
-    const account = await this.getAccountForCommunityOrFail(communityID);
+    const account = await this.getAccountForRoleSetOrFail(roleSetID);
 
     const virtualContributorMatches = await this.entityManager.count(
       VirtualContributor,

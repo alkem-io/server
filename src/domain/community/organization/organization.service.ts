@@ -42,7 +42,6 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { OrganizationRoleService } from '../organization-role/organization.role.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
@@ -61,6 +60,7 @@ import { organizationRoles } from './definitions/organization.roles';
 import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
 import { RoleType } from '@common/enums/role.type';
 import { organizationApplicationForm } from './definitions/organization.role.application.form';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 @Injectable()
 export class OrganizationService {
@@ -69,7 +69,6 @@ export class OrganizationService {
     private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
-    private organizationRoleService: OrganizationRoleService,
     private organizationSettingsService: OrganizationSettingsService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
@@ -158,21 +157,36 @@ export class OrganizationService {
       await this.organizationVerificationService.createOrganizationVerification(
         { organizationID: savedOrg.id }
       );
+
+    organization = await this.getOrganizationOrFail(organization.id, {
+      relations: {
+        roleSet: true,
+      },
+    });
+    if (!organization.roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load roleSet during org creation: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     // Assign the creating agent as both a member and admin
     if (agentInfo) {
-      await this.organizationRoleService.assignRoleToUser({
-        organizationID: savedOrg.id,
-        userID: agentInfo.userID,
-        role: RoleType.ASSOCIATE,
-      });
-      await this.organizationRoleService.assignRoleToUser({
-        organizationID: savedOrg.id,
-        userID: agentInfo.userID,
-        role: RoleType.ADMIN,
-      });
-    }
+      await this.roleSetService.assignUserToRole(
+        organization.roleSet,
+        RoleType.ASSOCIATE,
+        agentInfo.userID,
+        agentInfo,
+        false
+      );
 
-    organization = await this.save(organization);
+      await this.roleSetService.assignUserToRole(
+        organization.roleSet,
+        RoleType.ADMIN,
+        agentInfo.userID,
+        agentInfo,
+        false
+      );
+    }
 
     const userID = agentInfo ? agentInfo.userID : '';
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
@@ -334,7 +348,7 @@ export class OrganizationService {
       );
     }
 
-    await this.organizationRoleService.removeAllRoles(organization);
+    await this.roleSetService.removeAllRoleAssignments(organization.roleSet);
 
     await this.profileService.deleteProfile(organization.profile.id);
 
@@ -461,9 +475,13 @@ export class OrganizationService {
 
   async getMetrics(organization: IOrganization): Promise<INVP[]> {
     const activity: INVP[] = [];
+    const roleSet = await this.getRoleSet(organization);
 
-    const membersCount =
-      await this.organizationRoleService.getMembersCount(organization);
+    const membersCount = await this.roleSetService.countContributorsPerRole(
+      roleSet,
+      RoleType.ASSOCIATE,
+      CommunityContributorType.USER
+    );
     const membersTopic = new NVP('associates', membersCount.toString());
     membersTopic.id = `associates-${organization.id}`;
     activity.push(membersTopic);
@@ -585,11 +603,6 @@ export class OrganizationService {
       );
     }
     return organization.verification;
-  }
-
-  async getOrganizationByDomain(domain: string): Promise<IOrganization | null> {
-    const org = await this.organizationRepository.findOneBy({ domain: domain });
-    return org;
   }
 
   public async createOrganizationNameID(displayName: string): Promise<string> {

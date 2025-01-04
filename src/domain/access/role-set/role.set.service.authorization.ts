@@ -372,6 +372,8 @@ export class RoleSetAuthorizationService {
   ): IAuthorizationPolicy {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
+    // This works as the ID of the user to be removed is used in the credential rule,
+    // and only that actual user will have the credential for self management with that IR
     const userSelfRemovalRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.GRANT],

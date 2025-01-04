@@ -67,6 +67,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -116,7 +117,7 @@ export class RoleSetResolverMutations {
       agentInfo,
       roleSet.authorization,
       requiredPrivilege,
-      `assign user community role: ${roleSet.id}`
+      `assign role to User: ${roleSet.id}`
     );
 
     await this.roleSetService.assignUserToRole(
@@ -186,8 +187,8 @@ export class RoleSetResolverMutations {
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === RoleType.MEMBER) {
       const sameAccount =
-        await this.roleSetService.isCommunityAccountMatchingVcAccount(
-          roleSet.id,
+        await this.roleSetService.isRoleSetAccountMatchingVcAccount(
+          roleSet,
           roleData.contributorID
         );
       if (sameAccount) {
@@ -236,20 +237,41 @@ export class RoleSetResolverMutations {
       roleData.roleSetID
     );
 
-    // Extend the authorization policy with a credential rule to assign the GRANT privilege
-    // to the user specified in the incoming mutation. Then if it is the same user as is logged
-    // in then the user will have the GRANT privilege + so can carry out the mutation
-    const extendedAuthorization =
-      this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
-        roleSet,
-        roleData.contributorID
-      );
+    let extendedAuthorization = roleSet.authorization;
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        if (roleData.role === RoleType.MEMBER) {
+          // Extend the authorization policy with a credential rule to assign the GRANT privilege
+          // to the user specified in the incoming mutation. Then if it is the same user as is logged
+          // in then the user will have the GRANT privilege + so can carry out the mutation
+          extendedAuthorization =
+            this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+              roleSet,
+              roleData.contributorID
+            );
+        }
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        if (roleData.role === RoleType.ASSOCIATE) {
+          // Extend the authorization policy with a credential rule to assign the GRANT privilege
+          // to the user specified in the incoming mutation. Then if it is the same user as is logged
+          // in then the user will have the GRANT privilege + so can carry out the mutation
+          extendedAuthorization =
+            this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+              roleSet,
+              roleData.contributorID
+            );
+          break;
+        }
+      }
+    }
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       extendedAuthorization,
       AuthorizationPrivilege.GRANT,
-      `remove user from community role: ${roleSet.id}`
+      `remove role from User: ${roleSet.id}`
     );
 
     await this.roleSetService.removeUserFromRole(

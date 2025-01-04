@@ -59,6 +59,7 @@ import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.da
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class RoleSetService {
@@ -644,34 +645,39 @@ export class RoleSetService {
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ) {
-    this.logger.verbose?.(
-      `Trigger new member events: ${triggerNewMemberEvents}`,
-      LogContext.ROLES
-    );
-    if (role === RoleType.MEMBER) {
-      const communication =
-        await this.communityResolverService.getCommunicationForRoleSet(
-          roleSet.id
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        this.logger.verbose?.(
+          `Trigger new member events: ${triggerNewMemberEvents}`,
+          LogContext.ROLES
         );
-      this.communityCommunicationService.addMemberToCommunication(
-        communication,
-        contributor
-      );
-
-      if (agentInfo) {
-        await this.roleSetEventsService.registerCommunityNewMemberActivity(
-          roleSet,
-          contributor,
-          agentInfo
-        );
-
-        if (triggerNewMemberEvents) {
-          await this.roleSetEventsService.processCommunityNewMemberEvents(
-            roleSet,
-            agentInfo,
+        if (role === RoleType.MEMBER) {
+          const communication =
+            await this.communityResolverService.getCommunicationForRoleSet(
+              roleSet.id
+            );
+          this.communityCommunicationService.addMemberToCommunication(
+            communication,
             contributor
           );
+
+          if (agentInfo) {
+            await this.roleSetEventsService.registerCommunityNewMemberActivity(
+              roleSet,
+              contributor,
+              agentInfo
+            );
+
+            if (triggerNewMemberEvents) {
+              await this.roleSetEventsService.processCommunityNewMemberEvents(
+                roleSet,
+                agentInfo,
+                contributor
+              );
+            }
+          }
         }
+        break;
       }
     }
   }
@@ -721,11 +727,14 @@ export class RoleSetService {
       agentInfo,
       triggerNewMemberEvents
     );
-    // TO: THIS BREAKS THE DECOUPLING
-    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
-      roleSet.id
-    );
-    this.aiServerAdapter.ensureContextIsLoaded(space.id);
+    if (roleSet.type === RoleSetType.SPACE) {
+      // TO: THIS BREAKS THE DECOUPLING
+      const space =
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          roleSet.id
+        );
+      this.aiServerAdapter.ensureContextIsLoaded(space.id);
+    }
     return virtualContributor;
   }
 
@@ -864,20 +873,20 @@ export class RoleSetService {
     return virtualContributor;
   }
 
-  public async isCommunityAccountMatchingVcAccount(
-    roleSetID: string,
+  public async isRoleSetAccountMatchingVcAccount(
+    roleSet: IRoleSet,
     virtualContributorID: string
   ): Promise<boolean> {
-    const community =
-      await this.communityResolverService.getCommunityForRoleSet(roleSetID);
-
-    return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
-      community.id,
+    if (roleSet.type !== RoleSetType.SPACE) {
+      return false;
+    }
+    return await this.communityResolverService.isRoleSetAccountMatchingVcAccount(
+      roleSet.id,
       virtualContributorID
     );
   }
 
-  private async validateUserCommunityPolicy(
+  private async validateUserContributorPolicy(
     roleSet: IRoleSet,
     roleType: RoleType,
     action: CommunityContributorsUpdateType
@@ -911,7 +920,7 @@ export class RoleSetService {
     }
   }
 
-  private async validateOrganizationCommunityPolicy(
+  private async validateOrganizationContributorPolicy(
     roleSet: IRoleSet,
     roleType: RoleType,
     action: CommunityContributorsUpdateType
@@ -946,17 +955,21 @@ export class RoleSetService {
     }
   }
 
-  private async validateCommunityPolicyLimits(
+  private async validateContributorPolicyLimits(
     roleSet: IRoleSet,
     roleType: RoleType,
     action: CommunityContributorsUpdateType,
     contributorType: CommunityContributorType
   ) {
     if (contributorType === CommunityContributorType.USER)
-      await this.validateUserCommunityPolicy(roleSet, roleType, action);
+      await this.validateUserContributorPolicy(roleSet, roleType, action);
 
     if (contributorType === CommunityContributorType.ORGANIZATION)
-      await this.validateOrganizationCommunityPolicy(roleSet, roleType, action);
+      await this.validateOrganizationContributorPolicy(
+        roleSet,
+        roleType,
+        action
+      );
   }
 
   public async assignContributorAgentToRole(
@@ -965,7 +978,7 @@ export class RoleSetService {
     agent: IAgent,
     contributorType: CommunityContributorType
   ): Promise<IAgent> {
-    await this.validateCommunityPolicyLimits(
+    await this.validateContributorPolicyLimits(
       roleSet,
       roleType,
       CommunityContributorsUpdateType.ASSIGN,
@@ -1042,7 +1055,7 @@ export class RoleSetService {
     validatePolicyLimits: boolean
   ): Promise<IAgent> {
     if (validatePolicyLimits) {
-      await this.validateCommunityPolicyLimits(
+      await this.validateContributorPolicyLimits(
         roleSet,
         roleType,
         CommunityContributorsUpdateType.REMOVE,

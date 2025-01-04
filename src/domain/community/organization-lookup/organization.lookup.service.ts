@@ -95,6 +95,21 @@ export class OrganizationLookupService {
     return orgContributorsCount;
   }
 
+  async getOrganizationByDomain(
+    domain: string,
+    options?: FindOneOptions<Organization>
+  ): Promise<IOrganization | null> {
+    const organization: IOrganization | null = await this.entityManager.findOne(
+      Organization,
+      {
+        ...options,
+        where: { ...options?.where, domain: domain },
+      }
+    );
+
+    return organization;
+  }
+
   async getOrganizationByNameIdOrFail(
     organizationNameID: string,
     options?: FindOneOptions<Organization>
