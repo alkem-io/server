@@ -27,6 +27,7 @@ import { PlatformInvitationAuthorizationService } from '@platform/invitation/pla
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -39,7 +40,8 @@ export class PlatformAuthorizationService {
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private libraryAuthorizationService: LibraryAuthorizationService,
     private licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
-    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService
+    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
+    private roleSetAuthorizationService: RoleSetAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
@@ -52,6 +54,7 @@ export class PlatformAuthorizationService {
         storageAggregator: true,
         licensingFramework: true,
         templatesManager: true,
+        roleSet: true,
       },
     });
 
@@ -62,7 +65,8 @@ export class PlatformAuthorizationService {
       !platform.forum ||
       !platform.storageAggregator ||
       !platform.licensingFramework ||
-      !platform.templatesManager
+      !platform.templatesManager ||
+      !platform.roleSet
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
@@ -95,6 +99,15 @@ export class PlatformAuthorizationService {
         platform.authorization
       );
     updatedAuthorizations.push(...templatesManagerAuthorizations);
+
+    const roleSetAuthorizations =
+      await this.roleSetAuthorizationService.applyAuthorizationPolicy(
+        platform.roleSet.id,
+        platform.authorization,
+        false,
+        false
+      );
+    updatedAuthorizations.push(...roleSetAuthorizations);
 
     for (const platformInvitation of platform.platformInvitations) {
       const updatedInvitation =

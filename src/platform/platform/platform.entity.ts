@@ -8,6 +8,7 @@ import { PlatformInvitation } from '@platform/invitation/platform.invitation.ent
 import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
 import { LicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
@@ -68,4 +69,12 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   })
   @JoinColumn()
   guidanceVirtualContributor?: VirtualContributor;
+
+  @OneToOne(() => RoleSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  roleSet!: RoleSet;
 }

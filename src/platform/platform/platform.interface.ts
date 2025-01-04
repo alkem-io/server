@@ -1,3 +1,4 @@
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -21,4 +22,5 @@ export abstract class IPlatform extends IAuthorizable {
   licensingFramework?: ILicensingFramework;
   platformInvitations!: IPlatformInvitation[];
   templatesManager?: ITemplatesManager;
+  roleSet!: IRoleSet;
 }

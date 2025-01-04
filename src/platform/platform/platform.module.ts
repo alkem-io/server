@@ -17,6 +17,7 @@ import { ForumModule } from '@platform/forum/forum.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
     LicensingFrameworkModule,
     PlatformInvitationModule,
     TemplatesManagerModule,
+    RoleSetModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [
