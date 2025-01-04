@@ -10,7 +10,7 @@ import { RoleType } from '@common/enums/role.type';
 import { IRole } from '../role/role.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
 
 // Resolver for fields on RoleSet that are available without READ access
 @Resolver(() => IRoleSet)
@@ -76,7 +76,7 @@ export class RoleSetResolverFieldsPublic {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('myRolesImplicit', () => [CommunityRoleImplicit], {
+  @ResolveField('myRolesImplicit', () => [RoleSetRoleImplicit], {
     nullable: false,
     description:
       'The implicit roles on this community for the currently logged in user.',
@@ -84,7 +84,7 @@ export class RoleSetResolverFieldsPublic {
   async myRolesImplicit(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() roleSet: IRoleSet
-  ): Promise<CommunityRoleImplicit[]> {
+  ): Promise<RoleSetRoleImplicit[]> {
     return this.roleSetService.getCommunityImplicitRoles(agentInfo, roleSet);
   }
 }

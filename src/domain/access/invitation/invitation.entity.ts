@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IInvitation } from './invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ENUM_LENGTH, MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { RoleType } from '@common/enums/role.type';
@@ -30,7 +30,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   invitedToParent!: boolean;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  contributorType!: CommunityContributorType;
+  contributorType!: RoleSetContributorType;
 
   @ManyToOne(() => RoleSet, manager => manager.invitations, {
     eager: false,

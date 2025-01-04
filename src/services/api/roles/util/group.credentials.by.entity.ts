@@ -1,9 +1,9 @@
 import { ICredential } from '@src/domain';
 import { AuthorizationCredential } from '@common/enums';
 import { RoleType } from '@common/enums/role.type';
-import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
 
-export type CredentialRole = RoleType | CommunityRoleImplicit;
+export type CredentialRole = RoleType | RoleSetRoleImplicit;
 
 export type EntityCredentialType = 'spaces' | 'organizations' | 'groups';
 
@@ -77,7 +77,7 @@ const credentialTypeToRole = (
     [AuthorizationCredential.SPACE_LEAD]: RoleType.LEAD,
     [AuthorizationCredential.SPACE_MEMBER]: RoleType.MEMBER,
     [AuthorizationCredential.SPACE_SUBSPACE_ADMIN]:
-      CommunityRoleImplicit.SUBSPACE_ADMIN,
+      RoleSetRoleImplicit.SUBSPACE_ADMIN,
 
     [AuthorizationCredential.ORGANIZATION_ADMIN]: RoleType.ADMIN,
     [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: RoleType.ASSOCIATE,

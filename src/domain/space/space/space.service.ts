@@ -55,7 +55,7 @@ import { RoleType } from '@common/enums/role.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
@@ -1054,7 +1054,7 @@ export class SpaceService {
     space: ISpace,
     contributor: IContributor,
     role: RoleType,
-    type: CommunityContributorType
+    type: RoleSetContributorType
   ) {
     if (!space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(

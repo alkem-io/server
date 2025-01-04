@@ -12,7 +12,7 @@ import {
 import { LogContext } from '@common/enums/logging.context';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CreateProfileInput } from '@domain/common/profile/dto';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
@@ -180,13 +180,13 @@ export class ContributorService {
     const type = this.getContributorType(contributor);
     let contributorWithRelations: IContributor | null = null;
     switch (type) {
-      case CommunityContributorType.USER:
+      case RoleSetContributorType.USER:
         contributorWithRelations = await this.entityManager.findOne(User, {
           ...options,
           where: { ...options?.where, id: contributor.id },
         });
         break;
-      case CommunityContributorType.ORGANIZATION:
+      case RoleSetContributorType.ORGANIZATION:
         contributorWithRelations = await this.entityManager.findOne(
           Organization,
           {
@@ -195,7 +195,7 @@ export class ContributorService {
           }
         );
         break;
-      case CommunityContributorType.VIRTUAL:
+      case RoleSetContributorType.VIRTUAL:
         contributorWithRelations = await this.entityManager.findOne(
           VirtualContributor,
           {

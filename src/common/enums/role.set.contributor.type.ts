@@ -1,11 +1,11 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum CommunityContributorType {
+export enum RoleSetContributorType {
   USER = 'user',
   ORGANIZATION = 'organization',
   VIRTUAL = 'virtual',
 }
 
-registerEnumType(CommunityContributorType, {
-  name: 'CommunityContributorType',
+registerEnumType(RoleSetContributorType, {
+  name: 'RoleSetContributorType',
 });

@@ -60,7 +60,7 @@ import { organizationRoles } from './definitions/organization.roles';
 import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
 import { RoleType } from '@common/enums/role.type';
 import { organizationApplicationForm } from './definitions/organization.role.application.form';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 
 @Injectable()
 export class OrganizationService {
@@ -480,7 +480,7 @@ export class OrganizationService {
     const membersCount = await this.roleSetService.countContributorsPerRole(
       roleSet,
       RoleType.ASSOCIATE,
-      CommunityContributorType.USER
+      RoleSetContributorType.USER
     );
     const membersTopic = new NVP('associates', membersCount.toString());
     membersTopic.id = `associates-${organization.id}`;

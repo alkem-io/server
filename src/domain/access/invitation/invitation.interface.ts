@@ -1,7 +1,7 @@
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleType } from '@common/enums/role.type';
 
@@ -31,11 +31,11 @@ export class IInvitation extends IAuthorizable {
   })
   invitedToParent!: boolean;
 
-  @Field(() => CommunityContributorType, {
+  @Field(() => RoleSetContributorType, {
     nullable: false,
     description: 'The type of contributor that is invited.',
   })
-  contributorType!: CommunityContributorType;
+  contributorType!: RoleSetContributorType;
 
   @Field(() => RoleType, {
     nullable: true,
