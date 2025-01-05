@@ -172,7 +172,7 @@ export class PlatformService {
     return licensing;
   }
 
-  async getRoleSetOrFail(platformInput: IPlatform): Promise<IRoleSet | never> {
+  async getRoleSetOrFail(platformID: string): Promise<IRoleSet | never> {
     const platform = await this.getPlatformOrFail({
       relations: {
         roleSet: true,
@@ -182,7 +182,7 @@ export class PlatformService {
 
     if (!roleSet) {
       throw new EntityNotFoundException(
-        `Unable to find RoleSet for Platform: ${platformInput.id}`,
+        `Unable to find RoleSet for Platform: ${platformID}`,
         LogContext.PLATFORM
       );
     }

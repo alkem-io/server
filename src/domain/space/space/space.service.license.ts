@@ -71,9 +71,15 @@ export class SpaceLicenseService {
 
     updatedLicenses.push(space.license);
 
+    if (!space.license.entitlements) {
+      throw new RelationshipNotFoundException(
+        `Unable to load license entitlements on Spac: ${space.id} `,
+        LogContext.ACCOUNT
+      );
+    }
     const roleSetLicenses = await this.roleSetLicenseService.applyLicensePolicy(
       space.community.roleSet.id,
-      space.license
+      space.license.entitlements
     );
     updatedLicenses.push(...roleSetLicenses);
 

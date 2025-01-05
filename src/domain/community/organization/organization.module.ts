@@ -22,6 +22,7 @@ import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.cr
 import { OrganizationSettingsModule } from '../organization.settings/organization.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { OrganizationLicenseService } from './organization.service.license';
 
 @Module({
   imports: [
@@ -48,8 +49,13 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     OrganizationAuthorizationService,
     OrganizationResolverQueries,
     OrganizationResolverMutations,
+    OrganizationLicenseService,
     OrganizationResolverFields,
   ],
-  exports: [OrganizationService, OrganizationAuthorizationService],
+  exports: [
+    OrganizationService,
+    OrganizationAuthorizationService,
+    OrganizationLicenseService,
+  ],
 })
 export class OrganizationModule {}

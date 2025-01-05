@@ -18,6 +18,7 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { PlatformLicenseService } from './platform.service.license';
 
 @Module({
   imports: [
@@ -41,7 +42,12 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     PlatformResolverFields,
     PlatformService,
     PlatformAuthorizationService,
+    PlatformLicenseService,
   ],
-  exports: [PlatformService, PlatformAuthorizationService],
+  exports: [
+    PlatformService,
+    PlatformAuthorizationService,
+    PlatformLicenseService,
+  ],
 })
 export class PlatformModule {}
