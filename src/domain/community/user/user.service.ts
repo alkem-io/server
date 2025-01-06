@@ -71,6 +71,7 @@ import { PreferenceType } from '@common/enums/preference.type';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
+import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
@@ -84,6 +85,7 @@ export class UserService {
     private roomLookupService: RoomLookupService,
     private namingService: NamingService,
     private agentService: AgentService,
+    private agentInfoCacheService: AgentInfoCacheService,
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
@@ -114,6 +116,7 @@ export class UserService {
     await this.cacheManager.del(
       this.getUserCommunicationIdCacheKey(user.communicationID)
     );
+    await this.agentInfoCacheService.deleteAgentInfoFromCache(user.email);
   }
 
   async createUser(
