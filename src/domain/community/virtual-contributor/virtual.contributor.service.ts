@@ -201,7 +201,10 @@ export class VirtualContributorService {
     const virtual = await this.getVirtualContributorOrFail(
       virtualContributorData.ID,
       {
-        relations: { profile: true },
+        relations: {
+          profile: true,
+          knowledgeBase: true,
+        },
       }
     );
 
@@ -235,6 +238,11 @@ export class VirtualContributorService {
 
     if (virtualContributorData.searchVisibility) {
       virtual.searchVisibility = virtualContributorData.searchVisibility;
+    }
+
+    if (virtualContributorData.knowledgeBaseData?.profile?.description) {
+      virtual.knowledgeBase.profile.description =
+        virtualContributorData.knowledgeBaseData.profile?.description;
     }
 
     return await this.save(virtual);
