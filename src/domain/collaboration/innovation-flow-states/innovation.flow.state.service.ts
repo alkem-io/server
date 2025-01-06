@@ -65,10 +65,7 @@ export class InnovationFlowStatesService {
     // Avoid any characters JSON related:
     // This validation is also performed on the client: domain/collaboration/InnovationFlow/InnovationFlowDragNDropEditor/InnovationFlowStateForm.tsx
     // Keep them in sync consistently
-    if (
-      stateNames.filter(name => name.match(/^[^[\],'"{}\\]+$/)).length !==
-      stateNames.length
-    ) {
+    if (stateNames.some(name => !/^[^[\],'"{}\\]+$/.test(name))) {
       throw new ValidationException(
         `Invalid characters found on flow state: ${stateNames}`,
         LogContext.INNOVATION_FLOW
