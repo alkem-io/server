@@ -39,6 +39,10 @@ export class AgentInfoCacheService {
     );
   }
 
+  public async deleteAgentInfoFromCache(email: string): Promise<any> {
+    return await this.cacheManager.del(this.getAgentInfoCacheKey(email));
+  }
+
   public async setAgentInfoCache(agentInfo: AgentInfo): Promise<AgentInfo> {
     const cacheKey = this.getAgentInfoCacheKey(agentInfo.email);
     return await this.cacheManager.set<AgentInfo>(cacheKey, agentInfo, {
