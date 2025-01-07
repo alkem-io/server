@@ -113,7 +113,7 @@ export class PlatformRoleResolverMutations {
   @Mutation(() => IUser, {
     description: 'Removes a User from a Role on the Platform.',
   })
-  async removeRoleFromUser(
+  async removePlatformRoleFromUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveRoleOnRoleSetFromUserInput
   ): Promise<IUser> {
