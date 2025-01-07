@@ -16,9 +16,9 @@ export abstract class IRoleSet extends IAuthorizable {
   @Field(() => RoleName, {
     nullable: false,
     description:
-      'The CommunityRole that acts as the entry Role for the RoleSet, so other roles potentially require it.',
+      'The Role that acts as the entry Role for the RoleSet, so other roles potentially require it.',
   })
-  entryRole!: RoleName;
+  entryRoleType!: RoleName;
 
   applications?: IApplication[];
   invitations?: IInvitation[];

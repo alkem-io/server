@@ -94,7 +94,7 @@ export class RoleSetService {
     roleSet.applications = [];
     roleSet.invitations = [];
     roleSet.platformInvitations = [];
-    roleSet.entryRole = roleSetData.entryRole;
+    roleSet.entryRoleType = roleSetData.entryRole;
 
     roleSet.parentRoleSet = roleSetData.parentRoleSet;
 
@@ -1537,10 +1537,12 @@ export class RoleSetService {
 
   public async getEntryRoleDefinition(roleSet: IRoleSet): Promise<IRole> {
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
-    const entryRole = roleDefinitions.find(rd => rd.type === roleSet.entryRole);
+    const entryRole = roleDefinitions.find(
+      rd => rd.type === roleSet.entryRoleType
+    );
     if (!entryRole) {
       throw new RelationshipNotFoundException(
-        `Unable to find entry level Role of type ${roleSet.entryRole} for RoleSet: ${roleSet.id}`,
+        `Unable to find entry level Role of type ${roleSet.entryRoleType} for RoleSet: ${roleSet.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -1578,7 +1580,7 @@ export class RoleSetService {
     roleSet: IRoleSet,
     roleType: RoleName
   ): Promise<boolean> {
-    const isEntryRole = roleSet.entryRole === roleType;
+    const isEntryRole = roleSet.entryRoleType === roleType;
     return isEntryRole;
   }
 }
