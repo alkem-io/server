@@ -33,6 +33,9 @@ import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.s
 import { IUser } from '@domain/community/user/user.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AccountType } from '@common/enums/account.type';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -52,6 +55,7 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
+        MockContributorLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
         MockEntityManagerProvider,
@@ -206,6 +210,24 @@ describe('RolesService', () => {
   });
 });
 
+const spaceSettings = {
+  privacy: {
+    mode: SpacePrivacyMode.PUBLIC,
+    allowPlatformSupportAsAdmin: false,
+  },
+  membership: {
+    policy: CommunityMembershipPolicy.OPEN,
+    trustedOrganizations: [],
+    allowSubspaceAdminsToInviteMembers: false,
+  },
+  collaboration: {
+    inheritMembershipRights: true,
+    allowMembersToCreateSubspaces: true,
+    allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
+  },
+};
+
 const getSpaceRoleResultMock = ({
   id,
   roles,
@@ -226,7 +248,7 @@ const getSpaceRoleResultMock = ({
     roles,
     space: {
       id,
-      settingsStr: JSON.stringify({}),
+      settings: spaceSettings,
       rowId: parseInt(id),
       nameID: `space-${id}`,
       levelZeroSpaceID: '',

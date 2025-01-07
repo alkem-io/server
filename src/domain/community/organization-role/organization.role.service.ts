@@ -11,14 +11,14 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { AssignOrganizationRoleToUserInput } from './dto/organization.role.dto.assign.role.to.user';
 import { RemoveOrganizationRoleFromUserInput } from './dto/organization.role.dto.remove.role.from.user';
 import { IOrganization } from '../organization/organization.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
 
 @Injectable()
 export class OrganizationRoleService {
   constructor(
     private userService: UserService,
     private agentService: AgentService,
-    private contributorLookupService: ContributorLookupService,
+    private organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -150,7 +150,7 @@ export class OrganizationRoleService {
     const userID = assignData.userID;
     const agent = await this.userService.getAgentOrFail(userID);
     const organization =
-      await this.contributorLookupService.getOrganizationOrFail(
+      await this.organizationLookupService.getOrganizationOrFail(
         assignData.organizationID
       );
 
@@ -173,7 +173,9 @@ export class OrganizationRoleService {
   ): Promise<IUser> {
     const organizationID = removeData.organizationID;
     const organization =
-      await this.contributorLookupService.getOrganizationOrFail(organizationID);
+      await this.organizationLookupService.getOrganizationOrFail(
+        organizationID
+      );
     const agent = await this.userService.getAgentOrFail(removeData.userID);
 
     if (validationRoles) {

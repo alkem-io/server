@@ -21,7 +21,6 @@ import { InvitationService } from '../invitation/invitation.service';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { UserService } from '@domain/community/user/user.service';
@@ -66,6 +65,8 @@ import {
 } from '../application/application.service.lifecycle';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -77,7 +78,8 @@ export class RoleSetResolverMutations {
     private notificationAdapter: NotificationAdapter,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private virtualContributorService: VirtualContributorService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
+    private accountLookupService: AccountLookupService,
     private communityResolverService: CommunityResolverService,
     private roleSetServiceLifecycleApplication: RoleSetServiceLifecycleApplication,
     private roleSetServiceLifecycleInvitation: RoleSetServiceLifecycleInvitation,
@@ -215,7 +217,7 @@ export class RoleSetResolverMutations {
       true
     );
 
-    return await this.virtualContributorService.getVirtualContributorOrFail(
+    return await this.virtualContributorLookupService.getVirtualContributorOrFail(
       roleData.contributorID
     );
   }
@@ -322,7 +324,7 @@ export class RoleSetResolverMutations {
       roleData.contributorID
     );
 
-    return await this.virtualContributorService.getVirtualContributorOrFail(
+    return await this.virtualContributorLookupService.getVirtualContributorOrFail(
       roleData.contributorID
     );
   }
@@ -564,11 +566,17 @@ export class RoleSetResolverMutations {
         invitation,
         roleSet.authorization
       );
+
     await this.authorizationPolicyService.save(authorization);
 
     if (invitedContributor instanceof VirtualContributor) {
+      const account =
+        await this.virtualContributorLookupService.getAccountOrFail(
+          invitedContributor.id
+        );
       const accountProvider =
-        await this.virtualContributorService.getProvider(invitedContributor);
+        await this.accountLookupService.getHostOrFail(account);
+
       const notificationInput: NotificationInputCommunityInvitationVirtualContributor =
         {
           triggeredBy: agentInfo.userID,

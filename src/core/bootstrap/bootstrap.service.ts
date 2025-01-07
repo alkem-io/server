@@ -230,9 +230,11 @@ export class BootstrapService {
               },
               states: flowStates,
             },
-            calloutGroups: calloutGroups,
-            calloutsData: callouts,
-            defaultCalloutGroupName: calloutGroups[0].displayName,
+            calloutsSetData: {
+              calloutGroups: calloutGroups,
+              calloutsData: callouts,
+              defaultCalloutGroupName: calloutGroups[0].displayName,
+            },
           },
         }
       );
@@ -515,7 +517,9 @@ export class BootstrapService {
         },
         level: SpaceLevel.SPACE,
         type: SpaceType.SPACE,
-        collaborationData: {},
+        collaborationData: {
+          calloutsSetData: {},
+        },
       };
 
       const space = await this.accountService.createSpaceOnAccount(spaceInput);
@@ -563,6 +567,12 @@ export class BootstrapService {
         profileData: {
           displayName: 'Guidance',
           description: 'Guidance Virtual Contributor',
+        },
+        knowledgeBaseData: {
+          profile: {
+            displayName: 'Knowledge Base for Virtual Contributor',
+          },
+          calloutsSetData: {},
         },
       });
 

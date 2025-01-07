@@ -10,7 +10,7 @@ import { CalendarEventResolverFields } from './event.resolver.fields';
 import { CalendarEventAuthorizationService } from './event.service.authorization';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { RoomModule } from '@domain/communication/room/room.module';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -18,7 +18,7 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
     AuthorizationModule,
     RoomModule,
     VisualModule,
-    ContributorLookupModule,
+    UserLookupModule,
     ProfileModule,
     TypeOrmModule.forFeature([CalendarEvent]),
   ],

@@ -37,7 +37,7 @@ export class RolesService {
     private communityResolverService: CommunityResolverService,
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
-    private userLookupService: ContributorLookupService,
+    private contributorLookupService: ContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -178,7 +178,7 @@ export class RolesService {
   ): Promise<IInvitation[]> {
     // What contributors are managed by this user?
     const contributorsManagedByUser =
-      await this.userLookupService.getContributorsManagedByUser(userID);
+      await this.contributorLookupService.getContributorsManagedByUser(userID);
     const invitations: IInvitation[] = [];
     for (const contributor of contributorsManagedByUser) {
       const contributorInvitations =

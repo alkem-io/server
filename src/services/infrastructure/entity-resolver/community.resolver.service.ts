@@ -81,19 +81,21 @@ export class CommunityResolverService {
     return community.communication;
   }
 
-  public async getLevelZeroSpaceIdForCollaboration(
-    collaborationID: string
+  public async getLevelZeroSpaceIdForCalloutsSet(
+    calloutsSetID: string
   ): Promise<string> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          id: collaborationID,
+          calloutsSet: {
+            id: calloutsSetID,
+          },
         },
       },
     });
     if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find Space for given collaboration id: ${collaborationID}`,
+        `Unable to find Space for given calloutsSet id: ${calloutsSetID}`,
         LogContext.COMMUNITY
       );
     }
@@ -178,8 +180,10 @@ export class CommunityResolverService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: calloutId,
+          calloutsSet: {
+            callouts: {
+              id: calloutId,
+            },
           },
         },
       },
@@ -210,10 +214,12 @@ export class CommunityResolverService {
     let space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            contributions: {
-              whiteboard: {
-                id: whiteboardId,
+          calloutsSet: {
+            callouts: {
+              contributions: {
+                whiteboard: {
+                  id: whiteboardId,
+                },
               },
             },
           },
@@ -228,10 +234,12 @@ export class CommunityResolverService {
       space = await this.entityManager.findOne(Space, {
         where: {
           collaboration: {
-            callouts: {
-              framing: {
-                whiteboard: {
-                  id: whiteboardId,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  whiteboard: {
+                    id: whiteboardId,
+                  },
                 },
               },
             },
@@ -264,10 +272,12 @@ export class CommunityResolverService {
     // check for whitebaord in contributions
     let collaboration = await this.entityManager.findOne(Collaboration, {
       where: {
-        callouts: {
-          contributions: {
-            whiteboard: {
-              id: whiteboardId,
+        calloutsSet: {
+          callouts: {
+            contributions: {
+              whiteboard: {
+                id: whiteboardId,
+              },
             },
           },
         },
@@ -282,10 +292,12 @@ export class CommunityResolverService {
     if (!collaboration) {
       collaboration = await this.entityManager.findOne(Collaboration, {
         where: {
-          callouts: {
-            framing: {
-              whiteboard: {
-                id: whiteboardId,
+          calloutsSet: {
+            callouts: {
+              framing: {
+                whiteboard: {
+                  id: whiteboardId,
+                },
               },
             },
           },
@@ -418,9 +430,11 @@ export class CommunityResolverService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            comments: {
-              id: commentsId,
+          calloutsSet: {
+            callouts: {
+              comments: {
+                id: commentsId,
+              },
             },
           },
         },
@@ -446,11 +460,13 @@ export class CommunityResolverService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            contributions: {
-              post: {
-                comments: {
-                  id: commentsId,
+          calloutsSet: {
+            callouts: {
+              contributions: {
+                post: {
+                  comments: {
+                    id: commentsId,
+                  },
                 },
               },
             },

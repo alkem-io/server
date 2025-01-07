@@ -17,6 +17,7 @@ import {
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
+import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -26,7 +27,8 @@ export class VirtualContributorAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private aiPersonaAuthorizationService: AiPersonaAuthorizationService
+    private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
+    private knowledgeBaseAuthorizations: KnowledgeBaseAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -40,10 +42,16 @@ export class VirtualContributorAuthorizationService {
           profile: true,
           agent: true,
           aiPersona: true,
+          knowledgeBase: true,
         },
       }
     );
-    if (!virtual.profile || !virtual.agent || !virtual.aiPersona)
+    if (
+      !virtual.profile ||
+      !virtual.agent ||
+      !virtual.aiPersona ||
+      !virtual.knowledgeBase
+    )
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual: ${virtual.id} `,
         LogContext.COMMUNITY
@@ -91,6 +99,13 @@ export class VirtualContributorAuthorizationService {
         virtual.authorization
       );
     updatedAuthorizations.push(aiPersonaAuthorization);
+
+    const knowledgeBaseAuthorizations =
+      await this.knowledgeBaseAuthorizations.applyAuthorizationPolicy(
+        virtual.knowledgeBase,
+        virtual.authorization
+      );
+    updatedAuthorizations.push(...knowledgeBaseAuthorizations);
 
     return updatedAuthorizations;
   }

@@ -4,20 +4,17 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 @Resolver(() => IMessage)
 export class MessageResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userLookupService: ContributorLookupService,
-    @InjectRepository(VirtualContributor)
-    private virtualContributorRepository: Repository<VirtualContributor>
+    private userLookupService: UserLookupService,
+    private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
   @ResolveField('sender', () => IContributor, {
@@ -48,7 +45,10 @@ export class MessageResolverFields {
         );
       if (!sender) {
         sender =
-          await this.virtualContributorRepository.findOne(contributorOptions);
+          await this.virtualContributorLookupService.getVirtualContributorOrFail(
+            senderID,
+            contributorOptions
+          );
       }
 
       return sender;

@@ -1,13 +1,13 @@
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 export const MockUserLookupService: ValueProvider<
-  PublicPart<ContributorLookupService>
+  PublicPart<UserLookupService>
 > = {
-  provide: ContributorLookupService,
+  provide: UserLookupService,
   useValue: {
-    getContributorsManagedByUser: jest.fn(),
+    getUserByNameIdOrFail: jest.fn(),
     getUserByUUID: jest.fn(),
     getUserByUuidOrFail: jest.fn(),
   },

@@ -6,14 +6,14 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IUser } from '@domain/community/user/user.interface';
 import { IDocument } from './document.interface';
 import { DocumentService } from './document.service';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => IDocument)
 export class DocumentResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private contributorLookupService: ContributorLookupService,
+    private userLookupService: UserLookupService,
     private documentService: DocumentService
   ) {}
 
@@ -28,7 +28,7 @@ export class DocumentResolverFields {
     }
 
     try {
-      return await this.contributorLookupService.getUserByUUID(createdBy);
+      return await this.userLookupService.getUserByUUID(createdBy);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

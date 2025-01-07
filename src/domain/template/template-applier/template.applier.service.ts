@@ -25,7 +25,9 @@ export class TemplateApplierService {
         {
           relations: {
             innovationFlow: true,
-            callouts: true,
+            calloutsSet: {
+              callouts: true,
+            },
           },
         }
       );

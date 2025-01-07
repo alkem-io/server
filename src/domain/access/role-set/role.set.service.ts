@@ -34,7 +34,6 @@ import { IInvitation } from '../invitation/invitation.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
@@ -59,6 +58,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 @Injectable()
 export class RoleSetService {
@@ -73,7 +73,7 @@ export class RoleSetService {
     private contributorService: ContributorService,
     private userService: UserService,
     private organizationService: OrganizationService,
-    private virtualContributorService: VirtualContributorService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     private communityResolverService: CommunityResolverService,
     private roleSetEventsService: RoleSetEventsService,
     private aiServerAdapter: AiServerAdapter,
@@ -106,7 +106,7 @@ export class RoleSetService {
       roleSetData.applicationForm
     );
 
-    roleSet.license = await this.licenseService.createLicense({
+    roleSet.license = this.licenseService.createLicense({
       type: LicenseType.ROLESET,
       entitlements: [
         {
@@ -397,7 +397,7 @@ export class RoleSetService {
       roleSet,
       roleType
     );
-    return await this.virtualContributorService.virtualContributorsWithCredentials(
+    return await this.virtualContributorLookupService.virtualContributorsWithCredentials(
       {
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
@@ -683,7 +683,7 @@ export class RoleSetService {
     triggerNewMemberEvents = false
   ): Promise<IVirtualContributor> {
     const { virtualContributor, agent } =
-      await this.virtualContributorService.getVirtualContributorAndAgent(
+      await this.virtualContributorLookupService.getVirtualContributorAndAgent(
         virtualContributorID
       );
     const { isMember: hasMemberRoleInParent, parentRoleSet } =
@@ -843,7 +843,7 @@ export class RoleSetService {
     validatePolicyLimits = true
   ): Promise<IVirtualContributor> {
     const { virtualContributor, agent } =
-      await this.virtualContributorService.getVirtualContributorAndAgent(
+      await this.virtualContributorLookupService.getVirtualContributorAndAgent(
         virtualContributorID
       );
 

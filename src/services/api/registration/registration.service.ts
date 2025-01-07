@@ -8,8 +8,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
 import { getEmailDomain } from '@common/utils';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
-import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
 import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
@@ -32,7 +30,6 @@ export class RegistrationService {
     private userService: UserService,
     private organizationService: OrganizationService,
     private organizationRoleService: OrganizationRoleService,
-    private preferenceSetService: PreferenceSetService,
     private platformInvitationService: PlatformInvitationService,
     private platformRoleService: PlatformRoleService,
     private invitationAuthorizationService: InvitationAuthorizationService,
@@ -70,17 +67,13 @@ export class RegistrationService {
       return false;
     }
 
-    const preferences = await this.organizationService.getPreferenceSetOrFail(
-      org.id
-    );
+    const orgSettings = org.settings;
+
     const orgMatchDomain =
-      this.preferenceSetService.getPreferenceOrFail(
-        preferences,
-        OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN
-      ).value === 'true';
+      orgSettings.membership.allowUsersMatchingDomainToJoin;
     if (!orgMatchDomain) {
       this.logger.verbose?.(
-        `Organization '${org.id}' preference ${OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN} is disabled`,
+        `Organization '${org.id}' setting 'allowUsersMatchingDomainToJoin is disabled`,
         LogContext.COMMUNITY
       );
       return false;

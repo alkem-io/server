@@ -19,6 +19,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { UpdateUserInput } from './dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UpdateUserSettingsInput } from './dto/user.dto.update.settings';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -50,6 +51,37 @@ export class UserResolverMutations {
       `userUpdate: ${user.id}`
     );
     return await this.userService.updateUser(userData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Updates one of the Setting on a User',
+  })
+  async updateUserSettings(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('settingsData') settingsData: UpdateUserSettingsInput
+  ): Promise<IUser> {
+    let user = await this.userService.getUserOrFail(settingsData.userID);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      user.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `user settings update: ${user.id}`
+    );
+
+    user = await this.userService.updateUserSettings(
+      user,
+      settingsData.settings
+    );
+    user = await this.userService.save(user);
+
+    // For simplicity if a setting is updated we will reapply the authorization policy
+    const updatedAuthorizations =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return this.userService.getUserOrFail(user.id);
   }
 
   @UseGuards(GraphqlGuard)

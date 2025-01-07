@@ -22,7 +22,6 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SpaceSettingsModule } from '../space.settings/space.settings.module';
-import { AccountHostModule } from '../account.host/account.host.module';
 import { LicensingCredentialBasedModule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.module';
 import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
@@ -32,10 +31,11 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { SpaceLicenseService } from './space.service.license';
+import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 
 @Module({
   imports: [
-    AccountHostModule,
+    AccountLookupModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

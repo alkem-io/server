@@ -6,7 +6,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { UUID_LENGTH } from '@src/common/constants/entity.field.length.constants';
 import { CommunityGuidelines } from '../community-guidelines/community.guidelines.entity';
-import { RoleSet } from '@domain/access/role-set';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
 
 @Entity()
 export class Community

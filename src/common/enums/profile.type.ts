@@ -6,6 +6,7 @@ export enum ProfileType {
   OPPORTUNITY = 'opportunity',
   INNOVATION_FLOW = 'innovation-flow',
   CALLOUT_FRAMING = 'callout-framing',
+  KNOWLEDGE_BASE = 'knowledge-base',
   POST = 'post',
   CONTRIBUTION_LINK = 'contribution-link',
   WHITEBOARD = 'whiteboard',

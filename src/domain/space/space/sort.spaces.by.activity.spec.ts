@@ -7,6 +7,8 @@ import { SpaceType } from '@common/enums/space.type';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {
@@ -22,12 +24,30 @@ const createTestActivity = (createdDate: Date): IActivity => {
   };
 };
 
+const spaceSettings = {
+  privacy: {
+    mode: SpacePrivacyMode.PUBLIC,
+    allowPlatformSupportAsAdmin: false,
+  },
+  membership: {
+    policy: CommunityMembershipPolicy.OPEN,
+    trustedOrganizations: [],
+    allowSubspaceAdminsToInviteMembers: false,
+  },
+  collaboration: {
+    inheritMembershipRights: true,
+    allowMembersToCreateSubspaces: true,
+    allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
+  },
+};
+
 const createTestSpace = (id: string): ISpace => {
   return {
     id,
     rowId: 1,
     nameID: 'space1',
-    settingsStr: '',
+    settings: spaceSettings,
     levelZeroSpaceID: '',
     visibility: SpaceVisibility.ACTIVE,
     profile: {

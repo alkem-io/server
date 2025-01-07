@@ -49,7 +49,7 @@ export class TagsetTemplateSetService {
     );
   }
 
-  async getTagsetTemplateSetOrFail(
+  private async getTagsetTemplateSetOrFail(
     tagsetTemplateSetID: string,
     options?: FindOneOptions<TagsetTemplateSet>
   ): Promise<ITagsetTemplateSet | never> {
@@ -65,7 +65,7 @@ export class TagsetTemplateSetService {
     return tagsetTemplateSet;
   }
 
-  async save(
+  public async save(
     tagsetTemplateSet: ITagsetTemplateSet
   ): Promise<ITagsetTemplateSet> {
     return await this.tagsetTemplateSetRepository.save(tagsetTemplateSet);
@@ -84,7 +84,7 @@ export class TagsetTemplateSetService {
     return tagsetTemplates;
   }
 
-  hasTagsetTemplateWithName(
+  private hasTagsetTemplateWithName(
     tagsetTemplateSet: ITagsetTemplateSet,
     name: string
   ): boolean {
