@@ -157,6 +157,9 @@ export class CollaborationService {
   private createInnovationFlowStatesTagsetTemplateInput(
     innovationFlowData: CreateInnovationFlowInput
   ): CreateTagsetTemplateInput {
+    this.innovationFlowService.validateInnovationFlowDefinition(
+      innovationFlowData.states
+    );
     const allowedStates = innovationFlowData.states.map(
       state => state.displayName
     );
