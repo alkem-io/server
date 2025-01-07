@@ -48,6 +48,30 @@ export class RoleSets21736085928284 implements MigrationInterface {
       `UPDATE \`platform\` SET \`roleSetId\` = '${platformRoleSetID}'`
     );
 
+    // Update all the platform invitations to point to the new Platform RoleSet
+
+    const platformInvitations: {
+      id: string;
+      platformRole: string;
+    }[] = await queryRunner.query(
+      `SELECT id, platformRole FROM \`platform_invitation\` WHERE \`platformId\` IS NOT NULL`
+    );
+    for (const platformInvitation of platformInvitations) {
+      await queryRunner.query(
+        `UPDATE \`platform_invitation\` SET \`roleSetId\` = '${platformRoleSetID}' WHERE id = '${platformInvitation.id}'`
+      );
+      await queryRunner.query(
+        `UPDATE \`platform_invitation\` SET \`roleSetExtraRole\` = '${platformInvitation.platformRole}' WHERE id = '${platformInvitation.id}'`
+      );
+    }
+
+    await queryRunner.query(
+      `ALTER TABLE \`platform_invitation\` DROP COLUMN \`platformId\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform_invitation\` DROP COLUMN \`platformRole\``
+    );
+
     const organizations: {
       id: string;
     }[] = await queryRunner.query(`SELECT id FROM \`organization\``);
