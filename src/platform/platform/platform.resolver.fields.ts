@@ -38,8 +38,8 @@ export class PlatformResolverFields {
     nullable: false,
     description: 'The RoleSet for this Platform.',
   })
-  async roleSet(@Parent() platform: IPlatform): Promise<IRoleSet> {
-    return this.platformService.getRoleSetOrFail(platform.id);
+  async roleSet(): Promise<IRoleSet> {
+    return this.platformService.getRoleSetOrFail();
   }
 
   @ResolveField('library', () => ILibrary, {

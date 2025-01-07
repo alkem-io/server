@@ -15,8 +15,8 @@ export class PlatformLicenseService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async applyLicensePolicy(platformID: string): Promise<ILicense[]> {
-    const roleSet = await this.platformService.getRoleSetOrFail(platformID);
+  async applyLicensePolicy(): Promise<ILicense[]> {
+    const roleSet = await this.platformService.getRoleSetOrFail();
 
     const updatedLicenses: ILicense[] = [];
 

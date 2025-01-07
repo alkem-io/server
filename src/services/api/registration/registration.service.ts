@@ -14,7 +14,6 @@ import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
-import { PlatformRoleService } from '@platform/platform.role/platform.role.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { IOrganization } from '@domain/community/organization';
@@ -32,7 +31,6 @@ export class RegistrationService {
     private organizationLookupService: OrganizationLookupService,
     private organizationService: OrganizationService,
     private platformInvitationService: PlatformInvitationService,
-    private platformRoleService: PlatformRoleService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationService: InvitationService,
     private applicationService: ApplicationService,
@@ -153,14 +151,6 @@ export class RegistrationService {
         communityInvitations.push(invitation);
       }
 
-      // Proces platform role invitations
-      if (platformInvitation.platformRole) {
-        const membershipData = {
-          userID: user.id,
-          role: platformInvitation.platformRole,
-        };
-        await this.platformRoleService.assignPlatformRoleToUser(membershipData);
-      }
       await this.platformInvitationService.recordProfileCreated(
         platformInvitation
       );

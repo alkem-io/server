@@ -8,7 +8,6 @@ import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformInvitationModule } from '@domain/access/invitation.platform/platform.invitation.module';
-import { PlatformRoleModule } from '@platform/platform.role/platform.role.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AccountModule } from '@domain/space/account/account.module';
@@ -30,7 +29,6 @@ import { OrganizationModule } from '@domain/community/organization/organization.
     InvitationModule,
     PlatformInvitationModule,
     PlatformAuthorizationPolicyModule,
-    PlatformRoleModule,
     ApplicationModule,
   ],
   providers: [RegistrationService, RegistrationResolverMutations],

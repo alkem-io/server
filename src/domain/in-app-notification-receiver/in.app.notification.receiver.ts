@@ -7,19 +7,21 @@ import {
   InAppNotificationPayload,
 } from '@alkemio/notifications-lib';
 import { LogContext } from '@common/enums';
-import { PlatformRoleService } from '@platform/platform.role/platform.role.service';
 import { RoleName } from '@common/enums/role.name';
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
 import { InAppNotificationState } from '../in-app-notification/in.app.notification.state';
+import { PlatformService } from '@platform/platform/platform.service';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 
 @Injectable()
 export class InAppNotificationReceiver {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    private platformService: PlatformService,
+    private roleSetService: RoleSetService,
     @InjectRepository(InAppNotificationEntity)
-    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>,
-    private platformRoleService: PlatformRoleService
+    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
   ) {}
 
   public async decompressAndStore(
@@ -39,10 +41,11 @@ export class InAppNotificationReceiver {
     );
     // get all beta tester receivers
     const betaTesterReceivers: string[] = [];
-    const usersWithRoles =
-      await this.platformRoleService.getPlatformRolesForUsers(
-        Array.from(receiverSet)
-      );
+    const platformRoleSet = await this.platformService.getRoleSetOrFail();
+    const usersWithRoles = await this.roleSetService.getRolesForUsers(
+      platformRoleSet,
+      Array.from(receiverSet)
+    );
     for (const userID in usersWithRoles) {
       const roles = usersWithRoles[userID];
       if (roles.includes(RoleName.PLATFORM_BETA_TESTER)) {

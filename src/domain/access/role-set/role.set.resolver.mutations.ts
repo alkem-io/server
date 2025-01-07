@@ -68,6 +68,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { ValidationException } from '@common/exceptions';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -108,16 +109,33 @@ export class RoleSetResolverMutations {
       roleData.roleSetID
     );
 
-    let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === RoleName.MEMBER) {
-      requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+    if (roleSet.type === RoleSetType.PLATFORM) {
+      throw new ValidationException(
+        `Unable to assign role to user on roleSet of type: ${roleSet.type}`,
+        LogContext.PLATFORM
+      );
+    }
+
+    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        privilegeRequired = AuthorizationPrivilege.GRANT;
+        if (roleData.role === RoleName.MEMBER) {
+          privilegeRequired = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+        }
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        privilegeRequired = AuthorizationPrivilege.GRANT;
+        break;
+      }
     }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      requiredPrivilege,
-      `assign role to User: ${roleSet.id}`
+      privilegeRequired,
+      `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`
     );
 
     await this.roleSetService.assignUserToRole(
@@ -128,13 +146,22 @@ export class RoleSetResolverMutations {
       true
     );
 
-    // reset the user authorization policy so that their profile is visible to other community members
-    const user = await this.userLookupService.getUserOrFail(
-      roleData.contributorID
-    );
-    const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
-    await this.authorizationPolicyService.saveAll(authorizations);
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        // reset the user authorization policy so that their profile is visible to other community members
+        const user = await this.userLookupService.getUserOrFail(
+          roleData.contributorID
+        );
+        const authorizations =
+          await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
+        await this.authorizationPolicyService.saveAll(authorizations);
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        break;
+      }
+    }
+
     return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 
@@ -207,10 +234,12 @@ export class RoleSetResolverMutations {
     );
 
     // Also require SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement for the RoleSet
-    this.licenseService.isEntitlementEnabledOrFail(
-      roleSet.license,
-      LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
-    );
+    if (roleSet.type === RoleSetType.SPACE) {
+      this.licenseService.isEntitlementEnabledOrFail(
+        roleSet.license,
+        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+      );
+    }
 
     await this.roleSetService.assignVirtualToRole(
       roleSet,
@@ -237,9 +266,18 @@ export class RoleSetResolverMutations {
       roleData.roleSetID
     );
 
+    if (roleSet.type === RoleSetType.PLATFORM) {
+      throw new ValidationException(
+        `Unable to remove role to user on roleSet of type: ${roleSet.type}`,
+        LogContext.PLATFORM
+      );
+    }
+
+    let privilegeRequired = AuthorizationPrivilege.GRANT;
     let extendedAuthorization = roleSet.authorization;
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
+        privilegeRequired = AuthorizationPrivilege.GRANT;
         if (roleData.role === RoleName.MEMBER) {
           // Extend the authorization policy with a credential rule to assign the GRANT privilege
           // to the user specified in the incoming mutation. Then if it is the same user as is logged
@@ -253,6 +291,7 @@ export class RoleSetResolverMutations {
         break;
       }
       case RoleSetType.ORGANIZATION: {
+        privilegeRequired = AuthorizationPrivilege.GRANT;
         if (roleData.role === RoleName.ASSOCIATE) {
           // Extend the authorization policy with a credential rule to assign the GRANT privilege
           // to the user specified in the incoming mutation. Then if it is the same user as is logged
@@ -262,16 +301,16 @@ export class RoleSetResolverMutations {
               roleSet,
               roleData.contributorID
             );
-          break;
         }
+        break;
       }
     }
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       extendedAuthorization,
-      AuthorizationPrivilege.GRANT,
-      `remove role from User: ${roleSet.id}`
+      privilegeRequired,
+      `remove role from User: ${roleSet.id} on roleSet of type ${roleSet.type}`
     );
 
     await this.roleSetService.removeUserFromRole(
@@ -279,14 +318,24 @@ export class RoleSetResolverMutations {
       roleData.role,
       roleData.contributorID
     );
-    // reset the user authorization policy so that their profile is not visible
-    // to other community members
-    const user = await this.userLookupService.getUserOrFail(
-      roleData.contributorID
-    );
-    const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
-    await this.authorizationPolicyService.saveAll(authorizations);
+
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        // reset the user authorization policy so that their profile is not visible
+        // to other community members
+        const user = await this.userLookupService.getUserOrFail(
+          roleData.contributorID
+        );
+        const authorizations =
+          await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
+        await this.authorizationPolicyService.saveAll(authorizations);
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        break;
+      }
+    }
+
     return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 

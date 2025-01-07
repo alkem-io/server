@@ -1197,6 +1197,33 @@ export class RoleSetService {
     return await this.platformInvitationService.save(externalInvitation);
   }
 
+  public async getRolesForUsers(
+    roleSet: IRoleSet,
+    userIDs: string[]
+  ): Promise<{ [userID: string]: RoleName[] }> {
+    // Retrieve all agents for the provided user IDs in a single query
+    const usersWithAgents =
+      await this.userLookupService.getUsersWithAgent(userIDs);
+
+    const roleNames = await this.getRoleNames(roleSet);
+
+    // Initialize a result map to store roles for each user
+    const userRolesMap: { [userID: string]: RoleName[] } = {};
+
+    // Iterate over each agent and determine their roles
+    for (const { id: userID, agent } of usersWithAgents) {
+      const roles: RoleName[] = [];
+      for (const roleName of roleNames) {
+        if (await this.isInRole(agent, roleSet, roleName)) {
+          roles.push(roleName);
+        }
+      }
+      userRolesMap[userID] = roles;
+    }
+
+    return userRolesMap;
+  }
+
   private async validateApplicationFromUser(
     user: IUser,
     agent: IAgent,
@@ -1474,6 +1501,23 @@ export class RoleSetService {
       );
     }
     return roleDefinitions;
+  }
+
+  public async getRoleNames(roleSetInput: IRoleSet): Promise<RoleName[]> {
+    let roleDefinitions = roleSetInput.roles;
+    if (!roleDefinitions) {
+      const roleSet = await this.getRoleSetOrFail(roleSetInput.id, {
+        relations: { roles: true },
+      });
+      roleDefinitions = roleSet.roles;
+    }
+    if (!roleDefinitions) {
+      throw new RelationshipNotFoundException(
+        `Unable to load roles for RoleSet: ${roleSetInput.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return roleDefinitions.map(rd => rd.type);
   }
 
   public async getRoleDefinition(
