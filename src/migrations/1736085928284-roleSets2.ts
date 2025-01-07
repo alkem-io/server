@@ -111,12 +111,15 @@ export class RoleSets21736085928284 implements MigrationInterface {
       roleSetLicenseEntitlements
     );
 
+    const applicationFormID = await this.createApplicationForm(queryRunner);
+
     await queryRunner.query(
       `INSERT INTO role_set (id,
                                 version,
                                 authorizationId,
                                 entryRole,
                                 licenseId,
+                                applicationFormId,
                                 type) VALUES
                         (
                         '${roleSetID}',
@@ -124,6 +127,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
                         '${roleSetAuthID}',
                         '${entryRole}',
                         '${licenseID}',
+                        '${applicationFormID}',
                         '${roleSetType}')`
     );
 
@@ -133,14 +137,48 @@ export class RoleSets21736085928284 implements MigrationInterface {
       await queryRunner.query(
         `INSERT INTO role_set_role (id,
                                 roleSetId,
-                                role) VALUES
+                                type,
+                                credential,
+                                parentCredentials,
+                                requiresEntryRole,
+                                requiresSameRoleInParentRoleSet,
+                                userPolicy,
+                                organizationPolicy,
+                                virtualContributorPolicy) VALUES
                         (
                         '${roleID}',
                         '${roleSetID}',
-                        '${role}')`
+                        '${role.type}',
+                        '${JSON.stringify(role.credentialData)}',
+                        '${JSON.stringify(role.parentCredentialsData)}',
+                        ${role.requiresEntryRole},
+                        ${role.requiresSameRoleInParentRoleSet},
+                        '${JSON.stringify(role.userPolicyData)}',
+                        '${JSON.stringify(role.organizationPolicyData)}',
+                        '${JSON.stringify(role.virtualContributorPolicyData)}')`
       );
     }
     return roleSetID;
+  }
+
+  private async createApplicationForm(
+    queryRunner: QueryRunner
+  ): Promise<string> {
+    const applicationFormID = randomUUID();
+
+    await queryRunner.query(
+      `INSERT INTO form (id,
+                        version,
+                        questions,
+                        description) VALUES
+                        (
+                        '${applicationFormID}',
+                        1,
+                        '${JSON.stringify(applicationForm.questions)}',
+                        '${applicationForm.description}')`
+    );
+
+    return applicationFormID;
   }
 
   private async createLicense(
@@ -502,3 +540,16 @@ const platformRoles: CreateRoleInput[] = [
     },
   },
 ];
+
+const applicationForm = {
+  description: '',
+  questions: [
+    {
+      question: 'What makes you want to join?',
+      required: true,
+      maxLength: 500,
+      explanation: '',
+      sortOrder: 1,
+    },
+  ],
+};
