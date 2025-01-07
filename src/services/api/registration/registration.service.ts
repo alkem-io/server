@@ -121,41 +121,45 @@ export class RegistrationService {
         user.email
       );
 
-    const communityInvitations: IInvitation[] = [];
+    const roleSetInvitations: IInvitation[] = [];
     for (const platformInvitation of platformInvitations) {
       const roleSet = platformInvitation.roleSet;
-
-      // Process community invitations
-      if (roleSet) {
-        const invitationInput: CreateInvitationInput = {
-          invitedContributorID: user.id,
-          roleSetID: roleSet.id,
-          createdBy: platformInvitation.createdBy,
-          extraRole: platformInvitation.roleSetExtraRole,
-          invitedToParent: platformInvitation.roleSetInvitedToParent,
-        };
-        let invitation =
-          await this.roleSetService.createInvitationExistingContributor(
-            invitationInput
-          );
-        invitation.invitedToParent = platformInvitation.roleSetInvitedToParent;
-
-        invitation = await this.invitationService.save(invitation);
-        const authorization =
-          await this.invitationAuthorizationService.applyAuthorizationPolicy(
-            invitation,
-            roleSet.authorization
-          );
-        await this.authorizationPolicyService.save(authorization);
-
-        communityInvitations.push(invitation);
+      if (!roleSet) {
+        this.logger.error?.(
+          `Platform invitation ${platformInvitation.id} has no role set`,
+          LogContext.COMMUNITY
+        );
+        continue;
       }
+
+      const invitationInput: CreateInvitationInput = {
+        invitedContributorID: user.id,
+        roleSetID: roleSet.id,
+        createdBy: platformInvitation.createdBy,
+        extraRole: platformInvitation.roleSetExtraRole,
+        invitedToParent: platformInvitation.roleSetInvitedToParent,
+      };
+      let invitation =
+        await this.roleSetService.createInvitationExistingContributor(
+          invitationInput
+        );
+      invitation.invitedToParent = platformInvitation.roleSetInvitedToParent;
+
+      invitation = await this.invitationService.save(invitation);
+      const authorization =
+        await this.invitationAuthorizationService.applyAuthorizationPolicy(
+          invitation,
+          roleSet.authorization
+        );
+      await this.authorizationPolicyService.save(authorization);
+
+      roleSetInvitations.push(invitation);
 
       await this.platformInvitationService.recordProfileCreated(
         platformInvitation
       );
     }
-    return communityInvitations;
+    return roleSetInvitations;
   }
 
   async deleteUserWithPendingMemberships(
