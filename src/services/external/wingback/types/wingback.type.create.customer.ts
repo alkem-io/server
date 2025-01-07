@@ -5,6 +5,8 @@ export type CreateCustomer = {
   emails: {
     /** Where the invoices are going to be sent */
     invoice: string;
+    /** The organization email in Alkemio */
+    orgEmail?: string;
   };
   /** Customer's address (optional) */
   address?: {

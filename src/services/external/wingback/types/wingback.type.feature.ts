@@ -8,6 +8,11 @@ export type WingbackFeature = {
   entitlement_details: WingbackFeatureDetails;
 };
 
+export type WingbackTypedFeature<TDetails extends WingbackFeatureDetails> =
+  WingbackFeature & {
+    entitlement_details: TDetails;
+  };
+
 export type WingbackFeatureDetails =
   | WingbackFeatureDetailFlat
   | WingbackFeatureDetailPerUnit

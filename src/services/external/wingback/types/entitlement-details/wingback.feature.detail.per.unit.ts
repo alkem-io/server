@@ -1,4 +1,8 @@
-import { WingbackFeatureDetails } from '../wingback.type.feature';
+import {
+  WingbackFeature,
+  WingbackFeatureDetails,
+  WingbackTypedFeature,
+} from '../wingback.type.feature';
 
 export type WingbackFeatureDetailPerUnit = {
   pricing_strategy: 'per_unit';
@@ -18,4 +22,10 @@ export const isWingbackFeatureDetailPerUnit = (
   detail: WingbackFeatureDetails
 ): detail is WingbackFeatureDetailPerUnit => {
   return detail.pricing_strategy === 'per_unit';
+};
+
+export const isWingbackFeaturePerUnit = (
+  feature: WingbackFeature
+): feature is WingbackTypedFeature<WingbackFeatureDetailPerUnit> => {
+  return isWingbackFeatureDetailPerUnit(feature.entitlement_details);
 };

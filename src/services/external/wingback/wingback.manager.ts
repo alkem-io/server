@@ -8,6 +8,8 @@ import { WingbackEntitlement } from './types/wingback.type.entitlement';
 import { CreateCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { WingbackFeature } from '@services/external/wingback/types/wingback.type.feature';
+import { BaseException } from '@common/exceptions/base.exception';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
@@ -112,7 +114,25 @@ export class WingbackManager {
       `/v1/c/entitlement/${customerId}/access`
     );
 
-    return entitlements[0].plan.features;
+    const [subscription] = entitlements;
+
+    if (entitlements.length > 1) {
+      this.logger.warn?.(
+        `More than one subscription found for customer '${customerId}'. Continuing with the first plan '${subscription.plan.name}'...`,
+        LogContext.WINGBACK
+      );
+    }
+
+    if (!subscription) {
+      throw new BaseException(
+        'No subscription found for customer',
+        LogContext.WINGBACK,
+        AlkemioErrorStatus.ENTITY_NOT_FOUND,
+        { customerId }
+      );
+    }
+
+    return subscription.plan.features;
   }
 
   activateCustomer(customerId: string): Promise<boolean> {
