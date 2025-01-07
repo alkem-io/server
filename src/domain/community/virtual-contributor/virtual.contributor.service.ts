@@ -240,7 +240,10 @@ export class VirtualContributorService {
       virtual.searchVisibility = virtualContributorData.searchVisibility;
     }
 
-    if (virtualContributorData.knowledgeBaseData?.profile?.description) {
+    if (
+      virtualContributorData.knowledgeBaseData?.profile?.description &&
+      virtual?.knowledgeBase?.profile
+    ) {
       virtual.knowledgeBase.profile.description =
         virtualContributorData.knowledgeBaseData.profile?.description;
     }
