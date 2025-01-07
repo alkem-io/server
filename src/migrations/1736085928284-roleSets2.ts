@@ -33,6 +33,10 @@ export class RoleSets21736085928284 implements MigrationInterface {
       `ALTER TABLE \`organization\` ADD CONSTRAINT \`FK_857684833bbd26eff72f97bcfdb\` FOREIGN KEY (\`roleSetId\`) REFERENCES \`role_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`platform_invitation\` DROP FOREIGN KEY \`FK_809c1e6cf3ef6be03a0a1db3f70\``
+    );
+
     // Assign all current role sets the type of 'space'
     await queryRunner.query(`UPDATE \`role_set\` SET \`type\` = 'space'`);
 
@@ -141,7 +145,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
       `INSERT INTO role_set (id,
                                 version,
                                 authorizationId,
-                                entryRole,
+                                entryRoleType,
                                 licenseId,
                                 applicationFormId,
                                 type) VALUES
@@ -159,18 +163,20 @@ export class RoleSets21736085928284 implements MigrationInterface {
     for (const role of roles) {
       const roleID = randomUUID();
       await queryRunner.query(
-        `INSERT INTO role_set_role (id,
-                                roleSetId,
-                                type,
-                                credential,
-                                parentCredentials,
-                                requiresEntryRole,
-                                requiresSameRoleInParentRoleSet,
-                                userPolicy,
-                                organizationPolicy,
-                                virtualContributorPolicy) VALUES
+        `INSERT INTO role (id,
+                          version,
+                          roleSetId,
+                          type,
+                          credential,
+                          parentCredentials,
+                          requiresEntryRole,
+                          requiresSameRoleInParentRoleSet,
+                          userPolicy,
+                          organizationPolicy,
+                          virtualContributorPolicy) VALUES
                         (
                         '${roleID}',
+                        1,
                         '${roleSetID}',
                         '${role.type}',
                         '${JSON.stringify(role.credentialData)}',
@@ -230,18 +236,20 @@ export class RoleSets21736085928284 implements MigrationInterface {
     for (const entitlement of entitlements) {
       await queryRunner.query(
         `INSERT INTO license_entitlement (id,
+                                version,
                                 licenseId,
                                 type,
                                 dataType,
-                                limit,
+                                \`limit\`,
                                 enabled) VALUES
                         (
                         '${randomUUID()}',
+                        1,
                         '${licenseID}',
                         '${entitlement.type}',
-                        '${entitlement.dataType},'
-                        '${entitlement.limit}'
-                        '${entitlement.enabled}')`
+                        '${entitlement.dataType}',
+                        '${entitlement.limit}',
+                        ${entitlement.enabled})`
       );
     }
     return licenseID;
