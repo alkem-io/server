@@ -1,5 +1,4 @@
 import { LogContext } from '@common/enums/logging.context';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
@@ -9,12 +8,8 @@ import { RemovePlatformRoleFromUserInput } from './dto/platform.dto.remove.role.
 import { IUser } from '@domain/community/user/user.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
-import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
-import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
-import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { PlatformService } from '@platform/platform/platform.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AccountService } from '@domain/space/account/account.service';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
@@ -27,45 +22,8 @@ export class PlatformRoleService {
     private userLookupService: UserLookupService,
     private accountService: AccountService,
     private agentService: AgentService,
-    private platformService: PlatformService,
-    private platformInvitationService: PlatformInvitationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  async createPlatformInvitation(
-    platformInvitationData: CreatePlatformInvitationInput,
-    agentInfo: AgentInfo
-  ): Promise<IPlatformInvitation> {
-    const platform = await this.platformService.getPlatformOrFail({
-      relations: { platformInvitations: true },
-    });
-    if (!platform.platformInvitations) {
-      throw new EntityNotFoundException(
-        'No Platform Invitation found!',
-        LogContext.PLATFORM
-      );
-    }
-    platformInvitationData.createdBy = agentInfo.userID;
-    const platformInvitation =
-      await this.platformInvitationService.createPlatformInvitation(
-        platformInvitationData
-      );
-    platformInvitation.platform = platform;
-    return await this.platformInvitationService.save(platformInvitation);
-  }
-
-  async getPlatformInvitationsForRole(): Promise<IPlatformInvitation[]> {
-    const platform = await this.platformService.getPlatformOrFail({
-      relations: { platformInvitations: true },
-    });
-    if (!platform.platformInvitations) {
-      throw new EntityNotFoundException(
-        'No Platform Invitation found!',
-        LogContext.PLATFORM
-      );
-    }
-    return platform.platformInvitations;
-  }
 
   public async assignPlatformRoleToUser(
     assignData: AssignPlatformRoleToUserInput

@@ -32,6 +32,4 @@ export class CreatePlatformInvitationInput {
   roleSetID?: string;
   roleSetInvitedToParent!: boolean;
   roleSetExtraRole?: RoleName;
-
-  platformRole?: RoleName;
 }

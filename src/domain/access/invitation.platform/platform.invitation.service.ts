@@ -17,6 +17,8 @@ import { IUser } from '@domain/community/user/user.interface';
 import { RoleName } from '@common/enums/role.name';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IRoleSet } from '../role-set/role.set.interface';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class PlatformInvitationService {
@@ -34,15 +36,18 @@ export class PlatformInvitationService {
   ) {}
 
   async createPlatformInvitation(
+    roleSet: IRoleSet,
     platformInvitationData: CreatePlatformInvitationInput
   ): Promise<IPlatformInvitation> {
     // Only allow invitations to specific set of platform roles
-    const role = platformInvitationData.platformRole;
-    if (role !== undefined && !this.acceptedPlatformRoles.includes(role)) {
-      throw new ValidationException(
-        `Invalid platform role: ${role}`,
-        LogContext.PLATFORM
-      );
+    if (roleSet.type === RoleSetType.PLATFORM) {
+      const role = platformInvitationData.roleSetExtraRole;
+      if (role !== undefined && !this.acceptedPlatformRoles.includes(role)) {
+        throw new ValidationException(
+          `Unable to create invitation for platform role: ${role}, not in allowed invitation roles: ${this.acceptedPlatformRoles}`,
+          LogContext.PLATFORM
+        );
+      }
     }
     const platformInvitation: IPlatformInvitation = PlatformInvitation.create(
       platformInvitationData

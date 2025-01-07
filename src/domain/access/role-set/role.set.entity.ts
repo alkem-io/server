@@ -10,7 +10,7 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Role } from '../role/role.entity';
 import { Form } from '@domain/common/form/form.entity';
-import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
+import { PlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.entity';
 import { IRoleSet } from './role.set.interface';
 import { Application } from '@domain/access/application/application.entity';
 import { Invitation } from '@domain/access/invitation/invitation.entity';

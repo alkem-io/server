@@ -16,7 +16,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IInvitation } from '../invitation/invitation.interface';
-import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { RoleSetMemberCredentials } from '@domain/community/user/dto/user.dto.role.set.member.credentials';
 import { ILicense } from '@domain/common/license/license.interface';
 import { RoleSet } from './role.set.entity';

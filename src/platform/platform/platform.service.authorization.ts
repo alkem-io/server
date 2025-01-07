@@ -23,7 +23,6 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
-import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
@@ -37,7 +36,6 @@ export class PlatformAuthorizationService {
     private forumAuthorizationService: ForumAuthorizationService,
     private platformService: PlatformService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private libraryAuthorizationService: LibraryAuthorizationService,
     private licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
@@ -48,7 +46,6 @@ export class PlatformAuthorizationService {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
-        platformInvitations: true,
         forum: true,
         library: true,
         storageAggregator: true,
@@ -60,7 +57,6 @@ export class PlatformAuthorizationService {
 
     if (
       !platform.authorization ||
-      !platform.platformInvitations ||
       !platform.library ||
       !platform.forum ||
       !platform.storageAggregator ||
@@ -108,15 +104,6 @@ export class PlatformAuthorizationService {
         false
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
-
-    for (const platformInvitation of platform.platformInvitations) {
-      const updatedInvitation =
-        await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
-          platformInvitation,
-          platform.authorization
-        );
-      updatedAuthorizations.push(updatedInvitation);
-    }
 
     const copyPlatformAuthorization: IAuthorizationPolicy =
       this.authorizationPolicyService.cloneAuthorizationPolicy(

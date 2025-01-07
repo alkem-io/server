@@ -1,7 +1,6 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Platform } from '@platform/platform/platform.entity';
 import {
   ENUM_LENGTH,
   MID_TEXT_LENGTH,
@@ -30,20 +29,6 @@ export class PlatformInvitation
     nullable: true,
   })
   roleSetExtraRole?: RoleName;
-
-  // Platform invitations for Community
-  @ManyToOne(() => Platform, platform => platform.platformInvitations, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  platform?: Platform;
-
-  @Column('varchar', {
-    length: ENUM_LENGTH,
-    nullable: true,
-  })
-  platformRole?: RoleName;
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   email!: string;

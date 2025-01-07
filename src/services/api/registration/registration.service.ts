@@ -13,7 +13,7 @@ import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { ApplicationService } from '@domain/access/application/application.service';
-import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { PlatformRoleService } from '@platform/platform.role/platform.role.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountService } from '@domain/space/account/account.service';

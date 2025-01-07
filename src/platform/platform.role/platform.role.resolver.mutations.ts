@@ -13,10 +13,7 @@ import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/no
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 import { RoleName } from '@common/enums/role.name';
-import { CreatePlatformInvitationForRoleInput } from '@platform/platform/dto/platform.invitation.dto.global.role';
-import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 import { PlatformRoleService } from './platform.role.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -27,7 +24,6 @@ export class PlatformRoleResolverMutations {
     private accountService: AccountService,
     private accountLicenseService: AccountLicenseService,
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private notificationAdapter: NotificationAdapter,
     private platformRoleService: PlatformRoleService,
     private licenseService: LicenseService,
@@ -122,34 +118,6 @@ export class PlatformRoleResolverMutations {
       account.id
     );
     await this.licenseService.saveAll(licenses);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IPlatformInvitation, {
-    description:
-      'Invite a User to join the platform in a particular Platform role e.g. BetaTester',
-  })
-  async inviteUserToPlatformWithRole(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('invitationData')
-    invitationData: CreatePlatformInvitationForRoleInput
-  ): Promise<IPlatformInvitation> {
-    const platformPolicy =
-      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `invitation to platform in global role: ${invitationData.email}`
-    );
-
-    // TODO: Notification
-
-    return await this.platformRoleService.createPlatformInvitation(
-      invitationData,
-      agentInfo
-    );
   }
 
   private async notifyPlatformGlobalRoleChange(

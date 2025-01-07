@@ -8,7 +8,7 @@ import { RoleSetResolverMutations } from './role.set.resolver.mutations';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
-import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
+import { PlatformInvitationModule } from '@domain/access/invitation.platform/platform.invitation.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { RoleModule } from '../role/role.module';

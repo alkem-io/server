@@ -32,7 +32,7 @@ export class PlatformInvitationResolverMutations {
       agentInfo,
       platformInvitation.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete platformInvitation to community: ${platformInvitation.id}`
+      `delete platformInvitation: ${platformInvitation.id}`
     );
     return await this.platformInvitationService.deletePlatformInvitation(
       deleteData

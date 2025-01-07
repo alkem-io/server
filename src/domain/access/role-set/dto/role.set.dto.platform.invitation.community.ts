@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
-import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
+import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
 import { RoleName } from '@common/enums/role.name';
 
 @InputType()

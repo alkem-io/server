@@ -20,14 +20,14 @@ import { ApplicationAuthorizationService } from '../application/application.serv
 import { InvitationService } from '../invitation/invitation.service';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
+import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
 import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
-import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { AssignRoleOnRoleSetToUserInput } from './dto/role.set.dto.role.assign.user';
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
@@ -46,7 +46,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.vc';
-import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { InviteNewContributorForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invitation.community';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';

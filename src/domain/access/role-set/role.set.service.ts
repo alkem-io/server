@@ -16,7 +16,7 @@ import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CreateRoleSetInput } from './dto/role.set.dto.create';
-import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
@@ -45,8 +45,8 @@ import { RoleSetMembershipException } from '@common/exceptions/role.set.membersh
 import { CreateApplicationInput } from '../application/dto/application.dto.create';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { InviteNewContributorForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invitation.community';
-import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
-import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
+import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { RoleSetEventsService } from './role.set.service.events';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
@@ -1190,6 +1190,7 @@ export class RoleSetService {
     };
     const externalInvitation =
       await this.platformInvitationService.createPlatformInvitation(
+        roleSet,
         externalInvitationInput
       );
     externalInvitation.roleSet = roleSet;

@@ -16,7 +16,7 @@ export class PlatformInvitationResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('createdBy', () => IUser, {
     nullable: false,
-    description: 'The User who triggered the platformInvitation.',
+    description: 'The User who created the platformInvitation.',
   })
   @Profiling.api
   async createdBy(
