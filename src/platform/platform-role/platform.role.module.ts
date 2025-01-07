@@ -8,10 +8,12 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { LicenseModule } from '@domain/common/license/license.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 
 @Module({
   imports: [
     AccountModule,
+    AccountLookupModule,
     LicenseModule,
     AuthorizationModule,
     AuthorizationPolicyModule,

@@ -87,6 +87,7 @@ import { InAppNotificationReaderModule } from '@domain/in-app-notification-reade
 import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
+import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
 
 @Module({
   imports: [
@@ -297,6 +298,7 @@ import { WingbackManagerModule } from '@services/external/wingback/wingback.mana
     WhiteboardIntegrationModule,
     FileIntegrationModule,
     PlatformSettingsModule,
+    PlatformRoleModule,
     TemplateApplierModule,
     InAppNotificationReaderModule,
     InAppNotificationReceiverModule,
