@@ -41,7 +41,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
       queryRunner,
       'subspace-admin',
       'platform',
-      ['subspace-admin']
+      platformRoles
     );
     // set the role set for the platform
     await queryRunner.query(
@@ -57,7 +57,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
         queryRunner,
         'subspace-admin',
         'organization',
-        ['subspace-admin']
+        organizationRoles
       );
       // set the role set for the organization
       await queryRunner.query(
@@ -98,7 +98,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
     queryRunner: QueryRunner,
     entryRole: string,
     roleSetType: string,
-    roles: string[]
+    roles: CreateRoleInput[]
   ): Promise<string> {
     const roleSetID = randomUUID();
     const roleSetAuthID = await this.createAuthorizationPolicy(
@@ -214,3 +214,291 @@ type LicenseEntitlement = {
   limit: number;
   enabled: boolean;
 };
+
+enum RoleName {
+  MEMBER = 'member',
+  LEAD = 'lead',
+  ADMIN = 'admin',
+  ASSOCIATE = 'associate',
+  OWNER = 'owner',
+  GLOBAL_ADMIN = 'global-admin',
+  GLOBAL_SUPPORT = 'global-support', // Platform management; can be allowed to act as a SpaceAdmin depending on Space settings
+  GLOBAL_LICENSE_MANAGER = 'global-license-manager',
+  GLOBAL_COMMUNITY_READER = 'global-community-reader',
+  GLOBAL_SPACES_READER = 'global-spaces-reader',
+  PLATFORM_BETA_TESTER = 'platform-beta-tester',
+  PLATFORM_VC_CAMPAIGN = 'platform-vc-campaign',
+}
+
+enum AuthorizationCredential {
+  GLOBAL_ADMIN = 'global-admin', // able to do everything, god mode
+  GLOBAL_SUPPORT = 'global-support', // able to manage platform level information, can per space have admin rights
+  GLOBAL_LICENSE_MANAGER = 'global-license-manager', // able to manage platform level information, can per space have admin rights
+  GLOBAL_REGISTERED = 'global-registered', // credential issued to all registered users
+  GLOBAL_COMMUNITY_READ = 'global-community-read', // able to view all details of the top level community
+  GLOBAL_SPACES_READER = 'global-spaces-read', // able to view all details of the top level community
+
+  USER_SELF_MANAGEMENT = 'user-self', // able to update a user
+
+  SPACE_ADMIN = 'space-admin',
+  SPACE_MEMBER = 'space-member',
+  SPACE_LEAD = 'space-lead',
+  SPACE_SUBSPACE_ADMIN = 'space-subspace-admin', // assigned to admins of a subspace for a space
+
+  ORGANIZATION_OWNER = 'organization-owner', // Able to commit an organization
+  ORGANIZATION_ADMIN = 'organization-admin', // Able to administer an organization
+  ORGANIZATION_ASSOCIATE = 'organization-associate', // Able to be a part of an organization
+
+  USER_GROUP_MEMBER = 'user-group-member', // Able to be a part of an user group
+
+  // Roles to allow easier management of users
+  BETA_TESTER = 'beta-tester',
+  VC_CAMPAIGN = 'vc-campaign',
+}
+
+type ICredentialDefinition = {
+  type: string;
+  resourceID: string;
+};
+
+type IContributorRolePolicy = {
+  minimum: number;
+  maximum: number;
+};
+
+type CreateRoleInput = {
+  type: RoleName;
+  requiresEntryRole: boolean;
+  requiresSameRoleInParentRoleSet: boolean;
+  credentialData: ICredentialDefinition;
+  parentCredentialsData: ICredentialDefinition[];
+  userPolicyData: IContributorRolePolicy;
+  organizationPolicyData: IContributorRolePolicy;
+  virtualContributorPolicyData: IContributorRolePolicy;
+};
+
+const organizationRoles: CreateRoleInput[] = [
+  {
+    type: RoleName.ASSOCIATE,
+    requiresEntryRole: false,
+    requiresSameRoleInParentRoleSet: false, // not required
+    credentialData: {
+      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 0,
+      maximum: -1,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+  {
+    type: RoleName.ADMIN,
+    requiresEntryRole: true,
+    requiresSameRoleInParentRoleSet: false,
+    credentialData: {
+      type: AuthorizationCredential.ORGANIZATION_ADMIN,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 0,
+      maximum: 3,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+  {
+    type: RoleName.OWNER,
+    requiresEntryRole: true,
+    requiresSameRoleInParentRoleSet: false,
+    credentialData: {
+      type: AuthorizationCredential.ORGANIZATION_OWNER,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 1,
+      maximum: 3,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+];
+
+const platformRoles: CreateRoleInput[] = [
+  {
+    type: RoleName.GLOBAL_ADMIN,
+    requiresEntryRole: false,
+    requiresSameRoleInParentRoleSet: false, // not required
+    credentialData: {
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 1, // Important: always one
+      maximum: -1,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+  {
+    type: RoleName.GLOBAL_SUPPORT,
+    requiresEntryRole: false,
+    requiresSameRoleInParentRoleSet: false,
+    credentialData: {
+      type: AuthorizationCredential.GLOBAL_SUPPORT,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 0,
+      maximum: -1,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+  {
+    type: RoleName.GLOBAL_LICENSE_MANAGER,
+    requiresEntryRole: false,
+    requiresSameRoleInParentRoleSet: false,
+    credentialData: {
+      type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 0,
+      maximum: -1,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+  {
+    type: RoleName.GLOBAL_SPACES_READER,
+    requiresEntryRole: false,
+    requiresSameRoleInParentRoleSet: false,
+    credentialData: {
+      type: AuthorizationCredential.GLOBAL_SPACES_READER,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 0,
+      maximum: -1,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+  {
+    type: RoleName.PLATFORM_BETA_TESTER,
+    requiresEntryRole: false,
+    requiresSameRoleInParentRoleSet: false,
+    credentialData: {
+      type: AuthorizationCredential.BETA_TESTER,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 0,
+      maximum: -1,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+  {
+    type: RoleName.PLATFORM_VC_CAMPAIGN,
+    requiresEntryRole: false,
+    requiresSameRoleInParentRoleSet: false,
+    credentialData: {
+      type: AuthorizationCredential.VC_CAMPAIGN,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 0,
+      maximum: -1,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+  {
+    type: RoleName.GLOBAL_COMMUNITY_READER,
+    requiresEntryRole: false,
+    requiresSameRoleInParentRoleSet: false,
+    credentialData: {
+      type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+      resourceID: '',
+    },
+    parentCredentialsData: [],
+    userPolicyData: {
+      minimum: 0,
+      maximum: -1,
+    },
+    organizationPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+    virtualContributorPolicyData: {
+      minimum: 0,
+      maximum: 0,
+    },
+  },
+];
