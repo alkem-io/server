@@ -29,6 +29,7 @@ import { UserSettingsModule } from '../user.settings/user.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
+import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { UserLookupModule } from '../user-lookup/user.lookup.module';
     NotificationAdapterModule,
     CommunicationAdapterModule,
     AgentModule,
+    AuthenticationAgentInfoModule,
     AccountHostModule,
     AccountLookupModule,
     UserLookupModule,
