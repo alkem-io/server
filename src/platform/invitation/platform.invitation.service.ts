@@ -14,15 +14,15 @@ import { PlatformInvitation } from './platform.invitation.entity';
 import { CreatePlatformInvitationInput } from './dto/platform.invitation.dto.create';
 import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
 import { IUser } from '@domain/community/user/user.interface';
-import { PlatformRole } from '@common/enums/platform.role';
+import { RoleName } from '@common/enums/role.name';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class PlatformInvitationService {
-  private acceptedPlatformRoles: PlatformRole[] = [
-    PlatformRole.BETA_TESTER,
-    PlatformRole.VC_CAMPAIGN,
+  private acceptedPlatformRoles: RoleName[] = [
+    RoleName.PLATFORM_BETA_TESTER,
+    RoleName.PLATFORM_VC_CAMPAIGN,
   ];
 
   constructor(

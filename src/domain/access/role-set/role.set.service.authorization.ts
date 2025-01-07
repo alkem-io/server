@@ -32,7 +32,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { IRoleSet } from './role.set.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
@@ -248,7 +248,7 @@ export class RoleSetAuthorizationService {
       const inviteMembersCriterias: ICredentialDefinition[] =
         await this.roleSetService.getCredentialsForRoleWithParents(
           roleSet,
-          RoleType.ADMIN,
+          RoleName.ADMIN,
           spaceSettings
         );
       if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
@@ -256,7 +256,7 @@ export class RoleSetAuthorizationService {
         const subspaceAdminCredential: ICredentialDefinition =
           await this.roleSetService.getCredentialForRole(
             roleSet,
-            RoleType.MEMBER
+            RoleName.MEMBER
           );
         subspaceAdminCredential.type =
           AuthorizationCredential.SPACE_SUBSPACE_ADMIN;
@@ -301,7 +301,7 @@ export class RoleSetAuthorizationService {
     const parentRoleSetCredential =
       await this.roleSetService.getDirectParentCredentialForRole(
         roleSet,
-        RoleType.MEMBER
+        RoleName.MEMBER
       );
 
     // Allow member of the parent roleSet to Apply
@@ -334,7 +334,7 @@ export class RoleSetAuthorizationService {
     const adminCredentials =
       await this.roleSetService.getCredentialsForRoleWithParents(
         roleSet,
-        RoleType.ADMIN,
+        RoleName.ADMIN,
         spaceSettings
       );
 

@@ -6,7 +6,7 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 
 @InputType()
 export class InviteForEntryRoleOnRoleSetInput {
@@ -25,14 +25,14 @@ export class InviteForEntryRoleOnRoleSetInput {
   @MaxLength(MID_TEXT_LENGTH)
   welcomeMessage?: string;
 
-  @Field(() => RoleType, {
+  @Field(() => RoleName, {
     nullable: true,
     description:
       'An additional role to assign to the Contributors, in addition to the entry Role.',
   })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  extraRole?: RoleType;
+  extraRole?: RoleName;
 
   createdBy!: string;
 

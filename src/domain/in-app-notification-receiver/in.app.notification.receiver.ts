@@ -8,7 +8,7 @@ import {
 } from '@alkemio/notifications-lib';
 import { LogContext } from '@common/enums';
 import { PlatformRoleService } from '@platform/platform.role/platform.role.service';
-import { PlatformRole } from '@common/enums/platform.role';
+import { RoleName } from '@common/enums/role.name';
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
 import { InAppNotificationState } from '../in-app-notification/in.app.notification.state';
 
@@ -45,7 +45,7 @@ export class InAppNotificationReceiver {
       );
     for (const userID in usersWithRoles) {
       const roles = usersWithRoles[userID];
-      if (roles.includes(PlatformRole.BETA_TESTER)) {
+      if (roles.includes(RoleName.PLATFORM_BETA_TESTER)) {
         betaTesterReceivers.push(userID);
       }
     }

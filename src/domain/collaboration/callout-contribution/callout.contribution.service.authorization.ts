@@ -8,7 +8,7 @@ import { PostAuthorizationService } from '../post/post.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import {
   CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
@@ -206,7 +206,7 @@ export class CalloutContributionAuthorizationService {
       const roleCredentials =
         await this.roleSetService.getCredentialsForRoleWithParents(
           communityPolicy,
-          RoleType.ADMIN,
+          RoleName.ADMIN,
           spaceSettings
         );
       credentials.push(...roleCredentials);

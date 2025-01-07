@@ -10,7 +10,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { PlatformRole } from '@common/enums/platform.role';
+import { RoleName } from '@common/enums/role.name';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IPlatform } from '@platform/platform/platform.interface';
 
@@ -31,11 +31,11 @@ export class PlatformRoleResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('myRoles', () => [PlatformRole], {
+  @ResolveField('myRoles', () => [RoleName], {
     nullable: false,
     description: 'The roles on the Platform for the currently logged in user.',
   })
-  async myRoles(@CurrentUser() agentInfo: AgentInfo): Promise<PlatformRole[]> {
+  async myRoles(@CurrentUser() agentInfo: AgentInfo): Promise<RoleName[]> {
     return this.platformRoleService.getPlatformRoles(agentInfo);
   }
 }

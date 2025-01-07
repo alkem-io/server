@@ -12,7 +12,7 @@ import { IInvitation } from '../invitation/invitation.interface';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { IApplication } from '../application/application.interface';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.invitation';
 import { ApplicationService } from '../application/application.service';
@@ -109,7 +109,7 @@ export class RoleSetResolverMutations {
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === RoleType.MEMBER) {
+    if (roleData.role === RoleName.MEMBER) {
       requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
     }
 
@@ -185,7 +185,7 @@ export class RoleSetResolverMutations {
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === RoleType.MEMBER) {
+    if (roleData.role === RoleName.MEMBER) {
       const sameAccount =
         await this.roleSetService.isRoleSetAccountMatchingVcAccount(
           roleSet,
@@ -240,7 +240,7 @@ export class RoleSetResolverMutations {
     let extendedAuthorization = roleSet.authorization;
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
-        if (roleData.role === RoleType.MEMBER) {
+        if (roleData.role === RoleName.MEMBER) {
           // Extend the authorization policy with a credential rule to assign the GRANT privilege
           // to the user specified in the incoming mutation. Then if it is the same user as is logged
           // in then the user will have the GRANT privilege + so can carry out the mutation
@@ -253,7 +253,7 @@ export class RoleSetResolverMutations {
         break;
       }
       case RoleSetType.ORGANIZATION: {
-        if (roleData.role === RoleType.ASSOCIATE) {
+        if (roleData.role === RoleName.ASSOCIATE) {
           // Extend the authorization policy with a credential rule to assign the GRANT privilege
           // to the user specified in the incoming mutation. Then if it is the same user as is logged
           // in then the user will have the GRANT privilege + so can carry out the mutation
@@ -387,7 +387,7 @@ export class RoleSetResolverMutations {
 
     await this.roleSetService.assignUserToRole(
       roleSet,
-      RoleType.MEMBER,
+      RoleName.MEMBER,
       agentInfo.userID,
       agentInfo,
       true
@@ -427,7 +427,7 @@ export class RoleSetResolverMutations {
       const userIsMemberInParent = await this.roleSetService.isInRole(
         agent,
         roleSet.parentRoleSet,
-        RoleType.MEMBER
+        RoleName.MEMBER
       );
       if (!userIsMemberInParent) {
         throw new RoleSetMembershipException(
@@ -567,7 +567,7 @@ export class RoleSetResolverMutations {
     invitedContributor: IContributor,
     agentInfo: AgentInfo,
     invitedToParent: boolean,
-    extraRole?: RoleType,
+    extraRole?: RoleName,
     welcomeMessage?: string
   ): Promise<IInvitation> {
     const input: CreateInvitationInput = {

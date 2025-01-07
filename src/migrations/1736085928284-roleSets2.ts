@@ -96,7 +96,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
 
   private async createRoleSet(
     queryRunner: QueryRunner,
-    entryRoleType: string,
+    entryRole: string,
     roleSetType: string,
     roles: string[]
   ): Promise<string> {
@@ -115,14 +115,14 @@ export class RoleSets21736085928284 implements MigrationInterface {
       `INSERT INTO role_set (id,
                                 version,
                                 authorizationId,
-                                entryRoleType,
+                                entryRole,
                                 licenseId,
                                 type) VALUES
                         (
                         '${roleSetID}',
                         1,
                         '${roleSetAuthID}',
-                        '${entryRoleType}',
+                        '${entryRole}',
                         '${licenseID}',
                         '${roleSetType}')`
     );

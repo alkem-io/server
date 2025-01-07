@@ -1,4 +1,4 @@
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
@@ -10,6 +10,6 @@ export class RemoveRoleOnRoleSetFromVirtualContributorInput {
   @Field(() => UUID, { nullable: false })
   contributorID!: string;
 
-  @Field(() => RoleType, { nullable: false })
-  role!: RoleType;
+  @Field(() => RoleName, { nullable: false })
+  role!: RoleName;
 }

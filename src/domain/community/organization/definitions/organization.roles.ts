@@ -1,10 +1,10 @@
 import { AuthorizationCredential } from '@common/enums';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 
 export const organizationRoles: CreateRoleInput[] = [
   {
-    type: RoleType.ASSOCIATE,
+    type: RoleName.ASSOCIATE,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false, // not required
     credentialData: {
@@ -26,7 +26,7 @@ export const organizationRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleType.ADMIN,
+    type: RoleName.ADMIN,
     requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -48,7 +48,7 @@ export const organizationRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleType.OWNER,
+    type: RoleName.OWNER,
     requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {

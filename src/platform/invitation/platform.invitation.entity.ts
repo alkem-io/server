@@ -1,7 +1,6 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { PlatformRole } from '@common/enums/platform.role';
 import { Platform } from '@platform/platform/platform.entity';
 import {
   ENUM_LENGTH,
@@ -10,7 +9,7 @@ import {
   UUID_LENGTH,
 } from '@common/constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 @Entity()
 export class PlatformInvitation
   extends AuthorizableEntity
@@ -30,7 +29,7 @@ export class PlatformInvitation
     length: ENUM_LENGTH,
     nullable: true,
   })
-  roleSetExtraRole?: RoleType;
+  roleSetExtraRole?: RoleName;
 
   // Platform invitations for Community
   @ManyToOne(() => Platform, platform => platform.platformInvitations, {
@@ -44,7 +43,7 @@ export class PlatformInvitation
     length: ENUM_LENGTH,
     nullable: true,
   })
-  platformRole?: PlatformRole;
+  platformRole?: RoleName;
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   email!: string;

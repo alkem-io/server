@@ -19,7 +19,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AccountService } from '@domain/space/account/account.service';
 import { IOrganization } from '@domain/community/organization';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
@@ -106,7 +106,7 @@ export class RegistrationService {
 
     await this.roleSetService.assignUserToRole(
       org.roleSet,
-      RoleType.ASSOCIATE,
+      RoleName.ASSOCIATE,
       user.id
     );
 

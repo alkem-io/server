@@ -2,7 +2,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { PlatformRole } from '@common/enums/platform.role';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -20,6 +19,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { AccountService } from '@domain/space/account/account.service';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { RoleName } from '@common/enums/role.name';
 
 @Injectable()
 export class PlatformRoleService {
@@ -92,8 +92,8 @@ export class PlatformRoleService {
     });
 
     if (
-      assignData.role === PlatformRole.BETA_TESTER ||
-      assignData.role === PlatformRole.VC_CAMPAIGN
+      assignData.role === RoleName.PLATFORM_BETA_TESTER ||
+      assignData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
       // Also assign the user account a license plan
       const accountAgent = await this.accountService.getAgent(user.accountID);
@@ -128,7 +128,7 @@ export class PlatformRoleService {
     }
 
     // Validation logic
-    if (removeData.role === PlatformRole.GLOBAL_ADMIN) {
+    if (removeData.role === RoleName.GLOBAL_ADMIN) {
       // Check not the last global admin
       await this.removeValidationSingleGlobalAdmin();
     }
@@ -141,8 +141,8 @@ export class PlatformRoleService {
     });
 
     if (
-      removeData.role === PlatformRole.BETA_TESTER ||
-      removeData.role === PlatformRole.VC_CAMPAIGN
+      removeData.role === RoleName.PLATFORM_BETA_TESTER ||
+      removeData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
       // Also assign the user account a license plan
       const accountAgent = await this.accountService.getAgent(user.accountID);
@@ -173,10 +173,10 @@ export class PlatformRoleService {
     return true;
   }
 
-  async getPlatformRoles(agentInfo: AgentInfo): Promise<PlatformRole[]> {
-    const result: PlatformRole[] = [];
+  async getPlatformRoles(agentInfo: AgentInfo): Promise<RoleName[]> {
+    const result: RoleName[] = [];
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
-    const roles: PlatformRole[] = Object.values(PlatformRole) as PlatformRole[];
+    const roles: RoleName[] = Object.values(RoleName) as RoleName[];
     for (const role of roles) {
       const hasAgentRole = await this.isInRole(agent, role);
       if (hasAgentRole) {
@@ -187,12 +187,10 @@ export class PlatformRoleService {
     return result;
   }
 
-  public async getPlatformRolesForUser(
-    userID: string
-  ): Promise<PlatformRole[]> {
-    const result: PlatformRole[] = [];
+  public async getPlatformRolesForUser(userID: string): Promise<RoleName[]> {
+    const result: RoleName[] = [];
     const { agent } = await this.userLookupService.getUserAndAgent(userID);
-    const roles: PlatformRole[] = Object.values(PlatformRole) as PlatformRole[];
+    const roles: RoleName[] = Object.values(RoleName) as RoleName[];
     for (const role of roles) {
       const hasAgentRole = await this.isInRole(agent, role);
       if (hasAgentRole) {
@@ -205,18 +203,18 @@ export class PlatformRoleService {
 
   public async getPlatformRolesForUsers(
     userIDs: string[]
-  ): Promise<{ [userID: string]: PlatformRole[] }> {
+  ): Promise<{ [userID: string]: RoleName[] }> {
     // Retrieve all agents for the provided user IDs in a single query
     const usersWithAgents =
       await this.userLookupService.getUsersWithAgent(userIDs);
 
     // Initialize a result map to store roles for each user
-    const userRolesMap: { [userID: string]: PlatformRole[] } = {};
+    const userRolesMap: { [userID: string]: RoleName[] } = {};
 
     // Iterate over each agent and determine their roles
     for (const { id: userID, agent } of usersWithAgents) {
-      const roles: PlatformRole[] = [];
-      for (const platformRole of Object.values(PlatformRole)) {
+      const roles: RoleName[] = [];
+      for (const platformRole of Object.values(RoleName)) {
         if (await this.isInRole(agent, platformRole)) {
           roles.push(platformRole);
         }
@@ -227,7 +225,7 @@ export class PlatformRoleService {
     return userRolesMap;
   }
 
-  private async isInRole(agent: IAgent, role: PlatformRole): Promise<boolean> {
+  private async isInRole(agent: IAgent, role: RoleName): Promise<boolean> {
     const membershipCredential = this.getCredentialForRole(role);
 
     const validCredential = await this.agentService.hasValidCredential(
@@ -240,31 +238,31 @@ export class PlatformRoleService {
     return validCredential;
   }
 
-  private getCredentialForRole(role: PlatformRole): ICredentialDefinition {
+  private getCredentialForRole(role: RoleName): ICredentialDefinition {
     const result: ICredentialDefinition = {
       type: '',
       resourceID: '',
     };
     switch (role) {
-      case PlatformRole.GLOBAL_ADMIN:
+      case RoleName.GLOBAL_ADMIN:
         result.type = AuthorizationCredential.GLOBAL_ADMIN;
         break;
-      case PlatformRole.SUPPORT:
+      case RoleName.GLOBAL_SUPPORT:
         result.type = AuthorizationCredential.GLOBAL_SUPPORT;
         break;
-      case PlatformRole.LICENSE_MANAGER:
+      case RoleName.GLOBAL_LICENSE_MANAGER:
         result.type = AuthorizationCredential.GLOBAL_LICENSE_MANAGER;
         break;
-      case PlatformRole.COMMUNITY_READER:
+      case RoleName.GLOBAL_COMMUNITY_READER:
         result.type = AuthorizationCredential.GLOBAL_COMMUNITY_READ;
         break;
-      case PlatformRole.SPACES_READER:
+      case RoleName.GLOBAL_SPACES_READER:
         result.type = AuthorizationCredential.GLOBAL_SPACES_READER;
         break;
-      case PlatformRole.BETA_TESTER:
+      case RoleName.PLATFORM_BETA_TESTER:
         result.type = AuthorizationCredential.BETA_TESTER;
         break;
-      case PlatformRole.VC_CAMPAIGN:
+      case RoleName.PLATFORM_VC_CAMPAIGN:
         result.type = AuthorizationCredential.VC_CAMPAIGN;
         break;
       default:

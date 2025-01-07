@@ -12,7 +12,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
-import { PlatformRole } from '@common/enums/platform.role';
+import { RoleName } from '@common/enums/role.name';
 import { CreatePlatformInvitationForRoleInput } from '@platform/platform/dto/platform.invitation.dto.global.role';
 import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 import { PlatformRoleService } from './platform.role.service';
@@ -46,8 +46,8 @@ export class PlatformRoleResolverMutations {
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
     if (
-      membershipData.role === PlatformRole.BETA_TESTER ||
-      membershipData.role === PlatformRole.VC_CAMPAIGN
+      membershipData.role === RoleName.PLATFORM_BETA_TESTER ||
+      membershipData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
       privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
     }
@@ -61,8 +61,8 @@ export class PlatformRoleResolverMutations {
       await this.platformRoleService.assignPlatformRoleToUser(membershipData);
 
     if (
-      membershipData.role === PlatformRole.BETA_TESTER ||
-      membershipData.role === PlatformRole.VC_CAMPAIGN
+      membershipData.role === RoleName.PLATFORM_BETA_TESTER ||
+      membershipData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
       await this.resetLicenseForUserAccount(user);
     }
@@ -88,7 +88,7 @@ export class PlatformRoleResolverMutations {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-    if (membershipData.role === PlatformRole.BETA_TESTER) {
+    if (membershipData.role === RoleName.PLATFORM_BETA_TESTER) {
       privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
     }
     await this.authorizationService.grantAccessOrFail(
@@ -101,8 +101,8 @@ export class PlatformRoleResolverMutations {
       await this.platformRoleService.removePlatformRoleFromUser(membershipData);
 
     if (
-      membershipData.role === PlatformRole.BETA_TESTER ||
-      membershipData.role === PlatformRole.VC_CAMPAIGN
+      membershipData.role === RoleName.PLATFORM_BETA_TESTER ||
+      membershipData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
       await this.resetLicenseForUserAccount(user);
     }

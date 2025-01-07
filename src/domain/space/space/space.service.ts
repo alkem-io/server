@@ -51,7 +51,7 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
@@ -222,7 +222,7 @@ export class SpaceService {
       roleSetData: {
         roles: roleSetRolesData,
         applicationForm: applicationFormData,
-        entryRoleType: RoleType.MEMBER,
+        entryRole: RoleName.MEMBER,
       },
       guidelines: {
         // TODO: get this from defaults service
@@ -1053,7 +1053,7 @@ export class SpaceService {
   public async assignContributorToRole(
     space: ISpace,
     contributor: IContributor,
-    role: RoleType,
+    role: RoleName,
     type: RoleSetContributorType
   ) {
     if (!space.community || !space.community.roleSet) {
@@ -1080,21 +1080,21 @@ export class SpaceService {
   public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
     await this.roleSetService.assignUserToRole(
       roleSet,
-      RoleType.MEMBER,
+      RoleName.MEMBER,
       agentInfo.userID,
       agentInfo
     );
 
     await this.roleSetService.assignUserToRole(
       roleSet,
-      RoleType.LEAD,
+      RoleName.LEAD,
       agentInfo.userID,
       agentInfo
     );
 
     await this.roleSetService.assignUserToRole(
       roleSet,
-      RoleType.ADMIN,
+      RoleName.ADMIN,
       agentInfo.userID,
       agentInfo
     );

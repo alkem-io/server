@@ -8,7 +8,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -90,7 +90,7 @@ export class ConversionService {
     const challengeCommunityLeadOrgs =
       await this.roleSetService.getOrganizationsWithRole(
         subspace.community.roleSet,
-        RoleType.LEAD
+        RoleName.LEAD
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
@@ -139,15 +139,15 @@ export class ConversionService {
 
     const userMembers = await this.roleSetService.getUsersWithRole(
       spaceRoleSet,
-      RoleType.MEMBER
+      RoleName.MEMBER
     );
     const userLeads = await this.roleSetService.getUsersWithRole(
       spaceRoleSet,
-      RoleType.LEAD
+      RoleName.LEAD
     );
     const orgMembers = await this.roleSetService.getOrganizationsWithRole(
       spaceRoleSet,
-      RoleType.MEMBER
+      RoleName.MEMBER
     );
 
     // Remove the contributors from old roles
@@ -161,7 +161,7 @@ export class ConversionService {
 
     await this.roleSetService.removeUserFromRole(
       spaceRoleSet,
-      RoleType.MEMBER,
+      RoleName.MEMBER,
       agentInfo.userID
     );
 
@@ -321,19 +321,19 @@ export class ConversionService {
     const roleSet = subsubspace.community.roleSet;
     const userMembers = await this.roleSetService.getUsersWithRole(
       roleSet,
-      RoleType.MEMBER
+      RoleName.MEMBER
     );
     const userLeads = await this.roleSetService.getUsersWithRole(
       roleSet,
-      RoleType.LEAD
+      RoleName.LEAD
     );
     const orgMembers = await this.roleSetService.getOrganizationsWithRole(
       roleSet,
-      RoleType.MEMBER
+      RoleName.MEMBER
     );
     const orgLeads = await this.roleSetService.getOrganizationsWithRole(
       roleSet,
-      RoleType.LEAD
+      RoleName.LEAD
     );
 
     // Remove the contributors from old roles
@@ -348,12 +348,12 @@ export class ConversionService {
     // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
     await this.roleSetService.removeUserFromRole(
       subspace.community.roleSet,
-      RoleType.MEMBER,
+      RoleName.MEMBER,
       agentInfo.userID
     );
     await this.roleSetService.removeUserFromRole(
       subspace.community.roleSet,
-      RoleType.LEAD,
+      RoleName.LEAD,
       agentInfo.userID
     );
 
@@ -543,28 +543,28 @@ export class ConversionService {
     for (const userMember of userMembers) {
       await this.roleSetService.removeUserFromRole(
         roleSet,
-        RoleType.MEMBER,
+        RoleName.MEMBER,
         userMember.id
       );
     }
     for (const userLead of userLeads) {
       await this.roleSetService.removeUserFromRole(
         roleSet,
-        RoleType.LEAD,
+        RoleName.LEAD,
         userLead.id
       );
     }
     for (const orgMember of orgMembers) {
       await this.roleSetService.removeOrganizationFromRole(
         roleSet,
-        RoleType.MEMBER,
+        RoleName.MEMBER,
         orgMember.id
       );
     }
     for (const orgLead of orgLeads) {
       await this.roleSetService.removeOrganizationFromRole(
         roleSet,
-        RoleType.LEAD,
+        RoleName.LEAD,
         orgLead.id
       );
     }
@@ -580,21 +580,21 @@ export class ConversionService {
     for (const userMember of userMembers) {
       await this.roleSetService.assignUserToRole(
         roleSet,
-        RoleType.MEMBER,
+        RoleName.MEMBER,
         userMember.id
       );
     }
     for (const userLead of userLeads) {
       await this.roleSetService.assignUserToRole(
         roleSet,
-        RoleType.LEAD,
+        RoleName.LEAD,
         userLead.id
       );
     }
     for (const orgMember of orgMembers) {
       await this.roleSetService.assignOrganizationToRole(
         roleSet,
-        RoleType.MEMBER,
+        RoleName.MEMBER,
         orgMember.id
       );
     }
@@ -602,7 +602,7 @@ export class ConversionService {
       for (const orgLead of orgLeads) {
         await this.roleSetService.assignOrganizationToRole(
           roleSet,
-          RoleType.LEAD,
+          RoleName.LEAD,
           orgLead.id
         );
       }

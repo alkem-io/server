@@ -14,10 +14,10 @@ import { PlatformInvitation } from '@platform/invitation/platform.invitation.ent
 import { IRoleSet } from './role.set.interface';
 import { Application } from '@domain/access/application/application.entity';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
-import { RoleType } from '@common/enums/role.type';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
 import { License } from '@domain/common/license/license.entity';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { RoleName } from '@common/enums/role.name';
 
 @Entity()
 export class RoleSet
@@ -47,7 +47,7 @@ export class RoleSet
   roles?: Role[];
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  entryRoleType!: RoleType;
+  entryRole!: RoleName;
 
   @OneToMany(() => Application, application => application.roleSet, {
     eager: false,

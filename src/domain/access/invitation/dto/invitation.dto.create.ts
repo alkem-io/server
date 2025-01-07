@@ -3,7 +3,7 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
@@ -28,12 +28,12 @@ export class CreateInvitationInput {
   roleSetID!: string;
   invitedToParent!: boolean;
 
-  @Field(() => RoleType, {
+  @Field(() => RoleName, {
     nullable: true,
     description:
       'An additional role to assign to the Contributor, in addition to the entry Role.',
   })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  extraRole?: RoleType;
+  extraRole?: RoleName;
 }

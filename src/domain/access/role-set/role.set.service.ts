@@ -36,7 +36,7 @@ import { RoleSetContributorType } from '@common/enums/role.set.contributor.type'
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { IApplication } from '../application/application.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
@@ -94,7 +94,7 @@ export class RoleSetService {
     roleSet.applications = [];
     roleSet.invitations = [];
     roleSet.platformInvitations = [];
-    roleSet.entryRoleType = roleSetData.entryRoleType;
+    roleSet.entryRole = roleSetData.entryRole;
 
     roleSet.parentRoleSet = roleSetData.parentRoleSet;
 
@@ -258,7 +258,7 @@ export class RoleSetService {
 
   public async removeAllRoleAssignments(roleSet: IRoleSet) {
     // Remove all issued role credentials for contributors
-    for (const roleType of Object.values(RoleType)) {
+    for (const roleType of Object.values(RoleName)) {
       const users = await this.getUsersWithRole(roleSet, roleType);
       for (const user of users) {
         await this.removeUserFromRole(roleSet, roleType, user.id, false);
@@ -282,14 +282,14 @@ export class RoleSetService {
   async getRolesForAgentInfo(
     agentInfo: AgentInfo,
     roleSet: IRoleSet
-  ): Promise<RoleType[]> {
+  ): Promise<RoleName[]> {
     if (!agentInfo.agentID) {
       return [];
     }
 
-    const result: RoleType[] = [];
+    const result: RoleName[] = [];
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
-    const roles: RoleType[] = Object.values(RoleType) as RoleType[];
+    const roles: RoleName[] = Object.values(RoleName) as RoleName[];
     for (const role of roles) {
       const hasAgentRole = await this.isInRole(agent, roleSet, role);
       if (hasAgentRole) {
@@ -372,7 +372,7 @@ export class RoleSetService {
 
   public async getUsersWithRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     limit?: number
   ): Promise<IUser[]> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
@@ -390,7 +390,7 @@ export class RoleSetService {
 
   public async getVirtualContributorsWithRole(
     roleSet: IRoleSet,
-    roleType: RoleType
+    roleType: RoleName
   ): Promise<IVirtualContributor[]> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
@@ -406,7 +406,7 @@ export class RoleSetService {
 
   public async getOrganizationsWithRole(
     roleSet: IRoleSet,
-    roleType: RoleType
+    roleType: RoleName
   ): Promise<IOrganization[]> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
@@ -420,7 +420,7 @@ export class RoleSetService {
 
   public async countContributorsPerRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     contributorType: RoleSetContributorType
   ): Promise<number> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
@@ -449,7 +449,7 @@ export class RoleSetService {
 
   public async getCredentialDefinitionForRole(
     roleSet: IRoleSet,
-    role: RoleType
+    role: RoleName
   ): Promise<ICredentialDefinition> {
     const credential = this.getCredentialForRole(roleSet, role);
     return credential;
@@ -457,7 +457,7 @@ export class RoleSetService {
 
   public async assignContributorToRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     contributorID: string,
     contributorType: RoleSetContributorType,
     agentInfo?: AgentInfo,
@@ -496,7 +496,7 @@ export class RoleSetService {
 
   async assignUserToRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     userID: string,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
@@ -523,7 +523,7 @@ export class RoleSetService {
       agent,
       RoleSetContributorType.USER
     );
-    if (roleType === RoleType.ADMIN && parentRoleSet) {
+    if (roleType === RoleName.ADMIN && parentRoleSet) {
       // also assign as subspace admin in parent roleSet if there is a parent roleSet
       const credential = await this.getCredentialForImplicitRole(
         parentRoleSet,
@@ -592,7 +592,7 @@ export class RoleSetService {
         if (!isMemberOfParentRoleSet) {
           await this.assignContributorToRole(
             roleSet.parentRoleSet,
-            RoleType.MEMBER,
+            RoleName.MEMBER,
             contributorID,
             invitation.contributorType,
             agentInfo,
@@ -602,7 +602,7 @@ export class RoleSetService {
       }
       await this.assignContributorToRole(
         roleSet,
-        RoleType.MEMBER,
+        RoleName.MEMBER,
         contributorID,
         invitation.contributorType,
         agentInfo,
@@ -641,7 +641,7 @@ export class RoleSetService {
   private async contributorAddedToRole(
     contributor: IContributor,
     roleSet: IRoleSet,
-    role: RoleType,
+    role: RoleName,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ) {
@@ -651,7 +651,7 @@ export class RoleSetService {
           `Trigger new member events: ${triggerNewMemberEvents}`,
           LogContext.ROLES
         );
-        if (role === RoleType.MEMBER) {
+        if (role === RoleName.MEMBER) {
           const communication =
             await this.communityResolverService.getCommunicationForRoleSet(
               roleSet.id
@@ -684,7 +684,7 @@ export class RoleSetService {
 
   async assignVirtualToRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     virtualContributorID: string,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
@@ -762,7 +762,7 @@ export class RoleSetService {
 
   async assignOrganizationToRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     organizationID: string
   ): Promise<IOrganization> {
     const { organization, agent } =
@@ -782,7 +782,7 @@ export class RoleSetService {
 
   async removeUserFromRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     userID: string,
     validatePolicyLimits = true
   ): Promise<IUser> {
@@ -798,11 +798,11 @@ export class RoleSetService {
     );
 
     const parentRoleSet = await this.getParentRoleSet(roleSet);
-    if (roleType === RoleType.ADMIN && parentRoleSet) {
+    if (roleType === RoleName.ADMIN && parentRoleSet) {
       // Check if an admin anywhere else in the roleSet
       const peerRoleSets = await this.getPeerRoleSets(parentRoleSet, roleSet);
       const hasAnotherAdminRole = peerRoleSets.some(pc =>
-        this.isInRole(agent, pc, RoleType.ADMIN)
+        this.isInRole(agent, pc, RoleName.ADMIN)
       );
 
       if (!hasAnotherAdminRole) {
@@ -814,7 +814,7 @@ export class RoleSetService {
       }
     }
 
-    if (roleType === RoleType.MEMBER) {
+    if (roleType === RoleName.MEMBER) {
       const communication =
         await this.communityResolverService.getCommunicationForRoleSet(
           roleSet.id
@@ -831,7 +831,7 @@ export class RoleSetService {
 
   async removeOrganizationFromRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     organizationID: string,
     validatePolicyLimits = true
   ): Promise<IOrganization> {
@@ -853,7 +853,7 @@ export class RoleSetService {
 
   async removeVirtualFromRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     virtualContributorID: string,
     validatePolicyLimits = true
   ): Promise<IVirtualContributor> {
@@ -888,7 +888,7 @@ export class RoleSetService {
 
   private async validateUserContributorPolicy(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     action: RoleSetUpdateType
   ) {
     const userMembersCount = await this.countContributorsPerRole(
@@ -922,7 +922,7 @@ export class RoleSetService {
 
   private async validateOrganizationContributorPolicy(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     action: RoleSetUpdateType
   ) {
     const orgMemberCount = await this.countContributorsPerRole(
@@ -957,7 +957,7 @@ export class RoleSetService {
 
   private async validateContributorPolicyLimits(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     action: RoleSetUpdateType,
     contributorType: RoleSetContributorType
   ) {
@@ -974,7 +974,7 @@ export class RoleSetService {
 
   public async assignContributorAgentToRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     agent: IAgent,
     contributorType: RoleSetContributorType
   ): Promise<IAgent> {
@@ -1029,7 +1029,7 @@ export class RoleSetService {
     // Use the admin credential to get the resourceID
     const adminCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleType.ADMIN
+      RoleName.ADMIN
     );
     const resourceID = adminCredential.resourceID;
     switch (role) {
@@ -1049,7 +1049,7 @@ export class RoleSetService {
 
   private async removeContributorFromRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     agent: IAgent,
     contributorType: RoleSetContributorType,
     validatePolicyLimits: boolean
@@ -1075,7 +1075,7 @@ export class RoleSetService {
   public async isMember(agent: IAgent, roleSet: IRoleSet): Promise<boolean> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleType.MEMBER
+      RoleName.MEMBER
     );
 
     const validCredential = await this.agentService.hasValidCredential(
@@ -1091,7 +1091,7 @@ export class RoleSetService {
   public async isInRole(
     agent: IAgent,
     roleSet: IRoleSet,
-    role: RoleType
+    role: RoleName
   ): Promise<boolean> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
@@ -1318,7 +1318,7 @@ export class RoleSetService {
   async getMembersCount(roleSet: IRoleSet): Promise<number> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleType.MEMBER
+      RoleName.MEMBER
     );
 
     const credentialMatches =
@@ -1392,7 +1392,7 @@ export class RoleSetService {
 
   public async getDirectParentCredentialForRole(
     roleSet: IRoleSet,
-    roleType: RoleType
+    roleType: RoleName
   ): Promise<ICredentialDefinition | undefined> {
     const parentCredentials = await this.getParentCredentialsForRole(
       roleSet,
@@ -1409,7 +1409,7 @@ export class RoleSetService {
 
   public async getParentCredentialsForRole(
     roleSet: IRoleSet,
-    roleType: RoleType
+    roleType: RoleName
   ): Promise<ICredentialDefinition[]> {
     const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
     return this.roleService.getParentCredentialsForRole(roleDefinition);
@@ -1417,7 +1417,7 @@ export class RoleSetService {
 
   public async getCredentialsForRoleWithParents(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     spaceSettings: ISpaceSettings
   ): Promise<ICredentialDefinition[]> {
     const result = await this.getCredentialsForRole(
@@ -1434,12 +1434,12 @@ export class RoleSetService {
 
   public async getCredentialsForRole(
     roleSet: IRoleSet,
-    roleType: RoleType,
+    roleType: RoleName,
     spaceSettings: ISpaceSettings // TODO: would like not to have this here; for later
   ): Promise<ICredentialDefinition[]> {
     const result = [await this.getCredentialForRole(roleSet, roleType)];
     if (
-      roleType === RoleType.ADMIN &&
+      roleType === RoleName.ADMIN &&
       spaceSettings.privacy.allowPlatformSupportAsAdmin
     ) {
       result.push({
@@ -1452,7 +1452,7 @@ export class RoleSetService {
 
   public async getCredentialForRole(
     roleSet: IRoleSet,
-    roleType: RoleType
+    roleType: RoleName
   ): Promise<ICredentialDefinition> {
     const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
     return this.roleService.getCredentialForRole(roleDefinition);
@@ -1477,7 +1477,7 @@ export class RoleSetService {
 
   public async getRoleDefinition(
     roleSet: IRoleSet,
-    roleType: RoleType
+    roleType: RoleName
   ): Promise<IRole> {
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
     const role = roleDefinitions.find(rd => rd.type === roleType);
@@ -1492,12 +1492,10 @@ export class RoleSetService {
 
   public async getEntryRoleDefinition(roleSet: IRoleSet): Promise<IRole> {
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
-    const entryRole = roleDefinitions.find(
-      rd => rd.type === roleSet.entryRoleType
-    );
+    const entryRole = roleDefinitions.find(rd => rd.type === roleSet.entryRole);
     if (!entryRole) {
       throw new RelationshipNotFoundException(
-        `Unable to find entry level Role of type ${roleSet.entryRoleType} for RoleSet: ${roleSet.id}`,
+        `Unable to find entry level Role of type ${roleSet.entryRole} for RoleSet: ${roleSet.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -1524,7 +1522,7 @@ export class RoleSetService {
 
     await this.assignUserToRole(
       roleSet,
-      RoleType.MEMBER,
+      RoleName.MEMBER,
       userID,
       agentInfo,
       true
@@ -1533,9 +1531,9 @@ export class RoleSetService {
 
   public async isEntryRole(
     roleSet: IRoleSet,
-    roleType: RoleType
+    roleType: RoleName
   ): Promise<boolean> {
-    const isEntryRole = roleSet.entryRoleType === roleType;
+    const isEntryRole = roleSet.entryRole === roleType;
     return isEntryRole;
   }
 }

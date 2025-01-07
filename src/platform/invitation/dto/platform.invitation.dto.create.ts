@@ -1,6 +1,5 @@
 import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
-import { RoleType } from '@common/enums/role.type';
-import { PlatformRole } from '@common/enums/platform.role';
+import { RoleName } from '@common/enums/role.name';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 
@@ -32,7 +31,7 @@ export class CreatePlatformInvitationInput {
 
   roleSetID?: string;
   roleSetInvitedToParent!: boolean;
-  roleSetExtraRole?: RoleType;
+  roleSetExtraRole?: RoleName;
 
-  platformRole?: PlatformRole;
+  platformRole?: RoleName;
 }

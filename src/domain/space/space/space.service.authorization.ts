@@ -16,7 +16,7 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import {
   POLICY_RULE_SPACE_CREATE_SUBSPACE,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
@@ -163,7 +163,7 @@ export class SpaceAuthorizationService {
         parentSpaceAdminCredentialCriterias =
           await this.roleSetService.getCredentialsForRole(
             parentSpaceCommunity.roleSet,
-            RoleType.ADMIN,
+            RoleName.ADMIN,
             spaceSettings
           );
         break;
@@ -386,7 +386,7 @@ export class SpaceAuthorizationService {
 
     const memberCriteras = await this.roleSetService.getCredentialsForRole(
       roleSet,
-      RoleType.MEMBER,
+      RoleName.MEMBER,
       spaceSettings
     );
     const spaceMember = this.authorizationPolicyService.createCredentialRule(
@@ -398,7 +398,7 @@ export class SpaceAuthorizationService {
 
     const spaceAdminCriterias = await this.roleSetService.getCredentialsForRole(
       roleSet,
-      RoleType.ADMIN,
+      RoleName.ADMIN,
       spaceSettings
     );
     const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
@@ -444,7 +444,7 @@ export class SpaceAuthorizationService {
   ): Promise<ICredentialDefinition[]> {
     const memberCriteria = await this.roleSetService.getCredentialsForRole(
       roleSet,
-      RoleType.MEMBER,
+      RoleName.MEMBER,
       spaceSettings
     );
     const collaborationSettings = spaceSettings.collaboration;
@@ -455,7 +455,7 @@ export class SpaceAuthorizationService {
       const parentCredential =
         await this.roleSetService.getDirectParentCredentialForRole(
           roleSet,
-          RoleType.MEMBER
+          RoleName.MEMBER
         );
       if (parentCredential) memberCriteria.push(parentCredential);
     }
@@ -476,7 +476,7 @@ export class SpaceAuthorizationService {
     const credentials =
       await this.roleSetService.getCredentialsForRoleWithParents(
         roleSet,
-        RoleType.ADMIN,
+        RoleName.ADMIN,
         spaceSettings
       );
 

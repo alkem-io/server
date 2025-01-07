@@ -1,9 +1,9 @@
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IRole } from './role.interface';
-import { RoleType } from '@common/enums/role.type';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
 import { RoleSet } from '../role-set/role.set.entity';
+import { RoleName } from '@common/enums/role.name';
 
 @Entity()
 export class Role extends BaseAlkemioEntity implements IRole {
@@ -15,7 +15,7 @@ export class Role extends BaseAlkemioEntity implements IRole {
   roleSet?: RoleSet;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  type!: RoleType;
+  type!: RoleName;
 
   @Column('text', { nullable: false })
   credential!: string;

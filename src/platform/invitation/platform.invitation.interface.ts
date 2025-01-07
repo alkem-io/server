@@ -1,9 +1,8 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { PlatformRole } from '@common/enums/platform.role';
+import { RoleName } from '@common/enums/role.name';
 import { IPlatform } from '@platform/platform/platform.interface';
 import { IRoleSet } from '@domain/access/role-set';
-import { RoleType } from '@common/enums/role.type';
 
 @ObjectType('PlatformInvitation')
 export class IPlatformInvitation extends IAuthorizable {
@@ -43,16 +42,16 @@ export class IPlatformInvitation extends IAuthorizable {
   })
   roleSetInvitedToParent!: boolean;
 
-  @Field(() => RoleType, {
+  @Field(() => RoleName, {
     nullable: true,
     description:
       'An additional role to assign to the Contributor, in addition to the entry Role.',
   })
-  roleSetExtraRole?: RoleType;
+  roleSetExtraRole?: RoleName;
 
-  @Field(() => PlatformRole, {
+  @Field(() => RoleName, {
     nullable: true,
     description: 'The platform role the user will receive when they sign up',
   })
-  platformRole?: PlatformRole;
+  platformRole?: RoleName;
 }

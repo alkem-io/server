@@ -1,9 +1,9 @@
 import { ICredential } from '@src/domain';
 import { AuthorizationCredential } from '@common/enums';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
 
-export type CredentialRole = RoleType | RoleSetRoleImplicit;
+export type CredentialRole = RoleName | RoleSetRoleImplicit;
 
 export type EntityCredentialType = 'spaces' | 'organizations' | 'groups';
 
@@ -73,17 +73,17 @@ const credentialTypeToRole = (
   type: AuthorizationCredential
 ): CredentialRole => {
   const roleMap: Partial<Record<AuthorizationCredential, CredentialRole>> = {
-    [AuthorizationCredential.SPACE_ADMIN]: RoleType.ADMIN,
-    [AuthorizationCredential.SPACE_LEAD]: RoleType.LEAD,
-    [AuthorizationCredential.SPACE_MEMBER]: RoleType.MEMBER,
+    [AuthorizationCredential.SPACE_ADMIN]: RoleName.ADMIN,
+    [AuthorizationCredential.SPACE_LEAD]: RoleName.LEAD,
+    [AuthorizationCredential.SPACE_MEMBER]: RoleName.MEMBER,
     [AuthorizationCredential.SPACE_SUBSPACE_ADMIN]:
       RoleSetRoleImplicit.SUBSPACE_ADMIN,
 
-    [AuthorizationCredential.ORGANIZATION_ADMIN]: RoleType.ADMIN,
-    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: RoleType.ASSOCIATE,
-    [AuthorizationCredential.ORGANIZATION_OWNER]: RoleType.OWNER,
+    [AuthorizationCredential.ORGANIZATION_ADMIN]: RoleName.ADMIN,
+    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: RoleName.ASSOCIATE,
+    [AuthorizationCredential.ORGANIZATION_OWNER]: RoleName.OWNER,
 
-    [AuthorizationCredential.USER_GROUP_MEMBER]: RoleType.MEMBER, // hack for now; not used
+    [AuthorizationCredential.USER_GROUP_MEMBER]: RoleName.MEMBER, // hack for now; not used
   };
 
   const role = roleMap[type];

@@ -23,6 +23,7 @@ import { OrganizationSettingsModule } from '../organization.settings/organizatio
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { OrganizationLicenseService } from './organization.service.license';
+import { OrganizationLookupModule } from '../organization-lookup/organization.lookup.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { OrganizationLicenseService } from './organization.service.license';
     RoleSetModule,
     ContributorModule,
     OrganizationVerificationModule,
+    OrganizationLookupModule,
     OrganizationSettingsModule,
     UserGroupModule,
     EntityResolverModule,

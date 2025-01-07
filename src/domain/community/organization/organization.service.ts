@@ -58,7 +58,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { organizationRoles } from './definitions/organization.roles';
 import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { organizationApplicationForm } from './definitions/organization.role.application.form';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 
@@ -107,7 +107,7 @@ export class OrganizationService {
     const roleSetInput: CreateRoleSetInput = {
       roles: organizationRoles,
       applicationForm: organizationApplicationForm,
-      entryRoleType: RoleType.ASSOCIATE,
+      entryRole: RoleName.ASSOCIATE,
     };
     organization.roleSet =
       await this.roleSetService.createRoleSet(roleSetInput);
@@ -173,7 +173,7 @@ export class OrganizationService {
     if (agentInfo) {
       await this.roleSetService.assignUserToRole(
         organization.roleSet,
-        RoleType.ASSOCIATE,
+        RoleName.ASSOCIATE,
         agentInfo.userID,
         agentInfo,
         false
@@ -181,7 +181,7 @@ export class OrganizationService {
 
       await this.roleSetService.assignUserToRole(
         organization.roleSet,
-        RoleType.ADMIN,
+        RoleName.ADMIN,
         agentInfo.userID,
         agentInfo,
         false
@@ -479,7 +479,7 @@ export class OrganizationService {
 
     const membersCount = await this.roleSetService.countContributorsPerRole(
       roleSet,
-      RoleType.ASSOCIATE,
+      RoleName.ASSOCIATE,
       RoleSetContributorType.USER
     );
     const membersTopic = new NVP('associates', membersCount.toString());

@@ -11,7 +11,7 @@ import { PaginationArgs } from '@core/pagination/pagination.args';
 import { PaginatedUsers } from '@core/pagination/paginated.user';
 import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
 import { IUser } from '@domain/community/user/user.interface';
-import { RoleType } from '@common/enums/role.type';
+import { RoleName } from '@common/enums/role.name';
 import { UserService } from '@domain/community/user/user.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -45,7 +45,7 @@ export class RoleSetResolverFields {
     const roleDefinition =
       await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
-        RoleType.MEMBER
+        RoleName.MEMBER
       );
 
     const parentRoleSet = await this.roleSetService.getParentRoleSet(roleSet);
@@ -53,7 +53,7 @@ export class RoleSetResolverFields {
     const parentRoleSetMemberCredential = parentRoleSet
       ? await this.roleSetService.getCredentialDefinitionForRole(
           parentRoleSet,
-          RoleType.MEMBER
+          RoleName.MEMBER
         )
       : undefined;
 
@@ -84,13 +84,13 @@ export class RoleSetResolverFields {
     const memberRoleCredentials =
       await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
-        RoleType.MEMBER
+        RoleName.MEMBER
       );
 
     const leadRoleCredential =
       await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
-        RoleType.LEAD
+        RoleName.LEAD
       );
 
     const credentialCriteria = {
@@ -114,8 +114,8 @@ export class RoleSetResolverFields {
   })
   async usersInRole(
     @Parent() roleSet: IRoleSet,
-    @Args('role', { type: () => RoleType, nullable: false })
-    role: RoleType,
+    @Args('role', { type: () => RoleName, nullable: false })
+    role: RoleName,
     @Args({
       name: 'limit',
       type: () => Float,
@@ -143,8 +143,8 @@ export class RoleSetResolverFields {
   })
   async organizationsInRole(
     @Parent() roleSet: IRoleSet,
-    @Args('role', { type: () => RoleType, nullable: false })
-    role: RoleType
+    @Args('role', { type: () => RoleName, nullable: false })
+    role: RoleName
   ): Promise<IOrganization[]> {
     return await this.roleSetService.getOrganizationsWithRole(roleSet, role);
   }
@@ -157,8 +157,8 @@ export class RoleSetResolverFields {
   })
   async virtualContributorsInRole(
     @Parent() roleSet: IRoleSet,
-    @Args('role', { type: () => RoleType, nullable: false })
-    role: RoleType
+    @Args('role', { type: () => RoleName, nullable: false })
+    role: RoleName
   ) {
     return await this.roleSetService.getVirtualContributorsWithRole(
       roleSet,

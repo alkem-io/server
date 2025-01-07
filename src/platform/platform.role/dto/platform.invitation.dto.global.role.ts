@@ -2,11 +2,11 @@ import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
-import { PlatformRole } from '@common/enums/platform.role';
+import { RoleName } from '@common/enums/role.name';
 
 @InputType()
 export class CreatePlatformInvitationForRoleInput extends CreatePlatformInvitationInput {
-  @Field(() => PlatformRole, { nullable: false })
+  @Field(() => RoleName, { nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
-  platformRole!: PlatformRole;
+  platformRole!: RoleName;
 }
