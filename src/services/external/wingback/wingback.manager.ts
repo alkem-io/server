@@ -12,6 +12,7 @@ import { BaseException } from '@common/exceptions/base.exception';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { catchError, retry, timeout } from 'rxjs/operators';
 import { RetryException, TimeoutException } from '@common/exceptions/internal';
+import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
@@ -114,7 +115,10 @@ export class WingbackManager {
   // https://docs.wingback.com/dev/api-reference/entitlement/get_c_entitlement_customerid_access
   public async getEntitlements(customerId: string): Promise<WingbackFeature[]> {
     if (!this.enabled) {
-      throw new Error('Wingback is not enabled');
+      throw new BaseExceptionInternal(
+        'Wingback is not enabled',
+        LogContext.WINGBACK
+      );
     }
     const entitlements = await this.sendGet<WingbackEntitlement[]>(
       `/v1/c/entitlement/${customerId}/access`

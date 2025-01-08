@@ -1,4 +1,4 @@
-import { EntityManager } from 'typeorm';
+import { EntityManager, FindOptionsRelations } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -23,7 +23,29 @@ export class LicenseEntitlementUsageService {
     licenseID: string,
     entitlementType: LicenseEntitlementType
   ): Promise<number> {
-    // todo: optimize based on the type; too much is fetched
+    // optimize the joins based on the type
+    const relations: FindOptionsRelations<Account> = {};
+    switch (entitlementType) {
+      case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
+      case LicenseEntitlementType.ACCOUNT_SPACE_PLUS:
+      case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
+        relations.spaces = {
+          license: {
+            entitlements: true,
+          },
+        };
+        break;
+      case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
+        relations.virtualContributors = true;
+        break;
+      case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
+        relations.innovationHubs = true;
+        break;
+      case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
+        relations.innovationPacks = true;
+        break;
+    }
+
     const account = await this.entityManager.findOne(Account, {
       loadEagerRelations: false,
       where: {
@@ -31,16 +53,7 @@ export class LicenseEntitlementUsageService {
           id: licenseID,
         },
       },
-      relations: {
-        spaces: {
-          license: {
-            entitlements: true,
-          },
-        },
-        virtualContributors: true,
-        innovationHubs: true,
-        innovationPacks: true,
-      },
+      relations,
     });
     if (!account) {
       throw new EntityNotFoundException(
