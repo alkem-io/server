@@ -7,8 +7,8 @@ import {
   ArgumentsHost,
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { GraphQLError } from 'graphql';
 import { ContextTypeWithGraphQL } from '@src/types/context.type';
-import { GraphQLError } from 'graphql/index';
 import { AlkemioErrorStatus } from '@common/enums';
 
 @Catch(Error)
