@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ContextTypeWithGraphQL } from '@src/types/context.type';
+import { GraphQLError } from 'graphql/index';
+import { AlkemioErrorStatus } from '@common/enums';
 
 @Catch(Error)
 export class UnhandledExceptionFilter implements ExceptionFilter {
@@ -45,6 +47,24 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
             : 'Internal Server Error',
         stack:
           process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
+      });
+    } else if (contextType === 'graphql') {
+      if (process.env.NODE_ENV === 'production') {
+        // return a new error with only the message and the id
+        // that way we are not exposing any internal information
+        return new GraphQLError(exception.message, {
+          extensions: {
+            errorId: secondParam.errorId,
+            code: AlkemioErrorStatus.UNSPECIFIED,
+          },
+        });
+      }
+      // if not in PROD, return everything
+      return new GraphQLError(exception.message, {
+        extensions: {
+          ...exception,
+          message: undefined, // do not repeat the message
+        },
       });
     }
     // something needs to be returned so the default ExceptionsHandler is not triggered

@@ -9,6 +9,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { randomUUID } from 'crypto';
 import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
+import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 
 @Resolver()
 export class LicensingWingbackSubscriptionServiceResolverMutations {
@@ -52,7 +53,7 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
 
   // todo: move
   @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
+  @Mutation(() => [LicensingGrantedEntitlement], {
     description: 'Get wingback customer entitlements.',
   })
   public async adminWingbackGetCustomerEntitlements(
@@ -67,10 +68,8 @@ export class LicensingWingbackSubscriptionServiceResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `licensing wingback subscription entitlements: ${agentInfo.email}`
     );
-    const result =
-      await this.licensingWingbackSubscriptionService.getEntitlements(
-        customerId
-      );
-    return JSON.stringify(result, null, 2);
+    return this.licensingWingbackSubscriptionService.getEntitlements(
+      customerId
+    );
   }
 }

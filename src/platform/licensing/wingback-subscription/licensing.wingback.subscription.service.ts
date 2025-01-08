@@ -34,11 +34,22 @@ export class LicensingWingbackSubscriptionService {
     return this.wingbackManager.createCustomer(data);
   }
 
+  /**
+   * Returns the supported by Alkemio entitlements for the customer
+   * @param customerId
+   * @throws {Error}
+   */
   public async getEntitlements(
     customerId: string
   ): Promise<LicensingGrantedEntitlement[]> {
     const wingbackFeatures =
       await this.wingbackManager.getEntitlements(customerId);
+
+    this.logger.verbose?.(
+      `Wingback returned with ${wingbackFeatures.length} features for customer: '${customerId}'`,
+      LogContext.WINGBACK
+    );
+
     return this.toLicensingGrantedEntitlements(wingbackFeatures);
   }
 
