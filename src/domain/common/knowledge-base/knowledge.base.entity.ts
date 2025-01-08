@@ -3,6 +3,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/au
 import { Profile } from '@domain/common/profile/profile.entity';
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
 import { IKnowledgeBase } from './knowledge.base.interface';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Entity()
 export class KnowledgeBase
@@ -24,4 +25,10 @@ export class KnowledgeBase
   })
   @JoinColumn()
   calloutsSet?: CalloutsSet;
+
+  @OneToOne(
+    () => VirtualContributor,
+    (vc: VirtualContributor) => vc.knowledgeBase
+  )
+  virtualContributor?: VirtualContributor;
 }

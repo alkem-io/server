@@ -271,8 +271,8 @@ export class NamingService {
   }
 
   async getRoleSetAndSettingsForCallout(calloutID: string): Promise<{
-    roleSet: IRoleSet;
-    spaceSettings: ISpaceSettings;
+    roleSet?: IRoleSet;
+    spaceSettings?: ISpaceSettings;
   }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
@@ -290,16 +290,16 @@ export class NamingService {
         },
       },
     });
-    if (!space || !space.community || !space.community.roleSet) {
-      throw new EntityNotInitializedException(
-        `Unable to load all entities for space with callout ${calloutID}`,
-        LogContext.COMMUNITY
-      );
-    }
+    // if (!space || !space.community || !space.community.roleSet) {
+    //   throw new EntityNotInitializedException(
+    //     `Unable to load all entities for space with callout ${calloutID}`,
+    //     LogContext.COMMUNITY
+    //   );
+    // }
 
     // Directly parse the settings string to avoid the need to load the settings service
-    const roleSet = space.community.roleSet;
-    const spaceSettings: ISpaceSettings = space.settings;
+    const roleSet = space?.community?.roleSet;
+    const spaceSettings = space?.settings;
 
     return { roleSet: roleSet, spaceSettings };
   }

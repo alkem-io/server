@@ -42,6 +42,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -199,18 +200,17 @@ export class CalloutResolverMutations {
         LogContext.COLLABORATION
       );
     }
+
+    console.log('\n\n\n');
+    console.log(callout.calloutsSet);
+    console.log('\n\n\n');
+
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
       `create contribution on callout: ${callout.id}`
     );
-
-    // Get the levelZeroSpaceID for the callout
-    const levelZeroSpaceID =
-      await this.communityResolverService.getLevelZeroSpaceIdForCalloutsSet(
-        callout.calloutsSet.id
-      );
 
     if (callout.contributionPolicy.state === CalloutState.CLOSED) {
       if (
@@ -232,6 +232,7 @@ export class CalloutResolverMutations {
 
     const { roleSet, spaceSettings } =
       await this.namingService.getRoleSetAndSettingsForCallout(callout.id);
+
     contribution = await this.calloutContributionService.save(contribution);
 
     const destinationStorageBucket =
@@ -254,50 +255,58 @@ export class CalloutResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    if (contributionData.post && contribution.post) {
-      const postCreatedEvent: CalloutPostCreatedPayload = {
-        eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
-        calloutID: callout.id,
-        contributionID: contribution.id,
-        sortOrder: contribution.sortOrder,
-        post: contribution.post,
-      };
-      await this.postCreatedSubscription.publish(
-        SubscriptionType.CALLOUT_POST_CREATED,
-        postCreatedEvent
-      );
-
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
-        this.processActivityPostCreated(
-          callout,
-          contribution,
-          contribution.post,
-          levelZeroSpaceID,
-          agentInfo
+    // Get the levelZeroSpaceID for the callout
+    if (callout.calloutsSet.type === CalloutsSetType.COLLABORATION) {
+      const levelZeroSpaceID =
+        await this.communityResolverService.getLevelZeroSpaceIdForCalloutsSet(
+          callout.calloutsSet.id
         );
+
+      if (contributionData.post && contribution.post) {
+        const postCreatedEvent: CalloutPostCreatedPayload = {
+          eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
+          calloutID: callout.id,
+          contributionID: contribution.id,
+          sortOrder: contribution.sortOrder,
+          post: contribution.post,
+        };
+        await this.postCreatedSubscription.publish(
+          SubscriptionType.CALLOUT_POST_CREATED,
+          postCreatedEvent
+        );
+
+        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityPostCreated(
+            callout,
+            contribution,
+            contribution.post,
+            levelZeroSpaceID,
+            agentInfo
+          );
+        }
       }
-    }
 
-    if (contributionData.link && contribution.link) {
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
-        await this.processActivityLinkCreated(
-          callout,
-          contribution.link,
-          levelZeroSpaceID,
-          agentInfo
-        );
+      if (contributionData.link && contribution.link) {
+        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          await this.processActivityLinkCreated(
+            callout,
+            contribution.link,
+            levelZeroSpaceID,
+            agentInfo
+          );
+        }
       }
-    }
 
-    if (contributionData.whiteboard && contribution.whiteboard) {
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
-        this.processActivityWhiteboardCreated(
-          callout,
-          contribution,
-          contribution.whiteboard,
-          levelZeroSpaceID,
-          agentInfo
-        );
+      if (contributionData.whiteboard && contribution.whiteboard) {
+        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityWhiteboardCreated(
+            callout,
+            contribution,
+            contribution.whiteboard,
+            levelZeroSpaceID,
+            agentInfo
+          );
+        }
       }
     }
 
