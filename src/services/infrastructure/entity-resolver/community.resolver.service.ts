@@ -214,14 +214,14 @@ export class CommunityResolverService {
     });
     if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find space for whiteboard: ${calloutId}`,
+        `Unable to find space for callout: ${calloutId}`,
         LogContext.COMMUNITY
       );
     }
     const community = space.community;
     if (!community) {
       throw new EntityNotFoundException(
-        `Unable to find community for whiteboard: ${calloutId}`,
+        `Unable to find community for callout: ${calloutId}`,
         LogContext.COMMUNITY
       );
     }
