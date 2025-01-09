@@ -196,14 +196,10 @@ export class CalloutResolverMutations {
     );
     if (!callout.calloutsSet) {
       throw new RelationshipNotFoundException(
-        `Callout ${callout.id} has no collaboration relationship`,
+        `Callout ${callout.id} has no calloutSet relationship`,
         LogContext.COLLABORATION
       );
     }
-
-    console.log('\n\n\n');
-    console.log(callout.calloutsSet);
-    console.log('\n\n\n');
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,

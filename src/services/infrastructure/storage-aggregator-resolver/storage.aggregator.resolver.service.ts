@@ -456,9 +456,6 @@ export class StorageAggregatorResolverService {
       },
     });
 
-    console.log(space);
-    console.log(knowledgeBase);
-
     const storageAggregator =
       space?.storageAggregator ||
       knowledgeBase?.virtualContributor?.account?.storageAggregator;

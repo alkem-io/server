@@ -336,8 +336,6 @@ export class AccountAuthorizationService {
             AuthorizationPrivilege.UPDATE,
             AuthorizationPrivilege.DELETE,
             AuthorizationPrivilege.GRANT,
-            //TODO THIS SHOULD NOT BE HERE
-            AuthorizationPrivilege.CONTRIBUTE,
           ],
           accountChildEntitiesManage,
           CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES
