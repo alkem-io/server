@@ -203,7 +203,9 @@ export class VirtualContributorService {
       {
         relations: {
           profile: true,
-          knowledgeBase: true,
+          knowledgeBase: {
+            profile: true,
+          },
         },
       }
     );
