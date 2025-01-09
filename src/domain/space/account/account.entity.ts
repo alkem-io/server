@@ -16,7 +16,7 @@ export class Account extends AuthorizableEntity implements IAccount {
   type!: AccountType;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: true })
-  externalSubscriptionID!: string;
+  externalSubscriptionID?: string;
 
   @OneToMany(() => Space, space => space.account, {
     eager: false,
