@@ -175,6 +175,9 @@ export class PlatformRoleService {
 
   async getPlatformRoles(agentInfo: AgentInfo): Promise<PlatformRole[]> {
     const result: PlatformRole[] = [];
+    if (!agentInfo.agentID) {
+      return result;
+    }
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const roles: PlatformRole[] = Object.values(PlatformRole) as PlatformRole[];
     for (const role of roles) {
