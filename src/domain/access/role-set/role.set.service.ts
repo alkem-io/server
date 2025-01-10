@@ -291,9 +291,13 @@ export class RoleSetService {
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const roles: RoleName[] = Object.values(RoleName) as RoleName[];
     for (const role of roles) {
-      const hasAgentRole = await this.isInRole(agent, roleSet, role);
-      if (hasAgentRole) {
-        result.push(role);
+      try {
+        const hasAgentRole = await this.isInRole(agent, roleSet, role);
+        if (hasAgentRole) {
+          result.push(role);
+        }
+      } catch (ex) {
+        // Do nothing, the user is just not in the role
       }
     }
 

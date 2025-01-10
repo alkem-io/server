@@ -38,9 +38,14 @@ export class OrganizationLookupService {
   async getOrganizationAndAgent(
     organizationID: string
   ): Promise<{ organization: IOrganization; agent: IAgent }> {
-    const organization = await this.getOrganizationOrFail(organizationID, {
+    let organization = await this.getOrganizationByUUID(organizationID, {
       relations: { agent: true },
     });
+    if (!organization) {
+      organization = await this.getOrganizationByNameIdOrFail(organizationID, {
+        relations: { agent: true },
+      });
+    }
 
     if (!organization.agent) {
       throw new EntityNotInitializedException(

@@ -164,9 +164,14 @@ export class UserLookupService {
   }
 
   async getUserWithAgent(userID: string): Promise<IUser> {
-    const user = await this.getUserOrFail(userID, {
+    let user = await this.getUserByUUID(userID, {
       relations: { agent: true },
     });
+    if (!user) {
+      user = await this.getUserByNameIdOrFail(userID, {
+        relations: { agent: true },
+      });
+    }
 
     if (!user.agent || !user.agent.credentials) {
       throw new EntityNotInitializedException(
