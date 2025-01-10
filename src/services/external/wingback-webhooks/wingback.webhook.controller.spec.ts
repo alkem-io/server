@@ -1,15 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { WingbackWebhooksController } from './wingback-webhooks.controller';
+import { WingbackWebhookController } from './wingback.webhook.controller';
 
-describe('WingbackWebhooksController', () => {
-  let controller: WingbackWebhooksController;
+describe('WingbackWebhookController', () => {
+  let controller: WingbackWebhookController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [WingbackWebhooksController],
+      controllers: [WingbackWebhookController],
     }).compile();
 
-    controller = module.get<WingbackWebhooksController>(WingbackWebhooksController);
+    controller = module.get<WingbackWebhookController>(
+      WingbackWebhookController
+    );
   });
 
   it('should be defined', () => {

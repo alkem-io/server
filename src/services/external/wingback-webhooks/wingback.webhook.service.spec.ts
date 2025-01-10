@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { WingbackWebhooksService } from './wingback-webhooks.service';
+import { WingbackWebhookService } from './wingback.webhook.service';
 
-describe('WingbackWebhooksService', () => {
-  let service: WingbackWebhooksService;
+describe('WingbackWebhookService', () => {
+  let service: WingbackWebhookService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [WingbackWebhooksService],
+      providers: [WingbackWebhookService],
     }).compile();
 
-    service = module.get<WingbackWebhooksService>(WingbackWebhooksService);
+    service = module.get<WingbackWebhookService>(WingbackWebhookService);
   });
 
   it('should be defined', () => {
