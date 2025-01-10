@@ -119,7 +119,7 @@ export class VirtualContributorService {
     virtualContributor.aiPersona =
       await this.aiPersonaService.createAiPersona(aiPersonaInput);
 
-    virtualContributor.profile = this.profileService.createProfile(
+    virtualContributor.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
       ProfileType.VIRTUAL_CONTRIBUTOR,
       storageAggregator
