@@ -20,12 +20,13 @@ import { EventBus } from '@nestjs/cqrs';
 import { InteractionMessage } from './dto/interaction.message';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import {
-  IngestSpace,
-  SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/messages/ingest.space.command';
+  IngestBodyOfKnowledge,
+  IngestionPurpose,
+} from '@services/infrastructure/event-bus/messages/ingest.body.of.knowledge.command';
 import { IExternalConfig } from './dto/external.config';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -69,9 +70,10 @@ export class AiPersonaServiceService {
 
     if (aiPersonaServiceData.bodyOfKnowledgeID) {
       this.eventBus.publish(
-        new IngestSpace(
+        new IngestBodyOfKnowledge(
           savedAiPersonaService.bodyOfKnowledgeID,
-          SpaceIngestionPurpose.KNOWLEDGE,
+          savedAiPersonaService.bodyOfKnowledgeType,
+          IngestionPurpose.KNOWLEDGE,
           savedAiPersonaService.id
         )
       );

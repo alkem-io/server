@@ -21,8 +21,8 @@ import {
 } from '../ai-persona-service/dto';
 import { AiPersonaServiceInvocationInput } from '../ai-persona-service/dto/ai.persona.service.invocation.dto.input';
 import {
-  IngestSpace,
-  SpaceIngestionPurpose,
+  IngestBodyOfKnowledge,
+  IngestionPurpose,
 } from '@services/infrastructure/event-bus/messages';
 import { EventBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
@@ -45,6 +45,7 @@ import {
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 
 @Injectable()
 export class AiServerService {
@@ -170,9 +171,10 @@ export class AiServerService {
       LogContext.AI_SERVER
     );
     this.eventBus.publish(
-      new IngestSpace(
+      new IngestBodyOfKnowledge(
         persona.bodyOfKnowledgeID,
-        SpaceIngestionPurpose.KNOWLEDGE,
+        persona.bodyOfKnowledgeType,
+        IngestionPurpose.KNOWLEDGE,
         persona.id
       )
     );
@@ -180,7 +182,11 @@ export class AiServerService {
 
   public async ensureContextIsIngested(spaceID: string): Promise<void> {
     this.eventBus.publish(
-      new IngestSpace(spaceID, SpaceIngestionPurpose.CONTEXT)
+      new IngestBodyOfKnowledge(
+        spaceID,
+        AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE,
+        IngestionPurpose.CONTEXT
+      )
     );
   }
 
@@ -273,7 +279,7 @@ export class AiServerService {
     return messages;
   }
   private getContextCollectionID(contextID: string): string {
-    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
+    return `${contextID}-${IngestionPurpose.CONTEXT}`;
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
