@@ -3,10 +3,10 @@ export type CreateCustomer = {
   name: string;
   /** Customer's emails */
   emails: {
-    /** Main email */
-    main: string;
-    /** Secondary email (optional) */
-    secondary?: string;
+    /** Where the invoices are going to be sent */
+    invoice: string;
+    /** The organization email in Alkemio */
+    orgEmail?: string;
   };
   /** Customer's address (optional) */
   address?: {
@@ -29,9 +29,11 @@ export type CreateCustomer = {
     vat_id: string;
   };
   /** Notes about the customer */
-  notes: string;
+  notes?: string;
   /** Customer reference */
   customer_reference: string;
   /** Customer's contracts (optional) */
   contracts?: unknown[];
+  /** Additional metadata for the customer */
+  metadata?: Record<string, any>;
 };

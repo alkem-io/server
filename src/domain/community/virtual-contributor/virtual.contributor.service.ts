@@ -119,7 +119,7 @@ export class VirtualContributorService {
     virtualContributor.aiPersona =
       await this.aiPersonaService.createAiPersona(aiPersonaInput);
 
-    virtualContributor.profile = await this.profileService.createProfile(
+    virtualContributor.profile = this.profileService.createProfile(
       virtualContributorData.profileData,
       ProfileType.VIRTUAL_CONTRIBUTOR,
       storageAggregator
@@ -201,7 +201,12 @@ export class VirtualContributorService {
     const virtual = await this.getVirtualContributorOrFail(
       virtualContributorData.ID,
       {
-        relations: { profile: true },
+        relations: {
+          profile: true,
+          knowledgeBase: {
+            profile: true,
+          },
+        },
       }
     );
 
@@ -235,6 +240,14 @@ export class VirtualContributorService {
 
     if (virtualContributorData.searchVisibility) {
       virtual.searchVisibility = virtualContributorData.searchVisibility;
+    }
+
+    if (
+      virtualContributorData.knowledgeBaseData?.profile?.description &&
+      virtual?.knowledgeBase?.profile
+    ) {
+      virtual.knowledgeBase.profile.description =
+        virtualContributorData.knowledgeBaseData.profile?.description;
     }
 
     return await this.save(virtual);
@@ -274,7 +287,6 @@ export class VirtualContributorService {
     }
 
     await this.agentService.deleteAgent(virtualContributor.agent.id);
-    await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
 
     const result = await this.virtualContributorRepository.remove(
       virtualContributor as VirtualContributor
@@ -287,6 +299,7 @@ export class VirtualContributorService {
       });
     }
 
+    await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
     await this.deleteVCInvitations(virtualContributorID);
 
     return result;

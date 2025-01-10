@@ -38,6 +38,8 @@ export type AlkemioConfig = {
       enabled: boolean;
       key: string;
       endpoint: string;
+      retries: number;
+      timeout: number;
     };
   };
   identity: {
