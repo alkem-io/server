@@ -26,5 +26,10 @@ export class IAccount extends IAuthorizable {
   storageAggregator?: IStorageAggregator;
 
   license?: ILicense;
-  externalSubscriptionID!: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'The external subscription ID for this Account.',
+  })
+  externalSubscriptionID?: string;
 }
