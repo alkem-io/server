@@ -61,15 +61,15 @@ export class LicensingWingbackSubscriptionService {
   private toLicensingGrantedEntitlements = (
     features: WingbackFeature[]
   ): LicensingGrantedEntitlement[] => {
-    this.logger.verbose?.(
-      'Filtering only "per_unit" pricing strategy features',
-      LogContext.WINGBACK
-    );
     const supportedFeatures = features.filter(
       (
         feature
       ): feature is WingbackTypedFeature<WingbackFeatureDetailPerUnit> =>
         isWingbackFeaturePerUnit(feature)
+    );
+    this.logger.verbose?.(
+      `Filtering only "per_unit" pricing strategy features - found ${supportedFeatures.length}.`,
+      LogContext.WINGBACK
     );
 
     const entitlements: (LicensingGrantedEntitlement | undefined)[] =
