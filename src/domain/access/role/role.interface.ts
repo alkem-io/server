@@ -8,7 +8,7 @@ export abstract class IRole extends IBaseAlkemio {
     nullable: false,
     description: 'The CommunityRole that this role definition is for.',
   })
-  type!: RoleName;
+  name!: RoleName;
 
   @Field(() => Boolean, {
     nullable: false,

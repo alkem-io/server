@@ -1401,7 +1401,7 @@ export class RoleSetService {
     for (const roleDefinition of roleDefinitions) {
       const parentRoleDefinition = await this.getRoleDefinition(
         parentRoleSet,
-        roleDefinition.type
+        roleDefinition.name
       );
       const parentCredentials: ICredentialDefinition[] = [];
       const parentDirectCredential =
@@ -1518,7 +1518,7 @@ export class RoleSetService {
         LogContext.COMMUNITY
       );
     }
-    return roleDefinitions.map(rd => rd.type);
+    return roleDefinitions.map(rd => rd.name);
   }
 
   public async getRoleDefinition(
@@ -1526,7 +1526,7 @@ export class RoleSetService {
     roleType: RoleName
   ): Promise<IRole> {
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
-    const role = roleDefinitions.find(rd => rd.type === roleType);
+    const role = roleDefinitions.find(rd => rd.name === roleType);
     if (!role) {
       throw new RelationshipNotFoundException(
         `Unable to find Role for type ${roleType} for RoleSet: ${roleSet.id}`,
@@ -1539,7 +1539,7 @@ export class RoleSetService {
   public async getEntryRoleDefinition(roleSet: IRoleSet): Promise<IRole> {
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
     const entryRole = roleDefinitions.find(
-      rd => rd.type === roleSet.entryRoleType
+      rd => rd.name === roleSet.entryRoleType
     );
     if (!entryRole) {
       throw new RelationshipNotFoundException(

@@ -15,7 +15,7 @@ export class Role extends BaseAlkemioEntity implements IRole {
   roleSet?: RoleSet;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  type!: RoleName;
+  name!: RoleName;
 
   @Column('text', { nullable: false })
   credential!: string;
