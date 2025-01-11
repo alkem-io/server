@@ -41,6 +41,7 @@ export class OrganizationLookupService {
     let organization = await this.getOrganizationByUUID(organizationID, {
       relations: { agent: true },
     });
+    // TODO: remove this loookup, we should not be using nameIDs within the server logic
     if (!organization) {
       organization = await this.getOrganizationByNameIdOrFail(organizationID, {
         relations: { agent: true },

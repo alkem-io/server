@@ -258,20 +258,21 @@ export class RoleSetService {
 
   public async removeAllRoleAssignments(roleSet: IRoleSet) {
     // Remove all issued role credentials for contributors
-    for (const roleType of Object.values(RoleName)) {
-      const users = await this.getUsersWithRole(roleSet, roleType);
+    const roleNames = await this.getRoleNames(roleSet);
+    for (const roleName of roleNames) {
+      const users = await this.getUsersWithRole(roleSet, roleName);
       for (const user of users) {
-        await this.removeUserFromRole(roleSet, roleType, user.id, false);
+        await this.removeUserFromRole(roleSet, roleName, user.id, false);
       }
 
       const organizations = await this.getOrganizationsWithRole(
         roleSet,
-        roleType
+        roleName
       );
       for (const organization of organizations) {
         await this.removeOrganizationFromRole(
           roleSet,
-          roleType,
+          roleName,
           organization.id,
           false
         );
@@ -289,15 +290,11 @@ export class RoleSetService {
 
     const result: RoleName[] = [];
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
-    const roles: RoleName[] = Object.values(RoleName) as RoleName[];
+    const roles: RoleName[] = await this.getRoleNames(roleSet);
     for (const role of roles) {
-      try {
-        const hasAgentRole = await this.isInRole(agent, roleSet, role);
-        if (hasAgentRole) {
-          result.push(role);
-        }
-      } catch (ex) {
-        // Do nothing, the user is just not in the role
+      const hasAgentRole = await this.isInRole(agent, roleSet, role);
+      if (hasAgentRole) {
+        result.push(role);
       }
     }
 

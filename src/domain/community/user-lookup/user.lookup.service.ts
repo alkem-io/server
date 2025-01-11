@@ -167,6 +167,7 @@ export class UserLookupService {
     let user = await this.getUserByUUID(userID, {
       relations: { agent: true },
     });
+    // TODO: this must be removed, no core logic based on NameID
     if (!user) {
       user = await this.getUserByNameIdOrFail(userID, {
         relations: { agent: true },
