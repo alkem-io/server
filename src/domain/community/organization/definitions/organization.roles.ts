@@ -4,7 +4,7 @@ import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 
 export const organizationRoles: CreateRoleInput[] = [
   {
-    type: RoleName.ASSOCIATE,
+    name: RoleName.ASSOCIATE,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false, // not required
     credentialData: {
@@ -26,7 +26,7 @@ export const organizationRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.ADMIN,
+    name: RoleName.ADMIN,
     requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -48,7 +48,7 @@ export const organizationRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.OWNER,
+    name: RoleName.OWNER,
     requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {

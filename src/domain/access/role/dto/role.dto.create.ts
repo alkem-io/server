@@ -3,7 +3,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { IContributorRolePolicy } from '../contributor.role.policy.interface';
 
 export class CreateRoleInput {
-  type!: RoleName;
+  name!: RoleName;
   requiresEntryRole!: boolean;
   requiresSameRoleInParentRoleSet!: boolean;
   credentialData!: ICredentialDefinition;
