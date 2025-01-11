@@ -47,7 +47,7 @@ export class RoleSet
   roles?: Role[];
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  entryRoleType!: RoleName;
+  entryRoleName!: RoleName;
 
   @OneToMany(() => Application, application => application.roleSet, {
     eager: false,

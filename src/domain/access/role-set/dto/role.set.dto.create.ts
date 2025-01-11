@@ -7,5 +7,5 @@ export class CreateRoleSetInput {
   parentRoleSet?: IRoleSet;
   roles!: CreateRoleInput[];
   applicationForm!: CreateFormInput;
-  entryRole!: RoleName;
+  entryRoleName!: RoleName;
 }

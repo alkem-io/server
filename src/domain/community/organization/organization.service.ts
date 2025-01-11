@@ -107,7 +107,7 @@ export class OrganizationService {
     const roleSetInput: CreateRoleSetInput = {
       roles: organizationRoles,
       applicationForm: organizationApplicationForm,
-      entryRole: RoleName.ASSOCIATE,
+      entryRoleName: RoleName.ASSOCIATE,
     };
     organization.roleSet =
       await this.roleSetService.createRoleSet(roleSetInput);

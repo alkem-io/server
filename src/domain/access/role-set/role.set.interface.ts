@@ -18,7 +18,7 @@ export abstract class IRoleSet extends IAuthorizable {
     description:
       'The Role that acts as the entry Role for the RoleSet, so other roles potentially require it.',
   })
-  entryRoleType!: RoleName;
+  entryRoleName!: RoleName;
 
   applications?: IApplication[];
   invitations?: IInvitation[];
