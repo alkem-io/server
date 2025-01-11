@@ -40,6 +40,14 @@ export class RoleSets21736085928284 implements MigrationInterface {
     // Assign all current role sets the type of 'space'
     await queryRunner.query(`UPDATE \`role_set\` SET \`type\` = 'space'`);
 
+    // Rename the type column on role to be name
+    await queryRunner.query(
+      `ALTER TABLE \`role\` CHANGE COLUMN \`type\` \`name\` varchar(128) NOT NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`role_set\` CHANGE COLUMN \`entryRoleType\` \`entryRoleName\` varchar(128) NOT NULL`
+    );
+
     // Create the role set for the platform
     const platformRoleSetID = await this.createRoleSet(
       queryRunner,
@@ -145,7 +153,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
       `INSERT INTO role_set (id,
                                 version,
                                 authorizationId,
-                                entryRoleType,
+                                entryRoleName,
                                 licenseId,
                                 applicationFormId,
                                 type) VALUES
@@ -166,7 +174,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
         `INSERT INTO role (id,
                           version,
                           roleSetId,
-                          type,
+                          name,
                           credential,
                           parentCredentials,
                           requiresEntryRole,
@@ -178,7 +186,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
                         '${roleID}',
                         1,
                         '${roleSetID}',
-                        '${role.type}',
+                        '${role.name}',
                         '${JSON.stringify(role.credentialData)}',
                         '${JSON.stringify(role.parentCredentialsData)}',
                         ${role.requiresEntryRole},
@@ -337,7 +345,7 @@ type IContributorRolePolicy = {
 };
 
 type CreateRoleInput = {
-  type: RoleName;
+  name: RoleName;
   requiresEntryRole: boolean;
   requiresSameRoleInParentRoleSet: boolean;
   credentialData: ICredentialDefinition;
@@ -349,7 +357,7 @@ type CreateRoleInput = {
 
 const organizationRoles: CreateRoleInput[] = [
   {
-    type: RoleName.ASSOCIATE,
+    name: RoleName.ASSOCIATE,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false, // not required
     credentialData: {
@@ -371,7 +379,7 @@ const organizationRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.ADMIN,
+    name: RoleName.ADMIN,
     requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -393,7 +401,7 @@ const organizationRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.OWNER,
+    name: RoleName.OWNER,
     requiresEntryRole: true,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -418,7 +426,7 @@ const organizationRoles: CreateRoleInput[] = [
 
 const platformRoles: CreateRoleInput[] = [
   {
-    type: RoleName.GLOBAL_ADMIN,
+    name: RoleName.GLOBAL_ADMIN,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false, // not required
     credentialData: {
@@ -440,7 +448,7 @@ const platformRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.GLOBAL_SUPPORT,
+    name: RoleName.GLOBAL_SUPPORT,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -462,7 +470,7 @@ const platformRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.GLOBAL_LICENSE_MANAGER,
+    name: RoleName.GLOBAL_LICENSE_MANAGER,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -484,7 +492,7 @@ const platformRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.GLOBAL_SPACES_READER,
+    name: RoleName.GLOBAL_SPACES_READER,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -506,7 +514,7 @@ const platformRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.PLATFORM_BETA_TESTER,
+    name: RoleName.PLATFORM_BETA_TESTER,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -528,7 +536,7 @@ const platformRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.PLATFORM_VC_CAMPAIGN,
+    name: RoleName.PLATFORM_VC_CAMPAIGN,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
@@ -550,7 +558,7 @@ const platformRoles: CreateRoleInput[] = [
     },
   },
   {
-    type: RoleName.GLOBAL_COMMUNITY_READER,
+    name: RoleName.GLOBAL_COMMUNITY_READER,
     requiresEntryRole: false,
     requiresSameRoleInParentRoleSet: false,
     credentialData: {
