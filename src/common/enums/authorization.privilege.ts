@@ -27,11 +27,11 @@ export enum AuthorizationPrivilege {
   FILE_UPLOAD = 'file-upload',
   FILE_DELETE = 'file-delete',
   UPDATE_INNOVATION_FLOW = 'update-innovation-flow',
-  COMMUNITY_JOIN = 'community-join',
-  COMMUNITY_APPLY = 'community-apply',
-  COMMUNITY_INVITE = 'community-invite',
-  COMMUNITY_INVITE_ACCEPT = 'community-invite-accept',
-  COMMUNITY_ADD_MEMBER = 'community-add-member', // only for global admins
+  ROLESET_ENTRY_ROLE_JOIN = 'roleset-entry-role-join',
+  ROLESET_ENTRY_ROLE_APPLY = 'roleset-entry-role-apply',
+  ROLESET_ENTRY_ROLE_INVITE = 'roleset-entry-role-invite',
+  ROLESET_ENTRY_ROLE_INVITE_ACCEPT = 'roleset-entry-role-invite-accept',
+  ROLESET_ENTRY_ROLE_ADD = 'roleset-entry-role-add-member', // only for global admins
   COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT = 'community-add-member-vc-from-account', // allow adding a VC as member to a community from an account
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   READ_USERS = 'read-users',

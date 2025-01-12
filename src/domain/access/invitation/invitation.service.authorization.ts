@@ -84,7 +84,7 @@ export class InvitationAuthorizationService {
         [
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT,
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
         ],
         criterias,
         CREDENTIAL_RULE_COMMUNITY_USER_INVITATION

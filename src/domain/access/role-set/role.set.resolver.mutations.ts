@@ -121,7 +121,7 @@ export class RoleSetResolverMutations {
       case RoleSetType.SPACE: {
         privilegeRequired = AuthorizationPrivilege.GRANT;
         if (roleData.role === RoleName.MEMBER) {
-          privilegeRequired = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+          privilegeRequired = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD;
         }
         break;
       }
@@ -222,7 +222,7 @@ export class RoleSetResolverMutations {
         requiredPrivilege =
           AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT;
       } else {
-        requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+        requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD;
       }
     }
 
@@ -430,7 +430,7 @@ export class RoleSetResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_JOIN,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN,
       `join community: ${roleSet.id}`
     );
 
@@ -465,7 +465,7 @@ export class RoleSetResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_APPLY,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY,
       `create application RoleSet: ${roleSet.id}`
     );
 
@@ -544,7 +544,7 @@ export class RoleSetResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_INVITE,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
       `create invitation RoleSet: ${roleSet.id}`
     );
 
@@ -569,7 +569,7 @@ export class RoleSetResolverMutations {
       const canInviteToParent = this.authorizationService.isAccessGranted(
         agentInfo,
         parentRoleSetAuthorization,
-        AuthorizationPrivilege.COMMUNITY_INVITE
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
       );
 
       // Need to see if also can invite to the parent community if any of the users are not members there
@@ -703,7 +703,7 @@ export class RoleSetResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_INVITE,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
       `create invitation external community: ${roleSet.id}`
     );
 
@@ -725,7 +725,7 @@ export class RoleSetResolverMutations {
       const canInviteToParent = this.authorizationService.isAccessGranted(
         agentInfo,
         parentRoleSetAuthorization,
-        AuthorizationPrivilege.COMMUNITY_INVITE
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
       );
 
       // Not an existing user

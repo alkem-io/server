@@ -89,6 +89,9 @@ export class RoleSets21736085928284 implements MigrationInterface {
     }[] = await queryRunner.query(`SELECT id FROM \`organization\``);
     for (const organization of organizations) {
       // Create the role set for the organization
+      for (const role of organizationRoles) {
+        role.credentialData.resourceID = organization.id;
+      }
       const organizationRoleSetID = await this.createRoleSet(
         queryRunner,
         'subspace-admin',

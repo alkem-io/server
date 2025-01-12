@@ -7,12 +7,9 @@ import {
 } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
-  CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS,
-  CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
   POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
   CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL,
@@ -22,6 +19,8 @@ import {
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
+  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD,
+  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -95,9 +94,6 @@ export class RoleSetAuthorizationService {
       roleSet,
       roleSet.authorization,
       spaceSettings
-    );
-    roleSet.authorization = this.appendVerifiedCredentialRules(
-      roleSet.authorization
     );
     if (roleSet.type === RoleSetType.SPACE && spaceSettings) {
       if (entryRoleAllowed) {
@@ -175,7 +171,7 @@ export class RoleSetAuthorizationService {
       case CommunityMembershipPolicy.APPLICATIONS:
         const anyUserCanApply =
           this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-            [AuthorizationPrivilege.COMMUNITY_APPLY],
+            [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
             [AuthorizationCredential.GLOBAL_REGISTERED],
             CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED
           );
@@ -185,7 +181,7 @@ export class RoleSetAuthorizationService {
       case CommunityMembershipPolicy.OPEN:
         const anyUserCanJoin =
           this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-            [AuthorizationPrivilege.COMMUNITY_JOIN],
+            [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
             [AuthorizationCredential.GLOBAL_REGISTERED],
             CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED
           );
@@ -200,7 +196,7 @@ export class RoleSetAuthorizationService {
     for (const trustedOrganizationID of trustedOrganizationIDs) {
       const hostOrgMembersCanJoin =
         this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.COMMUNITY_JOIN],
+          [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
           [
             {
               type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
@@ -228,12 +224,12 @@ export class RoleSetAuthorizationService {
 
     const globalAdminAddMembers =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
+        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
         ],
-        CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS
+        CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD
       );
     newRules.push(globalAdminAddMembers);
 
@@ -265,11 +261,11 @@ export class RoleSetAuthorizationService {
       const spaceAdminsInvite =
         this.authorizationPolicyService.createCredentialRule(
           [
-            AuthorizationPrivilege.COMMUNITY_INVITE,
+            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
             AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT,
           ],
           inviteMembersCriterias,
-          CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS
+          CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE
         );
       spaceAdminsInvite.cascade = false;
       newRules.push(spaceAdminsInvite);
@@ -311,7 +307,7 @@ export class RoleSetAuthorizationService {
         case CommunityMembershipPolicy.APPLICATIONS:
           const spaceMemberCanApply =
             this.authorizationPolicyService.createCredentialRule(
-              [AuthorizationPrivilege.COMMUNITY_APPLY],
+              [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
               [parentRoleSetCredential],
               CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY
             );
@@ -321,7 +317,7 @@ export class RoleSetAuthorizationService {
         case CommunityMembershipPolicy.OPEN:
           const spaceMemberCanJoin =
             this.authorizationPolicyService.createCredentialRule(
-              [AuthorizationPrivilege.COMMUNITY_JOIN],
+              [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
               [parentRoleSetCredential],
               CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN
             );
@@ -339,7 +335,7 @@ export class RoleSetAuthorizationService {
       );
 
     const addMembers = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
+      [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD],
       adminCredentials,
       CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER
     );
@@ -352,18 +348,6 @@ export class RoleSetAuthorizationService {
     );
 
     return authorization;
-  }
-
-  private appendVerifiedCredentialRules(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[] =
-      [];
-
-    return this.authorizationPolicyService.appendVerifiedCredentialAuthorizationRules(
-      authorization,
-      verifiedCredentialRules
-    );
   }
 
   public extendAuthorizationPolicyForSelfRemoval(
@@ -447,8 +431,8 @@ export class RoleSetAuthorizationService {
 
     // If you are able to add a member, then you are also logically able to invite a member
     const invitePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_INVITE],
-      AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
+      [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD,
       POLICY_RULE_COMMUNITY_INVITE_MEMBER
     );
 
