@@ -70,6 +70,8 @@ import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -85,6 +87,7 @@ export class LookupResolverFields {
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
     private innovationPackService: InnovationPackService,
+    private organizationLookupService: OrganizationLookupService,
     private profileService: ProfileService,
     private postService: PostService,
     private calloutsSetService: CalloutsSetService,
@@ -147,6 +150,16 @@ export class LookupResolverFields {
     );
 
     return account;
+  }
+
+  @ResolveField(() => IOrganization, {
+    nullable: true,
+    description: 'Lookup the specified Organization using a ID',
+  })
+  async organization(
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IOrganization> {
+    return await this.organizationLookupService.getOrganizationOrFail(id);
   }
 
   @UseGuards(GraphqlGuard)
