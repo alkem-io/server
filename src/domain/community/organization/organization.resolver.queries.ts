@@ -1,4 +1,4 @@
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
@@ -29,7 +29,7 @@ export class OrganizationResolverQueries {
     description: 'A particular Organization',
   })
   async organization(
-    @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IOrganization> {
     return await this.organizationService.getOrganizationOrFail(id);
   }
