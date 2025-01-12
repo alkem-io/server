@@ -35,6 +35,7 @@ import { LicenseModule } from '@domain/common/license/license.module';
 import { LookupMyPrivilegesResolverFields } from './lookup.resolver.my.privileges.fields';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     StorageBucketModule,
     PlatformAuthorizationPolicyModule,
     UserLookupModule,
+    OrganizationLookupModule,
     VirtualContributorModule,
     SpaceModule,
     CommunityGuidelinesModule,
