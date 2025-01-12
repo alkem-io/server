@@ -13,31 +13,17 @@ import {
   POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
   CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL,
-  CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
-  CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
-  CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
-  CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
   CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD,
-  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
-import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { RoleName } from '@common/enums/role.name';
 import { IRoleSet } from './role.set.interface';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class RoleSetAuthorizationService {
@@ -54,10 +40,7 @@ export class RoleSetAuthorizationService {
 
   async applyAuthorizationPolicy(
     roleSetID: string,
-    parentAuthorization: IAuthorizationPolicy,
-    entryRoleAllowed: boolean,
-    isSubspace: boolean,
-    spaceSettings?: ISpaceSettings
+    parentAuthorization: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
       relations: {
@@ -91,26 +74,8 @@ export class RoleSetAuthorizationService {
     roleSet.authorization = this.appendPrivilegeRules(roleSet.authorization);
 
     roleSet.authorization = await this.extendAuthorizationPolicy(
-      roleSet,
-      roleSet.authorization,
-      spaceSettings
+      roleSet.authorization
     );
-    if (roleSet.type === RoleSetType.SPACE && spaceSettings) {
-      if (entryRoleAllowed) {
-        roleSet.authorization = this.extendRoleSetAuthorizationPolicySpace(
-          roleSet,
-          roleSet.authorization,
-          spaceSettings
-        );
-      }
-      if (isSubspace) {
-        roleSet.authorization = await this.extendAuthorizationPolicySubspace(
-          roleSet,
-          roleSet.authorization,
-          spaceSettings
-        );
-      }
-    }
 
     // always false
     roleSet.authorization.anonymousReadAccess = false;
@@ -153,72 +118,8 @@ export class RoleSetAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private extendRoleSetAuthorizationPolicySpace(
-    roleSet: IRoleSet,
-    roleSetAuthorization: IAuthorizationPolicy | undefined,
-    spaceSettings: ISpaceSettings
-  ): IAuthorizationPolicy {
-    if (!roleSetAuthorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${roleSet.id}`,
-        LogContext.SPACES
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const membershipPolicy = spaceSettings.membership.policy;
-    switch (membershipPolicy) {
-      case CommunityMembershipPolicy.APPLICATIONS:
-        const anyUserCanApply =
-          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-            [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
-            [AuthorizationCredential.GLOBAL_REGISTERED],
-            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED
-          );
-        anyUserCanApply.cascade = false;
-        newRules.push(anyUserCanApply);
-        break;
-      case CommunityMembershipPolicy.OPEN:
-        const anyUserCanJoin =
-          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-            [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
-            [AuthorizationCredential.GLOBAL_REGISTERED],
-            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED
-          );
-        anyUserCanJoin.cascade = false;
-        newRules.push(anyUserCanJoin);
-        break;
-    }
-
-    // Associates of trusted organizations can join
-    const trustedOrganizationIDs: UUID[] =
-      spaceSettings.membership.trustedOrganizations;
-    for (const trustedOrganizationID of trustedOrganizationIDs) {
-      const hostOrgMembersCanJoin =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
-          [
-            {
-              type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-              resourceID: JSON.stringify(trustedOrganizationID),
-            },
-          ],
-          CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN
-        );
-      hostOrgMembersCanJoin.cascade = false;
-      newRules.push(hostOrgMembersCanJoin);
-    }
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      roleSetAuthorization,
-      newRules
-    );
-  }
-
   private async extendAuthorizationPolicy(
-    roleSet: IRoleSet,
-    authorization: IAuthorizationPolicy | undefined,
-    spaceSettings?: ISpaceSettings
+    authorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -233,44 +134,6 @@ export class RoleSetAuthorizationService {
       );
     newRules.push(globalAdminAddMembers);
 
-    if (roleSet.type === RoleSetType.SPACE) {
-      if (!spaceSettings) {
-        throw new RelationshipNotFoundException(
-          `Missing space settings that are requried for role sets of type Space: ${roleSet.id}`,
-          LogContext.ROLES
-        );
-      }
-
-      const inviteMembersCriterias: ICredentialDefinition[] =
-        await this.roleSetService.getCredentialsForRoleWithParents(
-          roleSet,
-          RoleName.ADMIN,
-          spaceSettings
-        );
-      if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
-        // use the member credential to create subspace admin credential
-        const subspaceAdminCredential: ICredentialDefinition =
-          await this.roleSetService.getCredentialForRole(
-            roleSet,
-            RoleName.MEMBER
-          );
-        subspaceAdminCredential.type =
-          AuthorizationCredential.SPACE_SUBSPACE_ADMIN;
-        inviteMembersCriterias.push(subspaceAdminCredential);
-      }
-      const spaceAdminsInvite =
-        this.authorizationPolicyService.createCredentialRule(
-          [
-            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
-            AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT,
-          ],
-          inviteMembersCriterias,
-          CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE
-        );
-      spaceAdminsInvite.cascade = false;
-      newRules.push(spaceAdminsInvite);
-    }
-
     //
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -279,75 +142,6 @@ export class RoleSetAuthorizationService {
       );
 
     return updatedAuthorization;
-  }
-
-  private async extendAuthorizationPolicySubspace(
-    roleSet: IRoleSet,
-    authorization: IAuthorizationPolicy | undefined,
-    spaceSettings: ISpaceSettings
-  ): Promise<IAuthorizationPolicy> {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.SPACES
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const parentRoleSetCredential =
-      await this.roleSetService.getDirectParentCredentialForRole(
-        roleSet,
-        RoleName.MEMBER
-      );
-
-    // Allow member of the parent roleSet to Apply
-    if (parentRoleSetCredential) {
-      const membershipSettings = spaceSettings.membership;
-      switch (membershipSettings.policy) {
-        case CommunityMembershipPolicy.APPLICATIONS:
-          const spaceMemberCanApply =
-            this.authorizationPolicyService.createCredentialRule(
-              [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
-              [parentRoleSetCredential],
-              CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY
-            );
-          spaceMemberCanApply.cascade = false;
-          newRules.push(spaceMemberCanApply);
-          break;
-        case CommunityMembershipPolicy.OPEN:
-          const spaceMemberCanJoin =
-            this.authorizationPolicyService.createCredentialRule(
-              [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
-              [parentRoleSetCredential],
-              CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN
-            );
-          spaceMemberCanJoin.cascade = false;
-          newRules.push(spaceMemberCanJoin);
-          break;
-      }
-    }
-
-    const adminCredentials =
-      await this.roleSetService.getCredentialsForRoleWithParents(
-        roleSet,
-        RoleName.ADMIN,
-        spaceSettings
-      );
-
-    const addMembers = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD],
-      adminCredentials,
-      CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER
-    );
-    addMembers.cascade = false;
-    newRules.push(addMembers);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
-
-    return authorization;
   }
 
   public extendAuthorizationPolicyForSelfRemoval(
