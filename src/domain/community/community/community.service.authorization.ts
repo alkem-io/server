@@ -113,20 +113,21 @@ export class CommunityAuthorizationService {
       updatedAuthorizations.push(...groupAuthorizations);
     }
 
-    const clonedAuth = this.authorizationPolicyService.cloneAuthorizationPolicy(
-      community.roleSet.authorization
-    );
-    await this.extendRoleSetAuthorizationPolicy(
+    let clonedRoleSetAuth =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        community.roleSet.authorization
+      );
+    clonedRoleSetAuth = await this.extendRoleSetAuthorizationPolicy(
       community.roleSet,
-      clonedAuth,
+      clonedRoleSetAuth,
       spaceMembershipAllowed,
       isSubspace,
       spaceSettings
     );
-
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         community.roleSet.id,
+        clonedRoleSetAuth,
         community.authorization
       );
     updatedAuthorizations.push(...roleSetAuthorizations);

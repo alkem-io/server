@@ -27,6 +27,8 @@ import { LibraryAuthorizationService } from '@library/library/library.service.au
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -96,12 +98,19 @@ export class PlatformAuthorizationService {
       );
     updatedAuthorizations.push(...templatesManagerAuthorizations);
 
+    let clonedRoleSetAuth =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        platform.roleSet.authorization
+      );
+    clonedRoleSetAuth = await this.extendRoleSetAuthorizationPolicy(
+      platform.roleSet,
+      clonedRoleSetAuth
+    );
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         platform.roleSet.id,
-        platform.authorization,
-        false,
-        false
+        clonedRoleSetAuth,
+        platform.authorization
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
@@ -240,16 +249,6 @@ export class PlatformAuthorizationService {
   private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global admins to manage global privileges, access Platform mgmt
-    const globalAdminNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-        [AuthorizationCredential.GLOBAL_ADMIN],
-        CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS
-      );
-    globalAdminNotInherited.cascade = false;
-    credentialRules.push(globalAdminNotInherited);
-
     // Allow global supportto access Platform mgmt
     const platformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -315,5 +314,48 @@ export class PlatformAuthorizationService {
     credentialRules.push(createOrg);
 
     return credentialRules;
+  }
+
+  private async extendRoleSetAuthorizationPolicy(
+    roleSet: IRoleSet,
+    authorization: IAuthorizationPolicy | undefined
+  ): Promise<IAuthorizationPolicy> {
+    if (roleSet.type !== RoleSetType.PLATFORM) {
+      throw new RelationshipNotFoundException(
+        `RoleSet of wrong type passed: ${roleSet.id}`,
+        LogContext.ROLES
+      );
+    }
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Allow global admins to manage global privileges, access Platform mgmt
+    const globalAdminNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS
+      );
+    globalAdminNotInherited.cascade = false;
+    newRules.push(globalAdminNotInherited);
+
+    const globalAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.GRANT],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
+      );
+    globalAdmin.cascade = false;
+    newRules.push(globalAdmin);
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
   }
 }

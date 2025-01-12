@@ -40,6 +40,7 @@ export class RoleSetAuthorizationService {
 
   async applyAuthorizationPolicy(
     roleSetID: string,
+    roleSetAuthorization: IAuthorizationPolicy,
     parentAuthorization: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
@@ -67,7 +68,7 @@ export class RoleSetAuthorizationService {
 
     roleSet.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        roleSet.authorization,
+        roleSetAuthorization,
         parentAuthorization
       );
 
@@ -179,6 +180,7 @@ export class RoleSetAuthorizationService {
     return updatedAuthorization;
   }
 
+  // TODO: replace with fixed rules, and two checks a) on roleSet, on VC itself?
   public async extendAuthorizationPolicyForVirtualContributorRemoval(
     roleSet: IRoleSet,
     virtualContributorToBeRemoved: string
@@ -192,13 +194,13 @@ export class RoleSetAuthorizationService {
     const vcAccountHostCredentials =
       await this.accountLookupService.getHostCredentials(vcAccount);
 
-    const userSelfRemovalRule =
+    const vcSelfRemovalRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.GRANT],
         vcAccountHostCredentials,
         CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL
       );
-    newRules.push(userSelfRemovalRule);
+    newRules.push(vcSelfRemovalRule);
 
     const clonedRoleSetAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(

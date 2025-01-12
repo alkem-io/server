@@ -26,6 +26,10 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -39,6 +43,7 @@ export class OrganizationAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
+    private roleSetService: RoleSetService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
@@ -63,7 +68,8 @@ export class OrganizationAuthorizationService {
       !organization.storageAggregator ||
       !organization.agent ||
       !organization.groups ||
-      !organization.verification
+      !organization.verification ||
+      !organization.roleSet
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for organization: ${organization.id} `,
@@ -72,15 +78,27 @@ export class OrganizationAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    organization.authorization = await this.authorizationPolicyService.reset(
+    organization.authorization = this.authorizationPolicyService.reset(
       organization.authorization
     );
     organization.authorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         organization.authorization
       );
+
+    const organizationAdminCredentials = [
+      {
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: organization.id,
+      },
+      {
+        type: AuthorizationCredential.ORGANIZATION_OWNER,
+        resourceID: organization.id,
+      },
+    ];
     organization.authorization = this.appendCredentialRules(
       organization.authorization,
+      organizationAdminCredentials,
       organization.id
     );
     updatedAuthorizations.push(organization.authorization);
@@ -106,12 +124,20 @@ export class OrganizationAuthorizationService {
       );
     updatedAuthorizations.push(...storageAuthorizations);
 
+    let clonedRoleSetAuth =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        organization.roleSet.authorization
+      );
+    clonedRoleSetAuth = await this.extendRoleSetAuthorizationPolicy(
+      organization.roleSet,
+      organizationAdminCredentials,
+      clonedRoleSetAuth
+    );
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         organization.roleSet.id,
-        organization.authorization,
-        true,
-        false
+        clonedRoleSetAuth,
+        organization.authorization
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
@@ -143,6 +169,7 @@ export class OrganizationAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
+    organizationAdminCredentials: ICredentialDefinition[],
     organizationID: string
   ): IAuthorizationPolicy {
     if (!authorization)
@@ -187,41 +214,6 @@ export class OrganizationAuthorizationService {
       );
     newRules.push(globalSupportManage);
 
-    // Allow Global admins + Global Space Admins to manage access to Spaces + contents
-    const globalAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS
-      );
-    newRules.push(globalAdmin);
-
-    const organizationAdmin =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [
-          {
-            type: AuthorizationCredential.ORGANIZATION_ADMIN,
-            resourceID: organizationID,
-          },
-          {
-            type: AuthorizationCredential.ORGANIZATION_OWNER,
-            resourceID: organizationID,
-          },
-        ],
-        CREDENTIAL_RULE_ORGANIZATION_ADMIN
-      );
-
-    newRules.push(organizationAdmin);
-
     // Allow global admins do platform admin actions
     const globalAdminPlatformAdminNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -265,6 +257,59 @@ export class OrganizationAuthorizationService {
 
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
+  }
+
+  private async extendRoleSetAuthorizationPolicy(
+    roleSet: IRoleSet,
+    organizationAdminCredentials: ICredentialDefinition[],
+    authorization: IAuthorizationPolicy | undefined
+  ): Promise<IAuthorizationPolicy> {
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+    if (roleSet.type !== RoleSetType.ORGANIZATION) {
+      throw new RelationshipNotFoundException(
+        `RoleSet of wrong type passed: ${roleSet.id}`,
+        LogContext.ROLES
+      );
+    }
+
+    // Allow Global admins + Global Space Admins to manage access to Organization
+    const globalAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD,
+        ],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS
+      );
+    globalAdmin.cascade = false;
+    newRules.push(globalAdmin);
+
+    const organizationAdmin =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD, // Later remove this
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        organizationAdminCredentials,
+        CREDENTIAL_RULE_ORGANIZATION_ADMIN
+      );
+    organizationAdmin.cascade = true;
+    newRules.push(organizationAdmin);
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
         authorization,
         newRules
       );
