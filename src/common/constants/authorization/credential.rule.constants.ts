@@ -12,6 +12,8 @@ export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';
 export const CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN =
   'credentialRule-spaceHostAssociatesJoin';
+export const CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE =
+  'credentialRule-accountHostManage';
 export const CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY =
   'credentialRule-contributionCreatedBy';
 export const CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE =
