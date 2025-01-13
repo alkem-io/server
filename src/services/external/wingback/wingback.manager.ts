@@ -13,6 +13,7 @@ import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { catchError, retry, timeout } from 'rxjs/operators';
 import { RetryException, TimeoutException } from '@common/exceptions/internal';
 import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
+import { WingbackContract } from '@services/external/wingback/types/wingback.type.contract';
 
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
@@ -36,6 +37,14 @@ export class WingbackManager {
     this.enabled = config.enabled;
     this.retries = Number(config.retries);
     this.timeout = Number(config.timeout);
+  }
+
+  public getContract(contractId: string): Promise<WingbackContract> {
+    if (!this.enabled) {
+      throw new Error('Wingback is not enabled');
+    }
+
+    return this.sendGet<WingbackContract>(`/v1/c/contract/${contractId}`);
   }
 
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#1-create-a-new-customer-in-wingback-backend
