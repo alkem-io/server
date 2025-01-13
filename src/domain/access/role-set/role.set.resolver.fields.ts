@@ -23,6 +23,11 @@ import { RoleSet } from './role.set.entity';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import {
+  IOrganizationsInRoles,
+  IUsersInRoles,
+  IVirtualContributorsInRoles,
+} from './dto/role.set.contributors.in.roles.interfaces';
 
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFields {
@@ -136,6 +141,39 @@ export class RoleSetResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('usersInRoles', () => [IUsersInRoles], {
+    nullable: false,
+    description:
+      'All users that have a Role in this RoleSet in the specified Roles.',
+  })
+  async usersInRoles(
+    @Parent() roleSet: IRoleSet,
+    @Args('roles', { type: () => [RoleName], nullable: false })
+    roles: RoleName[],
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The positive number of users to return per role; if omitted returns all users in the specified role.',
+      nullable: true,
+    })
+    limit?: number
+  ): Promise<IUsersInRoles[]> {
+    if (limit && limit < 0) {
+      throw new PaginationInputOutOfBoundException(
+        `Limit expects a positive amount: ${limit} provided instead`
+      );
+    }
+    return Promise.all(
+      roles.map(async role => ({
+        role,
+        users: await this.roleSetService.getUsersWithRole(roleSet, role, limit),
+      }))
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('organizationsInRole', () => [IOrganization], {
     nullable: false,
     description:
@@ -147,6 +185,29 @@ export class RoleSetResolverFields {
     role: RoleName
   ): Promise<IOrganization[]> {
     return await this.roleSetService.getOrganizationsWithRole(roleSet, role);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('organizationsInRoles', () => [IOrganizationsInRoles], {
+    nullable: false,
+    description:
+      'All organizations that have a role in this RoleSet in the specified Roles.',
+  })
+  async organizationsInRoles(
+    @Parent() roleSet: IRoleSet,
+    @Args('roles', { type: () => [RoleName], nullable: false })
+    roles: RoleName[]
+  ): Promise<IOrganizationsInRoles[]> {
+    return Promise.all(
+      roles.map(async role => ({
+        role,
+        organizations: await this.roleSetService.getOrganizationsWithRole(
+          roleSet,
+          role
+        ),
+      }))
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -163,6 +224,34 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getVirtualContributorsWithRole(
       roleSet,
       role
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'virtualContributorsInRoles',
+    () => [IVirtualContributorsInRoles],
+    {
+      nullable: false,
+      description:
+        'All VirtualContributors that have a role in this RoleSet in the specified Roles.',
+    }
+  )
+  async virtualContributorsInRoles(
+    @Parent() roleSet: IRoleSet,
+    @Args('roles', { type: () => [RoleName], nullable: false })
+    roles: RoleName[]
+  ): Promise<IVirtualContributorsInRoles[]> {
+    return Promise.all(
+      roles.map(async role => ({
+        role,
+        virtualContributors:
+          await this.roleSetService.getVirtualContributorsWithRole(
+            roleSet,
+            role
+          ),
+      }))
     );
   }
 
