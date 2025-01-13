@@ -39,8 +39,7 @@ export class RoleSetAuthorizationService {
 
   async applyAuthorizationPolicy(
     roleSetID: string,
-    roleSetAuthorization: IAuthorizationPolicy,
-    parentAuthorization: IAuthorizationPolicy
+    roleSetAuthorization: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
       relations: {
@@ -65,13 +64,7 @@ export class RoleSetAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    roleSet.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        roleSetAuthorization,
-        parentAuthorization
-      );
-
-    roleSet.authorization = this.appendPrivilegeRules(roleSet.authorization);
+    roleSet.authorization = this.appendPrivilegeRules(roleSetAuthorization);
 
     roleSet.authorization = await this.extendAuthorizationPolicy(
       roleSet.authorization

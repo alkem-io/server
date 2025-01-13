@@ -102,6 +102,11 @@ export class PlatformAuthorizationService {
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         platform.roleSet.authorization
       );
+    clonedRoleSetAuth =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        clonedRoleSetAuth,
+        platform.authorization
+      );
     clonedRoleSetAuth = await this.extendRoleSetAuthorizationPolicy(
       platform.roleSet,
       clonedRoleSetAuth
@@ -109,8 +114,7 @@ export class PlatformAuthorizationService {
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         platform.roleSet.id,
-        clonedRoleSetAuth,
-        platform.authorization
+        clonedRoleSetAuth
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 

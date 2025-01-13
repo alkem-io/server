@@ -119,6 +119,11 @@ export class CommunityAuthorizationService {
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         community.roleSet.authorization
       );
+    clonedRoleSetAuth =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        clonedRoleSetAuth,
+        community.authorization
+      );
     clonedRoleSetAuth = await this.extendRoleSetAuthorizationPolicy(
       community.roleSet,
       clonedRoleSetAuth,
@@ -130,8 +135,7 @@ export class CommunityAuthorizationService {
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         community.roleSet.id,
-        clonedRoleSetAuth,
-        community.authorization
+        clonedRoleSetAuth
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
