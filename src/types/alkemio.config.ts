@@ -40,6 +40,10 @@ export type AlkemioConfig = {
       endpoint: string;
       retries: number;
       timeout: number;
+      webhook_secret: {
+        name: string;
+        value: string;
+      };
     };
   };
   identity: {
