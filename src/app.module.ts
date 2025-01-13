@@ -88,6 +88,7 @@ import { InAppNotificationReaderModule } from '@domain/in-app-notification-reade
 import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
+import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 
 @Module({
   imports: [
@@ -302,6 +303,7 @@ import { WingbackManagerModule } from '@services/external/wingback/wingback.mana
     TemplateApplierModule,
     InAppNotificationReaderModule,
     InAppNotificationReceiverModule,
+    WingbackWebhookModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
