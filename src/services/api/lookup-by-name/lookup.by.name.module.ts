@@ -9,6 +9,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
     OrganizationLookupModule,
     VirtualContributorLookupModule,
     PlatformAuthorizationPolicyModule,
+    SpaceModule,
   ],
   providers: [
     LookupByNameService,

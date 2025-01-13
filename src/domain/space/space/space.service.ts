@@ -738,6 +738,30 @@ export class SpaceService {
     return space;
   }
 
+  public async getSpaceByNameIdOrFail(
+    spaceNameID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
+    const { where, ...restOfOptions } = options ?? {};
+
+    const space = await this.spaceRepository.findOne({
+      where: where
+        ? { ...where, nameID: spaceNameID }
+        : { nameID: spaceNameID },
+      ...restOfOptions,
+    });
+    if (!space) {
+      if (!space)
+        throw new EntityNotFoundException(
+          `Unable to find Space with nameID: ${spaceNameID} using options '${JSON.stringify(
+            options
+          )}`,
+          LogContext.SPACES
+        );
+    }
+    return space;
+  }
+
   public async getAllSpaces(
     options?: FindManyOptions<ISpace>
   ): Promise<ISpace[]> {

@@ -15,6 +15,7 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { IOrganization } from '@domain/community/organization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { SpaceService } from '@domain/space/space/space.service';
 
 @Resolver(() => LookupByNameQueryResults)
 export class LookupByNameResolverFields {
@@ -24,6 +25,7 @@ export class LookupByNameResolverFields {
     private innovationPackService: InnovationPackService,
     private templateService: TemplateService,
     private userLookupService: UserLookupService,
+    private spaceService: SpaceService,
     private organizationLookupService: OrganizationLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
@@ -47,6 +49,26 @@ export class LookupByNameResolverFields {
     );
 
     return innovationPack.id;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'Lookup the ID of the specified Space using a NameID',
+  })
+  async space(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('NAMEID', { type: () => NameID }) nameid: string
+  ): Promise<string> {
+    const space = await this.spaceService.getSpaceByNameIdOrFail(nameid);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Space by NameID: ${space.id}`
+    );
+
+    return space.id;
   }
 
   @UseGuards(GraphqlGuard)
