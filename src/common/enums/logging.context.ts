@@ -77,4 +77,5 @@ export enum LogContext {
   SUBSCRIPTION_PUBLISH = 'subscription-publish',
   KRATOS = 'kratos',
   WINGBACK = 'wingback',
+  WINGBACK_HOOKS = 'wingback-hooks',
 }
