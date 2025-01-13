@@ -63,6 +63,8 @@ import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class RoleSetService {
+  private roleNamesCache: RoleName[] = [];
+
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private applicationService: ApplicationService,
@@ -1511,6 +1513,9 @@ export class RoleSetService {
   }
 
   public async getRoleNames(roleSetInput: IRoleSet): Promise<RoleName[]> {
+    if (this.roleNamesCache.length > 0) {
+      return this.roleNamesCache;
+    }
     let roleDefinitions = roleSetInput.roles;
     if (!roleDefinitions) {
       const roleSet = await this.getRoleSetOrFail(roleSetInput.id, {
@@ -1524,7 +1529,8 @@ export class RoleSetService {
         LogContext.COMMUNITY
       );
     }
-    return roleDefinitions.map(rd => rd.name);
+    this.roleNamesCache = roleDefinitions.map(rd => rd.name);
+    return this.roleNamesCache;
   }
 
   public async getRoleDefinition(
@@ -1540,20 +1546,6 @@ export class RoleSetService {
       );
     }
     return role;
-  }
-
-  public async getEntryRoleDefinition(roleSet: IRoleSet): Promise<IRole> {
-    const roleDefinitions = await this.getRoleDefinitions(roleSet);
-    const entryRole = roleDefinitions.find(
-      rd => rd.name === roleSet.entryRoleName
-    );
-    if (!entryRole) {
-      throw new RelationshipNotFoundException(
-        `Unable to find entry level Role of type ${roleSet.entryRoleName} for RoleSet: ${roleSet.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return entryRole;
   }
 
   public async approveApplication(

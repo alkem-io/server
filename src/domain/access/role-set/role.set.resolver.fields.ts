@@ -79,7 +79,7 @@ export class RoleSetResolverFields {
   @ResolveField('availableUsersForLeadRole', () => PaginatedUsers, {
     nullable: false,
     description:
-      'All  users excluding the current lead users in this Community.',
+      'All users excluding the current lead users in this Community.',
   })
   async availableUsersForLeadRole(
     @Parent() roleSet: IRoleSet,
@@ -270,7 +270,7 @@ export class RoleSetResolverFields {
   @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
     description:
-      'Invitations to join this Community for users not yet on the Alkemio platform.',
+      'Invitations to join this RoleSet in an entry role for users not yet on the Alkemio platform.',
   })
   async platformInvitations(
     @Parent() roleSet: IRoleSet
@@ -282,7 +282,7 @@ export class RoleSetResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,
-    description: 'Applications available for this roleSet.',
+    description: 'Applications available for this RoleSet.',
   })
   async applications(@Parent() roleSet: IRoleSet) {
     const apps = await this.roleSetService.getApplications(roleSet);
