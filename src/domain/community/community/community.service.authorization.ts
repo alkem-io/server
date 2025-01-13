@@ -19,6 +19,7 @@ import {
   CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
+  POLICY_RULE_COMMUNITY_ADD_VC,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
@@ -32,6 +33,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { RoleName } from '@common/enums/role.name';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -124,6 +126,7 @@ export class CommunityAuthorizationService {
       isSubspace,
       spaceSettings
     );
+    clonedRoleSetAuth = this.appendRoleSetPrivilegeRules(clonedRoleSetAuth);
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         community.roleSet.id,
@@ -367,6 +370,20 @@ export class CommunityAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       roleSetAuthorization,
       newRules
+    );
+  }
+  private appendRoleSetPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT],
+      AuthorizationPrivilege.GRANT,
+      POLICY_RULE_COMMUNITY_ADD_VC
+    );
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      [createVCPrivilege]
     );
   }
 }

@@ -10,7 +10,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
-  POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
   CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL,
   CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD,
@@ -219,12 +218,6 @@ export class RoleSetAuthorizationService {
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
-    const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT],
-      AuthorizationPrivilege.GRANT,
-      POLICY_RULE_COMMUNITY_ADD_VC
-    );
-
     // If you are able to add a member, then you are also logically able to invite a member
     const invitePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
@@ -234,7 +227,7 @@ export class RoleSetAuthorizationService {
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
-      [createVCPrivilege, invitePrivilege]
+      [invitePrivilege]
     );
   }
 }

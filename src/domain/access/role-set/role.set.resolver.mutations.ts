@@ -517,9 +517,9 @@ export class RoleSetResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => [IInvitation], {
     description:
-      'Invite an existing Contriburor to join the specified Community as a member.',
+      'Invite an existing Contriburor to join the specified RoleSet in the Entry Role.',
   })
-  async inviteContributorsForRoleSetMembership(
+  async inviteContributorsEntryRoleOnRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: InviteForEntryRoleOnRoleSetInput
