@@ -1487,7 +1487,10 @@ export class RoleSetService {
     return this.roleService.getCredentialForRole(roleDefinition);
   }
 
-  public async getRoleDefinitions(roleSetInput: IRoleSet): Promise<IRole[]> {
+  public async getRoleDefinitions(
+    roleSetInput: IRoleSet,
+    roles?: RoleName[]
+  ): Promise<IRole[]> {
     let roleDefinitions = roleSetInput.roles;
     if (!roleDefinitions) {
       const roleSet = await this.getRoleSetOrFail(roleSetInput.id, {
@@ -1500,6 +1503,9 @@ export class RoleSetService {
         `Unable to load roles for RoleSet: ${roleSetInput.id}`,
         LogContext.COMMUNITY
       );
+    }
+    if (roles) {
+      return roleDefinitions.filter(rd => roles.includes(rd.name));
     }
     return roleDefinitions;
   }

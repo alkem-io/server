@@ -32,8 +32,12 @@ export class RoleSetResolverFieldsPublic {
     nullable: false,
     description: 'The Role Definitions included in this roleSet.',
   })
-  async roleDefinitions(@Parent() roleSet: RoleSet): Promise<IRole[]> {
-    return await this.roleSetService.getRoleDefinitions(roleSet);
+  async roleDefinitions(
+    @Parent() roleSet: RoleSet,
+    @Args('roles', { type: () => [RoleName], nullable: true })
+    roles: RoleName[] | undefined
+  ): Promise<IRole[]> {
+    return await this.roleSetService.getRoleDefinitions(roleSet, roles);
   }
 
   // The set of fields from here down are not prote
@@ -48,6 +52,17 @@ export class RoleSetResolverFieldsPublic {
     role: RoleName
   ): Promise<IRole> {
     return await this.roleSetService.getRoleDefinition(roleSet, role);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('roleNames', () => [RoleName], {
+    nullable: false,
+    description: 'The Roles available in this roleSet.',
+  })
+  async roleNames(@Parent() roleSet: RoleSet): Promise<RoleName[]> {
+    return (await this.roleSetService.getRoleDefinitions(roleSet)).map(
+      role => role.name
+    );
   }
 
   @UseGuards(GraphqlGuard)
