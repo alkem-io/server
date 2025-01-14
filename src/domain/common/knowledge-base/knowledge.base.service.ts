@@ -37,8 +37,7 @@ export class KnowledgeBaseService {
     storageAggregator: IStorageAggregator,
     userID: string | undefined
   ): Promise<IKnowledgeBase> {
-    const knowledgeBase: IKnowledgeBase =
-      KnowledgeBase.create(knowledgeBaseData);
+    let knowledgeBase: IKnowledgeBase = KnowledgeBase.create(knowledgeBaseData);
 
     knowledgeBase.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.KNOWLEDGE_BASE
@@ -67,6 +66,20 @@ export class KnowledgeBaseService {
       ProfileType.KNOWLEDGE_BASE,
       storageAggregator
     );
+
+    await this.save(knowledgeBase);
+    knowledgeBase = await this.getKnowledgeBaseOrFail(knowledgeBase.id, {
+      relations: {
+        calloutsSet: { tagsetTemplateSet: true, callouts: true },
+      },
+    });
+
+    if (!knowledgeBase.calloutsSet) {
+      throw new EntityNotFoundException(
+        `CalloutsSet not found for KnowledgeBase: ${knowledgeBase.id}`,
+        LogContext.COLLABORATION
+      );
+    }
 
     if (knowledgeBaseData.calloutsSetData.calloutsData) {
       knowledgeBase.calloutsSet.callouts =

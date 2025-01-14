@@ -155,7 +155,7 @@ export class TagsetService {
     return tagsets;
   }
 
-  async getAllowedValues(tagset: ITagset): Promise<string[]> {
+  async getAllowedValuesOrFail(tagset: ITagset): Promise<string[]> {
     if (tagset.type === TagsetType.FREEFORM) return [];
 
     const tagsetTemplate = await this.getTagsetTemplateOrFail(tagset.id);
