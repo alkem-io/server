@@ -98,11 +98,11 @@ export class RoleSetResolverFields {
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const elevatedRoleDefintion = await this.roleSetService.getRoleDefinition(
+    const elevatedRoleDefinition = await this.roleSetService.getRoleDefinition(
       roleSet,
       role
     );
-    if (!elevatedRoleDefintion.requiresEntryRole) {
+    if (!elevatedRoleDefinition.requiresEntryRole) {
       throw new ValidationException(
         `Role ${role} does not require an entry role.`,
         LogContext.ROLES
@@ -114,7 +114,9 @@ export class RoleSetResolverFields {
         roleSet.entryRoleName
       );
 
-    const elevatedRoleCredential = JSON.parse(elevatedRoleDefintion.credential);
+    const elevatedRoleCredential = JSON.parse(
+      elevatedRoleDefinition.credential
+    );
 
     const credentialCriteria = {
       entryRole: entryRoleCredentials,
