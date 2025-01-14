@@ -145,7 +145,8 @@ export class LocalStorageAdapter implements StorageService {
     const dir = this.storagePath;
 
     if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
+      const mode = process.env.NODE_ENV === 'production' ? 0o755 : 0o777;
+      mkdirSync(dir, { recursive: true, mode });
     }
   }
 

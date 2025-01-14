@@ -92,6 +92,9 @@ licensing:
     endpoint: ${LICENSING_WINGBACK_API_ENDPOINT}
     retries: ${LICENSING_WINGBACK_RETRY}:3
     timeout: ${LICENSING_WINGBACK_TIMEOUT}:30000
+    webhook_secret:
+      name: ${LICENSING_WINGBACK_WEBHOOK_SECRET_NAME}:wb-secret
+      value: ${LICENSING_WINGBACK_WEBHOOK_SECRET_VALUE}
 
 ## identity ##
 
