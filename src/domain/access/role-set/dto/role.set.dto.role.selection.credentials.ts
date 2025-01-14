@@ -2,10 +2,10 @@ import { Field, InputType } from '@nestjs/graphql';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @InputType()
-export class RoleSetCredentials {
+export class RoleSetRoleSelectionCredentials {
   @Field()
-  member!: CredentialDefinition;
+  entryRole!: CredentialDefinition;
 
   @Field()
-  lead!: CredentialDefinition;
+  elevatedRole!: CredentialDefinition;
 }

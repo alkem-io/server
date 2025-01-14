@@ -17,7 +17,7 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IInvitation } from '../invitation/invitation.interface';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
-import { RoleSetMemberCredentials } from '@domain/community/user/dto/user.dto.role.set.member.credentials';
+import { RoleSetRoleWithParentCredentials } from './dto/role.set.dto.role.with.parent.credentials';
 import { ILicense } from '@domain/common/license/license.interface';
 import { RoleSet } from './role.set.entity';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
@@ -28,6 +28,9 @@ import {
   IUsersInRoles,
   IVirtualContributorsInRoles,
 } from './dto/role.set.contributors.in.roles.interfaces';
+import { ValidationException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { IPaginatedType } from '@core/pagination/paginated.type';
 
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFields {
@@ -38,37 +41,45 @@ export class RoleSetResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('availableUsersForMemberRole', () => PaginatedUsers, {
+  @ResolveField('availableUsersForEntryRole', () => PaginatedUsers, {
     nullable: false,
-    description: 'All available users that are potential Community members.',
+    description:
+      'All available users that are could join this RoleSet in the entry role.',
   })
-  async availableUsersForMemberRole(
+  async availableUsersForEntryRole(
     @Parent() roleSet: IRoleSet,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ) {
-    const roleDefinition =
-      await this.roleSetService.getCredentialDefinitionForRole(
-        roleSet,
-        RoleName.MEMBER
-      );
+    const entryRoleDefinition = await this.roleSetService.getRoleDefinition(
+      roleSet,
+      roleSet.entryRoleName
+    );
+    const entryRoleCredential = JSON.parse(entryRoleDefinition.credential);
+    // TODO: evaluated if this check is needed or not
+    // if (!entryRoleDefinition.requiresSameRoleInParentRoleSet) {
+    //   throw new ValidationException(
+    //     `Role ${roleSet.entryRoleName} does not require the same role in parent RoleSet.`,
+    //     LogContext.ROLES
+    //   );
+    // }
 
     const parentRoleSet = await this.roleSetService.getParentRoleSet(roleSet);
 
-    const parentRoleSetMemberCredential = parentRoleSet
+    const parentRoleSetEntryRoleCredential = parentRoleSet
       ? await this.roleSetService.getCredentialDefinitionForRole(
           parentRoleSet,
-          RoleName.MEMBER
+          roleSet.entryRoleName
         )
       : undefined;
 
-    const roleSetMemberCredential: RoleSetMemberCredentials = {
-      member: roleDefinition,
-      parentRoleSetMember: parentRoleSetMemberCredential,
+    const roleSetEntryRoleCredential: RoleSetRoleWithParentCredentials = {
+      role: entryRoleCredential,
+      parentRoleSetRole: parentRoleSetEntryRoleCredential,
     };
 
-    return this.userService.getPaginatedAvailableMemberUsers(
-      roleSetMemberCredential,
+    return this.userService.getPaginatedAvailableEntryRoleUsers(
+      roleSetEntryRoleCredential,
       pagination,
       filter
     );
@@ -76,34 +87,41 @@ export class RoleSetResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('availableUsersForLeadRole', () => PaginatedUsers, {
+  @ResolveField('availableUsersForElevatedRole', () => PaginatedUsers, {
     nullable: false,
     description:
-      'All users excluding the current lead users in this Community.',
+      'All users that have the entryRole in the RoleSet, minus those already in the specified role.',
   })
-  async availableUsersForLeadRole(
+  async availableUsersForElevatedRole(
     @Parent() roleSet: IRoleSet,
+    @Args('role', { type: () => RoleName, nullable: false }) role: RoleName,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
-  ) {
-    const memberRoleCredentials =
+  ): Promise<IPaginatedType<IUser>> {
+    const elevatedRoleDefintion = await this.roleSetService.getRoleDefinition(
+      roleSet,
+      role
+    );
+    if (!elevatedRoleDefintion.requiresEntryRole) {
+      throw new ValidationException(
+        `Role ${role} does not require an entry role.`,
+        LogContext.ROLES
+      );
+    }
+    const entryRoleCredentials =
       await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
-        RoleName.MEMBER
+        roleSet.entryRoleName
       );
 
-    const leadRoleCredential =
-      await this.roleSetService.getCredentialDefinitionForRole(
-        roleSet,
-        RoleName.LEAD
-      );
+    const elevatedRoleCredential = JSON.parse(elevatedRoleDefintion.credential);
 
     const credentialCriteria = {
-      member: memberRoleCredentials,
-      lead: leadRoleCredential,
+      entryRole: entryRoleCredentials,
+      elevatedRole: elevatedRoleCredential,
     };
 
-    return this.userService.getPaginatedAvailableLeadUsers(
+    return this.userService.getPaginatedAvailableElevatedRoleUsers(
       credentialCriteria,
       pagination,
       filter

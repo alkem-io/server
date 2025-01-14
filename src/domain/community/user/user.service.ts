@@ -42,8 +42,8 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
-import { RoleSetCredentials } from './dto/user.dto.role.set.credentials';
-import { RoleSetMemberCredentials } from './dto/user.dto.role.set.member.credentials';
+import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
+import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
@@ -592,37 +592,37 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  public async getPaginatedAvailableMemberUsers(
-    communityCredentials: RoleSetMemberCredentials,
+  public async getPaginatedAvailableEntryRoleUsers(
+    entryRoleCredentials: RoleSetRoleWithParentCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const currentMemberUsers =
+    const currentEntryRoleUsers =
       await this.userLookupService.usersWithCredentials(
-        communityCredentials.member
+        entryRoleCredentials.role
       );
     const qb = this.userRepository.createQueryBuilder('user').select();
 
-    if (communityCredentials.parentRoleSetMember) {
+    if (entryRoleCredentials.parentRoleSetRole) {
       qb.leftJoin('user.agent', 'agent')
         .leftJoin('agent.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({
-          type: communityCredentials.parentRoleSetMember.type,
-          resourceID: communityCredentials.parentRoleSetMember.resourceID,
+          type: entryRoleCredentials.parentRoleSetRole.type,
+          resourceID: entryRoleCredentials.parentRoleSetRole.resourceID,
         });
     }
 
-    if (currentMemberUsers.length > 0) {
+    if (currentEntryRoleUsers.length > 0) {
       const hasWhere =
         qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
 
       qb[hasWhere ? 'andWhere' : 'where'](
         'NOT user.id IN (:memberUsers)'
       ).setParameters({
-        memberUsers: currentMemberUsers.map(user => user.id),
+        memberUsers: currentEntryRoleUsers.map(user => user.id),
       });
     }
 
@@ -633,14 +633,15 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  public async getPaginatedAvailableLeadUsers(
-    roleSetCredentials: RoleSetCredentials,
+  public async getPaginatedAvailableElevatedRoleUsers(
+    roleSetCredentials: RoleSetRoleSelectionCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const currentLeadUsers = await this.userLookupService.usersWithCredentials(
-      roleSetCredentials.lead
-    );
+    const currentElevatedRoleUsers =
+      await this.userLookupService.usersWithCredentials(
+        roleSetCredentials.elevatedRole
+      );
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
@@ -650,13 +651,13 @@ export class UserService {
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
       .setParameters({
-        type: roleSetCredentials.member.type,
-        resourceID: roleSetCredentials.member.resourceID,
+        type: roleSetCredentials.entryRole.type,
+        resourceID: roleSetCredentials.entryRole.resourceID,
       });
 
-    if (currentLeadUsers.length > 0) {
+    if (currentElevatedRoleUsers.length > 0) {
       qb.andWhere('NOT user.id IN (:leadUsers)').setParameters({
-        leadUsers: currentLeadUsers.map(user => user.id),
+        leadUsers: currentElevatedRoleUsers.map(user => user.id),
       });
     }
 
