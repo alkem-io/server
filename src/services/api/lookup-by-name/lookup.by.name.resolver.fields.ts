@@ -97,9 +97,11 @@ export class LookupByNameResolverFields {
   async organization(
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
-    return (
-      await this.organizationLookupService.getOrganizationByNameIdOrFail(nameid)
-    ).id;
+    const organization =
+      await this.organizationLookupService.getOrganizationByNameIdOrFail(
+        nameid
+      );
+    return organization.id;
   }
 
   @ResolveField(() => String, {
