@@ -2,12 +2,9 @@ import { ObjectType } from '@nestjs/graphql';
 import {
   InAppNotificationContributorMentionedPayload,
   NotificationEventType,
-  InAppNotificationCategory,
 } from '@alkemio/notifications-lib';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { InAppNotification } from '../in.app.notification.interface';
-import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 import { InAppNotificationBase } from '@domain/in-app-notification-reader/dto/in.app.notification.base';
 
 @ObjectType('InAppNotificationUserMentioned', {

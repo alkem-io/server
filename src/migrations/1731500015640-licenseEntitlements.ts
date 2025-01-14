@@ -610,7 +610,7 @@ const licenseCredentialRules = [
   {
     credentialType: 'space-feature-save-as-template',
     grantedEntitlements: [LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE],
-    name: 'Space Save As Templatet',
+    name: 'Space Save As Template',
   },
   {
     credentialType: 'space-license-free',

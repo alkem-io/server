@@ -14,7 +14,7 @@ import {
 import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowledge';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
-@ObjectType('MigrateEmbeddings')
+@ObjectType('MigrateEmbeddings') // TODO: what is this about?
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverMutations {
   constructor(

@@ -104,9 +104,7 @@ export class SpaceAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const spaceVisibility = space.visibility;
-    const spaceSettings = this.spaceSettingsService.getSettings(
-      space.settingsStr
-    );
+    const spaceSettings = space.settings;
     const isPrivate = spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE;
 
     // Store the provided parent authorization so that later resets can happen

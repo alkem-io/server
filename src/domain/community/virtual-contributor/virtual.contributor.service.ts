@@ -25,29 +25,24 @@ import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.cre
 import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput } from '../ai-persona/dto';
-import {
-  InvocationResultAction,
-  VirtualContributorInvocationInput,
-  isInputValidForAction,
-} from './dto';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
+import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
+import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -57,11 +52,12 @@ export class VirtualContributorService {
     private profileService: ProfileService,
     private contributorService: ContributorService,
     private communicationAdapter: CommunicationAdapter,
-    private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
-    private accountHostService: AccountHostService,
-    private vcInteractionService: VcInteractionService,
+    private knowledgeBaseService: KnowledgeBaseService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
+    private accountLookupService: AccountLookupService,
+    private virtualContributorDefaultsService: VirtualContributorDefaultsService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(VirtualContributor)
@@ -70,7 +66,7 @@ export class VirtualContributorService {
     private readonly logger: LoggerService
   ) {}
 
-  async createVirtualContributor(
+  public async createVirtualContributor(
     virtualContributorData: CreateVirtualContributorInput,
     storageAggregator: IStorageAggregator,
     agentInfo?: AgentInfo
@@ -81,9 +77,10 @@ export class VirtualContributorService {
         virtualContributorData.nameID.toLowerCase();
       await this.checkNameIdOrFail(virtualContributorData.nameID);
     } else {
-      virtualContributorData.nameID = await this.createVirtualContributorNameID(
-        virtualContributorData.profileData?.displayName || ''
-      );
+      virtualContributorData.nameID =
+        await this.virtualContributorDefaultsService.createVirtualContributorNameID(
+          virtualContributorData.profileData?.displayName || ''
+        );
     }
 
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
@@ -96,6 +93,18 @@ export class VirtualContributorService {
     virtualContributor.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
     );
+
+    const knowledgeBaseData =
+      await this.virtualContributorDefaultsService.createKnowledgeBaseInput(
+        virtualContributorData.knowledgeBaseData,
+        virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType
+      );
+    virtualContributor.knowledgeBase =
+      await this.knowledgeBaseService.createKnowledgeBase(
+        knowledgeBaseData,
+        storageAggregator,
+        agentInfo?.userID
+      );
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );
@@ -103,7 +112,6 @@ export class VirtualContributorService {
       virtualContributor.communicationID = communicationID;
     }
 
-    this.logger.log(virtualContributorData);
     const aiPersonaInput: CreateAiPersonaInput = {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
@@ -111,7 +119,7 @@ export class VirtualContributorService {
     virtualContributor.aiPersona =
       await this.aiPersonaService.createAiPersona(aiPersonaInput);
 
-    virtualContributor.profile = await this.profileService.createProfile(
+    virtualContributor.profile = this.profileService.createProfile(
       virtualContributorData.profileData,
       ProfileType.VIRTUAL_CONTRIBUTOR,
       storageAggregator
@@ -141,6 +149,7 @@ export class VirtualContributorService {
       virtualContributor.profile.id,
       userID
     );
+
     // Reload to ensure have the updated avatar URL
     virtualContributor = await this.getVirtualContributorOrFail(
       virtualContributor.id
@@ -153,7 +162,7 @@ export class VirtualContributorService {
     return virtualContributor;
   }
 
-  async checkNameIdOrFail(nameID: string) {
+  private async checkNameIdOrFail(nameID: string) {
     const virtualCount = await this.virtualContributorRepository.countBy({
       nameID: nameID,
     });
@@ -164,7 +173,7 @@ export class VirtualContributorService {
       );
   }
 
-  async checkDisplayNameOrFail(
+  private async checkDisplayNameOrFail(
     newDisplayName?: string,
     existingDisplayName?: string
   ) {
@@ -186,13 +195,18 @@ export class VirtualContributorService {
       );
   }
 
-  async updateVirtualContributor(
+  public async updateVirtualContributor(
     virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const virtual = await this.getVirtualContributorOrFail(
       virtualContributorData.ID,
       {
-        relations: { profile: true },
+        relations: {
+          profile: true,
+          knowledgeBase: {
+            profile: true,
+          },
+        },
       }
     );
 
@@ -228,6 +242,14 @@ export class VirtualContributorService {
       virtual.searchVisibility = virtualContributorData.searchVisibility;
     }
 
+    if (
+      virtualContributorData.knowledgeBaseData?.profile?.description &&
+      virtual?.knowledgeBase?.profile
+    ) {
+      virtual.knowledgeBase.profile.description =
+        virtualContributorData.knowledgeBaseData.profile?.description;
+    }
+
     return await this.save(virtual);
   }
 
@@ -240,13 +262,23 @@ export class VirtualContributorService {
         relations: {
           profile: true,
           agent: true,
+          knowledgeBase: true,
         },
       }
     );
 
-    if (virtualContributor.profile) {
-      await this.profileService.deleteProfile(virtualContributor.profile.id);
+    if (
+      !virtualContributor.profile ||
+      !virtualContributor.agent ||
+      !virtualContributor.knowledgeBase
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities for virtual: ${virtualContributor.id} `,
+        LogContext.COMMUNITY
+      );
     }
+
+    await this.profileService.deleteProfile(virtualContributor.profile.id);
 
     if (virtualContributor.authorization) {
       await this.authorizationPolicyService.delete(
@@ -254,9 +286,7 @@ export class VirtualContributorService {
       );
     }
 
-    if (virtualContributor.agent) {
-      await this.agentService.deleteAgent(virtualContributor.agent.id);
-    }
+    await this.agentService.deleteAgent(virtualContributor.agent.id);
 
     const result = await this.virtualContributorRepository.remove(
       virtualContributor as VirtualContributor
@@ -269,6 +299,7 @@ export class VirtualContributorService {
       });
     }
 
+    await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
     await this.deleteVCInvitations(virtualContributorID);
 
     return result;
@@ -374,61 +405,6 @@ export class VirtualContributorService {
     );
   }
 
-  public async invoke(
-    invocationInput: VirtualContributorInvocationInput
-  ): Promise<void> {
-    const virtualContributor = await this.getVirtualContributorOrFail(
-      invocationInput.virtualContributorID,
-      {
-        relations: {
-          authorization: true,
-          aiPersona: true,
-          agent: true,
-          profile: true,
-        },
-      }
-    );
-    if (!virtualContributor.agent) {
-      throw new EntityNotInitializedException(
-        `Virtual Contributor Agent not initialized: ${invocationInput.virtualContributorID}`,
-        LogContext.AUTH
-      );
-    }
-
-    this.logger.verbose?.(
-      `still need to use the context ${invocationInput.contextSpaceID}, ${invocationInput.userID}`,
-      LogContext.AI_PERSONA_SERVICE_ENGINE
-    );
-
-    const aiServerAdapterInvocationInput: AiServerAdapterInvocationInput = {
-      aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
-      message: invocationInput.message,
-      contextID: invocationInput.contextSpaceID,
-      userID: invocationInput.userID,
-      description: virtualContributor.profile.description,
-      displayName: virtualContributor.profile.displayName,
-      resultHandler: invocationInput.resultHandler,
-    };
-
-    if (
-      isInputValidForAction(invocationInput, InvocationResultAction.POST_REPLY)
-    ) {
-      const vcInteraction =
-        await this.vcInteractionService.getVcInteractionOrFail(
-          invocationInput.resultHandler.roomDetails!.vcInteractionID!
-        );
-
-      aiServerAdapterInvocationInput.vcInteractionID = vcInteraction.id;
-      aiServerAdapterInvocationInput.externalMetadata =
-        vcInteraction.externalMetadata;
-    }
-
-    const response = await this.aiServerAdapter.invoke(
-      aiServerAdapterInvocationInput
-    );
-    return response;
-  }
-
   // TODO: move to store
   async getVirtualContributors(
     args: ContributorQueryArgs
@@ -487,38 +463,49 @@ export class VirtualContributorService {
   public async getProvider(
     virtualContributor: IVirtualContributor
   ): Promise<IContributor> {
-    const virtualContributorWithAccount =
-      await this.getVirtualContributorOrFail(virtualContributor.id, {
-        relations: { account: true },
-      });
-    const account = virtualContributorWithAccount.account;
-    if (!account)
-      throw new EntityNotInitializedException(
-        `Virtual Contributor Account not initialized: ${virtualContributor.id}`,
-        LogContext.AUTH
-      );
+    const account = await this.virtualContributorLookupService.getAccountOrFail(
+      virtualContributor.id
+    );
 
-    const host = await this.accountHostService.getHostOrFail(account);
+    const host = await this.accountLookupService.getHostOrFail(account);
     return host;
   }
 
   public async getAccountHostCredentials(
     virtualContributorID: string
   ): Promise<ICredentialDefinition[]> {
-    const virtualContributorWithAccount =
-      await this.getVirtualContributorOrFail(virtualContributorID, {
-        relations: { account: true },
-      });
-    const account = virtualContributorWithAccount.account;
-    if (!account)
-      throw new EntityNotInitializedException(
-        `Virtual Contributor Account not initialized: ${virtualContributorID}`,
-        LogContext.AUTH
+    const account =
+      await this.virtualContributorLookupService.getAccountOrFail(
+        virtualContributorID
       );
 
     const hostCredentials =
-      await this.accountHostService.getHostCredentials(account);
+      await this.accountLookupService.getHostCredentials(account);
     return hostCredentials;
+  }
+
+  async getKnowledgeBaseOrFail(
+    virtualContributor: IVirtualContributor
+  ): Promise<IKnowledgeBase | never> {
+    if (virtualContributor.knowledgeBase) {
+      return virtualContributor.knowledgeBase;
+    }
+    const virtualContributorWithKnowledgeBase =
+      await this.getVirtualContributorOrFail(virtualContributor.id, {
+        relations: {
+          knowledgeBase: true,
+        },
+      });
+    const knowledgeBase = virtualContributorWithKnowledgeBase.knowledgeBase;
+
+    if (!knowledgeBase) {
+      throw new EntityNotFoundException(
+        `Unable to find knowledge base for VirtualContributor: ${virtualContributor.id}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    return knowledgeBase;
   }
 
   async getAiPersonaOrFail(
@@ -543,45 +530,6 @@ export class VirtualContributorService {
     }
 
     return aiPersona;
-  }
-
-  async virtualContributorsWithCredentials(
-    credentialCriteria: CredentialsSearchInput
-  ): Promise<IVirtualContributor[]> {
-    const credResourceID = credentialCriteria.resourceID || '';
-    const virtualContributorMatches = await this.virtualContributorRepository
-      .createQueryBuilder('virtual_contributor')
-      .leftJoinAndSelect('virtual_contributor.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .getMany();
-
-    // reload to go through the normal loading path
-    const results: IVirtualContributor[] = [];
-    for (const virtualContributor of virtualContributorMatches) {
-      const loadedVirtual = await this.getVirtualContributorOrFail(
-        virtualContributor.id
-      );
-      results.push(loadedVirtual);
-    }
-    return results;
-  }
-
-  public async createVirtualContributorNameID(
-    displayName: string
-  ): Promise<string> {
-    const base = `${displayName}`;
-    const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
-    return this.namingService.createNameIdAvoidingReservedNameIDs(
-      base,
-      reservedNameIDs
-    );
   }
 
   async countVirtualContributorsWithCredentials(

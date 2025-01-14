@@ -21,6 +21,10 @@ import { AccountType } from '@common/enums/account.type';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -56,11 +60,10 @@ describe('SpaceService', () => {
       } as ISpaceSettings;
       const space = {
         id: spaceId,
-        settingsStr: JSON.stringify(settingsData),
+        settings: settingsData,
       } as Space;
 
       jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
-      jest.spyOn(service, 'getSettings').mockReturnValue(settingsData);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -85,11 +88,10 @@ describe('SpaceService', () => {
       } as ISpaceSettings;
       const space = {
         id: spaceId,
-        settingsStr: JSON.stringify(originalSettings),
+        settings: originalSettings,
       } as Space;
 
       jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
-      jest.spyOn(service, 'getSettings').mockReturnValue(originalSettings);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -108,11 +110,10 @@ describe('SpaceService', () => {
       } as ISpaceSettings;
       const space = {
         id: spaceId,
-        settingsStr: JSON.stringify(originalSettings),
+        settings: originalSettings,
       } as Space;
 
       jest.spyOn(spaceRepository, 'findOneOrFail').mockResolvedValue(space);
-      jest.spyOn(service, 'getSettings').mockReturnValue(originalSettings);
 
       const result = await service.shouldUpdateAuthorizationPolicy(
         spaceId,
@@ -245,12 +246,30 @@ const getAuthorizationPolicyMock = (
 ): AuthorizationPolicy => ({
   id,
   anonymousReadAccess,
-  credentialRules: '',
-  privilegeRules: '',
+  credentialRules: [],
+  privilegeRules: [],
   type: AuthorizationPolicyType.SPACE,
-  verifiedCredentialRules: '',
+  verifiedCredentialRules: [],
   ...getEntityMock<AuthorizationPolicy>(),
 });
+
+const spaceSettings = {
+  privacy: {
+    mode: SpacePrivacyMode.PUBLIC,
+    allowPlatformSupportAsAdmin: false,
+  },
+  membership: {
+    policy: CommunityMembershipPolicy.OPEN,
+    trustedOrganizations: [],
+    allowSubspaceAdminsToInviteMembers: false,
+  },
+  collaboration: {
+    inheritMembershipRights: true,
+    allowMembersToCreateSubspaces: true,
+    allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
+  },
+};
 
 const getSubspacesMock = (
   spaceId: string,
@@ -263,7 +282,7 @@ const getSubspacesMock = (
       id: `${spaceId}.${i}`,
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
-      settingsStr: JSON.stringify({}),
+      settings: spaceSettings,
       levelZeroSpaceID: spaceId,
       account: {
         id: `account-${spaceId}.${i}`,
@@ -281,24 +300,30 @@ const getSubspacesMock = (
       collaboration: {
         id: '',
         isTemplate: false,
-        groupsStr: JSON.stringify([
-          {
-            displayName: 'HOME',
-            description: 'The Home page.',
-          },
-          {
-            displayName: 'COMMUNITY',
-            description: 'The Community page.',
-          },
-          {
-            displayName: 'SUBSPACES',
-            description: 'The Subspaces page.',
-          },
-          {
-            displayName: 'KNOWLEDGE',
-            description: 'The knowledge page.',
-          },
-        ]),
+        calloutsSet: {
+          id: '',
+          callouts: [],
+          type: CalloutsSetType.COLLABORATION,
+          groups: [
+            {
+              displayName: 'HOME',
+              description: 'The Home page.',
+            },
+            {
+              displayName: 'COMMUNITY',
+              description: 'The Community page.',
+            },
+            {
+              displayName: 'SUBSPACES',
+              description: 'The Subspaces page.',
+            },
+            {
+              displayName: 'KNOWLEDGE',
+              description: 'The knowledge page.',
+            },
+          ],
+          ...getEntityMock<CalloutsSet>(),
+        },
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -360,7 +385,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       id: `${subsubspaceId}.${i}`,
       rowId: i,
       nameID: `subsubspace-${subsubspaceId}.${i}`,
-      settingsStr: JSON.stringify({}),
+      settings: spaceSettings,
       levelZeroSpaceID: subsubspaceId,
       account: {
         id: `account-${subsubspaceId}.${i}`,
@@ -378,24 +403,30 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       collaboration: {
         id: '',
         isTemplate: false,
-        groupsStr: JSON.stringify([
-          {
-            displayName: 'HOME',
-            description: 'The Home page.',
-          },
-          {
-            displayName: 'COMMUNITY',
-            description: 'The Community page.',
-          },
-          {
-            displayName: 'SUBSPACES',
-            description: 'The Subspaces page.',
-          },
-          {
-            displayName: 'KNOWLEDGE',
-            description: 'The knowledge page.',
-          },
-        ]),
+        calloutsSet: {
+          id: '',
+          callouts: [],
+          type: CalloutsSetType.COLLABORATION,
+          groups: [
+            {
+              displayName: 'HOME',
+              description: 'The Home page.',
+            },
+            {
+              displayName: 'COMMUNITY',
+              description: 'The Community page.',
+            },
+            {
+              displayName: 'SUBSPACES',
+              description: 'The Subspaces page.',
+            },
+            {
+              displayName: 'KNOWLEDGE',
+              description: 'The knowledge page.',
+            },
+          ],
+          ...getEntityMock<CalloutsSet>(),
+        },
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -452,18 +483,20 @@ const getSpaceMock = ({
   anonymousReadAccess,
   challengesCount,
   opportunitiesCounts,
+  settings,
 }: {
   id: string;
   visibility: SpaceVisibility;
   anonymousReadAccess: boolean;
   challengesCount: number;
   opportunitiesCounts: number[];
+  settings: ISpaceSettings;
 }): Space => {
   return {
     id,
     rowId: parseInt(id),
     nameID: `space-${id}`,
-    settingsStr: JSON.stringify({}),
+    settings: settings,
     levelZeroSpaceID: '',
     profile: {
       id: `profile-${id}`,
@@ -512,6 +545,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 1,
     opportunitiesCounts: [5],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PUBLIC,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '2',
@@ -519,6 +559,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 2,
     opportunitiesCounts: [5, 3],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PUBLIC,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '3',
@@ -526,6 +573,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.DEMO,
     challengesCount: 3,
     opportunitiesCounts: [5, 3, 1],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PUBLIC,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '4',
@@ -533,6 +587,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.DEMO,
     challengesCount: 3,
     opportunitiesCounts: [1, 2, 1],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PRIVATE,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '5',
@@ -540,6 +601,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 1,
     opportunitiesCounts: [1],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PRIVATE,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '6',
@@ -547,6 +615,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 3,
     opportunitiesCounts: [1, 1, 6],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PUBLIC,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '7',
@@ -554,6 +629,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.ARCHIVED,
     challengesCount: 0,
     opportunitiesCounts: [],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PUBLIC,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '8',
@@ -561,6 +643,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.DEMO,
     challengesCount: 0,
     opportunitiesCounts: [],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PUBLIC,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '9',
@@ -568,6 +657,13 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 0,
     opportunitiesCounts: [],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PRIVATE,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
   getSpaceMock({
     id: '10',
@@ -575,5 +671,12 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.DEMO,
     challengesCount: 3,
     opportunitiesCounts: [1, 2, 0],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PRIVATE,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
   }),
 ];

@@ -1,7 +1,7 @@
 import { Column, Entity } from 'typeorm';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { MID_TEXT_LENGTH } from '@common/constants';
 
 @Entity()
 export class NVP extends BaseAlkemioEntity implements INVP {
@@ -11,7 +11,7 @@ export class NVP extends BaseAlkemioEntity implements INVP {
     this.value = value;
   }
 
-  @Column('varchar', { nullable: false, length: SMALL_TEXT_LENGTH })
+  @Column('varchar', { nullable: false, length: MID_TEXT_LENGTH })
   name!: string;
 
   @Column('varchar', { nullable: false, length: MID_TEXT_LENGTH })

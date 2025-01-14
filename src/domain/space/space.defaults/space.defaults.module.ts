@@ -4,14 +4,14 @@ import { TemplateModule } from '@domain/template/template/template.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
-import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
+import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 
 @Module({
   imports: [
     TemplateModule,
     TemplatesManagerModule,
     InputCreatorModule,
-    CollaborationModule,
+    CalloutsSetModule,
     PlatformModule,
   ],
   providers: [SpaceDefaultsService],

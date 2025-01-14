@@ -61,7 +61,6 @@ import {
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
-import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
 import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
@@ -87,6 +86,9 @@ import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
 import { InAppNotificationReaderModule } from '@domain/in-app-notification-reader/in.app.notification.reader.module';
 import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
+import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
+import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
+import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 
 @Module({
   imports: [
@@ -267,6 +269,8 @@ import { InAppNotificationReceiverModule } from '@domain/in-app-notification-rec
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
+    LicensingWingbackSubscriptionModule,
+    WingbackManagerModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
@@ -299,6 +303,7 @@ import { InAppNotificationReceiverModule } from '@domain/in-app-notification-rec
     TemplateApplierModule,
     InAppNotificationReaderModule,
     InAppNotificationReceiverModule,
+    WingbackWebhookModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

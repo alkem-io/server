@@ -20,7 +20,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { AccountHostService } from '../account.host/account.host.service';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -29,12 +28,13 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
   constructor(
     private accountService: AccountService,
-    private accountHostService: AccountHostService
+    private accountLookupService: AccountLookupService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -70,7 +70,7 @@ export class AccountResolverFields {
     description: 'The Account host.',
   })
   async host(@Parent() account: Account): Promise<IContributor> {
-    return await this.accountHostService.getHostOrFail(account);
+    return await this.accountLookupService.getHostOrFail(account);
   }
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {

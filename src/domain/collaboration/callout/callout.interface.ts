@@ -10,7 +10,7 @@ import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
-import { ICollaboration } from '../collaboration/collaboration.interface';
+import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends IAuthorizable {
@@ -66,7 +66,7 @@ export abstract class ICallout extends IAuthorizable {
   publishedBy?: string;
   publishedDate?: Date;
 
-  collaboration?: ICollaboration;
+  calloutsSet?: ICalloutsSet;
 
   @Field(() => Boolean, {
     nullable: false,

@@ -8,19 +8,22 @@ import {
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
 import { IAccount } from './account.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceLicenseService } from '../space/space.service.license';
+import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
+import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
+import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 
 @Injectable()
 export class AccountLicenseService {
   constructor(
     private licenseService: LicenseService,
     private accountService: AccountService,
-    private licenseEngineService: LicenseEngineService,
     private spaceLicenseService: SpaceLicenseService,
+    private licensingCredentialBasedService: LicensingCredentialBasedService,
+    private licensingWingbackSubscriptionService: LicensingWingbackSubscriptionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -81,90 +84,57 @@ export class AccountLicenseService {
         LogContext.LICENSE
       );
     }
+
+    // First check the credential based licensing based on the Agent held credentials
     for (const entitlement of license.entitlements) {
-      switch (entitlement.type) {
-        case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
-          const createSpace =
-            await this.licenseEngineService.isEntitlementGranted(
-              LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-              accountAgent
-            );
-          if (createSpace) {
-            entitlement.limit = 3;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_SPACE_PLUS:
-          const createSpacePLus =
-            await this.licenseEngineService.isEntitlementGranted(
-              LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
-              accountAgent
-            );
-          if (createSpacePLus) {
-            entitlement.limit = 0;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
-          const createSpacePremium =
-            await this.licenseEngineService.isEntitlementGranted(
-              LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
-              accountAgent
-            );
-          if (createSpacePremium) {
-            entitlement.limit = 0;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
-          const createVirtualContributor =
-            await this.licenseEngineService.isEntitlementGranted(
-              LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-              accountAgent
-            );
-          if (createVirtualContributor) {
-            entitlement.limit = 3;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
-          const createInnovationHub =
-            await this.licenseEngineService.isEntitlementGranted(
-              LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
-              accountAgent
-            );
-          if (createInnovationHub) {
-            entitlement.limit = 1;
-            entitlement.enabled = true;
-          }
-          break;
-        case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
-          const createInnovationPack =
-            await this.licenseEngineService.isEntitlementGranted(
-              LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-              accountAgent
-            );
-          if (createInnovationPack) {
-            entitlement.limit = 3;
-            entitlement.enabled = true;
-          }
-          break;
-        default:
-          throw new EntityNotInitializedException(
-            `Unknown entitlement type for license: ${entitlement.type}`,
-            LogContext.LICENSE
+      await this.checkAndAssignGrantedEntitlement(entitlement, accountAgent);
+    }
+
+    // Then check the Wingback subscription service for any granted entitlements
+    if (account.externalSubscriptionID) {
+      const wingbackGrantedLicenseEntitlements: LicensingGrantedEntitlement[] =
+        [];
+
+      try {
+        const result =
+          await this.licensingWingbackSubscriptionService.getEntitlements(
+            account.externalSubscriptionID
           );
+        wingbackGrantedLicenseEntitlements.push(...result);
+      } catch (e: any) {
+        this.logger.warn?.(
+          `Skipping Wingback entitlements for account ${account.id} since it returned with an error: ${e}`,
+          LogContext.ACCOUNT
+        );
+      }
+
+      for (const entitlement of license.entitlements) {
+        const wingbackGrantedEntitlement =
+          wingbackGrantedLicenseEntitlements.find(
+            e => e.type === entitlement.type
+          );
+        if (wingbackGrantedEntitlement) {
+          entitlement.limit = wingbackGrantedEntitlement.limit;
+          entitlement.enabled = true;
+        }
       }
     }
 
-    if (account.externalSubscriptionID) {
-      // TODO: get subscription details from the WingBack api + set the entitlements accordingly
-      this.logger.verbose?.(
-        `Invoking external subscription service for account ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-
     return license;
+  }
+
+  private async checkAndAssignGrantedEntitlement(
+    entitlement: ILicenseEntitlement,
+    accountAgent: IAgent
+  ): Promise<void> {
+    const grantedEntitlement =
+      await this.licensingCredentialBasedService.getEntitlementIfGranted(
+        entitlement.type,
+        accountAgent
+      );
+    if (grantedEntitlement) {
+      entitlement.limit = grantedEntitlement.limit;
+      entitlement.enabled = true;
+    }
   }
 }

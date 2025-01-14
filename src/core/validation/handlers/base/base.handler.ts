@@ -32,7 +32,6 @@ import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
-import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
@@ -83,6 +82,15 @@ import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto
 import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
 import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
 import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
+import { UpdateOrganizationSettingsEntityInput } from '@domain/community/organization.settings/dto/organization.settings.dto.update';
+import { UpdateOrganizationSettingsMembershipInput } from '@domain/community/organization.settings/dto/organization.settings.membership.dto.update';
+import { UpdateOrganizationSettingsPrivacyInput } from '@domain/community/organization.settings/dto/organization.settings.privacy.dto.update';
+import { UpdateUserSettingsEntityInput } from '@domain/community/user.settings';
+import { UpdateUserSettingsInput } from '@domain/community/user/dto/user.dto.update.settings';
+import { UpdateUserSettingsCommunicationInput } from '@domain/community/user.settings/dto/user.settings.communications.dto.update';
+import { UpdateUserSettingsPrivacyInput } from '@domain/community/user.settings/dto/user.settings.privacy.dto.update';
+import { UpdateOrganizationSettingsInput } from '@domain/community/organization/dto/organization.dto.update.settings';
+import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -150,10 +158,18 @@ export class BaseHandler extends AbstractHandler {
       UpdateEcosystemModelInput,
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
+      UpdateOrganizationSettingsInput,
+      UpdateOrganizationSettingsEntityInput,
+      UpdateOrganizationSettingsMembershipInput,
+      UpdateOrganizationSettingsPrivacyInput,
+      UpdateUserSettingsEntityInput,
+      UpdateUserSettingsInput,
+      UpdateUserSettingsCommunicationInput,
+      UpdateUserSettingsPrivacyInput,
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
-      CreateCalloutOnCollaborationInput,
+      CreateCalloutOnCalloutsSetInput,
     ];
 
     if (types.includes(metatype)) {

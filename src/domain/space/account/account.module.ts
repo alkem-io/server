@@ -14,9 +14,9 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
-import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
+import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { AccountHostModule } from '../account.host/account.host.module';
-import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { LicensingCredentialBasedModule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
@@ -25,11 +25,15 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { AccountLicenseService } from './account.service.license';
-import { LicensingFrameworkModule } from '@platform/licensing-framework/licensing.framework.module';
+import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
+import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
+import { AccountLookupModule } from '../account.lookup/account.lookup.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 
 @Module({
   imports: [
     AccountHostModule,
+    AccountLookupModule,
     AgentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
@@ -39,12 +43,14 @@ import { LicensingFrameworkModule } from '@platform/licensing-framework/licensin
     PlatformAuthorizationPolicyModule,
     LicensingFrameworkModule,
     LicenseIssuerModule,
-    LicenseEngineModule,
+    LicensingCredentialBasedModule,
+    LicensingWingbackSubscriptionModule,
     LicenseModule,
     SpaceModule,
     InnovationHubModule,
     InnovationPackModule,
     VirtualContributorModule,
+    VirtualContributorLookupModule,
     NameReporterModule,
     NamingModule,
     TypeOrmModule.forFeature([Account]),

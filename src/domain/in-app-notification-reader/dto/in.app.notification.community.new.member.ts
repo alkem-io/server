@@ -2,12 +2,10 @@ import { ObjectType } from '@nestjs/graphql';
 import {
   InAppNotificationCommunityNewMemberPayload,
   NotificationEventType,
-  InAppNotificationCategory,
 } from '@alkemio/notifications-lib';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ISpace } from '@domain/space/space/space.interface';
-import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 import { InAppNotification } from '../in.app.notification.interface';
 import { InAppNotificationBase } from '@domain/in-app-notification-reader/dto/in.app.notification.base';
 

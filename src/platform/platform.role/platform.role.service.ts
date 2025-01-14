@@ -19,7 +19,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { PlatformService } from '@platform/platform/platform.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AccountService } from '@domain/space/account/account.service';
-import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 
 @Injectable()
 export class PlatformRoleService {
@@ -99,7 +99,7 @@ export class PlatformRoleService {
       const accountAgent = await this.accountService.getAgent(user.accountID);
 
       const accountLicenseCredential: ICredentialDefinition = {
-        type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
       await this.agentService.grantCredential({
@@ -147,7 +147,7 @@ export class PlatformRoleService {
       // Also assign the user account a license plan
       const accountAgent = await this.accountService.getAgent(user.accountID);
       const accountLicenseCredential: ICredentialDefinition = {
-        type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
       await this.agentService.revokeCredential({
@@ -175,6 +175,9 @@ export class PlatformRoleService {
 
   async getPlatformRoles(agentInfo: AgentInfo): Promise<PlatformRole[]> {
     const result: PlatformRole[] = [];
+    if (!agentInfo.agentID) {
+      return result;
+    }
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const roles: PlatformRole[] = Object.values(PlatformRole) as PlatformRole[];
     for (const role of roles) {

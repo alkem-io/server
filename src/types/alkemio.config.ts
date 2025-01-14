@@ -33,6 +33,19 @@ export type AlkemioConfig = {
     max_results: number;
     index_pattern: string;
   };
+  licensing: {
+    wingback: {
+      enabled: boolean;
+      key: string;
+      endpoint: string;
+      retries: number;
+      timeout: number;
+      webhook_secret: {
+        name: string;
+        value: string;
+      };
+    };
+  };
   identity: {
     authentication: {
       api_access_enabled: boolean;

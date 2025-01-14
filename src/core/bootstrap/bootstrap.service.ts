@@ -57,8 +57,8 @@ import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-defini
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
 import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
-import { LicensePlanService } from '@platform/license-plan/license.plan.service';
-import { LicensingFrameworkService } from '@platform/licensing-framework/licensing.framework.service';
+import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/ai.persona.service.service';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
@@ -230,9 +230,11 @@ export class BootstrapService {
               },
               states: flowStates,
             },
-            calloutGroups: calloutGroups,
-            calloutsData: callouts,
-            defaultCalloutGroupName: calloutGroups[0].displayName,
+            calloutsSetData: {
+              calloutGroups: calloutGroups,
+              calloutsData: callouts,
+              defaultCalloutGroupName: calloutGroups[0].displayName,
+            },
           },
         }
       );
@@ -515,7 +517,9 @@ export class BootstrapService {
         },
         level: SpaceLevel.SPACE,
         type: SpaceType.SPACE,
-        collaborationData: {},
+        collaborationData: {
+          calloutsSetData: {},
+        },
       };
 
       const space = await this.accountService.createSpaceOnAccount(spaceInput);
@@ -563,6 +567,12 @@ export class BootstrapService {
         profileData: {
           displayName: 'Guidance',
           description: 'Guidance Virtual Contributor',
+        },
+        knowledgeBaseData: {
+          profile: {
+            displayName: 'Knowledge Base for Virtual Contributor',
+          },
+          calloutsSetData: {},
         },
       });
 

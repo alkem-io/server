@@ -78,13 +78,13 @@ export class NamingService {
     return discussions?.map(discussion => discussion.nameID) || [];
   }
 
-  public async getReservedNameIDsInCollaboration(
-    collaborationID: string
+  public async getReservedNameIDsInCalloutsSet(
+    calloutsSetID: string
   ): Promise<string[]> {
     const callouts = await this.entityManager.find(Callout, {
       where: {
-        collaboration: {
-          id: collaborationID,
+        calloutsSet: {
+          id: calloutsSetID,
         },
       },
       select: {
@@ -238,8 +238,8 @@ export class NamingService {
     return result;
   }
 
-  async getRoleSetAndSettingsForCollaboration(
-    collaborationID: string
+  async getRoleSetAndSettingsForCollaborationCalloutsSet(
+    calloutsSetID: string
   ): Promise<{
     roleSet: IRoleSet;
     spaceSettings: ISpaceSettings;
@@ -247,36 +247,8 @@ export class NamingService {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          id: collaborationID,
-        },
-      },
-      relations: {
-        community: {
-          roleSet: true,
-        },
-      },
-    });
-    if (!space || !space.community || !space.community.roleSet) {
-      throw new EntityNotInitializedException(
-        `Unable to load all entities for space with collaboration ${collaborationID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    // Directly parse the settings string to avoid the need to load the settings service
-    const roleSet = space.community.roleSet;
-    const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
-    return { roleSet, spaceSettings };
-  }
-
-  async getRoleSetAndSettingsForCallout(calloutID: string): Promise<{
-    roleSet: IRoleSet;
-    spaceSettings: ISpaceSettings;
-  }> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          callouts: {
-            id: calloutID,
+          calloutsSet: {
+            id: calloutsSetID,
           },
         },
       },
@@ -288,14 +260,41 @@ export class NamingService {
     });
     if (!space || !space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
-        `Unable to load all entities for space with callout ${calloutID}`,
+        `Unable to load all entities for roleSet + settings for collaboration ${calloutsSetID}`,
         LogContext.COMMUNITY
       );
     }
-
     // Directly parse the settings string to avoid the need to load the settings service
     const roleSet = space.community.roleSet;
-    const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
+    const spaceSettings: ISpaceSettings = space.settings;
+    return { roleSet, spaceSettings };
+  }
+
+  async getRoleSetAndSettingsForCallout(calloutID: string): Promise<{
+    roleSet?: IRoleSet;
+    spaceSettings?: ISpaceSettings;
+  }> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              id: calloutID,
+            },
+          },
+        },
+      },
+      relations: {
+        community: {
+          roleSet: true,
+        },
+      },
+    });
+
+    // Directly parse the settings string to avoid the need to load the settings service
+    // We have 2 types of CalloutSet parents now, and KnowledgeBase doesn't have a roleSet and spaceSettings
+    const roleSet: IRoleSet | undefined = space?.community?.roleSet;
+    const spaceSettings: ISpaceSettings | undefined = space?.settings;
 
     return { roleSet: roleSet, spaceSettings };
   }
