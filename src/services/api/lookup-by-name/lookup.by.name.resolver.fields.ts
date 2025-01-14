@@ -13,7 +13,6 @@ import { TemplateService } from '@domain/template/template/template.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { IOrganization } from '@domain/community/organization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SpaceService } from '@domain/space/space/space.service';
 
@@ -97,10 +96,10 @@ export class LookupByNameResolverFields {
   })
   async organization(
     @Args('NAMEID', { type: () => NameID }) nameid: string
-  ): Promise<IOrganization> {
-    return await this.organizationLookupService.getOrganizationByNameIdOrFail(
-      nameid
-    );
+  ): Promise<string> {
+    return (
+      await this.organizationLookupService.getOrganizationByNameIdOrFail(nameid)
+    ).id;
   }
 
   @ResolveField(() => String, {
