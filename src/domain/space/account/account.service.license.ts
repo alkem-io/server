@@ -14,6 +14,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceLicenseService } from '../space/space.service.license';
 import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
 import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
+import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 
 @Injectable()
 export class AccountLicenseService {
@@ -91,20 +92,27 @@ export class AccountLicenseService {
 
     // Then check the Wingback subscription service for any granted entitlements
     if (account.externalSubscriptionID) {
-      const wingbackGrantedLicenseEntitlements =
-        await this.licensingWingbackSubscriptionService.getEntitlements(
-          account.externalSubscriptionID
+      const wingbackGrantedLicenseEntitlements: LicensingGrantedEntitlement[] =
+        [];
+
+      try {
+        const result =
+          await this.licensingWingbackSubscriptionService.getEntitlements(
+            account.externalSubscriptionID
+          );
+        wingbackGrantedLicenseEntitlements.push(...result);
+      } catch (e: any) {
+        this.logger.warn?.(
+          `Skipping Wingback entitlements for account ${account.id} since it returned with an error: ${e}`,
+          LogContext.ACCOUNT
         );
-      this.logger.verbose?.(
-        `Invoking external subscription service for account ${account.id}, entitlements ${wingbackGrantedLicenseEntitlements}`,
-        LogContext.ACCOUNT
-      );
+      }
+
       for (const entitlement of license.entitlements) {
         const wingbackGrantedEntitlement =
           wingbackGrantedLicenseEntitlements.find(
             e => e.type === entitlement.type
           );
-        // Note: for now overwrite the credential based entitlements with the Wingback entitlements
         if (wingbackGrantedEntitlement) {
           entitlement.limit = wingbackGrantedEntitlement.limit;
           entitlement.enabled = true;

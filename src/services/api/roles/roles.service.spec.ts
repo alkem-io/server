@@ -35,6 +35,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { AccountType } from '@common/enums/account.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -54,6 +55,7 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
+        MockContributorLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
         MockEntityManagerProvider,

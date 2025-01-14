@@ -15,6 +15,7 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
+import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/inno
     InputCreatorModule,
     StorageAggregatorResolverModule,
     CollaborationModule,
+    CalloutsSetModule,
     TypeOrmModule.forFeature([Template]),
   ],
   providers: [

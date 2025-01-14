@@ -168,15 +168,19 @@ export default class SearchResultBuilderService
     const spaceLoaded = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: callout.id,
+          calloutsSet: {
+            callouts: {
+              id: callout.id,
+            },
           },
         },
       },
       relations: {
         parentSpace: true,
         collaboration: {
-          callouts: true,
+          calloutsSet: {
+            callouts: true,
+          },
         },
       },
     });

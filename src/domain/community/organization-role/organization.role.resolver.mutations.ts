@@ -11,14 +11,14 @@ import { AssignOrganizationRoleToUserInput } from './dto/organization.role.dto.a
 import { OrganizationRole } from '@common/enums/organization.role';
 import { OrganizationRoleService } from './organization.role.service';
 import { IOrganization } from '../organization/organization.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { OrganizationRoleAuthorizationService } from './organization.role.service.authorization';
+import { OrganizationLookupService } from '../organization-lookup/organization.lookup.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationRoleResolverMutations {
   constructor(
     private organizationRoleAuthorizationService: OrganizationRoleAuthorizationService,
-    private contributorLookupService: ContributorLookupService,
+    private organizationLookupService: OrganizationLookupService,
     private organizationRoleService: OrganizationRoleService,
     private authorizationService: AuthorizationService
   ) {}
@@ -33,7 +33,7 @@ export class OrganizationRoleResolverMutations {
     @Args('membershipData') membershipData: AssignOrganizationRoleToUserInput
   ): Promise<IUser> {
     const organization =
-      await this.contributorLookupService.getOrganizationOrFail(
+      await this.organizationLookupService.getOrganizationOrFail(
         membershipData.organizationID
       );
 
@@ -58,7 +58,7 @@ export class OrganizationRoleResolverMutations {
     @Args('membershipData') membershipData: RemoveOrganizationRoleFromUserInput
   ): Promise<IUser> {
     const organization =
-      await this.contributorLookupService.getOrganizationOrFail(
+      await this.organizationLookupService.getOrganizationOrFail(
         membershipData.organizationID
       );
     let authorization = organization.authorization;

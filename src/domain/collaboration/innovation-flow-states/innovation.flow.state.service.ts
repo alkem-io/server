@@ -62,5 +62,14 @@ export class InnovationFlowStatesService {
         LogContext.INNOVATION_FLOW
       );
     }
+    // Avoid commas in state names, because they are used to separate states in the database
+    // This validation is also performed on the client: domain/collaboration/InnovationFlow/InnovationFlowDragNDropEditor/InnovationFlowStateForm.tsx
+    // Keep them in sync consistently
+    if (stateNames.some(name => name.includes(','))) {
+      throw new ValidationException(
+        `Invalid characters found on flow state: ${stateNames}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
   }
 }

@@ -9,8 +9,8 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => ICalendarEvent)
 export class CalendarEventResolverFields {
@@ -18,7 +18,7 @@ export class CalendarEventResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private calendarEventService: CalendarEventService,
-    private userLookupService: ContributorLookupService
+    private userLookupService: UserLookupService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {

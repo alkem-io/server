@@ -68,6 +68,8 @@ import { ITemplatesManager } from '@domain/template/templates-manager/templates.
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges.results';
+import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -85,6 +87,7 @@ export class LookupResolverFields {
     private innovationPackService: InnovationPackService,
     private profileService: ProfileService,
     private postService: PostService,
+    private calloutsSetService: CalloutsSetService,
     private calloutService: CalloutService,
     private roomService: RoomService,
     private innovationFlowService: InnovationFlowService,
@@ -464,6 +467,26 @@ export class LookupResolverFields {
     );
 
     return calendarEvent;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ICalloutsSet, {
+    nullable: true,
+    description: 'Lookup the specified CalloutsSet',
+  })
+  async calloutsSet(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ICalloutsSet> {
+    const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      calloutsSet.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup calloutsSet: ${calloutsSet.id}`
+    );
+
+    return calloutsSet;
   }
 
   @UseGuards(GraphqlGuard)

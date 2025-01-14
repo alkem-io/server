@@ -531,21 +531,27 @@ export class SearchResultService {
     const parentSpaces = await this.entityManager.find(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: In(calloutIds),
+          calloutsSet: {
+            callouts: {
+              id: In(calloutIds),
+            },
           },
         },
       },
       relations: {
         collaboration: {
-          callouts: true,
+          calloutsSet: {
+            callouts: true,
+          },
         },
       },
       select: {
         collaboration: {
           id: true,
-          callouts: {
-            id: true,
+          calloutsSet: {
+            callouts: {
+              id: true,
+            },
           },
         },
       },
@@ -554,7 +560,7 @@ export class SearchResultService {
     return callouts
       .map(callout => {
         const space = parentSpaces.find(space =>
-          space?.collaboration?.callouts?.some(
+          space?.collaboration?.calloutsSet?.callouts?.some(
             spaceCallout => spaceCallout.id === callout.id
           )
         );
@@ -611,14 +617,18 @@ export class SearchResultService {
     const spaces = await this.entityManager.find(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: In(calloutIds),
+          calloutsSet: {
+            callouts: {
+              id: In(calloutIds),
+            },
           },
         },
       },
       relations: {
         collaboration: {
-          callouts: true,
+          calloutsSet: {
+            callouts: true,
+          },
         },
       },
       select: {
@@ -641,8 +651,10 @@ export class SearchResultService {
         visibility: true,
         collaboration: {
           id: true,
-          callouts: {
-            id: true,
+          calloutsSet: {
+            callouts: {
+              id: true,
+            },
           },
         },
       },
@@ -666,7 +678,7 @@ export class SearchResultService {
         }
 
         const space = spaces.find(space =>
-          space?.collaboration?.callouts?.some(
+          space?.collaboration?.calloutsSet?.callouts?.some(
             spaceCallout => spaceCallout.id === callout.id
           )
         );

@@ -9,7 +9,7 @@ import { InnovationPackResolverMutations } from './innovation.pack.resolver.muta
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { AccountHostModule } from '@domain/space/account.host/account.host.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
-    AccountHostModule,
+    AccountLookupModule,
     TypeOrmModule.forFeature([InnovationPack]),
   ],
   providers: [

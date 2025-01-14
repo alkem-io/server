@@ -86,7 +86,7 @@ export class Space extends NameableEntity implements ISpace {
   @JoinColumn()
   agent?: Agent;
 
-  @Column('json', { nullable: true })
+  @Column('json', { nullable: false })
   settings: ISpaceSettings;
 
   @OneToOne(() => StorageAggregator, {

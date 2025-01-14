@@ -15,7 +15,7 @@ export class AuthorizationPolicyResolverFields {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
   @ResolveField('credentialRules', () => [IAuthorizationPolicyRuleCredential], {
-    nullable: false,
+    nullable: true,
     description:
       'The set of credential rules that are contained by this Authorization Policy.',
   })
@@ -30,7 +30,7 @@ export class AuthorizationPolicyResolverFields {
     'verifiedCredentialRules',
     () => [IAuthorizationPolicyRuleVerifiedCredential],
     {
-      nullable: false,
+      nullable: true,
       description:
         'The set of verified credential rules that are contained by this Authorization Policy.',
     }
@@ -45,7 +45,7 @@ export class AuthorizationPolicyResolverFields {
   }
 
   @ResolveField('privilegeRules', () => [IAuthorizationPolicyRulePrivilege], {
-    nullable: false,
+    nullable: true,
     description:
       'The set of privilege rules that are contained by this Authorization Policy.',
   })
@@ -58,7 +58,7 @@ export class AuthorizationPolicyResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('myPrivileges', () => [AuthorizationPrivilege], {
-    nullable: false,
+    nullable: true,
     description:
       'The privileges granted to the current user based on this Authorization Policy.',
   })
