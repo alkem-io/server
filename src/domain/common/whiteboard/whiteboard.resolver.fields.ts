@@ -40,7 +40,7 @@ export class WhiteboardResolverFields {
   })
   async createdBy(
     @Parent() whiteboard: IWhiteboard,
-    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+    @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
     const createdBy = whiteboard.createdBy;
     if (!createdBy) {
@@ -51,25 +51,7 @@ export class WhiteboardResolverFields {
       return null;
     }
 
-    try {
-      return await loader
-        .load(createdBy)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => {
-          return !Object.keys(x).length ? null : x;
-        });
-    } catch (e: unknown) {
-      if (e instanceof EntityNotFoundException) {
-        this.logger?.warn(
-          `createdBy '${createdBy}' unable to be resolved when resolving whiteboard '${whiteboard.id}'`,
-          LogContext.COLLABORATION
-        );
-        return null;
-      } else {
-        throw e;
-      }
-    }
+    return loader.load(createdBy);
   }
 
   @UseGuards(GraphqlGuard)

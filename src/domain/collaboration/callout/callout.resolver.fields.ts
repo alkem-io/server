@@ -126,7 +126,7 @@ export class CalloutResolverFields {
   })
   async publishedBy(
     @Parent() callout: ICallout,
-    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+    @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
     const publishedBy = callout.publishedBy;
     if (!publishedBy) {
@@ -154,31 +154,13 @@ export class CalloutResolverFields {
   })
   async createdBy(
     @Parent() callout: ICallout,
-    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+    @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
     const createdBy = callout.createdBy;
     if (!createdBy) {
       return null;
     }
 
-    try {
-      return await loader
-        .load(createdBy)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => {
-          return !Object.keys(x).length ? null : x;
-        });
-    } catch (e: unknown) {
-      if (e instanceof EntityNotFoundException) {
-        this.logger?.warn(
-          `createdBy '${createdBy}' unable to be resolved when resolving callout '${callout.id}'`,
-          LogContext.COLLABORATION
-        );
-        return null;
-      } else {
-        throw e;
-      }
-    }
+    return loader.load(createdBy);
   }
 }
