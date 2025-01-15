@@ -51,7 +51,7 @@ import {
   attachSessionMiddleware,
   attachAgentMiddleware,
   checkSessionMiddleware,
-  socketDataInitMiddleware,
+  createSocketDataInitMiddleware,
 } from './middlewares';
 import {
   defaultCollaboratorModeTimeout,
@@ -63,6 +63,7 @@ import {
 } from './types/defaults';
 import { SaveResponse } from './types/save.reponse';
 import { AlkemioConfig } from '@src/types';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timeout>;
@@ -90,7 +91,8 @@ export class ExcalidrawServer {
     private whiteboardService: WhiteboardService,
     private contributionReporter: ContributionReporterService,
     private communityResolver: CommunityResolverService,
-    private activityAdapter: ActivityAdapter
+    private activityAdapter: ActivityAdapter,
+    private agentInfoService: AgentInfoService
   ) {
     const {
       contribution_window,
@@ -208,7 +210,7 @@ export class ExcalidrawServer {
     });
 
     // middlewares
-    this.wsServer.use(socketDataInitMiddleware);
+    this.wsServer.use(createSocketDataInitMiddleware(this.agentInfoService));
     this.wsServer.use(attachSessionMiddleware(kratosClient));
     this.wsServer.use(
       attachAgentMiddleware(kratosClient, this.logger, this.authService)
