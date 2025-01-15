@@ -24,7 +24,7 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
       : fields
     : undefined;
 
-  return new DataLoader<string, TResult>(
+  return new DataLoader<string, TResult | null | EntityNotFoundException>(
     keys =>
       findByBatchIdsSimple(manager, classRef, keys as string[], {
         ...restOptions,
