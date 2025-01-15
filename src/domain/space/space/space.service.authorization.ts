@@ -431,9 +431,9 @@ export class SpaceAuthorizationService {
       if (parentRoleSetMemberCredentials.length !== 0) {
         const readAboutSubspaces =
           this.authorizationPolicyService.createCredentialRule(
-            [AuthorizationPrivilege.DELETE],
+            [AuthorizationPrivilege.READ_ABOUT],
             parentRoleSetAdminCredentials,
-            CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE
+            CREDENTIAL_RULE_SPACE_MEMBERS_READ_ABOUT_SUBSPACES
           );
         readAboutSubspaces.cascade = false;
         newRules.push(readAboutSubspaces);
