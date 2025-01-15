@@ -9,7 +9,7 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   classRef: Type<TResult>,
   ids: string[],
   options?: FindByBatchIdsOptions<TResult, TResult>
-): Promise<(TResult | Error)[] | never> => {
+): Promise<(TResult | null | EntityNotFoundException)[] | never> => {
   if (!ids.length) {
     return [];
   }
@@ -25,13 +25,15 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   });
   // return empty object because DataLoader does not allow to return NULL values
   // handle the value when the result is returned
-  const resolveUnresolvedForKey = options?.resolveToNull
-    ? () => ({} as TResult)
-    : (key: string) =>
-        new EntityNotFoundException(
-          `Could not load resource for '${key}'`,
-          LogContext.DATA_LOADER
+  const resolveUnresolvedForKey = (key: string) => {
+    return options?.resolveToNull
+      ? null
+      : new EntityNotFoundException(
+          `Could not find ${classRef.name} for the given key`,
+          LogContext.DATA_LOADER,
+          { id: key }
         );
+  };
 
   const resultsById = new Map<string, TResult>(
     results.map<[string, TResult]>(result => [result.id, result])

@@ -78,10 +78,20 @@ You can test (assuming default endpoint configuration) creating a file and then 
 touch hello-alkemio.pdf
 
 curl http://localhost:3000/api/private/non-interactive/graphql \
- -H "Authorization: Bearer $sessionToken" \
- -F operations='{"query":"mutation UploadFile($file:Upload!) {uploadFile(file:$file)}", "variables": { "file": null }}' \
- -F map='{ "0": ["variables.file"] }' \
- -F 0=@"hello-alkemio.pdf"
+  -H "x-apollo-operation-name: UploadFile" \
+  -H "Authorization: Bearer $sessionToken" \
+  -F 'operations={
+    "query":"mutation ($file: Upload!, $uploadData: StorageBucketUploadFileOnReferenceInput!) { uploadFileOnReference(file: $file, uploadData: $uploadData) { id } }",
+    "variables": {
+      "file": null,
+      "uploadData": {
+        "referenceID": "YOUR_REFERENCE_ID"
+      }
+    }
+  }' \
+  -F 'map={"0":["variables.file"]}' \
+  -F 0=@hello-alkemio.pdf
+
 ```
 
 You should get a response: {"data":{"uploadFile":"https://ipfs.io/ipfs/QmYt9ypyGsR1BKdaCGPdwdBgAiuXK5AYN2bGSNZov7YXuk"}}.
