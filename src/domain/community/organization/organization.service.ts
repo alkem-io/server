@@ -150,22 +150,24 @@ export class OrganizationService {
     );
     organization.accountID = account.id;
 
-    const savedOrg = await this.save(organization);
+    organization = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
       LogContext.COMMUNITY
     );
     organization.verification =
       await this.organizationVerificationService.createOrganizationVerification(
-        { organizationID: savedOrg.id }
+        { organizationID: organization.id }
       );
+    organization = await this.save(organization);
 
     organization = await this.getOrganizationOrFail(organization.id, {
       relations: {
         roleSet: true,
+        profile: true,
       },
     });
-    if (!organization.roleSet) {
+    if (!organization.roleSet || !organization.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load roleSet during org creation: ${organization.id}`,
         LogContext.COMMUNITY
