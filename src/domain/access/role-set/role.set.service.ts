@@ -97,6 +97,7 @@ export class RoleSetService {
     roleSet.invitations = [];
     roleSet.platformInvitations = [];
     roleSet.entryRoleName = roleSetData.entryRoleName;
+    roleSet.type = roleSetData.type;
 
     roleSet.parentRoleSet = roleSetData.parentRoleSet;
 
