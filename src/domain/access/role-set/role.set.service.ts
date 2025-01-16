@@ -1536,13 +1536,13 @@ export class RoleSetService {
 
   public async getRoleDefinition(
     roleSet: IRoleSet,
-    roleType: RoleName
+    roleName: RoleName
   ): Promise<IRole> {
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
-    const role = roleDefinitions.find(rd => rd.name === roleType);
+    const role = roleDefinitions.find(rd => rd.name === roleName);
     if (!role) {
       throw new RelationshipNotFoundException(
-        `Unable to find Role for type ${roleType} for RoleSet: ${roleSet.id}`,
+        `Unable to find Role with name '${roleName}' for RoleSet: ${roleSet.id}`,
         LogContext.COMMUNITY
       );
     }
