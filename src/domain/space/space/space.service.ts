@@ -84,6 +84,7 @@ import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -223,6 +224,7 @@ export class SpaceService {
         roles: roleSetRolesData,
         applicationForm: applicationFormData,
         entryRoleName: RoleName.MEMBER,
+        type: RoleSetType.SPACE,
       },
       guidelines: {
         // TODO: get this from defaults service

@@ -61,6 +61,7 @@ import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.cre
 import { RoleName } from '@common/enums/role.name';
 import { organizationApplicationForm } from './definitions/organization.role.application.form';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class OrganizationService {
@@ -108,6 +109,7 @@ export class OrganizationService {
       roles: organizationRoles,
       applicationForm: organizationApplicationForm,
       entryRoleName: RoleName.ASSOCIATE,
+      type: RoleSetType.ORGANIZATION,
     };
     organization.roleSet =
       await this.roleSetService.createRoleSet(roleSetInput);
