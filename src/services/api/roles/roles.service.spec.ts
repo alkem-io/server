@@ -39,9 +39,9 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 
 describe('RolesService', () => {
   let rolesService: RolesService;
-  let userLookupService: UserLookupService;
   let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
+  let userLookupService: UserLookupService;
   let organizationLookupService: OrganizationLookupService;
   let communityResolverService: CommunityResolverService;
 
