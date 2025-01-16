@@ -6,6 +6,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 @Injectable()
 export class ContextAuthorizationService {
   constructor(
@@ -16,7 +17,8 @@ export class ContextAuthorizationService {
 
   async applyAuthorizationPolicy(
     context: IContext,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
   ): Promise<IAuthorizationPolicy[]> {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
@@ -34,6 +36,7 @@ export class ContextAuthorizationService {
         [AuthorizationPrivilege.READ],
         POLICY_RULE_READ_ABOUT
       );
+    context.authorization.credentialRules.push(...credentialRulesFromParent);
     updatedAuthorizations.push(context.authorization);
 
     // cascade

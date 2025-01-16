@@ -128,7 +128,7 @@ export class PlatformAuthorizationService {
     platformStorageAuth =
       this.extendStorageAuthorizationPolicy(platformStorageAuth);
     platformStorageAuth =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         platformStorageAuth,
         AuthorizationPrivilege.READ
       );
@@ -185,7 +185,7 @@ export class PlatformAuthorizationService {
 
     // Set globally visible to replicate what already
     const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         authorization,
         AuthorizationPrivilege.READ
       );

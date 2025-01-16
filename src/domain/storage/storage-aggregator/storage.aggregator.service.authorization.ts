@@ -49,7 +49,7 @@ export class StorageAggregatorAuthorizationService {
         parentAuthorization
       );
     storageAggregator.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         storageAggregator.authorization,
         AuthorizationPrivilege.READ
       );

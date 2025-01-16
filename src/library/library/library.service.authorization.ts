@@ -23,7 +23,7 @@ export class LibraryAuthorizationService {
       );
     // For now the library is world visible
     library.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         library.authorization,
         AuthorizationPrivilege.READ
       );

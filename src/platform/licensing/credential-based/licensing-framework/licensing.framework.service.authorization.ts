@@ -58,7 +58,7 @@ export class LicensingFrameworkAuthorizationService {
         parentAuthorization
       );
     licensing.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         licensing.authorization,
         AuthorizationPrivilege.READ
       );

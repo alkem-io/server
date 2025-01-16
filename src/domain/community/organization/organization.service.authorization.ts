@@ -89,7 +89,7 @@ export class OrganizationAuthorizationService {
       );
     // To ensure that profile on an organization is always publicly visible, even for non-authenticated users
     clonedOrganizationAuthorizationAnonymousAccess =
-      this.authorizationPolicy.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicy.appendCredentialRuleAnonymousRegisteredAccess(
         clonedOrganizationAuthorizationAnonymousAccess,
         AuthorizationPrivilege.READ
       );

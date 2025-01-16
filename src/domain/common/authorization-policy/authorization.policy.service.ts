@@ -255,9 +255,44 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
+  public appendCredentialRuleRegisteredAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege,
+    cascade = true
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [AuthorizationCredential.GLOBAL_REGISTERED],
+      `Anonymous agent granted '${privilege}' registered access`
+    );
+    newRule.cascade = cascade;
+    auth.credentialRules.push(newRule);
+    return auth;
+  }
+
   public appendCredentialRuleAnonymousAccess(
     authorization: IAuthorizationPolicy | undefined,
-    privilege: AuthorizationPrivilege
+    privilege: AuthorizationPrivilege,
+    cascade = true
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [AuthorizationCredential.GLOBAL_ANONYMOUS],
+      `Anonymous agent granted '${privilege}' anonymous access`
+    );
+    newRule.cascade = cascade;
+    auth.credentialRules.push(newRule);
+    return auth;
+  }
+
+  public appendCredentialRuleAnonymousRegisteredAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege,
+    cascade = true
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
@@ -267,8 +302,9 @@ export class AuthorizationPolicyService {
         AuthorizationCredential.GLOBAL_ANONYMOUS,
         AuthorizationCredential.GLOBAL_REGISTERED,
       ],
-      `Anonymous agent granted '${privilege}' access`
+      `Anonymous agent granted '${privilege}' anonymous registered access`
     );
+    newRule.cascade = cascade;
     auth.credentialRules.push(newRule);
     return auth;
   }

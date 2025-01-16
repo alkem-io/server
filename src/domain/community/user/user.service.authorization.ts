@@ -136,7 +136,7 @@ export class UserAuthorizationService {
       );
     // To ensure that profile + context on a space are always publicly visible, even for private spaces
     clonedAnonymousReadAccessAuthorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         clonedAnonymousReadAccessAuthorization,
         AuthorizationPrivilege.READ
       );

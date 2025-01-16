@@ -85,7 +85,7 @@ export class VirtualContributorAuthorizationService {
       );
     // To ensure that profile on an virtual is always publicly visible, even for non-authenticated users
     clonedVirtualAuthorizationAnonymousAccess =
-      this.authorizationPolicy.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicy.appendCredentialRuleAnonymousRegisteredAccess(
         clonedVirtualAuthorizationAnonymousAccess,
         AuthorizationPrivilege.READ
       );

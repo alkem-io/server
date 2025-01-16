@@ -8,6 +8,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class ProfileAuthorizationService {
@@ -20,7 +21,8 @@ export class ProfileAuthorizationService {
 
   async applyAuthorizationPolicy(
     profileID: string,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
   ): Promise<IAuthorizationPolicy[]> {
     const profile = await this.profileService.getProfileOrFail(profileID, {
       loadEagerRelations: false,
@@ -101,6 +103,7 @@ export class ProfileAuthorizationService {
         [AuthorizationPrivilege.READ],
         POLICY_RULE_READ_ABOUT
       );
+    profile.authorization.credentialRules.push(...credentialRulesFromParent);
 
     updatedAuthorizations.push(profile.authorization);
 

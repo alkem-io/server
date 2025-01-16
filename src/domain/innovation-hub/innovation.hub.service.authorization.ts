@@ -47,7 +47,7 @@ export class InnovationHubAuthorizationService {
         parentAuthorization
       );
     clonedAuthorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         clonedAuthorization,
         AuthorizationPrivilege.READ
       );

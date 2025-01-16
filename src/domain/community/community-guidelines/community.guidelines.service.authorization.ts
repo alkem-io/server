@@ -29,7 +29,7 @@ export class CommunityGuidelinesAuthorizationService {
       );
     // All content on community guidelines is public
     communityGuidelines.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         communityGuidelines.authorization,
         AuthorizationPrivilege.READ
       );

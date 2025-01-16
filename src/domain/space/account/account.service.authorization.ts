@@ -86,7 +86,7 @@ export class AccountAuthorizationService {
       account.authorization
     );
     account.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         account.authorization,
         AuthorizationPrivilege.READ
       );
@@ -227,7 +227,7 @@ export class AccountAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible. TODO: work through the logic on this
     const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         authorization,
         AuthorizationPrivilege.READ
       );
