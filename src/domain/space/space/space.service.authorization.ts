@@ -352,6 +352,20 @@ export class SpaceAuthorizationService {
     }
   }
 
+  private createCredentialRuleSpaceCollaborationVisibility(
+    credentialCriterias: ICredentialDefinition[],
+    isPrivate: boolean
+  ): IAuthorizationPolicyRuleCredential | undefined {
+    if (!isPrivate) {
+      const newRule = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.READ],
+        credentialCriterias,
+        'Space visibility public'
+      );
+      return newRule;
+    }
+  }
+
   private appendCredentialRuleSpaceVisibility(
     credentialCriterias: ICredentialDefinition[],
     isPrivate: boolean,
@@ -421,12 +435,24 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...communityAuthorizations);
 
+    const credentialRuleAccessSpaceCollaboration =
+      this.createCredentialRuleSpaceCollaborationVisibility(
+        credentialCriteriasWithAccessToSpace,
+        isPrivate
+      );
+
+    if (credentialRuleAccessSpaceCollaboration)
+      credentialRuleAccessSpaceCollaboration.cascade = true;
+
     const collaborationAuthorizations =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         space.collaboration,
         space.authorization,
         space.community.roleSet,
-        spaceSettings
+        spaceSettings,
+        credentialRuleAccessSpaceCollaboration
+          ? [credentialRuleAccessSpaceCollaboration]
+          : []
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
@@ -512,17 +538,18 @@ export class SpaceAuthorizationService {
       }
     }
 
-    const credentialRuleAccessSpace = this.createCredentialRuleSpaceVisibility(
-      credentialCriteriasWithAccessToSpace,
-      isPrivate
-    );
-    credentialRuleAccessSpace.cascade = true;
+    const credentialRuleAccessSpaceContextProfile =
+      this.createCredentialRuleSpaceVisibility(
+        credentialCriteriasWithAccessToSpace,
+        isPrivate
+      );
+    credentialRuleAccessSpaceContextProfile.cascade = true;
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         space.profile.id,
         clonedAuthorization,
-        [credentialRuleAccessSpace]
+        [credentialRuleAccessSpaceContextProfile]
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
@@ -530,7 +557,7 @@ export class SpaceAuthorizationService {
       await this.contextAuthorizationService.applyAuthorizationPolicy(
         space.context,
         clonedAuthorization,
-        [credentialRuleAccessSpace]
+        [credentialRuleAccessSpaceContextProfile]
       );
     updatedAuthorizations.push(...contextAuthorizations);
 
@@ -572,7 +599,7 @@ export class SpaceAuthorizationService {
       spaceSettings
     );
     const spaceMember = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.READ, AuthorizationPrivilege.READ_ABOUT],
+      [AuthorizationPrivilege.READ],
       memberCriterias,
       CREDENTIAL_RULE_SPACE_MEMBERS_READ
     );
