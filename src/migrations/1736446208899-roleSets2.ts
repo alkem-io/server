@@ -51,7 +51,7 @@ export class RoleSets21736446208899 implements MigrationInterface {
     // Create the role set for the platform
     const platformRoleSetID = await this.createRoleSet(
       queryRunner,
-      'subspace-admin',
+      'global-registered',
       'platform',
       platformRoles
     );
@@ -94,7 +94,7 @@ export class RoleSets21736446208899 implements MigrationInterface {
       }
       const organizationRoleSetID = await this.createRoleSet(
         queryRunner,
-        'subspace-admin',
+        'associate',
         'organization',
         organizationRoles
       );
