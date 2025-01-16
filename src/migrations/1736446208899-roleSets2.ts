@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RoleSets21736085928284 implements MigrationInterface {
-  name = 'RoleSets21736085928284';
+export class RoleSets21736446208899 implements MigrationInterface {
+  name = 'RoleSets21736446208899';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -45,7 +45,7 @@ export class RoleSets21736085928284 implements MigrationInterface {
       `ALTER TABLE \`role\` CHANGE COLUMN \`type\` \`name\` varchar(128) NOT NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`role_set\` CHANGE COLUMN \`entryRoleType\` \`entryRoleName\` varchar(128) NOT NULL`
+      `ALTER TABLE \`role_set\` CHANGE COLUMN \`entryRole\` \`entryRoleName\` varchar(128) NOT NULL`
     );
 
     // Create the role set for the platform
