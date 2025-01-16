@@ -71,7 +71,7 @@ export class AccountResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IAccount, {
+  @Mutation(() => ISpace, {
     description: 'Creates a new Level Zero Space within the specified Account.',
   })
   async createSpace(
