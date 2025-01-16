@@ -33,9 +33,11 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { AccountType } from '@common/enums/account.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
+import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
+import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -55,13 +57,15 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
-        MockContributorLookupService,
+        MockVirtualContributorLookupService,
+        MockOrganizationLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
         MockEntityManagerProvider,
         MockSpaceService,
         MockUserLookupService,
         MockVirtualContributorService,
+        MockContributorLookupService,
         RolesService,
       ],
     }).compile();

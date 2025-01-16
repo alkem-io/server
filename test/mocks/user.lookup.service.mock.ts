@@ -11,5 +11,6 @@ export const MockUserLookupService: ValueProvider<
     getUserByUUID: jest.fn(),
     getUserOrFail: jest.fn(),
     isRegisteredUser: jest.fn(),
+    getUserWithAgent: jest.fn(),
   },
 };
