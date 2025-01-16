@@ -6,6 +6,7 @@ export const MockContributorLookupService: MockValueProvider<OrganizationLookupS
   {
     provide: ConfigService,
     useValue: {
+      getOrganizationAndAgent: jest.fn(),
       getOrganizationByNameIdOrFail: jest.fn(),
     },
   };

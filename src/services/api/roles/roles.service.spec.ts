@@ -11,7 +11,6 @@ import {
 } from '@test/mocks';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
-import { UserService } from '@domain/community/user/user.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { testData } from '@test/utils';
@@ -36,10 +35,11 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
-  let userService: UserService;
+  let userLookupService: UserLookupService;
   let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
   let organizationLookupService: OrganizationLookupService;
@@ -67,7 +67,7 @@ describe('RolesService', () => {
     }).compile();
 
     rolesService = moduleRef.get(RolesService);
-    userService = moduleRef.get(UserService);
+    userLookupService = moduleRef.get(UserLookupService);
     applicationService = moduleRef.get(ApplicationService);
     organizationLookupService = moduleRef.get(OrganizationLookupService);
     communityResolverService = moduleRef.get(CommunityResolverService);
@@ -99,7 +99,7 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      jest.spyOn(userService, 'getUserWithAgent').mockResolvedValue(user);
+      jest.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
 
       jest
         .spyOn(spaceFilterService, 'getAllowedVisibilities')
