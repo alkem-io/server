@@ -20,10 +20,9 @@ const mockAuth = (
   type: AuthorizationPolicyType,
   props?: Partial<IAuthorizationPolicy>
 ): IAuthorizationPolicy => ({
-  anonymousReadAccess: false,
-  credentialRules: '',
-  verifiedCredentialRules: '',
-  privilegeRules: '',
+  credentialRules: [],
+  verifiedCredentialRules: [],
+  privilegeRules: [],
   id: uniqueId(),
   ...props,
   type,
