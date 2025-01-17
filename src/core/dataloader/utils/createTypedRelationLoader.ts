@@ -34,9 +34,9 @@ export const createTypedRelationDataLoader = <
       : fields
     : { id: true };
 
-  return new DataLoader<string, TResult>(
+  return new DataLoader<string, TResult | null | EntityNotFoundException>(
     keys =>
-      findByBatchIds<TParent, TResult>(
+      findByBatchIds<TParent, TResult | null | EntityNotFoundException>(
         manager,
         parentClassRef,
         keys as string[],

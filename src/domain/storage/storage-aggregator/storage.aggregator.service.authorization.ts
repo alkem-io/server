@@ -3,7 +3,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { StorageAggregatorService } from './storage.aggregator.service';
 import { IStorageAggregator } from './storage.aggregator.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { StorageBucketAuthorizationService } from '../storage-bucket/storage.bucket.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
@@ -48,7 +48,11 @@ export class StorageAggregatorAuthorizationService {
         storageAggregator.authorization,
         parentAuthorization
       );
-    storageAggregator.authorization.anonymousReadAccess = true;
+    storageAggregator.authorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        storageAggregator.authorization,
+        AuthorizationPrivilege.READ
+      );
     updatedAuthorizations.push(storageAggregator.authorization);
 
     const bucketAuthorizations =

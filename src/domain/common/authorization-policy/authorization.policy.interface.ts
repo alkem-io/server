@@ -7,9 +7,6 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Authorization')
 export abstract class IAuthorizationPolicy extends IBaseAlkemio {
-  @Field(() => Boolean, { nullable: true })
-  anonymousReadAccess!: boolean;
-
   // exposed via field resolver
   credentialRules!: IAuthorizationPolicyRuleCredential[];
   verifiedCredentialRules!: IAuthorizationPolicyRuleVerifiedCredential[];
