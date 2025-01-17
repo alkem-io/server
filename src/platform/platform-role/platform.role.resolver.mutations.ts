@@ -14,17 +14,15 @@ import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AssignRoleOnRoleSetToUserInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.user';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { RoleSetType } from '@common/enums/role.set.type';
-import { ValidationException } from '@common/exceptions';
-import { LogContext } from '@common/enums/logging.context';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { RemoveRoleOnRoleSetFromUserInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.user';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
+import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
+import { PlatformService } from '@platform/platform/platform.service';
 
 @Resolver()
 export class PlatformRoleResolverMutations {
@@ -38,7 +36,8 @@ export class PlatformRoleResolverMutations {
     private agentService: AgentService,
     private roleSetService: RoleSetService,
     private userLookupService: UserLookupService,
-    private roleSetAuthorizationService: RoleSetAuthorizationService
+    private roleSetAuthorizationService: RoleSetAuthorizationService,
+    private platformService: PlatformService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -47,17 +46,9 @@ export class PlatformRoleResolverMutations {
   })
   async assignPlatformRoleToUser(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('roleData') roleData: AssignRoleOnRoleSetToUserInput
+    @Args('roleData') roleData: AssignPlatformRoleInput
   ): Promise<IUser> {
-    const roleSet = await this.roleSetService.getRoleSetOrFail(
-      roleData.roleSetID
-    );
-    if (roleSet.type !== RoleSetType.PLATFORM) {
-      throw new ValidationException(
-        `Unable to assign role to user on roleSet of type: ${roleSet.type}`,
-        LogContext.PLATFORM
-      );
-    }
+    const roleSet = await this.platformService.getRoleSetOrFail();
 
     let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
 
@@ -115,18 +106,9 @@ export class PlatformRoleResolverMutations {
   })
   async removePlatformRoleFromUser(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('roleData') roleData: RemoveRoleOnRoleSetFromUserInput
+    @Args('roleData') roleData: RemovePlatformRoleInput
   ): Promise<IUser> {
-    const roleSet = await this.roleSetService.getRoleSetOrFail(
-      roleData.roleSetID
-    );
-
-    if (roleSet.type !== RoleSetType.PLATFORM) {
-      throw new ValidationException(
-        `Unable to remove role to user on roleSet of type: ${roleSet.type}`,
-        LogContext.PLATFORM
-      );
-    }
+    const roleSet = await this.platformService.getRoleSetOrFail();
 
     let privilegeRequired = AuthorizationPrivilege.GRANT;
     let extendedAuthorization = roleSet.authorization;

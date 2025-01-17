@@ -9,6 +9,7 @@ import { LicenseModule } from '@domain/common/license/license.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { PlatformModule } from '@platform/platform/platform.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
     UserLookupModule,
     AgentModule,
     RoleSetModule,
+    PlatformModule,
   ],
   providers: [PlatformRoleResolverMutations],
   exports: [],
