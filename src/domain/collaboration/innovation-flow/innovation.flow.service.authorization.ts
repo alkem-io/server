@@ -6,8 +6,6 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE } from '@common/constants/authorization/policy.rule.constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
@@ -41,9 +39,13 @@ export class InnovationFlowAuthorizationService {
     innovationFlow.authorization = this.appendCredentialRules(
       innovationFlow.authorization
     );
-    innovationFlow.authorization = this.appendPrivilegeRules(
-      innovationFlow.authorization
-    );
+    innovationFlow.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        innovationFlow.authorization,
+        AuthorizationPrivilege.CREATE,
+        [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+        PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE
+      );
     updatedAuthorizations.push(innovationFlow.authorization);
 
     const profileAuthorizations =
@@ -77,28 +79,5 @@ export class InnovationFlowAuthorizationService {
     const rules: IAuthorizationPolicyRuleCredential[] = [];
 
     return rules;
-  }
-
-  private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.SPACES
-      );
-    const privilegeRules: IAuthorizationPolicyRulePrivilege[] = [];
-
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
-      AuthorizationPrivilege.CREATE,
-      PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
-    );
   }
 }

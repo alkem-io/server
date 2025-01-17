@@ -27,3 +27,4 @@ export const POLICY_RULE_COMMUNITY_ADD_VC =
   'policyRule-communityAddVirtualContributor';
 export const POLICY_RULE_COMMUNITY_APPROVE_APPLICATION =
   'policyRule-communityApproveApplication';
+export const POLICY_RULE_READ_ABOUT = 'policyRule-readAbout';

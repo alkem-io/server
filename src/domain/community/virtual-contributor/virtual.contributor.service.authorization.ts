@@ -79,12 +79,16 @@ export class VirtualContributorAuthorizationService {
     updatedAuthorizations.push(virtual.authorization);
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedVirtualAuthorizationAnonymousAccess =
+    let clonedVirtualAuthorizationAnonymousAccess =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         virtual.authorization
       );
     // To ensure that profile on an virtual is always publicly visible, even for non-authenticated users
-    clonedVirtualAuthorizationAnonymousAccess.anonymousReadAccess = true;
+    clonedVirtualAuthorizationAnonymousAccess =
+      this.authorizationPolicy.appendCredentialRuleAnonymousRegisteredAccess(
+        clonedVirtualAuthorizationAnonymousAccess,
+        AuthorizationPrivilege.READ
+      );
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         virtual.profile.id,

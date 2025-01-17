@@ -26,7 +26,6 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
@@ -40,12 +39,10 @@ import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
-  constructor(
-    private spaceService: SpaceService,
-    private authorizationService: AuthorizationService
-  ) {}
+  constructor(private spaceService: SpaceService) {}
 
   // Check authorization inside the field resolver directly on the Community
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: false,
@@ -58,16 +55,10 @@ export class SpaceResolverFields {
   ): Promise<ICommunity> {
     const community = await loader.load(space.id);
     // Do not check for READ access here, rely on per field check on resolver in Community
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   community.authorization,
-    //   AuthorizationPrivilege.READ,
-    //   `read community on space: ${community.id}`
-    // );
     return community;
   }
 
-  // Check authorization inside the field resolver directly on the Context
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: false,
@@ -75,18 +66,10 @@ export class SpaceResolverFields {
   })
   async context(
     @Parent() space: Space,
-    @CurrentUser() agentInfo: AgentInfo,
     @Loader(JourneyContextLoaderCreator, { parentClassRef: Space })
     loader: ILoader<IContext>
   ): Promise<IContext> {
     const context = await loader.load(space.id);
-    // Check if the user can read the Context entity, not the space
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      context.authorization,
-      AuthorizationPrivilege.READ,
-      `read context on space: ${context.id}`
-    );
     return context;
   }
 
@@ -169,7 +152,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getSubspaces(space, args);
   }
 
-  // Check authorization inside the field resolver
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
@@ -177,18 +160,10 @@ export class SpaceResolverFields {
   })
   async profile(
     @Parent() space: Space,
-    @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: Space })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     const profile = await loader.load(space.id);
-    // Check if the user can read the profile entity, not the space
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on space: ${profile.displayName}`
-    );
     return profile;
   }
 

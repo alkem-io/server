@@ -8,6 +8,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { ExcalidrawRedisServerFactoryProvider } from './adapters/redis';
 import { ExcalidrawServer } from './excalidraw.server';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
     ContributionReporterModule,
     EntityResolverModule,
     ActivityAdapterModule,
+    AuthenticationAgentInfoModule,
   ],
   providers: [
     ExcalidrawRedisServerFactoryProvider,
