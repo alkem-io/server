@@ -4,10 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WhiteboardService } from '@domain/common/whiteboard';
-import { UserService } from '@domain/community/user/user.service';
-import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
@@ -32,6 +29,7 @@ import {
   SaveOutputData,
 } from './outputs';
 import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 
 @Injectable()
 export class WhiteboardIntegrationService {
@@ -41,10 +39,10 @@ export class WhiteboardIntegrationService {
     private readonly authorizationService: AuthorizationService,
     private readonly authenticationService: AuthenticationService,
     private readonly whiteboardService: WhiteboardService,
-    private readonly userService: UserService,
     private readonly contributionReporter: ContributionReporterService,
     private readonly communityResolver: CommunityResolverService,
     private readonly activityAdapter: ActivityAdapter,
+    private readonly agentInfoService: AgentInfoService,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
     this.maxCollaboratorsInRoom = this.configService.get(
@@ -58,7 +56,9 @@ export class WhiteboardIntegrationService {
       const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
         data.whiteboardId
       );
-      const agentInfo = await this.buildAgentInfo(data.userId);
+      const agentInfo = await this.agentInfoService.buildAgentInfoForUser(
+        data.userId
+      );
 
       return this.authorizationService.isAccessGranted(
         agentInfo,
@@ -203,28 +203,5 @@ export class WhiteboardIntegrationService {
           LogContext.WHITEBOARD_INTEGRATION
         );
       });
-  }
-
-  private async buildAgentInfo(userId: string): Promise<AgentInfo> {
-    const user = await this.userService.getUserOrFail(userId, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent) {
-      throw new EntityNotInitializedException(
-        `Agent not loaded for User: ${user.id}`,
-        LogContext.WHITEBOARD_INTEGRATION,
-        { userId }
-      );
-    }
-
-    // const verifiedCredentials =
-    //   await this.agentService.getVerifiedCredentials(user.agent);
-    const verifiedCredentials = [] as IVerifiedCredential[];
-    // construct the agent info object needed for isAccessGranted
-    return {
-      credentials: user.agent.credentials ?? [],
-      verifiedCredentials,
-    } as AgentInfo;
   }
 }

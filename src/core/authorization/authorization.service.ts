@@ -1,6 +1,5 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   EntityNotInitializedException,
@@ -14,6 +13,7 @@ import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.
 import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class AuthorizationService {
@@ -53,9 +53,7 @@ export class AuthorizationService {
     } has credentials '${JSON.stringify(
       agentInfo.credentials,
       this.replacer
-    )}'; authorization definition: anonymousAccess=${
-      authorization?.anonymousReadAccess
-    } & rules: ${authorization?.credentialRules}`;
+    )}'; authorization definition: rules: ${authorization?.credentialRules}`;
     this.logger.debug?.(msg, LogContext.AUTH_POLICY);
   }
 
@@ -105,16 +103,6 @@ export class AuthorizationService {
         'Authorization: no definition provided',
         LogContext.AUTH_POLICY
       );
-    }
-    if (
-      authorization.anonymousReadAccess &&
-      privilegeRequired === AuthorizationPrivilege.READ
-    ) {
-      this.logger.verbose?.(
-        `Granted privilege '${privilegeRequired}' using rule 'AnonymousReadAccess'`,
-        LogContext.AUTH_POLICY
-      );
-      return true;
     }
 
     // Keep track of all the granted privileges via Credential rules so can use with Privilege rules
@@ -176,15 +164,11 @@ export class AuthorizationService {
   }
 
   getGrantedPrivileges(
-    credentials: ICredential[],
+    credentials: ICredentialDefinition[],
     verifiedCredentials: IVerifiedCredential[],
     authorization: IAuthorizationPolicy
   ): AuthorizationPrivilege[] {
     const grantedPrivileges = new Set<AuthorizationPrivilege>();
-
-    if (authorization.anonymousReadAccess) {
-      grantedPrivileges.add(AuthorizationPrivilege.READ);
-    }
 
     const credentialRules = authorization.credentialRules || [];
 
@@ -224,7 +208,7 @@ export class AuthorizationService {
     return Array.from(grantedPrivileges);
   }
   private isCredentialMatch(
-    credential: ICredential,
+    credential: ICredentialDefinition,
     credentialRule: IAuthorizationPolicyRuleCredential
   ): boolean {
     const criterias = credentialRule.criterias;

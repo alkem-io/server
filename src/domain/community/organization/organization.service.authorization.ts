@@ -104,12 +104,16 @@ export class OrganizationAuthorizationService {
     updatedAuthorizations.push(organization.authorization);
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedOrganizationAuthorizationAnonymousAccess =
+    let clonedOrganizationAuthorizationAnonymousAccess =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         organization.authorization
       );
     // To ensure that profile on an organization is always publicly visible, even for non-authenticated users
-    clonedOrganizationAuthorizationAnonymousAccess.anonymousReadAccess = true;
+    clonedOrganizationAuthorizationAnonymousAccess =
+      this.authorizationPolicy.appendCredentialRuleAnonymousRegisteredAccess(
+        clonedOrganizationAuthorizationAnonymousAccess,
+        AuthorizationPrivilege.READ
+      );
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         organization.profile.id,

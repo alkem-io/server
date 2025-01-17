@@ -9,11 +9,16 @@ import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
@@ -83,7 +88,7 @@ export class GraphqlGuard extends AuthGuard([
         `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
         LogContext.AUTH
       );
-      resultAgentInfo = new AgentInfo();
+      resultAgentInfo = this.createAnonymousAgentInfo();
     }
 
     // Apply any rules
@@ -103,5 +108,15 @@ export class GraphqlGuard extends AuthGuard([
     }
 
     return resultAgentInfo;
+  }
+
+  public createAnonymousAgentInfo(): AgentInfo {
+    const emptyAgentInfo = new AgentInfo();
+    const anonymousCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.GLOBAL_ANONYMOUS,
+      resourceID: '',
+    };
+    emptyAgentInfo.credentials = [anonymousCredential];
+    return emptyAgentInfo;
   }
 }

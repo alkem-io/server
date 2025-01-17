@@ -1,7 +1,7 @@
-import { ICredential } from '@src/domain';
 import { AuthorizationCredential } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 export type CredentialRole = RoleName | RoleSetRoleImplicit;
 
@@ -22,7 +22,9 @@ export type CredentialMap = Map<
  * The types are represented by an array because they are guaranteed unique,
  * meaning an User (whose credentials are parsed here) can't have two credentials of type 'space-admin' for the same Space
  */
-export const groupCredentialsByEntity = (credentials: ICredential[]) => {
+export const groupCredentialsByEntity = (
+  credentials: ICredentialDefinition[]
+) => {
   return credentials.reduce<CredentialMap>((map, credential) => {
     if (
       credential.type === AuthorizationCredential.SPACE_ADMIN ||
@@ -46,7 +48,7 @@ export const groupCredentialsByEntity = (credentials: ICredential[]) => {
 const setMap = (
   map: CredentialMap,
   type: EntityCredentialType,
-  credential: ICredential
+  credential: ICredentialDefinition
 ) => {
   const roleMap = map.get(type);
   if (roleMap) {

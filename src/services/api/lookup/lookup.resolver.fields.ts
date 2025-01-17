@@ -116,16 +116,12 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified Space',
   })
-  async space(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ISpace> {
+  async space(@Args('ID', { type: () => UUID }) id: string): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
-    // TODO: Fix this when dealing with public visibility of spaces
     // this.authorizationService.grantAccessOrFail(
     //   agentInfo,
     //   space.authorization,
-    //   AuthorizationPrivilege.READ,
+    //   AuthorizationPrivilege.READ_ABOUT,
     //   `lookup Space: ${space.id}`
     // );
 
@@ -177,7 +173,6 @@ export class LookupResolverFields {
     description: 'Lookup the specified RoleSet',
   })
   async roleSet(
-    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IRoleSet> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(id);

@@ -37,7 +37,8 @@ export class CollaborationAuthorizationService {
     collaborationInput: ICollaboration,
     parentAuthorization: IAuthorizationPolicy,
     roleSet?: IRoleSet,
-    spaceSettings?: ISpaceSettings
+    spaceSettings?: ISpaceSettings,
+    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
   ): Promise<IAuthorizationPolicy[]> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
@@ -82,6 +83,9 @@ export class CollaborationAuthorizationService {
           spaceSettings
         );
     }
+    collaboration.authorization.credentialRules.push(
+      ...credentialRulesFromParent
+    );
     updatedAuthorizations.push(collaboration.authorization);
 
     const childUpdatedAuthorizations =

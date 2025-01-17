@@ -41,7 +41,6 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
-import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -852,32 +851,5 @@ export class UserService {
       base,
       reservedNameIDs
     );
-  }
-
-  public async getAgentInfoMetadata(
-    email: string
-  ): Promise<AgentInfoMetadata> | never {
-    const user = await this.userRepository.findOne({
-      where: {
-        email: email,
-      },
-      relations: {
-        agent: {
-          credentials: true,
-        },
-      },
-    });
-    if (!user || !user.agent || !user.agent.credentials) {
-      throw new EntityNotFoundException(
-        `Unable to load User, Agent or Credentials for User: ${email}`,
-        LogContext.COMMUNITY
-      );
-    }
-    const agentInfo = new AgentInfoMetadata();
-    agentInfo.credentials = user.agent.credentials;
-    agentInfo.agentID = user.agent.id;
-    agentInfo.userID = user.id;
-    agentInfo.communicationID = user.communicationID;
-    return agentInfo;
   }
 }

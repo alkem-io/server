@@ -27,6 +27,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -46,7 +47,6 @@ export class AuthorizationPolicyService {
 
   public authorizationSelectOptions: FindOptionsSelect<AuthorizationPolicy> = {
     id: true,
-    anonymousReadAccess: true,
     credentialRules: true,
     privilegeRules: true,
     verifiedCredentialRules: true,
@@ -255,6 +255,60 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
+  public appendCredentialRuleRegisteredAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege,
+    cascade = true
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [AuthorizationCredential.GLOBAL_REGISTERED],
+      `Anonymous agent granted '${privilege}' registered access`
+    );
+    newRule.cascade = cascade;
+    auth.credentialRules.push(newRule);
+    return auth;
+  }
+
+  public appendCredentialRuleAnonymousAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege,
+    cascade = true
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [AuthorizationCredential.GLOBAL_ANONYMOUS],
+      `Anonymous agent granted '${privilege}' anonymous access`
+    );
+    newRule.cascade = cascade;
+    auth.credentialRules.push(newRule);
+    return auth;
+  }
+
+  public appendCredentialRuleAnonymousRegisteredAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege,
+    cascade = true
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [
+        AuthorizationCredential.GLOBAL_ANONYMOUS,
+        AuthorizationCredential.GLOBAL_REGISTERED,
+      ],
+      `Anonymous agent granted '${privilege}' anonymous registered access`
+    );
+    newRule.cascade = cascade;
+    auth.credentialRules.push(newRule);
+    return auth;
+  }
+
   appendCredentialAuthorizationRules(
     authorization: IAuthorizationPolicy | undefined,
     additionalRules: IAuthorizationPolicyRuleCredential[]
@@ -283,6 +337,25 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
+  public appendPrivilegeAuthorizationRuleMapping(
+    authorization: IAuthorizationPolicy | undefined,
+    sourcePrivilege: AuthorizationPrivilege,
+    grantedPrivileges: AuthorizationPrivilege[],
+    name: string
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+    const existingRules = auth.privilegeRules;
+    const newPrivilegeRule = new AuthorizationPolicyRulePrivilege(
+      grantedPrivileges,
+      sourcePrivilege,
+      name
+    );
+    existingRules.push(newPrivilegeRule);
+
+    auth.privilegeRules = existingRules;
+    return auth;
+  }
+
   appendVerifiedCredentialAuthorizationRules(
     authorization: IAuthorizationPolicy | undefined,
     additionalRules: AuthorizationPolicyRuleVerifiedCredential[]
@@ -295,15 +368,6 @@ export class AuthorizationPolicyService {
     }
 
     auth.verifiedCredentialRules = existingRules;
-    return auth;
-  }
-
-  setAnonymousAccess(
-    authorization: IAuthorizationPolicy | undefined,
-    newValue: boolean
-  ): IAuthorizationPolicy {
-    const auth = this.validateAuthorization(authorization);
-    auth.anonymousReadAccess = newValue;
     return auth;
   }
 
@@ -325,9 +389,8 @@ export class AuthorizationPolicyService {
     }
     const parent = this.validateAuthorization(parentAuthorization);
     const resetAuthPolicy = this.reset(child);
-    // (a) Inherit the visibility
-    resetAuthPolicy.anonymousReadAccess = parent.anonymousReadAccess;
-    // (b) Inherit the credential rules
+
+    // (a) Inherit the credential rules
     const inheritedRules = parent.credentialRules;
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -338,7 +401,7 @@ export class AuthorizationPolicyService {
     }
     resetAuthPolicy.credentialRules = newRules;
 
-    // (c) Inherit the verified credential rules
+    // (b) Inherit the verified credential rules
     const inheritedVCRules = parent.verifiedCredentialRules;
 
     const newVcRules: IAuthorizationPolicyRuleVerifiedCredential[] = [];
