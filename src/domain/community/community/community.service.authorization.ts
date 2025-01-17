@@ -70,11 +70,8 @@ export class CommunityAuthorizationService {
 
     community.authorization = await this.extendAuthorizationPolicy(
       community.authorization,
-      parentAuthorization?.anonymousReadAccess
+      spaceSettings.privacy.mode === 'public'
     );
-
-    // always false
-    community.authorization.anonymousReadAccess = false;
 
     updatedAuthorizations.push(community.authorization);
 

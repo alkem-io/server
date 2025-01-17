@@ -1,9 +1,9 @@
-import { ICredential } from '@domain/agent/credential';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 export class AgentInfoMetadata {
   userID!: string;
   email!: string;
-  credentials: ICredential[] = [];
+  credentials: ICredentialDefinition[] = [];
   communicationID!: string;
   agentID!: string;
   did!: string;

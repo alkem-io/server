@@ -271,8 +271,8 @@ export class NamingService {
   }
 
   async getRoleSetAndSettingsForCallout(calloutID: string): Promise<{
-    roleSet: IRoleSet;
-    spaceSettings: ISpaceSettings;
+    roleSet?: IRoleSet;
+    spaceSettings?: ISpaceSettings;
   }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
@@ -290,16 +290,11 @@ export class NamingService {
         },
       },
     });
-    if (!space || !space.community || !space.community.roleSet) {
-      throw new EntityNotInitializedException(
-        `Unable to load all entities for space with callout ${calloutID}`,
-        LogContext.COMMUNITY
-      );
-    }
 
     // Directly parse the settings string to avoid the need to load the settings service
-    const roleSet = space.community.roleSet;
-    const spaceSettings: ISpaceSettings = space.settings;
+    // We have 2 types of CalloutSet parents now, and KnowledgeBase doesn't have a roleSet and spaceSettings
+    const roleSet: IRoleSet | undefined = space?.community?.roleSet;
+    const spaceSettings: ISpaceSettings | undefined = space?.settings;
 
     return { roleSet: roleSet, spaceSettings };
   }

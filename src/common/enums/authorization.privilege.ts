@@ -34,6 +34,7 @@ export enum AuthorizationPrivilege {
   COMMUNITY_ADD_MEMBER = 'community-add-member', // only for global admins
   COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT = 'community-add-member-vc-from-account', // allow adding a VC as member to a community from an account
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
+  READ_ABOUT = 'read-about', // access the external about information for an entity
   READ_USERS = 'read-users',
   READ_USER_PII = 'read-user-pii',
   READ_USER_SETTINGS = 'read-user-settings',

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILibrary } from './library.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Injectable()
 export class LibraryAuthorizationService {
@@ -21,7 +22,11 @@ export class LibraryAuthorizationService {
         parentAuthorization
       );
     // For now the library is world visible
-    library.authorization.anonymousReadAccess = true;
+    library.authorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        library.authorization,
+        AuthorizationPrivilege.READ
+      );
 
     return library.authorization;
   }

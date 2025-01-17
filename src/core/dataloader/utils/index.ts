@@ -5,3 +5,4 @@ export * from './createTypedSimpleLoader';
 export * from './createTypedBatchLoader';
 export * from './selectOptionsFromFields';
 export * from './find.by.batch.options';
+export * from './sort.output.by.keys';

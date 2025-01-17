@@ -11,6 +11,7 @@ import {
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
+  CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
 } from '@common/constants';
@@ -18,6 +19,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
 import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -57,7 +59,9 @@ export class VirtualContributorAuthorizationService {
         LogContext.COMMUNITY
       );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
-
+    const hostAccount = await this.virtualService.getAccountHostCredentials(
+      virtual.id
+    );
     virtual.authorization = this.authorizationPolicyService.reset(
       virtual.authorization
     );
@@ -68,17 +72,23 @@ export class VirtualContributorAuthorizationService {
       );
     virtual.authorization = this.appendCredentialRules(
       virtual.authorization,
-      virtual.id
+      virtual.id,
+      hostAccount
     );
+
     updatedAuthorizations.push(virtual.authorization);
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedVirtualAuthorizationAnonymousAccess =
+    let clonedVirtualAuthorizationAnonymousAccess =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         virtual.authorization
       );
     // To ensure that profile on an virtual is always publicly visible, even for non-authenticated users
-    clonedVirtualAuthorizationAnonymousAccess.anonymousReadAccess = true;
+    clonedVirtualAuthorizationAnonymousAccess =
+      this.authorizationPolicy.appendCredentialRuleAnonymousRegisteredAccess(
+        clonedVirtualAuthorizationAnonymousAccess,
+        AuthorizationPrivilege.READ
+      );
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         virtual.profile.id,
@@ -112,7 +122,8 @@ export class VirtualContributorAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    accountID: string
+    accountID: string,
+    accountHostCredentials: ICredentialDefinition[]
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -121,6 +132,20 @@ export class VirtualContributorAuthorizationService {
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const accountHostManage =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.CONTRIBUTE,
+        ],
+        accountHostCredentials,
+        CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE
+      );
+    newRules.push(accountHostManage);
 
     const globalCommunityRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
