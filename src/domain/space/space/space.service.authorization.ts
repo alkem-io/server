@@ -240,95 +240,121 @@ export class SpaceAuthorizationService {
     space: ISpace
   ): Promise<ICredentialDefinition[]> {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
-    const credentialCriteriasAnonymousRegistered: ICredentialDefinition[] = [
-      {
-        type: AuthorizationCredential.GLOBAL_ANONYMOUS,
-        resourceID: '',
-      },
-      {
-        type: AuthorizationCredential.GLOBAL_REGISTERED,
-        resourceID: '',
-      },
-    ];
+    const globalAnonymousRegistered = this.getGlobalAnonymousRegistered();
+
     switch (space.level) {
-      case SpaceLevel.SPACE: {
+      case SpaceLevel.SPACE:
+        credentialCriteriasWithAccess.push(...globalAnonymousRegistered);
+        break;
+
+      case SpaceLevel.CHALLENGE:
         credentialCriteriasWithAccess.push(
-          ...credentialCriteriasAnonymousRegistered
+          ...(await this.getL1SpaceLevelCredentials(
+            space,
+            globalAnonymousRegistered
+          ))
         );
         break;
-      }
-      case SpaceLevel.CHALLENGE: {
-        const parentSpace = space.parentSpace;
-        if (!parentSpace || !parentSpace.community?.roleSet) {
-          throw new EntityNotFoundException(
-            ` Parent spaces not found for space ${space.id}`,
-            LogContext.SPACES
-          );
-        }
-        const isParentSpacePublic =
-          space.parentSpace?.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
-        if (isParentSpacePublic) {
-          credentialCriteriasWithAccess.push(
-            ...credentialCriteriasAnonymousRegistered
-          );
-        } else {
-          // get the member criterias for the parent space and add it
-          const parentMembersCriterias =
-            await this.roleSetService.getCredentialsForRole(
-              parentSpace.community?.roleSet,
-              CommunityRoleType.MEMBER,
-              parentSpace.settings
-            );
-          credentialCriteriasWithAccess.push(...parentMembersCriterias);
-        }
-        break;
-      }
-      case SpaceLevel.OPPORTUNITY: {
-        // Space Challenge	Opportunity
-        // Public space, Public challenge ==>	anyone
-        // Public	space, Private challenge ==> challenge members
-        // Private space,	Public challenge ==> challenge + space members
-        // Private space,Private challenge ==> challenge members
-        const parentSpace = space.parentSpace;
-        const parentParentSpace = parentSpace?.parentSpace;
-        if (!parentSpace || !parentSpace.community || !parentParentSpace) {
-          throw new EntityNotFoundException(
-            ` Parent spaces not found for space ${space.id}`,
-            LogContext.SPACES
-          );
-        }
-        const isParentSpacePublic =
-          parentSpace.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
-        const isParentParentSpacePublic =
-          parentParentSpace.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
-        if (isParentSpacePublic) {
-          if (isParentParentSpacePublic) {
-            credentialCriteriasWithAccess.push(
-              ...credentialCriteriasAnonymousRegistered
-            );
-          } else {
-            const parentMembersCriterias =
-              await this.roleSetService.getCredentialsForRoleWithParents(
-                parentSpace.community?.roleSet,
-                CommunityRoleType.MEMBER,
-                parentSpace.settings
-              );
-            credentialCriteriasWithAccess.push(...parentMembersCriterias);
-          }
-        } else {
-          const parentMembersCriterias =
-            await this.roleSetService.getCredentialsForRole(
-              parentSpace.community?.roleSet,
-              CommunityRoleType.MEMBER,
-              parentSpace.settings
-            );
-          credentialCriteriasWithAccess.push(...parentMembersCriterias);
-        }
 
+      case SpaceLevel.OPPORTUNITY:
+        credentialCriteriasWithAccess.push(
+          ...(await this.getL2SpaceLevelCredentials(
+            space,
+            globalAnonymousRegistered
+          ))
+        );
         break;
-      }
     }
+
     return credentialCriteriasWithAccess;
+  }
+
+  /**
+   * Returns GLOBAL_ANONYMOUS and GLOBAL_REGISTERED credential definitions.
+   */
+  private getGlobalAnonymousRegistered(): ICredentialDefinition[] {
+    return [
+      { type: AuthorizationCredential.GLOBAL_ANONYMOUS, resourceID: '' },
+      { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
+    ];
+  }
+
+  /**
+   * Determines which credentials have access for a L1 space.
+   */
+  private async getL1SpaceLevelCredentials(
+    space: ISpace,
+    globalAnonymousRegistered: ICredentialDefinition[]
+  ): Promise<ICredentialDefinition[]> {
+    const parentSpace = space.parentSpace;
+    if (!parentSpace || !parentSpace.community?.roleSet) {
+      throw new EntityNotFoundException(
+        `Parent space or parentSpace.community.roleSet not found for space ${space.id}`,
+        LogContext.SPACES
+      );
+    }
+
+    const isParentSpacePublic =
+      parentSpace.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
+    if (isParentSpacePublic) {
+      // If the parent space is PUBLIC, allow anonymous/registered.
+      return globalAnonymousRegistered;
+    } else {
+      // Otherwise, return the parent space’s MEMBER credentials.
+      return this.roleSetService.getCredentialsForRole(
+        parentSpace.community.roleSet,
+        CommunityRoleType.MEMBER,
+        parentSpace.settings
+      );
+    }
+  }
+
+  /**
+   * Determines which credentials have access for an L2 space.
+   */
+  private async getL2SpaceLevelCredentials(
+    space: ISpace,
+    globalAnonymousRegistered: ICredentialDefinition[]
+  ): Promise<ICredentialDefinition[]> {
+    const parentSpace = space.parentSpace;
+    const parentParentSpace = parentSpace?.parentSpace;
+
+    if (!parentSpace || !parentSpace.community || !parentParentSpace) {
+      throw new EntityNotFoundException(
+        `Parent spaces not found for space ${space.id}`,
+        LogContext.SPACES
+      );
+    }
+
+    const isParentSpacePublic =
+      parentSpace.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
+    const isGrandparentSpacePublic =
+      parentParentSpace.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
+
+    // - Public space, Public challenge ⇒ anyone
+    // - Public space, Private challenge ⇒ challenge members
+    // - Private space, Public challenge ⇒ challenge + space members
+    // - Private space, Private challenge ⇒ challenge members
+    if (isParentSpacePublic) {
+      if (isGrandparentSpacePublic) {
+        // ParentSpace is public, grandparent (the top-level space) is also public
+        return globalAnonymousRegistered;
+      } else {
+        // ParentSpace is public, but grandparent is private ⇒ challenge members
+        return this.roleSetService.getCredentialsForRoleWithParents(
+          parentSpace.community.roleSet,
+          CommunityRoleType.MEMBER,
+          parentSpace.settings
+        );
+      }
+    } else {
+      // ParentSpace is private ⇒ challenge members
+      return this.roleSetService.getCredentialsForRole(
+        parentSpace.community.roleSet,
+        CommunityRoleType.MEMBER,
+        parentSpace.settings
+      );
+    }
   }
 
   private createCredentialRuleSpaceVisibility(
