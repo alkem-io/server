@@ -1,4 +1,4 @@
-import { IngestSpaceResult } from './ingest.space.result.event';
+import { IngestBodyOfKnowledgeResult } from './ingest.body.of.knowledge.result.event';
 import { InvokeEngineResult } from './invoke.engine.result';
 import { InvokeEngine } from './invoke.engine';
 import { IngestBodyOfKnowledge } from './ingest.body.of.knowledge.command';
@@ -9,8 +9,8 @@ export {
 
 export const Messages = [
   IngestBodyOfKnowledge,
-  IngestSpaceResult,
+  IngestBodyOfKnowledgeResult,
   InvokeEngine,
 ];
-export const HandleMessages = [IngestSpaceResult, InvokeEngineResult];
+export const HandleMessages = [IngestBodyOfKnowledgeResult, InvokeEngineResult];
 export const SendMessages = [IngestBodyOfKnowledge, InvokeEngine];

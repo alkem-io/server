@@ -70,6 +70,8 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges.results';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
+import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
+import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -105,7 +107,8 @@ export class LookupResolverFields {
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
     private roleSetService: RoleSetService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private knowledgeBaseService: KnowledgeBaseService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -748,5 +751,16 @@ export class LookupResolverFields {
     const license = await this.licenseService.getLicenseOrFail(id);
 
     return license;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IKnowledgeBase, {
+    nullable: false,
+    description: 'Lookup as specific KnowledgeBase',
+  })
+  async knowledgeBase(
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
+  ): Promise<IKnowledgeBase> {
+    return await this.knowledgeBaseService.getKnowledgeBaseOrFail(id);
   }
 }

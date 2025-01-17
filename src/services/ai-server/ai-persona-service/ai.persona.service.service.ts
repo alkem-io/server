@@ -68,16 +68,19 @@ export class AiPersonaServiceService {
       LogContext.PLATFORM
     );
 
-    if (aiPersonaServiceData.bodyOfKnowledgeID) {
-      this.eventBus.publish(
-        new IngestBodyOfKnowledge(
-          savedAiPersonaService.bodyOfKnowledgeID,
-          savedAiPersonaService.bodyOfKnowledgeType,
-          IngestionPurpose.KNOWLEDGE,
-          savedAiPersonaService.id
-        )
-      );
-    }
+    //TODO enable again - having a bit of a race condition and the
+    // ingest service is trying to read the knowledge base before it's authorization
+    // is properly set up
+    // if (aiPersonaServiceData.bodyOfKnowledgeID) {
+    //   this.eventBus.publish(
+    //     new IngestBodyOfKnowledge(
+    //       savedAiPersonaService.bodyOfKnowledgeID,
+    //       savedAiPersonaService.bodyOfKnowledgeType,
+    //       IngestionPurpose.KNOWLEDGE,
+    //       savedAiPersonaService.id
+    //     )
+    //   );
+    // }
 
     return savedAiPersonaService;
   }

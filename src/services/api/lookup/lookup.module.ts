@@ -35,6 +35,7 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
 import { LicenseModule } from '@domain/common/license/license.module';
 import { LookupMyPrivilegesResolverFields } from './lookup.resolver.my.privileges.fields';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
+import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.s
     VirtualContributorModule,
     RoleSetModule,
     LicenseModule,
+    KnowledgeBaseModule,
   ],
   providers: [
     LookupService,

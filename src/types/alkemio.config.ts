@@ -139,8 +139,8 @@ export type AlkemioConfig = {
       };
       event_bus: {
         exchange: string;
-        ingest_space_queue: string;
-        ingest_space_result_queue: string;
+        ingest_body_of_knowledge_queue: string;
+        ingest_body_of_knowledge_result_queue: string;
       };
     };
   };

@@ -64,15 +64,15 @@ import amqplib from 'amqplib';
           ],
           queues: [
             {
-              name: eventBusConfig.ingest_space_queue,
+              name: eventBusConfig.ingest_body_of_knowledge_queue,
               exchange: eventBusConfig.exchange,
               //TODO dynamically map queue names to events for the routing
-              routingKey: 'IngestSpace',
+              routingKey: 'IngestBodyOfKnowledge',
             },
             {
-              name: eventBusConfig.ingest_space_result_queue,
+              name: eventBusConfig.ingest_body_of_knowledge_result_queue,
               exchange: eventBusConfig.exchange,
-              routingKey: 'IngestSpaceResult',
+              routingKey: 'IngestBodyOfKnowledgResult',
             },
             {
               name: 'virtual-contributor-engine-expert',

@@ -354,8 +354,8 @@ microservices:
     # configuration for the event bus used by the AiServer
     event_bus:
       exchange: ${RABBITMQ_EVENT_BUS_EXCHANGE}:event-bus
-      ingest_space_queue: ${RABBITMQ_INGEST_SPACE_QUEUE}:virtual-contributor-ingest-space
-      ingest_space_result_queue: ${RABBITMQ_INGEST_SPACE_RESULT_QUEUE}:virtual-contributor-ingest-space-result
+      ingest_body_of_knowledge_queue: ${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_QUEUE}:virtual-contributor-ingest-body-of-knowledge
+      ingest_body_of_knowledge_result_queue: ${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_RESULT_QUEUE}:virtual-contributor-ingest-body-of-knowledge-result
 
 # integrations with 3rd party services
 integrations:

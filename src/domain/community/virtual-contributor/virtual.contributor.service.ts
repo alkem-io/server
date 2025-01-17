@@ -105,6 +105,11 @@ export class VirtualContributorService {
         storageAggregator,
         agentInfo?.userID
       );
+
+    const kb = await this.knowledgeBaseService.save(
+      virtualContributor.knowledgeBase
+    );
+
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );
@@ -116,6 +121,10 @@ export class VirtualContributorService {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
+    if (aiPersonaInput.aiPersonaService) {
+      aiPersonaInput.aiPersonaService.bodyOfKnowledgeID = kb.id;
+    }
+
     virtualContributor.aiPersona =
       await this.aiPersonaService.createAiPersona(aiPersonaInput);
 

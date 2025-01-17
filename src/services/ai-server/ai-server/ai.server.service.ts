@@ -152,7 +152,7 @@ export class AiServerService {
         LogContext.AI_SERVER
       );
 
-      await this.subscriptionPublishService.publishVirtualContributorUpdated(
+      this.subscriptionPublishService.publishVirtualContributorUpdated(
         virtualContributor
       );
     } else {
