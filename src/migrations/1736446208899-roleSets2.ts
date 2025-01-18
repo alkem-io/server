@@ -103,6 +103,10 @@ export class RoleSets21736446208899 implements MigrationInterface {
         `UPDATE \`organization\` SET \`roleSetId\` = '${organizationRoleSetID}' WHERE id = '${organization.id}'`
       );
     }
+
+    // Finally update all existing authorization policies that have the old privilege names
+    await this.updatePrivilegeNames(queryRunner, 'credentialRules');
+    await this.updatePrivilegeNames(queryRunner, 'privilegeRules');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -130,6 +134,27 @@ export class RoleSets21736446208899 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`platform\` DROP COLUMN \`roleSetId\``
+    );
+  }
+
+  private async updatePrivilegeNames(
+    queryRunner: QueryRunner,
+    columnName: string
+  ) {
+    await queryRunner.query(
+      `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-join', 'roleset-entry-role-join')`
+    );
+    await queryRunner.query(
+      `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-apply', 'roleset-entry-role-apply')`
+    );
+    await queryRunner.query(
+      `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-invite', 'roleset-entry-role-invite')`
+    );
+    await queryRunner.query(
+      `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-invite-accept', 'roleset-entry-role-invite-accept')`
+    );
+    await queryRunner.query(
+      `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-add-member', 'roleset-entry-role-add-member')`
     );
   }
 
