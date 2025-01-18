@@ -157,7 +157,7 @@ export class RoleSets21736446208899 implements MigrationInterface {
       `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-invite-accept', 'roleset-entry-role-invite-accept')`
     );
     await queryRunner.query(
-      `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-add-member', 'roleset-entry-role-add-member')`
+      `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-add-member', 'roleset-entry-role-assign')`
     );
   }
 

@@ -9,7 +9,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
+  CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
   CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL,
   CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD,
@@ -151,7 +151,7 @@ export class RoleSetAuthorizationService {
             resourceID: userToBeRemovedID,
           },
         ],
-        CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL
+        CREDENTIAL_RULE_ROLESET_SELF_REMOVAL
       );
     newRules.push(userSelfRemovalRule);
 
