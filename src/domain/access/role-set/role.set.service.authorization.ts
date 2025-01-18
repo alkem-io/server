@@ -11,7 +11,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import {
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
-  CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL,
+  CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL,
   CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -115,7 +115,7 @@ export class RoleSetAuthorizationService {
 
     const globalAdminAddMembers =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD],
+        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
@@ -187,7 +187,7 @@ export class RoleSetAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.GRANT],
         vcAccountHostCredentials,
-        CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL
+        CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL
       );
     newRules.push(vcSelfRemovalRule);
 
@@ -211,7 +211,7 @@ export class RoleSetAuthorizationService {
     // If you are able to add a member, then you are also logically able to invite a member
     const invitePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
-      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
       POLICY_RULE_COMMUNITY_INVITE_MEMBER
     );
 

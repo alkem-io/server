@@ -45,7 +45,7 @@ export class RoleSets21736446208899 implements MigrationInterface {
       `ALTER TABLE \`role\` CHANGE COLUMN \`type\` \`name\` varchar(128) NOT NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`role_set\` CHANGE COLUMN \`entryRole\` \`entryRoleName\` varchar(128) NOT NULL`
+      `ALTER TABLE \`role_set\` CHANGE COLUMN \`entryRoleType\` \`entryRoleName\` varchar(128) NOT NULL`
     );
 
     // Create the role set for the platform
@@ -141,6 +141,9 @@ export class RoleSets21736446208899 implements MigrationInterface {
     queryRunner: QueryRunner,
     columnName: string
   ) {
+    await queryRunner.query(
+      `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-add-member-vc-from-account', 'community-assign-vc-from-account')`
+    );
     await queryRunner.query(
       `UPDATE \`authorization_policy\` SET \`${columnName}\` = REPLACE(\`${columnName}\`, 'community-join', 'roleset-entry-role-join')`
     );
@@ -297,9 +300,9 @@ export class RoleSets21736446208899 implements MigrationInterface {
   ): Promise<string> {
     const authID = randomUUID();
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, privilegeRules, type) VALUES
                         ('${authID}',
-                        1, '[]', '[]', 0, '[]', '${policyType}')`
+                        1, '[]', '[]', '[]', '${policyType}')`
     );
     return authID;
   }

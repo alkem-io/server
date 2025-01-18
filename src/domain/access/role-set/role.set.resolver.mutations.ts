@@ -121,7 +121,7 @@ export class RoleSetResolverMutations {
       case RoleSetType.SPACE: {
         privilegeRequired = AuthorizationPrivilege.GRANT;
         if (roleData.role === RoleName.MEMBER) {
-          privilegeRequired = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD;
+          privilegeRequired = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
         }
         break;
       }
@@ -220,9 +220,9 @@ export class RoleSetResolverMutations {
         );
       if (sameAccount) {
         requiredPrivilege =
-          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT;
+          AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT;
       } else {
-        requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD;
+        requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
       }
     }
 

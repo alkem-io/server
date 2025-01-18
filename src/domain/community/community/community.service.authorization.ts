@@ -11,7 +11,7 @@ import { UserGroupAuthorizationService } from '../user-group/user-group.service.
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
+  CREDENTIAL_RULE_ROLESET_ASSIGN,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
@@ -211,7 +211,7 @@ export class CommunityAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [
           AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
-          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT,
+          AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT,
         ],
         inviteMembersCriterias,
         CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE
@@ -297,9 +297,9 @@ export class CommunityAuthorizationService {
       );
 
     const addMembers = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD],
+      [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
       adminCredentials,
-      CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER
+      CREDENTIAL_RULE_ROLESET_ASSIGN
     );
     addMembers.cascade = false;
     newRules.push(addMembers);
@@ -377,7 +377,7 @@ export class CommunityAuthorizationService {
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
     const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT],
+      [AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT],
       AuthorizationPrivilege.GRANT,
       POLICY_RULE_COMMUNITY_ADD_VC
     );

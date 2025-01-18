@@ -10,7 +10,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { CREDENTIAL_RULE_COMMUNITY_USER_INVITATION } from '@common/constants';
+import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
 
 @Injectable()
 export class InvitationAuthorizationService {
@@ -87,7 +87,7 @@ export class InvitationAuthorizationService {
           AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
         ],
         criterias,
-        CREDENTIAL_RULE_COMMUNITY_USER_INVITATION
+        CREDENTIAL_RULE_ROLESET_INVITATION
       );
     newRules.push(virtualInvitationRule);
 

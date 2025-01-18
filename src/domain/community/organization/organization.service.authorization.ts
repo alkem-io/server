@@ -290,7 +290,7 @@ export class OrganizationAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
           AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD,
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
@@ -305,7 +305,7 @@ export class OrganizationAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [
           AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ADD, // Later remove this
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN, // Later remove this
           AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
