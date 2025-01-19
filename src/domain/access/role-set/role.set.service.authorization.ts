@@ -39,7 +39,9 @@ export class RoleSetAuthorizationService {
 
   async applyAuthorizationPolicy(
     roleSetID: string,
-    roleSetAuthorization: IAuthorizationPolicy
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = [],
+    privilegeRulesFromParent: AuthorizationPolicyRulePrivilege[] = []
   ): Promise<IAuthorizationPolicy[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
       relations: {
@@ -55,7 +57,8 @@ export class RoleSetAuthorizationService {
       !roleSet.applications ||
       !roleSet.invitations ||
       !roleSet.platformInvitations ||
-      !roleSet.license
+      !roleSet.license ||
+      !roleSet.authorization
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for roleSet authorization: ${roleSet.id} `,
@@ -64,7 +67,17 @@ export class RoleSetAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    roleSet.authorization = this.appendPrivilegeRules(roleSetAuthorization);
+    roleSet.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        roleSet.authorization,
+        parentAuthorization
+      );
+
+    // Take over the rules from the parent
+    roleSet.authorization.credentialRules.push(...credentialRulesFromParent);
+    roleSet.authorization.privilegeRules.push(...privilegeRulesFromParent);
+
+    roleSet.authorization = this.appendPrivilegeRules(roleSet.authorization);
 
     roleSet.authorization = await this.extendAuthorizationPolicy(
       roleSet.authorization

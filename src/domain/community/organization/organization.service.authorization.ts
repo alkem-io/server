@@ -98,7 +98,6 @@ export class OrganizationAuthorizationService {
     ];
     organization.authorization = this.appendCredentialRules(
       organization.authorization,
-      organizationAdminCredentials,
       organization.id
     );
     updatedAuthorizations.push(organization.authorization);
@@ -128,24 +127,16 @@ export class OrganizationAuthorizationService {
       );
     updatedAuthorizations.push(...storageAuthorizations);
 
-    let clonedRoleSetAuth =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        organization.roleSet.authorization
+    const additionalAdditionalRoleSetCredentialRules =
+      await this.createAdditionalRoleSetCredentialRules(
+        organization.roleSet,
+        organizationAdminCredentials
       );
-    clonedRoleSetAuth =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        clonedRoleSetAuth,
-        organization.authorization
-      );
-    clonedRoleSetAuth = await this.extendRoleSetAuthorizationPolicy(
-      organization.roleSet,
-      organizationAdminCredentials,
-      clonedRoleSetAuth
-    );
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         organization.roleSet.id,
-        clonedRoleSetAuth
+        organization.authorization,
+        additionalAdditionalRoleSetCredentialRules
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
@@ -177,7 +168,6 @@ export class OrganizationAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    organizationAdminCredentials: ICredentialDefinition[],
     organizationID: string
   ): IAuthorizationPolicy {
     if (!authorization)
@@ -272,11 +262,10 @@ export class OrganizationAuthorizationService {
     return updatedAuthorization;
   }
 
-  private async extendRoleSetAuthorizationPolicy(
+  private async createAdditionalRoleSetCredentialRules(
     roleSet: IRoleSet,
-    organizationAdminCredentials: ICredentialDefinition[],
-    authorization: IAuthorizationPolicy | undefined
-  ): Promise<IAuthorizationPolicy> {
+    organizationAdminCredentials: ICredentialDefinition[]
+  ): Promise<IAuthorizationPolicyRuleCredential[]> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     if (roleSet.type !== RoleSetType.ORGANIZATION) {
       throw new RelationshipNotFoundException(
@@ -316,12 +305,6 @@ export class OrganizationAuthorizationService {
     organizationAdmin.cascade = true;
     newRules.push(organizationAdmin);
 
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return newRules;
   }
 }

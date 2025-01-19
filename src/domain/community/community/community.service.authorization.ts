@@ -29,7 +29,6 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { RoleName } from '@common/enums/role.name';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -112,27 +111,20 @@ export class CommunityAuthorizationService {
       updatedAuthorizations.push(...groupAuthorizations);
     }
 
-    let clonedRoleSetAuth =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        community.roleSet.authorization
+    const additionalRoleCredentialRules =
+      await this.createAdditionalRoleSetCredentialRules(
+        community.roleSet,
+        spaceMembershipAllowed,
+        isSubspace,
+        spaceSettings
       );
-    clonedRoleSetAuth =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        clonedRoleSetAuth,
-        community.authorization
-      );
-    clonedRoleSetAuth = await this.extendRoleSetAuthorizationPolicy(
-      community.roleSet,
-      clonedRoleSetAuth,
-      spaceMembershipAllowed,
-      isSubspace,
-      spaceSettings
-    );
-    clonedRoleSetAuth = this.appendRoleSetPrivilegeRules(clonedRoleSetAuth);
+
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         community.roleSet.id,
-        clonedRoleSetAuth
+        community.authorization,
+        additionalRoleCredentialRules,
+        this.createAdditionalRoleSetPrivilegeRules()
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
@@ -175,17 +167,16 @@ export class CommunityAuthorizationService {
     return updatedAuthorization;
   }
 
-  private async extendRoleSetAuthorizationPolicy(
+  private async createAdditionalRoleSetCredentialRules(
     roleSet: IRoleSet,
-    authorization: IAuthorizationPolicy | undefined,
     entryRoleAllowed: boolean,
     isSubspace: boolean,
     spaceSettings?: ISpaceSettings
-  ): Promise<IAuthorizationPolicy> {
+  ): Promise<IAuthorizationPolicyRuleCredential[]> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     if (roleSet.type !== RoleSetType.SPACE || !spaceSettings) {
       throw new RelationshipNotFoundException(
-        `Missing space settings that are requried for role sets of type Space: ${roleSet.id}`,
+        `Missing space settings that are required for role sets of type Space: ${roleSet.id}`,
         LogContext.ROLES
       );
     }
@@ -219,41 +210,27 @@ export class CommunityAuthorizationService {
     spaceAdminsInvite.cascade = false;
     newRules.push(spaceAdminsInvite);
 
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
     if (entryRoleAllowed) {
-      roleSet.authorization = this.extendRoleSetAuthorizationPolicySpace(
-        roleSet,
-        roleSet.authorization,
-        spaceSettings
+      newRules.push(
+        ...this.extendRoleSetAuthorizationPolicySpace(spaceSettings)
       );
     }
     if (isSubspace) {
-      roleSet.authorization = await this.extendAuthorizationPolicySubspace(
-        roleSet,
-        roleSet.authorization,
-        spaceSettings
+      newRules.push(
+        ...(await this.extendAuthorizationPolicySubspace(
+          roleSet,
+          spaceSettings
+        ))
       );
     }
 
-    return updatedAuthorization;
+    return newRules;
   }
 
   private async extendAuthorizationPolicySubspace(
     roleSet: IRoleSet,
-    authorization: IAuthorizationPolicy | undefined,
     spaceSettings: ISpaceSettings
-  ): Promise<IAuthorizationPolicy> {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.SPACES
-      );
-
+  ): Promise<IAuthorizationPolicyRuleCredential[]> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const parentRoleSetCredential =
@@ -304,25 +281,12 @@ export class CommunityAuthorizationService {
     addMembers.cascade = false;
     newRules.push(addMembers);
 
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
-
-    return authorization;
+    return newRules;
   }
 
   private extendRoleSetAuthorizationPolicySpace(
-    roleSet: IRoleSet,
-    roleSetAuthorization: IAuthorizationPolicy | undefined,
     spaceSettings: ISpaceSettings
-  ): IAuthorizationPolicy {
-    if (!roleSetAuthorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${roleSet.id}`,
-        LogContext.SPACES
-      );
-
+  ): IAuthorizationPolicyRuleCredential[] {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const membershipPolicy = spaceSettings.membership.policy;
@@ -368,23 +332,16 @@ export class CommunityAuthorizationService {
       newRules.push(hostOrgMembersCanJoin);
     }
 
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      roleSetAuthorization,
-      newRules
-    );
+    return newRules;
   }
-  private appendRoleSetPrivilegeRules(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
+
+  private createAdditionalRoleSetPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
     const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT],
       AuthorizationPrivilege.GRANT,
       POLICY_RULE_COMMUNITY_ADD_VC
     );
 
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      [createVCPrivilege]
-    );
+    return [createVCPrivilege];
   }
 }

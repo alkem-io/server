@@ -98,23 +98,13 @@ export class PlatformAuthorizationService {
       );
     updatedAuthorizations.push(...templatesManagerAuthorizations);
 
-    let clonedRoleSetAuth =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        platform.roleSet.authorization
-      );
-    clonedRoleSetAuth =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        clonedRoleSetAuth,
-        platform.authorization
-      );
-    clonedRoleSetAuth = await this.extendRoleSetAuthorizationPolicy(
-      platform.roleSet,
-      clonedRoleSetAuth
-    );
+    const additionalRoleSetCredentialRules =
+      await this.createAdditionalRoleSetCredentialRules(platform.roleSet);
     const roleSetAuthorizations =
       await this.roleSetAuthorizationService.applyAuthorizationPolicy(
         platform.roleSet.id,
-        clonedRoleSetAuth
+        platform.authorization,
+        additionalRoleSetCredentialRules
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
@@ -123,7 +113,7 @@ export class PlatformAuthorizationService {
         platform.authorization
       );
 
-    // Extend the platform authoization policy for communication only
+    // Extend the platform authorization policy for communication only
     const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
       copyPlatformAuthorization
     );
@@ -326,10 +316,9 @@ export class PlatformAuthorizationService {
     return credentialRules;
   }
 
-  private async extendRoleSetAuthorizationPolicy(
-    roleSet: IRoleSet,
-    authorization: IAuthorizationPolicy | undefined
-  ): Promise<IAuthorizationPolicy> {
+  private async createAdditionalRoleSetCredentialRules(
+    roleSet: IRoleSet
+  ): Promise<IAuthorizationPolicyRuleCredential[]> {
     if (roleSet.type !== RoleSetType.PLATFORM) {
       throw new RelationshipNotFoundException(
         `RoleSet of wrong type passed: ${roleSet.id}`,
@@ -360,12 +349,6 @@ export class PlatformAuthorizationService {
     globalAdmin.cascade = false;
     newRules.push(globalAdmin);
 
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return newRules;
   }
 }

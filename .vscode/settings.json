@@ -9,5 +9,6 @@
   },
   "[yml]": {
     "editor.formatOnSave": false
-  }
+  },
+  "cSpell.words": ["ROLESET"]
 }
