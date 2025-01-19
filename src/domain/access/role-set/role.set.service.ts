@@ -63,8 +63,6 @@ import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class RoleSetService {
-  private roleNamesCache: RoleName[] = [];
-
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private applicationService: ApplicationService,
@@ -1514,9 +1512,6 @@ export class RoleSetService {
   }
 
   public async getRoleNames(roleSetInput: IRoleSet): Promise<RoleName[]> {
-    if (this.roleNamesCache.length > 0) {
-      return this.roleNamesCache;
-    }
     let roleDefinitions = roleSetInput.roles;
     if (!roleDefinitions) {
       const roleSet = await this.getRoleSetOrFail(roleSetInput.id, {
@@ -1530,8 +1525,7 @@ export class RoleSetService {
         LogContext.COMMUNITY
       );
     }
-    this.roleNamesCache = roleDefinitions.map(rd => rd.name);
-    return this.roleNamesCache;
+    return roleDefinitions.map(rd => rd.name);
   }
 
   public async getRoleDefinition(
