@@ -55,7 +55,7 @@ export class RoleSetResolverFields {
       roleSet,
       roleSet.entryRoleName
     );
-    const entryRoleCredential = JSON.parse(entryRoleDefinition.credential);
+
     // TODO: evaluated if this check is needed or not
     // if (!entryRoleDefinition.requiresSameRoleInParentRoleSet) {
     //   throw new ValidationException(
@@ -74,7 +74,7 @@ export class RoleSetResolverFields {
       : undefined;
 
     const roleSetEntryRoleCredential: RoleSetRoleWithParentCredentials = {
-      role: entryRoleCredential,
+      role: entryRoleDefinition.credential,
       parentRoleSetRole: parentRoleSetEntryRoleCredential,
     };
 
@@ -108,19 +108,15 @@ export class RoleSetResolverFields {
         LogContext.ROLES
       );
     }
-    const entryRoleCredentials =
+    const entryRoleCredential =
       await this.roleSetService.getCredentialDefinitionForRole(
         roleSet,
         roleSet.entryRoleName
       );
 
-    const elevatedRoleCredential = JSON.parse(
-      elevatedRoleDefinition.credential
-    );
-
     const credentialCriteria = {
-      entryRole: entryRoleCredentials,
-      elevatedRole: elevatedRoleCredential,
+      entryRole: entryRoleCredential,
+      elevatedRole: elevatedRoleDefinition.credential,
     };
 
     return this.userService.getPaginatedAvailableElevatedRoleUsers(

@@ -248,10 +248,7 @@ export class RoleSetService {
   ): Promise<IRoleSet> {
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
     for (const roleDefinition of roleDefinitions) {
-      const credential = this.roleService.getCredentialForRole(roleDefinition);
-      credential.resourceID = resourceID;
-      roleDefinition.credential =
-        this.roleService.convertCredentialToString(credential);
+      roleDefinition.credential.resourceID = resourceID;
     }
 
     return roleSet;
@@ -901,7 +898,7 @@ export class RoleSetService {
 
     const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
 
-    const userPolicy = this.roleService.getUserPolicy(roleDefinition);
+    const userPolicy = roleDefinition.userPolicy;
 
     if (action === RoleSetUpdateType.ASSIGN) {
       if (userMembersCount === userPolicy.maximum) {
@@ -935,8 +932,7 @@ export class RoleSetService {
 
     const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
 
-    const organizationPolicy =
-      this.roleService.getOrganizationPolicy(roleDefinition);
+    const organizationPolicy = roleDefinition.organizationPolicy;
 
     if (action === RoleSetUpdateType.ASSIGN) {
       if (orgMemberCount === organizationPolicy.maximum) {
@@ -1405,16 +1401,13 @@ export class RoleSetService {
         roleDefinition.name
       );
       const parentCredentials: ICredentialDefinition[] = [];
-      const parentDirectCredential =
-        this.roleService.getCredentialForRole(parentRoleDefinition);
-      const parentParentCredentials =
-        this.roleService.getParentCredentialsForRole(parentRoleDefinition);
+      const parentDirectCredential = parentRoleDefinition.credential;
+      const parentParentCredentials = roleDefinition.parentCredentials;
 
       parentCredentials.push(parentDirectCredential);
       parentParentCredentials.forEach(c => parentCredentials?.push(c));
 
-      roleDefinition.parentCredentials =
-        this.roleService.convertParentCredentialsToString(parentCredentials);
+      roleDefinition.parentCredentials = parentCredentials;
     }
 
     return childRoleSet;
@@ -1439,37 +1432,37 @@ export class RoleSetService {
 
   public async getParentCredentialsForRole(
     roleSet: IRoleSet,
-    roleType: RoleName
+    roleName: RoleName
   ): Promise<ICredentialDefinition[]> {
-    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
-    return this.roleService.getParentCredentialsForRole(roleDefinition);
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleName);
+    return roleDefinition.parentCredentials;
   }
 
   public async getCredentialsForRoleWithParents(
     roleSet: IRoleSet,
-    roleType: RoleName,
+    roleName: RoleName,
     spaceSettings: ISpaceSettings
   ): Promise<ICredentialDefinition[]> {
     const result = await this.getCredentialsForRole(
       roleSet,
-      roleType,
+      roleName,
       spaceSettings
     );
     const parentCredentials = await this.getParentCredentialsForRole(
       roleSet,
-      roleType
+      roleName
     );
     return result.concat(parentCredentials);
   }
 
   public async getCredentialsForRole(
     roleSet: IRoleSet,
-    roleType: RoleName,
+    roleName: RoleName,
     spaceSettings: ISpaceSettings // TODO: would like not to have this here; for later
   ): Promise<ICredentialDefinition[]> {
-    const result = [await this.getCredentialForRole(roleSet, roleType)];
+    const result = [await this.getCredentialForRole(roleSet, roleName)];
     if (
-      roleType === RoleName.ADMIN &&
+      roleName === RoleName.ADMIN &&
       spaceSettings.privacy.allowPlatformSupportAsAdmin
     ) {
       result.push({
@@ -1482,10 +1475,10 @@ export class RoleSetService {
 
   public async getCredentialForRole(
     roleSet: IRoleSet,
-    roleType: RoleName
+    roleName: RoleName
   ): Promise<ICredentialDefinition> {
-    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
-    return this.roleService.getCredentialForRole(roleDefinition);
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleName);
+    return roleDefinition.credential;
   }
 
   public async getRoleDefinitions(
