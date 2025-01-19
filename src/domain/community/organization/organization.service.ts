@@ -56,7 +56,7 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { organizationRoles } from './definitions/organization.roles';
+import { organizationRoleDefinitions } from './definitions/organization.role.definitions';
 import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
 import { RoleName } from '@common/enums/role.name';
 import { organizationApplicationForm } from './definitions/organization.role.application.form';
@@ -106,7 +106,7 @@ export class OrganizationService {
     );
 
     const roleSetInput: CreateRoleSetInput = {
-      roles: organizationRoles,
+      roles: organizationRoleDefinitions,
       applicationForm: organizationApplicationForm,
       entryRoleName: RoleName.ASSOCIATE,
       type: RoleSetType.ORGANIZATION,
@@ -150,6 +150,9 @@ export class OrganizationService {
     );
     organization.accountID = account.id;
 
+    // Cache some of the contents before saving
+    const roleSetBeforeSave = organization.roleSet;
+
     organization = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
@@ -159,6 +162,11 @@ export class OrganizationService {
       await this.organizationVerificationService.createOrganizationVerification(
         { organizationID: organization.id }
       );
+    // Ensure the credentials have the right resourceID
+    organization.roleSet = await this.roleSetService.updateRoleResourceID(
+      roleSetBeforeSave,
+      organization.id
+    );
     organization = await this.save(organization);
 
     organization = await this.getOrganizationOrFail(organization.id, {
@@ -173,6 +181,7 @@ export class OrganizationService {
         LogContext.COMMUNITY
       );
     }
+
     // Assign the creating agent as both a member and admin
     if (agentInfo) {
       await this.roleSetService.assignUserToRole(

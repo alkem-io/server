@@ -2,7 +2,7 @@ import { AuthorizationCredential } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 
-export const organizationRoles: CreateRoleInput[] = [
+export const organizationRoleDefinitions: CreateRoleInput[] = [
   {
     name: RoleName.ASSOCIATE,
     requiresEntryRole: false,
