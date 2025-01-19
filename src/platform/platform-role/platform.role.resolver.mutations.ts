@@ -56,7 +56,7 @@ export class PlatformRoleResolverMutations {
       roleData.role === RoleName.PLATFORM_BETA_TESTER ||
       roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
-      privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
+      privilegeRequired = AuthorizationPrivilege.GRANT;
     }
 
     this.authorizationService.grantAccessOrFail(
