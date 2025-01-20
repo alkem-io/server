@@ -52,12 +52,18 @@ export class WhiteboardService {
     whiteboard.createdBy = userID;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
-    whiteboard.profile = this.profileService.createProfile(
-      whiteboardData.profileData,
+    whiteboard.profile = await this.profileService.createProfile(
+      whiteboardData.profile ?? {
+        displayName: 'Whiteboard',
+      },
       ProfileType.WHITEBOARD,
       storageAggregator
     );
-    this.profileService.addVisualOnProfile(whiteboard.profile, VisualType.CARD);
+    await this.profileService.addVisualsOnProfile(
+      whiteboard.profile,
+      whiteboardData.profile?.visuals,
+      [VisualType.CARD]
+    );
     await this.profileService.addTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
@@ -239,6 +245,12 @@ export class WhiteboardService {
         },
       }
     );
+    if (!profile.storageBucket) {
+      throw new EntityNotInitializedException(
+        'Profile: no definition of StorageBucket',
+        LogContext.PROFILE
+      );
+    }
 
     for (const [, file] of files) {
       if (!file.url) {
@@ -246,12 +258,13 @@ export class WhiteboardService {
       }
 
       const newDocUrl =
-        await this.profileDocumentsService.reuploadDocumentToProfile(
+        await this.profileDocumentsService.reuploadFileOnStorageBucket(
           file.url,
-          profile
+          profile.storageBucket,
+          true
         );
 
-      if (!newDocUrl) {
+      if (!newDocUrl || newDocUrl === file.url) {
         continue;
       }
 

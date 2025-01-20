@@ -71,6 +71,7 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class UserService {
@@ -361,7 +362,12 @@ export class UserService {
       lastName: agentInfo.lastName,
       accountUpn: email,
       profileData: {
-        avatarURL: agentInfo.avatarURL,
+        visuals: [
+          {
+            name: VisualType.AVATAR,
+            uri: agentInfo.avatarURL,
+          },
+        ],
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     };
