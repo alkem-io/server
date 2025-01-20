@@ -35,9 +35,6 @@ export class LicenseAuthorizationService {
     license.authorization.credentialRules.push(...credentialRulesFromParent);
     updatedAuthorizations.push(license.authorization);
 
-    license.authorization.credentialRules.push(...credentialRulesFromParent);
-    updatedAuthorizations.push(license.authorization);
-
     return updatedAuthorizations;
   }
 }
