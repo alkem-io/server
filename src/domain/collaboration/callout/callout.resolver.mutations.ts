@@ -264,7 +264,13 @@ export class CalloutResolverMutations {
           calloutID: callout.id,
           contributionID: contribution.id,
           sortOrder: contribution.sortOrder,
-          post: contribution.post,
+          post: {
+            ...contribution.post,
+            profile: {
+              ...contribution.post.profile,
+              storageBucket: undefined,
+            },
+          },
         };
         await this.postCreatedSubscription.publish(
           SubscriptionType.CALLOUT_POST_CREATED,
