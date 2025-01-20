@@ -72,7 +72,7 @@ import amqplib from 'amqplib';
             {
               name: eventBusConfig.ingest_body_of_knowledge_result_queue,
               exchange: eventBusConfig.exchange,
-              routingKey: 'IngestBodyOfKnowledgResult',
+              routingKey: 'IngestBodyOfKnowledgeResult',
             },
             {
               name: 'virtual-contributor-engine-expert',

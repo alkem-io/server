@@ -754,8 +754,17 @@ export class LookupResolverFields {
     description: 'Lookup as specific KnowledgeBase',
   })
   async knowledgeBase(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IKnowledgeBase> {
-    return await this.knowledgeBaseService.getKnowledgeBaseOrFail(id);
+    const knowledgeBase =
+      await this.knowledgeBaseService.getKnowledgeBaseOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      knowledgeBase.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup KnowledgeBase: ${knowledgeBase.id}`
+    );
+    return knowledgeBase;
   }
 }
