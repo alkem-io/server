@@ -80,7 +80,7 @@ export class CalloutFramingService {
       const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
       whiteboard.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboard.profileData.displayName}`,
+          `${whiteboard.profile?.displayName ?? 'whiteboard'}`,
           reservedNameIDs
         );
       calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -88,9 +88,10 @@ export class CalloutFramingService {
         storageAggregator,
         userID
       );
-      this.profileService.addVisualOnProfile(
+      await this.profileService.addVisualsOnProfile(
         calloutFraming.whiteboard.profile,
-        VisualType.BANNER
+        whiteboard.profile?.visuals,
+        [VisualType.BANNER]
       );
     }
 
