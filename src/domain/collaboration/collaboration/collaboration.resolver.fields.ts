@@ -45,7 +45,7 @@ export class CollaborationResolverFields {
     return loader.load(collaboration.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @ResolveField('calloutsSet', () => ICalloutsSet, {
     nullable: false,
     description: 'The calloutsSet with Callouts in use by this Space',

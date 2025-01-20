@@ -372,20 +372,6 @@ export class SpaceAuthorizationService {
     }
   }
 
-  private createCredentialRuleSpaceCollaborationVisibility(
-    credentialCriterias: ICredentialDefinition[],
-    isPrivate: boolean
-  ): IAuthorizationPolicyRuleCredential | undefined {
-    if (!isPrivate) {
-      const newRule = this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.READ],
-        credentialCriterias,
-        'Space visibility public'
-      );
-      return newRule;
-    }
-  }
-
   private appendCredentialRuleSpaceVisibility(
     credentialCriterias: ICredentialDefinition[],
     isPrivate: boolean,
@@ -456,7 +442,7 @@ export class SpaceAuthorizationService {
     updatedAuthorizations.push(...communityAuthorizations);
 
     const credentialRuleAccessSpaceCollaboration =
-      this.createCredentialRuleSpaceCollaborationVisibility(
+      this.createCredentialRuleSpaceVisibility(
         credentialCriteriasWithAccessToSpace,
         isPrivate
       );
@@ -489,13 +475,6 @@ export class SpaceAuthorizationService {
         space.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
-
-    const licenseAuthorizations =
-      this.licenseAuthorizationService.applyAuthorizationPolicy(
-        space.license,
-        space.authorization
-      );
-    updatedAuthorizations.push(...licenseAuthorizations);
 
     // Level zero space only entities
     if (space.level === SpaceLevel.SPACE) {
@@ -558,18 +537,18 @@ export class SpaceAuthorizationService {
       }
     }
 
-    const credentialRuleAccessSpaceContextProfile =
+    const credentialRuleAnonymousRegisteredAccess =
       this.createCredentialRuleSpaceVisibility(
         credentialCriteriasWithAccessToSpace,
         isPrivate
       );
-    credentialRuleAccessSpaceContextProfile.cascade = true;
+    credentialRuleAnonymousRegisteredAccess.cascade = true;
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         space.profile.id,
         clonedAuthorization,
-        [credentialRuleAccessSpaceContextProfile]
+        [credentialRuleAnonymousRegisteredAccess]
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
@@ -577,9 +556,17 @@ export class SpaceAuthorizationService {
       await this.contextAuthorizationService.applyAuthorizationPolicy(
         space.context,
         clonedAuthorization,
-        [credentialRuleAccessSpaceContextProfile]
+        [credentialRuleAnonymousRegisteredAccess]
       );
     updatedAuthorizations.push(...contextAuthorizations);
+
+    const licenseAuthorizations =
+      this.licenseAuthorizationService.applyAuthorizationPolicy(
+        space.license,
+        space.authorization,
+        [credentialRuleAnonymousRegisteredAccess]
+      );
+    updatedAuthorizations.push(...licenseAuthorizations);
 
     return updatedAuthorizations;
   }

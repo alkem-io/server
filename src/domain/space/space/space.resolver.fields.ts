@@ -89,6 +89,8 @@ export class SpaceResolverFields {
     return this.spaceService.activeSubscription(space);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
     description: 'The collaboration for the Space.',
@@ -101,7 +103,7 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,

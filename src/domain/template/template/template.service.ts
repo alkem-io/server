@@ -76,12 +76,11 @@ export class TemplateService {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
-    this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       template.profile,
-      VisualType.CARD,
-      templateData.visualUri
+      templateData.profileData.visuals,
+      [VisualType.CARD]
     );
-
     switch (template.type) {
       case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
@@ -175,7 +174,7 @@ export class TemplateService {
         }
         template.whiteboard = await this.whiteboardService.createWhiteboard(
           {
-            profileData: {
+            profile: {
               displayName: 'Whiteboard Template',
             },
             nameID: randomUUID().slice(0, 8),

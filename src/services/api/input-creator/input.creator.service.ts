@@ -1,5 +1,6 @@
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { LogContext } from '@common/enums/logging.context';
+import { validateAndConvertVisualTypeName } from '@common/enums/visual.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
@@ -23,11 +24,13 @@ import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovatio
 import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';
 import { ILocation } from '@domain/common/location/location.interface';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
+import { CreateVisualOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.visual';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { CreateReferenceInput } from '@domain/common/reference/dto/reference.dto.create';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IVisual } from '@domain/common/visual';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
@@ -64,9 +67,12 @@ export class InputCreatorService {
           profile: {
             tagsets: true,
             references: true,
+            visuals: true,
           },
           whiteboard: {
-            profile: true,
+            profile: {
+              visuals: true,
+            },
           },
         },
       },
@@ -145,7 +151,16 @@ export class InputCreatorService {
       await this.collaborationService.getCollaborationOrFail(collaborationID, {
         relations: {
           calloutsSet: {
-            callouts: true,
+            callouts: {
+              framing: {
+                profile: true,
+                whiteboard: {
+                  profile: {
+                    visuals: true,
+                  },
+                },
+              },
+            },
           },
           innovationFlow: {
             profile: true,
@@ -214,7 +229,7 @@ export class InputCreatorService {
   ): CreateWhiteboardInput | undefined {
     if (!whiteboard) return undefined;
     return {
-      profileData: this.buildCreateProfileInputFromProfile(whiteboard.profile),
+      profile: this.buildCreateProfileInputFromProfile(whiteboard.profile),
       content: whiteboard.content,
       nameID: whiteboard.nameID,
     };
@@ -275,6 +290,9 @@ export class InputCreatorService {
       ),
       tagline: profile.tagline,
       tagsets: this.buildCreateTagsetsInputFromTagsets(profile.tagsets),
+      visuals: this.buildCreateVisualsOnProfileInputFromVisuals(
+        profile.visuals
+      ),
     };
   }
 
@@ -311,6 +329,20 @@ export class InputCreatorService {
       uri: reference.uri,
       description: reference.description,
     };
+  }
+
+  private buildCreateVisualsOnProfileInputFromVisuals(
+    visuals?: IVisual[]
+  ): CreateVisualOnProfileInput[] {
+    const result: CreateVisualOnProfileInput[] = [];
+    if (!visuals) return result;
+    for (const visual of visuals) {
+      result.push({
+        name: validateAndConvertVisualTypeName(visual.name),
+        uri: visual.uri,
+      });
+    }
+    return result;
   }
 
   public buildCreateTagsetInputFromTagset(tagset: ITagset): CreateTagsetInput {

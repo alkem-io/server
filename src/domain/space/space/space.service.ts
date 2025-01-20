@@ -254,9 +254,11 @@ export class SpaceService {
     });
 
     // add the visuals
-    this.profileService.addVisualOnProfile(space.profile, VisualType.AVATAR);
-    this.profileService.addVisualOnProfile(space.profile, VisualType.BANNER);
-    this.profileService.addVisualOnProfile(space.profile, VisualType.CARD);
+    await this.profileService.addVisualsOnProfile(
+      space.profile,
+      spaceData.profileData.visuals,
+      [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
+    );
 
     space.levelZeroSpaceID = '';
     // save the collaboration and all it's template sets
