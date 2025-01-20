@@ -912,7 +912,7 @@ export class RoleSetService {
     if (action === RoleSetUpdateType.REMOVE) {
       if (userMembersCount === userPolicy.minimum) {
         throw new RoleSetPolicyRoleLimitsException(
-          `Min limit of users reached for role '${roleType}': ${userPolicy.minimum}, cannot remove user.`,
+          `Min limit of users reached for role '${roleType}': ${userPolicy.minimum}, cannot remove user from role on RoleSet: ${roleSet.id}, type: ${roleSet.type}`,
           LogContext.COMMUNITY
         );
       }
