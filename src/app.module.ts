@@ -39,7 +39,6 @@ import {
 import { RegistrationModule } from '@services/api/registration/registration.module';
 import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
-import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
@@ -275,7 +274,6 @@ import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
     MessageModule,
     MessageReactionModule,
     RegistrationModule,
-    RedisLockModule,
     ConversionModule,
     LibraryModule,
     PlatformModule,
