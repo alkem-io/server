@@ -361,6 +361,7 @@ export class SpaceAuthorizationService {
         credentialCriterias,
         'Space visibility private'
       );
+      newRule.cascade = false;
       return newRule;
     } else {
       const newRule = this.authorizationPolicyService.createCredentialRule(
@@ -368,6 +369,7 @@ export class SpaceAuthorizationService {
         credentialCriterias,
         'Space visibility public'
       );
+      newRule.cascade = true;
       return newRule;
     }
   }
@@ -446,9 +448,6 @@ export class SpaceAuthorizationService {
         credentialCriteriasWithAccessToSpace,
         isPrivate
       );
-
-    if (credentialRuleAccessSpaceCollaboration)
-      credentialRuleAccessSpaceCollaboration.cascade = true;
 
     const collaborationAuthorizations =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
