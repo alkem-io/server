@@ -416,6 +416,12 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       joiningData.roleSetID
     );
+    if (roleSet.type !== RoleSetType.SPACE) {
+      throw new RoleSetMembershipException(
+        `Unable to join roleSet of type: ${roleSet.type} - ${roleSet.id}`,
+        LogContext.PLATFORM
+      );
+    }
     const membershipStatus = await this.roleSetService.getMembershipStatus(
       agentInfo,
       roleSet
@@ -461,6 +467,12 @@ export class RoleSetResolverMutations {
         },
       }
     );
+    if (roleSet.type !== RoleSetType.SPACE) {
+      throw new RoleSetMembershipException(
+        `Unable to apply for roleSet of type: ${roleSet.type} - ${roleSet.id}`,
+        LogContext.PLATFORM
+      );
+    }
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -534,6 +546,12 @@ export class RoleSetResolverMutations {
         },
       }
     );
+    if (roleSet.type !== RoleSetType.SPACE) {
+      throw new RoleSetMembershipException(
+        `Unable to invite existing contributors on roleSet of type: ${roleSet.type} - ${roleSet.id}`,
+        LogContext.PLATFORM
+      );
+    }
     if (invitationData.invitedContributors.length === 0) {
       throw new RoleSetInvitationException(
         `No contributors were provided to invite: ${roleSet.id}`,
@@ -699,6 +717,12 @@ export class RoleSetResolverMutations {
         },
       }
     );
+    if (roleSet.type !== RoleSetType.SPACE) {
+      throw new RoleSetMembershipException(
+        `Unable to do invites on roleSet of type: ${roleSet.type} - ${roleSet.id}`,
+        LogContext.PLATFORM
+      );
+    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,

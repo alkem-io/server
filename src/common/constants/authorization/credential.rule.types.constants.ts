@@ -12,13 +12,13 @@ export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
 export const CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
-export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED =
-  'credentialRuleTypes-spaceCommunityApplyGlobalRegistered';
-export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED =
-  'credentialRuleTypes-spaceCommunityJoinGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED =
+  'credentialRuleTypes-roleSetApplyGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_SPACE_ROLESET_JOIN_GLOBAL_REGISTERED =
+  'credentialRuleTypes-roleSetJoinGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =
   'credentialRuleTypes-calloutUpdatePublisherGlobalAdmins';
-export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD =
+export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN =
   'credentialRuleTypes-roleSetEntryRoleAdd';
 export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE =
   'credentialRuleTypes-roleSetEntryRoleInvite';

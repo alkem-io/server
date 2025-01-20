@@ -12,7 +12,7 @@ import {
   CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
   CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL,
-  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD,
+  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
@@ -133,7 +133,7 @@ export class RoleSetAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
         ],
-        CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ADD
+        CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN
       );
     newRules.push(globalAdminAddMembers);
 

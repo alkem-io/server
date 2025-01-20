@@ -17,8 +17,8 @@ import {
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE,
-  CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
+  CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED,
+  CREDENTIAL_RULE_TYPES_SPACE_ROLESET_JOIN_GLOBAL_REGISTERED,
   POLICY_RULE_COMMUNITY_ADD_VC,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -296,7 +296,7 @@ export class CommunityAuthorizationService {
           this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
             [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
             [AuthorizationCredential.GLOBAL_REGISTERED],
-            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED
+            CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED
           );
         anyUserCanApply.cascade = false;
         newRules.push(anyUserCanApply);
@@ -306,7 +306,7 @@ export class CommunityAuthorizationService {
           this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
             [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
             [AuthorizationCredential.GLOBAL_REGISTERED],
-            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED
+            CREDENTIAL_RULE_TYPES_SPACE_ROLESET_JOIN_GLOBAL_REGISTERED
           );
         anyUserCanJoin.cascade = false;
         newRules.push(anyUserCanJoin);
