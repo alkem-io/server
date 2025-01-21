@@ -50,6 +50,7 @@ export class UrlGeneratorService {
   PATH_FORUM = 'forum';
   PATH_DISCUSSION = 'discussion';
   PATH_CALENDAR = 'calendar';
+  PATH_KNOWLEDGE_BASE = 'knowledge-base';
 
   FIELD_PROFILE_ID = 'profileId';
   FIELD_ID = 'id';
@@ -294,6 +295,12 @@ export class UrlGeneratorService {
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
         return `${this.endpoint_cluster}`;
+      case ProfileType.KNOWLEDGE_BASE:
+        const vc =
+          await this.getVirtualContributorFromKnowledgeBaseProfileOrFail(
+            profile.id
+          );
+        return `${this.endpoint_cluster}/${this.PATH_VIRTUAL_CONTRIBUTOR}/${vc.nameID}/${this.PATH_KNOWLEDGE_BASE}`;
     }
     return '';
   }
@@ -951,5 +958,25 @@ export class UrlGeneratorService {
       collaboration.id
     );
     return `${journeyUrlPath}/${this.PATH_CALENDAR}/${calendarEventInfo.entityNameID}`;
+  }
+
+  private async getVirtualContributorFromKnowledgeBaseProfileOrFail(
+    kbProfileId: string
+  ) {
+    const vc = await this.entityManager.findOne(VirtualContributor, {
+      where: {
+        knowledgeBase: {
+          profile: { id: kbProfileId },
+        },
+      },
+    });
+
+    if (!vc) {
+      throw new EntityNotFoundException(
+        `Unable to fine VirtualContributor for KnowledgeBase with profile ID: ${kbProfileId}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return vc;
   }
 }
