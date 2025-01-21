@@ -264,7 +264,16 @@ export class CalloutResolverMutations {
           calloutID: callout.id,
           contributionID: contribution.id,
           sortOrder: contribution.sortOrder,
-          post: contribution.post,
+          post: {
+            // Removing the storageBucket from the post because it cannot be stringified
+            // due to a circular reference (storageBucket => documents[] => storageBucket)
+            // The client is not querying it from the subscription anyway.
+            ...contribution.post,
+            profile: {
+              ...contribution.post.profile,
+              storageBucket: undefined,
+            },
+          },
         };
         await this.postCreatedSubscription.publish(
           SubscriptionType.CALLOUT_POST_CREATED,

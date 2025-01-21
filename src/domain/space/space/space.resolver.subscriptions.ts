@@ -67,7 +67,7 @@ export class SpaceResolverSubscriptions {
   ) {
     const logMsgPrefix = '[SubspaceCreated subscription] -';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new subspaced on the following Space: ${args.spaceID}`,
+      `${logMsgPrefix} User ${agentInfo.email} subscribed for new subspace on the following Space: ${args.spaceID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
