@@ -45,7 +45,7 @@ export class RoleSets21736446208899 implements MigrationInterface {
       `ALTER TABLE \`role\` CHANGE COLUMN \`type\` \`name\` varchar(128) NOT NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`role_set\` CHANGE COLUMN \`entryRole\` \`entryRoleName\` varchar(128) NOT NULL`
+      `ALTER TABLE \`role_set\` CHANGE COLUMN \`entryRoleType\` \`entryRoleName\` varchar(128) NOT NULL`
     );
 
     await queryRunner.query(
