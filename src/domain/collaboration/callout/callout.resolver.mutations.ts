@@ -260,9 +260,7 @@ export class CalloutResolverMutations {
 
       if (contributionData.post && contribution.post) {
         const post = await this.calloutContributionService.getPost(
-          {
-            id: contribution.id,
-          },
+          contribution,
           {
             post: {
               authorization: true,

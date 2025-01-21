@@ -229,7 +229,7 @@ export class CalloutContributionService {
   }
 
   public async getPost(
-    calloutContributionInput: Pick<ICalloutContribution, 'id'>,
+    calloutContributionInput: ICalloutContribution,
     relations?: FindOptionsRelations<ICalloutContribution>
   ): Promise<IPost | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
