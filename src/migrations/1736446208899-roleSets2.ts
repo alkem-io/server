@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RoleSets1736446208899 implements MigrationInterface {
-  name = 'RoleSets1736446208899';
+export class RoleSets21736446208899 implements MigrationInterface {
+  name = 'RoleSets21736446208899';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
