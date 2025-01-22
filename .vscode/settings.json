@@ -10,5 +10,12 @@
   "[yml]": {
     "editor.formatOnSave": false
   },
-  "cSpell.words": ["Alkemio", "EXCALIDRAW", "ROLESET", "tagset", "tagsets"]
+  "cSpell.words": [
+    "Alkemio",
+    "Criterias",
+    "EXCALIDRAW",
+    "ROLESET",
+    "tagset",
+    "tagsets"
+  ]
 }
