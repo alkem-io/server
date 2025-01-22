@@ -3,6 +3,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { LookupByNameService } from './lookup.by.name.service';
 import { LookupByNameResolverQueries } from './lookup.by.name.resolver.queries';
 import { LookupByNameResolverFields } from './lookup.by.name.resolver.fields';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
@@ -14,6 +15,7 @@ import { SpaceModule } from '@domain/space/space/space.module';
 @Module({
   imports: [
     AuthorizationModule,
+    InnovationHubModule,
     InnovationPackModule,
     TemplateModule,
     UserLookupModule,
