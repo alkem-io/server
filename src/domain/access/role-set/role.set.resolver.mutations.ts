@@ -210,7 +210,9 @@ export class RoleSetResolverMutations {
         },
       }
     );
-
+    // TODO: remove usage of COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
+    // Rational: the ability to assign the VC is a function of the space and the VC, not of the user
+    // So it is not a privilege, as not dependent on the current user.
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === RoleName.MEMBER) {
       const sameAccount =
