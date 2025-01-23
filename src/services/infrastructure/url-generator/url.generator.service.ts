@@ -973,7 +973,7 @@ export class UrlGeneratorService {
 
     if (!vc) {
       throw new EntityNotFoundException(
-        `Unable to fine VirtualContributor for KnowledgeBase with profile ID: ${kbProfileId}`,
+        `Unable to find VirtualContributor for KnowledgeBase with profile ID: ${kbProfileId}`,
         LogContext.URL_GENERATOR
       );
     }

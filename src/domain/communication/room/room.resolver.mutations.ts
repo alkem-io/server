@@ -351,7 +351,7 @@ export class RoomResolverMutations {
               );
 
             await this.virtualContributorMessageService.invokeVirtualContributor(
-              vcMentioned?.id,
+              vcMentioned.id,
               messageData.message,
               threadID,
               agentInfo,
@@ -443,7 +443,7 @@ export class RoomResolverMutations {
               await this.roomMentionsService.getSpaceIdForRoom(room);
 
             await this.virtualContributorMessageService.invokeVirtualContributor(
-              vcMentioned?.id,
+              vcMentioned.id,
               messageData.message,
               threadID,
               agentInfo,
