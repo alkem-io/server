@@ -180,6 +180,24 @@ export class AdminAuthorizationService {
 
     const updatedAuthorization =
       this.extendAuthorizationPolicyWithAuthorizationReset(authorization);
+
+    // Also grant READ, UPDATE, DELETE to global admins
+    const globalAdminsReadUpdateDelete =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
+      );
+    globalAdminsReadUpdateDelete.cascade = false;
+
+    updatedAuthorization.credentialRules.push(globalAdminsReadUpdateDelete);
     return await this.authorizationPolicyService.save(updatedAuthorization);
   }
 
