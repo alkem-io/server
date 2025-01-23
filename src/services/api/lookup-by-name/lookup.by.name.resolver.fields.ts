@@ -7,6 +7,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LookupByNameQueryResults } from './dto/lookup.by.name.query.results';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { NameID, UUID } from '@domain/common/scalars';
 import { TemplateService } from '@domain/template/template/template.service';
@@ -21,6 +22,7 @@ export class LookupByNameResolverFields {
   constructor(
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private authorizationService: AuthorizationService,
+    private innovationHubService: InnovationHubService,
     private innovationPackService: InnovationPackService,
     private templateService: TemplateService,
     private userLookupService: UserLookupService,
@@ -28,6 +30,27 @@ export class LookupByNameResolverFields {
     private organizationLookupService: OrganizationLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'Lookup the ID of the specified InnovationHub using a NameID',
+  })
+  async innovationHub(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('NAMEID', { type: () => NameID }) nameid: string
+  ): Promise<string> {
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubByNameIdOrFail(nameid);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationHub.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup InnovationHub by NameID: ${innovationHub.id}`
+    );
+
+    return innovationHub.id;
+  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {

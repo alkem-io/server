@@ -222,6 +222,23 @@ export class InnovationHubService {
     return innovationHub;
   }
 
+  public async getInnovationHubByNameIdOrFail(
+    innovationHubNameID: string,
+    options?: FindOneOptions<InnovationHub>
+  ): Promise<IInnovationHub> {
+    const innovationHub = await this.innovationHubRepository.findOne({
+      where: { nameID: innovationHubNameID },
+      ...options,
+    });
+
+    if (!innovationHub)
+      throw new EntityNotFoundException(
+        `Unable to find InnovationHub with NameID: ${innovationHubNameID}`,
+        LogContext.SPACES
+      );
+    return innovationHub;
+  }
+
   public async getInnovationHubFlexOrFail(
     args: { subdomain?: string; idOrNameId?: string },
     options?: FindOneOptions<InnovationHub>
