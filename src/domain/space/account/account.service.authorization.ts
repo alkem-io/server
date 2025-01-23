@@ -241,7 +241,7 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.LICENSE_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
-          AuthorizationPrivilege.TRANSFER_RESOURCE_PROPOSE,
+          AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
           AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
           AuthorizationPrivilege.CREATE_INNOVATION_PACK,
@@ -269,7 +269,7 @@ export class AccountAuthorizationService {
     // Allow hosts (users = self mgmt, org = org admin) to manage their own account
     const accountResourcesManage =
       this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.TRANSFER_RESOURCE_PROPOSE],
+        [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
         [...hostCredentials],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE
       );

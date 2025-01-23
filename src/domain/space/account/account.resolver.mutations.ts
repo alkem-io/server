@@ -556,7 +556,7 @@ export class AccountResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       currentAccount.authorization,
-      AuthorizationPrivilege.TRANSFER_RESOURCE_PROPOSE,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `transfer ${resourceName} to another Account: ${agentInfo.email}`
     );
     this.authorizationService.grantAccessOrFail(

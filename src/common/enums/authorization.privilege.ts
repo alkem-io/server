@@ -42,7 +42,7 @@ export enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
   UPDATE_CONTENT = 'update-content',
-  TRANSFER_RESOURCE_PROPOSE = 'transfer-resource-propose',
+  TRANSFER_RESOURCE_OFFER = 'transfer-resource-propose',
   TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
 }
 
