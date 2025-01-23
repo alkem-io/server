@@ -189,10 +189,7 @@ export class AdminAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
       );
     globalAdminsReadUpdateDelete.cascade = false;
