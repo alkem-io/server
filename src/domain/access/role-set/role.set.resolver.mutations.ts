@@ -531,7 +531,7 @@ export class RoleSetResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => [IInvitation], {
     description:
-      'Invite an existing Contriburor to join the specified RoleSet in the Entry Role.',
+      'Invite an existing Contributor to join the specified RoleSet in the Entry Role.',
   })
   async inviteContributorsEntryRoleOnRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
@@ -580,6 +580,18 @@ export class RoleSetResolverMutations {
           }
         );
       contributors.push(contributor);
+    }
+
+    // Check if any of the contributors are VCs and if so check if the entitlement is on
+    if (roleSet.type === RoleSetType.SPACE) {
+      for (const contributor of contributors) {
+        if (contributor instanceof VirtualContributor) {
+          this.licenseService.isEntitlementEnabledOrFail(
+            roleSet.license,
+            LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+          );
+        }
+      }
     }
 
     // Logic is that the ability to invite to a subspace requires the ability to invite to the
