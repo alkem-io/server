@@ -33,6 +33,7 @@ import { VirtualContributorMessageService } from '../virtual.contributor.message
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -213,7 +214,10 @@ export class RoomResolverMutations {
           );
         }
 
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (
+          callout.visibility === CalloutVisibility.PUBLISHED &&
+          callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
+        ) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             message,
@@ -320,7 +324,7 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        // TODO extact in a helper function
+        // TODO extract in a helper function
         if (accessVirtualContributors) {
           // Check before processing so as not to reply to same message where interaction started
           const vcInteraction =
