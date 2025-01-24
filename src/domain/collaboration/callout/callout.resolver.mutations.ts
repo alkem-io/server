@@ -111,7 +111,7 @@ export class CalloutResolverMutations {
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID,
-      { relations: { framing: true } }
+      { relations: { framing: true, calloutsSet: true } }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -132,19 +132,21 @@ export class CalloutResolverMutations {
           Date.now()
         );
 
-        if (calloutData.sendNotification) {
-          const notificationInput: NotificationInputCalloutPublished = {
+        if (callout.calloutsSet?.type === CalloutsSetType.COLLABORATION) {
+          if (calloutData.sendNotification) {
+            const notificationInput: NotificationInputCalloutPublished = {
+              triggeredBy: agentInfo.userID,
+              callout: callout,
+            };
+            await this.notificationAdapter.calloutPublished(notificationInput);
+          }
+
+          const activityLogInput: ActivityInputCalloutPublished = {
             triggeredBy: agentInfo.userID,
             callout: callout,
           };
-          await this.notificationAdapter.calloutPublished(notificationInput);
+          this.activityAdapter.calloutPublished(activityLogInput);
         }
-
-        const activityLogInput: ActivityInputCalloutPublished = {
-          triggeredBy: agentInfo.userID,
-          callout: callout,
-        };
-        this.activityAdapter.calloutPublished(activityLogInput);
       }
     }
 
