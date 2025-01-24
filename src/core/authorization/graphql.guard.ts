@@ -19,6 +19,9 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
@@ -30,6 +33,8 @@ export class GraphqlGuard extends AuthGuard([
   constructor(
     private reflector: Reflector,
     private authorizationService: AuthorizationService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
@@ -98,13 +103,37 @@ export class GraphqlGuard extends AuthGuard([
     );
     if (privilege) {
       const fieldParent = gqlContext.getRoot();
-      const rule = new AuthorizationRuleAgentPrivilege(
-        this.authorizationService,
-        privilege,
-        fieldParent,
-        fieldName
-      );
-      rule.execute(resultAgentInfo);
+      if (fieldParent.authorizationId && !fieldParent.authorization) {
+        this.entityManager
+          .findOne(AuthorizationPolicy, {
+            where: { id: fieldParent.authorizationId },
+          })
+          .then((authorization: any) => {
+            fieldParent.authorization = authorization;
+
+            const rule = new AuthorizationRuleAgentPrivilege(
+              this.authorizationService,
+              privilege,
+              fieldParent,
+              fieldName
+            );
+            rule.execute(resultAgentInfo);
+          })
+          .catch((error: any) => {
+            this.logger.error(
+              `Error loading authorization with id ${fieldParent.authorizationId}: ${error}`,
+              LogContext.AUTH
+            );
+          });
+      } else {
+        const rule = new AuthorizationRuleAgentPrivilege(
+          this.authorizationService,
+          privilege,
+          fieldParent,
+          fieldName
+        );
+        rule.execute(resultAgentInfo);
+      }
     }
 
     return resultAgentInfo;
