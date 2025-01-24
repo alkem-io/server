@@ -224,7 +224,8 @@ export class AccountService {
   }
 
   public async getAccountAndDetails(accountID: string) {
-    const [account] = await this.accountRepository.query(`
+    const [account] = await this.accountRepository.query(
+      `
         SELECT
           a.id as accountId, a.externalSubscriptionID as externalSubscriptionID,
           o.id as orgId, o.contactEmail as orgContactEmail, o.legalEntityName as orgName,
@@ -232,8 +233,10 @@ export class AccountService {
         FROM account as a
         LEFT JOIN user as u on a.id = u.accountID
         LEFT JOIN organization as o on a.id = o.accountID
-        WHERE a.id = '${accountID}'
-    `);
+        WHERE a.id = ?
+    `,
+      [accountID]
+    );
 
     if (!account) {
       return undefined;
