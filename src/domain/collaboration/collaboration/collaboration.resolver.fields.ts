@@ -28,8 +28,8 @@ export class CollaborationResolverFields {
     description: 'The InnovationFlow for the Collaboration.',
   })
   @Profiling.api
-  async innovationFlow(@Parent() collabotation: ICollaboration) {
-    return await this.collaborationService.getInnovationFlow(collabotation.id);
+  async innovationFlow(@Parent() collaboration: ICollaboration) {
+    return await this.collaborationService.getInnovationFlow(collaboration.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
