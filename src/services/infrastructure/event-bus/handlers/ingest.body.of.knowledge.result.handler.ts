@@ -1,18 +1,18 @@
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import {
   ErrorCode,
-  IngestSpaceResult,
-  SpaceIngestionPurpose,
-  SpaceIngestionResult,
-} from '../messages/ingest.space.result.event';
+  IngestionResult,
+  IngestionPurpose,
+  IngestBodyOfKnowledgeResult,
+} from '../messages/ingest.body.of.knowledge.result.event';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 
-@EventsHandler(IngestSpaceResult)
-export class IngestSpaceResultHandler
-  implements IEventHandler<IngestSpaceResult>
+@EventsHandler(IngestBodyOfKnowledgeResult)
+export class IngestBodyOfKnowledgeResultHandler
+  implements IEventHandler<IngestBodyOfKnowledgeResult>
 {
   constructor(
     private readonly aiServerService: AiServerService,
@@ -20,7 +20,7 @@ export class IngestSpaceResultHandler
     private readonly logger: LoggerService
   ) {}
 
-  async handle(event: IngestSpaceResult) {
+  async handle(event: IngestBodyOfKnowledgeResult) {
     this.logger.verbose?.(
       `IngestSpaceResultHandler invoked. Event data: PersonaServiceId: ${event.personaServiceId}; Result: ${event.result}`,
       LogContext.AI_SERVER_EVENT_BUS
@@ -29,8 +29,10 @@ export class IngestSpaceResultHandler
     if (
       !event.personaServiceId ||
       !event.timestamp ||
-      event.purpose === SpaceIngestionPurpose.CONTEXT
+      event.purpose === IngestionPurpose.CONTEXT
     ) {
+      this.logger.verbose?.('Returning?', LogContext.AI_SERVER_EVENT_BUS);
+
       return;
     }
 
@@ -39,7 +41,7 @@ export class IngestSpaceResultHandler
       LogContext.AI_SERVER_EVENT_BUS
     );
 
-    if (event.result === SpaceIngestionResult.SUCCESS) {
+    if (event.result === IngestionResult.SUCCESS) {
       this.aiServerService.updatePersonaBoKLastUpdated(
         event.personaServiceId,
         new Date(event.timestamp)

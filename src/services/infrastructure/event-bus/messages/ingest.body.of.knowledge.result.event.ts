@@ -1,11 +1,12 @@
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IEvent } from '@nestjs/cqrs';
 
-export enum SpaceIngestionPurpose {
+export enum IngestionPurpose {
   KNOWLEDGE = 'knowledge',
   CONTEXT = 'context',
 }
 
-export enum SpaceIngestionResult {
+export enum IngestionResult {
   SUCCESS = 'success',
   FAILURE = 'failure',
 }
@@ -19,13 +20,14 @@ type IngestError = {
   message: string;
 };
 
-export class IngestSpaceResult implements IEvent {
+export class IngestBodyOfKnowledgeResult implements IEvent {
   constructor(
-    public readonly spaceId: string,
-    public readonly purpose: SpaceIngestionPurpose,
+    public readonly bodyOfKnowledgeId: string,
+    public readonly type: AiPersonaBodyOfKnowledgeType,
+    public readonly purpose: IngestionPurpose,
     public readonly personaServiceId: string,
     public readonly timestamp: number,
-    public result: SpaceIngestionResult,
+    public result: IngestionResult,
     public error?: IngestError
   ) {}
 }
