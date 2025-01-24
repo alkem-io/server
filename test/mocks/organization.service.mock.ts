@@ -7,7 +7,6 @@ export const MockOrganizationService: ValueProvider<
 > = {
   provide: OrganizationService,
   useValue: {
-    getOrganizationAndAgent: jest.fn(),
     getOrganizationOrFail: jest.fn(),
   },
 };

@@ -14,9 +14,10 @@ import { KonfigModule } from '@platform/configuration/config/config.module';
 import { MetadataModule } from '@platform/metadata/metadata.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { ForumModule } from '@platform/forum/forum.module';
-import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { PlatformLicenseService } from './platform.service.license';
 
 @Module({
   imports: [
@@ -29,8 +30,8 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
     KonfigModule,
     MetadataModule,
     LicensingFrameworkModule,
-    PlatformInvitationModule,
     TemplatesManagerModule,
+    RoleSetModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [
@@ -39,7 +40,12 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
     PlatformResolverFields,
     PlatformService,
     PlatformAuthorizationService,
+    PlatformLicenseService,
   ],
-  exports: [PlatformService, PlatformAuthorizationService],
+  exports: [
+    PlatformService,
+    PlatformAuthorizationService,
+    PlatformLicenseService,
+  ],
 })
 export class PlatformModule {}

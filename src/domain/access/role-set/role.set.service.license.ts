@@ -9,6 +9,7 @@ import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoleSetService } from './role.set.service';
+import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 
 @Injectable()
 export class RoleSetLicenseService {
@@ -20,7 +21,7 @@ export class RoleSetLicenseService {
 
   async applyLicensePolicy(
     roleSetID: string,
-    parentLicense: ILicense
+    parentLicenseEntitlements: ILicenseEntitlement[]
   ): Promise<ILicense[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
       relations: {
@@ -42,7 +43,7 @@ export class RoleSetLicenseService {
 
     roleSet.license = await this.extendLicensePolicy(
       roleSet.license,
-      parentLicense
+      parentLicenseEntitlements
     );
 
     updatedLicenses.push(roleSet.license);
@@ -52,26 +53,20 @@ export class RoleSetLicenseService {
 
   private async extendLicensePolicy(
     license: ILicense | undefined,
-    parentLicense: ILicense
+    parentLicenseEntitlements: ILicenseEntitlement[]
   ): Promise<ILicense> {
-    if (
-      !license ||
-      !license.entitlements ||
-      !parentLicense ||
-      !parentLicense.entitlements
-    ) {
+    if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
-        'License or parent License with entitlements not found for RoleSet',
+        'License with entitlements not found for RoleSet',
         LogContext.LICENSE
       );
     }
-    const parentEntitlements = parentLicense.entitlements;
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
         case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS:
           this.licenseService.findAndCopyParentEntitlement(
             entitlement,
-            parentEntitlements
+            parentLicenseEntitlements
           );
           break;
 

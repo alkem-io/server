@@ -263,16 +263,6 @@ export class CommunityService {
     return communication;
   }
 
-  public async isCommunityAccountMatchingVcAccount(
-    communityID: string,
-    virtualContributorID: string
-  ): Promise<boolean> {
-    return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
-      communityID,
-      virtualContributorID
-    );
-  }
-
   public async getLevelZeroSpaceIdForCommunity(
     community: ICommunity
   ): Promise<string> {

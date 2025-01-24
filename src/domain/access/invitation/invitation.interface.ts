@@ -1,9 +1,9 @@
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { IRoleSet } from '@domain/access/role-set';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 
 @ObjectType('Invitation')
 export class IInvitation extends IAuthorizable {
@@ -31,16 +31,16 @@ export class IInvitation extends IAuthorizable {
   })
   invitedToParent!: boolean;
 
-  @Field(() => CommunityContributorType, {
+  @Field(() => RoleSetContributorType, {
     nullable: false,
     description: 'The type of contributor that is invited.',
   })
-  contributorType!: CommunityContributorType;
+  contributorType!: RoleSetContributorType;
 
-  @Field(() => CommunityRoleType, {
+  @Field(() => RoleName, {
     nullable: true,
     description:
       'An additional role to assign to the Contributor, in addition to the entry Role.',
   })
-  extraRole?: CommunityRoleType;
+  extraRole?: RoleName;
 }
