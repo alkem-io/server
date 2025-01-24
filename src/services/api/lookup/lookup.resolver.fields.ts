@@ -72,6 +72,8 @@ import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.in
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
+import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -108,7 +110,8 @@ export class LookupResolverFields {
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
     private roleSetService: RoleSetService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private knowledgeBaseService: KnowledgeBaseService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -756,5 +759,25 @@ export class LookupResolverFields {
     const license = await this.licenseService.getLicenseOrFail(id);
 
     return license;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IKnowledgeBase, {
+    nullable: false,
+    description: 'Lookup as specific KnowledgeBase',
+  })
+  async knowledgeBase(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
+  ): Promise<IKnowledgeBase> {
+    const knowledgeBase =
+      await this.knowledgeBaseService.getKnowledgeBaseOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      knowledgeBase.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup KnowledgeBase: ${knowledgeBase.id}`
+    );
+    return knowledgeBase;
   }
 }
