@@ -36,6 +36,7 @@ import { LookupMyPrivilegesResolverFields } from './lookup.resolver.my.privilege
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
     CommunityGuidelinesModule,
     RoleSetModule,
     LicenseModule,
+    KnowledgeBaseModule,
   ],
   providers: [
     LookupService,

@@ -16,6 +16,11 @@
     "EXCALIDRAW",
     "ROLESET",
     "tagset",
-    "tagsets"
+    "tagsets",
+    "authorizable",
+    "INVP",
+    "authorizable",
+    "NAMEID",
+    "kratos"
   ]
 }
