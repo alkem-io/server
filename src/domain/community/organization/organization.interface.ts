@@ -6,11 +6,13 @@ import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @ObjectType('Organization', {
   implements: () => [IGroupable, IContributor],
 })
 export class IOrganization extends IContributorBase implements IContributor {
+  roleSet!: IRoleSet;
   accountID!: string;
 
   rowId!: number;

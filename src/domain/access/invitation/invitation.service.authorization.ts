@@ -5,12 +5,12 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IInvitation } from './invitation.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { CREDENTIAL_RULE_COMMUNITY_USER_INVITATION } from '@common/constants';
+import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
 
 @Injectable()
 export class InvitationAuthorizationService {
@@ -51,13 +51,13 @@ export class InvitationAuthorizationService {
       this.contributorService.getContributorType(contributor);
     const criterias: ICredentialDefinition[] = [];
     switch (contributorType) {
-      case CommunityContributorType.USER:
+      case RoleSetContributorType.USER:
         criterias.push({
           type: AuthorizationCredential.USER_SELF_MANAGEMENT,
           resourceID: contributor.id,
         });
         break;
-      case CommunityContributorType.ORGANIZATION:
+      case RoleSetContributorType.ORGANIZATION:
         criterias.push({
           type: AuthorizationCredential.ORGANIZATION_OWNER,
           resourceID: contributor.id,
@@ -67,7 +67,7 @@ export class InvitationAuthorizationService {
           resourceID: contributor.id,
         });
         break;
-      case CommunityContributorType.VIRTUAL:
+      case RoleSetContributorType.VIRTUAL:
         const account =
           await this.virtualContributorLookupService.getAccountOrFail(
             contributor.id
@@ -84,10 +84,10 @@ export class InvitationAuthorizationService {
         [
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT,
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
         ],
         criterias,
-        CREDENTIAL_RULE_COMMUNITY_USER_INVITATION
+        CREDENTIAL_RULE_ROLESET_INVITATION
       );
     newRules.push(virtualInvitationRule);
 

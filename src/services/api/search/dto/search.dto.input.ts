@@ -1,4 +1,4 @@
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
@@ -23,7 +23,7 @@ export class SearchInput {
   })
   typesFilter?: string[];
 
-  @Field(() => UUID_NAMEID, {
+  @Field(() => UUID, {
     nullable: true,
     description:
       'Restrict the search to only the specified Space. Default is all Spaces.',

@@ -1,5 +1,5 @@
 import { ArgsType, Field } from '@nestjs/graphql';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 
 @ArgsType()
 export class InnovationHubArgsQuery {
@@ -9,9 +9,9 @@ export class InnovationHubArgsQuery {
   })
   subdomain?: string;
 
-  @Field(() => UUID_NAMEID, {
+  @Field(() => UUID, {
     nullable: true,
-    description: 'The ID or nameID of the Innovation Hub',
+    description: 'The ID of the Innovation Hub',
   })
   id?: string;
 }

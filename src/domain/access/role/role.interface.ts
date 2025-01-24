@@ -1,14 +1,16 @@
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IContributorRolePolicy } from './contributor.role.policy.interface';
 
 @ObjectType('Role')
 export abstract class IRole extends IBaseAlkemio {
-  @Field(() => CommunityRoleType, {
+  @Field(() => RoleName, {
     nullable: false,
     description: 'The CommunityRole that this role definition is for.',
   })
-  type!: CommunityRoleType;
+  name!: RoleName;
 
   @Field(() => Boolean, {
     nullable: false,
@@ -24,11 +26,11 @@ export abstract class IRole extends IBaseAlkemio {
   })
   requiresSameRoleInParentRoleSet!: boolean;
 
-  credential!: string;
+  credential!: ICredentialDefinition;
 
-  parentCredentials!: string;
+  parentCredentials!: ICredentialDefinition[];
 
-  userPolicy!: string;
-  organizationPolicy!: string;
-  virtualContributorPolicy!: string;
+  userPolicy!: IContributorRolePolicy;
+  organizationPolicy!: IContributorRolePolicy;
+  virtualContributorPolicy!: IContributorRolePolicy;
 }

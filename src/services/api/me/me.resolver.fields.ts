@@ -48,7 +48,7 @@ export class MeResolverFields {
       );
     }
 
-    return this.userService.getUserByEmail(email);
+    return this.userService.getUserOrFail(agentInfo.userID);
   }
 
   @UseGuards(GraphqlGuard)

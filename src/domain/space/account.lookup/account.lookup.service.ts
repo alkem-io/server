@@ -14,6 +14,7 @@ import { Organization } from '@domain/community/organization';
 import { Account } from '../account/account.entity';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions } from 'typeorm';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Injectable()
 export class AccountLookupService {
@@ -45,6 +46,23 @@ export class AccountLookupService {
       where: { ...options?.where, id: accountID },
     });
     return account;
+  }
+
+  public async getAgent(accountID: string): Promise<IAgent> {
+    const account = await this.getAccountOrFail(accountID, {
+      relations: {
+        agent: true,
+      },
+    });
+
+    if (!account.agent) {
+      throw new RelationshipNotFoundException(
+        `Unable to retrieve Agent for Account: ${account.id}`,
+        LogContext.PLATFORM
+      );
+    }
+
+    return account.agent;
   }
 
   public async getHostOrFail(account: IAccount): Promise<IContributor> {

@@ -1,4 +1,4 @@
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
@@ -10,6 +10,6 @@ export class AssignRoleOnRoleSetToVirtualContributorInput {
   @Field(() => UUID, { nullable: false })
   contributorID!: string;
 
-  @Field(() => CommunityRoleType, { nullable: false })
-  role!: CommunityRoleType;
+  @Field(() => RoleName, { nullable: false })
+  role!: RoleName;
 }

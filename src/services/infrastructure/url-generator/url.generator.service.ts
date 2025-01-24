@@ -16,7 +16,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
@@ -309,13 +309,13 @@ export class UrlGeneratorService {
     const type = this.getContributorType(contributor);
     let path = this.PATH_VIRTUAL_CONTRIBUTOR;
     switch (type) {
-      case CommunityContributorType.USER:
+      case RoleSetContributorType.USER:
         path = this.PATH_USER;
         break;
-      case CommunityContributorType.ORGANIZATION:
+      case RoleSetContributorType.ORGANIZATION:
         path = this.PATH_ORGANIZATION;
         break;
-      case CommunityContributorType.VIRTUAL:
+      case RoleSetContributorType.VIRTUAL:
         path = this.PATH_VIRTUAL_CONTRIBUTOR;
         break;
     }
@@ -331,11 +331,11 @@ export class UrlGeneratorService {
   }
 
   private getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return CommunityContributorType.USER;
+    if (contributor instanceof User) return RoleSetContributorType.USER;
     if (contributor instanceof Organization)
-      return CommunityContributorType.ORGANIZATION;
+      return RoleSetContributorType.ORGANIZATION;
     if (contributor instanceof VirtualContributor)
-      return CommunityContributorType.VIRTUAL;
+      return RoleSetContributorType.VIRTUAL;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY

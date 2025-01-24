@@ -6,7 +6,6 @@ import {
 } from '@common/enums';
 import { IUser } from '@domain/community/user/user.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
@@ -30,6 +29,7 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -41,13 +41,13 @@ export class UserAuthorizationService {
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private agentService: AgentService,
-    private userService: UserService
+    private userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
     userID: string
   ): Promise<IAuthorizationPolicy[]> {
-    const user = await this.userService.getUserOrFail(userID, {
+    const user = await this.userLookupService.getUserOrFail(userID, {
       loadEagerRelations: false,
       relations: {
         authorization: true,
@@ -174,7 +174,7 @@ export class UserAuthorizationService {
   }
 
   async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
-    const agent = await this.userService.getAgentOrFail(userID);
+    const { agent } = await this.userLookupService.getUserAndAgent(userID);
 
     await this.agentService.grantCredential({
       type: AuthorizationCredential.GLOBAL_REGISTERED,
@@ -186,7 +186,7 @@ export class UserAuthorizationService {
       resourceID: userID,
     });
 
-    return await this.userService.getUserOrFail(userID);
+    return await this.userLookupService.getUserOrFail(userID);
   }
 
   private appendGlobalCredentialRules(
@@ -285,7 +285,7 @@ export class UserAuthorizationService {
     newRules.push(communityReader);
 
     // Determine who is able to see the PII designated fields for a User
-    const { credentials } = await this.userService.getUserAndCredentials(
+    const { credentials } = await this.userLookupService.getUserAndCredentials(
       user.id
     );
     const readUserPiiCredentials: ICredentialDefinition[] = [

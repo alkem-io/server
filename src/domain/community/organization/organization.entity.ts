@@ -14,6 +14,7 @@ import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { UUID_LENGTH } from '@common/constants';
 import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
 
 @Entity()
 export class Organization
@@ -65,4 +66,12 @@ export class Organization
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
+
+  @OneToOne(() => RoleSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  roleSet!: RoleSet;
 }

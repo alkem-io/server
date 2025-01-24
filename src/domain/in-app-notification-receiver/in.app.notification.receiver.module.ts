@@ -1,14 +1,16 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PlatformRoleModule } from '@platform/platform.role/platform.role.module';
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
 import { InAppNotificationReceiver } from './in.app.notification.receiver';
 import { InAppNotificationReceiverController } from './in.app.notification.receiver.controller';
+import { PlatformModule } from '@platform/platform/platform.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([InAppNotificationEntity]),
-    PlatformRoleModule,
+    PlatformModule,
+    RoleSetModule,
   ],
   providers: [InAppNotificationReceiver],
   controllers: [InAppNotificationReceiverController],

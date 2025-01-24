@@ -51,11 +51,11 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
@@ -84,6 +84,7 @@ import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -222,7 +223,8 @@ export class SpaceService {
       roleSetData: {
         roles: roleSetRolesData,
         applicationForm: applicationFormData,
-        entryRoleType: CommunityRoleType.MEMBER,
+        entryRoleName: RoleName.MEMBER,
+        type: RoleSetType.SPACE,
       },
       guidelines: {
         // TODO: get this from defaults service
@@ -740,6 +742,30 @@ export class SpaceService {
     return space;
   }
 
+  public async getSpaceByNameIdOrFail(
+    spaceNameID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
+    const { where, ...restOfOptions } = options ?? {};
+
+    const space = await this.spaceRepository.findOne({
+      where: where
+        ? { ...where, nameID: spaceNameID }
+        : { nameID: spaceNameID },
+      ...restOfOptions,
+    });
+    if (!space) {
+      if (!space)
+        throw new EntityNotFoundException(
+          `Unable to find Space with nameID: ${spaceNameID} using options '${JSON.stringify(
+            options
+          )}`,
+          LogContext.SPACES
+        );
+    }
+    return space;
+  }
+
   public async getAllSpaces(
     options?: FindManyOptions<ISpace>
   ): Promise<ISpace[]> {
@@ -1055,8 +1081,8 @@ export class SpaceService {
   public async assignContributorToRole(
     space: ISpace,
     contributor: IContributor,
-    role: CommunityRoleType,
-    type: CommunityContributorType
+    role: RoleName,
+    type: RoleSetContributorType
   ) {
     if (!space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
@@ -1082,21 +1108,21 @@ export class SpaceService {
   public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
     await this.roleSetService.assignUserToRole(
       roleSet,
-      CommunityRoleType.MEMBER,
+      RoleName.MEMBER,
       agentInfo.userID,
       agentInfo
     );
 
     await this.roleSetService.assignUserToRole(
       roleSet,
-      CommunityRoleType.LEAD,
+      RoleName.LEAD,
       agentInfo.userID,
       agentInfo
     );
 
     await this.roleSetService.assignUserToRole(
       roleSet,
-      CommunityRoleType.ADMIN,
+      RoleName.ADMIN,
       agentInfo.userID,
       agentInfo
     );
