@@ -174,7 +174,8 @@ export class UserAuthorizationService {
   }
 
   async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
-    const { agent } = await this.userLookupService.getUserAndAgent(userID);
+    const { user, agent } =
+      await this.userLookupService.getUserAndAgent(userID);
 
     await this.agentService.grantCredential({
       type: AuthorizationCredential.GLOBAL_REGISTERED,
@@ -184,6 +185,11 @@ export class UserAuthorizationService {
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,
       agentID: agent.id,
       resourceID: userID,
+    });
+    await this.agentService.grantCredential({
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      agentID: agent.id,
+      resourceID: user.accountID,
     });
 
     return await this.userLookupService.getUserOrFail(userID);

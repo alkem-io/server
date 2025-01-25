@@ -11,7 +11,7 @@ import {
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE,
+  CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE as CREDENTIAL_RULE_ACCOUNT_ADMIN,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
 } from '@common/constants';
@@ -41,6 +41,7 @@ export class VirtualContributorAuthorizationService {
       virtualInput.id,
       {
         relations: {
+          account: true,
           profile: true,
           agent: true,
           aiPersona: true,
@@ -49,6 +50,7 @@ export class VirtualContributorAuthorizationService {
       }
     );
     if (
+      !virtual.account ||
       !virtual.profile ||
       !virtual.agent ||
       !virtual.aiPersona ||
@@ -59,12 +61,11 @@ export class VirtualContributorAuthorizationService {
         LogContext.COMMUNITY
       );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
-    const hostAccount = await this.virtualService.getAccountHostCredentials(
-      virtual.id
-    );
-    virtual.authorization = this.authorizationPolicyService.reset(
-      virtual.authorization
-    );
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: virtual.account.id,
+    };
+
     virtual.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         virtual.authorization,
@@ -73,7 +74,7 @@ export class VirtualContributorAuthorizationService {
     virtual.authorization = this.appendCredentialRules(
       virtual.authorization,
       virtual.id,
-      hostAccount
+      accountAdminCredential
     );
 
     updatedAuthorizations.push(virtual.authorization);
@@ -123,7 +124,7 @@ export class VirtualContributorAuthorizationService {
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     accountID: string,
-    accountHostCredentials: ICredentialDefinition[]
+    accountAdminCredential: ICredentialDefinition
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -142,8 +143,8 @@ export class VirtualContributorAuthorizationService {
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.CONTRIBUTE,
         ],
-        accountHostCredentials,
-        CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE
+        [accountAdminCredential],
+        CREDENTIAL_RULE_ACCOUNT_ADMIN
       );
     newRules.push(accountHostManage);
 

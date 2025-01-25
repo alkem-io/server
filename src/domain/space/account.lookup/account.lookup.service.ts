@@ -1,14 +1,12 @@
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAccount } from '../account/account.interface';
 import {
-  AccountException,
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization';
 import { Account } from '../account/account.entity';
@@ -118,37 +116,5 @@ export class AccountLookupService {
     }
 
     return false;
-  }
-
-  public async getHostCredentials(
-    account: IAccount
-  ): Promise<ICredentialDefinition[]> {
-    const accountHost = await this.getHostOrFail(account);
-    const accountHostCredentials: ICredentialDefinition[] = [];
-    if (accountHost instanceof User) {
-      const userCriteria: ICredentialDefinition = {
-        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-        resourceID: accountHost.id,
-      };
-      accountHostCredentials.push(userCriteria);
-    } else if (accountHost instanceof Organization) {
-      const organizationCriteriaAdmin: ICredentialDefinition = {
-        type: AuthorizationCredential.ORGANIZATION_ADMIN,
-        resourceID: accountHost.id,
-      };
-      const organizationCriteriaOwner: ICredentialDefinition = {
-        type: AuthorizationCredential.ORGANIZATION_OWNER,
-        resourceID: accountHost.id,
-      };
-      accountHostCredentials.push(organizationCriteriaAdmin);
-      accountHostCredentials.push(organizationCriteriaOwner);
-    } else {
-      throw new AccountException(
-        `Unable to determine host type for: ${account.id}, of type '${accountHost.constructor.name}'`,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return accountHostCredentials;
   }
 }

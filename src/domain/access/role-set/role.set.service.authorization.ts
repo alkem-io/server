@@ -22,7 +22,7 @@ import { InvitationAuthorizationService } from '@domain/access/invitation/invita
 import { IRoleSet } from './role.set.interface';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class RoleSetAuthorizationService {
@@ -32,7 +32,6 @@ export class RoleSetAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
-    private accountLookupService: AccountLookupService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
@@ -193,13 +192,15 @@ export class RoleSetAuthorizationService {
       await this.virtualContributorLookupService.getAccountOrFail(
         virtualContributorToBeRemoved
       );
-    const vcAccountHostCredentials =
-      await this.accountLookupService.getHostCredentials(vcAccount);
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: vcAccount.id,
+    };
 
     const vcSelfRemovalRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.GRANT],
-        vcAccountHostCredentials,
+        [accountAdminCredential],
         CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL
       );
     newRules.push(vcSelfRemovalRule);
