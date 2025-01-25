@@ -223,7 +223,7 @@ export class CalendarEventService {
         'subspace.collaborationId = collaboration.id'
       )
       .where('calendarEvent.id = :id', { id: calendarEvent.id })
-      .andWhere('subspace.level != :level', { level: SpaceLevel.SPACE })
+      .andWhere('subspace.level != :level', { level: SpaceLevel.L0 })
       .select('subspace.*')
       .getRawOne<ISpace>();
   }
