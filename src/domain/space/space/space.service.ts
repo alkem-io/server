@@ -22,7 +22,6 @@ import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
@@ -442,38 +441,6 @@ export class SpaceService {
       `Unsupported Innovation Hub type: '${type}'`,
       LogContext.INNOVATION_HUB
     );
-  }
-
-  /***
-   * Checks if Spaces exists against a list of IDs
-   * @param ids List of Space ids
-   * @returns  <i>true</i> if all Spaces exist; list of ids of the Spaces that doesn't, otherwise
-   */
-  public async spacesExist(ids: string[]): Promise<true | string[]> {
-    if (!ids.length) {
-      return true;
-    }
-
-    const spaces = await this.spaceRepository.find({
-      where: { id: In(ids) },
-      select: { id: true },
-    });
-
-    if (!spaces.length) {
-      return ids;
-    }
-
-    const notExist = [...ids];
-
-    spaces.forEach(space => {
-      const idIndex = notExist.findIndex(x => x === space.id);
-
-      if (idIndex >= -1) {
-        notExist.splice(idIndex, 1);
-      }
-    });
-
-    return notExist.length > 0 ? notExist : true;
   }
 
   async getSpacesSorted(
@@ -1423,21 +1390,6 @@ export class SpaceService {
         LogContext.PROFILE
       );
     return profile;
-  }
-
-  public async getCollaborationOrFail(
-    subspaceId: string
-  ): Promise<ICollaboration> | never {
-    const subspaceWithCollaboration = await this.getSpaceOrFail(subspaceId, {
-      relations: { collaboration: true },
-    });
-    const collaboration = subspaceWithCollaboration.collaboration;
-    if (!collaboration)
-      throw new RelationshipNotFoundException(
-        `Unable to load collaboration for subspace ${subspaceId} `,
-        LogContext.COLLABORATION
-      );
-    return collaboration;
   }
 
   public async getCalloutsSetOrFail(
