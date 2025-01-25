@@ -186,7 +186,7 @@ export class SpaceResolverFields {
     description: 'A particular subspace by its nameID',
   })
   async subspace(
-    @Args('ID', { type: () => NameID }) id: string,
+    @Args('NAMEID', { type: () => NameID }) id: string,
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: ISpace
   ): Promise<ISpace> {
