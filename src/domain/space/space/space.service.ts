@@ -722,7 +722,7 @@ export class SpaceService {
     const space = await this.spaceRepository.findOne({
       where: {
         nameID: spaceNameID,
-        level: SpaceLevel.SPACE,
+        level: SpaceLevel.L0,
       },
     });
     if (!space) {
