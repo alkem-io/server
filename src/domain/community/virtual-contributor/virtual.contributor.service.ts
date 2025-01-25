@@ -10,7 +10,6 @@ import {
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -318,19 +317,11 @@ export class VirtualContributorService {
     virtualContributorID: string,
     options?: FindOneOptions<VirtualContributor>
   ): Promise<IVirtualContributor | null> {
-    let virtualContributor: IVirtualContributor | null;
-    if (virtualContributorID.length === UUID_LENGTH) {
-      virtualContributor = await this.virtualContributorRepository.findOne({
-        ...options,
-        where: { ...options?.where, id: virtualContributorID },
-      });
-    } else {
-      // look up based on nameID
-      virtualContributor = await this.virtualContributorRepository.findOne({
-        ...options,
-        where: { ...options?.where, nameID: virtualContributorID },
-      });
-    }
+    const virtualContributor = await this.virtualContributorRepository.findOne({
+      ...options,
+      where: { ...options?.where, id: virtualContributorID },
+    });
+
     return virtualContributor;
   }
 

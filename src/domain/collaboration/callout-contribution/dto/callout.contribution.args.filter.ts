@@ -1,16 +1,16 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 
 @InputType()
 export class CalloutContributionFilterArgs {
-  @Field(() => [UUID_NAMEID], {
-    description: 'Include Contributions with Post ids/nameIds.',
+  @Field(() => [UUID], {
+    description: 'Include Contributions with Post ids.',
     nullable: true,
   })
   postIDs?: string[];
 
-  @Field(() => [UUID_NAMEID], {
-    description: 'Include Contributions with Whiteboard ids/nameIds.',
+  @Field(() => [UUID], {
+    description: 'Include Contributions with Whiteboard ids.',
     nullable: true,
   })
   whiteboardIDs?: string[];

@@ -1,7 +1,6 @@
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
-import { UUID_NAMEID } from '@domain/common/scalars';
 import { SpaceService } from './space.service';
 import { ISpace } from './space.interface';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
@@ -11,7 +10,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @Resolver()
 export class SpaceResolverQueries {
@@ -47,23 +45,6 @@ export class SpaceResolverQueries {
     @Args('filter', { nullable: true }) filter?: SpaceFilterInput
   ): Promise<PaginatedSpaces> {
     return this.spaceService.getPaginatedSpaces(pagination, filter);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Query(() => ISpace, {
-    nullable: false,
-    description:
-      'Look up a top level Space (i.e. a Space that does not have a parent Space) by the UUID or NameID.',
-  })
-  async space(
-    @Args('ID', { type: () => UUID_NAMEID }) ID: string
-  ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(ID, {
-      where: {
-        level: SpaceLevel.SPACE,
-      },
-    });
-    return space;
   }
 
   @UseGuards(GraphqlGuard)

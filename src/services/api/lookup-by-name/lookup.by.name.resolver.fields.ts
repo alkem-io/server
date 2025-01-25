@@ -87,7 +87,7 @@ export class LookupByNameResolverFields {
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.READ,
-      `lookup Space by NameID: ${space.id}`
+      `lookup L0 Space by NameID: ${space.id}`
     );
 
     return space.id;

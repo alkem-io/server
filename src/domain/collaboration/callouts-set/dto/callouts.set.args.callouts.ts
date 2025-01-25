@@ -1,10 +1,10 @@
 import { ArgsType, Field, Float } from '@nestjs/graphql';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { TagsetArgs } from '@common/args/tagset.args';
 
 @ArgsType()
 export class CalloutsSetArgsCallouts {
-  @Field(() => [UUID_NAMEID], {
+  @Field(() => [UUID], {
     description: 'The IDs of the callouts to return',
     nullable: true,
   })

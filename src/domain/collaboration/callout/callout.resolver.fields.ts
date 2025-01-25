@@ -8,7 +8,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -38,7 +38,7 @@ export class CalloutResolverFields {
     @Parent() callout: Callout,
     @Args({
       name: 'IDs',
-      type: () => [UUID_NAMEID],
+      type: () => [UUID],
       description: 'The IDs of the Contributions to return',
       nullable: true,
     })

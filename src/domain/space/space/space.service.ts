@@ -658,25 +658,10 @@ export class SpaceService {
     });
   }
 
-  public getSpacesById(
-    spaceIdsOrNameIds: string[],
-    options?: FindManyOptions<Space>
-  ) {
+  public getSpacesById(spaceIds: string[], options?: FindManyOptions<Space>) {
     return this.spaceRepository.find({
+      where: { id: In(spaceIds) },
       ...options,
-      where: options?.where
-        ? Array.isArray(options.where)
-          ? [
-              { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
-              ...options.where,
-            ]
-          : [
-              { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
-              options.where,
-            ]
-        : [{ id: In(spaceIdsOrNameIds) }, { nameID: In(spaceIdsOrNameIds) }],
     });
   }
 
@@ -724,42 +709,27 @@ export class SpaceService {
     spaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
-    let space: ISpace | null = null;
-    const { where, ...restOfOptions } = options ?? {};
-    if (spaceID.length === UUID_LENGTH) {
-      space = await this.spaceRepository.findOne({
-        where: where ? { ...where, id: spaceID } : { id: spaceID },
-        ...restOfOptions,
-      });
-    }
-    if (!space) {
-      // look up based on nameID
-      space = await this.spaceRepository.findOne({
-        where: where ? { ...where, nameID: spaceID } : { nameID: spaceID },
-        ...restOfOptions,
-      });
-    }
+    const space = await this.spaceRepository.findOne({
+      where: {
+        id: spaceID,
+      },
+      ...options,
+    });
+
     return space;
   }
 
-  public async getSpaceByNameIdOrFail(
-    spaceNameID: string,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace> {
-    const { where, ...restOfOptions } = options ?? {};
-
+  public async getSpaceByNameIdOrFail(spaceNameID: string): Promise<ISpace> {
     const space = await this.spaceRepository.findOne({
-      where: where
-        ? { ...where, nameID: spaceNameID }
-        : { nameID: spaceNameID },
-      ...restOfOptions,
+      where: {
+        nameID: spaceNameID,
+        level: SpaceLevel.SPACE,
+      },
     });
     if (!space) {
       if (!space)
         throw new EntityNotFoundException(
-          `Unable to find Space with nameID: ${spaceNameID} using options '${JSON.stringify(
-            options
-          )}`,
+          `Unable to find L0 Space with nameID: ${spaceNameID}`,
           LogContext.SPACES
         );
     }
@@ -1157,7 +1127,7 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  async getSubspaceInLevelZeroSpace(
+  async getSubspaceByNameIdInLevelZeroSpace(
     subspaceID: string,
     levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
@@ -1191,7 +1161,7 @@ export class SpaceService {
     levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | never> {
-    const subspace = await this.getSubspaceInLevelZeroSpace(
+    const subspace = await this.getSubspaceByNameIdInLevelZeroSpace(
       subspaceID,
       levelZeroSpaceID,
       options
