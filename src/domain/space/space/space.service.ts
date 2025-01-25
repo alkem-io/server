@@ -1,4 +1,3 @@
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
@@ -1128,30 +1127,17 @@ export class SpaceService {
   }
 
   async getSubspaceByNameIdInLevelZeroSpace(
-    subspaceID: string,
+    subspaceNameID: string,
     levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
-    let subspace: ISpace | null = null;
-    if (subspaceID.length == UUID_LENGTH) {
-      subspace = await this.spaceRepository.findOne({
-        where: {
-          id: subspaceID,
-          levelZeroSpaceID: levelZeroSpaceID,
-        },
-        ...options,
-      });
-    }
-    if (!subspace) {
-      // look up based on nameID
-      subspace = await this.spaceRepository.findOne({
-        where: {
-          nameID: subspaceID,
-          levelZeroSpaceID: levelZeroSpaceID,
-        },
-        ...options,
-      });
-    }
+    const subspace = await this.spaceRepository.findOne({
+      where: {
+        nameID: subspaceNameID,
+        levelZeroSpaceID: levelZeroSpaceID,
+      },
+      ...options,
+    });
 
     return subspace;
   }

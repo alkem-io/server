@@ -26,7 +26,6 @@ import {
   ITagsetTemplate,
 } from '@domain/common/tagset-template';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -535,11 +534,7 @@ export class CalloutsSetService {
     if (args.IDs) {
       const results: ICallout[] = [];
       for (const calloutID of args.IDs) {
-        let callout;
-        if (calloutID.length === UUID_LENGTH)
-          callout = allCallouts.find(callout => callout.id === calloutID);
-        else
-          callout = allCallouts.find(callout => callout.nameID === calloutID);
+        const callout = allCallouts.find(callout => callout.id === calloutID);
 
         if (!callout)
           throw new EntityNotFoundException(

@@ -20,7 +20,6 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
 import { limitAndShuffle } from '@common/utils';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -157,20 +156,11 @@ export class CalloutService {
     calloutID: string,
     options?: FindOneOptions<Callout>
   ): Promise<ICallout | never> {
-    let callout: ICallout | null = null;
-    if (calloutID.length === UUID_LENGTH) {
-      callout = await this.calloutRepository.findOne({
-        where: { id: calloutID },
-        ...options,
-      });
-    }
-    if (!callout) {
-      // look up based on nameID
-      callout = await this.calloutRepository.findOne({
-        where: { nameID: calloutID },
-        ...options,
-      });
-    }
+    const callout = await this.calloutRepository.findOne({
+      where: { id: calloutID },
+      ...options,
+    });
+
     if (!callout)
       throw new EntityNotFoundException(
         `No Callout found with the given id: ${calloutID}, using options: ${JSON.stringify(
