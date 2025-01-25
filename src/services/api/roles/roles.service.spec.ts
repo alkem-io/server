@@ -245,7 +245,7 @@ const getSpaceRoleResultMock = ({
     id,
     displayName,
     type: SpaceType.SPACE,
-    level: SpaceLevel.SPACE,
+    level: SpaceLevel.L0,
     spaceID: id,
     nameID: `space-${id}`,
     visibility: SpaceVisibility.ACTIVE,
@@ -265,7 +265,7 @@ const getSpaceRoleResultMock = ({
         ...getEntityMock<Profile>(),
       },
       type: SpaceType.SPACE,
-      level: SpaceLevel.SPACE,
+      level: SpaceLevel.L0,
       visibility: SpaceVisibility.ACTIVE,
       account: {
         id: `account-${id}`,
@@ -300,7 +300,7 @@ const getSubpaceRoleResultMock = ({
     nameID: `subspace-${id}`,
     roles,
     type,
-    level: SpaceLevel.SPACE,
+    level: SpaceLevel.L0,
   };
 };
 

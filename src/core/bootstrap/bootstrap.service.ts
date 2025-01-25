@@ -517,7 +517,7 @@ export class BootstrapService {
           displayName: DEFAULT_SPACE_DISPLAYNAME,
           tagline: 'An empty space to be populated',
         },
-        level: SpaceLevel.SPACE,
+        level: SpaceLevel.L0,
         type: SpaceType.SPACE,
         collaborationData: {
           calloutsSetData: {},
