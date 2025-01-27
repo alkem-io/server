@@ -103,8 +103,7 @@ export class VirtualContributorResolverMutations {
 
     const updatedAuthorizations =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtualContributor,
-        accountAuthorization
+        virtualContributor
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
