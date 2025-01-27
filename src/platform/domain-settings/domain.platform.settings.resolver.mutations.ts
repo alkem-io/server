@@ -3,7 +3,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { PlatformSettingsService } from './platform.settings.service';
+import { DomainPlatformSettingsService } from './domain.platform.settings.service';
 import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -11,9 +11,9 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver()
-export class PlatformSettingsResolverMutations {
+export class DomainPlatformSettingsResolverMutations {
   constructor(
-    private readonly platformSettingsService: PlatformSettingsService,
+    private readonly platformSettingsService: DomainPlatformSettingsService,
     private readonly organizationService: OrganizationService,
     private readonly authorizationService: AuthorizationService
   ) {}

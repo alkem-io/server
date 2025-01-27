@@ -2,6 +2,6 @@ import { IVirtualContributorSettings } from '@domain/community/virtual-contribut
 
 export const virtualContributorSettingsDefault: IVirtualContributorSettings = {
   privacy: {
-    contributionRolesPubliclyVisible: false,
+    knowledgeBaseContentVisible: false,
   },
 };
