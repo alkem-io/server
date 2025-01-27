@@ -1,15 +1,15 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UpdatePlatformSettingsPrivacyInput } from './platform.settings.privacy.dto.update';
+import { UpdatePlatformSettingsIntegrationInput } from './platform.settings.integration.dto.update';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 @InputType()
-export class UpdatePlatformSettingsEntityInput {
-  @Field(() => UpdatePlatformSettingsPrivacyInput, {
+export class UpdatePlatformSettingsInput {
+  @Field(() => UpdatePlatformSettingsIntegrationInput, {
     nullable: true,
     description: '',
   })
   @ValidateNested()
-  @Type(() => UpdatePlatformSettingsPrivacyInput)
-  privacy?: UpdatePlatformSettingsPrivacyInput;
+  @Type(() => UpdatePlatformSettingsIntegrationInput)
+  integration?: UpdatePlatformSettingsIntegrationInput;
 }

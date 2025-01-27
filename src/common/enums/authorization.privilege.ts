@@ -10,6 +10,7 @@ export enum AuthorizationPrivilege {
   AUTHORIZATION_RESET = 'authorization-reset',
   LICENSE_RESET = 'license-reset',
   PLATFORM_ADMIN = 'platform-admin', // To determine if the user should have access to the platform administration
+  PLATFORM_SETTINGS_ADMIN = 'platform-settings-admin', // To determine if the user should be able to update platform wide settings
   CONTRIBUTE = 'contribute',
   CREATE_CALLOUT = 'create-callout',
   CREATE_POST = 'create-post',

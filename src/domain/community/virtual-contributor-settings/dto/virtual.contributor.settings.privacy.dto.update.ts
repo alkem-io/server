@@ -5,9 +5,8 @@ import { IsBoolean } from 'class-validator';
 export class UpdateVirtualContributorSettingsPrivacyInput {
   @Field(() => Boolean, {
     nullable: false,
-    description:
-      'Allow contribution roles (membership, lead etc) in Spaces to be visible.',
+    description: 'Enable the content of knowledge bases to be accessed or not.',
   })
   @IsBoolean()
-  contributionRolesPubliclyVisible!: boolean;
+  knowledgeBaseContentVisible!: boolean;
 }

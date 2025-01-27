@@ -1,11 +1,11 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IPlatformSettingsPrivacy } from './platform.settings.privacy.interface';
+import { IPlatformSettingsIntegration } from './platform.settings.integrations.interface';
 
 @ObjectType('PlatformSettings')
 export abstract class IPlatformSettings {
-  @Field(() => IPlatformSettingsPrivacy, {
+  @Field(() => IPlatformSettingsIntegration, {
     nullable: false,
-    description: 'The privacy settings for this Platform',
+    description: 'The integration settings for this Platform',
   })
-  privacy!: IPlatformSettingsPrivacy;
+  integration!: IPlatformSettingsIntegration;
 }

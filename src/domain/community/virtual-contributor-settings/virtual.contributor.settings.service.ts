@@ -14,9 +14,9 @@ export class VirtualContributorSettingsService {
     updateData: UpdateVirtualContributorSettingsEntityInput
   ): IVirtualContributorSettings {
     if (updateData.privacy) {
-      if (updateData.privacy.contributionRolesPubliclyVisible !== undefined) {
-        settings.privacy.contributionRolesPubliclyVisible =
-          updateData.privacy.contributionRolesPubliclyVisible;
+      if (updateData.privacy.knowledgeBaseContentVisible !== undefined) {
+        settings.privacy.knowledgeBaseContentVisible =
+          updateData.privacy.knowledgeBaseContentVisible;
       }
     }
     return settings;

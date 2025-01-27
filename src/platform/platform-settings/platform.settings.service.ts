@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IPlatformSettings } from './platform.settings.interface';
-import { UpdatePlatformSettingsEntityInput } from './dto/platform.settings.dto.update';
+import { UpdatePlatformSettingsInput } from './dto/platform.settings.dto.update';
 
 @Injectable()
 export class PlatformSettingsService {
@@ -11,12 +11,12 @@ export class PlatformSettingsService {
 
   public updateSettings(
     settings: IPlatformSettings,
-    updateData: UpdatePlatformSettingsEntityInput
+    updateData: UpdatePlatformSettingsInput
   ): IPlatformSettings {
-    if (updateData.privacy) {
-      if (updateData.privacy.contributionRolesPubliclyVisible !== undefined) {
-        settings.privacy.contributionRolesPubliclyVisible =
-          updateData.privacy.contributionRolesPubliclyVisible;
+    if (updateData.integration) {
+      if (updateData.integration.iframeAllowedUrls !== undefined) {
+        settings.integration.iframeAllowedUrls =
+          updateData.integration.iframeAllowedUrls;
       }
     }
     return settings;

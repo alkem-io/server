@@ -4,8 +4,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export abstract class IVirtualContributorSettingsPrivacy {
   @Field(() => Boolean, {
     nullable: false,
-    description:
-      'Allow contribution roles (membership, lead etc) in Spaces to be visible.',
+    description: 'Are the contents of the knowledge base publicly visible.',
   })
-  contributionRolesPubliclyVisible!: boolean;
+  knowledgeBaseContentVisible!: boolean;
 }
