@@ -43,7 +43,7 @@ export class RoomMentionsService {
       room.type as RoomType
     );
 
-    // The ID of the actual community where the vc is being invoced
+    // The ID of the actual community where the vc is being invoked
     const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
       community.roleSet.id
     );

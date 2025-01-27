@@ -19,8 +19,9 @@
     "tagsets",
     "authorizable",
     "INVP",
-    "authorizable",
     "NAMEID",
-    "kratos"
+    "kratos",
+    "subsubspace",
+    "oathkeeper"
   ]
 }
