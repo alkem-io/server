@@ -5,6 +5,7 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.e
 import { Room } from '@domain/communication/room/room.entity';
 import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
+import { Space } from '@domain/space/space/space.entity';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
@@ -53,6 +54,13 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
 
   @Column('boolean', { nullable: false })
   visibleOnParentCalendar!: boolean;
+
+  // @ManyToOne(() => Space, {
+  //   createForeignKeyConstraints: false,
+  //   eager: false,
+  //   nullable: true,
+  // })
+  subspace?: Space;
 
   constructor() {
     super();
