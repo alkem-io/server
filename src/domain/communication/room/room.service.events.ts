@@ -193,7 +193,7 @@ export class RoomServiceEvents {
     this.activityAdapter.calloutCommentCreated(activityLogInput);
 
     const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
         callout.id
       );
     const levelZeroSpaceID =
