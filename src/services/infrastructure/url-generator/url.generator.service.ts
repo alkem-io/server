@@ -667,6 +667,11 @@ export class UrlGeneratorService {
             LogContext.URL_GENERATOR
           );
         }
+
+        if (callout.isTemplate) {
+          return ''; // no journey url path for templates
+        }
+
         const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
           'collaborationId',
           collaboration.id
@@ -741,13 +746,13 @@ export class UrlGeneratorService {
         fieldID
       );
     }
-    if (!collaborationJourneyUrlPath) {
-      throw new EntityNotFoundException(
-        `Unable to find url path for collaboration: ${fieldName} - ${fieldID}`,
-        LogContext.URL_GENERATOR
-      );
-    }
-    return collaborationJourneyUrlPath;
+    // if (!collaborationJourneyUrlPath) {
+    //   throw new EntityNotFoundException(
+    //     `Unable to find url path for collaboration: ${fieldName} - ${fieldID}`,
+    //     LogContext.URL_GENERATOR
+    //   );
+    // }
+    return collaborationJourneyUrlPath ?? '';
   }
 
   public async getPostUrlPath(calloutID: string): Promise<string> {
