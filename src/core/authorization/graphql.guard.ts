@@ -111,32 +111,51 @@ export class GraphqlGuard extends AuthGuard([
           .then((authorization: any) => {
             fieldParent.authorization = authorization;
 
-            const rule = new AuthorizationRuleAgentPrivilege(
-              this.authorizationService,
+            this.executeAuthorizationRule(
               privilege,
               fieldParent,
-              fieldName
+              fieldName,
+              resultAgentInfo
             );
-            rule.execute(resultAgentInfo);
           })
           .catch((error: any) => {
             this.logger.error(
               `Error loading authorization with id ${fieldParent.authorizationId}: ${error}`,
               LogContext.AUTH
             );
+            this.executeAuthorizationRule(
+              privilege,
+              fieldParent,
+              fieldName,
+              resultAgentInfo
+            );
           });
       } else {
-        const rule = new AuthorizationRuleAgentPrivilege(
-          this.authorizationService,
+        this.executeAuthorizationRule(
           privilege,
           fieldParent,
-          fieldName
+          fieldName,
+          resultAgentInfo
         );
-        rule.execute(resultAgentInfo);
       }
     }
 
     return resultAgentInfo;
+  }
+
+  private executeAuthorizationRule(
+    privilege: AuthorizationPrivilege,
+    fieldParent: any,
+    fieldName: any,
+    resultAgentInfo: any
+  ) {
+    const rule = new AuthorizationRuleAgentPrivilege(
+      this.authorizationService,
+      privilege,
+      fieldParent,
+      fieldName
+    );
+    rule.execute(resultAgentInfo);
   }
 
   public createAnonymousAgentInfo(): AgentInfo {
