@@ -721,7 +721,8 @@ export class UrlGeneratorService {
             LogContext.URL_GENERATOR
           );
         }
-        return this.generateUrlForVC(virtualContributor.nameID);
+        const vcUrl = await this.generateUrlForVC(virtualContributor.nameID);
+        return `${vcUrl}/${this.PATH_KNOWLEDGE_BASE}/${callout.nameID}`;
       }
     }
 
