@@ -798,7 +798,7 @@ export class UrlGeneratorService {
     const calloutUrlPath = await this.getCalloutUrlPath(
       contribution.callout.id
     );
-    return `${calloutUrlPath}/${this.PATH_KNOWLEDGE_BASE}/${this.PATH_POSTS}/${result.postNameId}`;
+    return `${calloutUrlPath}/${this.PATH_POSTS}/${result.postNameId}`;
   }
 
   public async getWhiteboardUrlPath(whiteboardID: string): Promise<string> {
