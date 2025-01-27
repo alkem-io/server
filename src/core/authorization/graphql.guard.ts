@@ -104,25 +104,31 @@ export class GraphqlGuard extends AuthGuard([
     if (privilege) {
       const fieldParent = gqlContext.getRoot();
       if (fieldParent.authorizationId && !fieldParent.authorization) {
+        this.logger.error(
+          {
+            message: 'No authorization policy present in Guard',
+            fieldName,
+            fieldParent,
+            authorizationId: fieldParent.authorizationId,
+          },
+          undefined,
+          LogContext.CODE_ERRORS
+        );
         this.entityManager
           .findOne(AuthorizationPolicy, {
             where: { id: fieldParent.authorizationId },
           })
           .then((authorization: any) => {
             fieldParent.authorization = authorization;
-
-            this.executeAuthorizationRule(
-              privilege,
-              fieldParent,
-              fieldName,
-              resultAgentInfo
-            );
           })
           .catch((error: any) => {
             this.logger.error(
               `Error loading authorization with id ${fieldParent.authorizationId}: ${error}`,
-              LogContext.AUTH
+              undefined,
+              LogContext.AUTH_GUARD
             );
+          })
+          .finally(() => {
             this.executeAuthorizationRule(
               privilege,
               fieldParent,
