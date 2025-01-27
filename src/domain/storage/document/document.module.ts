@@ -3,20 +3,20 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { StorageServiceModule } from '@services/adapters/storage';
 import { Document } from './document.entity';
 import { DocumentResolverMutations } from './document.resolver.mutations';
 import { DocumentService } from './document.service';
 import { DocumentResolverFields } from './document.resolver.fields';
 import { DocumentAuthorizationService } from './document.service.authorization';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     TagsetModule,
-    ContributorLookupModule,
+    UserLookupModule,
     StorageServiceModule,
     TypeOrmModule.forFeature([Document]),
   ],

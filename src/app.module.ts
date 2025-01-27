@@ -75,7 +75,6 @@ import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/wh
 import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
 import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
-import { PlatformRoleModule } from '@platform/platform.role/platform.role.module';
 import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
@@ -88,6 +87,9 @@ import { InAppNotificationReaderModule } from '@domain/in-app-notification-reade
 import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
+import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
+import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
+
 
 @Module({
   imports: [
@@ -278,7 +280,6 @@ import { WingbackManagerModule } from '@services/external/wingback/wingback.mana
     ConversionModule,
     LibraryModule,
     PlatformModule,
-    PlatformRoleModule,
     PlatformHubModule,
     ContributionMoveModule,
     GeoLocationModule,
@@ -299,9 +300,11 @@ import { WingbackManagerModule } from '@services/external/wingback/wingback.mana
     WhiteboardIntegrationModule,
     FileIntegrationModule,
     PlatformSettingsModule,
+    PlatformRoleModule,
     TemplateApplierModule,
     InAppNotificationReaderModule,
     InAppNotificationReceiverModule,
+    WingbackWebhookModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

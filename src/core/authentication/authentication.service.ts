@@ -3,29 +3,27 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Session } from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
 import { NotSupportedException } from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
-
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import ConfigUtils from '@config/config.utils';
 import { AlkemioConfig } from '@src/types';
-import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { OryTraits } from '@services/infrastructure/kratos/types/ory.traits';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class AuthenticationService {
   private readonly extendSessionMinRemainingTTL: number | undefined; // min time before session expires when it's already allowed to be extended (in milliseconds)
 
   constructor(
-    private agentCacheService: AgentInfoCacheService,
+    private agentInfoCacheService: AgentInfoCacheService,
+    private agentInfoService: AgentInfoService,
     private configService: ConfigService<AlkemioConfig, true>,
-    private userService: UserService,
-    private agentService: AgentService,
     private kratosService: KratosService,
+    private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     const { earliest_possible_extend } = this.configService.get(
@@ -40,7 +38,10 @@ export class AuthenticationService {
     );
   }
 
-  async getAgentInfo(opts: { cookie?: string; authorization?: string }) {
+  public async getAgentInfo(opts: {
+    cookie?: string;
+    authorization?: string;
+  }): Promise<AgentInfo> {
     let session: Session | undefined;
     try {
       session = await this.kratosService.getSession(
@@ -48,15 +49,34 @@ export class AuthenticationService {
         opts.cookie
       );
     } catch (e) {
-      return new AgentInfo();
+      return this.agentInfoService.createAnonymousAgentInfo();
     }
 
     if (!session?.identity) {
-      return new AgentInfo();
+      return this.agentInfoService.createAnonymousAgentInfo();
     }
 
     const oryIdentity = session.identity as OryDefaultIdentitySchema;
     return this.createAgentInfo(oryIdentity);
+  }
+
+  /**
+   * Adds verified credentials to the agent information if SSI (Self-Sovereign Identity) is enabled.
+   *
+   * @param agentInfo - The information of the agent to which verified credentials will be added.
+   * @param agentID - The unique identifier of the agent.
+   * @returns A promise that resolves when the operation is complete.
+   */
+  public async addVerifiedCredentialsIfEnabled(
+    agentInfo: AgentInfo,
+    agentID: string
+  ): Promise<void> {
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
+    if (ssiEnabled) {
+      const verifiedCredentials =
+        await this.agentService.getVerifiedCredentials(agentID);
+      agentInfo.verifiedCredentials = verifiedCredentials;
+    }
   }
 
   /**
@@ -80,25 +100,30 @@ export class AuthenticationService {
     oryIdentity?: OryDefaultIdentitySchema,
     session?: Session
   ): Promise<AgentInfo> {
-    if (!oryIdentity) return new AgentInfo();
+    if (!oryIdentity) return this.agentInfoService.createAnonymousAgentInfo();
 
     const oryTraits = this.validateEmail(oryIdentity);
 
     const cachedAgentInfo = await this.getCachedAgentInfo(oryTraits.email);
     if (cachedAgentInfo) return cachedAgentInfo;
 
-    const agentInfo = this.buildBasicAgentInfo(oryIdentity, session);
+    const agentInfo = this.buildAgentInfoFromOrySession(oryIdentity, session);
 
-    const agentInfoMetadata = await this.getAgentInfoMetadata(agentInfo.email);
+    const agentInfoMetadata = await this.agentInfoService.getAgentInfoMetadata(
+      agentInfo.email
+    );
     if (!agentInfoMetadata) return agentInfo;
 
-    this.populateAgentInfoWithMetadata(agentInfo, agentInfoMetadata);
+    this.agentInfoService.populateAgentInfoWithMetadata(
+      agentInfo,
+      agentInfoMetadata
+    );
     await this.addVerifiedCredentialsIfEnabled(
       agentInfo,
       agentInfoMetadata.agentID
     );
 
-    await this.agentCacheService.setAgentInfoCache(agentInfo);
+    await this.agentInfoCacheService.setAgentInfoCache(agentInfo);
     return agentInfo;
   }
 
@@ -129,7 +154,7 @@ export class AuthenticationService {
   private async getCachedAgentInfo(
     email: string
   ): Promise<AgentInfo | undefined> {
-    return await this.agentCacheService.getAgentInfoFromCache(email);
+    return await this.agentInfoCacheService.getAgentInfoFromCache(email);
   }
 
   /**
@@ -139,7 +164,7 @@ export class AuthenticationService {
    * @param session - Optional session object containing session details like expiration time.
    * @returns An `AgentInfo` object populated with the user's email, name, avatar URL, and session expiry.
    */
-  private buildBasicAgentInfo(
+  private buildAgentInfoFromOrySession(
     oryIdentity: OryDefaultIdentitySchema,
     session?: Session
   ): AgentInfo {
@@ -159,75 +184,6 @@ export class AuthenticationService {
       : undefined;
 
     return agentInfo;
-  }
-
-  /**
-   * Retrieves the agent information metadata for a given email.
-   *
-   * @param email - The email address of the user whose agent information metadata is to be retrieved.
-   * @returns A promise that resolves to the agent information metadata if found, or undefined if the user is not registered.
-   * @throws Will log an error message if the user is not registered.
-   */
-  private async getAgentInfoMetadata(
-    email: string
-  ): Promise<AgentInfoMetadata | undefined> {
-    try {
-      return await this.userService.getAgentInfoMetadata(email);
-    } catch (error) {
-      this.logger.verbose?.(
-        `User not registered: ${email}, ${error}`,
-        LogContext.AUTH
-      );
-      return undefined;
-    }
-  }
-
-  /**
-   * Populates the given `agentInfo` object with metadata from `agentInfoMetadata`.
-   *
-   * @param agentInfo - The agent information object to be populated.
-   * @param agentInfoMetadata - The metadata containing information to populate the agent info.
-   *
-   * @remarks
-   * This method assigns the `agentID`, `userID`, and `communicationID` from `agentInfoMetadata` to `agentInfo`.
-   * If `agentInfoMetadata` contains credentials, they are also assigned to `agentInfo`.
-   * If credentials are not available, a warning is logged.
-   */
-  private populateAgentInfoWithMetadata(
-    agentInfo: AgentInfo,
-    agentInfoMetadata: AgentInfoMetadata
-  ): void {
-    agentInfo.agentID = agentInfoMetadata.agentID;
-    agentInfo.userID = agentInfoMetadata.userID;
-    agentInfo.communicationID = agentInfoMetadata.communicationID;
-
-    if (agentInfoMetadata.credentials) {
-      agentInfo.credentials = agentInfoMetadata.credentials;
-    } else {
-      this.logger.warn?.(
-        `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
-        LogContext.AUTH
-      );
-    }
-  }
-
-  /**
-   * Adds verified credentials to the agent information if SSI (Self-Sovereign Identity) is enabled.
-   *
-   * @param agentInfo - The information of the agent to which verified credentials will be added.
-   * @param agentID - The unique identifier of the agent.
-   * @returns A promise that resolves when the operation is complete.
-   */
-  private async addVerifiedCredentialsIfEnabled(
-    agentInfo: AgentInfo,
-    agentID: string
-  ): Promise<void> {
-    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
-    if (ssiEnabled) {
-      const verifiedCredentials =
-        await this.agentService.getVerifiedCredentials(agentID);
-      agentInfo.verifiedCredentials = verifiedCredentials;
-    }
   }
 
   public async extendSession(sessionToBeExtended: Session): Promise<void> {

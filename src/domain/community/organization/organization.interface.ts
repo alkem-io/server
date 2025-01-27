@@ -2,18 +2,22 @@ import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
-import { IPreferenceSet } from '@domain/common/preference-set';
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @ObjectType('Organization', {
   implements: () => [IGroupable, IContributor],
 })
 export class IOrganization extends IContributorBase implements IContributor {
+  roleSet!: IRoleSet;
   accountID!: string;
 
   rowId!: number;
+
+  settings!: IOrganizationSettings;
 
   groups?: IUserGroup[];
 
@@ -43,8 +47,6 @@ export class IOrganization extends IContributorBase implements IContributor {
 
   @Field(() => IOrganizationVerification, { nullable: false })
   verification?: IOrganizationVerification;
-
-  preferenceSet?: IPreferenceSet;
 
   storageAggregator?: IStorageAggregator;
 }

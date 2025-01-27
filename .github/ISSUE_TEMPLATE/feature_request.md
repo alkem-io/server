@@ -2,9 +2,8 @@
 name: Feature request
 about: Suggest an idea for this project
 title: ''
-labels: 'enhancement, server'
+labels: 'enhancement, server, Atlas Team'
 assignees: ''
-
 ---
 
 **Is your feature request related to a problem? Please describe.**

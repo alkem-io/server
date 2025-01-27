@@ -4,7 +4,7 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 
 export const spaceDefaultsSettingsRootSpace: ISpaceSettings = {
   privacy: {
-    mode: SpacePrivacyMode.PUBLIC,
+    mode: SpacePrivacyMode.PRIVATE,
     allowPlatformSupportAsAdmin: false,
   },
   membership: {

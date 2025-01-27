@@ -3,6 +3,6 @@ import { BaseException } from './base.exception';
 
 export class RoleSetMembershipException extends BaseException {
   constructor(error: string, context: LogContext, code?: AlkemioErrorStatus) {
-    super(error, context, code ?? AlkemioErrorStatus.ROLE_SET_MEMBERSHIP);
+    super(error, context, code ?? AlkemioErrorStatus.ROLE_SET_ROLE);
   }
 }

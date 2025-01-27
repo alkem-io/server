@@ -14,7 +14,6 @@
       "displayName": "host org",
       "type": "organization",
       "authorization": {
-        "anonymousReadAccess": false,
         "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "",
@@ -30,7 +29,6 @@
       "updatedDate": {},
       "version": 1,
       "authorization": {
-        "anonymousReadAccess": false,
         "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-admin\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-owner\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-associate\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-registered\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "",
@@ -45,7 +43,6 @@
       ]
     },
     "authorization": {
-      "anonymousReadAccess": false,
       "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-admin\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-owner\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-associate\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-registered\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
       "verifiedCredentialRules": "[]",
       "privilegeRules": "",

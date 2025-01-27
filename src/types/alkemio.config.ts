@@ -38,6 +38,12 @@ export type AlkemioConfig = {
       enabled: boolean;
       key: string;
       endpoint: string;
+      retries: number;
+      timeout: number;
+      webhook_secret: {
+        name: string;
+        value: string;
+      };
     };
   };
   identity: {
@@ -137,8 +143,13 @@ export type AlkemioConfig = {
       };
       event_bus: {
         exchange: string;
-        ingest_space_queue: string;
-        ingest_space_result_queue: string;
+        ingest_body_of_knowledge_queue: string;
+        ingest_body_of_knowledge_result_queue: string;
+        invoke_engine_result: string;
+        invoke_engine_expert: string;
+        invoke_engine_guidance: string;
+        invoke_engine_generic: string;
+        invoke_engine_openai_assistant: string;
       };
     };
   };

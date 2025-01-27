@@ -28,7 +28,6 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
@@ -48,6 +47,7 @@ import { UpdateCalloutInput } from './dto/callout.dto.update';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { keyBy } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class CalloutService {
@@ -55,7 +55,7 @@ export class CalloutService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private namingService: NamingService,
     private roomService: RoomService,
-    private userLookupService: ContributorLookupService,
+    private userLookupService: UserLookupService,
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionPolicyService: CalloutContributionPolicyService,
@@ -418,7 +418,7 @@ export class CalloutService {
     } else {
       whiteboardData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboardData.profileData.displayName}`,
+          `${whiteboardData.profile?.displayName ?? 'Whiteboard'}`,
           reservedNameIDs
         );
     }
@@ -571,6 +571,7 @@ export class CalloutService {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
       relations: {
         contributions: {
+          post: true,
           whiteboard: true,
         },
         ...relations,

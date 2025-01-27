@@ -6,6 +6,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ForbiddenException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
@@ -22,17 +23,12 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { OrganizationVerificationService } from '../organization-verification/organization.verification.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { IPreferenceSet } from '@domain/common/preference-set';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { PreferenceType } from '@common/enums/preference.type';
 import { PaginationArgs } from '@core/pagination';
 import { OrganizationFilterInput } from '@core/filtering';
 import { IPaginatedType } from '@core/pagination/paginated.type';
@@ -42,13 +38,10 @@ import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args'
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { OrganizationRoleService } from '../organization-role/organization.role.service';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
@@ -56,21 +49,35 @@ import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { OrganizationSettingsService } from '../organization.settings/organization.settings.service';
+import { UpdateOrganizationSettingsEntityInput } from '../organization.settings/dto/organization.settings.dto.update';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { organizationRoleDefinitions } from './definitions/organization.role.definitions';
+import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.create';
+import { RoleName } from '@common/enums/role.name';
+import { organizationApplicationForm } from './definitions/organization.role.application.form';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class OrganizationService {
   constructor(
+    private accountLookupService: AccountLookupService,
     private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
-    private organizationRoleService: OrganizationRoleService,
+    private organizationSettingsService: OrganizationSettingsService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     private namingService: NamingService,
-    private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
     private contributorService: ContributorService,
+    private roleSetService: RoleSetService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -97,6 +104,16 @@ export class OrganizationService {
     organization.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ORGANIZATION
     );
+
+    const roleSetInput: CreateRoleSetInput = {
+      roles: organizationRoleDefinitions,
+      applicationForm: organizationApplicationForm,
+      entryRoleName: RoleName.ASSOCIATE,
+      type: RoleSetType.ORGANIZATION,
+    };
+    organization.roleSet =
+      await this.roleSetService.createRoleSet(roleSetInput);
+    organization.settings = this.getDefaultOrganizationSettings();
 
     organization.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -133,36 +150,56 @@ export class OrganizationService {
     );
     organization.accountID = account.id;
 
-    const savedOrg = await this.save(organization);
+    // Cache some of the contents before saving
+    const roleSetBeforeSave = organization.roleSet;
+
+    organization = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
       LogContext.COMMUNITY
     );
     organization.verification =
       await this.organizationVerificationService.createOrganizationVerification(
-        { organizationID: savedOrg.id }
+        { organizationID: organization.id }
       );
-    // Assign the creating agent as both a member and admin
-    if (agentInfo) {
-      await this.organizationRoleService.assignOrganizationRoleToUser({
-        organizationID: savedOrg.id,
-        userID: agentInfo.userID,
-        role: OrganizationRole.ASSOCIATE,
-      });
-      await this.organizationRoleService.assignOrganizationRoleToUser({
-        organizationID: savedOrg.id,
-        userID: agentInfo.userID,
-        role: OrganizationRole.ADMIN,
-      });
+    // Ensure the credentials have the right resourceID
+    organization.roleSet = await this.roleSetService.updateRoleResourceID(
+      roleSetBeforeSave,
+      organization.id
+    );
+    organization = await this.save(organization);
+
+    organization = await this.getOrganizationOrFail(organization.id, {
+      relations: {
+        roleSet: true,
+        profile: true,
+      },
+    });
+    if (!organization.roleSet || !organization.profile) {
+      throw new RelationshipNotFoundException(
+        `Unable to load roleSet during org creation: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
     }
 
-    organization.preferenceSet =
-      await this.preferenceSetService.createPreferenceSet(
-        PreferenceDefinitionSet.ORGANIZATION,
-        this.createPreferenceDefaults()
+    // Assign the creating agent as both a member and admin
+    if (agentInfo) {
+      await this.roleSetService.assignUserToRole(
+        organization.roleSet,
+        RoleName.ASSOCIATE,
+        agentInfo.userID,
+        agentInfo,
+        false
       );
 
-    organization = await this.save(organization);
+      await this.roleSetService.assignUserToRole(
+        organization.roleSet,
+        RoleName.ADMIN,
+        agentInfo.userID,
+        agentInfo,
+        false
+      );
+    }
 
     const userID = agentInfo ? agentInfo.userID : '';
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
@@ -171,6 +208,36 @@ export class OrganizationService {
     );
 
     return await this.getOrganizationOrFail(organization.id);
+  }
+
+  public async getRoleSet(organization: IOrganization): Promise<IRoleSet> {
+    const organizationWithRoleSet = await this.getOrganizationOrFail(
+      organization.id,
+      {
+        relations: { roleSet: true },
+      }
+    );
+
+    if (!organizationWithRoleSet.roleSet) {
+      throw new EntityNotInitializedException(
+        `Unable to locate RoleSet for organization: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return organizationWithRoleSet.roleSet;
+  }
+
+  private getDefaultOrganizationSettings(): IOrganizationSettings {
+    const settings: IOrganizationSettings = {
+      membership: {
+        allowUsersMatchingDomainToJoin: false,
+      },
+      privacy: {
+        // Note: not currently used but will be near term.
+        contributionRolesPubliclyVisible: true,
+      },
+    };
+    return settings;
   }
 
   async checkNameIdOrFail(nameID: string) {
@@ -204,6 +271,17 @@ export class OrganizationService {
         `Organization: the provided displayName is already taken: ${newDisplayName}`,
         LogContext.COMMUNITY
       );
+  }
+
+  public async updateOrganizationSettings(
+    organization: IOrganization,
+    settingsData: UpdateOrganizationSettingsEntityInput
+  ): Promise<IOrganization> {
+    organization.settings = this.organizationSettingsService.updateSettings(
+      organization.settings,
+      settingsData
+    );
+    return await this.save(organization);
   }
 
   async updateOrganization(
@@ -251,17 +329,29 @@ export class OrganizationService {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
       relations: {
-        preferenceSet: true,
         profile: true,
         agent: true,
         verification: true,
         groups: true,
         storageAggregator: true,
+        roleSet: true,
       },
     });
+
+    if (
+      !organization.roleSet ||
+      !organization.profile ||
+      !organization.verification ||
+      !organization.agent
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to delete org, missing relations: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     // TODO: give additional feedback?
     const accountHasResources =
-      await this.accountHostService.areResourcesInAccount(
+      await this.accountLookupService.areResourcesInAccount(
         organization.accountID
       );
     if (accountHasResources) {
@@ -271,11 +361,9 @@ export class OrganizationService {
       );
     }
 
-    await this.organizationRoleService.removeAllRoles(organization);
+    await this.roleSetService.removeAllRoleAssignments(organization.roleSet);
 
-    if (organization.profile) {
-      await this.profileService.deleteProfile(organization.profile.id);
-    }
+    await this.profileService.deleteProfile(organization.profile.id);
 
     if (organization.storageAggregator) {
       await this.storageAggregatorService.delete(
@@ -295,21 +383,13 @@ export class OrganizationService {
       await this.authorizationPolicyService.delete(organization.authorization);
     }
 
-    if (organization.agent) {
-      await this.agentService.deleteAgent(organization.agent.id);
-    }
+    await this.agentService.deleteAgent(organization.agent.id);
 
-    if (organization.verification) {
-      await this.organizationVerificationService.delete(
-        organization.verification.id
-      );
-    }
+    await this.organizationVerificationService.delete(
+      organization.verification.id
+    );
 
-    if (organization.preferenceSet) {
-      await this.preferenceSetService.deletePreferenceSet(
-        organization.preferenceSet.id
-      );
-    }
+    await this.roleSetService.removeRoleSetOrFail(organization.roleSet.id);
 
     const result = await this.organizationRepository.remove(
       organization as Organization
@@ -352,25 +432,9 @@ export class OrganizationService {
   }
 
   public async getAccount(organization: IOrganization): Promise<IAccount> {
-    return await this.accountHostService.getAccountOrFail(
+    return await this.accountLookupService.getAccountOrFail(
       organization.accountID
     );
-  }
-
-  async getOrganizationAndAgent(
-    organizationID: string
-  ): Promise<{ organization: IOrganization; agent: IAgent }> {
-    const organization = await this.getOrganizationOrFail(organizationID, {
-      relations: { agent: true },
-    });
-
-    if (!organization.agent) {
-      throw new EntityNotInitializedException(
-        `Organization Agent not initialized: ${organizationID}`,
-        LogContext.AUTH
-      );
-    }
-    return { organization: organization, agent: organization.agent };
   }
 
   async getOrganizations(args: ContributorQueryArgs): Promise<IOrganization[]> {
@@ -424,9 +488,13 @@ export class OrganizationService {
 
   async getMetrics(organization: IOrganization): Promise<INVP[]> {
     const activity: INVP[] = [];
+    const roleSet = await this.getRoleSet(organization);
 
-    const membersCount =
-      await this.organizationRoleService.getMembersCount(organization);
+    const membersCount = await this.roleSetService.countContributorsPerRole(
+      roleSet,
+      RoleName.ASSOCIATE,
+      RoleSetContributorType.USER
+    );
     const membersTopic = new NVP('associates', membersCount.toString());
     membersTopic.id = `associates-${organization.id}`;
     activity.push(membersTopic);
@@ -508,26 +576,6 @@ export class OrganizationService {
     return groups;
   }
 
-  async getPreferenceSetOrFail(orgId: string): Promise<IPreferenceSet> {
-    const orgWithPreferences = await this.getOrganizationOrFail(orgId, {
-      relations: {
-        preferenceSet: {
-          preferences: true,
-        },
-      },
-    });
-    const preferenceSet = orgWithPreferences.preferenceSet;
-
-    if (!preferenceSet) {
-      throw new EntityNotFoundException(
-        `Unable to find preferenceSet for organization with nameID: ${orgWithPreferences.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return preferenceSet;
-  }
-
   async getStorageAggregatorOrFail(
     organizationID: string
   ): Promise<IStorageAggregator> {
@@ -552,52 +600,6 @@ export class OrganizationService {
     return storageAggregator;
   }
 
-  async organizationsWithCredentials(
-    credentialCriteria: CredentialsSearchInput
-  ): Promise<IOrganization[]> {
-    const credResourceID = credentialCriteria.resourceID || '';
-    const organizationMatches = await this.organizationRepository
-      .createQueryBuilder('organization')
-      .leftJoinAndSelect('organization.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .getMany();
-
-    // reload to go through the normal loading path
-    const results: IOrganization[] = [];
-    for (const organization of organizationMatches) {
-      const loadedOrganization = await this.getOrganizationOrFail(
-        organization.id
-      );
-      results.push(loadedOrganization);
-    }
-    return results;
-  }
-
-  async countOrganizationsWithCredentials(
-    credentialCriteria: CredentialsSearchInput
-  ): Promise<number> {
-    const credResourceID = credentialCriteria.resourceID || '';
-    const organizationMatchesCount = await this.organizationRepository
-      .createQueryBuilder('organization')
-      .leftJoinAndSelect('organization.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .getCount();
-
-    return organizationMatchesCount;
-  }
-
   async getVerification(
     organizationParent: IOrganization
   ): Promise<IOrganizationVerification> {
@@ -614,21 +616,6 @@ export class OrganizationService {
       );
     }
     return organization.verification;
-  }
-
-  createPreferenceDefaults(): Map<PreferenceType, string> {
-    const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(
-      PreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN,
-      'false'
-    );
-
-    return defaults;
-  }
-
-  async getOrganizationByDomain(domain: string): Promise<IOrganization | null> {
-    const org = await this.organizationRepository.findOneBy({ domain: domain });
-    return org;
   }
 
   public async createOrganizationNameID(displayName: string): Promise<string> {

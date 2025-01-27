@@ -76,4 +76,9 @@ export enum LogContext {
   AI_SERVER_EVENT_BUS = 'ai-server-event-bus',
   SUBSCRIPTION_PUBLISH = 'subscription-publish',
   KRATOS = 'kratos',
+  WINGBACK = 'wingback',
+  WINGBACK_HOOKS = 'wingback-hooks',
+  //
+  AUTH_GUARD = 'auth-guard',
+  CODE_ERRORS = 'code-errors', // This is a special context for logging code errors with potential high impact
 }

@@ -1,5 +1,4 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
+import { Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UseGuards } from '@nestjs/common';
@@ -15,21 +14,17 @@ export class InAppNotificationResolverQueries {
   @UseGuards(GraphqlGuard)
   @Query(() => [InAppNotification], {
     nullable: false,
-    description: 'Get all notifications for a receiver.',
+    description: 'Get all notifications for the logged in user.',
   })
-  public async notifications(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('receiverID', { type: () => UUID, nullable: false })
-    receiverID: string
-  ) {
-    if (receiverID !== agentInfo.userID) {
+  public notifications(@CurrentUser() agentInfo: AgentInfo) {
+    if (!agentInfo.userID) {
       throw new ForbiddenException(
-        'Users can only view their own notifications',
+        'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,
-        { receiverID }
+        { agentInfo }
       );
     }
 
-    return this.inAppNotificationReader.getNotifications(receiverID);
+    return this.inAppNotificationReader.getNotifications(agentInfo.userID);
   }
 }

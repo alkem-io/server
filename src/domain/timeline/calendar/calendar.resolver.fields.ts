@@ -8,7 +8,7 @@ import {
 } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CalendarService } from './calendar.service';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 import { ICalendarEvent } from '../event/event.interface';
 import { ICalendar } from './calendar.interface';
@@ -32,8 +32,8 @@ export class CalendarResolverFields {
     @Args({
       name: 'ID',
       nullable: false,
-      type: () => UUID_NAMEID,
-      description: 'The ID or NAMEID of the CalendarEvent',
+      type: () => UUID,
+      description: 'The ID of the CalendarEvent',
     })
     idOrNameId: string
   ): Promise<ICalendarEvent> {
@@ -54,10 +54,7 @@ export class CalendarResolverFields {
       calendar.id
     );
 
-    const spaceSettings = this.spaceSettingsService.getSettings(
-      space.settingsStr
-    );
-
+    const spaceSettings = space.settings;
     const shouldSubspaceEventsBubble =
       spaceSettings.collaboration.allowEventsFromSubspaces;
 

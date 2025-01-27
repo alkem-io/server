@@ -1,7 +1,4 @@
 import { Module } from '@nestjs/common';
-import { UserGroupModule } from '@domain/community/user-group/user-group.module';
-import { UserModule } from '@domain/community/user/user.module';
-import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { RolesService } from './roles.service';
 import { RolesResolverQueries } from './roles.resolver.queries';
@@ -14,8 +11,10 @@ import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.f
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RolesResolverFields } from './roles.resolver.fields';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 
 @Module({
   imports: [
@@ -23,16 +22,15 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
     AuthorizationPolicyModule,
     ApplicationModule,
     InvitationModule,
-    UserModule,
-    UserGroupModule,
     CommunityModule,
-    OrganizationModule,
-    VirtualContributorModule,
+    UserLookupModule,
+    OrganizationLookupModule,
+    VirtualContributorLookupModule,
+    ContributorLookupModule,
     SpaceModule,
     PlatformAuthorizationPolicyModule,
     SpaceFilterModule,
     EntityResolverModule,
-    ContributorLookupModule,
   ],
   providers: [RolesService, RolesResolverQueries, RolesResolverFields],
   exports: [RolesService],

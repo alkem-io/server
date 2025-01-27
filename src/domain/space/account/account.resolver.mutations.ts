@@ -14,7 +14,6 @@ import { SpaceService } from '../space/space.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
@@ -44,6 +43,8 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { AccountLicenseResetInput } from './dto/account.dto.reset.license';
 import { AccountLicenseService } from './account.service.license';
 import { SpaceLicenseService } from '../space/space.service.license';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -54,6 +55,7 @@ export class AccountResolverMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private virtualContributorService: VirtualContributorService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
@@ -69,7 +71,7 @@ export class AccountResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IAccount, {
+  @Mutation(() => ISpace, {
     description: 'Creates a new Level Zero Space within the specified Account.',
   })
   async createSpace(
@@ -234,7 +236,7 @@ export class AccountResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Reload to ensure the new member credential is loaded
-    return await this.virtualContributorService.getVirtualContributorOrFail(
+    return await this.virtualContributorLookupService.getVirtualContributorOrFail(
       virtual.id
     );
   }
@@ -490,7 +492,7 @@ export class AccountResolverMutations {
     @Args('transferData') transferData: TransferAccountVirtualContributorInput
   ): Promise<IVirtualContributor> {
     let virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
+      await this.virtualContributorLookupService.getVirtualContributorOrFail(
         transferData.virtualContributorID,
         {
           relations: {
@@ -531,7 +533,7 @@ export class AccountResolverMutations {
     );
 
     // TODO: check if still needed later
-    return await this.virtualContributorService.getVirtualContributorOrFail(
+    return await this.virtualContributorLookupService.getVirtualContributorOrFail(
       virtualContributor.id
     );
   }

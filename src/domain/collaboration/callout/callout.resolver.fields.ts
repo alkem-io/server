@@ -4,13 +4,12 @@ import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { IUser } from '@domain/community/user/user.interface';
-import { EntityNotFoundException } from '@common/exceptions';
 import { UserLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
@@ -126,7 +125,7 @@ export class CalloutResolverFields {
   })
   async publishedBy(
     @Parent() callout: ICallout,
-    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+    @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
     const publishedBy = callout.publishedBy;
     if (!publishedBy) {
@@ -154,31 +153,13 @@ export class CalloutResolverFields {
   })
   async createdBy(
     @Parent() callout: ICallout,
-    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+    @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
     const createdBy = callout.createdBy;
     if (!createdBy) {
       return null;
     }
 
-    try {
-      return await loader
-        .load(createdBy)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => {
-          return !Object.keys(x).length ? null : x;
-        });
-    } catch (e: unknown) {
-      if (e instanceof EntityNotFoundException) {
-        this.logger?.warn(
-          `createdBy '${createdBy}' unable to be resolved when resolving callout '${callout.id}'`,
-          LogContext.COLLABORATION
-        );
-        return null;
-      } else {
-        throw e;
-      }
-    }
+    return loader.load(createdBy);
   }
 }

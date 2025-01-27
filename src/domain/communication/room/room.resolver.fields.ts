@@ -12,11 +12,13 @@ import { RoomService } from './room.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
 
 @Resolver(() => IRoom)
 export class RoomResolverFields {
   constructor(
     private roomService: RoomService,
+    private roomLookupService: RoomLookupService,
     private authorizationService: AuthorizationService
   ) {}
 
@@ -48,7 +50,7 @@ export class RoomResolverFields {
       AuthorizationPrivilege.READ,
       `resolve vc interactions for: ${reloadedRoom.id}`
     );
-    const result = await this.roomService.getVcInteractions(room.id);
+    const result = await this.roomLookupService.getVcInteractions(room.id);
     if (!result) return [];
     return result;
   }

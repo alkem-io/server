@@ -16,7 +16,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
@@ -28,6 +28,7 @@ import { Community } from '@domain/community/community';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -49,6 +50,7 @@ export class UrlGeneratorService {
   PATH_FORUM = 'forum';
   PATH_DISCUSSION = 'discussion';
   PATH_CALENDAR = 'calendar';
+  PATH_KNOWLEDGE_BASE = 'knowledge-base';
 
   FIELD_PROFILE_ID = 'profileId';
   FIELD_ID = 'id';
@@ -293,6 +295,12 @@ export class UrlGeneratorService {
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
         return `${this.endpoint_cluster}`;
+      case ProfileType.KNOWLEDGE_BASE:
+        const vc =
+          await this.getVirtualContributorFromKnowledgeBaseProfileOrFail(
+            profile.id
+          );
+        return `${this.endpoint_cluster}/${this.PATH_VIRTUAL_CONTRIBUTOR}/${vc.nameID}/${this.PATH_KNOWLEDGE_BASE}`;
     }
     return '';
   }
@@ -301,13 +309,13 @@ export class UrlGeneratorService {
     const type = this.getContributorType(contributor);
     let path = this.PATH_VIRTUAL_CONTRIBUTOR;
     switch (type) {
-      case CommunityContributorType.USER:
+      case RoleSetContributorType.USER:
         path = this.PATH_USER;
         break;
-      case CommunityContributorType.ORGANIZATION:
+      case RoleSetContributorType.ORGANIZATION:
         path = this.PATH_ORGANIZATION;
         break;
-      case CommunityContributorType.VIRTUAL:
+      case RoleSetContributorType.VIRTUAL:
         path = this.PATH_VIRTUAL_CONTRIBUTOR;
         break;
     }
@@ -323,11 +331,11 @@ export class UrlGeneratorService {
   }
 
   private getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return CommunityContributorType.USER;
+    if (contributor instanceof User) return RoleSetContributorType.USER;
     if (contributor instanceof Organization)
-      return CommunityContributorType.ORGANIZATION;
+      return RoleSetContributorType.ORGANIZATION;
     if (contributor instanceof VirtualContributor)
-      return CommunityContributorType.VIRTUAL;
+      return RoleSetContributorType.VIRTUAL;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY
@@ -545,14 +553,39 @@ export class UrlGeneratorService {
         },
       },
     });
-    if (collaboration) {
-      return await this.getJourneyUrlPath('collaborationId', collaboration.id);
+    if (!collaboration) {
+      throw new EntityNotFoundException(
+        `Unable to find innovationFlow for profile: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    if (collaboration.isTemplate) {
+      return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
     }
 
-    throw new EntityNotFoundException(
-      `Unable to find innovationFlow for profile: ${profileID}`,
-      LogContext.URL_GENERATOR
-    );
+    return this.getJourneyUrlPath('collaborationId', collaboration.id);
+  }
+
+  private async getCollaborationTemplateUrlPathOrFail(collaborationId: string) {
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        collaboration: {
+          id: collaborationId,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+
+    if (!template || !template.profile) {
+      throw new EntityNotFoundException(
+        `Unable to find collaboration template for collaboration: ${collaborationId}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    return this.getTemplateUrlPathOrFail(template.profile.id);
   }
 
   private async getCommunityGuidelinesUrlPathOrFail(
@@ -633,7 +666,7 @@ export class UrlGeneratorService {
         id: calloutID,
       },
       relations: {
-        collaboration: true,
+        calloutsSet: true,
       },
     });
 
@@ -644,12 +677,53 @@ export class UrlGeneratorService {
       );
     }
 
-    if (callout.collaboration) {
-      const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
-        'collaborationId',
-        callout.collaboration.id
-      );
-      return `${collaborationJourneyUrlPath}/${this.PATH_COLLABORATION}/${callout.nameID}`;
+    if (callout.calloutsSet) {
+      if (callout.calloutsSet.type === CalloutsSetType.COLLABORATION) {
+        const collaboration = await this.entityManager.findOne(Collaboration, {
+          where: {
+            calloutsSet: {
+              id: callout.calloutsSet.id,
+            },
+          },
+        });
+        if (!collaboration) {
+          throw new EntityNotFoundException(
+            `Unable to find collaboration for callouts set where id: ${callout.calloutsSet.id}`,
+            LogContext.URL_GENERATOR
+          );
+        }
+
+        if (collaboration.isTemplate) {
+          return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+        }
+
+        const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
+          'collaborationId',
+          collaboration.id
+        );
+        return `${collaborationJourneyUrlPath}/${this.PATH_COLLABORATION}/${callout.nameID}`;
+      } else if (callout.calloutsSet.type === CalloutsSetType.KNOWLEDGE_BASE) {
+        const virtualContributor = await this.entityManager.findOne(
+          VirtualContributor,
+          {
+            where: {
+              knowledgeBase: {
+                calloutsSet: {
+                  id: callout.calloutsSet.id,
+                },
+              },
+            },
+          }
+        );
+        if (!virtualContributor) {
+          throw new EntityNotFoundException(
+            `Unable to find virtual contributor for callouts set where id: ${callout.calloutsSet.id}`,
+            LogContext.URL_GENERATOR
+          );
+        }
+        const vcUrl = await this.generateUrlForVC(virtualContributor.nameID);
+        return `${vcUrl}/${this.PATH_KNOWLEDGE_BASE}/${callout.nameID}`;
+      }
     }
 
     const template = await this.entityManager.findOne(Template, {
@@ -915,5 +989,25 @@ export class UrlGeneratorService {
       collaboration.id
     );
     return `${journeyUrlPath}/${this.PATH_CALENDAR}/${calendarEventInfo.entityNameID}`;
+  }
+
+  private async getVirtualContributorFromKnowledgeBaseProfileOrFail(
+    kbProfileId: string
+  ) {
+    const vc = await this.entityManager.findOne(VirtualContributor, {
+      where: {
+        knowledgeBase: {
+          profile: { id: kbProfileId },
+        },
+      },
+    });
+
+    if (!vc) {
+      throw new EntityNotFoundException(
+        `Unable to find VirtualContributor for KnowledgeBase with profile ID: ${kbProfileId}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return vc;
   }
 }

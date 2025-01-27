@@ -6,7 +6,6 @@ import { Repository } from 'typeorm';
 import { Role } from './role.entity';
 import { IRole } from './role.interface';
 import { CreateRoleInput } from './dto/role.dto.create';
-import { IContributorRolePolicy } from './contributor.role.policy.interface';
 
 @Injectable()
 export class RoleService {
@@ -18,13 +17,11 @@ export class RoleService {
 
   public createRole(roleData: CreateRoleInput): IRole {
     const role = Role.create(roleData);
-    role.credential = JSON.stringify(roleData.credentialData);
-    role.parentCredentials = JSON.stringify(roleData.parentCredentialsData);
-    role.userPolicy = JSON.stringify(roleData.userPolicyData);
-    role.organizationPolicy = JSON.stringify(roleData.organizationPolicyData);
-    role.virtualContributorPolicy = JSON.stringify(
-      roleData.virtualContributorPolicyData
-    );
+    role.credential = roleData.credentialData;
+    role.parentCredentials = roleData.parentCredentialsData;
+    role.userPolicy = roleData.userPolicyData;
+    role.organizationPolicy = roleData.organizationPolicyData;
+    role.virtualContributorPolicy = roleData.virtualContributorPolicyData;
     return role;
   }
 
@@ -33,58 +30,10 @@ export class RoleService {
     return true;
   }
 
-  public getParentCredentialsForRole(role: IRole): ICredentialDefinition[] {
-    const parentCredentials: ICredentialDefinition[] = JSON.parse(
-      role.parentCredentials
-    );
-    return parentCredentials;
-  }
-
   public getCredentialsForRoleWithParents(
     role: IRole
   ): ICredentialDefinition[] {
-    const result = this.getCredentialsForRole(role);
-    return result.concat(this.getParentCredentialsForRole(role));
-  }
-
-  public getCredentialsForRole(role: IRole): ICredentialDefinition[] {
-    const result = [this.getCredentialForRole(role)];
-    return result;
-  }
-
-  public getCredentialForRole(role: IRole): ICredentialDefinition {
-    const result: ICredentialDefinition = JSON.parse(role.credential);
-    return result;
-  }
-
-  public convertCredentialToString(credential: ICredentialDefinition): string {
-    return JSON.stringify(credential);
-  }
-
-  public convertParentCredentialsToString(
-    parentCredentials: ICredentialDefinition[]
-  ): string {
-    return JSON.stringify(parentCredentials);
-  }
-
-  public getUserPolicy(role: IRole): IContributorRolePolicy {
-    const result: IContributorRolePolicy = JSON.parse(role.userPolicy);
-    return result;
-  }
-
-  public getOrganizationPolicy(role: IRole): IContributorRolePolicy {
-    const result: IContributorRolePolicy = JSON.parse(role.organizationPolicy);
-    return result;
-  }
-
-  public getVirtualContributorPolicy(role: IRole): IContributorRolePolicy {
-    const result: IContributorRolePolicy = JSON.parse(
-      role.virtualContributorPolicy
-    );
-    return result;
-  }
-
-  public save(role: IRole): Promise<IRole> {
-    return this.roleRepository.save(role);
+    const parentCredentials = role.parentCredentials;
+    return parentCredentials.concat(role.credential);
   }
 }

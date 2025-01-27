@@ -1,6 +1,6 @@
 import { LogContext } from '@common/enums';
 import { MutationType } from '@common/enums/subscriptions';
-import { RoomService } from '@domain/communication/room/room.service';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
@@ -14,7 +14,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 @Injectable()
 export class RoomControllerService {
   constructor(
-    private roomService: RoomService,
+    private roomLookupService: RoomLookupService,
     private subscriptionPublishService: SubscriptionPublishService,
     private vcInteractionService: VcInteractionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -27,8 +27,8 @@ export class RoomControllerService {
     if (!threadID) {
       return;
     }
-    const room = await this.roomService.getRoomOrFail(roomID);
-    const answerMessage = await this.roomService.sendMessageReply(
+    const room = await this.roomLookupService.getRoomOrFail(roomID);
+    const answerMessage = await this.roomLookupService.sendMessageReply(
       room,
       communicationID,
       {
@@ -61,8 +61,8 @@ export class RoomControllerService {
     const { roomID, communicationID }: RoomDetails =
       event.original.resultHandler.roomDetails!;
     const response: InvokeEngineResponse = event.response;
-    const room = await this.roomService.getRoomOrFail(roomID);
-    const answerMessage = await this.roomService.sendMessage(
+    const room = await this.roomLookupService.getRoomOrFail(roomID);
+    const answerMessage = await this.roomLookupService.sendMessage(
       room,
       communicationID,
       {

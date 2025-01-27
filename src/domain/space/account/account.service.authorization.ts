@@ -28,12 +28,12 @@ import {
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { AccountHostService } from '../account.host/account.host.service';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -47,7 +47,7 @@ export class AccountAuthorizationService {
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
-    private accountHostService: AccountHostService,
+    private accountLookupService: AccountLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -79,13 +79,17 @@ export class AccountAuthorizationService {
 
     // Get the host credentials
     const hostCredentials =
-      await this.accountHostService.getHostCredentials(account);
+      await this.accountLookupService.getHostCredentials(account);
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
       account.authorization
     );
-    account.authorization.anonymousReadAccess = false;
+    account.authorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        account.authorization,
+        AuthorizationPrivilege.READ
+      );
     account.authorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         account.authorization
@@ -116,7 +120,7 @@ export class AccountAuthorizationService {
       );
     // Get the host credentials
     const hostCredentials =
-      await this.accountHostService.getHostCredentials(account);
+      await this.accountLookupService.getHostCredentials(account);
 
     clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
       clonedAccountAuth,
@@ -222,7 +226,11 @@ export class AccountAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible. TODO: work through the logic on this
-    authorization.anonymousReadAccess = true;
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        authorization,
+        AuthorizationPrivilege.READ
+      );
 
     // Allow global admins to reset authorization, manage platform settings
     // and transfer resources
@@ -308,7 +316,7 @@ export class AccountAuthorizationService {
     newRules.push(createInnovationPack);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
+      updatedAuthorization,
       newRules
     );
   }

@@ -8,7 +8,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { InnovationPack } from './innovation.pack.entity';
 import { IInnovationPack } from './innovation.pack.interface';
 import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
@@ -23,15 +22,16 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { InnovationPack } from './innovation.pack.entity';
 
 @Injectable()
 export class InnovationPackService {
   constructor(
     private profileService: ProfileService,
     private templatesSetService: TemplatesSetService,
-    private accountHostService: AccountHostService,
+    private accountLookupService: AccountLookupService,
     @InjectRepository(InnovationPack)
     private innovationPackRepository: Repository<InnovationPack>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -52,9 +52,10 @@ export class InnovationPackService {
       ProfileType.INNOVATION_PACK,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       innovationPack.profile,
-      VisualType.CARD
+      innovationPackData.profileData.visuals,
+      [VisualType.CARD]
     );
 
     innovationPack.listedInStore = true;
@@ -255,7 +256,7 @@ export class InnovationPackService {
         LogContext.LIBRARY
       );
     }
-    const provider = await this.accountHostService.getHost(
+    const provider = await this.accountLookupService.getHost(
       innovationPack.account
     );
     if (!provider) {

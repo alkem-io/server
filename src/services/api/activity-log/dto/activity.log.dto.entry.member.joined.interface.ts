@@ -2,7 +2,7 @@ import { ICommunity } from '@domain/community/community';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @ObjectType('ActivityLogEntryMemberJoined', {
@@ -18,11 +18,11 @@ export abstract class IActivityLogEntryMemberJoined
   })
   contributor!: IContributor;
 
-  @Field(() => CommunityContributorType, {
+  @Field(() => RoleSetContributorType, {
     nullable: false,
     description: 'The type of the Contributor that joined the Community.',
   })
-  contributorType!: CommunityContributorType;
+  contributorType!: RoleSetContributorType;
 
   @Field(() => ICommunity, {
     nullable: false,

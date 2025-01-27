@@ -18,6 +18,7 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
+import { IUserSettings } from '../user.settings/user.settings.interface';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
@@ -29,6 +30,9 @@ export class User extends ContributorBase implements IUser {
   })
   @Generated('increment')
   rowId!: number;
+
+  @Column('json', { nullable: false })
+  settings!: IUserSettings;
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   accountUpn!: string;

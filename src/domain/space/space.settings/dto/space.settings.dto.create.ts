@@ -1,5 +1,1 @@
-export class CreateSpaceSettingsInput {
-  displayName!: string;
-
-  description!: string;
-}
+export class CreateSpaceSettingsInput {}

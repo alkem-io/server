@@ -1,5 +1,6 @@
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { LogContext } from '@common/enums/logging.context';
+import { validateAndConvertVisualTypeName } from '@common/enums/visual.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
@@ -9,10 +10,12 @@ import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/call
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
-import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
+import { ICalloutGroup } from '@domain/collaboration/callouts-set/dto/callout.group.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
+import { CreateCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.service';
@@ -21,11 +24,13 @@ import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovatio
 import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';
 import { ILocation } from '@domain/common/location/location.interface';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
+import { CreateVisualOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.visual';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { CreateReferenceInput } from '@domain/common/reference/dto/reference.dto.create';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IVisual } from '@domain/common/visual';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
@@ -62,9 +67,12 @@ export class InputCreatorService {
           profile: {
             tagsets: true,
             references: true,
+            visuals: true,
           },
           whiteboard: {
-            profile: true,
+            profile: {
+              visuals: true,
+            },
           },
         },
       },
@@ -109,40 +117,77 @@ export class InputCreatorService {
     };
   }
 
+  public async buildCreateCalloutsSetInputFromCalloutsSet(
+    calloutsSet: ICalloutsSet
+  ): Promise<CreateCalloutsSetInput> {
+    if (!calloutsSet.callouts) {
+      throw new RelationshipNotFoundException(
+        `CalloutsSet ${calloutsSet.id} is missing a relation`,
+        LogContext.INPUT_CREATOR
+      );
+    }
+
+    const calloutInputs: CreateCalloutInput[] = [];
+    for (const callout of calloutsSet.callouts) {
+      calloutInputs.push(
+        await this.buildCreateCalloutInputFromCallout(callout.id)
+      );
+    }
+
+    const calloutGroups: ICalloutGroup[] = calloutsSet.groups;
+    const result: CreateCalloutsSetInput = {
+      calloutsData: calloutInputs,
+      calloutGroups,
+      defaultCalloutGroupName: calloutGroups[0].displayName as CalloutGroupName,
+    };
+
+    return result;
+  }
+
   public async buildCreateCollaborationInputFromCollaboration(
     collaborationID: string
   ): Promise<CreateCollaborationInput> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(collaborationID, {
         relations: {
-          callouts: true,
+          calloutsSet: {
+            callouts: {
+              framing: {
+                profile: true,
+                whiteboard: {
+                  profile: {
+                    visuals: true,
+                  },
+                },
+              },
+            },
+          },
           innovationFlow: {
             profile: true,
           },
         },
       });
-    if (!collaboration.callouts || !collaboration.innovationFlow) {
+    if (
+      !collaboration.calloutsSet ||
+      !collaboration.calloutsSet.callouts ||
+      !collaboration.innovationFlow
+    ) {
       throw new RelationshipNotFoundException(
         `Collaboration ${collaboration.id} is missing a relation`,
         LogContext.INPUT_CREATOR
       );
     }
 
-    const calloutInputs: CreateCalloutInput[] = [];
-    for (const callout of collaboration.callouts) {
-      calloutInputs.push(
-        await this.buildCreateCalloutInputFromCallout(callout.id)
+    const calloutsSetInput =
+      await this.buildCreateCalloutsSetInputFromCalloutsSet(
+        collaboration.calloutsSet
       );
-    }
 
-    const calloutGroups: ICalloutGroup[] = JSON.parse(collaboration.groupsStr);
     const result: CreateCollaborationInput = {
-      calloutsData: calloutInputs,
+      calloutsSetData: calloutsSetInput,
       innovationFlowData: this.buildCreateInnovationFlowInputFromInnovationFlow(
         collaboration.innovationFlow
       ),
-      calloutGroups,
-      defaultCalloutGroupName: calloutGroups[0].displayName as CalloutGroupName,
     };
 
     return result;
@@ -184,7 +229,7 @@ export class InputCreatorService {
   ): CreateWhiteboardInput | undefined {
     if (!whiteboard) return undefined;
     return {
-      profileData: this.buildCreateProfileInputFromProfile(whiteboard.profile),
+      profile: this.buildCreateProfileInputFromProfile(whiteboard.profile),
       content: whiteboard.content,
       nameID: whiteboard.nameID,
     };
@@ -245,6 +290,9 @@ export class InputCreatorService {
       ),
       tagline: profile.tagline,
       tagsets: this.buildCreateTagsetsInputFromTagsets(profile.tagsets),
+      visuals: this.buildCreateVisualsOnProfileInputFromVisuals(
+        profile.visuals
+      ),
     };
   }
 
@@ -281,6 +329,20 @@ export class InputCreatorService {
       uri: reference.uri,
       description: reference.description,
     };
+  }
+
+  private buildCreateVisualsOnProfileInputFromVisuals(
+    visuals?: IVisual[]
+  ): CreateVisualOnProfileInput[] {
+    const result: CreateVisualOnProfileInput[] = [];
+    if (!visuals) return result;
+    for (const visual of visuals) {
+      result.push({
+        name: validateAndConvertVisualTypeName(visual.name),
+        uri: visual.uri,
+      });
+    }
+    return result;
   }
 
   public buildCreateTagsetInputFromTagset(tagset: ITagset): CreateTagsetInput {

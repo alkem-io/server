@@ -4,7 +4,6 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { User } from '@domain/community/user/user.entity';
-import { IUser } from '@domain/community/user/user.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import {
   EntityNotFoundException,
@@ -13,131 +12,19 @@ import {
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { IOrganization, Organization } from '@domain/community/organization';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 export class ContributorLookupService {
   constructor(
+    private userLookupService: UserLookupService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
-
-  public async getUserByUUID(
-    userID: string,
-    options?: FindOneOptions<User> | undefined
-  ): Promise<IUser | null> {
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        id: userID,
-      },
-      ...options,
-    });
-
-    return user;
-  }
-  public async getUserByNameIdOrFail(
-    userNameID: string,
-    options?: FindOneOptions<User> | undefined
-  ): Promise<IUser> {
-    const user: IUser | null = await this.entityManager.findOne(User, {
-      where: {
-        nameID: userNameID,
-      },
-      ...options,
-    });
-    if (!user) {
-      throw new EntityNotFoundException(
-        `User with nameId ${userNameID} not found`,
-        LogContext.COMMUNITY
-      );
-    }
-    return user;
-  }
-
-  public async getUserByUuidOrFail(
-    userID: string,
-    options?: FindOneOptions<User> | undefined
-  ): Promise<IUser> {
-    const user = await this.getUserByUUID(userID, options);
-    if (!user) {
-      throw new EntityNotFoundException(
-        `User with id ${userID} not found`,
-        LogContext.COMMUNITY
-      );
-    }
-    return user;
-  }
-
-  async getOrganizationByUUID(
-    organizationID: string,
-    options?: FindOneOptions<Organization>
-  ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, id: organizationID },
-      }
-    );
-
-    return organization;
-  }
-
-  async getOrganizationByNameIdOrFail(
-    organizationNameID: string,
-    options?: FindOneOptions<Organization>
-  ): Promise<IOrganization> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, nameID: organizationNameID },
-      }
-    );
-    if (!organization)
-      throw new EntityNotFoundException(
-        `Unable to find Organization with NameID: ${organizationNameID}`,
-        LogContext.COMMUNITY
-      );
-    return organization;
-  }
-
-  async getVirtualContributorByNameIdOrFail(
-    virtualContributorNameID: string,
-    options?: FindOneOptions<VirtualContributor>
-  ): Promise<IVirtualContributor> {
-    const virtualContributor: IVirtualContributor | null =
-      await this.entityManager.findOne(VirtualContributor, {
-        ...options,
-        where: { ...options?.where, nameID: virtualContributorNameID },
-      });
-    if (!virtualContributor)
-      throw new EntityNotFoundException(
-        `Unable to find VirtualContributor with NameID: ${virtualContributorNameID}`,
-        LogContext.COMMUNITY
-      );
-    return virtualContributor;
-  }
-
-  async getOrganizationOrFail(
-    organizationID: string,
-    options?: FindOneOptions<Organization>
-  ): Promise<IOrganization | never> {
-    const organization = await this.getOrganizationByUUID(
-      organizationID,
-      options
-    );
-    if (!organization)
-      throw new EntityNotFoundException(
-        `Unable to find Organization with ID: ${organizationID}`,
-        LogContext.COMMUNITY
-      );
-    return organization;
-  }
 
   // TODO: this may be heavy, is there a better way to do this?
   // Note: this logic should be reworked when the Account relationship to User / Organization is resolved
@@ -145,7 +32,7 @@ export class ContributorLookupService {
     userID: string
   ): Promise<IContributor[]> {
     const contributorsManagedByUser: IContributor[] = [];
-    const user = await this.getUserByUuidOrFail(userID, {
+    const user = await this.userLookupService.getUserOrFail(userID, {
       relations: {
         agent: true,
       },
@@ -217,11 +104,11 @@ export class ContributorLookupService {
   }
 
   public getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return CommunityContributorType.USER;
+    if (contributor instanceof User) return RoleSetContributorType.USER;
     if (contributor instanceof Organization)
-      return CommunityContributorType.ORGANIZATION;
+      return RoleSetContributorType.ORGANIZATION;
     if (contributor instanceof VirtualContributor)
-      return CommunityContributorType.VIRTUAL;
+      return RoleSetContributorType.VIRTUAL;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY

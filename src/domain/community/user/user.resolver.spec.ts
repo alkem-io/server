@@ -14,6 +14,7 @@ import { MockPreferenceSetService } from '@test/mocks/preference.set.service.moc
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
 import { MockNotificationAdapter } from '@test/mocks/notification.adapter.service.mock';
 import { MockPlatformAuthorizationService } from '@test/mocks/platform.authorization.service.mock';
+import { MockEntityManagerProvider } from '@test/mocks';
 
 describe('UserResolver', () => {
   let resolver: UserResolverQueries;
@@ -35,6 +36,7 @@ describe('UserResolver', () => {
         MockPreferenceSetService,
         MockNotificationAdapter,
         MockNotificationsService,
+        MockEntityManagerProvider,
         UserResolverMutations,
         UserResolverQueries,
       ],

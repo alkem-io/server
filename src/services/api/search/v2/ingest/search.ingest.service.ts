@@ -610,9 +610,11 @@ export class SearchIngestService {
             parentSpace: true,
           },
           collaboration: {
-            callouts: {
-              framing: {
-                profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  profile: profileRelationOptions,
+                },
               },
             },
           },
@@ -623,14 +625,16 @@ export class SearchIngestService {
           parentSpace: { id: true, parentSpace: { id: true } },
           collaboration: {
             id: true,
-            callouts: {
-              id: true,
-              createdBy: true,
-              createdDate: true,
-              nameID: true,
-              framing: {
+            calloutsSet: {
+              callouts: {
                 id: true,
-                profile: profileSelectOptions,
+                createdBy: true,
+                createdDate: true,
+                nameID: true,
+                framing: {
+                  id: true,
+                  profile: profileSelectOptions,
+                },
               },
             },
           },
@@ -640,7 +644,7 @@ export class SearchIngestService {
       })
       .then(spaces =>
         spaces.flatMap(space =>
-          space.collaboration?.callouts?.map(callout => ({
+          space.collaboration?.calloutsSet?.callouts?.map(callout => ({
             ...callout,
             framing: undefined,
             type: SearchEntityTypes.CALLOUT,
@@ -679,15 +683,17 @@ export class SearchIngestService {
         },
         relations: {
           collaboration: {
-            callouts: {
-              framing: {
-                whiteboard: {
-                  profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  whiteboard: {
+                    profile: profileRelationOptions,
+                  },
                 },
-              },
-              contributions: {
-                whiteboard: {
-                  profile: profileRelationOptions,
+                contributions: {
+                  whiteboard: {
+                    profile: profileRelationOptions,
+                  },
                 },
               },
             },
@@ -701,25 +707,27 @@ export class SearchIngestService {
           visibility: true,
           collaboration: {
             id: true,
-            callouts: {
-              id: true,
-              createdBy: true,
-              createdDate: true,
-              nameID: true,
-              framing: {
+            calloutsSet: {
+              callouts: {
                 id: true,
-                whiteboard: {
+                createdBy: true,
+                createdDate: true,
+                nameID: true,
+                framing: {
                   id: true,
-                  content: true,
-                  profile: profileSelectOptions,
+                  whiteboard: {
+                    id: true,
+                    content: true,
+                    profile: profileSelectOptions,
+                  },
                 },
-              },
-              contributions: {
-                id: true,
-                whiteboard: {
+                contributions: {
                   id: true,
-                  content: true,
-                  profile: profileSelectOptions,
+                  whiteboard: {
+                    id: true,
+                    content: true,
+                    profile: profileSelectOptions,
+                  },
                 },
               },
             },
@@ -736,7 +744,7 @@ export class SearchIngestService {
       })
       .then(spaces => {
         return spaces.flatMap(space => {
-          const callouts = space.collaboration?.callouts;
+          const callouts = space.collaboration?.calloutsSet?.callouts;
           return callouts
             ?.flatMap(callout => {
               // a callout can have whiteboard in the framing
@@ -836,10 +844,12 @@ export class SearchIngestService {
         },
         relations: {
           collaboration: {
-            callouts: {
-              contributions: {
-                post: {
-                  profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                contributions: {
+                  post: {
+                    profile: profileRelationOptions,
+                  },
                 },
               },
             },
@@ -853,16 +863,18 @@ export class SearchIngestService {
           visibility: true,
           collaboration: {
             id: true,
-            callouts: {
-              id: true,
-              contributions: {
+            calloutsSet: {
+              callouts: {
                 id: true,
-                post: {
+                contributions: {
                   id: true,
-                  createdBy: true,
-                  createdDate: true,
-                  nameID: true,
-                  profile: profileSelectOptions,
+                  post: {
+                    id: true,
+                    createdBy: true,
+                    createdDate: true,
+                    nameID: true,
+                    profile: profileSelectOptions,
+                  },
                 },
               },
             },
@@ -880,7 +892,7 @@ export class SearchIngestService {
       .then(spaces => {
         const posts: any[] = [];
         spaces.forEach(space => {
-          const callouts = space?.collaboration?.callouts;
+          const callouts = space?.collaboration?.calloutsSet?.callouts;
           callouts?.forEach(callout => {
             const contributions = callout?.contributions;
             contributions?.forEach(contribution => {

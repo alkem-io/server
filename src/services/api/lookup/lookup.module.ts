@@ -20,7 +20,6 @@ import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { UserModule } from '@domain/community/user/user.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
@@ -33,6 +32,11 @@ import { TemplatesSetModule } from '@domain/template/templates-set/templates.set
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { LookupMyPrivilegesResolverFields } from './lookup.resolver.my.privileges.fields';
+import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 
 @Module({
   imports: [
@@ -41,6 +45,7 @@ import { LicenseModule } from '@domain/common/license/license.module';
     AuthorizationPolicyModule,
     CommunityModule,
     CollaborationModule,
+    CalloutsSetModule,
     ContextModule,
     TemplateModule,
     TemplatesSetModule,
@@ -61,14 +66,21 @@ import { LicenseModule } from '@domain/common/license/license.module';
     StorageAggregatorModule,
     StorageBucketModule,
     PlatformAuthorizationPolicyModule,
-    UserModule,
+    UserLookupModule,
+    OrganizationLookupModule,
+    VirtualContributorModule,
     SpaceModule,
     CommunityGuidelinesModule,
-    VirtualContributorModule,
     RoleSetModule,
     LicenseModule,
+    KnowledgeBaseModule,
   ],
-  providers: [LookupService, LookupResolverQueries, LookupResolverFields],
+  providers: [
+    LookupService,
+    LookupResolverQueries,
+    LookupResolverFields,
+    LookupMyPrivilegesResolverFields,
+  ],
   exports: [LookupService],
 })
 export class LookupModule {}

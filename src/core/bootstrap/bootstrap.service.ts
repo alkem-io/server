@@ -63,6 +63,7 @@ import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class BootstrapService {
@@ -72,6 +73,7 @@ export class BootstrapService {
     private agentService: AgentService,
     private spaceService: SpaceService,
     private userService: UserService,
+    private userLookupService: UserLookupService,
     private userAuthorizationService: UserAuthorizationService,
     private organizationService: OrganizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
@@ -230,9 +232,11 @@ export class BootstrapService {
               },
               states: flowStates,
             },
-            calloutGroups: calloutGroups,
-            calloutsData: callouts,
-            defaultCalloutGroupName: calloutGroups[0].displayName,
+            calloutsSetData: {
+              calloutGroups: calloutGroups,
+              calloutsData: callouts,
+              defaultCalloutGroupName: calloutGroups[0].displayName,
+            },
           },
         }
       );
@@ -308,7 +312,7 @@ export class BootstrapService {
   async createUserProfiles(usersData: any[]) {
     try {
       for (const userData of usersData) {
-        const userExists = await this.userService.isRegisteredUser(
+        const userExists = await this.userLookupService.isRegisteredUser(
           userData.email
         );
         if (!userExists) {
@@ -515,7 +519,9 @@ export class BootstrapService {
         },
         level: SpaceLevel.SPACE,
         type: SpaceType.SPACE,
-        collaborationData: {},
+        collaborationData: {
+          calloutsSetData: {},
+        },
       };
 
       const space = await this.accountService.createSpaceOnAccount(spaceInput);
@@ -563,6 +569,12 @@ export class BootstrapService {
         profileData: {
           displayName: 'Guidance',
           description: 'Guidance Virtual Contributor',
+        },
+        knowledgeBaseData: {
+          profile: {
+            displayName: 'Knowledge Base for Virtual Contributor',
+          },
+          calloutsSetData: {},
         },
       });
 

@@ -5,4 +5,6 @@ export enum RESET_EVENT_TYPE {
   AUTHORIZATION_RESET_PLATFORM = 'auth-reset-platform',
   AUTHORIZATION_RESET_AI_SERVER = 'auth-reset-ai-server',
   LICENSE_RESET_ACCOUNT = 'license-reset-account',
+  LICENSE_RESET_ORGANIZATION = 'license-reset-organization',
+  LICENSE_RESET_PLATFORM = 'license-reset-platform',
 }

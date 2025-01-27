@@ -12,7 +12,7 @@ import {
 import { LogContext } from '@common/enums/logging.context';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CreateProfileInput } from '@domain/common/profile/dto';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
@@ -58,12 +58,16 @@ export class ContributorService {
     lastName?: string
   ): Promise<void> {
     let avatarURL: string | undefined = undefined;
-    if (profileData.avatarURL && this.isValidHttpUrl(profileData.avatarURL)) {
+    const avatarUrlFromProfile = profileData.visuals?.find(
+      visual => visual.name === VisualType.AVATAR
+    )?.uri;
+    const avatarUrlFromAgent = agentInfo?.avatarURL;
+    if (avatarUrlFromProfile && this.isValidHttpUrl(avatarUrlFromProfile)) {
       // Avatar has been explicitly set
-      avatarURL = profileData.avatarURL;
-    } else if (agentInfo && this.isValidHttpUrl(agentInfo.avatarURL)) {
+      avatarURL = avatarUrlFromProfile;
+    } else if (avatarUrlFromAgent && this.isValidHttpUrl(avatarUrlFromAgent)) {
       // Pick up the avatar from the user request context
-      avatarURL = agentInfo.avatarURL;
+      avatarURL = avatarUrlFromAgent;
     } else {
       // Generate a random avatar
       let avatarFirstName = profileData.displayName;
@@ -75,11 +79,15 @@ export class ContributorService {
         lastName
       );
     }
-    this.profileService.addVisualOnProfile(
-      profile,
+    const avatarVisual = [
+      {
+        name: VisualType.AVATAR,
+        uri: avatarURL,
+      },
+    ];
+    await this.profileService.addVisualsOnProfile(profile, avatarVisual, [
       VisualType.AVATAR,
-      avatarURL
-    );
+    ]);
   }
 
   public async ensureAvatarIsStoredInLocalStorageBucket(
@@ -180,13 +188,13 @@ export class ContributorService {
     const type = this.getContributorType(contributor);
     let contributorWithRelations: IContributor | null = null;
     switch (type) {
-      case CommunityContributorType.USER:
+      case RoleSetContributorType.USER:
         contributorWithRelations = await this.entityManager.findOne(User, {
           ...options,
           where: { ...options?.where, id: contributor.id },
         });
         break;
-      case CommunityContributorType.ORGANIZATION:
+      case RoleSetContributorType.ORGANIZATION:
         contributorWithRelations = await this.entityManager.findOne(
           Organization,
           {
@@ -195,7 +203,7 @@ export class ContributorService {
           }
         );
         break;
-      case CommunityContributorType.VIRTUAL:
+      case RoleSetContributorType.VIRTUAL:
         contributorWithRelations = await this.entityManager.findOne(
           VirtualContributor,
           {

@@ -8,14 +8,11 @@ import { RoleSetResolverMutations } from './role.set.resolver.mutations';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
-import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
+import { PlatformInvitationModule } from '@domain/access/invitation.platform/platform.invitation.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { RoleModule } from '../role/role.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { UserModule } from '@domain/community/user/user.module';
-import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RoleSetEventsService } from './role.set.service.events';
@@ -30,6 +27,11 @@ import { CommunityCommunicationModule } from '@domain/community/community-commun
 import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields.public';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { RoleSetLicenseService } from './role.set.service.license';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -38,15 +40,17 @@ import { RoleSetLicenseService } from './role.set.service.license';
     LicenseModule,
     FormModule,
     AgentModule,
+    UserLookupModule,
     UserModule,
-    OrganizationModule,
+    OrganizationLookupModule,
+    VirtualContributorLookupModule,
     ContributorModule,
     RoleModule,
     InvitationModule,
     EntityResolverModule,
     ApplicationModule,
     PlatformInvitationModule,
-    VirtualContributorModule,
+    AccountLookupModule,
     AiServerAdapterModule,
     NotificationAdapterModule,
     ContributionReporterModule,
