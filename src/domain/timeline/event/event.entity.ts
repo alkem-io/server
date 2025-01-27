@@ -55,13 +55,6 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @Column('boolean', { nullable: false })
   visibleOnParentCalendar!: boolean;
 
-  // @ManyToOne(() => Space, {
-  //   createForeignKeyConstraints: false,
-  //   eager: false,
-  //   nullable: true,
-  // })
-  subspace?: Space;
-
   constructor() {
     super();
   }

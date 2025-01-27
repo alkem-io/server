@@ -223,12 +223,6 @@ export class CalendarEventService {
         'subspace',
         'subspace.collaborationId = collaboration.id'
       )
-      // .leftJoinAndMapOne(
-      //   'calendarEvent.subspace',
-      //   Space,
-      //   'subspace',
-      //   'subspace.collaborationId = collaboration.id'
-      // )
       .where('calendarEvent.id = :id', { id: calendarEvent.id })
       .andWhere('subspace.level != :level', { level: SpaceLevel.SPACE })
       .select('subspace.id as spaceId')
@@ -243,12 +237,6 @@ export class CalendarEventService {
     });
 
     return space ?? undefined;
-
-    // return (spaceParentOfTheEvent as ICalendarEvent)?.subspace;
-
-    // return this.calendarEventRepository.findOne({
-    //   where: { id: spaceParentOfTheEvent.id },
-    // });
   }
 
   public async getComments(calendarEventID: string) {
