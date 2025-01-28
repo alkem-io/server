@@ -34,6 +34,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 import { CreateReferenceInput } from '../reference';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 
 @Injectable()
 export class ProfileService {
@@ -234,11 +235,20 @@ export class ProfileService {
     let visual: IVisual;
     for (const visualType of visualTypes) {
       switch (visualType) {
-        case VisualType.AVATAR:
-          visual = this.visualService.createVisualAvatar(
-            visualsData?.find(v => v.name === VisualType.AVATAR)?.uri
-          );
+        case VisualType.AVATAR: {
+          const defaultAvatarUrl = visualsData?.find(
+            v => v.name === VisualType.AVATAR
+          )?.uri;
+          if (
+            defaultAvatarUrl &&
+            defaultAvatarUrl.startsWith(DEFAULT_AVATAR_SERVICE_URL)
+          ) {
+            visual = this.visualService.createVisualAvatar(defaultAvatarUrl);
+          } else {
+            visual = this.visualService.createVisualAvatar();
+          }
           break;
+        }
         case VisualType.BANNER:
           visual = this.visualService.createVisualBanner();
           break;
