@@ -42,6 +42,7 @@ import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.ba
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 
 @Injectable()
 export class VirtualContributorService {
@@ -98,6 +99,7 @@ export class VirtualContributorService {
         virtualContributorData.knowledgeBaseData,
         virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType
       );
+
     virtualContributor.knowledgeBase =
       await this.knowledgeBaseService.createKnowledgeBase(
         knowledgeBaseData,
@@ -120,7 +122,12 @@ export class VirtualContributorService {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
-    if (aiPersonaInput.aiPersonaService) {
+
+    if (
+      aiPersonaInput.aiPersonaService &&
+      virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType ===
+        AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
+    ) {
       aiPersonaInput.aiPersonaService.bodyOfKnowledgeID = kb.id;
     }
 

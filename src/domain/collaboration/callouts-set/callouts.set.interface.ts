@@ -17,7 +17,7 @@ export abstract class ICalloutsSet extends IAuthorizable {
   })
   groups!: ICalloutGroup[];
 
-  @Field(() => [ICalloutGroup], {
+  @Field(() => CalloutsSetType, {
     nullable: false,
     description: 'The set of CalloutGroups in use in this CalloutsSet.',
   })
