@@ -34,7 +34,7 @@ export class AccountAdminCred1737793420337 implements MigrationInterface {
       accountID: string;
       agentId: string;
     }[] = await queryRunner.query(
-      `SELECT id, accountID, agentId FROM \`user\``
+      `SELECT id, accountID, agentId FROM \`organization\``
     );
     for (const organization of organizations) {
       // Find all agents that have a owner or admin credential for this organization
