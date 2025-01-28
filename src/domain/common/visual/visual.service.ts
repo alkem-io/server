@@ -216,10 +216,13 @@ export class VisualService {
     );
   }
 
-  public createVisualAvatar(): IVisual {
-    return this.createVisual({
-      name: VisualType.AVATAR,
-      ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
-    });
+  public createVisualAvatar(uri?: string): IVisual {
+    return this.createVisual(
+      {
+        name: VisualType.AVATAR,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
+      },
+      uri ?? ''
+    );
   }
 }

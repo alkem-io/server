@@ -235,7 +235,9 @@ export class ProfileService {
     for (const visualType of visualTypes) {
       switch (visualType) {
         case VisualType.AVATAR:
-          visual = this.visualService.createVisualAvatar();
+          visual = this.visualService.createVisualAvatar(
+            visualsData?.find(v => v.name === VisualType.AVATAR)?.uri
+          );
           break;
         case VisualType.BANNER:
           visual = this.visualService.createVisualBanner();
