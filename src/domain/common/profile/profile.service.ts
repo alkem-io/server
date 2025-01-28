@@ -235,10 +235,9 @@ export class ProfileService {
     let visual: IVisual;
     for (const visualType of visualTypes) {
       switch (visualType) {
-        case VisualType.AVATAR: {
+        case VisualType.AVATAR:
           visual = this.visualService.createVisualAvatar();
           break;
-        }
         case VisualType.BANNER:
           visual = this.visualService.createVisualBanner();
           break;
@@ -257,7 +256,7 @@ export class ProfileService {
       }
       const providedVisual = visualsData?.find(v => v.name === visualType);
       if (providedVisual) {
-        // Only allow external URL if we are creating an Avatar and if it comes from https://eu.ui-avatars.com/api/
+        // Only allow external URL if we are creating an Avatar and if it comes from https://eu.ui-avatars.com
         const allowExternalUrl =
           visualType === VisualType.AVATAR &&
           providedVisual.uri.startsWith(DEFAULT_AVATAR_SERVICE_URL);
