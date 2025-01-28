@@ -106,7 +106,7 @@ export class VirtualContributorAuthorizationService {
     const aiPersonaAuthorization =
       this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
         virtual.aiPersona,
-        virtual.authorization
+        clonedVirtualAuthorizationAnonymousAccess
       );
     updatedAuthorizations.push(aiPersonaAuthorization);
 
