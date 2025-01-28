@@ -320,6 +320,9 @@ export class NamingService {
       where: {
         comments: { id: commentsID },
       },
+      relations: {
+        calloutsSet: true,
+      },
     });
     if (!result) {
       throw new EntityNotFoundException(

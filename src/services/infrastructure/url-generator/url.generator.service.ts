@@ -553,14 +553,39 @@ export class UrlGeneratorService {
         },
       },
     });
-    if (collaboration) {
-      return await this.getJourneyUrlPath('collaborationId', collaboration.id);
+    if (!collaboration) {
+      throw new EntityNotFoundException(
+        `Unable to find innovationFlow for profile: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    if (collaboration.isTemplate) {
+      return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
     }
 
-    throw new EntityNotFoundException(
-      `Unable to find innovationFlow for profile: ${profileID}`,
-      LogContext.URL_GENERATOR
-    );
+    return this.getJourneyUrlPath('collaborationId', collaboration.id);
+  }
+
+  private async getCollaborationTemplateUrlPathOrFail(collaborationId: string) {
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        collaboration: {
+          id: collaborationId,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+
+    if (!template || !template.profile) {
+      throw new EntityNotFoundException(
+        `Unable to find collaboration template for collaboration: ${collaborationId}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    return this.getTemplateUrlPathOrFail(template.profile.id);
   }
 
   private async getCommunityGuidelinesUrlPathOrFail(
@@ -667,6 +692,11 @@ export class UrlGeneratorService {
             LogContext.URL_GENERATOR
           );
         }
+
+        if (collaboration.isTemplate) {
+          return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+        }
+
         const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
           'collaborationId',
           collaboration.id
@@ -691,7 +721,8 @@ export class UrlGeneratorService {
             LogContext.URL_GENERATOR
           );
         }
-        return this.generateUrlForVC(virtualContributor.nameID);
+        const vcUrl = await this.generateUrlForVC(virtualContributor.nameID);
+        return `${vcUrl}/${this.PATH_KNOWLEDGE_BASE}/${callout.nameID}`;
       }
     }
 
