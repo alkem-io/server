@@ -37,10 +37,10 @@ export class VirtualContributorResolverSubscriptions {
       variables
     ) {
       const isMatch =
-        variables.virtualContributorID === payload.virtualContributor.nameID;
+        variables.virtualContributorID === payload.virtualContributor.id;
 
       this.logger.verbose?.(
-        `[Filtering VirtualContribuor updated event id '${payload.eventID}'; VC id ${payload.virtualContributor.nameID}- match=${isMatch}`,
+        `[Filtering VirtualContribuor updated event id '${payload.eventID}'; payload VC id ${payload.virtualContributor.id}; variables VC id ${variables.virtualContributorID}- match=${isMatch}`,
         LogContext.SUBSCRIPTIONS
       );
       return isMatch;
