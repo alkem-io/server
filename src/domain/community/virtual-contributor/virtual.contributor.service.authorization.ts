@@ -25,7 +25,6 @@ export class VirtualContributorAuthorizationService {
   constructor(
     private virtualService: VirtualContributorService,
     private agentAuthorizationService: AgentAuthorizationService,
-    private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
@@ -70,7 +69,7 @@ export class VirtualContributorAuthorizationService {
     );
     // Allow everyone to see the VirtualContributor for now; note do not cascade to children
     virtual.authorization =
-      this.authorizationPolicy.appendCredentialRuleAnonymousRegisteredAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         virtual.authorization,
         AuthorizationPrivilege.READ,
         false
@@ -85,7 +84,7 @@ export class VirtualContributorAuthorizationService {
       );
     // To ensure that profile on an virtual is always publicly visible, even for non-authenticated users
     clonedVirtualAuthorizationAnonymousAccess =
-      this.authorizationPolicy.appendCredentialRuleAnonymousRegisteredAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         clonedVirtualAuthorizationAnonymousAccess,
         AuthorizationPrivilege.READ
       );
