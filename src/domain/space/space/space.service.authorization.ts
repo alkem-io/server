@@ -662,7 +662,10 @@ export class SpaceAuthorizationService {
     // Later: to allow account admins to some settings?
     const platformSettings =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationPrivilege.PLATFORM_ADMIN,
+          AuthorizationPrivilege.READ_ABOUT, // in order for Global Support to be able to administer the spaces
+        ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
