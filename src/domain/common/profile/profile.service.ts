@@ -236,17 +236,7 @@ export class ProfileService {
     for (const visualType of visualTypes) {
       switch (visualType) {
         case VisualType.AVATAR: {
-          const defaultAvatarUrl = visualsData?.find(
-            v => v.name === VisualType.AVATAR
-          )?.uri;
-          if (
-            defaultAvatarUrl &&
-            defaultAvatarUrl.startsWith(DEFAULT_AVATAR_SERVICE_URL)
-          ) {
-            visual = this.visualService.createVisualAvatar(defaultAvatarUrl);
-          } else {
-            visual = this.visualService.createVisualAvatar();
-          }
+          visual = this.visualService.createVisualAvatar();
           break;
         }
         case VisualType.BANNER:
@@ -267,11 +257,16 @@ export class ProfileService {
       }
       const providedVisual = visualsData?.find(v => v.name === visualType);
       if (providedVisual) {
+        // Only allow external URL if we are creating an Avatar and if it comes from https://eu.ui-avatars.com/api/
+        const allowExternalUrl =
+          visualType === VisualType.AVATAR &&
+          providedVisual.uri.startsWith(DEFAULT_AVATAR_SERVICE_URL);
+
         const url =
           await this.profileDocumentsService.reuploadFileOnStorageBucket(
             providedVisual.uri,
             profile.storageBucket,
-            true
+            allowExternalUrl
           );
         if (url) {
           visual.uri = url;

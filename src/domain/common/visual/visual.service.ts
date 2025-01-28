@@ -222,7 +222,7 @@ export class VisualService {
         name: VisualType.AVATAR,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
       },
-      uri ?? ''
+      uri
     );
   }
 }
