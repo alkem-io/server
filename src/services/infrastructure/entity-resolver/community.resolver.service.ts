@@ -195,7 +195,7 @@ export class CommunityResolverService {
     return community;
   }
 
-  public async getCommunityFromCalloutOrFail(
+  public async getCommunityFromCollaborationCalloutOrFail(
     calloutId: string
   ): Promise<ICommunity> {
     const space = await this.entityManager.findOne(Space, {
@@ -231,7 +231,7 @@ export class CommunityResolverService {
   public async getCommunityFromWhiteboardOrFail(
     whiteboardId: string
   ): Promise<ICommunity> {
-    // check for whitebaord in contributions
+    // check for whiteboard in contributions
     let space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
@@ -290,7 +290,7 @@ export class CommunityResolverService {
   public async getCollaborationLicenseFromWhiteboardOrFail(
     whiteboardId: string
   ): Promise<ILicense> {
-    // check for whitebaord in contributions
+    // check for whiteboard in contributions
     let collaboration = await this.entityManager.findOne(Collaboration, {
       where: {
         calloutsSet: {
@@ -341,7 +341,7 @@ export class CommunityResolverService {
   }
 
   public async getCommunityFromCalendarEventOrFail(
-    callendarEventId: string
+    calendarEventId: string
   ): Promise<ICommunity> {
     const [result]: {
       entityId: string;
@@ -353,7 +353,7 @@ export class CommunityResolverService {
         RIGHT JOIN \`space\` on \`timeline\`.\`id\` = \`space\`.\`timelineID\`
         JOIN \`calendar\` on \`timeline\`.\`calendarId\` = \`calendar\`.\`id\`
         JOIN \`calendar_event\` on \`calendar\`.\`id\` = \`calendar_event\`.\`calendarId\`
-        WHERE \`calendar_event\`.\`id\` = '${callendarEventId}';
+        WHERE \`calendar_event\`.\`id\` = '${calendarEventId}';
       `
     );
 
@@ -362,7 +362,7 @@ export class CommunityResolverService {
     });
     if (!community) {
       throw new EntityNotFoundException(
-        `Unable to find Community: ${result.communityId} for CalendarEvent with id: ${callendarEventId}`,
+        `Unable to find Community: ${result.communityId} for CalendarEvent with id: ${calendarEventId}`,
         LogContext.COMMUNITY
       );
     }
@@ -445,7 +445,7 @@ export class CommunityResolverService {
     return space.profile.displayName;
   }
 
-  public async getCommunityFromCalloutRoomOrFail(
+  public async getCommunityFromCollaborationCalloutRoomOrFail(
     commentsId: string
   ): Promise<ICommunity> {
     const space = await this.entityManager.findOne(Space, {
@@ -515,14 +515,14 @@ export class CommunityResolverService {
   ): Promise<ICommunity> {
     switch (roomType) {
       case RoomType.CALLOUT: {
-        return this.getCommunityFromCalloutRoomOrFail(id);
+        return this.getCommunityFromCollaborationCalloutRoomOrFail(id);
       }
       case RoomType.POST: {
         return this.getCommunityFromPostRoomOrFail(id);
       }
       default: {
         throw new EntityNotFoundException(
-          `Unable to find communnity for room of type: ${roomType}`,
+          `Unable to find community for room of type: ${roomType}`,
           LogContext.COMMUNITY
         );
       }

@@ -121,14 +121,14 @@ export class SpaceAuthorizationService {
     // Note: later will need additional logic here for Templates
     let parentSpaceRoleSet: IRoleSet | undefined;
     switch (space.level) {
-      case SpaceLevel.SPACE: {
+      case SpaceLevel.L0: {
         space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
           space.authorization
         );
         break;
       }
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY: {
+      case SpaceLevel.L1:
+      case SpaceLevel.L2: {
         if (isPrivate) {
           // Key: private get the base space authorization setup, that is then extended
           space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
@@ -262,11 +262,11 @@ export class SpaceAuthorizationService {
     const globalAnonymousRegistered = this.getGlobalAnonymousRegistered();
 
     switch (space.level) {
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         credentialCriteriasWithAccess.push(...globalAnonymousRegistered);
         break;
 
-      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.L1:
         credentialCriteriasWithAccess.push(
           ...(await this.getL1SpaceLevelCredentials(
             space,
@@ -275,7 +275,7 @@ export class SpaceAuthorizationService {
         );
         break;
 
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L2:
         credentialCriteriasWithAccess.push(
           ...(await this.getL2SpaceLevelCredentials(
             space,
@@ -415,7 +415,7 @@ export class SpaceAuthorizationService {
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    const isSubspaceCommunity = space.level !== SpaceLevel.SPACE;
+    const isSubspaceCommunity = space.level !== SpaceLevel.L0;
 
     const communityAuthorizations =
       await this.communityAuthorizationService.applyAuthorizationPolicy(
@@ -442,7 +442,7 @@ export class SpaceAuthorizationService {
     updatedAuthorizations.push(...storageAuthorizations);
 
     // Level zero space only entities
-    if (space.level === SpaceLevel.SPACE) {
+    if (space.level === SpaceLevel.L0) {
       if (!space.templatesManager) {
         throw new RelationshipNotFoundException(
           `Unable to load templatesManager on level zero space for auth reset ${space.id} `,
@@ -662,7 +662,10 @@ export class SpaceAuthorizationService {
     // Later: to allow account admins to some settings?
     const platformSettings =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationPrivilege.PLATFORM_ADMIN,
+          AuthorizationPrivilege.READ_ABOUT, // in order for Global Support to be able to administer the spaces
+        ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,

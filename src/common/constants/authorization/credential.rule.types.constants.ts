@@ -26,6 +26,8 @@ export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE =
   'credentialRuleTypes-roleSetEntryRoleInvite';
 export const CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED =
   'credentialRuleTypes-communityReadGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED =
+  'credentialRuleTypes-userReadGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET =
   'credentialRuleTypes-organizationAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ =

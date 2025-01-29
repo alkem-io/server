@@ -1,4 +1,4 @@
-import { CurrentUser, Profiling } from '@common/decorators';
+import { Profiling } from '@common/decorators';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UseGuards } from '@nestjs/common';
@@ -8,7 +8,7 @@ import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { IProfile } from './profile.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -24,7 +24,6 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { ProfileStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/profile/profile.storage.bucket.loader.creator';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 
@@ -158,17 +157,7 @@ export class ProfileResolverFields {
     nullable: false,
     description: 'The URL at which this profile can be viewed.',
   })
-  async url(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() profile: IProfile
-  ): Promise<string> {
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `generate URL for Profile: ${profile.id}`
-    );
-
+  async url(@Parent() profile: IProfile): Promise<string> {
     return await this.urlGeneratorService.generateUrlForProfile(profile);
   }
 }

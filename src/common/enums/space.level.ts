@@ -1,9 +1,9 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum SpaceLevel {
-  SPACE = 0,
-  CHALLENGE = 1,
-  OPPORTUNITY = 2,
+  L0 = 0,
+  L1 = 1,
+  L2 = 2,
 }
 
 registerEnumType(SpaceLevel, {

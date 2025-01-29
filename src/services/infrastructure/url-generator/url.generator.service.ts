@@ -169,17 +169,17 @@ export class UrlGeneratorService {
     const spaceNameID = space.nameID;
     const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
     switch (space.level) {
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         const spaceAdminUrl = await this.generateAdminUrlForSpace(space.nameID);
         return `${spaceAdminUrl}/community`;
-      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.L1:
         const subspaceAdminUrl = await this.getSubspaceUrlPath(
           this.FIELD_ID,
           space.id,
           true
         );
         return `${subspaceAdminUrl}/community`;
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L2:
         const subsubspaceAdminURL = await this.getSubsubspaceUrlPath(
           this.FIELD_ID,
           space.id,
@@ -553,14 +553,39 @@ export class UrlGeneratorService {
         },
       },
     });
-    if (collaboration) {
-      return await this.getJourneyUrlPath('collaborationId', collaboration.id);
+    if (!collaboration) {
+      throw new EntityNotFoundException(
+        `Unable to find innovationFlow for profile: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    if (collaboration.isTemplate) {
+      return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
     }
 
-    throw new EntityNotFoundException(
-      `Unable to find innovationFlow for profile: ${profileID}`,
-      LogContext.URL_GENERATOR
-    );
+    return this.getJourneyUrlPath('collaborationId', collaboration.id);
+  }
+
+  private async getCollaborationTemplateUrlPathOrFail(collaborationId: string) {
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        collaboration: {
+          id: collaborationId,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+
+    if (!template || !template.profile) {
+      throw new EntityNotFoundException(
+        `Unable to find collaboration template for collaboration: ${collaborationId}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    return this.getTemplateUrlPathOrFail(template.profile.id);
   }
 
   private async getCommunityGuidelinesUrlPathOrFail(
@@ -667,6 +692,11 @@ export class UrlGeneratorService {
             LogContext.URL_GENERATOR
           );
         }
+
+        if (collaboration.isTemplate) {
+          return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+        }
+
         const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
           'collaborationId',
           collaboration.id
@@ -691,7 +721,8 @@ export class UrlGeneratorService {
             LogContext.URL_GENERATOR
           );
         }
-        return this.generateUrlForVC(virtualContributor.nameID);
+        const vcUrl = await this.generateUrlForVC(virtualContributor.nameID);
+        return `${vcUrl}/${this.PATH_KNOWLEDGE_BASE}/${callout.nameID}`;
       }
     }
 
