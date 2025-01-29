@@ -4,6 +4,8 @@ export const CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE =
   'credentialRuleTypes-accountManage';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE =
   'credentialRuleTypes-accountResourcesManage';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT =
+  'credentialRuleTypes-accountResourceTransferAccept';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES =
   'credentialRuleTypes-accountChildEntities';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_COMMUNITY_READ =

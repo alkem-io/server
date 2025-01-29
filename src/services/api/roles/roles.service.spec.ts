@@ -287,6 +287,7 @@ const getSubpaceRoleResultMock = ({
   roles,
   displayName,
   type,
+  level,
 }: {
   id: string;
   roles: string[];
@@ -300,7 +301,7 @@ const getSubpaceRoleResultMock = ({
     nameID: `subspace-${id}`,
     roles,
     type,
-    level: SpaceLevel.L0,
+    level,
   };
 };
 
