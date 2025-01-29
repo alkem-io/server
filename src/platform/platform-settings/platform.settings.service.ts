@@ -13,12 +13,18 @@ export class PlatformSettingsService {
     settings: IPlatformSettings,
     updateData: UpdatePlatformSettingsInput
   ): IPlatformSettings {
+    const updatedSettings = {
+      ...settings,
+      integration: {
+        ...settings.integration,
+      },
+    };
     if (updateData.integration) {
       if (updateData.integration.iframeAllowedUrls !== undefined) {
-        settings.integration.iframeAllowedUrls =
+        updatedSettings.integration.iframeAllowedUrls =
           updateData.integration.iframeAllowedUrls;
       }
     }
-    return settings;
+    return updatedSettings;
   }
 }

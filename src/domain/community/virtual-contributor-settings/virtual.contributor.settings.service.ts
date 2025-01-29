@@ -13,12 +13,18 @@ export class VirtualContributorSettingsService {
     settings: IVirtualContributorSettings,
     updateData: UpdateVirtualContributorSettingsEntityInput
   ): IVirtualContributorSettings {
+    const updatedSettings = {
+      ...settings,
+      privacy: {
+        ...settings.privacy,
+      },
+    };
     if (updateData.privacy) {
       if (updateData.privacy.knowledgeBaseContentVisible !== undefined) {
-        settings.privacy.knowledgeBaseContentVisible =
+        updatedSettings.privacy.knowledgeBaseContentVisible =
           updateData.privacy.knowledgeBaseContentVisible;
       }
     }
-    return settings;
+    return updatedSettings;
   }
 }
