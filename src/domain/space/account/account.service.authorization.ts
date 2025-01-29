@@ -181,18 +181,17 @@ export class AccountAuthorizationService {
       );
     updatedAuthorizations.push(...storageAggregatorAuthorizations);
 
-    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
-    const clonedAccountAuth =
-      await this.getClonedAccountAuthExtendedForChildEntities(account);
-
     for (const vc of account.virtualContributors) {
       const updatedVcAuthorizations =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-          vc,
-          clonedAccountAuth
+          vc
         );
       updatedAuthorizations.push(...updatedVcAuthorizations);
     }
+
+    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
+    const clonedAccountAuth =
+      await this.getClonedAccountAuthExtendedForChildEntities(account);
 
     for (const ip of account.innovationPacks) {
       const innovationPackAuthorizations =
