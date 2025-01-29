@@ -16,6 +16,7 @@ import { EntityManager } from 'typeorm';
 import { Callout } from '@domain/collaboration/callout';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { UrlType } from '@common/enums/url.type';
+import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
 
 @Injectable()
 export class UrlResolverService {
@@ -37,7 +38,9 @@ export class UrlResolverService {
   ): Promise<UrlResolverQueryResults> {
     const pathElements = this.getPathElements(url);
 
-    const result: UrlResolverQueryResults = {};
+    const result: UrlResolverQueryResults = {
+      type: UrlType.SPACE,
+    };
 
     if (pathElements.length === 0) {
       throw new ValidationException(
@@ -110,15 +113,13 @@ export class UrlResolverService {
     };
 
     // Know it is a space URL
+    result.type = UrlType.SPACE;
     const space = await this.spaceLookupService.getSpaceByNameIdOrFail(
       pathElements[0],
       spaceRelations
     );
-    result.spaceId = space.id;
-    result.type = UrlType.SPACE;
+    result.space = this.createSpaceResult(space, pathElements.slice(1));
 
-    let subspace: ISpace | null;
-    let subsubspace: ISpace | null;
     if (pathElements.length === 2) {
       this.authorizationService.grantAccessOrFail(
         agentInfo,
@@ -126,55 +127,49 @@ export class UrlResolverService {
         AuthorizationPrivilege.READ_ABOUT,
         `resolving url ${url}`
       );
-      result.spaceId = space.id;
       return result;
     }
 
-    let spaceForPath: ISpace = space;
-    let spacePath: string[] = pathElements.slice(1);
     if (pathElements.length > 2 && pathElements[1] === URL_PATHS.CHALLENGES) {
-      subspace =
+      const subspace =
         await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
           pathElements[2],
           space.id,
           spaceRelations
         );
-      if (!subspace) {
-        throw new ValidationException(
-          `Invalid URL: ${url}`,
-          LogContext.URL_GENERATOR
-        );
-      }
-      spaceForPath = subspace;
-      spacePath = pathElements.splice(3);
-      result.subspaceId = subspace.id;
+      const parentSpaceID = space.id;
+      result.space = this.createSpaceResult(subspace, pathElements.slice(3));
+      result.space.parentSpaces.push(parentSpaceID);
     }
     if (
       pathElements.length > 4 &&
       pathElements[3] === URL_PATHS.OPPORTUNITIES
     ) {
-      subsubspace =
+      const subsubspace =
         await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
           pathElements[4],
           space.id,
           spaceRelations
         );
-      if (!subsubspace) {
-        throw new ValidationException(
-          `Invalid URL: ${url}`,
-          LogContext.URL_GENERATOR
-        );
-      }
-      spaceForPath = subsubspace;
-      spacePath = pathElements.splice(5);
-      result.subsubspaceId = subsubspace.id;
+
+      const parentSpaceID = space.id;
+      result.space = this.createSpaceResult(subsubspace, pathElements.slice(5));
+      result.space.parentSpaces.push(parentSpaceID);
     }
 
-    // Set the internal fields based on the spaceForPath
-    result.collaborationId = spaceForPath.collaboration?.id;
-    result.calloutsSetId = spaceForPath.collaboration?.calloutsSet?.id;
+    return await this.populateCollaborationResult(result);
+  }
 
-    // Now lets process inside the space
+  private async populateCollaborationResult(
+    result: UrlResolverQueryResults
+  ): Promise<UrlResolverQueryResults> {
+    if (!result.space) {
+      throw new ValidationException(
+        `Space not provided: ${result.type}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    const spacePath = result.space.pathElements;
     if (spacePath.length === 0) {
       return result;
     }
@@ -192,7 +187,7 @@ export class UrlResolverService {
             },
           },
         });
-        result.calloutId = callout.id;
+        result.space.collaboration.calloutId = callout.id;
         result.type = UrlType.CALLOUT;
         if (spacePath.length >= 4) {
           if (spacePath[2] === URL_PATHS.POSTS) {
@@ -210,9 +205,9 @@ export class UrlResolverService {
                 },
               }
             );
-            result.contributionId = contribution.id;
+            result.space.collaboration.contributionId = contribution.id;
             result.type = UrlType.CONTRIBUTION_POST;
-            result.postId = contribution?.post?.id;
+            result.space.collaboration.postId = contribution?.post?.id;
           } else if (spacePath[2] === URL_PATHS.WHITEBOARDS) {
             const whiteboardNameID = spacePath[3];
             const contribution = await this.entityManager.findOneOrFail(
@@ -228,14 +223,14 @@ export class UrlResolverService {
                 },
               }
             );
-            result.contributionId = contribution.id;
+            result.space.collaboration.contributionId = contribution.id;
             result.type = UrlType.CONTRIBUTION_WHITEBOARD;
-            result.whiteboardId = contribution?.whiteboard?.id;
+            result.space.collaboration.whiteboardId =
+              contribution?.whiteboard?.id;
           }
         }
       }
     }
-
     return result;
   }
 
@@ -244,5 +239,34 @@ export class UrlResolverService {
 
     const pathElements = parsedUrl.pathname.split('/').filter(Boolean);
     return pathElements;
+  }
+
+  private createSpaceResult(
+    space: ISpace | null,
+    pathElements: string[]
+  ): UrlResolverQueryResultSpace {
+    if (!space) {
+      throw new ValidationException(
+        'Space not provided',
+        LogContext.URL_GENERATOR
+      );
+    }
+    if (!space.collaboration) {
+      throw new ValidationException(
+        `Space ${space.id} does not have a collaboration`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    const result: UrlResolverQueryResultSpace = {
+      id: space.id,
+      level: space.level,
+      parentSpaces: [],
+      collaboration: {
+        id: space.collaboration.id,
+        calloutsSetId: space.collaboration.calloutsSet?.id,
+      },
+      pathElements: pathElements,
+    };
+    return result;
   }
 }

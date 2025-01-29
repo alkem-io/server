@@ -1,84 +1,46 @@
 import { UrlType } from '@common/enums/url.type';
+import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { UrlResolverQueryResultSpace } from './url.resolver.query.space.result';
 
 @ObjectType()
 export class UrlResolverQueryResults {
   @Field(() => UrlType, {
+    nullable: false,
+  })
+  type!: UrlType;
+
+  @Field(() => UrlResolverQueryResultSpace, {
     nullable: true,
   })
-  type?: UrlType;
+  space?: UrlResolverQueryResultSpace;
 
-  @Field(() => String, {
-    nullable: true,
-  })
-  spaceId?: string;
-
-  @Field(() => String, {
-    nullable: true,
-  })
-  subspaceId?: string;
-
-  @Field(() => String, {
-    nullable: true,
-  })
-  subsubspaceId?: string;
-
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: true,
   })
   organizationId?: string;
 
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: true,
   })
   innovationPackId?: string;
 
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: true,
   })
   innovationHubId?: string;
 
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: true,
   })
   templateId?: string;
 
-  @Field(() => String, {
-    nullable: true,
-  })
-  collaborationId?: string;
-
-  @Field(() => String, {
-    nullable: true,
-  })
-  calloutsSetId?: string;
-
-  @Field(() => String, {
-    nullable: true,
-  })
-  calloutId?: string;
-
-  @Field(() => String, {
-    nullable: true,
-  })
-  contributionId?: string;
-
-  @Field(() => String, {
-    nullable: true,
-  })
-  postId?: string;
-
-  @Field(() => String, {
-    nullable: true,
-  })
-  whiteboardId?: string;
-
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: true,
   })
   userId?: string;
 
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: true,
   })
   vcId?: string;
