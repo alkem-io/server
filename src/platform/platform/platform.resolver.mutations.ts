@@ -61,7 +61,7 @@ export class PlatformResolverMutations {
       agentInfo,
       platform.authorization,
       AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
-      `platform settings update: ${settingsData}`
+      `platform settings update: ${JSON.stringify(settingsData.integration)}`
     );
 
     platform.settings = await this.platformSettingsService.updateSettings(
