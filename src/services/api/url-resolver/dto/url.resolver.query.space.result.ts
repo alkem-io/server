@@ -23,7 +23,7 @@ export class UrlResolverQueryResultSpace {
   @Field(() => UUID, {
     nullable: false,
   })
-  l0SpaceID!: string;
+  levelZeroSpaceID!: string;
 
   @Field(() => UrlResolverQueryResultCollaboration, {
     nullable: false,

@@ -23,21 +23,6 @@ export class UrlResolverQueryResults {
   @Field(() => UUID, {
     nullable: true,
   })
-  innovationPackId?: string;
-
-  @Field(() => UUID, {
-    nullable: true,
-  })
-  innovationHubId?: string;
-
-  @Field(() => UUID, {
-    nullable: true,
-  })
-  templateId?: string;
-
-  @Field(() => UUID, {
-    nullable: true,
-  })
   userId?: string;
 
   @Field(() => UUID, {
