@@ -8,7 +8,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE as CREDENTIAL_RULE_ACCOUNT_ADMIN,
+  CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
   CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS,
@@ -178,7 +178,7 @@ export class VirtualContributorAuthorizationService {
       );
     newRules.push(globalSpacesReader);
 
-    const accountHostManage =
+    const accountAdminManage =
       this.authorizationPolicyService.createCredentialRule(
         [
           AuthorizationPrivilege.CREATE,
@@ -188,9 +188,9 @@ export class VirtualContributorAuthorizationService {
           AuthorizationPrivilege.CONTRIBUTE,
         ],
         [accountAdminCredential],
-        CREDENTIAL_RULE_ACCOUNT_ADMIN
+        CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE
       );
-    newRules.push(accountHostManage);
+    newRules.push(accountAdminManage);
 
     // TODO: rule that for now allows global support ability to manage VCs, this to be removed later
     const globalSupportManage =
