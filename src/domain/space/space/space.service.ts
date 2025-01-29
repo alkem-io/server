@@ -625,28 +625,6 @@ export class SpaceService {
     });
   }
 
-  public getSpacesById(
-    spaceIdsOrNameIds: string[],
-    options?: FindManyOptions<Space>
-  ) {
-    return this.spaceRepository.find({
-      ...options,
-      where: options?.where
-        ? Array.isArray(options.where)
-          ? [
-              { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
-              ...options.where,
-            ]
-          : [
-              { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
-              options.where,
-            ]
-        : [{ id: In(spaceIdsOrNameIds) }, { nameID: In(spaceIdsOrNameIds) }],
-    });
-  }
-
   async getSpaceOrFail(
     spaceID: string,
     options?: FindOneOptions<Space>

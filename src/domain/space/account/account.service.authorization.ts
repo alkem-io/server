@@ -34,7 +34,6 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AccountLookupService } from '../account.lookup/account.lookup.service';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -48,7 +47,6 @@ export class AccountAuthorizationService {
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
-    private accountLookupService: AccountLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}

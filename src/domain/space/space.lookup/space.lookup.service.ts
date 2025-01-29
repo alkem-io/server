@@ -8,7 +8,13 @@ import {
 } from '@common/exceptions';
 import { Space } from '../space/space.entity';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
@@ -93,6 +99,28 @@ export class SpaceLookupService {
     });
 
     return notExist.length > 0 ? notExist : true;
+  }
+
+  public getSpacesById(
+    spaceIdsOrNameIds: string[],
+    options?: FindManyOptions<Space>
+  ) {
+    return this.spaceRepository.find({
+      ...options,
+      where: options?.where
+        ? Array.isArray(options.where)
+          ? [
+              { id: In(spaceIdsOrNameIds) },
+              { nameID: In(spaceIdsOrNameIds) },
+              ...options.where,
+            ]
+          : [
+              { id: In(spaceIdsOrNameIds) },
+              { nameID: In(spaceIdsOrNameIds) },
+              options.where,
+            ]
+        : [{ id: In(spaceIdsOrNameIds) }, { nameID: In(spaceIdsOrNameIds) }],
+    });
   }
 
   public async getCollaborationOrFail(
