@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsArray, ArrayNotEmpty, IsUrl } from 'class-validator';
 
 @InputType()
 export class UpdatePlatformSettingsIntegrationInput {
@@ -8,6 +8,8 @@ export class UpdatePlatformSettingsIntegrationInput {
     description:
       'Update the list of allowed URLs for iFrames within Markdown content.',
   })
-  @IsBoolean()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUrl({}, { each: true })
   iframeAllowedUrls!: string[];
 }
