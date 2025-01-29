@@ -92,34 +92,24 @@ export class UrlResolverService {
         result.type = UrlType.ORGANIZATION;
         return result;
       case URL_PATHS.ADMIN:
+        result.type = UrlType.ADMIN;
+        return result;
       case URL_PATHS.INNOVATION_LIBRARY:
+        result.type = UrlType.INNOVATION_LIBRARY;
+        return result;
       case URL_PATHS.INNOVATION_PACKS:
+        result.type = UrlType.INNOVATION_PACKS;
+        return result;
       case URL_PATHS.FORUM:
-        throw new ValidationException(
-          `Url of type ${pathElements[0]} not supported for resolving`,
-          LogContext.URL_GENERATOR
-        );
+        result.type = UrlType.FORUM;
+        return result;
     }
-    const spaceRelations = {
-      relations: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              contributions: true,
-            },
-          },
-        },
-        community: {
-          roleSet: true,
-        },
-      },
-    };
 
-    // Know it is a space URL
+    // Assumption is that everything else is a Space!
     result.type = UrlType.SPACE;
     const space = await this.spaceLookupService.getSpaceByNameIdOrFail(
       pathElements[0],
-      spaceRelations
+      this.spaceRelations
     );
     result.space = this.createSpaceResult(space, pathElements.slice(1));
 
@@ -138,7 +128,7 @@ export class UrlResolverService {
         await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
           pathElements[2],
           space.id,
-          spaceRelations
+          this.spaceRelations
         );
       const parentSpaceID = space.id;
       result.space = this.createSpaceResult(subspace, pathElements.slice(3));
@@ -152,7 +142,7 @@ export class UrlResolverService {
         await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
           pathElements[4],
           space.id,
-          spaceRelations
+          this.spaceRelations
         );
 
       const parentSpaceID = space.id;
@@ -268,8 +258,24 @@ export class UrlResolverService {
         id: space.collaboration.id,
         calloutsSetId: space.collaboration.calloutsSet?.id,
       },
+      levelZeroSpaceID: space.levelZeroSpaceID,
       pathElements: pathElements,
     };
     return result;
   }
+
+  private spaceRelations = {
+    relations: {
+      collaboration: {
+        calloutsSet: {
+          callouts: {
+            contributions: true,
+          },
+        },
+      },
+      community: {
+        roleSet: true,
+      },
+    },
+  };
 }

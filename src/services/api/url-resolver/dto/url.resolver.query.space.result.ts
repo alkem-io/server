@@ -20,6 +20,11 @@ export class UrlResolverQueryResultSpace {
   })
   parentSpaces!: string[];
 
+  @Field(() => UUID, {
+    nullable: false,
+  })
+  l0SpaceID!: string;
+
   @Field(() => UrlResolverQueryResultCollaboration, {
     nullable: false,
   })

@@ -8,6 +8,11 @@ export enum UrlType {
   USER = 'user',
   VIRTUAL_CONTRIBUTOR = 'vc',
   CONTRIBUTION_WHITEBOARD = 'whiteboard',
+  FORUM = 'forum',
+  INNOVATION_HUB = 'innovation-hub',
+  INNOVATION_LIBRARY = 'innovation-library',
+  INNOVATION_PACKS = 'innovation-pack',
+  ADMIN = 'admin',
 }
 
 registerEnumType(UrlType, {
