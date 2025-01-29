@@ -92,8 +92,11 @@ export class UrlResolverService {
         result.type = UrlType.ORGANIZATION;
         return result;
       case URL_PATHS.ADMIN:
+      case URL_PATHS.INNOVATION_LIBRARY:
+      case URL_PATHS.INNOVATION_PACKS:
+      case URL_PATHS.FORUM:
         throw new ValidationException(
-          `Invalid URL: ${url}`,
+          `Url of type ${pathElements[0]} not supported for resolving`,
           LogContext.URL_GENERATOR
         );
     }
