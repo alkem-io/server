@@ -23,6 +23,6 @@ export class UrlResolverResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('url', { type: () => String }) url: string
   ): Promise<UrlResolverQueryResults> {
-    return await this.urlResolverService.resolveUrl(url);
+    return await this.urlResolverService.resolveUrl(url, agentInfo);
   }
 }

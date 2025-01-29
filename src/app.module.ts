@@ -89,7 +89,7 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
-
+import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
 
 @Module({
   imports: [
@@ -254,6 +254,7 @@ import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
         };
       },
     }),
+    UrlResolverModule,
     LoaderCreatorModule,
     ScalarsModule,
     AuthenticationModule,

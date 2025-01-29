@@ -1,5 +1,6 @@
 export const URL_PATHS = {
   USER: 'user',
+  ADMIN: 'admin',
   VIRTUAL_CONTRIBUTOR: 'vc',
   ORGANIZATION: 'organization',
   INNOVATION_LIBRARY: 'innovation-library',

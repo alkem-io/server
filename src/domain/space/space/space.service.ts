@@ -718,12 +718,16 @@ export class SpaceService {
     return space;
   }
 
-  public async getSpaceByNameIdOrFail(spaceNameID: string): Promise<ISpace> {
+  public async getSpaceByNameIdOrFail(
+    spaceNameID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
     const space = await this.spaceRepository.findOne({
       where: {
         nameID: spaceNameID,
         level: SpaceLevel.L0,
       },
+      ...options,
     });
     if (!space) {
       if (!space)
