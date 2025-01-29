@@ -396,7 +396,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       where: {
         visibility: Not(SpaceVisibility.ARCHIVED),
-        level: SpaceLevel.SPACE,
+        level: SpaceLevel.L0,
       },
     });
   }
@@ -406,7 +406,7 @@ export class SearchIngestService {
         ...journeyFindOptions,
         where: {
           visibility: Not(SpaceVisibility.ARCHIVED),
-          level: SpaceLevel.SPACE,
+          level: SpaceLevel.L0,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -438,7 +438,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       where: {
         visibility: Not(SpaceVisibility.ARCHIVED),
-        level: SpaceLevel.CHALLENGE,
+        level: SpaceLevel.L1,
       },
     });
   }
@@ -448,7 +448,7 @@ export class SearchIngestService {
         ...journeyFindOptions,
         where: {
           visibility: Not(SpaceVisibility.ARCHIVED),
-          level: SpaceLevel.CHALLENGE,
+          level: SpaceLevel.L1,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -483,7 +483,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       where: {
         visibility: Not(SpaceVisibility.ARCHIVED),
-        level: SpaceLevel.OPPORTUNITY,
+        level: SpaceLevel.L2,
       },
     });
   }
@@ -493,7 +493,7 @@ export class SearchIngestService {
         ...journeyFindOptions,
         where: {
           visibility: Not(SpaceVisibility.ARCHIVED),
-          level: SpaceLevel.OPPORTUNITY,
+          level: SpaceLevel.L2,
         },
         relations: {
           ...journeyFindOptions.relations,
