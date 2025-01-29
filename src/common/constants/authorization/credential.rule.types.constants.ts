@@ -12,6 +12,8 @@ export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_COMMUNITY_READ =
   'credentialRuleTypes-spaceGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
+export const CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS =
+  'credentialRuleTypes-virtualContributorPlatformSettings';
 export const CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
 export const CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED =
@@ -60,6 +62,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS =
   'credentialRuleTypes-platformGrantGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS =
   'credentialRuleTypes-platformPlatformAdmins';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_SETTINGS_ADMINS =
+  'credentialRuleTypes-platformPlatformSettingsAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_MGMT =
   'credentialRuleTypes-platformPlatformMgmt';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET =
