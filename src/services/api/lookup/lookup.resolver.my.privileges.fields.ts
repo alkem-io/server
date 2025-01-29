@@ -16,7 +16,6 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { UserService } from '@domain/community/user/user.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
@@ -37,6 +36,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => LookupMyPrivilegesQueryResults)
 export class LookupMyPrivilegesResolverFields {
@@ -64,7 +64,7 @@ export class LookupMyPrivilegesResolverFields {
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private guidelinesService: CommunityGuidelinesService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
@@ -172,7 +172,7 @@ export class LookupMyPrivilegesResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const user = await this.userService.getUserOrFail(id, {
+    const user = await this.userLookupService.getUserOrFail(id, {
       relations: { authorization: true },
     });
 

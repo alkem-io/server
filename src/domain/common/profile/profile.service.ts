@@ -34,6 +34,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 import { CreateReferenceInput } from '../reference';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 
 @Injectable()
 export class ProfileService {
@@ -255,11 +256,16 @@ export class ProfileService {
       }
       const providedVisual = visualsData?.find(v => v.name === visualType);
       if (providedVisual) {
+        // Only allow external URL if we are creating an Avatar and if it comes from https://eu.ui-avatars.com
+        const allowExternalUrl =
+          visualType === VisualType.AVATAR &&
+          providedVisual.uri.startsWith(DEFAULT_AVATAR_SERVICE_URL);
+
         const url =
           await this.profileDocumentsService.reuploadFileOnStorageBucket(
             providedVisual.uri,
             profile.storageBucket,
-            true
+            !allowExternalUrl
           );
         if (url) {
           visual.uri = url;

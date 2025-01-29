@@ -24,6 +24,7 @@ import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
   CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
@@ -179,18 +180,17 @@ export class AccountAuthorizationService {
       );
     updatedAuthorizations.push(...storageAggregatorAuthorizations);
 
-    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
-    const clonedAccountAuth =
-      await this.getClonedAccountAuthExtendedForChildEntities(account);
-
     for (const vc of account.virtualContributors) {
       const updatedVcAuthorizations =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-          vc,
-          clonedAccountAuth
+          vc
         );
       updatedAuthorizations.push(...updatedVcAuthorizations);
     }
+
+    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
+    const clonedAccountAuth =
+      await this.getClonedAccountAuthExtendedForChildEntities(account);
 
     for (const ip of account.innovationPacks) {
       const innovationPackAuthorizations =
@@ -240,7 +240,6 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.LICENSE_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
-          AuthorizationPrivilege.TRANSFER_RESOURCE,
           AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
           AuthorizationPrivilege.CREATE_INNOVATION_PACK,
@@ -265,15 +264,32 @@ export class AccountAuthorizationService {
       );
     newRules.push(globalSpacesReader);
 
-    // Allow hosts (users = self mgmt, org = org admin) to manage their own account
+    // Add privileges related to offering and accepting transfer of resources
     const accountResourcesManage =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.TRANSFER_RESOURCE],
-        [...hostCredentials],
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT, // Later remove?
+        ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE
       );
+    accountResourcesManage.criterias.push(...hostCredentials);
     accountResourcesManage.cascade = false;
     newRules.push(accountResourcesManage);
+
+    const acceptResourceTransfers =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT
+      );
+    acceptResourceTransfers.criterias.push(...hostCredentials);
+    acceptResourceTransfers.cascade = false;
+    newRules.push(acceptResourceTransfers);
 
     // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
     const accountHostManage =

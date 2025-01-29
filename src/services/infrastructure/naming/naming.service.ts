@@ -40,7 +40,7 @@ export class NamingService {
     const subspaces = await this.entityManager.find(Space, {
       where: {
         levelZeroSpaceID: levelZeroSpaceID,
-        level: Not(SpaceLevel.SPACE),
+        level: Not(SpaceLevel.L0),
       },
       select: {
         nameID: true,
@@ -52,7 +52,7 @@ export class NamingService {
   public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
     const levelZeroSpaces = await this.entityManager.find(Space, {
       where: {
-        level: SpaceLevel.SPACE,
+        level: SpaceLevel.L0,
       },
       select: {
         nameID: true,
@@ -319,6 +319,9 @@ export class NamingService {
     const result = await this.entityManager.findOne(Callout, {
       where: {
         comments: { id: commentsID },
+      },
+      relations: {
+        calloutsSet: true,
       },
     });
     if (!result) {

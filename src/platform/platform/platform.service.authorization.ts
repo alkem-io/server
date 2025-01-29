@@ -23,10 +23,12 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
-import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LicensingFrameworkAuthorizationService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetType } from '@common/enums/role.set.type';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -36,33 +38,33 @@ export class PlatformAuthorizationService {
     private forumAuthorizationService: ForumAuthorizationService,
     private platformService: PlatformService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private libraryAuthorizationService: LibraryAuthorizationService,
     private licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
-    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService
+    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
+    private roleSetAuthorizationService: RoleSetAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
-        platformInvitations: true,
         forum: true,
         library: true,
         storageAggregator: true,
         licensingFramework: true,
         templatesManager: true,
+        roleSet: true,
       },
     });
 
     if (
       !platform.authorization ||
-      !platform.platformInvitations ||
       !platform.library ||
       !platform.forum ||
       !platform.storageAggregator ||
       !platform.licensingFramework ||
-      !platform.templatesManager
+      !platform.templatesManager ||
+      !platform.roleSet
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
@@ -96,21 +98,22 @@ export class PlatformAuthorizationService {
       );
     updatedAuthorizations.push(...templatesManagerAuthorizations);
 
-    for (const platformInvitation of platform.platformInvitations) {
-      const updatedInvitation =
-        await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
-          platformInvitation,
-          platform.authorization
-        );
-      updatedAuthorizations.push(updatedInvitation);
-    }
+    const additionalRoleSetCredentialRules =
+      await this.createAdditionalRoleSetCredentialRules(platform.roleSet);
+    const roleSetAuthorizations =
+      await this.roleSetAuthorizationService.applyAuthorizationPolicy(
+        platform.roleSet.id,
+        platform.authorization,
+        additionalRoleSetCredentialRules
+      );
+    updatedAuthorizations.push(...roleSetAuthorizations);
 
     const copyPlatformAuthorization: IAuthorizationPolicy =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         platform.authorization
       );
 
-    // Extend the platform authoization policy for communication only
+    // Extend the platform authorization policy for communication only
     const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
       copyPlatformAuthorization
     );
@@ -246,17 +249,7 @@ export class PlatformAuthorizationService {
   private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global admins to manage global privileges, access Platform mgmt
-    const globalAdminNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-        [AuthorizationCredential.GLOBAL_ADMIN],
-        CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS
-      );
-    globalAdminNotInherited.cascade = false;
-    credentialRules.push(globalAdminNotInherited);
-
-    // Allow global supportto access Platform mgmt
+    // Allow global support to access Platform mgmt
     const platformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_ADMIN],
@@ -269,6 +262,18 @@ export class PlatformAuthorizationService {
       );
     platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
+
+    // Allow global admins to manage the platform settings
+    // Separate rule + privilege as can imagine that we later define this as a separate
+    // platform role
+    const platformSettingsAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
+      );
+    platformSettingsAdmin.cascade = false;
+    credentialRules.push(platformSettingsAdmin);
 
     const globalSupportPlatformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -321,5 +326,41 @@ export class PlatformAuthorizationService {
     credentialRules.push(createOrg);
 
     return credentialRules;
+  }
+
+  private async createAdditionalRoleSetCredentialRules(
+    roleSet: IRoleSet
+  ): Promise<IAuthorizationPolicyRuleCredential[]> {
+    if (roleSet.type !== RoleSetType.PLATFORM) {
+      throw new RelationshipNotFoundException(
+        `RoleSet of wrong type passed: ${roleSet.id}`,
+        LogContext.ROLES
+      );
+    }
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Allow global admins to manage global privileges, access Platform mgmt
+    const globalAdminNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS
+      );
+    globalAdminNotInherited.cascade = false;
+    newRules.push(globalAdminNotInherited);
+
+    const globalAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.GRANT],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
+      );
+    globalAdmin.cascade = false;
+    newRules.push(globalAdmin);
+
+    return newRules;
   }
 }

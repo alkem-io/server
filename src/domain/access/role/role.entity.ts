@@ -1,9 +1,11 @@
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IRole } from './role.interface';
-import { CommunityRoleType } from '@common/enums/community.role';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
 import { RoleSet } from '../role-set/role.set.entity';
+import { RoleName } from '@common/enums/role.name';
+import { IContributorRolePolicy } from './contributor.role.policy.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Entity()
 export class Role extends BaseAlkemioEntity implements IRole {
@@ -15,13 +17,13 @@ export class Role extends BaseAlkemioEntity implements IRole {
   roleSet?: RoleSet;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  type!: CommunityRoleType;
+  name!: RoleName;
 
-  @Column('text', { nullable: false })
-  credential!: string;
+  @Column('json', { nullable: false })
+  credential!: ICredentialDefinition;
 
-  @Column('text', { nullable: false })
-  parentCredentials!: string;
+  @Column('json', { nullable: false })
+  parentCredentials!: ICredentialDefinition[];
 
   @Column('boolean', { nullable: false })
   requiresEntryRole!: boolean;
@@ -29,12 +31,12 @@ export class Role extends BaseAlkemioEntity implements IRole {
   @Column('boolean', { nullable: false })
   requiresSameRoleInParentRoleSet!: boolean;
 
-  @Column('text', { nullable: false })
-  userPolicy!: string;
+  @Column('json', { nullable: false })
+  userPolicy!: IContributorRolePolicy;
 
-  @Column('text', { nullable: false })
-  organizationPolicy!: string;
+  @Column('json', { nullable: false })
+  organizationPolicy!: IContributorRolePolicy;
 
-  @Column('text', { nullable: false })
-  virtualContributorPolicy!: string;
+  @Column('json', { nullable: false })
+  virtualContributorPolicy!: IContributorRolePolicy;
 }

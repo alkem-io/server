@@ -63,6 +63,7 @@ import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class BootstrapService {
@@ -72,6 +73,7 @@ export class BootstrapService {
     private agentService: AgentService,
     private spaceService: SpaceService,
     private userService: UserService,
+    private userLookupService: UserLookupService,
     private userAuthorizationService: UserAuthorizationService,
     private organizationService: OrganizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
@@ -310,7 +312,7 @@ export class BootstrapService {
   async createUserProfiles(usersData: any[]) {
     try {
       for (const userData of usersData) {
-        const userExists = await this.userService.isRegisteredUser(
+        const userExists = await this.userLookupService.isRegisteredUser(
           userData.email
         );
         if (!userExists) {
@@ -515,7 +517,7 @@ export class BootstrapService {
           displayName: DEFAULT_SPACE_DISPLAYNAME,
           tagline: 'An empty space to be populated',
         },
-        level: SpaceLevel.SPACE,
+        level: SpaceLevel.L0,
         type: SpaceType.SPACE,
         collaborationData: {
           calloutsSetData: {},

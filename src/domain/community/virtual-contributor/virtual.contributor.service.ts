@@ -43,6 +43,10 @@ import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.ba
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { virtualContributorSettingsDefault } from './definition/virtual.contributor.settings.default';
+import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
+import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -56,6 +60,7 @@ export class VirtualContributorService {
     private aiServerAdapter: AiServerAdapter,
     private knowledgeBaseService: KnowledgeBaseService,
     private virtualContributorLookupService: VirtualContributorLookupService,
+    private virtualContributorSettingsService: VirtualContributorSettingsService,
     private accountLookupService: AccountLookupService,
     private virtualContributorDefaultsService: VirtualContributorDefaultsService,
     @InjectEntityManager('default')
@@ -93,18 +98,26 @@ export class VirtualContributorService {
     virtualContributor.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
     );
+    // Pull the settings from a defaults file
+    virtualContributor.settings = virtualContributorSettingsDefault;
 
     const knowledgeBaseData =
       await this.virtualContributorDefaultsService.createKnowledgeBaseInput(
         virtualContributorData.knowledgeBaseData,
         virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType
       );
+
     virtualContributor.knowledgeBase =
       await this.knowledgeBaseService.createKnowledgeBase(
         knowledgeBaseData,
         storageAggregator,
         agentInfo?.userID
       );
+
+    const kb = await this.knowledgeBaseService.save(
+      virtualContributor.knowledgeBase
+    );
+
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );
@@ -116,6 +129,15 @@ export class VirtualContributorService {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
+
+    if (
+      aiPersonaInput.aiPersonaService &&
+      virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType ===
+        AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
+    ) {
+      aiPersonaInput.aiPersonaService.bodyOfKnowledgeID = kb.id;
+    }
+
     virtualContributor.aiPersona =
       await this.aiPersonaService.createAiPersona(aiPersonaInput);
 
@@ -160,6 +182,18 @@ export class VirtualContributorService {
     );
 
     return virtualContributor;
+  }
+
+  public async updateVirtualContributorSettings(
+    virtualContributor: IVirtualContributor,
+    settingsData: UpdateVirtualContributorSettingsEntityInput
+  ): Promise<IVirtualContributor> {
+    virtualContributor.settings =
+      this.virtualContributorSettingsService.updateSettings(
+        virtualContributor.settings,
+        settingsData
+      );
+    return await this.save(virtualContributor);
   }
 
   private async checkNameIdOrFail(nameID: string) {

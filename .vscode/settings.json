@@ -9,5 +9,18 @@
   },
   "[yml]": {
     "editor.formatOnSave": false
-  }
+  },
+  "cSpell.words": [
+    "Alkemio",
+    "authorizable",
+    "Criterias",
+    "EXCALIDRAW",
+    "INVP",
+    "kratos",
+    "mgmt",
+    "NAMEID",
+    "ROLESET",
+    "subsubspace",
+    "oathkeeper"
+  ]
 }

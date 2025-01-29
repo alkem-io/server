@@ -11,7 +11,7 @@ import {
 import { Args, Parent, ResolveField } from '@nestjs/graphql';
 import { IDocument } from '../document/document.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 
@@ -31,8 +31,8 @@ export class StorageBucketResolverFields {
     @Args({
       name: 'ID',
       nullable: false,
-      type: () => UUID_NAMEID,
-      description: 'The ID or NAMEID of the Document',
+      type: () => UUID,
+      description: 'The ID of the Document',
     })
     ID: string
   ): Promise<IDocument> {

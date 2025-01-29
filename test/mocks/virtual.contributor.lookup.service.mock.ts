@@ -1,10 +1,9 @@
 import { MockValueProvider } from '@test/utils/mock.value.provider';
-import { ConfigService } from '@nestjs/config';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
-export const MockContributorLookupService: MockValueProvider<VirtualContributorLookupService> =
+export const MockVirtualContributorLookupService: MockValueProvider<VirtualContributorLookupService> =
   {
-    provide: ConfigService,
+    provide: VirtualContributorLookupService,
     useValue: {
       getVirtualContributorByNameIdOrFail: jest.fn(),
     },

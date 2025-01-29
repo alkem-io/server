@@ -5,7 +5,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IApplication } from './application.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION } from '@common/constants/authorization/credential.rule.constants';
+import { CREDENTIAL_RULE_ROLESET_APPLY } from '@common/constants/authorization/credential.rule.constants';
 @Injectable()
 export class ApplicationAuthorizationService {
   constructor(
@@ -52,7 +52,7 @@ export class ApplicationAuthorizationService {
             resourceID: user.id,
           },
         ],
-        CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION
+        CREDENTIAL_RULE_ROLESET_APPLY
       );
     newRules.push(userApplicationRule);
 

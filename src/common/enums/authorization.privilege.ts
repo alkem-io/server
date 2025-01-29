@@ -10,6 +10,7 @@ export enum AuthorizationPrivilege {
   AUTHORIZATION_RESET = 'authorization-reset',
   LICENSE_RESET = 'license-reset',
   PLATFORM_ADMIN = 'platform-admin', // To determine if the user should have access to the platform administration
+  PLATFORM_SETTINGS_ADMIN = 'platform-settings-admin', // To determine if the user should be able to update platform wide settings
   CONTRIBUTE = 'contribute',
   CREATE_CALLOUT = 'create-callout',
   CREATE_POST = 'create-post',
@@ -27,12 +28,12 @@ export enum AuthorizationPrivilege {
   FILE_UPLOAD = 'file-upload',
   FILE_DELETE = 'file-delete',
   UPDATE_INNOVATION_FLOW = 'update-innovation-flow',
-  COMMUNITY_JOIN = 'community-join',
-  COMMUNITY_APPLY = 'community-apply',
-  COMMUNITY_INVITE = 'community-invite',
-  COMMUNITY_INVITE_ACCEPT = 'community-invite-accept',
-  COMMUNITY_ADD_MEMBER = 'community-add-member', // only for global admins
-  COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT = 'community-add-member-vc-from-account', // allow adding a VC as member to a community from an account
+  ROLESET_ENTRY_ROLE_JOIN = 'roleset-entry-role-join',
+  ROLESET_ENTRY_ROLE_APPLY = 'roleset-entry-role-apply',
+  ROLESET_ENTRY_ROLE_INVITE = 'roleset-entry-role-invite',
+  ROLESET_ENTRY_ROLE_INVITE_ACCEPT = 'roleset-entry-role-invite-accept',
+  ROLESET_ENTRY_ROLE_ASSIGN = 'roleset-entry-role-assign', // only for global admins
+  COMMUNITY_ASSIGN_VC_FROM_ACCOUNT = 'community-assign-vc-from-account', // allow adding a VC as member to a community from an account
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   READ_ABOUT = 'read-about', // access the external about information for an entity
   READ_USERS = 'read-users',
@@ -42,7 +43,8 @@ export enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
   UPDATE_CONTENT = 'update-content',
-  TRANSFER_RESOURCE = 'transfer-resource',
+  TRANSFER_RESOURCE_OFFER = 'transfer-resource-offer',
+  TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
 }
 
 registerEnumType(AuthorizationPrivilege, {

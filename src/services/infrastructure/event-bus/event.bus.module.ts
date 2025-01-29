@@ -64,36 +64,36 @@ import amqplib from 'amqplib';
           ],
           queues: [
             {
-              name: eventBusConfig.ingest_space_queue,
+              name: eventBusConfig.ingest_body_of_knowledge_queue,
               exchange: eventBusConfig.exchange,
               //TODO dynamically map queue names to events for the routing
-              routingKey: 'IngestSpace',
+              routingKey: 'IngestBodyOfKnowledge',
             },
             {
-              name: eventBusConfig.ingest_space_result_queue,
+              name: eventBusConfig.ingest_body_of_knowledge_result_queue,
               exchange: eventBusConfig.exchange,
-              routingKey: 'IngestSpaceResult',
+              routingKey: 'IngestBodyOfKnowledgeResult',
             },
             {
-              name: 'virtual-contributor-engine-expert',
+              name: eventBusConfig.invoke_engine_expert,
               exchange: eventBusConfig.exchange,
               routingKey: 'expert',
               durable: true,
             },
             {
-              name: 'virtual-contributor-engine-guidance',
+              name: eventBusConfig.invoke_engine_guidance,
               exchange: eventBusConfig.exchange,
               routingKey: 'guidance',
               durable: true,
             },
             {
-              name: 'virtual-contributor-engine-generic',
+              name: eventBusConfig.invoke_engine_generic,
               exchange: eventBusConfig.exchange,
               routingKey: 'generic-openai',
               durable: true,
             },
             {
-              name: 'virtual-contributor-engine-openai-assistant',
+              name: eventBusConfig.invoke_engine_openai_assistant,
               exchange: eventBusConfig.exchange,
               routingKey: 'openai-assistant',
               durable: true,

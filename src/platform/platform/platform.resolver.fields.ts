@@ -14,6 +14,7 @@ import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { IForum } from '@platform/forum';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -29,6 +30,16 @@ export class PlatformResolverFields {
   })
   authorization(@Parent() platform: IPlatform): IAuthorizationPolicy {
     return this.platformService.getAuthorizationPolicy(platform);
+  }
+
+  // TODO: protect with privilege...
+  @UseGuards(GraphqlGuard)
+  @ResolveField('roleSet', () => IRoleSet, {
+    nullable: false,
+    description: 'The RoleSet for this Platform.',
+  })
+  async roleSet(): Promise<IRoleSet> {
+    return this.platformService.getRoleSetOrFail();
   }
 
   @ResolveField('library', () => ILibrary, {

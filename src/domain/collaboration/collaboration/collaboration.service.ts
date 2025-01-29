@@ -216,7 +216,7 @@ export class CollaborationService {
     }
 
     switch (space.level) {
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         const spacesInAccount = await this.entityManager.find(Space, {
           where: {
             levelZeroSpaceID: space.id,
@@ -239,7 +239,7 @@ export class CollaborationService {
           }
           return x.collaboration;
         });
-      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.L1:
         const subsubspaces = space.subspaces;
         if (!subsubspaces) {
           throw new EntityNotInitializedException(

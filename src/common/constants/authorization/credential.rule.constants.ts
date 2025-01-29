@@ -38,16 +38,15 @@ export const CREDENTIAL_RULE_ROOM_MESSAGE_SENDER =
   'credentialRule-roomMessageSender';
 export const CREDENTIAL_RULE_ROOM_REACTION_SENDER =
   'credentialRule-roomReactionSender';
-export const CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION =
-  'credentialRule-communityUserApplication';
-export const CREDENTIAL_RULE_COMMUNITY_USER_INVITATION =
-  'credentialRule-communityUserInvitation';
-export const CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL =
-  'credentialRule-communitySelfRemoval';
-export const CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL =
-  'credentialRule-communityVirtualContributorRemoval';
-export const CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER =
-  'credentialRule-communityAddMember';
+export const CREDENTIAL_RULE_ROLESET_APPLY =
+  'credentialRule-roleSetApplication';
+export const CREDENTIAL_RULE_ROLESET_INVITATION =
+  'credentialRule-roleSetInvitation';
+export const CREDENTIAL_RULE_ROLESET_SELF_REMOVAL =
+  'credentialRule-roleSetSelfRemoval';
+export const CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL =
+  'credentialRule-roleSetVirtualContributorRemoval';
+export const CREDENTIAL_RULE_ROLESET_ASSIGN = 'credentialRule-roleSetAssign';
 export const CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN =
   'credentialRule-organizationVerificationAdmin';
 export const CREDENTIAL_RULE_ORGANIZATION_ADMIN =

@@ -22,6 +22,7 @@ import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IRoleSet } from '@domain/access/role-set';
 
 @Injectable()
 export class PlatformService {
@@ -169,6 +170,24 @@ export class PlatformService {
     }
 
     return licensing;
+  }
+
+  async getRoleSetOrFail(): Promise<IRoleSet | never> {
+    const platform = await this.getPlatformOrFail({
+      relations: {
+        roleSet: true,
+      },
+    });
+    const roleSet = platform.roleSet;
+
+    if (!roleSet) {
+      throw new EntityNotFoundException(
+        'Unable to find RoleSet for Platform',
+        LogContext.PLATFORM
+      );
+    }
+
+    return roleSet;
   }
 
   getAuthorizationPolicy(platform: IPlatform): IAuthorizationPolicy {
