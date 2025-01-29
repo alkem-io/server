@@ -17,7 +17,6 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
-import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -44,13 +43,6 @@ export class CalloutResolverFields {
     })
     IDs: string[],
     @Args({
-      name: 'filter',
-      type: () => CalloutContributionFilterArgs,
-      description: 'The Post/Whiteboard/Link ids filter',
-      nullable: true,
-    })
-    filter: CalloutContributionFilterArgs,
-    @Args({
       name: 'limit',
       type: () => Float,
       description:
@@ -69,9 +61,7 @@ export class CalloutResolverFields {
   ): Promise<ICalloutContribution[]> {
     return await this.calloutService.getContributions(
       callout,
-      {},
       IDs,
-      filter,
       limit,
       shuffle
     );

@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindManyOptions,
-  FindOneOptions,
-  FindOptionsRelations,
-  Repository,
-} from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -38,7 +33,6 @@ import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.
 import { CreatePostInput } from '../post/dto/post.dto.create';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
-import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -552,9 +546,7 @@ export class CalloutService {
 
   public async getContributions(
     callout: ICallout,
-    relations?: FindOptionsRelations<ICallout>,
     contributionIDs?: string[],
-    filter?: CalloutContributionFilterArgs,
     limit?: number,
     shuffle?: boolean
   ): Promise<ICalloutContribution[]> {
@@ -563,82 +555,31 @@ export class CalloutService {
         contributions: {
           post: true,
           whiteboard: true,
+          link: true,
         },
-        ...relations,
       },
     });
     if (!calloutLoaded.contributions)
       throw new EntityNotFoundException(
-        `Callout not initialised, no contributions: ${callout.id}`,
+        `Callout not initialized, no contributions: ${callout.id}`,
         LogContext.COLLABORATION
       );
 
     const results: ICalloutContribution[] = [];
     if (!contributionIDs) {
-      if (!filter) {
-        const limitAndShuffled = limitAndShuffle(
-          calloutLoaded.contributions,
-          limit,
-          shuffle
+      results.push(...calloutLoaded.contributions);
+    } else {
+      for (const contributionID of contributionIDs) {
+        const contribution = calloutLoaded.contributions.find(
+          contribution => contribution.id === contributionID
         );
-        return limitAndShuffled;
-      }
-
-      for (const contribution of calloutLoaded.contributions) {
-        if (
-          contribution.whiteboard &&
-          filter.whiteboardIDs &&
-          !filter.whiteboardIDs.includes(contribution.whiteboard.id) &&
-          !filter.whiteboardIDs.includes(contribution.whiteboard.nameID)
-        )
-          continue;
-        if (
-          contribution.post &&
-          filter.postIDs &&
-          !filter.postIDs.includes(contribution.post.id) &&
-          !filter.postIDs.includes(contribution.post.nameID)
-        )
-          continue;
-        if (
-          contribution.link &&
-          filter.linkIDs &&
-          !filter.linkIDs.includes(contribution.link.id)
-        )
-          continue;
+        if (!contribution) continue;
 
         results.push(contribution);
       }
-      return results;
     }
 
-    for (const contributionID of contributionIDs) {
-      const contribution = calloutLoaded.contributions.find(
-        contribution => contribution.id === contributionID
-      );
-      if (!contribution) continue;
-      if (
-        contribution.whiteboard &&
-        filter?.whiteboardIDs &&
-        (!filter.whiteboardIDs.includes(contribution.whiteboard.id) ||
-          !filter.whiteboardIDs.includes(contribution.whiteboard.nameID))
-      )
-        continue;
-      if (
-        contribution.post &&
-        filter?.postIDs &&
-        (!filter.postIDs.includes(contribution.post.id) ||
-          !filter.postIDs.includes(contribution.post.nameID))
-      )
-        continue;
-      if (
-        contribution.link &&
-        filter?.linkIDs &&
-        !filter.linkIDs.includes(contribution.link.id)
-      )
-        continue;
-
-      results.push(contribution);
-    }
-    return results;
+    const limitAndShuffled = limitAndShuffle(results, limit, shuffle);
+    return limitAndShuffled;
   }
 }
