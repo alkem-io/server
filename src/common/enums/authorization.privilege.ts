@@ -43,7 +43,8 @@ export enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
   UPDATE_CONTENT = 'update-content',
-  TRANSFER_RESOURCE = 'transfer-resource',
+  TRANSFER_RESOURCE_OFFER = 'transfer-resource-offer',
+  TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
 }
 
 registerEnumType(AuthorizationPrivilege, {

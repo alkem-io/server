@@ -46,8 +46,8 @@ export const getSpaceRolesForContributorEntityData = async (
   };
 
   const [spaces, subspaces] = await Promise.all([
-    fetchData(Space, spaceIds, [SpaceLevel.SPACE], spaceAllowedVisibilities),
-    fetchData(Space, spaceIds, [SpaceLevel.CHALLENGE, SpaceLevel.OPPORTUNITY]),
+    fetchData(Space, spaceIds, [SpaceLevel.L0], spaceAllowedVisibilities),
+    fetchData(Space, spaceIds, [SpaceLevel.L1, SpaceLevel.L2]),
   ]);
 
   return { spaces, subspaces };
