@@ -47,6 +47,10 @@ export class MeResolverFields {
         LogContext.RESOLVER_FIELD
       );
     }
+    // When the user is just registered, the agentInfo.userID is still null
+    if (email && !agentInfo.userID) {
+      return null;
+    }
 
     return this.userService.getUserOrFail(agentInfo.userID);
   }

@@ -1,6 +1,7 @@
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { TagsetArgs } from '@common/args/tagset.args';
+import { CalloutType } from '@common/enums/callout.type';
 
 @ArgsType()
 export class CalloutsSetArgsCallouts {
@@ -9,6 +10,13 @@ export class CalloutsSetArgsCallouts {
     nullable: true,
   })
   IDs?: string[];
+
+  @Field(() => [CalloutType], {
+    description:
+      'The type of Callouts to return; if omitted return all types of Callouts.',
+    nullable: true,
+  })
+  types?: CalloutType[];
 
   @Field(() => Float, {
     description:

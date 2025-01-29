@@ -11,6 +11,7 @@ import { CalendarEventAuthorizationService } from './event.service.authorization
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { Space } from '@domain/space/space/space.entity';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     VisualModule,
     UserLookupModule,
     ProfileModule,
-    TypeOrmModule.forFeature([CalendarEvent]),
+    TypeOrmModule.forFeature([CalendarEvent, Space]),
   ],
   providers: [
     CalendarEventResolverMutations,

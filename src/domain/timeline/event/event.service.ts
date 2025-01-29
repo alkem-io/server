@@ -31,6 +31,7 @@ export class CalendarEventService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomService: RoomService,
     private profileService: ProfileService,
+    @InjectRepository(Space) private spaceRepository: Repository<Space>,
     @InjectRepository(CalendarEvent)
     private calendarEventRepository: Repository<CalendarEvent>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -199,10 +200,10 @@ export class CalendarEventService {
     return calendarEventLoaded.profile;
   }
 
-  public getSubspace(
+  public async getSubspace(
     calendarEvent: ICalendarEvent
   ): Promise<ISpace | undefined> {
-    return this.calendarEventRepository
+    const spaceParentOfTheEvent = await this.calendarEventRepository
       .createQueryBuilder('calendarEvent')
       .leftJoin(Calendar, 'calendar', 'calendar.id = calendarEvent.calendarId')
       .leftJoin(Timeline, 'timeline', 'timeline.calendarId = calendar.id')
@@ -218,8 +219,18 @@ export class CalendarEventService {
       )
       .where('calendarEvent.id = :id', { id: calendarEvent.id })
       .andWhere('subspace.level != :level', { level: SpaceLevel.L0 })
-      .select('subspace.*')
-      .getRawOne<ISpace>();
+      .select('subspace.id as spaceId')
+      .getRawOne<{ spaceId: string }>();
+
+    if (!spaceParentOfTheEvent) {
+      return undefined;
+    }
+
+    const space = await this.spaceRepository.findOne({
+      where: { id: spaceParentOfTheEvent.spaceId },
+    });
+
+    return space ?? undefined;
   }
 
   public async getComments(calendarEventID: string) {

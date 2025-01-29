@@ -501,6 +501,11 @@ export class CalloutsSetService {
       const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
       if (!hasAccess) return false;
 
+      // Filter by Callout types
+      if (args.types && !args.types.includes(callout.type)) {
+        return false;
+      }
+
       // Filter by Callout groups
       if (groupNames.length > 0) {
         const hasMatchingTagset = callout.framing.profile.tagsets?.some(

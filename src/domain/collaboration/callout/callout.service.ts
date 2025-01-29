@@ -561,6 +561,7 @@ export class CalloutService {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
       relations: {
         contributions: {
+          post: true,
           whiteboard: true,
         },
         ...relations,
