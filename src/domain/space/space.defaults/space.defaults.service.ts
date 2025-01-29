@@ -193,10 +193,10 @@ export class SpaceDefaultsService {
 
   public getRoleSetCommunityRoles(spaceLevel: SpaceLevel): CreateRoleInput[] {
     switch (spaceLevel) {
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L1:
+      case SpaceLevel.L2:
         return subspaceCommunityRoles;
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         return spaceCommunityRoles;
       default:
         throw new EntityNotInitializedException(
@@ -208,11 +208,11 @@ export class SpaceDefaultsService {
 
   public getProfileType(spaceLevel: SpaceLevel): ProfileType {
     switch (spaceLevel) {
-      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.L1:
         return ProfileType.CHALLENGE;
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L2:
         return ProfileType.OPPORTUNITY;
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         return ProfileType.SPACE;
     }
   }
@@ -221,10 +221,10 @@ export class SpaceDefaultsService {
     spaceLevel: SpaceLevel
   ): CreateFormInput {
     switch (spaceLevel) {
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L1:
+      case SpaceLevel.L2:
         return subspceCommunityApplicationForm;
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         return spaceCommunityApplicationForm;
     }
   }
