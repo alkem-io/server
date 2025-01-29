@@ -265,7 +265,7 @@ export class ProfileService {
           await this.profileDocumentsService.reuploadFileOnStorageBucket(
             providedVisual.uri,
             profile.storageBucket,
-            allowExternalUrl
+            !allowExternalUrl
           );
         if (url) {
           visual.uri = url;
