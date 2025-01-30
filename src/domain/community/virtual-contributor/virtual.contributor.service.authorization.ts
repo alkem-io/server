@@ -8,7 +8,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE,
+  CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
   CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS,
@@ -39,15 +39,16 @@ export class VirtualContributorAuthorizationService {
       virtualInput.id,
       {
         relations: {
+          account: true,
           profile: true,
           agent: true,
           aiPersona: true,
           knowledgeBase: true,
-          account: true,
         },
       }
     );
     if (
+      !virtual.account ||
       !virtual.profile ||
       !virtual.agent ||
       !virtual.aiPersona ||
@@ -59,13 +60,14 @@ export class VirtualContributorAuthorizationService {
         LogContext.COMMUNITY
       );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
-    const hostAccount = await this.virtualService.getAccountHostCredentials(
-      virtual.id
-    );
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: virtual.account.id,
+    };
 
     virtual.authorization = this.resetToBaseVirtualContributorAuthorization(
       virtual.authorization,
-      hostAccount
+      accountAdminCredential
     );
     // Allow everyone to see the VirtualContributor for now; note do not cascade to children
     virtual.authorization =
@@ -143,7 +145,7 @@ export class VirtualContributorAuthorizationService {
 
   private resetToBaseVirtualContributorAuthorization(
     authorizationPolicy: IAuthorizationPolicy | undefined,
-    accountHostCredentials: ICredentialDefinition[]
+    accountAdminCredential: ICredentialDefinition
   ): IAuthorizationPolicy {
     let updatedAuthorization =
       this.authorizationPolicyService.reset(authorizationPolicy);
@@ -176,7 +178,7 @@ export class VirtualContributorAuthorizationService {
       );
     newRules.push(globalSpacesReader);
 
-    const accountHostManage =
+    const accountAdminManage =
       this.authorizationPolicyService.createCredentialRule(
         [
           AuthorizationPrivilege.CREATE,
@@ -185,10 +187,10 @@ export class VirtualContributorAuthorizationService {
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.CONTRIBUTE,
         ],
-        accountHostCredentials,
-        CREDENTIAL_RULE_ACCOUNT_HOST_MANAGE
+        [accountAdminCredential],
+        CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE
       );
-    newRules.push(accountHostManage);
+    newRules.push(accountAdminManage);
 
     // TODO: rule that for now allows global support ability to manage VCs, this to be removed later
     const globalSupportManage =
