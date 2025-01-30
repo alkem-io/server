@@ -249,7 +249,7 @@ export class PlatformAuthorizationService {
   private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global supportto access Platform mgmt
+    // Allow global support to access Platform mgmt
     const platformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_ADMIN],
@@ -262,6 +262,18 @@ export class PlatformAuthorizationService {
       );
     platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
+
+    // Allow global admins to manage the platform settings
+    // Separate rule + privilege as can imagine that we later define this as a separate
+    // platform role
+    const platformSettingsAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
+      );
+    platformSettingsAdmin.cascade = false;
+    credentialRules.push(platformSettingsAdmin);
 
     const globalSupportPlatformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(

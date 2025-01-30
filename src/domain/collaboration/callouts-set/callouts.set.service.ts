@@ -505,7 +505,7 @@ export class CalloutsSetService {
       // Filter by Callout types
       if (args.types && !args.types.includes(callout.type)) {
         return false;
-      }      
+      }
 
       // Filter by Callout groups
       if (groupNames.length > 0) {

@@ -139,7 +139,7 @@ export class MeService {
 
     for (const space of allSpaces) {
       if (
-        (space.level !== SpaceLevel.SPACE && !space.parentSpace) ||
+        (space.level !== SpaceLevel.L0 && !space.parentSpace) ||
         !space.collaboration
       ) {
         this.logger.warn(
@@ -179,15 +179,15 @@ export class MeService {
 
     const levelZeroSpaces = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
-      SpaceLevel.SPACE
+      SpaceLevel.L0
     );
     const levelOneSpaces = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
-      SpaceLevel.CHALLENGE
+      SpaceLevel.L1
     );
     const levelTwoSpaces = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
-      SpaceLevel.OPPORTUNITY
+      SpaceLevel.L2
     );
 
     const levelZeroMemberships = levelZeroSpaces.map(levelZeroSpace => {

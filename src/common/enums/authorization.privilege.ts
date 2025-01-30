@@ -10,6 +10,7 @@ export enum AuthorizationPrivilege {
   AUTHORIZATION_RESET = 'authorization-reset',
   LICENSE_RESET = 'license-reset',
   PLATFORM_ADMIN = 'platform-admin', // To determine if the user should have access to the platform administration
+  PLATFORM_SETTINGS_ADMIN = 'platform-settings-admin', // To determine if the user should be able to update platform wide settings
   CONTRIBUTE = 'contribute',
   CREATE_CALLOUT = 'create-callout',
   CREATE_POST = 'create-post',
@@ -42,7 +43,8 @@ export enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
   UPDATE_CONTENT = 'update-content',
-  TRANSFER_RESOURCE = 'transfer-resource',
+  TRANSFER_RESOURCE_OFFER = 'transfer-resource-offer',
+  TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
 }
 
 registerEnumType(AuthorizationPrivilege, {

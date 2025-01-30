@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InvitationService } from './invitation.service';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IInvitation } from './invitation.interface';
@@ -11,6 +15,9 @@ import { ContributorService } from '@domain/community/contributor/contributor.se
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
+import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
 
 @Injectable()
 export class InvitationAuthorizationService {
@@ -47,37 +54,37 @@ export class InvitationAuthorizationService {
       await this.invitationService.getInvitedContributor(invitation);
 
     // also grant the user privileges to work with their own invitation
+    let accountID: string | undefined = undefined;
     const contributorType =
       this.contributorService.getContributorType(contributor);
     const criterias: ICredentialDefinition[] = [];
     switch (contributorType) {
       case RoleSetContributorType.USER:
-        criterias.push({
-          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-          resourceID: contributor.id,
-        });
+        accountID = (contributor as User).accountID;
         break;
       case RoleSetContributorType.ORGANIZATION:
-        criterias.push({
-          type: AuthorizationCredential.ORGANIZATION_OWNER,
-          resourceID: contributor.id,
-        });
-        criterias.push({
-          type: AuthorizationCredential.ORGANIZATION_ADMIN,
-          resourceID: contributor.id,
-        });
+        accountID = (contributor as Organization).accountID;
         break;
       case RoleSetContributorType.VIRTUAL:
         const account =
           await this.virtualContributorLookupService.getAccountOrFail(
             contributor.id
           );
-        const vcHostCriterias =
-          await this.accountLookupService.getHostCredentials(account);
-
-        criterias.push(...vcHostCriterias);
+        accountID = account.id;
         break;
     }
+    if (!accountID) {
+      throw new RoleSetMembershipException(
+        `Unable to find account for contributor: ${contributor.id}`,
+        LogContext.ROLES
+      );
+    }
+
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: accountID,
+    };
+    criterias.push(accountAdminCredential);
 
     const virtualInvitationRule =
       this.authorizationPolicyService.createCredentialRule(

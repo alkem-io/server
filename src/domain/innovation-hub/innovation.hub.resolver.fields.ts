@@ -2,7 +2,6 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceService } from '@domain/space/space/space.service';
 import { IProfile } from '@domain/common/profile';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { Loader } from '@core/dataloader/decorators';
@@ -13,12 +12,13 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLoaderCreator } from '@core/dataloader/creators/loader.creators/account/account.loader.creator';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 @Resolver(() => IInnovationHub)
 export class InnovationHubResolverFields {
   constructor(
     private innovationHubService: InnovationHubService,
-    private spaceService: SpaceService
+    private spaceLookupService: SpaceLookupService
   ) {}
 
   @ResolveField(() => [ISpace], {
@@ -35,7 +35,7 @@ export class InnovationHubResolverFields {
       return undefined;
     }
 
-    const spaces = await this.spaceService.getSpacesById(filter);
+    const spaces = await this.spaceLookupService.getSpacesById(filter);
     const result: ISpace[] = [];
     for (const spaceId of filter) {
       const space = spaces.find(s => s.id === spaceId);

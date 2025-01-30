@@ -101,7 +101,7 @@ export class CalendarService {
       // to be levelZeroSpace = spaceId and level > space level
       .where({
         parentSpace: { id: rootSpaceId },
-        level: SpaceLevel.CHALLENGE,
+        level: SpaceLevel.L1,
       })
       .leftJoin(
         Collaboration,

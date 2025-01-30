@@ -5,7 +5,7 @@ import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.
 import { OrganizationService } from '@domain/community/organization/organization.service';
 
 @Injectable()
-export class PlatformSettingsService {
+export class DomainPlatformSettingsService {
   constructor(
     private readonly organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

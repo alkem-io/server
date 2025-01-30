@@ -100,6 +100,6 @@ export class RoleSetResolverFieldsPublic {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() roleSet: IRoleSet
   ): Promise<RoleSetRoleImplicit[]> {
-    return this.roleSetService.getCommunityImplicitRoles(agentInfo, roleSet);
+    return this.roleSetService.getImplicitRoles(agentInfo, roleSet);
   }
 }

@@ -91,7 +91,7 @@ export class AccountService {
     }
 
     // Set data for the root space
-    spaceData.level = SpaceLevel.SPACE;
+    spaceData.level = SpaceLevel.L0;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
     let space = await this.spaceService.createSpace(spaceData, agentInfo);

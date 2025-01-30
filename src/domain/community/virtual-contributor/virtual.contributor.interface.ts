@@ -5,6 +5,7 @@ import { IContributor } from '../contributor/contributor.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAiPersona } from '../ai-persona';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
+import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
@@ -30,4 +31,10 @@ export class IVirtualContributor
     description: 'Flag to control if this VC is listed in the platform store.',
   })
   listedInStore!: boolean;
+
+  @Field(() => IVirtualContributorSettings, {
+    nullable: false,
+    description: 'The settings of this Virtual Contributor.',
+  })
+  settings!: IVirtualContributorSettings;
 }

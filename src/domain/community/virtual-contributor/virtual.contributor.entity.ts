@@ -6,6 +6,7 @@ import { SearchVisibility } from '@common/enums/search.visibility';
 import { AiPersona } from '../ai-persona';
 import { ENUM_LENGTH } from '@common/constants';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
+import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 
 @Entity()
 export class VirtualContributor
@@ -18,6 +19,9 @@ export class VirtualContributor
     nullable: true,
   })
   account?: Account;
+
+  @Column('json', { nullable: false })
+  settings!: IVirtualContributorSettings;
 
   @OneToOne(() => AiPersona, {
     eager: false,

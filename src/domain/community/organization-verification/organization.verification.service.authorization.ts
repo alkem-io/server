@@ -20,7 +20,7 @@ export class OrganizationVerificationAuthorizationService {
 
   async applyAuthorizationPolicy(
     organizationVerification: IOrganizationVerification,
-    organizationID: string
+    organizationAccountID: string
   ): Promise<IAuthorizationPolicy> {
     organizationVerification.authorization =
       this.authorizationPolicyService.reset(
@@ -29,7 +29,7 @@ export class OrganizationVerificationAuthorizationService {
     organizationVerification.authorization = this.appendCredentialRules(
       organizationVerification.authorization,
       organizationVerification.id,
-      organizationID
+      organizationAccountID
     );
 
     return organizationVerification.authorization;
@@ -38,7 +38,7 @@ export class OrganizationVerificationAuthorizationService {
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     organizationVerificationID: string,
-    organizationID: string
+    organizationAccountID: string
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -70,12 +70,8 @@ export class OrganizationVerificationAuthorizationService {
       [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],
       [
         {
-          type: AuthorizationCredential.ORGANIZATION_ADMIN,
-          resourceID: organizationID,
-        },
-        {
-          type: AuthorizationCredential.ORGANIZATION_OWNER,
-          resourceID: organizationID,
+          type: AuthorizationCredential.ACCOUNT_ADMIN,
+          resourceID: organizationAccountID,
         },
       ],
       CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN

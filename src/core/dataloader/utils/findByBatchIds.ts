@@ -7,7 +7,8 @@ import {
 import { Type } from '@nestjs/common';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { FindByBatchIdsOptions, sorOutputByKeys } from '../utils';
+import { FindByBatchIdsOptions } from './find.by.batch.options';
+import { sorOutputByKeys } from './sort.output.by.keys';
 
 export const findByBatchIds = async <
   TParent extends { id: string } & { [key: string]: any }, // todo better type

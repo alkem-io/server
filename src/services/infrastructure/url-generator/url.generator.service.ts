@@ -169,17 +169,17 @@ export class UrlGeneratorService {
     const spaceNameID = space.nameID;
     const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
     switch (space.level) {
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         const spaceAdminUrl = await this.generateAdminUrlForSpace(space.nameID);
         return `${spaceAdminUrl}/community`;
-      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.L1:
         const subspaceAdminUrl = await this.getSubspaceUrlPath(
           this.FIELD_ID,
           space.id,
           true
         );
         return `${subspaceAdminUrl}/community`;
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L2:
         const subsubspaceAdminURL = await this.getSubsubspaceUrlPath(
           this.FIELD_ID,
           space.id,

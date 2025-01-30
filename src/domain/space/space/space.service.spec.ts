@@ -291,7 +291,7 @@ const getSubspacesMock = (
         ...getEntityMock<Account>(),
       },
       type: SpaceType.CHALLENGE,
-      level: SpaceLevel.CHALLENGE,
+      level: SpaceLevel.L1,
       visibility: SpaceVisibility.ACTIVE,
       collaboration: {
         id: '',
@@ -394,7 +394,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         ...getEntityMock<Account>(),
       },
       type: SpaceType.OPPORTUNITY,
-      level: SpaceLevel.OPPORTUNITY,
+      level: SpaceLevel.L2,
       visibility: SpaceVisibility.ACTIVE,
       collaboration: {
         id: '',

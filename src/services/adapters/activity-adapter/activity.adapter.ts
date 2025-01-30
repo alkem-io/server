@@ -76,7 +76,7 @@ export class ActivityAdapter {
       );
     }
     const eventType =
-      subspace.level === SpaceLevel.OPPORTUNITY
+      subspace.level === SpaceLevel.L2
         ? ActivityEventType.OPPORTUNITY_CREATED
         : ActivityEventType.CHALLENGE_CREATED;
 

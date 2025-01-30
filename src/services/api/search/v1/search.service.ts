@@ -980,7 +980,7 @@ export class SearchService {
     const subspaces = await this.spaceRepository.find({
       where: {
         levelZeroSpaceID: In(levelZeroSpaceIDsFilter),
-        level: SpaceLevel.CHALLENGE,
+        level: SpaceLevel.L1,
       },
       relations: {
         collaboration: true,
@@ -996,7 +996,7 @@ export class SearchService {
     const subsubspaces = await this.spaceRepository.find({
       where: {
         levelZeroSpaceID: In(levelZeroSpaceIDsFilter),
-        level: SpaceLevel.OPPORTUNITY,
+        level: SpaceLevel.L2,
       },
       relations: {
         collaboration: true,

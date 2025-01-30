@@ -105,7 +105,7 @@ export class ConversionService {
       profileData: {
         displayName: subspace.profile.displayName,
       },
-      level: SpaceLevel.SPACE,
+      level: SpaceLevel.L0,
       type: SpaceType.SPACE,
       collaborationData: {
         calloutsSetData: {},
@@ -288,7 +288,7 @@ export class ConversionService {
         displayName: subsubspace.profile.displayName,
       },
       storageAggregatorParent: levelZeroSpaceStorageAggregator,
-      level: SpaceLevel.CHALLENGE,
+      level: SpaceLevel.L1,
       type: SpaceType.CHALLENGE,
     };
     const emptyChallenge = await this.spaceService.createSubspace(

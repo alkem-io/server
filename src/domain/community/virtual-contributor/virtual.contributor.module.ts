@@ -21,6 +21,7 @@ import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.bas
 import { VirtualContributorLookupModule } from '../virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { VirtualContributorDefaultsModule } from '../virtual-contributor-defaults/virtual.contributor.defaults.module';
+import { VirtualContributorSettingsModule } from '../virtual-contributor-settings/virtual.contributor.settings.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { VirtualContributorDefaultsModule } from '../virtual-contributor-default
     AiServerAdapterModule,
     CommunicationAdapterModule,
     VirtualContributorLookupModule,
+    VirtualContributorSettingsModule,
     VirtualContributorDefaultsModule,
     AccountLookupModule,
     TypeOrmModule.forFeature([VirtualContributor]),
