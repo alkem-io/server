@@ -34,7 +34,6 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AccountLookupService } from '../account.lookup/account.lookup.service';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -48,7 +47,6 @@ export class AccountAuthorizationService {
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
-    private accountLookupService: AccountLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -78,9 +76,10 @@ export class AccountAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    // Get the host credentials
-    const hostCredentials =
-      await this.accountLookupService.getHostCredentials(account);
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: account.id,
+    };
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
@@ -98,7 +97,7 @@ export class AccountAuthorizationService {
 
     account.authorization = await this.extendAuthorizationPolicy(
       account.authorization,
-      hostCredentials
+      accountAdminCredential
     );
 
     account.authorization = await this.authorizationPolicyService.save(
@@ -119,13 +118,15 @@ export class AccountAuthorizationService {
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         account.authorization
       );
-    // Get the host credentials
-    const hostCredentials =
-      await this.accountLookupService.getHostCredentials(account);
+    // Get the account admin credential
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: account.id,
+    };
 
     clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
       clonedAccountAuth,
-      hostCredentials
+      accountAdminCredential
     );
     return clonedAccountAuth;
   }
@@ -180,18 +181,17 @@ export class AccountAuthorizationService {
       );
     updatedAuthorizations.push(...storageAggregatorAuthorizations);
 
-    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
-    const clonedAccountAuth =
-      await this.getClonedAccountAuthExtendedForChildEntities(account);
-
     for (const vc of account.virtualContributors) {
       const updatedVcAuthorizations =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-          vc,
-          clonedAccountAuth
+          vc
         );
       updatedAuthorizations.push(...updatedVcAuthorizations);
     }
+
+    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
+    const clonedAccountAuth =
+      await this.getClonedAccountAuthExtendedForChildEntities(account);
 
     for (const ip of account.innovationPacks) {
       const innovationPackAuthorizations =
@@ -216,7 +216,7 @@ export class AccountAuthorizationService {
 
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    hostCredentials: ICredentialDefinition[]
+    accountAdminCredential: ICredentialDefinition
   ): Promise<IAuthorizationPolicy> {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -275,7 +275,7 @@ export class AccountAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE
       );
-    accountResourcesManage.criterias.push(...hostCredentials);
+    accountResourcesManage.criterias.push(accountAdminCredential);
     accountResourcesManage.cascade = false;
     newRules.push(accountResourcesManage);
 
@@ -288,7 +288,7 @@ export class AccountAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT
       );
-    acceptResourceTransfers.criterias.push(...hostCredentials);
+    acceptResourceTransfers.criterias.push(accountAdminCredential);
     acceptResourceTransfers.cascade = false;
     newRules.push(acceptResourceTransfers);
 
@@ -301,7 +301,7 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [...hostCredentials],
+        [accountAdminCredential],
         CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
       );
     accountHostManage.cascade = true;
@@ -309,7 +309,7 @@ export class AccountAuthorizationService {
 
     const createSpace = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_SPACE],
-      [...hostCredentials],
+      [accountAdminCredential],
       CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
     );
     createSpace.cascade = false;
@@ -317,7 +317,7 @@ export class AccountAuthorizationService {
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
-      [...hostCredentials],
+      [accountAdminCredential],
       CREDENTIAL_RULE_PLATFORM_CREATE_VC
     );
     createVC.cascade = false;
@@ -326,7 +326,7 @@ export class AccountAuthorizationService {
     const createInnovationPack =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.CREATE_INNOVATION_PACK],
-        [...hostCredentials],
+        [accountAdminCredential],
         CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK
       );
     createInnovationPack.cascade = false;
@@ -340,7 +340,7 @@ export class AccountAuthorizationService {
 
   private extendAuthorizationPolicyForChildEntities(
     authorization: IAuthorizationPolicy | undefined,
-    hostCredentials: ICredentialDefinition[]
+    accountAdminCredential: ICredentialDefinition
   ): IAuthorizationPolicy {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -349,24 +349,21 @@ export class AccountAuthorizationService {
       );
     }
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
-    // If there is a root space, then also allow the admins to manage the account for now
-    const accountChildEntitiesManage = hostCredentials;
 
-    if (accountChildEntitiesManage.length !== 0) {
-      const accountChildEntities =
-        this.authorizationPolicyService.createCredentialRule(
-          [
-            AuthorizationPrivilege.CREATE,
-            AuthorizationPrivilege.READ,
-            AuthorizationPrivilege.UPDATE,
-            AuthorizationPrivilege.DELETE,
-            AuthorizationPrivilege.GRANT,
-          ],
-          accountChildEntitiesManage,
-          CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES
-        );
-      newRules.push(accountChildEntities);
-    }
+    const accountChildEntities =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
+        ],
+        [accountAdminCredential],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES
+      );
+    newRules.push(accountChildEntities);
+
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules

@@ -18,12 +18,14 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { PlatformLicenseService } from './platform.service.license';
+import { PlatformSettingsModule } from '@platform/platform-settings/platform.settings.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,
+    PlatformSettingsModule,
     LibraryModule,
     ForumModule,
     StorageAggregatorModule,
