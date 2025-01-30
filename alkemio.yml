@@ -361,6 +361,7 @@ microservices:
       ingest_body_of_knowledge_result_queue: ${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_RESULT_QUEUE}:virtual-contributor-ingest-body-of-knowledge-result
       invoke_engine_result: ${RABBITMQ_RESULT_QUEUE}:virtual-contributor-invoke-engine-result
       invoke_engine_expert: ${RABBITMQ_INVOKE_ENGINE_EXPERT}:virtual-contributor-engine-expert
+      invoke_engine_libra_flow: ${RABBITMQ_INVOKE_ENGINE_LIBRA_FLOW}:virtual-contributor-engine-libra-flow
       invoke_engine_guidance: ${RABBITMQ_INVOKE_ENGINE_GUIDANCE}:virtual-contributor-engine-guidance
       invoke_engine_generic: ${RABBITMQ_INVOKE_ENGINE_GENERIC}:virtual-contributor-engine-generic
       invoke_engine_openai_assistant: ${RABBITMQ_INVOKE_ENGINE_OPENAI_ASSISTANT}:virtual-contributor-engine-openai-assistant
