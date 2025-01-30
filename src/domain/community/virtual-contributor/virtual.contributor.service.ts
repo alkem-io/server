@@ -31,7 +31,6 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -494,19 +493,6 @@ export class VirtualContributorService {
 
     const host = await this.accountLookupService.getHostOrFail(account);
     return host;
-  }
-
-  public async getAccountHostCredentials(
-    virtualContributorID: string
-  ): Promise<ICredentialDefinition[]> {
-    const account =
-      await this.virtualContributorLookupService.getAccountOrFail(
-        virtualContributorID
-      );
-
-    const hostCredentials =
-      await this.accountLookupService.getHostCredentials(account);
-    return hostCredentials;
   }
 
   async getKnowledgeBaseOrFail(
