@@ -223,15 +223,9 @@ export class AccountResolverMutations {
       destinationStorageBucket
     );
 
-    const clonedAccountAuth =
-      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
-        account
-      );
-
     const updatedAuthorizations =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtual,
-        clonedAccountAuth
+        virtual
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
@@ -519,14 +513,9 @@ export class AccountResolverMutations {
     virtualContributor =
       await this.virtualContributorService.save(virtualContributor);
 
-    const clonedAccountAuth =
-      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
-        targetAccount
-      );
     const virtualContributorAuthorizations =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtualContributor,
-        clonedAccountAuth
+        virtualContributor
       );
     await this.authorizationPolicyService.saveAll(
       virtualContributorAuthorizations
@@ -556,13 +545,13 @@ export class AccountResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       currentAccount.authorization,
-      AuthorizationPrivilege.TRANSFER_RESOURCE,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `transfer ${resourceName} to another Account: ${agentInfo.email}`
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       targetAccount.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
       `transfer ${resourceName} to target Account: ${agentInfo.email}`
     );
   }

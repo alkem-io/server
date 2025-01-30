@@ -4,11 +4,12 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILibrary } from '@library/library/library.interface';
-import { ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IConfig } from '@platform/configuration/config/config.interface';
 import { IForum } from '@platform/forum';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IMetadata } from '@platform/metadata/metadata.interface';
+import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 
 @ObjectType('Platform')
 export abstract class IPlatform extends IAuthorizable {
@@ -21,4 +22,10 @@ export abstract class IPlatform extends IAuthorizable {
   licensingFramework?: ILicensingFramework;
   templatesManager?: ITemplatesManager;
   roleSet!: IRoleSet;
+
+  @Field(() => IPlatformSettings, {
+    nullable: false,
+    description: 'The settings of the Platform.',
+  })
+  settings!: IPlatformSettings;
 }
