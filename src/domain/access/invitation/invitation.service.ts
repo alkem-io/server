@@ -119,7 +119,7 @@ export class InvitationService {
   }
 
   async getCreatedBy(invitation: IInvitation): Promise<IUser> {
-    const user = await this.userLookupService.getUserByUuidOrFail(
+    const user = await this.userLookupService.getUserOrFail(
       invitation.createdBy
     );
     if (!user)

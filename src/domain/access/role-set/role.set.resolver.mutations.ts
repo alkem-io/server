@@ -12,7 +12,7 @@ import { IInvitation } from '../invitation/invitation.interface';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { IApplication } from '../application/application.interface';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.invitation';
 import { ApplicationService } from '../application/application.service';
@@ -20,15 +20,14 @@ import { ApplicationAuthorizationService } from '../application/application.serv
 import { InvitationService } from '../invitation/invitation.service';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
+import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
 import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
-import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { AssignRoleOnRoleSetToUserInput } from './dto/role.set.dto.role.assign.user';
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
@@ -47,7 +46,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.vc';
-import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { InviteNewContributorForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invitation.community';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
@@ -67,6 +66,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { ValidationException } from '@common/exceptions';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -76,7 +78,7 @@ export class RoleSetResolverMutations {
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private notificationAdapter: NotificationAdapter,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private userAuthorizationService: UserAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private accountLookupService: AccountLookupService,
@@ -107,16 +109,31 @@ export class RoleSetResolverMutations {
       roleData.roleSetID
     );
 
-    let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === CommunityRoleType.MEMBER) {
-      requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+    this.validateRoleSetTypeOrFail(roleSet, [
+      RoleSetType.SPACE,
+      RoleSetType.ORGANIZATION,
+    ]);
+
+    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        privilegeRequired = AuthorizationPrivilege.GRANT;
+        if (roleData.role === RoleName.MEMBER) {
+          privilegeRequired = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
+        }
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        privilegeRequired = AuthorizationPrivilege.GRANT;
+        break;
+      }
     }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      requiredPrivilege,
-      `assign user community role: ${roleSet.id}`
+      privilegeRequired,
+      `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`
     );
 
     await this.roleSetService.assignUserToRole(
@@ -127,12 +144,23 @@ export class RoleSetResolverMutations {
       true
     );
 
-    // reset the user authorization policy so that their profile is visible to other community members
-    const user = await this.userService.getUserOrFail(roleData.contributorID);
-    const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
-    await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.userService.getUserOrFail(roleData.contributorID);
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        // reset the user authorization policy so that their profile is visible to other community members
+        const user = await this.userLookupService.getUserOrFail(
+          roleData.contributorID
+        );
+        const authorizations =
+          await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
+        await this.authorizationPolicyService.saveAll(authorizations);
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        break;
+      }
+    }
+
+    return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -147,6 +175,7 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -181,18 +210,25 @@ export class RoleSetResolverMutations {
       }
     );
 
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+
+    // Note re COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
+    // The ability to assign the VC is a function of the space and the VC, not of the user
+    // So it is a privilege to be able to assign from the same account,
+    // but this is separate from the business logic check that the space and the
+    // account are in the same account.
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === CommunityRoleType.MEMBER) {
+    if (roleData.role === RoleName.MEMBER) {
       const sameAccount =
-        await this.roleSetService.isCommunityAccountMatchingVcAccount(
-          roleSet.id,
+        await this.roleSetService.isRoleSetAccountMatchingVcAccount(
+          roleSet,
           roleData.contributorID
         );
       if (sameAccount) {
         requiredPrivilege =
-          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT;
+          AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT;
       } else {
-        requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+        requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
       }
     }
 
@@ -204,10 +240,12 @@ export class RoleSetResolverMutations {
     );
 
     // Also require SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement for the RoleSet
-    this.licenseService.isEntitlementEnabledOrFail(
-      roleSet.license,
-      LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
-    );
+    if (roleSet.type === RoleSetType.SPACE) {
+      this.licenseService.isEntitlementEnabledOrFail(
+        roleSet.license,
+        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+      );
+    }
 
     await this.roleSetService.assignVirtualToRole(
       roleSet,
@@ -233,21 +271,49 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
+    this.validateRoleSetTypeOrFail(roleSet, [
+      RoleSetType.SPACE,
+      RoleSetType.ORGANIZATION,
+    ]);
 
-    // Extend the authorization policy with a credential rule to assign the GRANT privilege
-    // to the user specified in the incoming mutation. Then if it is the same user as is logged
-    // in then the user will have the GRANT privilege + so can carry out the mutation
-    const extendedAuthorization =
-      this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
-        roleSet,
-        roleData.contributorID
-      );
+    let privilegeRequired = AuthorizationPrivilege.GRANT;
+    let extendedAuthorization = roleSet.authorization;
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        privilegeRequired = AuthorizationPrivilege.GRANT;
+        if (roleData.role === RoleName.MEMBER) {
+          // Extend the authorization policy with a credential rule to assign the GRANT privilege
+          // to the user specified in the incoming mutation. Then if it is the same user as is logged
+          // in then the user will have the GRANT privilege + so can carry out the mutation
+          extendedAuthorization =
+            this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+              roleSet,
+              roleData.contributorID
+            );
+        }
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        privilegeRequired = AuthorizationPrivilege.GRANT;
+        if (roleData.role === RoleName.ASSOCIATE) {
+          // Extend the authorization policy with a credential rule to assign the GRANT privilege
+          // to the user specified in the incoming mutation. Then if it is the same user as is logged
+          // in then the user will have the GRANT privilege + so can carry out the mutation
+          extendedAuthorization =
+            this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+              roleSet,
+              roleData.contributorID
+            );
+        }
+        break;
+      }
+    }
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       extendedAuthorization,
-      AuthorizationPrivilege.GRANT,
-      `remove user from community role: ${roleSet.id}`
+      privilegeRequired,
+      `remove role from User: ${roleSet.id} on roleSet of type ${roleSet.type}`
     );
 
     await this.roleSetService.removeUserFromRole(
@@ -255,13 +321,25 @@ export class RoleSetResolverMutations {
       roleData.role,
       roleData.contributorID
     );
-    // reset the user authorization policy so that their profile is not visible
-    // to other community members
-    const user = await this.userService.getUserOrFail(roleData.contributorID);
-    const authorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
-    await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.userService.getUserOrFail(roleData.contributorID);
+
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        // reset the user authorization policy so that their profile is not visible
+        // to other community members
+        const user = await this.userLookupService.getUserOrFail(
+          roleData.contributorID
+        );
+        const authorizations =
+          await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
+        await this.authorizationPolicyService.saveAll(authorizations);
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        break;
+      }
+    }
+
+    return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -276,6 +354,8 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
@@ -301,6 +381,7 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     // Extend the authorization policy with a credential rule to assign the GRANT privilege
     // to the user with rights around the incoming virtual being removed.
@@ -341,6 +422,8 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       joiningData.roleSetID
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+
     const membershipStatus = await this.roleSetService.getMembershipStatus(
       agentInfo,
       roleSet
@@ -355,13 +438,13 @@ export class RoleSetResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_JOIN,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN,
       `join community: ${roleSet.id}`
     );
 
     await this.roleSetService.assignUserToRole(
       roleSet,
-      CommunityRoleType.MEMBER,
+      RoleName.MEMBER,
       agentInfo.userID,
       agentInfo,
       true
@@ -386,22 +469,23 @@ export class RoleSetResolverMutations {
         },
       }
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_APPLY,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY,
       `create application RoleSet: ${roleSet.id}`
     );
 
     if (roleSet.parentRoleSet) {
-      const { agent } = await this.userService.getUserAndAgent(
+      const { agent } = await this.userLookupService.getUserAndAgent(
         agentInfo.userID
       );
       const userIsMemberInParent = await this.roleSetService.isInRole(
         agent,
         roleSet.parentRoleSet,
-        CommunityRoleType.MEMBER
+        RoleName.MEMBER
       );
       if (!userIsMemberInParent) {
         throw new RoleSetMembershipException(
@@ -442,9 +526,9 @@ export class RoleSetResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => [IInvitation], {
     description:
-      'Invite an existing Contriburor to join the specified Community as a member.',
+      'Invite an existing Contriburor to join the specified RoleSet in the Entry Role.',
   })
-  async inviteContributorsForRoleSetMembership(
+  async inviteContributorsEntryRoleOnRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: InviteForEntryRoleOnRoleSetInput
@@ -459,6 +543,8 @@ export class RoleSetResolverMutations {
         },
       }
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+
     if (invitationData.invitedContributors.length === 0) {
       throw new RoleSetInvitationException(
         `No contributors were provided to invite: ${roleSet.id}`,
@@ -469,7 +555,7 @@ export class RoleSetResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_INVITE,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
       `create invitation RoleSet: ${roleSet.id}`
     );
 
@@ -494,7 +580,7 @@ export class RoleSetResolverMutations {
       const canInviteToParent = this.authorizationService.isAccessGranted(
         agentInfo,
         parentRoleSetAuthorization,
-        AuthorizationPrivilege.COMMUNITY_INVITE
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
       );
 
       // Need to see if also can invite to the parent community if any of the users are not members there
@@ -541,7 +627,7 @@ export class RoleSetResolverMutations {
     invitedContributor: IContributor,
     agentInfo: AgentInfo,
     invitedToParent: boolean,
-    extraRole?: CommunityRoleType,
+    extraRole?: RoleName,
     welcomeMessage?: string
   ): Promise<IInvitation> {
     const input: CreateInvitationInput = {
@@ -624,26 +710,22 @@ export class RoleSetResolverMutations {
         },
       }
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
-      AuthorizationPrivilege.COMMUNITY_INVITE,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
       `create invitation external community: ${roleSet.id}`
     );
 
-    const existingUser = await this.userService.getUserByEmail(
-      invitationData.email,
-      {
-        relations: {
-          agent: true,
-        },
-      }
+    const existingUser = await this.userLookupService.isRegisteredUser(
+      invitationData.email
     );
 
     if (existingUser) {
       throw new RoleSetInvitationException(
-        `User already has a profile (${existingUser.email})`,
+        `User already has a profile (${invitationData.email})`,
         LogContext.COMMUNITY
       );
     }
@@ -655,7 +737,7 @@ export class RoleSetResolverMutations {
       const canInviteToParent = this.authorizationService.isAccessGranted(
         agentInfo,
         parentRoleSetAuthorization,
-        AuthorizationPrivilege.COMMUNITY_INVITE
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
       );
 
       // Not an existing user
@@ -840,5 +922,17 @@ export class RoleSetResolverMutations {
       roleSet,
       applicationFormData.formData
     );
+  }
+
+  private validateRoleSetTypeOrFail(
+    roleSet: IRoleSet,
+    allowedRoleSetTypes: RoleSetType[]
+  ) {
+    if (!allowedRoleSetTypes.includes(roleSet.type)) {
+      throw new ValidationException(
+        `Unable to carry out mutation on roleSet of type: ${roleSet.type}`,
+        LogContext.PLATFORM
+      );
+    }
   }
 }

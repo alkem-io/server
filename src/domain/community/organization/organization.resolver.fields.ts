@@ -31,6 +31,7 @@ import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/cre
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -64,6 +65,16 @@ export class OrganizationResolverFields {
     );
 
     return this.organizationService.getUserGroups(organization);
+  }
+
+  // Note: do not check for READ so that it is accessible to check for authorization
+  @UseGuards(GraphqlGuard)
+  @ResolveField('roleSet', () => IRoleSet, {
+    nullable: false,
+    description: 'The RoleSet for this Organization.',
+  })
+  async roleSet(@Parent() organization: IOrganization): Promise<IRoleSet> {
+    return this.organizationService.getRoleSet(organization);
   }
 
   @UseGuards(GraphqlGuard)

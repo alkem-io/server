@@ -28,8 +28,8 @@ export class CollaborationResolverFields {
     description: 'The InnovationFlow for the Collaboration.',
   })
   @Profiling.api
-  async innovationFlow(@Parent() collabotation: ICollaboration) {
-    return await this.collaborationService.getInnovationFlow(collabotation.id);
+  async innovationFlow(@Parent() collaboration: ICollaboration) {
+    return await this.collaborationService.getInnovationFlow(collaboration.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -45,12 +45,10 @@ export class CollaborationResolverFields {
     return loader.load(collaboration.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('calloutsSet', () => ICalloutsSet, {
     nullable: false,
     description: 'The calloutsSet with Callouts in use by this Space',
   })
-  @UseGuards(GraphqlGuard)
   async calloutsSet(
     @Parent() collaboration: ICollaboration,
     @Loader(CollaborationCalloutsSetLoaderCreator) loader: ILoader<ICalloutsSet>

@@ -6,7 +6,6 @@ import {
 } from '@common/enums';
 import { IUser } from '@domain/community/user/user.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
@@ -26,10 +25,12 @@ import {
   CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
   CREDENTIAL_RULE_USER_READ,
   PRIVILEGE_RULE_READ_USER_SETTINGS,
+  CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -41,13 +42,13 @@ export class UserAuthorizationService {
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private agentService: AgentService,
-    private userService: UserService
+    private userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
     userID: string
   ): Promise<IAuthorizationPolicy[]> {
-    const user = await this.userService.getUserOrFail(userID, {
+    const user = await this.userLookupService.getUserOrFail(userID, {
       loadEagerRelations: false,
       relations: {
         authorization: true,
@@ -174,7 +175,8 @@ export class UserAuthorizationService {
   }
 
   async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
-    const agent = await this.userService.getAgentOrFail(userID);
+    const { user, agent } =
+      await this.userLookupService.getUserAndAgent(userID);
 
     await this.agentService.grantCredential({
       type: AuthorizationCredential.GLOBAL_REGISTERED,
@@ -185,8 +187,13 @@ export class UserAuthorizationService {
       agentID: agent.id,
       resourceID: userID,
     });
+    await this.agentService.grantCredential({
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      agentID: agent.id,
+      resourceID: user.accountID,
+    });
 
-    return await this.userService.getUserOrFail(userID);
+    return await this.userLookupService.getUserOrFail(userID);
   }
 
   private appendGlobalCredentialRules(
@@ -228,6 +235,15 @@ export class UserAuthorizationService {
       );
 
     newRules.push(communityAdmin);
+
+    const globalRegistered =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED
+      );
+
+    newRules.push(globalRegistered);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -285,7 +301,7 @@ export class UserAuthorizationService {
     newRules.push(communityReader);
 
     // Determine who is able to see the PII designated fields for a User
-    const { credentials } = await this.userService.getUserAndCredentials(
+    const { credentials } = await this.userLookupService.getUserAndCredentials(
       user.id
     );
     const readUserPiiCredentials: ICredentialDefinition[] = [

@@ -1,4 +1,4 @@
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { IVirtualContributor } from './virtual.contributor.interface';
@@ -22,7 +22,8 @@ export class VirtualContributorResolverQueries {
   @UseGuards(GraphqlGuard)
   @Query(() => [IVirtualContributor], {
     nullable: false,
-    description: 'The VirtualContributors on this platform',
+    description:
+      'The VirtualContributors on this platform; only accessible to platform admins',
   })
   async virtualContributors(
     @Args({ nullable: true }) args: ContributorQueryArgs,
@@ -49,7 +50,7 @@ export class VirtualContributorResolverQueries {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
-    @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
     return await this.virtualContributorService.getVirtualContributorOrFail(id);
   }

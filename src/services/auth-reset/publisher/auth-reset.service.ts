@@ -35,6 +35,7 @@ export class AuthResetService {
       await this.publishAuthorizationResetAiServer();
       // And reset licenses
       await this.publishLicenseResetAllAccounts(task.id);
+      await this.publishLicenseResetAllOrganizations(task.id);
     } catch (error) {
       throw new BaseException(
         `Error while initializing authorization reset: ${error}`,
@@ -84,6 +85,29 @@ export class AuthResetService {
         {
           id,
           type: RESET_EVENT_TYPE.LICENSE_RESET_ACCOUNT,
+          task: task.id,
+        }
+      )
+    );
+
+    return task.id;
+  }
+
+  public async publishLicenseResetAllOrganizations(taskId?: string) {
+    const organizations = await this.manager.find(Organization, {
+      select: { id: true },
+    });
+
+    const task = taskId
+      ? { id: taskId }
+      : await this.taskService.create(organizations.length);
+
+    organizations.forEach(({ id }) =>
+      this.authResetQueue.emit<any, AuthResetEventPayload>(
+        RESET_EVENT_TYPE.LICENSE_RESET_ORGANIZATION,
+        {
+          id,
+          type: RESET_EVENT_TYPE.LICENSE_RESET_ORGANIZATION,
           task: task.id,
         }
       )
@@ -142,6 +166,10 @@ export class AuthResetService {
     // does not need a task
     this.authResetQueue.emit<any, any>(
       RESET_EVENT_TYPE.AUTHORIZATION_RESET_PLATFORM,
+      {}
+    );
+    this.authResetQueue.emit<any, any>(
+      RESET_EVENT_TYPE.LICENSE_RESET_PLATFORM,
       {}
     );
   }

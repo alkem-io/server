@@ -41,7 +41,6 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { UserService } from '@domain/community/user/user.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
@@ -70,6 +69,11 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges.results';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
+import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -85,6 +89,7 @@ export class LookupResolverFields {
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
     private innovationPackService: InnovationPackService,
+    private organizationLookupService: OrganizationLookupService,
     private profileService: ProfileService,
     private postService: PostService,
     private calloutsSetService: CalloutsSetService,
@@ -100,12 +105,13 @@ export class LookupResolverFields {
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private guidelinesService: CommunityGuidelinesService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
     private roleSetService: RoleSetService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private knowledgeBaseService: KnowledgeBaseService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -143,6 +149,16 @@ export class LookupResolverFields {
     );
 
     return account;
+  }
+
+  @ResolveField(() => IOrganization, {
+    nullable: true,
+    description: 'Lookup the specified Organization using a ID',
+  })
+  async organization(
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IOrganization> {
+    return await this.organizationLookupService.getOrganizationOrFail(id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -223,7 +239,7 @@ export class LookupResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(id);
+    const user = await this.userLookupService.getUserOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
@@ -283,7 +299,7 @@ export class LookupResolverFields {
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
         authorizationPolicyID
       );
-    const agent = await this.userService.getAgentOrFail(userID);
+    const { agent } = await this.userLookupService.getUserAndAgent(userID);
     return this.authorizationService.getGrantedPrivileges(
       agent.credentials || [],
       [],
@@ -743,5 +759,25 @@ export class LookupResolverFields {
     const license = await this.licenseService.getLicenseOrFail(id);
 
     return license;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IKnowledgeBase, {
+    nullable: false,
+    description: 'Lookup as specific KnowledgeBase',
+  })
+  async knowledgeBase(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
+  ): Promise<IKnowledgeBase> {
+    const knowledgeBase =
+      await this.knowledgeBaseService.getKnowledgeBaseOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      knowledgeBase.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup KnowledgeBase: ${knowledgeBase.id}`
+    );
+    return knowledgeBase;
   }
 }

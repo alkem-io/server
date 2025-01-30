@@ -418,7 +418,7 @@ export class CalloutService {
     } else {
       whiteboardData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboardData.profileData.displayName}`,
+          `${whiteboardData.profile?.displayName ?? 'Whiteboard'}`,
           reservedNameIDs
         );
     }
@@ -571,6 +571,7 @@ export class CalloutService {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
       relations: {
         contributions: {
+          post: true,
           whiteboard: true,
         },
         ...relations,

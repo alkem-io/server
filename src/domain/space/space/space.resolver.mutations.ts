@@ -224,16 +224,6 @@ export class SpaceResolverMutations {
       }
     );
 
-    const subspaceCreatedEvent: SubspaceCreatedPayload = {
-      eventID: `space-challenge-created-${Math.round(Math.random() * 100)}`,
-      spaceID: space.id,
-      subspace: subspace,
-    };
-    this.subspaceCreatedSubscription.publish(
-      SubscriptionType.SUBSPACE_CREATED,
-      subspaceCreatedEvent
-    );
-
     const level0Space = await this.spaceService.getSpaceOrFail(
       subspace.levelZeroSpaceID,
       {
@@ -247,6 +237,18 @@ export class SpaceResolverMutations {
     );
     await this.licenseService.saveAll(updatedLicenses);
 
-    return this.spaceService.getSpaceOrFail(subspace.id);
+    const newSubspace = await this.spaceService.getSpaceOrFail(subspace.id);
+
+    const subspaceCreatedEvent: SubspaceCreatedPayload = {
+      eventID: `space-challenge-created-${Math.round(Math.random() * 100)}`,
+      spaceID: space.id,
+      subspace: newSubspace,
+    };
+    this.subspaceCreatedSubscription.publish(
+      SubscriptionType.SUBSPACE_CREATED,
+      subspaceCreatedEvent
+    );
+
+    return newSubspace;
   }
 }

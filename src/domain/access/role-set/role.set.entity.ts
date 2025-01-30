@@ -10,13 +10,14 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Role } from '../role/role.entity';
 import { Form } from '@domain/common/form/form.entity';
-import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
+import { PlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.entity';
 import { IRoleSet } from './role.set.interface';
 import { Application } from '@domain/access/application/application.entity';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
-import { CommunityRoleType } from '@common/enums/community.role';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
 import { License } from '@domain/common/license/license.entity';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { RoleName } from '@common/enums/role.name';
 
 @Entity()
 export class RoleSet
@@ -46,7 +47,7 @@ export class RoleSet
   roles?: Role[];
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  entryRoleType!: CommunityRoleType;
+  entryRoleName!: RoleName;
 
   @OneToMany(() => Application, application => application.roleSet, {
     eager: false,
@@ -77,4 +78,7 @@ export class RoleSet
     onDelete: 'SET NULL',
   })
   parentRoleSet?: RoleSet;
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  type!: RoleSetType;
 }

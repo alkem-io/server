@@ -3,10 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserGroup } from '@domain/community/user-group';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { User } from '@domain/community/user/user.entity';
-import { UserModule } from '@domain/community/user/user.module';
 import { SearchResolverQueries } from './search.resolver.queries';
 import { SearchService } from './search.service';
-import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { Organization } from '@domain/community/organization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
@@ -18,14 +16,16 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Search2Module } from '@services/api/search/v2/search2.module';
+import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    UserModule,
     UserGroupModule,
-    OrganizationModule,
+    UserLookupModule,
+    OrganizationLookupModule,
     SpaceModule,
     CollaborationModule,
     PostModule,

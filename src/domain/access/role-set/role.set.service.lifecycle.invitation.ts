@@ -39,7 +39,7 @@ export class RoleSetServiceLifecycleInvitation {
           return this.authorizationService.isAccessGranted(
             agentInfo,
             authorizationPolicy,
-            AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT
+            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT
           );
         },
       },
