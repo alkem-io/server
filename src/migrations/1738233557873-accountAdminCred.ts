@@ -1,9 +1,7 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AccountAdminCred1737793420337 implements MigrationInterface {
-  name = 'AccountAdminCred1737793420337';
-
+export class AccountAdminCred1738233557873 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create an account admin credential for every user
     const users: {
@@ -41,10 +39,12 @@ export class AccountAdminCred1737793420337 implements MigrationInterface {
       const agents: {
         id: string;
       }[] = await queryRunner.query(
-        `SELECT agentId FROM credential WHERE resourceID = '${organization.id}' AND type IN ('organization-owner', 'organization-admin')`
+        `SELECT agentId as id FROM credential WHERE resourceID = '${organization.id}' AND type IN ('organization-owner', 'organization-admin')`
       );
       // For each such agent assign an account admin credential
       for (const agent of agents) {
+        if (!agent.id) continue;
+
         const credentialID = randomUUID();
         await queryRunner.query(`INSERT INTO credential (
                                 id,
