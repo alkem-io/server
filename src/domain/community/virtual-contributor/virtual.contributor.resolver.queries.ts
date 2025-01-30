@@ -22,7 +22,8 @@ export class VirtualContributorResolverQueries {
   @UseGuards(GraphqlGuard)
   @Query(() => [IVirtualContributor], {
     nullable: false,
-    description: 'The VirtualContributors on this platform',
+    description:
+      'The VirtualContributors on this platform; only accessible to platform admins',
   })
   async virtualContributors(
     @Args({ nullable: true }) args: ContributorQueryArgs,
