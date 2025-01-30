@@ -305,11 +305,25 @@ export class SearchIngestService {
 
     const total = await countFn();
 
+    if (total === 0) {
+      return [
+        {
+          success: true,
+          message: `[${index}] - 0 documents indexed`,
+          total: 0,
+        },
+      ];
+    }
+
     while (start <= total) {
       const fetched = await fetchFn(start, batchSize);
-      if (fetched.length) {
-        const result = await this.ingestBulk(fetched, index, task);
-        results.push(result);
+      const result = await this.ingestBulk(fetched, index, task);
+      results.push(result);
+
+      if (result.erroredDocuments?.length) {
+        this.logger.error(result.message, undefined, LogContext.SEARCH_INGEST);
+      } else {
+        this.logger.verbose?.(result.message, LogContext.SEARCH_INGEST);
       }
 
       start += batchSize;
@@ -337,7 +351,7 @@ export class SearchIngestService {
       return {
         success: true,
         total: 0,
-        message: 'No data indexed',
+        message: `[${index}] - 0 documents indexed`,
       };
     }
 
@@ -372,7 +386,6 @@ export class SearchIngestService {
       } documents errored. ${
         data.length - erroredDocuments.length
       } documents indexed.`;
-      this.logger.error(message, undefined, LogContext.SEARCH_INGEST);
       this.taskService.updateTaskErrors(task.id, message);
       return {
         success: false,
@@ -382,7 +395,6 @@ export class SearchIngestService {
       };
     } else {
       const message = `[${index}] - ${data.length} documents indexed`;
-      this.logger.verbose?.(message, LogContext.SEARCH_INGEST);
       this.taskService.updateTaskResults(task.id, message);
       return {
         success: true,
@@ -626,6 +638,7 @@ export class SearchIngestService {
           collaboration: {
             id: true,
             calloutsSet: {
+              id: true,
               callouts: {
                 id: true,
                 createdBy: true,
@@ -708,6 +721,7 @@ export class SearchIngestService {
           collaboration: {
             id: true,
             calloutsSet: {
+              id: true,
               callouts: {
                 id: true,
                 createdBy: true,
@@ -864,6 +878,7 @@ export class SearchIngestService {
           collaboration: {
             id: true,
             calloutsSet: {
+              id: true,
               callouts: {
                 id: true,
                 contributions: {
