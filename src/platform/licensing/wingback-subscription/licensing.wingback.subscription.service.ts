@@ -14,7 +14,7 @@ import {
   WingbackFeatureMapping,
   WingbackFeatureNames,
 } from '@platform/licensing/wingback-subscription/wingback.constants';
-import { CreateCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
+import { CreateWingbackCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
 import { LicensingGrantedEntitlement } from '../dto/licensing.dto.granted.entitlement';
 
 @Injectable()
@@ -30,7 +30,9 @@ export class LicensingWingbackSubscriptionService {
    * @param data
    * @throws {Error} if the request fails
    */
-  public createCustomer(data: CreateCustomer): Promise<{ id: string } | never> {
+  public createCustomer(
+    data: CreateWingbackCustomer
+  ): Promise<{ id: string } | never> {
     return this.wingbackManager.createCustomer(data);
   }
 

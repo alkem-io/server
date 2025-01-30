@@ -192,6 +192,13 @@ export class AccountService {
     return result;
   }
 
+  public updateExternalSubscriptionId(
+    accountID: string,
+    externalSubscriptionID: string
+  ) {
+    return this.accountRepository.update(accountID, { externalSubscriptionID });
+  }
+
   async getAccountOrFail(
     accountID: string,
     options?: FindOneOptions<Account>
@@ -213,6 +220,45 @@ export class AccountService {
       where: { id: accountID },
       ...options,
     });
+  }
+
+  public async getAccountAndDetails(accountID: string) {
+    const [account] = await this.accountRepository.query(
+      `
+        SELECT
+          a.id as accountId, a.externalSubscriptionID as externalSubscriptionID,
+          o.id as orgId, o.contactEmail as orgContactEmail, o.legalEntityName as orgName,
+          u.id as userId, u.email as userEmail, CONCAT(u.firstName, ' ', u.lastName) as userName
+        FROM account as a
+        LEFT JOIN user as u on a.id = u.accountID
+        LEFT JOIN organization as o on a.id = o.accountID
+        WHERE a.id = ?
+    `,
+      [accountID]
+    );
+
+    if (!account) {
+      return undefined;
+    }
+
+    return {
+      accountID,
+      externalSubscriptionID: account.externalSubscriptionID,
+      user: account.userId
+        ? {
+            id: account.userId,
+            email: account.userEmail,
+            name: account.userName,
+          }
+        : undefined,
+      organization: account.orgId
+        ? {
+            id: account.orgId,
+            email: account.orgContactEmail,
+            name: account.orgName,
+          }
+        : undefined,
+    };
   }
 
   async getAccounts(options?: FindManyOptions<Account>): Promise<IAccount[]> {

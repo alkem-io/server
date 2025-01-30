@@ -2,10 +2,11 @@ import { ConfigService } from '@nestjs/config';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, map, TimeoutError, timer } from 'rxjs';
+import { isAxiosError } from 'axios';
 import { AlkemioConfig } from '@src/types';
 import { UpdateCustomer } from '@services/external/wingback/types/wingback.type.update.customer';
 import { WingbackEntitlement } from './types/wingback.type.entitlement';
-import { CreateCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
+import { CreateWingbackCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { WingbackFeature } from '@services/external/wingback/types/wingback.type.feature';
 import { BaseException } from '@common/exceptions/base.exception';
@@ -14,6 +15,14 @@ import { catchError, retry, timeout } from 'rxjs/operators';
 import { RetryException, TimeoutException } from '@common/exceptions/internal';
 import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import { WingbackContract } from '@services/external/wingback/types/wingback.type.contract';
+import { WingbackCustomerNotFound } from '@services/external/wingback/exceptions/wingback.customer.not.found';
+import { WingbackCustomerNotRemoved } from '@services/external/wingback/exceptions/wingback.customer.not.removed';
+import { WingbackCustomerNotCreated } from '@services/external/wingback/exceptions/wingback.customer.not.created';
+import { WingbackError } from '@services/external/wingback/types/wingback.type.error';
+import {
+  isWingbackException,
+  WingbackException,
+} from '@services/external/wingback/exceptions/wingback.exception';
 
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
@@ -48,15 +57,54 @@ export class WingbackManager {
   }
 
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#1-create-a-new-customer-in-wingback-backend
-  public async createCustomer(data: CreateCustomer): Promise<{ id: string }> {
+  public async createCustomer(
+    data: CreateWingbackCustomer
+  ): Promise<{ id: string }> {
+    if (!this.enabled) {
+      throw new Error('Wingback is not enabled');
+    }
+    try {
+      const response = await this.sendPost<string>('/v1/c/customer', data);
+      return { id: response };
+    } catch (e) {
+      const response = isWingbackException(e) ? e.details?.data : undefined;
+      throw new WingbackCustomerNotCreated(
+        'Error while creating Wingback customer',
+        LogContext.WINGBACK,
+        { data, response, originalException: e }
+      );
+    }
+  }
+
+  public async removeCustomer(customerId: string): Promise<boolean> {
     if (!this.enabled) {
       throw new Error('Wingback is not enabled');
     }
 
-    const response = await this.sendPost<string>('/v1/c/customer', data);
+    const customer = await this.getCustomer(customerId);
 
-    return { id: response };
+    if (!customer) {
+      throw new WingbackCustomerNotFound(
+        'Wingback customer not found',
+        LogContext.WINGBACK,
+        { customerId }
+      );
+    }
+
+    try {
+      await this.sendDelete(`/v1/c/customer/${customerId}`);
+    } catch (e) {
+      const response = isWingbackException(e) ? e.details?.data : undefined;
+      throw new WingbackCustomerNotRemoved(
+        'Error while removing Wingback customer',
+        LogContext.WINGBACK,
+        { customerId, originalException: e, response }
+      );
+    }
+
+    return true;
   }
+
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#2-collect-payment-information
   public triggerPaymentSession(): Promise<void> {
     throw new Error('Method not implemented');
@@ -158,8 +206,12 @@ export class WingbackManager {
     throw new Error(`Method not implemented: ${customerId}`);
   }
 
-  getCustomer(customerId: string): Promise<unknown> {
-    throw new Error(`Method not implemented: ${customerId}`);
+  async getCustomer(customerId: string): Promise<unknown | undefined> {
+    try {
+      return await this.sendGet(`/v1/c/customer/${customerId}`);
+    } catch (e) {
+      return undefined;
+    }
   }
 
   inactivateCustomer(customerId: string): Promise<boolean> {
@@ -183,6 +235,13 @@ export class WingbackManager {
     return this.sendRequest('get', path);
   }
 
+  private sendDelete<TResult = unknown, TInput = unknown>(
+    path: string,
+    data?: TInput
+  ): Promise<TResult> {
+    return this.sendRequest('delete', path, data);
+  }
+
   /**
    *
    * @param method
@@ -190,10 +249,12 @@ export class WingbackManager {
    * @param data
    * @private
    * @throws {TimeoutError} on timeout
-   * @throws {Error} on retry exceeded or other error
+   * @throws {RetryException} on too many retries
+   * @throws {WingbackException} on Wingback connection error
+   * @throws {Error} on other errors
    */
   private sendRequest<TResult>(
-    method: 'get' | 'post',
+    method: 'get' | 'post' | 'delete',
     path: string,
     data?: unknown
   ): Promise<TResult> {
@@ -222,6 +283,14 @@ export class WingbackManager {
         retry({
           count: this.retries,
           delay: (error, retryCount) => {
+            if (
+              isAxiosError(error) &&
+              !!error.response?.status &&
+              error.response?.status >= 400 &&
+              error.response?.status < 500
+            ) {
+              throw error;
+            }
             if (retryCount === this.retries) {
               throw new RetryException(
                 'Wingback request did not succeed after several retries',
@@ -251,11 +320,16 @@ export class WingbackManager {
             );
           }
 
-          this.logger.error(
-            'Wingback responded with error',
-            error.stack,
-            LogContext.WINGBACK
-          );
+          if (isAxiosError(error)) {
+            throw new WingbackException(
+              'Wingback responded with error',
+              LogContext.WINGBACK,
+              error.response?.status,
+              error.response?.statusText,
+              { url, method, data: error.response?.data }
+            );
+          }
+
           throw error;
         }),
         map(response => response.data)

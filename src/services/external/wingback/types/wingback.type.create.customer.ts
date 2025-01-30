@@ -1,13 +1,8 @@
-export type CreateCustomer = {
+export type CreateWingbackCustomer = {
   /** Customer's name */
-  name: string;
+  name?: string;
   /** Customer's emails */
-  emails: {
-    /** Where the invoices are going to be sent */
-    invoice: string;
-    /** The organization email in Alkemio */
-    orgEmail?: string;
-  };
+  emails?: Record<string, string>;
   /** Customer's address (optional) */
   address?: {
     /** City name */
@@ -24,14 +19,14 @@ export type CreateCustomer = {
     zip: string;
   };
   /** Customer's tax details */
-  tax_details: {
+  tax_details?: {
     /** VAT ID */
-    vat_id: string;
+    vat_id?: string;
   };
   /** Notes about the customer */
   notes?: string;
-  /** Customer reference */
-  customer_reference: string;
+  /** Customer Reference. May contain a reference to an external system */
+  customer_reference?: string;
   /** Customer's contracts (optional) */
   contracts?: unknown[];
   /** Additional metadata for the customer */
