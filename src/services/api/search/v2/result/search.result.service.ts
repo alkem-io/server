@@ -20,7 +20,7 @@ import {
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { Post } from '@domain/collaboration/post';
-import { Callout } from '@domain/collaboration/callout';
+import { Callout, ICallout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -33,6 +33,7 @@ import { SearchEntityTypes } from '@services/api/search/search.entity.types';
 import { User } from '@domain/community/user/user.entity';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 type PostParents = {
   post: Post;
@@ -523,17 +524,43 @@ export class SearchResultService {
       .filter((callout): callout is ISearchResultCallout => !!callout);
   }
 
+  private async filterCalloutsBySetType(
+    callouts: ICallout[],
+    setType: CalloutsSetType
+  ): Promise<ICallout[]> {
+    const calloutIds = callouts.map(callout => callout.id);
+    const calloutsWithSet = await this.entityManager.find(Callout, {
+      where: {
+        id: In(calloutIds),
+      },
+      select: {
+        id: true,
+        calloutsSet: {
+          type: true,
+        },
+      },
+    });
+    const calloutsInSetType = calloutsWithSet.filter(
+      c => c.calloutsSet?.type === setType
+    );
+    return calloutsInSetType;
+  }
+
   private async getCalloutParents(
     callouts: Callout[]
   ): Promise<CalloutParents[]> {
-    const calloutIds = callouts.map(callout => callout.id);
+    const spaceCallouts = await this.filterCalloutsBySetType(
+      callouts,
+      CalloutsSetType.COLLABORATION
+    );
+    const spaceCalloutIds = spaceCallouts.map(callout => callout.id);
 
     const parentSpaces = await this.entityManager.find(Space, {
       where: {
         collaboration: {
           calloutsSet: {
             callouts: {
-              id: In(calloutIds),
+              id: In(spaceCalloutIds),
             },
           },
         },
@@ -557,7 +584,7 @@ export class SearchResultService {
       },
     });
 
-    return callouts
+    return spaceCallouts
       .map(callout => {
         const space = parentSpaces.find(space =>
           space?.collaboration?.calloutsSet?.callouts?.some(
