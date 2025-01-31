@@ -17,6 +17,15 @@ import { Callout } from '@domain/collaboration/callout';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { UrlType } from '@common/enums/url.type';
 import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
+import { UrlParser, UrlParserResult } from 'url-params-parser';
+import { compact } from 'lodash';
+import { NameID } from '@domain/common/scalars';
+
+type UrlTypeParser = {
+  urlType: UrlType;
+  routes: string[];
+  validator: (params: Record<string, string>) => boolean;
+};
 
 @Injectable()
 export class UrlResolverService {
@@ -38,6 +47,28 @@ export class UrlResolverService {
   ): Promise<UrlResolverQueryResults> {
     const pathElements = this.getPathElements(url);
 
+    const result: UrlResolverQueryResults = {
+      type: UrlType.SPACE,
+    };
+
+    switch (pathElements.urlType) {
+      case UrlType.USER: {
+        const user = await this.userLookupService.getUserByNameIdOrFail(
+          pathElements.params.userNameId
+        );
+        result.userId = user.id;
+        result.type = UrlType.USER;
+        return result;
+      }
+      case UrlType.SPACE: {
+        const space = await this.spaceLookupService.getSpaceByNameIdOrFail(
+          pathElements.params.spaceNameId,
+          this.spaceRelations
+        );
+      }
+    }
+
+    /*
     const result: UrlResolverQueryResults = {
       type: UrlType.SPACE,
     };
@@ -151,6 +182,7 @@ export class UrlResolverService {
     }
 
     return await this.populateCollaborationResult(result);
+    */
   }
 
   private async populateCollaborationResult(
@@ -227,8 +259,231 @@ export class UrlResolverService {
     return result;
   }
 
-  private getPathElements(url: string): string[] {
+  //!! calendar events nameIds space, subspace and subsubspace
+  //!! :spaceNameId/collaboration/:calloutNameId ....
+
+  private prepareSpaceRoutes(): UrlTypeParser {
+    const routes: string[] = [];
+    // client-web/src/domain/journey/settings/routes/SpaceSettingsRoute.tsx
+    const spaceSettingsRoutes = [
+      'profile',
+      'settings',
+      'account',
+      'context',
+      'community',
+      'communications',
+      'templates',
+      'storage',
+      'challenges',
+    ];
+    spaceSettingsRoutes.forEach(tab =>
+      routes.push(`/:spaceNameId/settings/${tab}`)
+    );
+    routes.push('/:spaceNameId/settings');
+
+    // client-web/src/domain/journey/space/routing/SpaceRoute.tsx
+    const spaceTabs = [
+      'dashboard/updates',
+      'dashboard/contributors',
+      'dashboard',
+      'calendar',
+      'community',
+      'about',
+      'subspaces',
+      'knowledge-base',
+      'search',
+    ];
+    spaceTabs.forEach(tab => routes.push(`/:spaceNameId/${tab}`));
+    routes.push('/:spaceNameId');
+    const validator = (params: Record<string, string>) => {
+      return NameID.isValidFormat(params.spaceNameId);
+    };
+    return {
+      urlType: UrlType.SPACE,
+      routes,
+      validator,
+    };
+  }
+
+  private prepareSubspaceRoutes(): UrlTypeParser {
+    const routes: string[] = [];
+    // client-web/src/domain/journey/settings/routes/ChallengeRoute.tsx
+    const subspaceSettingsRoutes = [
+      'profile',
+      'context',
+      'community',
+      'communications',
+      'opportunities',
+      'templates',
+      'settings',
+      'authorization',
+    ];
+    // client-web/src/domain/journey/subspace/routing/SubspaceRoute.tsx
+    const subspaceRoutes = [
+      'index',
+      'outline',
+      'about',
+      'subspaces',
+      'contributors',
+      'activity',
+      'calendar',
+      'share',
+      'manageFlow',
+      'settings',
+      'dashboard/updates',
+    ];
+    subspaceSettingsRoutes.forEach(tab =>
+      routes.push(`/:spaceNameId/challenges/:subspaceNameId/settings/${tab}`)
+    );
+    routes.push('/:spaceNameId/challenges/:subspaceNameId/settings');
+    subspaceRoutes.forEach(tab =>
+      routes.push(`/:spaceNameId/challenges/:subspaceNameId/${tab}`)
+    );
+    routes.push('/:spaceNameId/challenges/:subspaceNameId');
+
+    const validator = (params: Record<string, string>) => {
+      return (
+        NameID.isValidFormat(params.spaceNameId) &&
+        NameID.isValidFormat(params.subspaceNameId)
+      );
+    };
+    return {
+      urlType: UrlType.SPACE,
+      routes,
+      validator,
+    };
+  }
+
+  private prepareL2SubspaceRoutes(): UrlTypeParser {
+    const routes: string[] = [];
+    //client-web/src/domain/journey/settings/routes/OpportunityRoute.tsx
+    const subspaceSettingsRoutes = [
+      'profile',
+      'context',
+      'community',
+      'communications',
+      'templates',
+      'settings',
+    ];
+    // client-web/src/domain/journey/subspace/routing/SubspaceRoute.tsx
+    const subspaceRoutes = [
+      'index',
+      'outline',
+      'about',
+      'subspaces',
+      'contributors',
+      'activity',
+      'calendar',
+      'share',
+      'manageFlow',
+      'settings',
+      'dashboard/updates',
+    ];
+    subspaceSettingsRoutes.forEach(tab =>
+      routes.push(
+        `/:spaceNameId/challenges/:subspaceNameId/opportunities/:subsubspaceNameId/settings/${tab}`
+      )
+    );
+    routes.push(
+      '/:spaceNameId/challenges/:subspaceNameId/opportunities/:subsubspaceNameId/settings'
+    );
+    subspaceRoutes.forEach(tab =>
+      routes.push(
+        `/:spaceNameId/challenges/:subspaceNameId/opportunities/:subsubspaceNameId/${tab}`
+      )
+    );
+    routes.push(
+      '/:spaceNameId/challenges/:subspaceNameId/opportunities/:subsubspaceNameId'
+    );
+
+    const validator = (params: Record<string, string>) => {
+      return (
+        NameID.isValidFormat(params.spaceNameId) &&
+        NameID.isValidFormat(params.subspaceNameId)
+      );
+    };
+    return {
+      urlType: UrlType.SPACE,
+      routes,
+      validator,
+    };
+  }
+
+  private prepareUserRoutes(): UrlTypeParser {
+    const routes: string[] = [];
+    // client-web/src/domain/journey/settings/routes/SpaceSettingsRoute.tsx
+    const userSettingsRoutes = [
+      'profile',
+      'account',
+      'membership',
+      'organizations',
+      'notifications',
+      'settings',
+    ];
+    userSettingsRoutes.forEach(tab =>
+      routes.push(`/user/:userNameId/settings/${tab}`)
+    );
+    routes.push('/user/:userNameId/settings');
+    routes.push('/user/:userNameId');
+
+    const validator = (params: Record<string, string>) => {
+      return NameID.isValidFormat(params.useNameId);
+    };
+    return {
+      urlType: UrlType.USER,
+      routes,
+      validator,
+    };
+  }
+
+  private tryParse(
+    url: string,
+    routeParser: string,
+    validator: (params: Record<string, string>) => boolean = () => true
+  ): Record<string, string> | undefined {
+    try {
+      const result = UrlParser(url, routeParser);
+      if (
+        result.namedParamsValues.length > 0 &&
+        validator(result.namedParams)
+      ) {
+        return result.namedParams;
+      } else {
+        return undefined;
+      }
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  private getPathElements(url: string): {
+    urlType: UrlType;
+    params: Record<string, string>;
+  } {
     const parsedUrl = new URL(url);
+    // Go from most restrictive to less restrictive
+    const parsers = {
+      L2subspaceRoutes: this.prepareL2SubspaceRoutes(),
+      subspaceRoutes: this.prepareSubspaceRoutes(),
+      spaceRoutes: this.prepareSpaceRoutes(),
+      userRoutes: this.prepareUserRoutes(),
+    };
+
+    for (const parser of Object.values(parsers)) {
+      for (const route of parser.routes) {
+        const result = this.tryParse(url, route, parser.validator);
+        if (result) {
+          return {
+            urlType: parser.urlType,
+            params: result,
+          };
+          // console.log({ result });
+
+          // const pathElements = parsedUrl.pathname.split('/').filter(Boolean);
+          // return pathElements;
+        }
+      }
+    }
 
     const pathElements = parsedUrl.pathname.split('/').filter(Boolean);
     return pathElements;
