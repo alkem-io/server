@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
 import {
   LogContext,
   AuthorizationCredential,
@@ -18,11 +17,12 @@ import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.u
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IOrganization } from '@domain/community/organization';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
 import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class AdminAuthorizationService {
@@ -30,8 +30,8 @@ export class AdminAuthorizationService {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
-    private userService: UserService,
-    private organizationService: OrganizationService,
+    private userLookupService: UserLookupService,
+    private organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -44,7 +44,7 @@ export class AdminAuthorizationService {
         LogContext.AUTH
       );
 
-    return await this.userService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredentials({
       type: credentialCriteria.type.toString(),
       resourceID: credentialCriteria.resourceID,
     });
@@ -55,7 +55,7 @@ export class AdminAuthorizationService {
     userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput
   ): Promise<AuthorizationPrivilege[]> {
     // get the user
-    const { credentials } = await this.userService.getUserAndCredentials(
+    const { credentials } = await this.userLookupService.getUserAndCredentials(
       userAuthorizationPrivilegesData.userID
     );
 
@@ -83,7 +83,7 @@ export class AdminAuthorizationService {
           LogContext.AUTH
         );
     }
-    const { user, agent } = await this.userService.getUserAndAgent(
+    const { user, agent } = await this.userLookupService.getUserAndAgent(
       grantCredentialData.userID
     );
 
@@ -107,7 +107,7 @@ export class AdminAuthorizationService {
         );
     }
 
-    const { user, agent } = await this.userService.getUserAndAgent(
+    const { user, agent } = await this.userLookupService.getUserAndAgent(
       revokeCredentialData.userID
     );
 
@@ -132,7 +132,7 @@ export class AdminAuthorizationService {
         );
     }
     const { organization, agent } =
-      await this.organizationService.getOrganizationAndAgent(
+      await this.organizationLookupService.getOrganizationAndAgent(
         grantCredentialData.organizationID
       );
 
@@ -157,7 +157,7 @@ export class AdminAuthorizationService {
     }
 
     const { organization, agent } =
-      await this.organizationService.getOrganizationAndAgent(
+      await this.organizationLookupService.getOrganizationAndAgent(
         revokeCredentialData.organizationID
       );
 
@@ -180,6 +180,21 @@ export class AdminAuthorizationService {
 
     const updatedAuthorization =
       this.extendAuthorizationPolicyWithAuthorizationReset(authorization);
+
+    // Also grant READ, UPDATE, DELETE to global admins
+    const globalAdminsReadUpdateDelete =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
+      );
+    globalAdminsReadUpdateDelete.cascade = false;
+
+    updatedAuthorization.credentialRules.push(globalAdminsReadUpdateDelete);
     return await this.authorizationPolicyService.save(updatedAuthorization);
   }
 

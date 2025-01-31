@@ -260,21 +260,29 @@ export class StorageBucketService {
     }
   }
 
-  public async addDocumentToBucketOrFail(
+  public async addDocumentToStorageBucketOrFail(
+    storageBucket: IStorageBucket,
+    document: IDocument
+  ): Promise<IDocument> | never {
+    this.validateMimeTypes(storageBucket, document.mimeType);
+    this.validateSize(storageBucket, document.size);
+    document.storageBucket = storageBucket;
+    if (!storageBucket.documents.includes(document)) {
+      storageBucket.documents.push(document);
+    }
+    this.logger.verbose?.(
+      `Added document '${document.externalID}' on storage bucket: ${storageBucket.id}`,
+      LogContext.STORAGE_BUCKET
+    );
+    return document;
+  }
+
+  public async addDocumentToStorageBucketByIdOrFail(
     storageBucketId: string,
     document: IDocument
   ): Promise<IDocument> | never {
-    const storage = await this.getStorageBucketOrFail(storageBucketId);
-
-    this.validateMimeTypes(storage, document.mimeType);
-    this.validateSize(storage, document.size);
-    document.storageBucket = storage;
-
-    this.logger.verbose?.(
-      `Added document '${document.externalID}' on storage bucket: ${storage.id}`,
-      LogContext.STORAGE_BUCKET
-    );
-    return this.documentService.save(document);
+    const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
+    return this.addDocumentToStorageBucketOrFail(storageBucket, document);
   }
 
   public async size(storage: IStorageBucket): Promise<number> {

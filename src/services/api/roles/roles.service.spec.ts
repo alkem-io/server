@@ -11,9 +11,7 @@ import {
 } from '@test/mocks';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
-import { UserService } from '@domain/community/user/user.service';
 import { ApplicationService } from '@domain/access/application/application.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { testData } from '@test/utils';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -35,13 +33,18 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { AccountType } from '@common/enums/account.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
+import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
+import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
-  let userService: UserService;
   let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
-  let organizationService: OrganizationService;
+  let userLookupService: UserLookupService;
+  let organizationLookupService: OrganizationLookupService;
   let communityResolverService: CommunityResolverService;
 
   beforeAll(async () => {
@@ -54,20 +57,23 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
+        MockVirtualContributorLookupService,
+        MockOrganizationLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
         MockEntityManagerProvider,
         MockSpaceService,
         MockUserLookupService,
         MockVirtualContributorService,
+        MockContributorLookupService,
         RolesService,
       ],
     }).compile();
 
     rolesService = moduleRef.get(RolesService);
-    userService = moduleRef.get(UserService);
+    userLookupService = moduleRef.get(UserLookupService);
     applicationService = moduleRef.get(ApplicationService);
-    organizationService = moduleRef.get(OrganizationService);
+    organizationLookupService = moduleRef.get(OrganizationLookupService);
     communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
   });
@@ -97,7 +103,7 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      jest.spyOn(userService, 'getUserWithAgent').mockResolvedValue(user);
+      jest.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
 
       jest
         .spyOn(spaceFilterService, 'getAllowedVisibilities')
@@ -182,7 +188,7 @@ describe('RolesService', () => {
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
       jest
-        .spyOn(organizationService, 'getOrganizationAndAgent')
+        .spyOn(organizationLookupService, 'getOrganizationAndAgent')
         .mockResolvedValue({
           organization: testData.organization as any,
           agent: testData.agent,
@@ -239,7 +245,7 @@ const getSpaceRoleResultMock = ({
     id,
     displayName,
     type: SpaceType.SPACE,
-    level: SpaceLevel.SPACE,
+    level: SpaceLevel.L0,
     spaceID: id,
     nameID: `space-${id}`,
     visibility: SpaceVisibility.ACTIVE,
@@ -259,7 +265,7 @@ const getSpaceRoleResultMock = ({
         ...getEntityMock<Profile>(),
       },
       type: SpaceType.SPACE,
-      level: SpaceLevel.SPACE,
+      level: SpaceLevel.L0,
       visibility: SpaceVisibility.ACTIVE,
       account: {
         id: `account-${id}`,
@@ -281,6 +287,7 @@ const getSubpaceRoleResultMock = ({
   roles,
   displayName,
   type,
+  level,
 }: {
   id: string;
   roles: string[];
@@ -294,7 +301,7 @@ const getSubpaceRoleResultMock = ({
     nameID: `subspace-${id}`,
     roles,
     type,
-    level: SpaceLevel.SPACE,
+    level,
   };
 };
 

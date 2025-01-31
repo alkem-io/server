@@ -13,7 +13,6 @@ export const SUBSCRIPTION_ACTIVITY_CREATED =
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
-export const REDIS_LOCK_SERVICE = 'redis-lock-service';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
 export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
 export const EXCALIDRAW_SERVER = 'excalidraw-backend';

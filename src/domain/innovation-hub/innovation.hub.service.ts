@@ -12,15 +12,15 @@ import { VisualType } from '@common/enums/visual.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
 import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
-import { SpaceService } from '@domain/space/space/space.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 @Injectable()
 export class InnovationHubService {
@@ -29,9 +29,9 @@ export class InnovationHubService {
     private readonly innovationHubRepository: Repository<InnovationHub>,
     private readonly profileService: ProfileService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    private readonly spaceService: SpaceService,
+    private readonly spaceLookupService: SpaceLookupService,
     private namingService: NamingService,
-    private accountHostService: AccountHostService
+    private accountLookupService: AccountLookupService
   ) {}
 
   public async createInnovationHub(
@@ -100,9 +100,10 @@ export class InnovationHubService {
       tags: [],
     });
 
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       hub.profile,
-      VisualType.BANNER_WIDE
+      createData.profileData.visuals,
+      [VisualType.BANNER_WIDE]
     );
 
     return await this.save(hub);
@@ -145,7 +146,7 @@ export class InnovationHubService {
       }
 
       // validate spaces
-      const trueOrList = await this.spaceService.spacesExist(
+      const trueOrList = await this.spaceLookupService.spacesExist(
         input.spaceListFilter
       );
 
@@ -221,6 +222,23 @@ export class InnovationHubService {
     return innovationHub;
   }
 
+  public async getInnovationHubByNameIdOrFail(
+    innovationHubNameID: string,
+    options?: FindOneOptions<InnovationHub>
+  ): Promise<IInnovationHub> {
+    const innovationHub = await this.innovationHubRepository.findOne({
+      where: { nameID: innovationHubNameID },
+      ...options,
+    });
+
+    if (!innovationHub)
+      throw new EntityNotFoundException(
+        `Unable to find InnovationHub with NameID: ${innovationHubNameID}`,
+        LogContext.SPACES
+      );
+    return innovationHub;
+  }
+
   public async getInnovationHubFlexOrFail(
     args: { subdomain?: string; idOrNameId?: string },
     options?: FindOneOptions<InnovationHub>
@@ -286,7 +304,8 @@ export class InnovationHubService {
       }
       if (spaceListFilter && spaceListFilter.length) {
         // If specified on create, validate spaces
-        const trueOrList = await this.spaceService.spacesExist(spaceListFilter);
+        const trueOrList =
+          await this.spaceLookupService.spacesExist(spaceListFilter);
 
         if (Array.isArray(trueOrList)) {
           throw new Error(
@@ -328,7 +347,7 @@ export class InnovationHubService {
         LogContext.LIBRARY
       );
     }
-    const provider = await this.accountHostService.getHost(
+    const provider = await this.accountLookupService.getHost(
       innovationHub.account
     );
     if (!provider) {

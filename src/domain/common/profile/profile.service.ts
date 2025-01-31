@@ -5,6 +5,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
@@ -30,6 +31,10 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.select.tagset.value';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
+import { CreateReferenceInput } from '../reference';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 
 @Injectable()
 export class ProfileService {
@@ -41,6 +46,7 @@ export class ProfileService {
     private referenceService: ReferenceService,
     private visualService: VisualService,
     private locationService: LocationService,
+    private profileDocumentsService: ProfileDocumentsService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -48,11 +54,11 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  public createProfile(
+  public async createProfile(
     profileData: CreateProfileInput,
     profileType: ProfileType,
     storageAggregator: IStorageAggregator
-  ): IProfile {
+  ): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
@@ -66,16 +72,16 @@ export class ProfileService {
     profile.storageBucket = this.storageBucketService.createStorageBucket({
       storageAggregator: storageAggregator,
     });
-
+    profile.description =
+      await this.profileDocumentsService.reuploadDocumentsInMarkdownProfile(
+        profile.description ?? '',
+        profile.storageBucket
+      );
     profile.visuals = [];
     profile.location = this.locationService.createLocation(
       profileData?.location
     );
-
-    const newReferences = profileData?.referencesData?.map(
-      this.referenceService.createReference
-    );
-    profile.references = newReferences ?? [];
+    await this.createReferencesOnProfile(profileData?.referencesData, profile);
 
     const tagsetsFromInput = profileData?.tagsets?.map(tagsetData =>
       this.tagsetService.createTagsetWithName([], tagsetData)
@@ -83,6 +89,33 @@ export class ProfileService {
     profile.tagsets = tagsetsFromInput ?? [];
 
     return profile;
+  }
+
+  private async createReferencesOnProfile(
+    references: CreateReferenceInput[] | undefined,
+    profile: IProfile
+  ) {
+    if (!profile.storageBucket) {
+      throw new EntityNotInitializedException(
+        `Storage bucket not initialized on profile: ${profile.id}`,
+        LogContext.PROFILE
+      );
+    }
+    const newReferences = [];
+    for (const reference of references ?? []) {
+      const newReference = this.referenceService.createReference(reference);
+      const newUrl =
+        await this.profileDocumentsService.reuploadFileOnStorageBucket(
+          newReference.uri,
+          profile.storageBucket,
+          false
+        );
+      if (newUrl) {
+        newReference.uri = newUrl;
+      }
+      newReferences.push(newReference);
+    }
+    profile.references = newReferences;
   }
 
   async updateProfile(
@@ -188,42 +221,62 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  public addVisualOnProfile(
+  public async addVisualsOnProfile(
     profile: IProfile,
-    visualType: VisualType,
-    url?: string
-  ): IProfile {
-    if (!profile.visuals) {
+    visualsData: CreateVisualOnProfileInput[] | undefined,
+    visualTypes: VisualType[]
+  ): Promise<IProfile> {
+    if (!profile.visuals || !profile.storageBucket) {
       throw new EntityNotInitializedException(
-        `No visuals found on profile: ${profile.id}`,
+        `No visuals or no storageBucket found on profile: ${profile.id}`,
         LogContext.COMMUNITY
       );
     }
     let visual: IVisual;
-    switch (visualType) {
-      case VisualType.AVATAR:
-        visual = this.visualService.createVisualAvatar();
-        break;
-      case VisualType.BANNER:
-        visual = this.visualService.createVisualBanner();
-        break;
-      case VisualType.CARD:
-        visual = this.visualService.createVisualCard();
-        break;
-      case VisualType.BANNER_WIDE:
-        visual = this.visualService.createVisualBannerWide();
-        break;
+    for (const visualType of visualTypes) {
+      switch (visualType) {
+        case VisualType.AVATAR:
+          visual = this.visualService.createVisualAvatar();
+          break;
+        case VisualType.BANNER:
+          visual = this.visualService.createVisualBanner();
+          break;
+        case VisualType.CARD:
+          visual = this.visualService.createVisualCard();
+          break;
+        case VisualType.BANNER_WIDE:
+          visual = this.visualService.createVisualBannerWide();
+          break;
 
-      default:
-        throw new Error(
-          `Unable to recognise type of visual requested: ${visualType}`
-        );
-    }
-    if (url) {
-      visual.uri = url;
-    }
+        default:
+          throw new NotSupportedException(
+            `Unable to recognise type of visual requested: ${visualTypes}`,
+            LogContext.PROFILE
+          );
+      }
+      const providedVisual = visualsData?.find(v => v.name === visualType);
+      if (providedVisual) {
+        // Only allow external URL if we are creating an Avatar and if it comes from https://eu.ui-avatars.com
+        const allowExternalUrl =
+          visualType === VisualType.AVATAR &&
+          providedVisual.uri.startsWith(DEFAULT_AVATAR_SERVICE_URL);
 
-    profile.visuals.push(visual);
+        const url =
+          await this.profileDocumentsService.reuploadFileOnStorageBucket(
+            providedVisual.uri,
+            profile.storageBucket,
+            !allowExternalUrl
+          );
+        if (url) {
+          visual.uri = url;
+        } else {
+          this.logger.warn(
+            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
+          );
+        }
+      }
+      profile.visuals.push(visual);
+    }
     return profile;
   }
 

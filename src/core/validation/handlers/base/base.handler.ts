@@ -32,7 +32,6 @@ import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
-import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
@@ -66,7 +65,6 @@ import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { UpdateSpaceSettingsEntityInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
 import { UpdateSpaceSettingsInput } from '@domain/space/space/dto/space.dto.update.settings';
-import { CreateAccountInput } from '@domain/space/account/dto';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
@@ -91,6 +89,11 @@ import { UpdateUserSettingsInput } from '@domain/community/user/dto/user.dto.upd
 import { UpdateUserSettingsCommunicationInput } from '@domain/community/user.settings/dto/user.settings.communications.dto.update';
 import { UpdateUserSettingsPrivacyInput } from '@domain/community/user.settings/dto/user.settings.privacy.dto.update';
 import { UpdateOrganizationSettingsInput } from '@domain/community/organization/dto/organization.dto.update.settings';
+import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
+import { UpdateVirtualContributorSettingsEntityInput } from '@domain/community/virtual-contributor-settings';
+import { UpdateVirtualContributorSettingsInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.update.settings';
+import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/virtual-contributor-settings/dto/virtual.contributor.settings.privacy.dto.update';
+import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -133,7 +136,6 @@ export class BaseHandler extends AbstractHandler {
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
-      CreateAccountInput,
       DeleteDocumentInput,
       UpdateActorInput,
       UpdatePostInput,
@@ -162,6 +164,10 @@ export class BaseHandler extends AbstractHandler {
       UpdateOrganizationSettingsEntityInput,
       UpdateOrganizationSettingsMembershipInput,
       UpdateOrganizationSettingsPrivacyInput,
+      UpdateVirtualContributorSettingsEntityInput,
+      UpdateVirtualContributorSettingsInput,
+      UpdateVirtualContributorSettingsPrivacyInput,
+      UpdatePlatformSettingsInput,
       UpdateUserSettingsEntityInput,
       UpdateUserSettingsInput,
       UpdateUserSettingsCommunicationInput,
@@ -169,7 +175,7 @@ export class BaseHandler extends AbstractHandler {
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
-      CreateCalloutOnCollaborationInput,
+      CreateCalloutOnCalloutsSetInput,
     ];
 
     if (types.includes(metatype)) {

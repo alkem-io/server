@@ -26,7 +26,6 @@
       "storageSpaceId": "storageSpaceId",
       "type": "user",
       "authorization": {
-        "anonymousReadAccess": false,
         "type": "profile",
         "credentialRules": [
           {
@@ -78,7 +77,6 @@
       "id": "07c6ec54-524a-4d7f-9f58-a4c50f0c0496",
       "authorization": {
         "type": "agent",
-        "anonymousReadAccess": false,
         "credentialRules": [
           {
             "name": "1",
@@ -138,7 +136,6 @@
       ]
     },
     "authorization": {
-      "anonymousReadAccess": false,
       "type": "profile",
       "credentialRules": [
         {

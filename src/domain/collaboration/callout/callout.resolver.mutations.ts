@@ -42,6 +42,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -110,7 +111,7 @@ export class CalloutResolverMutations {
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID,
-      { relations: { framing: true } }
+      { relations: { framing: true, calloutsSet: true } }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -131,19 +132,21 @@ export class CalloutResolverMutations {
           Date.now()
         );
 
-        if (calloutData.sendNotification) {
-          const notificationInput: NotificationInputCalloutPublished = {
+        if (callout.calloutsSet?.type === CalloutsSetType.COLLABORATION) {
+          if (calloutData.sendNotification) {
+            const notificationInput: NotificationInputCalloutPublished = {
+              triggeredBy: agentInfo.userID,
+              callout: callout,
+            };
+            await this.notificationAdapter.calloutPublished(notificationInput);
+          }
+
+          const activityLogInput: ActivityInputCalloutPublished = {
             triggeredBy: agentInfo.userID,
             callout: callout,
           };
-          await this.notificationAdapter.calloutPublished(notificationInput);
+          this.activityAdapter.calloutPublished(activityLogInput);
         }
-
-        const activityLogInput: ActivityInputCalloutPublished = {
-          triggeredBy: agentInfo.userID,
-          callout: callout,
-        };
-        this.activityAdapter.calloutPublished(activityLogInput);
       }
     }
 
@@ -189,28 +192,23 @@ export class CalloutResolverMutations {
       contributionData.calloutID,
       {
         relations: {
-          collaboration: true,
+          calloutsSet: true,
         },
       }
     );
-    if (!callout.collaboration) {
+    if (!callout.calloutsSet) {
       throw new RelationshipNotFoundException(
-        `Callout ${callout.id} has no collaboration relationship`,
+        `Callout ${callout.id} has no calloutSet relationship`,
         LogContext.COLLABORATION
       );
     }
+
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
       `create contribution on callout: ${callout.id}`
     );
-
-    // Get the levelZeroSpaceID for the callout
-    const levelZeroSpaceID =
-      await this.communityResolverService.getLevelZeroSpaceIdForCollaboration(
-        callout.collaboration.id
-      );
 
     if (callout.contributionPolicy.state === CalloutState.CLOSED) {
       if (
@@ -232,6 +230,7 @@ export class CalloutResolverMutations {
 
     const { roleSet, spaceSettings } =
       await this.namingService.getRoleSetAndSettingsForCallout(callout.id);
+
     contribution = await this.calloutContributionService.save(contribution);
 
     const destinationStorageBucket =
@@ -260,44 +259,64 @@ export class CalloutResolverMutations {
         calloutID: callout.id,
         contributionID: contribution.id,
         sortOrder: contribution.sortOrder,
-        post: contribution.post,
+        post: {
+          // Removing the storageBucket from the post because it cannot be stringified
+          // due to a circular reference (storageBucket => documents[] => storageBucket)
+          // The client is not querying it from the subscription anyway.
+          ...contribution.post,
+          profile: {
+            ...contribution.post.profile,
+            storageBucket: undefined,
+          },
+        },
       };
-      await this.postCreatedSubscription.publish(
+      this.postCreatedSubscription.publish(
         SubscriptionType.CALLOUT_POST_CREATED,
         postCreatedEvent
       );
-
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
-        this.processActivityPostCreated(
-          callout,
-          contribution,
-          contribution.post,
-          levelZeroSpaceID,
-          agentInfo
-        );
-      }
     }
 
-    if (contributionData.link && contribution.link) {
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
-        await this.processActivityLinkCreated(
-          callout,
-          contribution.link,
-          levelZeroSpaceID,
-          agentInfo
+    //toDo - rework activities also for CalloutSetType.KNOWLEDGE_BASE
+    // Get the levelZeroSpaceID for the callout
+    if (callout.calloutsSet.type === CalloutsSetType.COLLABORATION) {
+      const levelZeroSpaceID =
+        await this.communityResolverService.getLevelZeroSpaceIdForCalloutsSet(
+          callout.calloutsSet.id
         );
-      }
-    }
 
-    if (contributionData.whiteboard && contribution.whiteboard) {
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
-        this.processActivityWhiteboardCreated(
-          callout,
-          contribution,
-          contribution.whiteboard,
-          levelZeroSpaceID,
-          agentInfo
-        );
+      if (contributionData.post && contribution.post) {
+        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityPostCreated(
+            callout,
+            contribution,
+            contribution.post,
+            levelZeroSpaceID,
+            agentInfo
+          );
+        }
+      }
+
+      if (contributionData.link && contribution.link) {
+        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityLinkCreated(
+            callout,
+            contribution.link,
+            levelZeroSpaceID,
+            agentInfo
+          );
+        }
+      }
+
+      if (contributionData.whiteboard && contribution.whiteboard) {
+        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityWhiteboardCreated(
+            callout,
+            contribution,
+            contribution.whiteboard,
+            levelZeroSpaceID,
+            agentInfo
+          );
+        }
       }
     }
 

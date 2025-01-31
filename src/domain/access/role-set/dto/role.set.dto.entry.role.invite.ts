@@ -6,7 +6,7 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 
 @InputType()
 export class InviteForEntryRoleOnRoleSetInput {
@@ -25,14 +25,14 @@ export class InviteForEntryRoleOnRoleSetInput {
   @MaxLength(MID_TEXT_LENGTH)
   welcomeMessage?: string;
 
-  @Field(() => CommunityRoleType, {
+  @Field(() => RoleName, {
     nullable: true,
     description:
       'An additional role to assign to the Contributors, in addition to the entry Role.',
   })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  extraRole?: CommunityRoleType;
+  extraRole?: RoleName;
 
   createdBy!: string;
 

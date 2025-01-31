@@ -1,6 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IRole } from './role.interface';
-import { RoleService } from './role.service';
 import { IContributorRolePolicy } from './contributor.role.policy.interface';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { UseGuards } from '@nestjs/common';
@@ -8,14 +7,12 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 
 @Resolver(() => IRole)
 export class RoleResolverFields {
-  constructor(private roleService: RoleService) {}
-
   @ResolveField('credential', () => ICredentialDefinition, {
     nullable: false,
     description: 'The Credential associated with this Role.',
   })
   credential(@Parent() role: IRole): ICredentialDefinition {
-    return this.roleService.getCredentialForRole(role);
+    return role.credential;
   }
 
   @ResolveField('parentCredentials', () => [ICredentialDefinition], {
@@ -23,7 +20,7 @@ export class RoleResolverFields {
     description: 'The Credential associated with this Role.',
   })
   parentCredentials(@Parent() role: IRole): ICredentialDefinition[] {
-    return this.roleService.getParentCredentialsForRole(role);
+    return role.parentCredentials;
   }
 
   @ResolveField('userPolicy', () => IContributorRolePolicy, {
@@ -31,7 +28,7 @@ export class RoleResolverFields {
     description: 'The role policy that applies for Users in this Role.',
   })
   userPolicy(@Parent() role: IRole): IContributorRolePolicy {
-    return this.roleService.getUserPolicy(role);
+    return role.userPolicy;
   }
 
   @ResolveField('organizationPolicy', () => IContributorRolePolicy, {
@@ -39,7 +36,7 @@ export class RoleResolverFields {
     description: 'The role policy that applies for Organizations in this Role.',
   })
   organizationPolicy(@Parent() role: IRole): IContributorRolePolicy {
-    return this.roleService.getOrganizationPolicy(role);
+    return role.organizationPolicy;
   }
 
   @UseGuards(GraphqlGuard)
@@ -49,6 +46,6 @@ export class RoleResolverFields {
       'The role policy that applies for VirtualContributors in this Role.',
   })
   virtualContributorPolicy(@Parent() role: IRole): IContributorRolePolicy {
-    return this.roleService.getVirtualContributorPolicy(role);
+    return role.virtualContributorPolicy;
   }
 }

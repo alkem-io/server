@@ -1,15 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { InvitationService } from './invitation.service';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IInvitation } from './invitation.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_COMMUNITY_USER_INVITATION as CREDENTIAL_RULE_COMMUNITY_CONTRIBUTOR_INVITATION } from '@common/constants/authorization/credential.rule.constants';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
+import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
 
 @Injectable()
 export class InvitationAuthorizationService {
@@ -17,7 +25,8 @@ export class InvitationAuthorizationService {
     private invitationService: InvitationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private contributorService: ContributorService,
-    private virtualContributorService: VirtualContributorService
+    private virtualContributorLookupService: VirtualContributorLookupService,
+    private accountLookupService: AccountLookupService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -45,44 +54,47 @@ export class InvitationAuthorizationService {
       await this.invitationService.getInvitedContributor(invitation);
 
     // also grant the user privileges to work with their own invitation
+    let accountID: string | undefined = undefined;
     const contributorType =
       this.contributorService.getContributorType(contributor);
     const criterias: ICredentialDefinition[] = [];
     switch (contributorType) {
-      case CommunityContributorType.USER:
-        criterias.push({
-          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-          resourceID: contributor.id,
-        });
+      case RoleSetContributorType.USER:
+        accountID = (contributor as User).accountID;
         break;
-      case CommunityContributorType.ORGANIZATION:
-        criterias.push({
-          type: AuthorizationCredential.ORGANIZATION_OWNER,
-          resourceID: contributor.id,
-        });
-        criterias.push({
-          type: AuthorizationCredential.ORGANIZATION_ADMIN,
-          resourceID: contributor.id,
-        });
+      case RoleSetContributorType.ORGANIZATION:
+        accountID = (contributor as Organization).accountID;
         break;
-      case CommunityContributorType.VIRTUAL:
-        const vcHostCriterias =
-          await this.virtualContributorService.getAccountHostCredentials(
+      case RoleSetContributorType.VIRTUAL:
+        const account =
+          await this.virtualContributorLookupService.getAccountOrFail(
             contributor.id
           );
-        criterias.push(...vcHostCriterias);
+        accountID = account.id;
         break;
     }
+    if (!accountID) {
+      throw new RoleSetMembershipException(
+        `Unable to find account for contributor: ${contributor.id}`,
+        LogContext.ROLES
+      );
+    }
+
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: accountID,
+    };
+    criterias.push(accountAdminCredential);
 
     const virtualInvitationRule =
       this.authorizationPolicyService.createCredentialRule(
         [
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT,
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
         ],
         criterias,
-        CREDENTIAL_RULE_COMMUNITY_CONTRIBUTOR_INVITATION
+        CREDENTIAL_RULE_ROLESET_INVITATION
       );
     newRules.push(virtualInvitationRule);
 

@@ -39,7 +39,6 @@ import {
 import { RegistrationModule } from '@services/api/registration/registration.module';
 import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
-import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
@@ -72,10 +71,9 @@ import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ing
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
-import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
+import { DomainPlatformSettingsModule } from '@platform/domain-settings/domain.platform.settings.module';
 import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
-import { PlatformRoleModule } from '@platform/platform.role/platform.role.module';
 import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
@@ -88,6 +86,8 @@ import { InAppNotificationReaderModule } from '@domain/in-app-notification-reade
 import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
+import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
+import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 
 @Module({
   imports: [
@@ -274,11 +274,9 @@ import { WingbackManagerModule } from '@services/external/wingback/wingback.mana
     MessageModule,
     MessageReactionModule,
     RegistrationModule,
-    RedisLockModule,
     ConversionModule,
     LibraryModule,
     PlatformModule,
-    PlatformRoleModule,
     PlatformHubModule,
     ContributionMoveModule,
     GeoLocationModule,
@@ -298,10 +296,12 @@ import { WingbackManagerModule } from '@services/external/wingback/wingback.mana
     EventBusModule,
     WhiteboardIntegrationModule,
     FileIntegrationModule,
-    PlatformSettingsModule,
+    DomainPlatformSettingsModule,
+    PlatformRoleModule,
     TemplateApplierModule,
     InAppNotificationReaderModule,
     InAppNotificationReceiverModule,
+    WingbackWebhookModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

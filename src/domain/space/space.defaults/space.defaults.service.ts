@@ -24,9 +24,9 @@ import { TemplatesManagerService } from '@domain/template/templates-manager/temp
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { ValidationException } from '@common/exceptions';
 import { PlatformService } from '@platform/platform/platform.service';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -34,7 +34,7 @@ export class SpaceDefaultsService {
     private templateService: TemplateService,
     private inputCreatorService: InputCreatorService,
     private platformService: PlatformService,
-    private collaborationService: CollaborationService,
+    private calloutsSetService: CalloutsSetService,
     private templatesManagerService: TemplatesManagerService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -124,22 +124,25 @@ export class SpaceDefaultsService {
       }
     }
     if (collaborationTemplateInput && collaborationData.addCallouts) {
-      if (!collaborationData.calloutsData) {
-        collaborationData.calloutsData =
-          collaborationTemplateInput?.calloutsData;
-      } else if (collaborationTemplateInput?.calloutsData) {
+      if (!collaborationData.calloutsSetData.calloutsData) {
+        collaborationData.calloutsSetData.calloutsData =
+          collaborationTemplateInput?.calloutsSetData.calloutsData;
+      } else if (collaborationTemplateInput?.calloutsSetData.calloutsData) {
         // The request includes the calloutsData, so merge template callouts with request callouts
-        collaborationData.calloutsData.push(
-          ...collaborationTemplateInput.calloutsData
+        collaborationData.calloutsSetData.calloutsData.push(
+          ...collaborationTemplateInput.calloutsSetData.calloutsData
         );
       }
     } else {
-      collaborationData.calloutsData = [];
+      collaborationData.calloutsSetData.calloutsData = [];
     }
 
-    if (!collaborationData.calloutGroups && collaborationTemplateInput) {
-      collaborationData.calloutGroups =
-        collaborationTemplateInput?.calloutGroups;
+    if (
+      !collaborationData.calloutsSetData.calloutGroups &&
+      collaborationTemplateInput
+    ) {
+      collaborationData.calloutsSetData.calloutGroups =
+        collaborationTemplateInput?.calloutsSetData.calloutGroups;
     }
 
     // Add in tutorials if needed
@@ -157,31 +160,32 @@ export class SpaceDefaultsService {
           await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
             tutorialsCollaborationTemplate.id
           );
-        if (tutorialsCollaborationTemplateInput.calloutsData) {
-          collaborationData.calloutsData?.push(
-            ...tutorialsCollaborationTemplateInput.calloutsData
+        if (tutorialsCollaborationTemplateInput.calloutsSetData.calloutsData) {
+          collaborationData.calloutsSetData.calloutsData?.push(
+            ...tutorialsCollaborationTemplateInput.calloutsSetData.calloutsData
           );
         }
       }
     }
     if (collaborationTemplateInput) {
-      collaborationData.defaultCalloutGroupName =
-        collaborationTemplateInput.defaultCalloutGroupName;
+      collaborationData.calloutsSetData.defaultCalloutGroupName =
+        collaborationTemplateInput.calloutsSetData.defaultCalloutGroupName;
     }
 
     // Move callouts that are not in valid groups or flowStates to the default group & first flowState
-    const validGroupNames = collaborationData.calloutGroups?.map(
-      group => group.displayName
-    );
+    const validGroupNames =
+      collaborationData.calloutsSetData.calloutGroups?.map(
+        group => group.displayName
+      );
     const validFlowStateNames =
       collaborationData.innovationFlowData?.states?.map(
         state => state.displayName
       );
 
-    this.collaborationService.moveCalloutsToDefaultGroupAndState(
+    this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
       validGroupNames ?? [],
       validFlowStateNames ?? [],
-      collaborationData.calloutsData ?? []
+      collaborationData.calloutsSetData.calloutsData ?? []
     );
 
     return collaborationData;
@@ -189,10 +193,10 @@ export class SpaceDefaultsService {
 
   public getRoleSetCommunityRoles(spaceLevel: SpaceLevel): CreateRoleInput[] {
     switch (spaceLevel) {
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L1:
+      case SpaceLevel.L2:
         return subspaceCommunityRoles;
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         return spaceCommunityRoles;
       default:
         throw new EntityNotInitializedException(
@@ -204,11 +208,11 @@ export class SpaceDefaultsService {
 
   public getProfileType(spaceLevel: SpaceLevel): ProfileType {
     switch (spaceLevel) {
-      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.L1:
         return ProfileType.CHALLENGE;
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L2:
         return ProfileType.OPPORTUNITY;
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         return ProfileType.SPACE;
     }
   }
@@ -217,10 +221,10 @@ export class SpaceDefaultsService {
     spaceLevel: SpaceLevel
   ): CreateFormInput {
     switch (spaceLevel) {
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L1:
+      case SpaceLevel.L2:
         return subspceCommunityApplicationForm;
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         return spaceCommunityApplicationForm;
     }
   }

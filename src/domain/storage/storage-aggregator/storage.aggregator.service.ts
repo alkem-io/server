@@ -287,15 +287,15 @@ export class StorageAggregatorService {
   ): Promise<string> {
     let url = '';
     switch (space.level) {
-      case SpaceLevel.OPPORTUNITY:
+      case SpaceLevel.L2:
         url = await this.urlGeneratorService.generateUrlForSubsubspace(
           space.id
         );
         break;
-      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.L1:
         url = await this.urlGeneratorService.generateUrlForSubspace(space.id);
         break;
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         url = this.urlGeneratorService.generateUrlForSpace(space.nameID);
         break;
     }

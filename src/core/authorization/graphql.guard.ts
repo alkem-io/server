@@ -9,11 +9,19 @@ import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
@@ -25,6 +33,8 @@ export class GraphqlGuard extends AuthGuard([
   constructor(
     private reflector: Reflector,
     private authorizationService: AuthorizationService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
@@ -83,7 +93,7 @@ export class GraphqlGuard extends AuthGuard([
         `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
         LogContext.AUTH
       );
-      resultAgentInfo = new AgentInfo();
+      resultAgentInfo = this.createAnonymousAgentInfo();
     }
 
     // Apply any rules
@@ -93,15 +103,74 @@ export class GraphqlGuard extends AuthGuard([
     );
     if (privilege) {
       const fieldParent = gqlContext.getRoot();
-      const rule = new AuthorizationRuleAgentPrivilege(
-        this.authorizationService,
-        privilege,
-        fieldParent,
-        fieldName
-      );
-      rule.execute(resultAgentInfo);
+      if (fieldParent.authorizationId && !fieldParent.authorization) {
+        this.logger.error(
+          {
+            message: 'No authorization policy present in Guard',
+            fieldName,
+            fieldParent,
+            authorizationId: fieldParent.authorizationId,
+          },
+          undefined,
+          LogContext.CODE_ERRORS
+        );
+        this.entityManager
+          .findOne(AuthorizationPolicy, {
+            where: { id: fieldParent.authorizationId },
+          })
+          .then((authorization: any) => {
+            fieldParent.authorization = authorization;
+          })
+          .catch((error: any) => {
+            this.logger.error(
+              `Error loading authorization with id ${fieldParent.authorizationId}: ${error}`,
+              undefined,
+              LogContext.AUTH_GUARD
+            );
+          })
+          .finally(() => {
+            this.executeAuthorizationRule(
+              privilege,
+              fieldParent,
+              fieldName,
+              resultAgentInfo
+            );
+          });
+      } else {
+        this.executeAuthorizationRule(
+          privilege,
+          fieldParent,
+          fieldName,
+          resultAgentInfo
+        );
+      }
     }
 
     return resultAgentInfo;
+  }
+
+  private executeAuthorizationRule(
+    privilege: AuthorizationPrivilege,
+    fieldParent: any,
+    fieldName: any,
+    resultAgentInfo: any
+  ) {
+    const rule = new AuthorizationRuleAgentPrivilege(
+      this.authorizationService,
+      privilege,
+      fieldParent,
+      fieldName
+    );
+    rule.execute(resultAgentInfo);
+  }
+
+  public createAnonymousAgentInfo(): AgentInfo {
+    const emptyAgentInfo = new AgentInfo();
+    const anonymousCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.GLOBAL_ANONYMOUS,
+      resourceID: '',
+    };
+    emptyAgentInfo.credentials = [anonymousCredential];
+    return emptyAgentInfo;
   }
 }

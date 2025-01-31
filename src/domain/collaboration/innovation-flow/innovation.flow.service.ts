@@ -27,6 +27,8 @@ import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CreateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.create';
+import { UpdateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.update';
 
 @Injectable()
 export class InnovationFlowService {
@@ -86,9 +88,10 @@ export class InnovationFlowService {
       storageAggregator
     );
 
-    this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       innovationFlow.profile,
-      VisualType.CARD
+      innovationFlowData.profile.visuals,
+      [VisualType.CARD]
     );
 
     const convertedStates =
@@ -402,5 +405,11 @@ export class InnovationFlowService {
       );
     }
     return currentState;
+  }
+
+  public validateInnovationFlowDefinition(
+    states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[]
+  ) {
+    this.innovationFlowStatesService.validateDefinition(states);
   }
 }

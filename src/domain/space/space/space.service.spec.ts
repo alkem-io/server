@@ -23,6 +23,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -238,12 +240,8 @@ const getEntityMock = <T>() => ({
   },
 });
 
-const getAuthorizationPolicyMock = (
-  id: string,
-  anonymousReadAccess: boolean
-): AuthorizationPolicy => ({
+const getAuthorizationPolicyMock = (id: string): AuthorizationPolicy => ({
   id,
-  anonymousReadAccess,
   credentialRules: [],
   privilegeRules: [],
   type: AuthorizationPolicyType.SPACE,
@@ -293,29 +291,35 @@ const getSubspacesMock = (
         ...getEntityMock<Account>(),
       },
       type: SpaceType.CHALLENGE,
-      level: SpaceLevel.CHALLENGE,
+      level: SpaceLevel.L1,
       visibility: SpaceVisibility.ACTIVE,
       collaboration: {
         id: '',
         isTemplate: false,
-        groupsStr: JSON.stringify([
-          {
-            displayName: 'HOME',
-            description: 'The Home page.',
-          },
-          {
-            displayName: 'COMMUNITY',
-            description: 'The Community page.',
-          },
-          {
-            displayName: 'SUBSPACES',
-            description: 'The Subspaces page.',
-          },
-          {
-            displayName: 'KNOWLEDGE',
-            description: 'The knowledge page.',
-          },
-        ]),
+        calloutsSet: {
+          id: '',
+          callouts: [],
+          type: CalloutsSetType.COLLABORATION,
+          groups: [
+            {
+              displayName: 'HOME',
+              description: 'The Home page.',
+            },
+            {
+              displayName: 'COMMUNITY',
+              description: 'The Community page.',
+            },
+            {
+              displayName: 'SUBSPACES',
+              description: 'The Subspaces page.',
+            },
+            {
+              displayName: 'KNOWLEDGE',
+              description: 'The knowledge page.',
+            },
+          ],
+          ...getEntityMock<CalloutsSet>(),
+        },
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -390,29 +394,35 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         ...getEntityMock<Account>(),
       },
       type: SpaceType.OPPORTUNITY,
-      level: SpaceLevel.OPPORTUNITY,
+      level: SpaceLevel.L2,
       visibility: SpaceVisibility.ACTIVE,
       collaboration: {
         id: '',
         isTemplate: false,
-        groupsStr: JSON.stringify([
-          {
-            displayName: 'HOME',
-            description: 'The Home page.',
-          },
-          {
-            displayName: 'COMMUNITY',
-            description: 'The Community page.',
-          },
-          {
-            displayName: 'SUBSPACES',
-            description: 'The Subspaces page.',
-          },
-          {
-            displayName: 'KNOWLEDGE',
-            description: 'The knowledge page.',
-          },
-        ]),
+        calloutsSet: {
+          id: '',
+          callouts: [],
+          type: CalloutsSetType.COLLABORATION,
+          groups: [
+            {
+              displayName: 'HOME',
+              description: 'The Home page.',
+            },
+            {
+              displayName: 'COMMUNITY',
+              description: 'The Community page.',
+            },
+            {
+              displayName: 'SUBSPACES',
+              description: 'The Subspaces page.',
+            },
+            {
+              displayName: 'KNOWLEDGE',
+              description: 'The knowledge page.',
+            },
+          ],
+          ...getEntityMock<CalloutsSet>(),
+        },
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -466,14 +476,12 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
 const getSpaceMock = ({
   id,
   visibility,
-  anonymousReadAccess,
   challengesCount,
   opportunitiesCounts,
   settings,
 }: {
   id: string;
   visibility: SpaceVisibility;
-  anonymousReadAccess: boolean;
   challengesCount: number;
   opportunitiesCounts: number[];
   settings: ISpaceSettings;
@@ -505,10 +513,7 @@ const getSpaceMock = ({
       type: AccountType.ORGANIZATION,
       ...getEntityMock<Account>(),
     },
-    authorization: getAuthorizationPolicyMock(
-      `auth-${id}`,
-      anonymousReadAccess
-    ),
+    authorization: getAuthorizationPolicyMock(`auth-${id}`),
     subspaces: getSubspacesMock(id, challengesCount, opportunitiesCounts),
     ...getEntityMock<Space>(),
   };
@@ -527,7 +532,6 @@ const getFilteredSpaces = (
 const spaceTestData: Space[] = [
   getSpaceMock({
     id: '1',
-    anonymousReadAccess: true,
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 1,
     opportunitiesCounts: [5],
@@ -541,7 +545,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '2',
-    anonymousReadAccess: true,
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 2,
     opportunitiesCounts: [5, 3],
@@ -555,7 +558,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '3',
-    anonymousReadAccess: true,
     visibility: SpaceVisibility.DEMO,
     challengesCount: 3,
     opportunitiesCounts: [5, 3, 1],
@@ -569,7 +571,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '4',
-    anonymousReadAccess: false,
     visibility: SpaceVisibility.DEMO,
     challengesCount: 3,
     opportunitiesCounts: [1, 2, 1],
@@ -583,7 +584,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '5',
-    anonymousReadAccess: false,
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 1,
     opportunitiesCounts: [1],
@@ -597,7 +597,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '6',
-    anonymousReadAccess: true,
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 3,
     opportunitiesCounts: [1, 1, 6],
@@ -611,7 +610,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '7',
-    anonymousReadAccess: true,
     visibility: SpaceVisibility.ARCHIVED,
     challengesCount: 0,
     opportunitiesCounts: [],
@@ -625,7 +623,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '8',
-    anonymousReadAccess: true,
     visibility: SpaceVisibility.DEMO,
     challengesCount: 0,
     opportunitiesCounts: [],
@@ -639,7 +636,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '9',
-    anonymousReadAccess: false,
     visibility: SpaceVisibility.ACTIVE,
     challengesCount: 0,
     opportunitiesCounts: [],
@@ -653,7 +649,6 @@ const spaceTestData: Space[] = [
   }),
   getSpaceMock({
     id: '10',
-    anonymousReadAccess: false,
     visibility: SpaceVisibility.DEMO,
     challengesCount: 3,
     opportunitiesCounts: [1, 2, 0],

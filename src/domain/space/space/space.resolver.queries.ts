@@ -60,7 +60,7 @@ export class SpaceResolverQueries {
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(ID, {
       where: {
-        level: SpaceLevel.SPACE,
+        level: SpaceLevel.L0,
       },
     });
     return space;

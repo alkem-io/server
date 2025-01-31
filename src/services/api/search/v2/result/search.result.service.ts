@@ -23,8 +23,6 @@ import { Post } from '@domain/collaboration/post';
 import { Callout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UserService } from '@domain/community/user/user.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import {
   ISearchResults,
   ISearchResultOrganization,
@@ -33,6 +31,8 @@ import {
 } from '../../dto';
 import { SearchEntityTypes } from '@services/api/search/search.entity.types';
 import { User } from '@domain/community/user/user.entity';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 type PostParents = {
   post: Post;
@@ -51,8 +51,8 @@ export class SearchResultService {
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private authorizationService: AuthorizationService,
-    private userService: UserService,
-    private organizationService: OrganizationService
+    private userLookupService: UserLookupService,
+    private organizationLookupService: OrganizationLookupService
   ) {}
 
   /**
@@ -531,21 +531,27 @@ export class SearchResultService {
     const parentSpaces = await this.entityManager.find(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: In(calloutIds),
+          calloutsSet: {
+            callouts: {
+              id: In(calloutIds),
+            },
           },
         },
       },
       relations: {
         collaboration: {
-          callouts: true,
+          calloutsSet: {
+            callouts: true,
+          },
         },
       },
       select: {
         collaboration: {
           id: true,
-          callouts: {
-            id: true,
+          calloutsSet: {
+            callouts: {
+              id: true,
+            },
           },
         },
       },
@@ -554,7 +560,7 @@ export class SearchResultService {
     return callouts
       .map(callout => {
         const space = parentSpaces.find(space =>
-          space?.collaboration?.callouts?.some(
+          space?.collaboration?.calloutsSet?.callouts?.some(
             spaceCallout => spaceCallout.id === callout.id
           )
         );
@@ -611,14 +617,18 @@ export class SearchResultService {
     const spaces = await this.entityManager.find(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: In(calloutIds),
+          calloutsSet: {
+            callouts: {
+              id: In(calloutIds),
+            },
           },
         },
       },
       relations: {
         collaboration: {
-          callouts: true,
+          calloutsSet: {
+            callouts: true,
+          },
         },
       },
       select: {
@@ -641,8 +651,10 @@ export class SearchResultService {
         visibility: true,
         collaboration: {
           id: true,
-          callouts: {
-            id: true,
+          calloutsSet: {
+            callouts: {
+              id: true,
+            },
           },
         },
       },
@@ -666,7 +678,7 @@ export class SearchResultService {
         }
 
         const space = spaces.find(space =>
-          space?.collaboration?.callouts?.some(
+          space?.collaboration?.calloutsSet?.callouts?.some(
             spaceCallout => spaceCallout.id === callout.id
           )
         );
@@ -692,13 +704,13 @@ export class SearchResultService {
   private async getUsersInSpace(spaceId: string): Promise<string[]> {
     const usersFilter = [];
 
-    const membersInSpace = await this.userService.usersWithCredentials({
+    const membersInSpace = await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.SPACE_MEMBER,
       resourceID: spaceId,
     });
     usersFilter.push(...membersInSpace.map(user => user.id));
 
-    const adminsInSpace = await this.userService.usersWithCredentials({
+    const adminsInSpace = await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.SPACE_ADMIN,
       resourceID: spaceId,
     });
@@ -711,21 +723,21 @@ export class SearchResultService {
     const orgsInSpace = [];
 
     const membersInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_MEMBER,
         resourceID: spaceId,
       });
     orgsInSpace.push(...membersInSpace.map(org => org.id));
 
     const adminsInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_ADMIN,
         resourceID: spaceId,
       });
     orgsInSpace.push(...adminsInSpace.map(org => org.id));
 
     const leadsInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_LEAD,
         resourceID: spaceId,
       });

@@ -26,6 +26,10 @@ import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { UserSettingsModule } from '../user.settings/user.settings.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
+import { UserLookupModule } from '../user-lookup/user.lookup.module';
+import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 
 @Module({
   imports: [
@@ -34,12 +38,16 @@ import { UserSettingsModule } from '../user.settings/user.settings.module';
     NotificationAdapterModule,
     CommunicationAdapterModule,
     AgentModule,
+    AuthenticationAgentInfoModule,
     AccountHostModule,
+    AccountLookupModule,
+    UserLookupModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     EntityResolverModule,
     RoomModule,
+    RoomLookupModule,
     MicroservicesModule,
     PlatformAuthorizationPolicyModule,
     PreferenceModule,

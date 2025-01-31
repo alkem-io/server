@@ -33,7 +33,6 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountHostService } from '../account.host/account.host.service';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -92,7 +91,7 @@ export class AccountService {
     }
 
     // Set data for the root space
-    spaceData.level = SpaceLevel.SPACE;
+    spaceData.level = SpaceLevel.L0;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
     let space = await this.spaceService.createSpace(spaceData, agentInfo);
@@ -327,23 +326,6 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     return storageAggregator;
-  }
-
-  public async getAgent(accountID: string): Promise<IAgent> {
-    const account = await this.getAccountOrFail(accountID, {
-      relations: {
-        agent: true,
-      },
-    });
-
-    if (!account.agent) {
-      throw new RelationshipNotFoundException(
-        `Unable to retrieve Agent for Account: ${account.id}`,
-        LogContext.PLATFORM
-      );
-    }
-
-    return account.agent;
   }
 
   async getSubscriptions(

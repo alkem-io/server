@@ -9,6 +9,7 @@ import {
   POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
   POLICY_RULE_PLATFORM_DELETE,
   POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
+  POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
@@ -44,6 +45,14 @@ export class StorageBucketAuthorizationService {
     storageBucket.authorization = this.appendPrivilegeRules(
       storageBucket.authorization
     );
+
+    storageBucket.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        storageBucket.authorization,
+        AuthorizationPrivilege.READ_ABOUT,
+        [AuthorizationPrivilege.READ],
+        POLICY_RULE_READ_ABOUT
+      );
     updatedAuthorizations.push(storageBucket.authorization);
 
     // Cascade down

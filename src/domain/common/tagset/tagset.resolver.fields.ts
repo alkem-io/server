@@ -12,6 +12,6 @@ export class TagsetResolverFields {
     description: 'The allowed values for this Tagset.',
   })
   async allowedValues(@Parent() tagset: ITagset): Promise<string[]> {
-    return await this.tagsetService.getAllowedValues(tagset);
+    return await this.tagsetService.getAllowedValuesOrFail(tagset);
   }
 }

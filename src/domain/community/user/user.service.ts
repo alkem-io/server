@@ -10,9 +10,7 @@ import {
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -28,7 +26,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -43,9 +41,8 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
-import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
-import { RoleSetCredentials } from './dto/user.dto.role.set.credentials';
-import { RoleSetMemberCredentials } from './dto/user.dto.role.set.member.credentials';
+import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
+import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
@@ -53,7 +50,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
@@ -69,6 +65,12 @@ import { IUserSettings } from '../user.settings/user.settings.interface';
 import { UserSettingsService } from '../user.settings/user.settings.service';
 import { UpdateUserSettingsEntityInput } from '../user.settings/dto/user.settings.dto.update';
 import { PreferenceType } from '@common/enums/preference.type';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
+import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class UserService {
@@ -78,11 +80,15 @@ export class UserService {
     private profileService: ProfileService,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
+    private roomLookupService: RoomLookupService,
     private namingService: NamingService,
     private agentService: AgentService,
+    private agentInfoCacheService: AgentInfoCacheService,
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
+    private accountLookupService: AccountLookupService,
+    private userLookupService: UserLookupService,
     private accountHostService: AccountHostService,
     private userSettingsService: UserSettingsService,
     private contributorService: ContributorService,
@@ -105,10 +111,12 @@ export class UserService {
       this.cacheOptions
     );
   }
+
   private async clearUserCache(user: IUser) {
     await this.cacheManager.del(
       this.getUserCommunicationIdCacheKey(user.communicationID)
     );
+    await this.agentInfoCacheService.deleteAgentInfoFromCache(user.email);
   }
 
   async createUser(
@@ -343,7 +351,7 @@ export class UserService {
       );
     }
 
-    if (await this.isRegisteredUser(email)) {
+    if (await this.userLookupService.isRegisteredUser(email)) {
       throw new UserAlreadyRegisteredException(
         `User with email: ${email} already registered`
       );
@@ -355,7 +363,12 @@ export class UserService {
       lastName: agentInfo.lastName,
       accountUpn: email,
       profileData: {
-        avatarURL: agentInfo.avatarURL,
+        visuals: [
+          {
+            name: VisualType.AVATAR,
+            uri: agentInfo.avatarURL,
+          },
+        ],
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     };
@@ -366,7 +379,9 @@ export class UserService {
   private async validateUserProfileCreationRequest(
     userData: CreateUserInput
   ): Promise<boolean> {
-    const userCheck = await this.isRegisteredUser(userData.email);
+    const userCheck = await this.userLookupService.isRegisteredUser(
+      userData.email
+    );
     if (userCheck)
       throw new ValidationException(
         `User profile with the specified email (${userData.email}) already exists`,
@@ -402,7 +417,7 @@ export class UserService {
 
     // TODO: give additional feedback?
     const accountHasResources =
-      await this.accountHostService.areResourcesInAccount(user.accountID);
+      await this.accountLookupService.areResourcesInAccount(user.accountID);
     if (accountHasResources) {
       throw new ForbiddenException(
         'Unable to delete User: account contains one or more resources',
@@ -454,7 +469,7 @@ export class UserService {
   }
 
   public async getAccount(user: IUser): Promise<IAccount> {
-    return await this.accountHostService.getAccountOrFail(user.accountID);
+    return await this.accountLookupService.getAccountOrFail(user.accountID);
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
@@ -529,65 +544,6 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  async isRegisteredUser(email: string): Promise<boolean> {
-    const user = await this.userRepository.findOneBy({ email: email });
-    if (user) return true;
-    return false;
-  }
-
-  async getUserAndCredentials(
-    userID: string
-  ): Promise<{ user: IUser; credentials: ICredential[] }> {
-    const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent || !user.agent.credentials) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-    }
-    return { user: user, credentials: user.agent.credentials };
-  }
-
-  async getUserAndAgent(
-    userID: string
-  ): Promise<{ user: IUser; agent: IAgent }> {
-    const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-    }
-    return { user: user, agent: user.agent };
-  }
-
-  async getUserWithAgent(userID: string): Promise<IUser> {
-    const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent || !user.agent.credentials) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-    }
-    return user;
-  }
-
-  public getUsers(ids: string[], options?: FindManyOptions<User>) {
-    return this.userRepository.find({
-      ...options,
-      where: { id: In(ids) },
-    });
-  }
-
   async getUsersForQuery(args: UsersQueryArgs): Promise<IUser[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
@@ -641,36 +597,37 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  public async getPaginatedAvailableMemberUsers(
-    communityCredentials: RoleSetMemberCredentials,
+  public async getPaginatedAvailableEntryRoleUsers(
+    entryRoleCredentials: RoleSetRoleWithParentCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const currentMemberUsers = await this.usersWithCredentials(
-      communityCredentials.member
-    );
+    const currentEntryRoleUsers =
+      await this.userLookupService.usersWithCredentials(
+        entryRoleCredentials.role
+      );
     const qb = this.userRepository.createQueryBuilder('user').select();
 
-    if (communityCredentials.parentRoleSetMember) {
+    if (entryRoleCredentials.parentRoleSetRole) {
       qb.leftJoin('user.agent', 'agent')
         .leftJoin('agent.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({
-          type: communityCredentials.parentRoleSetMember.type,
-          resourceID: communityCredentials.parentRoleSetMember.resourceID,
+          type: entryRoleCredentials.parentRoleSetRole.type,
+          resourceID: entryRoleCredentials.parentRoleSetRole.resourceID,
         });
     }
 
-    if (currentMemberUsers.length > 0) {
+    if (currentEntryRoleUsers.length > 0) {
       const hasWhere =
         qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
 
       qb[hasWhere ? 'andWhere' : 'where'](
         'NOT user.id IN (:memberUsers)'
       ).setParameters({
-        memberUsers: currentMemberUsers.map(user => user.id),
+        memberUsers: currentEntryRoleUsers.map(user => user.id),
       });
     }
 
@@ -681,14 +638,15 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  public async getPaginatedAvailableLeadUsers(
-    roleSetCredentials: RoleSetCredentials,
+  public async getPaginatedAvailableElevatedRoleUsers(
+    roleSetCredentials: RoleSetRoleSelectionCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const currentLeadUsers = await this.usersWithCredentials(
-      roleSetCredentials.lead
-    );
+    const currentElevatedRoleUsers =
+      await this.userLookupService.usersWithCredentials(
+        roleSetCredentials.elevatedRole
+      );
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
@@ -698,13 +656,13 @@ export class UserService {
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
       .setParameters({
-        type: roleSetCredentials.member.type,
-        resourceID: roleSetCredentials.member.resourceID,
+        type: roleSetCredentials.entryRole.type,
+        resourceID: roleSetCredentials.entryRole.resourceID,
       });
 
-    if (currentLeadUsers.length > 0) {
+    if (currentElevatedRoleUsers.length > 0) {
       qb.andWhere('NOT user.id IN (:leadUsers)').setParameters({
-        leadUsers: currentLeadUsers.map(user => user.id),
+        leadUsers: currentElevatedRoleUsers.map(user => user.id),
       });
     }
 
@@ -770,7 +728,9 @@ export class UserService {
 
     if (updateData.email) {
       if (updateData.email !== user.email) {
-        const userCheck = await this.isRegisteredUser(updateData.email);
+        const userCheck = await this.userLookupService.isRegisteredUser(
+          updateData.email
+        );
         if (userCheck) {
           throw new ValidationException(
             `User profile with the specified email (${updateData.email}) already exists`,
@@ -785,20 +745,6 @@ export class UserService {
     return await this.save(user);
   }
 
-  async getAgentOrFail(userID: string): Promise<IAgent> {
-    const userWithAgent = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-    const agent = userWithAgent.agent;
-    if (!agent)
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-
-    return agent;
-  }
-
   async getProfile(user: IUser): Promise<IProfile> {
     const userWithProfile = await this.getUserOrFail(user.id, {
       relations: { profile: true },
@@ -811,43 +757,6 @@ export class UserService {
       );
 
     return profile;
-  }
-
-  async usersWithCredentials(
-    credentialCriteria: CredentialsSearchInput,
-    limit?: number
-  ): Promise<IUser[]> {
-    const credResourceID = credentialCriteria.resourceID || '';
-
-    return this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .take(limit)
-      .getMany();
-  }
-
-  public countUsersWithCredentials(
-    credentialCriteria: CredentialsSearchInput
-  ): Promise<number> {
-    const credResourceID = credentialCriteria.resourceID || '';
-    return this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .getCount();
   }
 
   async getStorageAggregatorOrFail(
@@ -914,7 +823,7 @@ export class UserService {
       user.communicationID
     );
 
-    await this.roomService.populateRoomsMessageSenders(communityRooms);
+    await this.roomLookupService.populateRoomsMessageSenders(communityRooms);
 
     return communityRooms;
   }
@@ -924,7 +833,7 @@ export class UserService {
       user.communicationID
     );
 
-    await this.roomService.populateRoomsMessageSenders(directRooms);
+    await this.roomLookupService.populateRoomsMessageSenders(directRooms);
 
     return directRooms;
   }
@@ -948,32 +857,5 @@ export class UserService {
       base,
       reservedNameIDs
     );
-  }
-
-  public async getAgentInfoMetadata(
-    email: string
-  ): Promise<AgentInfoMetadata> | never {
-    const user = await this.userRepository.findOne({
-      where: {
-        email: email,
-      },
-      relations: {
-        agent: {
-          credentials: true,
-        },
-      },
-    });
-    if (!user || !user.agent || !user.agent.credentials) {
-      throw new EntityNotFoundException(
-        `Unable to load User, Agent or Credentials for User: ${email}`,
-        LogContext.COMMUNITY
-      );
-    }
-    const agentInfo = new AgentInfoMetadata();
-    agentInfo.credentials = user.agent.credentials;
-    agentInfo.agentID = user.agent.id;
-    agentInfo.userID = user.id;
-    agentInfo.communicationID = user.communicationID;
-    return agentInfo;
   }
 }

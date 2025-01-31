@@ -18,8 +18,6 @@ import { Space } from '@domain/space/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
 import { SpaceService } from '@domain/space/space/space.service';
-import { UserService } from '@domain/community/user/user.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import SearchResultBuilderService from './search.result.builder.service';
 import { PostService } from '@domain/collaboration/post/post.service';
@@ -36,6 +34,8 @@ import { validateSearchParameters } from '@services/api/search/util/validate.sea
 import { validateSearchTerms } from '@services/api/search/util/validate.search.terms';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SearchEntityTypes } from '../search.entity.types';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 const SCORE_INCREMENT = 10;
 const RESULTS_LIMIT = 8;
@@ -63,8 +63,8 @@ export class SearchService {
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>,
     private spaceService: SpaceService,
-    private userService: UserService,
-    private organizationService: OrganizationService,
+    private userLookupService: UserLookupService,
+    private organizationLookupService: OrganizationLookupService,
     private userGroupService: UserGroupService,
     private postService: PostService,
     private calloutService: CalloutService,
@@ -881,8 +881,8 @@ export class SearchService {
         new SearchResultBuilderService(
           searchResultBase,
           this.spaceService,
-          this.userService,
-          this.organizationService,
+          this.userLookupService,
+          this.organizationLookupService,
           this.userGroupService,
           this.postService,
           this.calloutService,
@@ -980,7 +980,7 @@ export class SearchService {
     const subspaces = await this.spaceRepository.find({
       where: {
         levelZeroSpaceID: In(levelZeroSpaceIDsFilter),
-        level: SpaceLevel.CHALLENGE,
+        level: SpaceLevel.L1,
       },
       relations: {
         collaboration: true,
@@ -996,7 +996,7 @@ export class SearchService {
     const subsubspaces = await this.spaceRepository.find({
       where: {
         levelZeroSpaceID: In(levelZeroSpaceIDsFilter),
-        level: SpaceLevel.OPPORTUNITY,
+        level: SpaceLevel.L2,
       },
       relations: {
         collaboration: true,
@@ -1008,14 +1008,14 @@ export class SearchService {
 
   private async getUsersFilter(searchInSpace: ISpace): Promise<string[]> {
     const usersFilter = [];
-    const membersInSpace = await this.userService.usersWithCredentials({
+    const membersInSpace = await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.SPACE_MEMBER,
       resourceID: searchInSpace.id,
     });
     for (const user of membersInSpace) {
       usersFilter.push(user.id);
     }
-    const adminsInSpace = await this.userService.usersWithCredentials({
+    const adminsInSpace = await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.SPACE_ADMIN,
       resourceID: searchInSpace.id,
     });
@@ -1030,7 +1030,7 @@ export class SearchService {
   ): Promise<string[]> {
     const organizationsFilter = [];
     const membersInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_MEMBER,
         resourceID: searchInSpace.id,
       });
@@ -1038,7 +1038,7 @@ export class SearchService {
       organizationsFilter.push(org.id);
     }
     const adminsInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_ADMIN,
         resourceID: searchInSpace.id,
       });
@@ -1046,7 +1046,7 @@ export class SearchService {
       organizationsFilter.push(org.id);
     }
     const leadsInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_LEAD,
         resourceID: searchInSpace.id,
       });

@@ -2,10 +2,10 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IInvitation } from './invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ENUM_LENGTH, MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
-import { CommunityRoleType } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 @Entity()
 export class Invitation extends AuthorizableEntity implements IInvitation {
   // todo ID in migration is varchar - must be char(36)
@@ -30,7 +30,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   invitedToParent!: boolean;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  contributorType!: CommunityContributorType;
+  contributorType!: RoleSetContributorType;
 
   @ManyToOne(() => RoleSet, manager => manager.invitations, {
     eager: false,
@@ -43,5 +43,5 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
     length: ENUM_LENGTH,
     nullable: true,
   })
-  extraRole?: CommunityRoleType;
+  extraRole?: RoleName;
 }

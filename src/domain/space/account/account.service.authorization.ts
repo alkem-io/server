@@ -24,11 +24,11 @@ import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
   CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { AccountHostService } from '../account.host/account.host.service';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
@@ -47,7 +47,6 @@ export class AccountAuthorizationService {
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
-    private accountHostService: AccountHostService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -77,15 +76,20 @@ export class AccountAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    // Get the host credentials
-    const hostCredentials =
-      await this.accountHostService.getHostCredentials(account);
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: account.id,
+    };
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
       account.authorization
     );
-    account.authorization.anonymousReadAccess = false;
+    account.authorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        account.authorization,
+        AuthorizationPrivilege.READ
+      );
     account.authorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         account.authorization
@@ -93,7 +97,7 @@ export class AccountAuthorizationService {
 
     account.authorization = await this.extendAuthorizationPolicy(
       account.authorization,
-      hostCredentials
+      accountAdminCredential
     );
 
     account.authorization = await this.authorizationPolicyService.save(
@@ -114,13 +118,15 @@ export class AccountAuthorizationService {
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         account.authorization
       );
-    // Get the host credentials
-    const hostCredentials =
-      await this.accountHostService.getHostCredentials(account);
+    // Get the account admin credential
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: account.id,
+    };
 
     clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
       clonedAccountAuth,
-      hostCredentials
+      accountAdminCredential
     );
     return clonedAccountAuth;
   }
@@ -175,18 +181,17 @@ export class AccountAuthorizationService {
       );
     updatedAuthorizations.push(...storageAggregatorAuthorizations);
 
-    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
-    const clonedAccountAuth =
-      await this.getClonedAccountAuthExtendedForChildEntities(account);
-
     for (const vc of account.virtualContributors) {
       const updatedVcAuthorizations =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-          vc,
-          clonedAccountAuth
+          vc
         );
       updatedAuthorizations.push(...updatedVcAuthorizations);
     }
+
+    // For the VCs, InnovationPacks + InnovationHubs use a cloned + extended authorization
+    const clonedAccountAuth =
+      await this.getClonedAccountAuthExtendedForChildEntities(account);
 
     for (const ip of account.innovationPacks) {
       const innovationPackAuthorizations =
@@ -211,7 +216,7 @@ export class AccountAuthorizationService {
 
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    hostCredentials: ICredentialDefinition[]
+    accountAdminCredential: ICredentialDefinition
   ): Promise<IAuthorizationPolicy> {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -222,7 +227,11 @@ export class AccountAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible. TODO: work through the logic on this
-    authorization.anonymousReadAccess = true;
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        authorization,
+        AuthorizationPrivilege.READ
+      );
 
     // Allow global admins to reset authorization, manage platform settings
     // and transfer resources
@@ -232,7 +241,6 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.LICENSE_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
-          AuthorizationPrivilege.TRANSFER_RESOURCE,
           AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
           AuthorizationPrivilege.CREATE_INNOVATION_PACK,
@@ -257,15 +265,32 @@ export class AccountAuthorizationService {
       );
     newRules.push(globalSpacesReader);
 
-    // Allow hosts (users = self mgmt, org = org admin) to manage their own account
+    // Add privileges related to offering and accepting transfer of resources
     const accountResourcesManage =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.TRANSFER_RESOURCE],
-        [...hostCredentials],
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT, // Later remove?
+        ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE
       );
+    accountResourcesManage.criterias.push(accountAdminCredential);
     accountResourcesManage.cascade = false;
     newRules.push(accountResourcesManage);
+
+    const acceptResourceTransfers =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT
+      );
+    acceptResourceTransfers.criterias.push(accountAdminCredential);
+    acceptResourceTransfers.cascade = false;
+    newRules.push(acceptResourceTransfers);
 
     // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
     const accountHostManage =
@@ -276,7 +301,7 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [...hostCredentials],
+        [accountAdminCredential],
         CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
       );
     accountHostManage.cascade = true;
@@ -284,7 +309,7 @@ export class AccountAuthorizationService {
 
     const createSpace = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_SPACE],
-      [...hostCredentials],
+      [accountAdminCredential],
       CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
     );
     createSpace.cascade = false;
@@ -292,7 +317,7 @@ export class AccountAuthorizationService {
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
-      [...hostCredentials],
+      [accountAdminCredential],
       CREDENTIAL_RULE_PLATFORM_CREATE_VC
     );
     createVC.cascade = false;
@@ -301,21 +326,21 @@ export class AccountAuthorizationService {
     const createInnovationPack =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.CREATE_INNOVATION_PACK],
-        [...hostCredentials],
+        [accountAdminCredential],
         CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK
       );
     createInnovationPack.cascade = false;
     newRules.push(createInnovationPack);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
+      updatedAuthorization,
       newRules
     );
   }
 
   private extendAuthorizationPolicyForChildEntities(
     authorization: IAuthorizationPolicy | undefined,
-    hostCredentials: ICredentialDefinition[]
+    accountAdminCredential: ICredentialDefinition
   ): IAuthorizationPolicy {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -324,24 +349,21 @@ export class AccountAuthorizationService {
       );
     }
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
-    // If there is a root space, then also allow the admins to manage the account for now
-    const accountChildEntitiesManage = hostCredentials;
 
-    if (accountChildEntitiesManage.length !== 0) {
-      const accountChildEntities =
-        this.authorizationPolicyService.createCredentialRule(
-          [
-            AuthorizationPrivilege.CREATE,
-            AuthorizationPrivilege.READ,
-            AuthorizationPrivilege.UPDATE,
-            AuthorizationPrivilege.DELETE,
-            AuthorizationPrivilege.GRANT,
-          ],
-          accountChildEntitiesManage,
-          CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES
-        );
-      newRules.push(accountChildEntities);
-    }
+    const accountChildEntities =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
+        ],
+        [accountAdminCredential],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES
+      );
+    newRules.push(accountChildEntities);
+
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules

@@ -13,13 +13,19 @@ import {
 } from './dto';
 import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowledge';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UpdateVirtualContributorSettingsInput } from './dto/virtual.contributor.dto.update.settings';
+import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
-@ObjectType('MigrateEmbeddings')
+@ObjectType('MigrateEmbeddings') // TODO: what is this about?
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverMutations {
   constructor(
     private virtualContributorService: VirtualContributorService,
+    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -47,6 +53,62 @@ export class VirtualContributorResolverMutations {
 
     return await this.virtualContributorService.updateVirtualContributor(
       virtualContributorData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtualContributor, {
+    description: 'Updates one of the Setting on an Organization',
+  })
+  async updateVirtualContributorSettings(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('settingsData')
+    settingsData: UpdateVirtualContributorSettingsInput
+  ): Promise<IVirtualContributor> {
+    let virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        settingsData.virtualContributorID,
+        {
+          relations: {
+            account: {
+              authorization: true,
+            },
+          },
+        }
+      );
+
+    const accountAuthorization = virtualContributor.account?.authorization;
+    if (!accountAuthorization) {
+      throw new RelationshipNotFoundException(
+        `Unable to load authorizing account for VC ${virtualContributor.id}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `virtualContributor settings update: ${virtualContributor.id}`
+    );
+
+    virtualContributor =
+      await this.virtualContributorService.updateVirtualContributorSettings(
+        virtualContributor,
+        settingsData.settings
+      );
+    virtualContributor =
+      await this.virtualContributorService.save(virtualContributor);
+    // As the settings may update the authorization for the Space, the authorization policy will need to be reset
+
+    const updatedAuthorizations =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtualContributor
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return this.virtualContributorService.getVirtualContributorOrFail(
+      virtualContributor.id
     );
   }
 

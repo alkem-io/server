@@ -5,7 +5,6 @@ import { IActivity } from '@platform/activity';
 import { ActivityService } from '@platform/activity/activity.service';
 import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { SpaceService } from '@domain/space/space/space.service';
 import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActivityEventType } from '@common/enums/activity.event.type';
@@ -20,6 +19,7 @@ import {
   groupCredentialsByEntity,
 } from '@services/api/roles/util/group.credentials.by.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;
@@ -40,7 +40,7 @@ export class ActivityFeedService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private collaborationService: CollaborationService,
-    private spaceService: SpaceService,
+    private spaceLookupService: SpaceLookupService,
     private authorizationService: AuthorizationService,
     private activityService: ActivityService,
     private activityLogService: ActivityLogService
@@ -144,9 +144,8 @@ export class ActivityFeedService {
       : spaceIds;
     // check if the Spaces exist;
     // a Space might not exist if it's deleted or broken/orphaned data was introduced
-    const successOrNonExistingSpaces = await this.spaceService.spacesExist(
-      filteredSpaceIds
-    );
+    const successOrNonExistingSpaces =
+      await this.spaceLookupService.spacesExist(filteredSpaceIds);
     if (Array.isArray(successOrNonExistingSpaces)) {
       throw new EntityNotFoundException(
         `Spaces with the following identifiers not found: '${successOrNonExistingSpaces.join(
@@ -248,9 +247,8 @@ export class ActivityFeedService {
     const collaborationIds: string[] = [];
     for (const spaceId of spaceIds) {
       // filter the collaborations by read access
-      const collaboration = await this.spaceService.getCollaborationOrFail(
-        spaceId
-      );
+      const collaboration =
+        await this.spaceLookupService.getCollaborationOrFail(spaceId);
       let childCollaborations: ICollaboration[] = [];
       try {
         this.authorizationService.grantAccessOrFail(

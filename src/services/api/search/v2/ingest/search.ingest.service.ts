@@ -305,11 +305,25 @@ export class SearchIngestService {
 
     const total = await countFn();
 
+    if (total === 0) {
+      return [
+        {
+          success: true,
+          message: `[${index}] - 0 documents indexed`,
+          total: 0,
+        },
+      ];
+    }
+
     while (start <= total) {
       const fetched = await fetchFn(start, batchSize);
-      if (fetched.length) {
-        const result = await this.ingestBulk(fetched, index, task);
-        results.push(result);
+      const result = await this.ingestBulk(fetched, index, task);
+      results.push(result);
+
+      if (result.erroredDocuments?.length) {
+        this.logger.error(result.message, undefined, LogContext.SEARCH_INGEST);
+      } else {
+        this.logger.verbose?.(result.message, LogContext.SEARCH_INGEST);
       }
 
       start += batchSize;
@@ -337,7 +351,7 @@ export class SearchIngestService {
       return {
         success: true,
         total: 0,
-        message: 'No data indexed',
+        message: `[${index}] - 0 documents indexed`,
       };
     }
 
@@ -372,7 +386,6 @@ export class SearchIngestService {
       } documents errored. ${
         data.length - erroredDocuments.length
       } documents indexed.`;
-      this.logger.error(message, undefined, LogContext.SEARCH_INGEST);
       this.taskService.updateTaskErrors(task.id, message);
       return {
         success: false,
@@ -382,7 +395,6 @@ export class SearchIngestService {
       };
     } else {
       const message = `[${index}] - ${data.length} documents indexed`;
-      this.logger.verbose?.(message, LogContext.SEARCH_INGEST);
       this.taskService.updateTaskResults(task.id, message);
       return {
         success: true,
@@ -396,7 +408,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       where: {
         visibility: Not(SpaceVisibility.ARCHIVED),
-        level: SpaceLevel.SPACE,
+        level: SpaceLevel.L0,
       },
     });
   }
@@ -406,7 +418,7 @@ export class SearchIngestService {
         ...journeyFindOptions,
         where: {
           visibility: Not(SpaceVisibility.ARCHIVED),
-          level: SpaceLevel.SPACE,
+          level: SpaceLevel.L0,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -438,7 +450,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       where: {
         visibility: Not(SpaceVisibility.ARCHIVED),
-        level: SpaceLevel.CHALLENGE,
+        level: SpaceLevel.L1,
       },
     });
   }
@@ -448,7 +460,7 @@ export class SearchIngestService {
         ...journeyFindOptions,
         where: {
           visibility: Not(SpaceVisibility.ARCHIVED),
-          level: SpaceLevel.CHALLENGE,
+          level: SpaceLevel.L1,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -483,7 +495,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       where: {
         visibility: Not(SpaceVisibility.ARCHIVED),
-        level: SpaceLevel.OPPORTUNITY,
+        level: SpaceLevel.L2,
       },
     });
   }
@@ -493,7 +505,7 @@ export class SearchIngestService {
         ...journeyFindOptions,
         where: {
           visibility: Not(SpaceVisibility.ARCHIVED),
-          level: SpaceLevel.OPPORTUNITY,
+          level: SpaceLevel.L2,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -610,9 +622,11 @@ export class SearchIngestService {
             parentSpace: true,
           },
           collaboration: {
-            callouts: {
-              framing: {
-                profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  profile: profileRelationOptions,
+                },
               },
             },
           },
@@ -623,14 +637,17 @@ export class SearchIngestService {
           parentSpace: { id: true, parentSpace: { id: true } },
           collaboration: {
             id: true,
-            callouts: {
+            calloutsSet: {
               id: true,
-              createdBy: true,
-              createdDate: true,
-              nameID: true,
-              framing: {
+              callouts: {
                 id: true,
-                profile: profileSelectOptions,
+                createdBy: true,
+                createdDate: true,
+                nameID: true,
+                framing: {
+                  id: true,
+                  profile: profileSelectOptions,
+                },
               },
             },
           },
@@ -640,7 +657,7 @@ export class SearchIngestService {
       })
       .then(spaces =>
         spaces.flatMap(space =>
-          space.collaboration?.callouts?.map(callout => ({
+          space.collaboration?.calloutsSet?.callouts?.map(callout => ({
             ...callout,
             framing: undefined,
             type: SearchEntityTypes.CALLOUT,
@@ -679,15 +696,17 @@ export class SearchIngestService {
         },
         relations: {
           collaboration: {
-            callouts: {
-              framing: {
-                whiteboard: {
-                  profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  whiteboard: {
+                    profile: profileRelationOptions,
+                  },
                 },
-              },
-              contributions: {
-                whiteboard: {
-                  profile: profileRelationOptions,
+                contributions: {
+                  whiteboard: {
+                    profile: profileRelationOptions,
+                  },
                 },
               },
             },
@@ -701,25 +720,28 @@ export class SearchIngestService {
           visibility: true,
           collaboration: {
             id: true,
-            callouts: {
+            calloutsSet: {
               id: true,
-              createdBy: true,
-              createdDate: true,
-              nameID: true,
-              framing: {
+              callouts: {
                 id: true,
-                whiteboard: {
+                createdBy: true,
+                createdDate: true,
+                nameID: true,
+                framing: {
                   id: true,
-                  content: true,
-                  profile: profileSelectOptions,
+                  whiteboard: {
+                    id: true,
+                    content: true,
+                    profile: profileSelectOptions,
+                  },
                 },
-              },
-              contributions: {
-                id: true,
-                whiteboard: {
+                contributions: {
                   id: true,
-                  content: true,
-                  profile: profileSelectOptions,
+                  whiteboard: {
+                    id: true,
+                    content: true,
+                    profile: profileSelectOptions,
+                  },
                 },
               },
             },
@@ -736,7 +758,7 @@ export class SearchIngestService {
       })
       .then(spaces => {
         return spaces.flatMap(space => {
-          const callouts = space.collaboration?.callouts;
+          const callouts = space.collaboration?.calloutsSet?.callouts;
           return callouts
             ?.flatMap(callout => {
               // a callout can have whiteboard in the framing
@@ -836,10 +858,12 @@ export class SearchIngestService {
         },
         relations: {
           collaboration: {
-            callouts: {
-              contributions: {
-                post: {
-                  profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                contributions: {
+                  post: {
+                    profile: profileRelationOptions,
+                  },
                 },
               },
             },
@@ -853,16 +877,19 @@ export class SearchIngestService {
           visibility: true,
           collaboration: {
             id: true,
-            callouts: {
+            calloutsSet: {
               id: true,
-              contributions: {
+              callouts: {
                 id: true,
-                post: {
+                contributions: {
                   id: true,
-                  createdBy: true,
-                  createdDate: true,
-                  nameID: true,
-                  profile: profileSelectOptions,
+                  post: {
+                    id: true,
+                    createdBy: true,
+                    createdDate: true,
+                    nameID: true,
+                    profile: profileSelectOptions,
+                  },
                 },
               },
             },
@@ -880,7 +907,7 @@ export class SearchIngestService {
       .then(spaces => {
         const posts: any[] = [];
         spaces.forEach(space => {
-          const callouts = space?.collaboration?.callouts;
+          const callouts = space?.collaboration?.calloutsSet?.callouts;
           callouts?.forEach(callout => {
             const contributions = callout?.contributions;
             contributions?.forEach(contribution => {

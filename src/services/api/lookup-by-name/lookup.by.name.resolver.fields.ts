@@ -7,29 +7,60 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LookupByNameQueryResults } from './dto/lookup.by.name.query.results';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
-import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { NameID, UUID } from '@domain/common/scalars';
 import { TemplateService } from '@domain/template/template/template.service';
-import { ITemplate } from '@domain/template/template/template.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { SpaceService } from '@domain/space/space/space.service';
 
 @Resolver(() => LookupByNameQueryResults)
 export class LookupByNameResolverFields {
   constructor(
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private authorizationService: AuthorizationService,
+    private innovationHubService: InnovationHubService,
     private innovationPackService: InnovationPackService,
-    private templateService: TemplateService
+    private templateService: TemplateService,
+    private userLookupService: UserLookupService,
+    private spaceService: SpaceService,
+    private organizationLookupService: OrganizationLookupService,
+    private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => IInnovationPack, {
+  @ResolveField(() => String, {
     nullable: true,
-    description: 'Lookup the specified InnovationPack using a NameID',
+    description: 'Lookup the ID of the specified InnovationHub using a NameID',
+  })
+  async innovationHub(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('NAMEID', { type: () => NameID }) nameid: string
+  ): Promise<string> {
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubByNameIdOrFail(nameid);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationHub.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup InnovationHub by NameID: ${innovationHub.id}`
+    );
+
+    return innovationHub.id;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'Lookup the ID of the specified InnovationPack using a NameID',
   })
   async innovationPack(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('NAMEID', { type: () => NameID }) nameid: string
-  ): Promise<IInnovationPack> {
+  ): Promise<string> {
     const innovationPack =
       await this.innovationPackService.getInnovationPackByNameIdOrFail(nameid);
     this.authorizationService.grantAccessOrFail(
@@ -39,20 +70,90 @@ export class LookupByNameResolverFields {
       `lookup InnovationPack by NameID: ${innovationPack.id}`
     );
 
-    return innovationPack;
+    return innovationPack.id;
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => ITemplate, {
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'Lookup the ID of the specified Space using a NameID',
+  })
+  async space(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('NAMEID', { type: () => NameID }) nameid: string
+  ): Promise<string> {
+    const space = await this.spaceService.getSpaceByNameIdOrFail(nameid);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Space by NameID: ${space.id}`
+    );
+
+    return space.id;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'Lookup the ID of the specified User using a NameID',
+  })
+  async user(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('NAMEID', { type: () => NameID }) nameid: string
+  ): Promise<string> {
+    const user = await this.userLookupService.getUserByNameIdOrFail(nameid);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      `user lookup by NameID: ${agentInfo.email}`
+    );
+
+    return user.id;
+  }
+
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'Lookup the ID of the specified Organization using a NameID',
+  })
+  async organization(
+    @Args('NAMEID', { type: () => NameID }) nameid: string
+  ): Promise<string> {
+    const organization =
+      await this.organizationLookupService.getOrganizationByNameIdOrFail(
+        nameid
+      );
+    return organization.id;
+  }
+
+  @ResolveField(() => String, {
     nullable: true,
     description:
-      'Lookup the specified Template using a templatesSetId and the template NameID',
+      'Lookup the ID of the specified Virtual Contributor using a NameID',
+  })
+  async virtualContributor(
+    @Args('NAMEID', { type: () => NameID }) nameid: string
+  ): Promise<string> {
+    const virtualContributor =
+      await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
+        nameid
+      );
+
+    return virtualContributor.id;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => String, {
+    nullable: true,
+    description:
+      'Lookup the ID of the specified Template using a templatesSetId and the template NameID',
   })
   async template(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('templatesSetID', { type: () => UUID }) ID: string,
     @Args('NAMEID', { type: () => NameID }) nameID: string
-  ): Promise<ITemplate> {
+  ): Promise<string> {
     const template =
       await this.templateService.getTemplateByNameIDInTemplatesSetOrFail(
         ID,
@@ -66,6 +167,6 @@ export class LookupByNameResolverFields {
       `lookup template by NameID: ${template.id}`
     );
 
-    return template;
+    return template.id;
   }
 }

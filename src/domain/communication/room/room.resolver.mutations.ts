@@ -27,10 +27,13 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MutationType } from '@common/enums/subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoomServiceMentions } from './room.service.mentions';
 import { Mention } from '../messaging/mention.interface';
 import { IRoom } from './room.interface';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { RoomMentionsService } from '../room-mentions/room.mentions.service';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -40,9 +43,11 @@ export class RoomResolverMutations {
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
-    private roomServiceMentions: RoomServiceMentions,
+    private roomLookupService: RoomLookupService,
+    private roomMentionsService: RoomMentionsService,
     private subscriptionPublishService: SubscriptionPublishService,
-    private virtualContributorsService: VirtualContributorService,
+    private virtualContributorMessageService: VirtualContributorMessageService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -72,11 +77,11 @@ export class RoomResolverMutations {
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
 
-    const mentions = await this.roomServiceMentions.getMentionsFromText(
+    const mentions = await this.roomMentionsService.getMentionsFromText(
       messageData.message
     );
 
-    const message = await this.roomService.sendMessage(
+    const message = await this.roomLookupService.sendMessage(
       room,
       agentInfo.communicationID,
       messageData
@@ -89,7 +94,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           post.id,
           post.nameID,
@@ -114,7 +119,7 @@ export class RoomResolverMutations {
           agentInfo
         );
         if (accessVirtualContributors) {
-          await this.roomServiceMentions.processVirtualContributorMentions(
+          await this.roomMentionsService.processVirtualContributorMentions(
             mentions,
             message.message,
             threadID,
@@ -129,7 +134,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           calendar.id,
           calendar.nameID,
@@ -145,7 +150,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           discussion.id,
           discussion.nameID,
@@ -159,7 +164,7 @@ export class RoomResolverMutations {
         const discussionForum = await this.namingService.getDiscussionForRoom(
           messageData.roomID
         );
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           discussionForum.id,
           discussionForum.nameID,
@@ -189,7 +194,7 @@ export class RoomResolverMutations {
         );
 
         // Mentions notifications should be sent regardless of callout visibility per client-web#5557
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           callout.id,
           callout.nameID,
@@ -200,7 +205,7 @@ export class RoomResolverMutations {
         );
 
         if (accessVirtualContributors) {
-          await this.roomServiceMentions.processVirtualContributorMentions(
+          await this.roomMentionsService.processVirtualContributorMentions(
             mentions,
             message.message,
             threadID,
@@ -209,7 +214,10 @@ export class RoomResolverMutations {
           );
         }
 
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (
+          callout.visibility === CalloutVisibility.PUBLISHED &&
+          callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
+        ) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             message,
@@ -273,7 +281,7 @@ export class RoomResolverMutations {
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
     const mentions: Mention[] =
-      await this.roomServiceMentions.getMentionsFromText(messageData.message);
+      await this.roomMentionsService.getMentionsFromText(messageData.message);
     const threadID = messageData.threadID;
 
     const messageOwnerId = await this.roomService.getUserIdForMessage(
@@ -281,7 +289,7 @@ export class RoomResolverMutations {
       threadID
     );
 
-    const reply = await this.roomService.sendMessageReply(
+    const reply = await this.roomLookupService.sendMessageReply(
       room,
       agentInfo.communicationID,
       messageData,
@@ -316,15 +324,16 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        // TODO extact in a helper function
+        // TODO extract in a helper function
         if (accessVirtualContributors) {
           // Check before processing so as not to reply to same message where interaction started
-          const vcInteraction = await this.roomService.getVcInteractionByThread(
-            room.id,
-            threadID
-          );
+          const vcInteraction =
+            await this.roomMentionsService.getVcInteractionByThread(
+              room.id,
+              threadID
+            );
 
-          await this.roomServiceMentions.processVirtualContributorMentions(
+          await this.roomMentionsService.processVirtualContributorMentions(
             mentions,
             messageData.message,
             threadID,
@@ -337,15 +346,16 @@ export class RoomResolverMutations {
               `VC Interaction found in thread ${messageData.threadID} in room ${room.id}`,
               LogContext.VIRTUAL_CONTRIBUTOR
             );
+            const contextSpaceID =
+              await this.roomMentionsService.getSpaceIdForRoom(room);
+
             const vcMentioned =
-              await this.virtualContributorsService.getVirtualContributorOrFail(
+              await this.virtualContributorLookupService.getVirtualContributorOrFail(
                 vcInteraction.virtualContributorID
               );
-            const contextSpaceID =
-              await this.roomServiceMentions.getSpaceIdForRoom(room);
 
-            await this.roomServiceMentions.invokeVirtualContributor(
-              vcMentioned?.nameID,
+            await this.virtualContributorMessageService.invokeVirtualContributor(
+              vcMentioned.id,
               messageData.message,
               threadID,
               agentInfo,
@@ -411,11 +421,12 @@ export class RoomResolverMutations {
 
         if (accessVirtualContributors) {
           // Check before processing so as not to reply to same message where interaction started
-          const vcInteraction = await this.roomService.getVcInteractionByThread(
-            room.id,
-            threadID
-          );
-          await this.roomServiceMentions.processVirtualContributorMentions(
+          const vcInteraction =
+            await this.roomMentionsService.getVcInteractionByThread(
+              room.id,
+              threadID
+            );
+          await this.roomMentionsService.processVirtualContributorMentions(
             mentions,
             messageData.message,
             threadID,
@@ -429,14 +440,14 @@ export class RoomResolverMutations {
               LogContext.VIRTUAL_CONTRIBUTOR
             );
             const vcMentioned =
-              await this.virtualContributorsService.getVirtualContributorOrFail(
+              await this.virtualContributorLookupService.getVirtualContributorOrFail(
                 vcInteraction.virtualContributorID
               );
             const contextSpaceID =
-              await this.roomServiceMentions.getSpaceIdForRoom(room);
+              await this.roomMentionsService.getSpaceIdForRoom(room);
 
-            await this.roomServiceMentions.invokeVirtualContributor(
-              vcMentioned?.nameID,
+            await this.virtualContributorMessageService.invokeVirtualContributor(
+              vcMentioned.id,
               messageData.message,
               threadID,
               agentInfo,
@@ -462,7 +473,7 @@ export class RoomResolverMutations {
             agentInfo,
             messageOwnerId
           );
-          this.roomServiceMentions.processNotificationMentions(
+          this.roomMentionsService.processNotificationMentions(
             mentions,
             callout.id,
             callout.nameID,

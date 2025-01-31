@@ -20,10 +20,10 @@ import { asyncFilter } from '@common/utils';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { UserService } from '@domain/community/user/user.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { InvitationLifecycleService } from './invitation.service.lifecycle';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class InvitationService {
@@ -31,7 +31,7 @@ export class InvitationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Invitation)
     private invitationRepository: Repository<Invitation>,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private contributorService: ContributorService,
     private lifecycleService: LifecycleService,
     private invitationLifecycleService: InvitationLifecycleService,
@@ -119,7 +119,9 @@ export class InvitationService {
   }
 
   async getCreatedBy(invitation: IInvitation): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(invitation.createdBy);
+    const user = await this.userLookupService.getUserOrFail(
+      invitation.createdBy
+    );
     if (!user)
       throw new RelationshipNotFoundException(
         `Unable to load User that created invitation ${invitation.id} `,

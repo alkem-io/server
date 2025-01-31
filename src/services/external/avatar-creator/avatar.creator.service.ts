@@ -5,6 +5,7 @@ import { LogContext } from '@common/enums';
 import replaceSpecialCharacters from 'replace-special-characters';
 import { MimeFileType } from '@common/enums/mime.file.type';
 
+export const DEFAULT_AVATAR_SERVICE_URL = 'https://eu.ui-avatars.com/api/';
 @Injectable()
 export class AvatarCreatorService {
   constructor(
@@ -17,12 +18,12 @@ export class AvatarCreatorService {
     if (!lastName) {
       const lastNameNoSpecialCharacters =
         this.removeSpecialCharacters(firstName);
-      return `https://eu.ui-avatars.com/api/?name=${lastNameNoSpecialCharacters}&background=${randomColor}&color=ffffff&size=${size}`;
+      return `${DEFAULT_AVATAR_SERVICE_URL}?name=${lastNameNoSpecialCharacters}&background=${randomColor}&color=ffffff&size=${size}`;
     }
     const firstNameNoSpecialCharacters =
       this.removeSpecialCharacters(firstName);
     const lastNameNoSpecialCharacters = this.removeSpecialCharacters(lastName);
-    return `https://eu.ui-avatars.com/api/?name=${firstNameNoSpecialCharacters}+${lastNameNoSpecialCharacters}&background=${randomColor}&color=ffffff&size=${size}`;
+    return `${DEFAULT_AVATAR_SERVICE_URL}?name=${firstNameNoSpecialCharacters}+${lastNameNoSpecialCharacters}&background=${randomColor}&color=ffffff&size=${size}`;
   }
 
   private removeSpecialCharacters(base: string): string {

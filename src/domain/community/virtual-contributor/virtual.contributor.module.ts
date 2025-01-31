@@ -11,15 +11,17 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { VirtualContributorResolverSubscriptions } from './virtual.contributor.resolver.subscriptions';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
-import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.interaction.module';
+import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
+import { VirtualContributorLookupModule } from '../virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { VirtualContributorDefaultsModule } from '../virtual-contributor-defaults/virtual.contributor.defaults.module';
+import { VirtualContributorSettingsModule } from '../virtual-contributor-settings/virtual.contributor.settings.module';
 
 @Module({
   imports: [
@@ -28,15 +30,17 @@ import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.int
     AuthorizationModule,
     ContributorModule,
     ProfileModule,
-    NamingModule,
     AiPersonaModule,
+    KnowledgeBaseModule,
     AiServerAdapterModule,
     CommunicationAdapterModule,
-    AccountHostModule,
+    VirtualContributorLookupModule,
+    VirtualContributorSettingsModule,
+    VirtualContributorDefaultsModule,
+    AccountLookupModule,
     TypeOrmModule.forFeature([VirtualContributor]),
     PlatformAuthorizationPolicyModule,
     SubscriptionServiceModule,
-    VcInteractionModule,
   ],
   providers: [
     VirtualContributorService,
