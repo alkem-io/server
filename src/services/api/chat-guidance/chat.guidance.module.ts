@@ -10,9 +10,11 @@ import { RoomModule } from '@domain/communication/room/room.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { PlatformModule } from '@platform/platform/platform.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,
