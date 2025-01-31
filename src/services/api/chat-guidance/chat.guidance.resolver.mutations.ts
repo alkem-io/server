@@ -1,6 +1,5 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -20,7 +19,6 @@ import { IRoom } from '@domain/communication/room/room.interface';
 @Resolver()
 export class ChatGuidanceResolverMutations {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private chatGuidanceService: ChatGuidanceService,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -142,7 +140,6 @@ export class ChatGuidanceResolverMutations {
   })
   @Profiling.api
   public updateAnswerRelevance(
-    @CurrentUser() agentInfo: AgentInfo,
     @Args('input') { id, relevant }: ChatGuidanceAnswerRelevanceInput
   ): Promise<boolean> {
     return this.guidanceReporterService.updateAnswerRelevance(id, relevant);

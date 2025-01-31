@@ -123,7 +123,6 @@ export class ChatGuidanceService {
   }
 
   public isGuidanceEngineEnabled(): boolean {
-    console.log(this.configService);
     return this.configService.get('platform.guidance_engine.enabled', {
       infer: true,
     });
