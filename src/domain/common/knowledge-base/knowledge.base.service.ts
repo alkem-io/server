@@ -9,7 +9,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
@@ -148,13 +147,10 @@ export class KnowledgeBaseService {
     knowledgeBaseID: string,
     options?: FindOneOptions<KnowledgeBase>
   ): Promise<IKnowledgeBase | never> {
-    let knowledgeBase: IKnowledgeBase | null = null;
-    if (knowledgeBaseID.length === UUID_LENGTH) {
-      knowledgeBase = await this.knowledgeBaseRepository.findOne({
-        where: { id: knowledgeBaseID },
-        ...options,
-      });
-    }
+    const knowledgeBase = await this.knowledgeBaseRepository.findOne({
+      where: { id: knowledgeBaseID },
+      ...options,
+    });
 
     if (!knowledgeBase)
       throw new EntityNotFoundException(

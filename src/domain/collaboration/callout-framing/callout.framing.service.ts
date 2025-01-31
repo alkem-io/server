@@ -9,7 +9,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
@@ -162,13 +161,10 @@ export class CalloutFramingService {
     calloutFramingID: string,
     options?: FindOneOptions<CalloutFraming>
   ): Promise<ICalloutFraming | never> {
-    let calloutFraming: ICalloutFraming | null = null;
-    if (calloutFramingID.length === UUID_LENGTH) {
-      calloutFraming = await this.calloutFramingRepository.findOne({
-        where: { id: calloutFramingID },
-        ...options,
-      });
-    }
+    const calloutFraming = await this.calloutFramingRepository.findOne({
+      where: { id: calloutFramingID },
+      ...options,
+    });
 
     if (!calloutFraming)
       throw new EntityNotFoundException(
@@ -190,7 +186,7 @@ export class CalloutFramingService {
     );
     if (!calloutFraming.profile)
       throw new EntityNotFoundException(
-        `Callout profile not initialised: ${calloutFramingInput.id}`,
+        `Callout profile not initialized: ${calloutFramingInput.id}`,
         LogContext.COLLABORATION
       );
 

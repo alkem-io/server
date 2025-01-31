@@ -1,0 +1,18 @@
+export const URL_PATHS = {
+  USER: 'user',
+  ADMIN: 'admin',
+  VIRTUAL_CONTRIBUTOR: 'vc',
+  ORGANIZATION: 'organization',
+  INNOVATION_LIBRARY: 'innovation-library',
+  INNOVATION_PACKS: 'innovation-packs',
+  CHALLENGES: 'challenges',
+  OPPORTUNITIES: 'opportunities',
+  COLLABORATION: 'collaboration',
+  CONTRIBUTE: 'contribute',
+  POSTS: 'posts',
+  WHITEBOARDS: 'whiteboards',
+  FORUM: 'forum',
+  DISCUSSION: 'discussion',
+  CALENDAR: 'calendar',
+  KNOWLEDGE_BASE: 'knowledge-base',
+} as const;
