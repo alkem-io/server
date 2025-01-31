@@ -1,4 +1,4 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -21,7 +21,6 @@ import { IRoom } from '@domain/communication/room/room.interface';
 export class ChatGuidanceResolverMutations {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private chatGuidanceService: ChatGuidanceService,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -45,6 +44,7 @@ export class ChatGuidanceResolverMutations {
       AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
       `Access interactive guidance: ${agentInfo.email}`
     );
+
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
       return undefined;
     }
@@ -129,6 +129,7 @@ export class ChatGuidanceResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `Access interactive guidance: ${agentInfo.email}`
     );
+
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
       return false;
     }

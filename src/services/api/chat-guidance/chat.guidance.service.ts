@@ -11,7 +11,9 @@ import { UserService } from '@domain/community/user/user.service';
 import { IMessageGuidanceQuestionResult } from '@domain/communication/message.guidance.question.result/message.guidance.question.result.interface';
 import { PlatformService } from '@platform/platform/platform.service';
 import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class ChatGuidanceService {
   constructor(
     private configService: ConfigService<AlkemioConfig, true>,
@@ -121,6 +123,7 @@ export class ChatGuidanceService {
   }
 
   public isGuidanceEngineEnabled(): boolean {
+    console.log(this.configService);
     return this.configService.get('platform.guidance_engine.enabled', {
       infer: true,
     });
