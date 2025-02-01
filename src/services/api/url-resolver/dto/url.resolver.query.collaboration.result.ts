@@ -32,4 +32,6 @@ export class UrlResolverQueryResultCollaboration {
     nullable: true,
   })
   whiteboardId?: string;
+
+  internalPath?: string;
 }

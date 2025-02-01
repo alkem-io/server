@@ -25,7 +25,7 @@ export class UrlResolverService {
     `/:spaceNameID{/${URL_PATHS.CHALLENGES}/:challengeNameID}{/${URL_PATHS.OPPORTUNITIES}/:opportunityNameID}{/*path}`
   );
   private spaceInternalPathMatcher = match(
-    `{/${URL_PATHS.COLLABORATION}/:calloutNameID}{/*path}`
+    `{/${URL_PATHS.COLLABORATION}/:calloutNameID}{/${URL_PATHS.POSTS}/:postNameID}{/${URL_PATHS.WHITEBOARDS}/:whiteboardNameID}{/*path}`
   );
 
   constructor(
@@ -252,6 +252,12 @@ export class UrlResolverService {
     const calloutNameID = this.getMatchedResultAsString(
       collaborationMatch.params.calloutNameID
     );
+    const postNameID = this.getMatchedResultAsString(
+      collaborationMatch.params.postNameID
+    );
+    const whiteboardNameID = this.getMatchedResultAsString(
+      collaborationMatch.params.whiteboardNameID
+    );
     const collaborationInternalPath = this.getMatchedResultAsPath(
       collaborationMatch.params.path
     );
@@ -270,17 +276,13 @@ export class UrlResolverService {
     });
     result.space.collaboration.calloutId = callout.id;
     result.type = UrlType.CALLOUT;
-    if (!collaborationInternalPath) {
+    result.space.internalPath = collaborationInternalPath;
+    if (!postNameID && !whiteboardNameID) {
       return result;
     }
 
     // Check for post contribution
-    const postMatch = this.spaceInternalPathMatcher(collaborationInternalPath);
-
-    if (postMatch && postMatch.params && postMatch.params.postNameId) {
-      const postNameID = this.getMatchedResultAsString(
-        postMatch.params.postNameId
-      );
+    if (postNameID) {
       const contribution = await this.entityManager.findOneOrFail(
         CalloutContribution,
         {
@@ -301,19 +303,7 @@ export class UrlResolverService {
     }
 
     // Check for whiteboard contribution
-    const whiteboardMatch = this.spaceInternalPathMatcher(
-      collaborationInternalPath
-    );
-
-    if (
-      whiteboardMatch &&
-      whiteboardMatch.params &&
-      whiteboardMatch.params.whiteboardNameId
-    ) {
-      const whiteboardNameID = this.getMatchedResultAsString(
-        whiteboardMatch.params.whiteboardNameId
-      );
-
+    if (whiteboardNameID) {
       const contribution = await this.entityManager.findOneOrFail(
         CalloutContribution,
         {
