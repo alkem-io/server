@@ -29,4 +29,6 @@ export class UrlResolverQueryResultSpace {
     nullable: false,
   })
   collaboration!: UrlResolverQueryResultCollaboration;
+
+  internalPath?: string;
 }

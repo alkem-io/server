@@ -17,16 +17,16 @@ import { Callout } from '@domain/collaboration/callout';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { UrlType } from '@common/enums/url.type';
 import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
-import { UrlParser } from 'url-params-parser';
+import { match } from 'path-to-regexp';
 
 @Injectable()
 export class UrlResolverService {
-  private SPACE_URL = ':spaceNameId/:spacePath';
-  private SUBSPACE_URL = `:spaceNameId/${URL_PATHS.CHALLENGES}/:subspaceNameId/:spacePath`;
-  private SUBSUBSPACE_URL = `:spaceNameId/${URL_PATHS.CHALLENGES}/:subspaceNameId/${URL_PATHS.OPPORTUNITIES}/:subsubspaceNameId/:spacePath`;
-  private COLLABORATION_URL_CALLOUT = `${URL_PATHS.COLLABORATION}/:calloutNameId`;
-  private COLLABORATION_URL_CALLOUT_WHITEBOARD_CONTRIBUTION = `${this.COLLABORATION_URL_CALLOUT}/${URL_PATHS.WHITEBOARDS}/:whiteboardNameId`;
-  private COLLABORATION_URL_CALLOUT_POST_CONTRIBUTION = `${this.COLLABORATION_URL_CALLOUT}/${URL_PATHS.POSTS}/:postNameId`;
+  private spacePathMatcher = match(
+    `/:spaceNameID{/${URL_PATHS.CHALLENGES}/:challengeNameID}{/${URL_PATHS.OPPORTUNITIES}/:opportunityNameID}{/*path}`
+  );
+  private spaceInternalPathMatcher = match(
+    `{/${URL_PATHS.COLLABORATION}/:calloutNameID}{/*path}`
+  );
 
   constructor(
     private authorizationService: AuthorizationService,
@@ -115,10 +115,36 @@ export class UrlResolverService {
         return result;
     }
 
+    const urlPath = this.getPath(url);
+
     // Assumption is that everything else is a Space!
-    await this.populateSpaceResult(result, agentInfo, url);
+    await this.populateSpaceResult(result, agentInfo, urlPath);
 
     return await this.populateCollaborationResult(result);
+  }
+
+  private getMatchedResultAsString(
+    matchedResult: string | string[] | undefined
+  ): string | undefined {
+    if (!matchedResult) {
+      return undefined;
+    }
+    if (Array.isArray(matchedResult)) {
+      return matchedResult[0];
+    }
+    return matchedResult;
+  }
+
+  private getMatchedResultAsPath(
+    matchedResult: string | string[] | undefined
+  ): string | undefined {
+    if (!matchedResult) {
+      return undefined;
+    }
+    if (Array.isArray(matchedResult)) {
+      return this.createPathFromElements(matchedResult);
+    }
+    return `/${matchedResult}`;
   }
 
   private async populateSpaceResult(
@@ -127,8 +153,28 @@ export class UrlResolverService {
     url: string
   ): Promise<UrlResolverQueryResults> {
     result.type = UrlType.SPACE;
-    const spacePathParams = this.parseUrl(url, this.SPACE_URL);
-    if (!spacePathParams || !spacePathParams.spaceNameId) {
+    const spacePathMatch = this.spacePathMatcher(url);
+    if (!spacePathMatch || !spacePathMatch.params) {
+      throw new ValidationException(
+        `Invalid URL: ${url}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    const spaceNameID = this.getMatchedResultAsString(
+      spacePathMatch.params.spaceNameID
+    );
+    const subspaceNameID = this.getMatchedResultAsString(
+      spacePathMatch.params.challengeNameID
+    );
+    const subsubspaceNameID = this.getMatchedResultAsString(
+      spacePathMatch.params.opportunityNameID
+    );
+    const spaceInternalPath = this.getMatchedResultAsPath(
+      spacePathMatch.params.path
+    );
+
+    if (!spaceNameID) {
       throw new ValidationException(
         `Invalid URL: ${url}`,
         LogContext.URL_GENERATOR
@@ -136,32 +182,47 @@ export class UrlResolverService {
     }
 
     const space = await this.spaceLookupService.getSpaceByNameIdOrFail(
-      spacePathParams.spaceNameId,
+      spaceNameID,
       this.spaceRelations
     );
-    result.space = this.createSpaceResult(space, agentInfo, url);
+    result.space = this.createSpaceResult(
+      space,
+      agentInfo,
+      url,
+      spaceInternalPath
+    );
 
-    if (spacePathParams.subspaceNameId) {
+    if (subspaceNameID) {
       const subspace =
         await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
-          spacePathParams.subspaceNameId,
+          subspaceNameID,
           space.id,
           this.spaceRelations
         );
       const parentSpaceID = space.id;
-      result.space = this.createSpaceResult(subspace, agentInfo, url);
+      result.space = this.createSpaceResult(
+        subspace,
+        agentInfo,
+        url,
+        spaceInternalPath
+      );
       result.space.parentSpaces.push(parentSpaceID);
     }
-    if (spacePathParams.subsubspaceNameId) {
+    if (subsubspaceNameID) {
       const subsubspace =
         await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
-          spacePathParams.subsubspaceNameId,
+          subsubspaceNameID,
           space.id,
           this.spaceRelations
         );
 
       const parentSpaceID = space.id;
-      result.space = this.createSpaceResult(subsubspace, agentInfo, url);
+      result.space = this.createSpaceResult(
+        subsubspace,
+        agentInfo,
+        url,
+        spaceInternalPath
+      );
       result.space.parentSpaces.push(parentSpaceID);
     }
     return result;
@@ -169,45 +230,36 @@ export class UrlResolverService {
 
   private createPathFromElements(pathElements: string[]): string {
     // Note: any domain works, we just need a valid URL base
-    return 'https://alkem.io/' + pathElements.join('/');
-  }
-
-  private parseUrl(
-    url: string,
-    route: string
-  ): Record<string, string> | undefined {
-    const result = UrlParser(url, route);
-    if (result) {
-      return result.namedParams;
-    }
-    return undefined;
+    return '/' + pathElements.join('/');
   }
 
   private async populateCollaborationResult(
     result: UrlResolverQueryResults
   ): Promise<UrlResolverQueryResults> {
-    if (!result.space) {
+    if (!result.space || !result.space.internalPath) {
       throw new ValidationException(
         `Space not provided: ${result.type}`,
         LogContext.URL_GENERATOR
       );
     }
 
-    const pathElements: string[] = [];
-    const spacePath = this.createPathFromElements(pathElements);
-    const spacePathParams = this.parseUrl(
-      spacePath,
-      this.COLLABORATION_URL_CALLOUT
-    );
-    if (!spacePathParams || !spacePathParams.calloutNameId) {
+    const internalPath = result.space.internalPath;
+    const collaborationMatch = this.spaceInternalPathMatcher(internalPath);
+    if (!collaborationMatch || !collaborationMatch.params) {
       return result;
     }
-    const calloutParam = spacePathParams.calloutNameId;
+
+    const calloutNameID = this.getMatchedResultAsString(
+      collaborationMatch.params.calloutNameID
+    );
+    const collaborationInternalPath = this.getMatchedResultAsPath(
+      collaborationMatch.params.path
+    );
 
     // Assume have a callout
     const callout = await this.entityManager.findOneOrFail(Callout, {
       where: {
-        nameID: calloutParam,
+        nameID: calloutNameID,
       },
       relations: {
         contributions: {
@@ -218,13 +270,17 @@ export class UrlResolverService {
     });
     result.space.collaboration.calloutId = callout.id;
     result.type = UrlType.CALLOUT;
+    if (!collaborationInternalPath) {
+      return result;
+    }
 
     // Check for post contribution
-    const postContributionParams = this.parseUrl(
-      spacePath,
-      this.COLLABORATION_URL_CALLOUT_POST_CONTRIBUTION
-    );
-    if (postContributionParams && postContributionParams.postNameId) {
+    const postMatch = this.spaceInternalPathMatcher(collaborationInternalPath);
+
+    if (postMatch && postMatch.params && postMatch.params.postNameId) {
+      const postNameID = this.getMatchedResultAsString(
+        postMatch.params.postNameId
+      );
       const contribution = await this.entityManager.findOneOrFail(
         CalloutContribution,
         {
@@ -233,7 +289,7 @@ export class UrlResolverService {
               id: callout.id,
             },
             post: {
-              nameID: postContributionParams.postNameId,
+              nameID: postNameID,
             },
           },
         }
@@ -245,14 +301,19 @@ export class UrlResolverService {
     }
 
     // Check for whiteboard contribution
-    const whiteboardContributionParams = this.parseUrl(
-      spacePath,
-      this.COLLABORATION_URL_CALLOUT_WHITEBOARD_CONTRIBUTION
+    const whiteboardMatch = this.spaceInternalPathMatcher(
+      collaborationInternalPath
     );
+
     if (
-      whiteboardContributionParams &&
-      whiteboardContributionParams.whiteboardNameId
+      whiteboardMatch &&
+      whiteboardMatch.params &&
+      whiteboardMatch.params.whiteboardNameId
     ) {
+      const whiteboardNameID = this.getMatchedResultAsString(
+        whiteboardMatch.params.whiteboardNameId
+      );
+
       const contribution = await this.entityManager.findOneOrFail(
         CalloutContribution,
         {
@@ -261,7 +322,7 @@ export class UrlResolverService {
               id: callout.id,
             },
             whiteboard: {
-              nameID: whiteboardContributionParams.whiteboardNameId,
+              nameID: whiteboardNameID,
             },
           },
         }
@@ -282,10 +343,17 @@ export class UrlResolverService {
     return pathElements;
   }
 
+  private getPath(url: string): string {
+    const parsedUrl = new URL(url);
+
+    return parsedUrl.pathname;
+  }
+
   private createSpaceResult(
     space: ISpace | null,
     agentInfo: AgentInfo,
-    url: string
+    url: string,
+    internalSpacePath: string | undefined
   ): UrlResolverQueryResultSpace {
     if (!space) {
       throw new ValidationException(
@@ -314,6 +382,7 @@ export class UrlResolverService {
         calloutsSetId: space.collaboration.calloutsSet?.id,
       },
       levelZeroSpaceID: space.levelZeroSpaceID,
+      internalPath: internalSpacePath,
     };
     return result;
   }

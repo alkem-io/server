@@ -104,11 +104,11 @@
     "nest-winston": "^1.9.7",
     "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.1",
+    "path-to-regexp": "^8.2.0",
     "replace-special-characters": "^1.2.7",
     "rxjs": "^7.8.1",
     "socket.io": "^4.7.5",
     "typeorm": "0.3.13",
-    "url-params-parser": "^1.0.4",
     "winston": "^3.13.1",
     "xstate": "^5.18.2",
     "yaml": "^2.4.5"
