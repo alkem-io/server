@@ -120,7 +120,7 @@ export class UrlResolverService {
     // Assumption is that everything else is a Space!
     await this.populateSpaceResult(result, agentInfo, urlPath);
 
-    return await this.populateCollaborationResult(result);
+    return await this.populateCollaborationResult(result, agentInfo);
   }
 
   private getMatchedResultAsString(
@@ -234,7 +234,8 @@ export class UrlResolverService {
   }
 
   private async populateCollaborationResult(
-    result: UrlResolverQueryResults
+    result: UrlResolverQueryResults,
+    agentInfo: AgentInfo
   ): Promise<UrlResolverQueryResults> {
     if (!result.space || !result.space.internalPath) {
       throw new ValidationException(
@@ -268,12 +269,19 @@ export class UrlResolverService {
         nameID: calloutNameID,
       },
       relations: {
+        authorization: true,
         contributions: {
           post: true,
           whiteboard: true,
         },
       },
     });
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.READ,
+      `resolving url for callout ${internalPath}`
+    );
     result.space.collaboration.calloutId = callout.id;
     result.type = UrlType.CALLOUT;
     result.space.internalPath = collaborationInternalPath;
@@ -294,7 +302,17 @@ export class UrlResolverService {
               nameID: postNameID,
             },
           },
+          relations: {
+            authorization: true,
+            post: true,
+          },
         }
+      );
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        contribution.authorization,
+        AuthorizationPrivilege.READ,
+        `resolving url for post on callout ${internalPath}`
       );
       result.space.collaboration.contributionId = contribution.id;
       result.type = UrlType.CONTRIBUTION_POST;
@@ -315,7 +333,17 @@ export class UrlResolverService {
               nameID: whiteboardNameID,
             },
           },
+          relations: {
+            authorization: true,
+            whiteboard: true,
+          },
         }
+      );
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        contribution.authorization,
+        AuthorizationPrivilege.READ,
+        `resolving url for whiteboard on callout ${internalPath}`
       );
       result.space.collaboration.contributionId = contribution.id;
       result.type = UrlType.CONTRIBUTION_WHITEBOARD;
