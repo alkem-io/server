@@ -17,18 +17,17 @@ import { Callout } from '@domain/collaboration/callout';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { UrlType } from '@common/enums/url.type';
 import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
-import { UrlParser, UrlParserResult } from 'url-params-parser';
-import { compact } from 'lodash';
-import { NameID } from '@domain/common/scalars';
-
-type UrlTypeParser = {
-  urlType: UrlType;
-  routes: string[];
-  validator: (params: Record<string, string>) => boolean;
-};
+import { UrlParser } from 'url-params-parser';
 
 @Injectable()
 export class UrlResolverService {
+  private SPACE_URL = ':spaceNameId/:spacePath';
+  private SUBSPACE_URL = `:spaceNameId/${URL_PATHS.CHALLENGES}/:subspaceNameId/:spacePath`;
+  private SUBSUBSPACE_URL = `:spaceNameId/${URL_PATHS.CHALLENGES}/:subspaceNameId/${URL_PATHS.OPPORTUNITIES}/:subsubspaceNameId/:spacePath`;
+  private COLLABORATION_URL_CALLOUT = `${URL_PATHS.COLLABORATION}/:calloutNameId`;
+  private COLLABORATION_URL_CALLOUT_WHITEBOARD_CONTRIBUTION = `${this.COLLABORATION_URL_CALLOUT}/${URL_PATHS.WHITEBOARDS}/:whiteboardNameId`;
+  private COLLABORATION_URL_CALLOUT_POST_CONTRIBUTION = `${this.COLLABORATION_URL_CALLOUT}/${URL_PATHS.POSTS}/:postNameId`;
+
   constructor(
     private authorizationService: AuthorizationService,
     private userLookupService: UserLookupService,
@@ -48,29 +47,7 @@ export class UrlResolverService {
     const pathElements = this.getPathElements(url);
 
     const result: UrlResolverQueryResults = {
-      type: UrlType.SPACE,
-    };
-
-    switch (pathElements.urlType) {
-      case UrlType.USER: {
-        const user = await this.userLookupService.getUserByNameIdOrFail(
-          pathElements.params.userNameId
-        );
-        result.userId = user.id;
-        result.type = UrlType.USER;
-        return result;
-      }
-      case UrlType.SPACE: {
-        const space = await this.spaceLookupService.getSpaceByNameIdOrFail(
-          pathElements.params.spaceNameId,
-          this.spaceRelations
-        );
-      }
-    }
-
-    /*
-    const result: UrlResolverQueryResults = {
-      type: UrlType.SPACE,
+      type: UrlType.UNKNOWN,
     };
 
     if (pathElements.length === 0) {
@@ -80,7 +57,9 @@ export class UrlResolverService {
       );
     }
 
-    switch (pathElements[0]) {
+    const urlPathRoot = pathElements[0];
+
+    switch (urlPathRoot) {
       case URL_PATHS.USER:
         if (pathElements.length !== 2) {
           throw new ValidationException(
@@ -137,52 +116,71 @@ export class UrlResolverService {
     }
 
     // Assumption is that everything else is a Space!
-    result.type = UrlType.SPACE;
-    const space = await this.spaceLookupService.getSpaceByNameIdOrFail(
-      pathElements[0],
-      this.spaceRelations
-    );
-    result.space = this.createSpaceResult(space, pathElements.slice(1));
-
-    if (pathElements.length === 2) {
-      this.authorizationService.grantAccessOrFail(
-        agentInfo,
-        space.authorization,
-        AuthorizationPrivilege.READ_ABOUT,
-        `resolving url ${url}`
-      );
-      return result;
-    }
-
-    if (pathElements.length > 2 && pathElements[1] === URL_PATHS.CHALLENGES) {
-      const subspace =
-        await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
-          pathElements[2],
-          space.id,
-          this.spaceRelations
-        );
-      const parentSpaceID = space.id;
-      result.space = this.createSpaceResult(subspace, pathElements.slice(3));
-      result.space.parentSpaces.push(parentSpaceID);
-    }
-    if (
-      pathElements.length > 4 &&
-      pathElements[3] === URL_PATHS.OPPORTUNITIES
-    ) {
-      const subsubspace =
-        await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
-          pathElements[4],
-          space.id,
-          this.spaceRelations
-        );
-
-      const parentSpaceID = space.id;
-      result.space = this.createSpaceResult(subsubspace, pathElements.slice(5));
-      result.space.parentSpaces.push(parentSpaceID);
-    }
+    await this.populateSpaceResult(result, agentInfo, url);
 
     return await this.populateCollaborationResult(result);
-    */
+  }
+
+  private async populateSpaceResult(
+    result: UrlResolverQueryResults,
+    agentInfo: AgentInfo,
+    url: string
+  ): Promise<UrlResolverQueryResults> {
+    result.type = UrlType.SPACE;
+    const spacePathParams = this.parseUrl(url, this.SPACE_URL);
+    if (!spacePathParams || !spacePathParams.spaceNameId) {
+      throw new ValidationException(
+        `Invalid URL: ${url}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    const space = await this.spaceLookupService.getSpaceByNameIdOrFail(
+      spacePathParams.spaceNameId,
+      this.spaceRelations
+    );
+    result.space = this.createSpaceResult(space, agentInfo, url);
+
+    if (spacePathParams.subspaceNameId) {
+      const subspace =
+        await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
+          spacePathParams.subspaceNameId,
+          space.id,
+          this.spaceRelations
+        );
+      const parentSpaceID = space.id;
+      result.space = this.createSpaceResult(subspace, agentInfo, url);
+      result.space.parentSpaces.push(parentSpaceID);
+    }
+    if (spacePathParams.subsubspaceNameId) {
+      const subsubspace =
+        await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
+          spacePathParams.subsubspaceNameId,
+          space.id,
+          this.spaceRelations
+        );
+
+      const parentSpaceID = space.id;
+      result.space = this.createSpaceResult(subsubspace, agentInfo, url);
+      result.space.parentSpaces.push(parentSpaceID);
+    }
+    return result;
+  }
+
+  private createPathFromElements(pathElements: string[]): string {
+    // Note: any domain works, we just need a valid URL base
+    return 'https://alkem.io/' + pathElements.join('/');
+  }
+
+  private parseUrl(
+    url: string,
+    route: string
+  ): Record<string, string> | undefined {
+    const result = UrlParser(url, route);
+    if (result) {
+      return result.namedParams;
+    }
+    return undefined;
   }
 
   private async populateCollaborationResult(
@@ -194,296 +192,91 @@ export class UrlResolverService {
         LogContext.URL_GENERATOR
       );
     }
-    const spacePath = result.space.pathElements;
-    if (spacePath.length === 0) {
+
+    const pathElements: string[] = [];
+    const spacePath = this.createPathFromElements(pathElements);
+    const spacePathParams = this.parseUrl(
+      spacePath,
+      this.COLLABORATION_URL_CALLOUT
+    );
+    if (!spacePathParams || !spacePathParams.calloutNameId) {
       return result;
     }
-    if (spacePath[0] === URL_PATHS.COLLABORATION) {
-      if (spacePath.length >= 1) {
-        const calloutNameID = spacePath[1];
-        const callout = await this.entityManager.findOneOrFail(Callout, {
+    const calloutParam = spacePathParams.calloutNameId;
+
+    // Assume have a callout
+    const callout = await this.entityManager.findOneOrFail(Callout, {
+      where: {
+        nameID: calloutParam,
+      },
+      relations: {
+        contributions: {
+          post: true,
+          whiteboard: true,
+        },
+      },
+    });
+    result.space.collaboration.calloutId = callout.id;
+    result.type = UrlType.CALLOUT;
+
+    // Check for post contribution
+    const postContributionParams = this.parseUrl(
+      spacePath,
+      this.COLLABORATION_URL_CALLOUT_POST_CONTRIBUTION
+    );
+    if (postContributionParams && postContributionParams.postNameId) {
+      const contribution = await this.entityManager.findOneOrFail(
+        CalloutContribution,
+        {
           where: {
-            nameID: calloutNameID,
-          },
-          relations: {
-            contributions: {
-              post: true,
-              whiteboard: true,
+            callout: {
+              id: callout.id,
+            },
+            post: {
+              nameID: postContributionParams.postNameId,
             },
           },
-        });
-        result.space.collaboration.calloutId = callout.id;
-        result.type = UrlType.CALLOUT;
-        if (spacePath.length >= 4) {
-          if (spacePath[2] === URL_PATHS.POSTS) {
-            const postNameID = spacePath[3];
-            const contribution = await this.entityManager.findOneOrFail(
-              CalloutContribution,
-              {
-                where: {
-                  callout: {
-                    id: callout.id,
-                  },
-                  post: {
-                    nameID: postNameID,
-                  },
-                },
-              }
-            );
-            result.space.collaboration.contributionId = contribution.id;
-            result.type = UrlType.CONTRIBUTION_POST;
-            result.space.collaboration.postId = contribution?.post?.id;
-          } else if (spacePath[2] === URL_PATHS.WHITEBOARDS) {
-            const whiteboardNameID = spacePath[3];
-            const contribution = await this.entityManager.findOneOrFail(
-              CalloutContribution,
-              {
-                where: {
-                  callout: {
-                    id: callout.id,
-                  },
-                  whiteboard: {
-                    nameID: whiteboardNameID,
-                  },
-                },
-              }
-            );
-            result.space.collaboration.contributionId = contribution.id;
-            result.type = UrlType.CONTRIBUTION_WHITEBOARD;
-            result.space.collaboration.whiteboardId =
-              contribution?.whiteboard?.id;
-          }
         }
-      }
+      );
+      result.space.collaboration.contributionId = contribution.id;
+      result.type = UrlType.CONTRIBUTION_POST;
+      result.space.collaboration.postId = contribution?.post?.id;
+      return result;
     }
+
+    // Check for whiteboard contribution
+    const whiteboardContributionParams = this.parseUrl(
+      spacePath,
+      this.COLLABORATION_URL_CALLOUT_WHITEBOARD_CONTRIBUTION
+    );
+    if (
+      whiteboardContributionParams &&
+      whiteboardContributionParams.whiteboardNameId
+    ) {
+      const contribution = await this.entityManager.findOneOrFail(
+        CalloutContribution,
+        {
+          where: {
+            callout: {
+              id: callout.id,
+            },
+            whiteboard: {
+              nameID: whiteboardContributionParams.whiteboardNameId,
+            },
+          },
+        }
+      );
+      result.space.collaboration.contributionId = contribution.id;
+      result.type = UrlType.CONTRIBUTION_WHITEBOARD;
+      result.space.collaboration.whiteboardId = contribution?.whiteboard?.id;
+      return result;
+    }
+
     return result;
   }
 
-  //!! calendar events nameIds space, subspace and subsubspace
-  //!! :spaceNameId/collaboration/:calloutNameId ....
-
-  private prepareSpaceRoutes(): UrlTypeParser {
-    const routes: string[] = [];
-    // client-web/src/domain/journey/settings/routes/SpaceSettingsRoute.tsx
-    const spaceSettingsRoutes = [
-      'profile',
-      'settings',
-      'account',
-      'context',
-      'community',
-      'communications',
-      'templates',
-      'storage',
-      'challenges',
-    ];
-    spaceSettingsRoutes.forEach(tab =>
-      routes.push(`/:spaceNameId/settings/${tab}`)
-    );
-    routes.push('/:spaceNameId/settings');
-
-    // client-web/src/domain/journey/space/routing/SpaceRoute.tsx
-    const spaceTabs = [
-      'dashboard/updates',
-      'dashboard/contributors',
-      'dashboard',
-      'calendar',
-      'community',
-      'about',
-      'subspaces',
-      'knowledge-base',
-      'search',
-    ];
-    spaceTabs.forEach(tab => routes.push(`/:spaceNameId/${tab}`));
-    routes.push('/:spaceNameId');
-    const validator = (params: Record<string, string>) => {
-      return NameID.isValidFormat(params.spaceNameId);
-    };
-    return {
-      urlType: UrlType.SPACE,
-      routes,
-      validator,
-    };
-  }
-
-  private prepareSubspaceRoutes(): UrlTypeParser {
-    const routes: string[] = [];
-    // client-web/src/domain/journey/settings/routes/ChallengeRoute.tsx
-    const subspaceSettingsRoutes = [
-      'profile',
-      'context',
-      'community',
-      'communications',
-      'opportunities',
-      'templates',
-      'settings',
-      'authorization',
-    ];
-    // client-web/src/domain/journey/subspace/routing/SubspaceRoute.tsx
-    const subspaceRoutes = [
-      'index',
-      'outline',
-      'about',
-      'subspaces',
-      'contributors',
-      'activity',
-      'calendar',
-      'share',
-      'manageFlow',
-      'settings',
-      'dashboard/updates',
-    ];
-    subspaceSettingsRoutes.forEach(tab =>
-      routes.push(`/:spaceNameId/challenges/:subspaceNameId/settings/${tab}`)
-    );
-    routes.push('/:spaceNameId/challenges/:subspaceNameId/settings');
-    subspaceRoutes.forEach(tab =>
-      routes.push(`/:spaceNameId/challenges/:subspaceNameId/${tab}`)
-    );
-    routes.push('/:spaceNameId/challenges/:subspaceNameId');
-
-    const validator = (params: Record<string, string>) => {
-      return (
-        NameID.isValidFormat(params.spaceNameId) &&
-        NameID.isValidFormat(params.subspaceNameId)
-      );
-    };
-    return {
-      urlType: UrlType.SPACE,
-      routes,
-      validator,
-    };
-  }
-
-  private prepareL2SubspaceRoutes(): UrlTypeParser {
-    const routes: string[] = [];
-    //client-web/src/domain/journey/settings/routes/OpportunityRoute.tsx
-    const subspaceSettingsRoutes = [
-      'profile',
-      'context',
-      'community',
-      'communications',
-      'templates',
-      'settings',
-    ];
-    // client-web/src/domain/journey/subspace/routing/SubspaceRoute.tsx
-    const subspaceRoutes = [
-      'index',
-      'outline',
-      'about',
-      'subspaces',
-      'contributors',
-      'activity',
-      'calendar',
-      'share',
-      'manageFlow',
-      'settings',
-      'dashboard/updates',
-    ];
-    subspaceSettingsRoutes.forEach(tab =>
-      routes.push(
-        `/:spaceNameId/challenges/:subspaceNameId/opportunities/:subsubspaceNameId/settings/${tab}`
-      )
-    );
-    routes.push(
-      '/:spaceNameId/challenges/:subspaceNameId/opportunities/:subsubspaceNameId/settings'
-    );
-    subspaceRoutes.forEach(tab =>
-      routes.push(
-        `/:spaceNameId/challenges/:subspaceNameId/opportunities/:subsubspaceNameId/${tab}`
-      )
-    );
-    routes.push(
-      '/:spaceNameId/challenges/:subspaceNameId/opportunities/:subsubspaceNameId'
-    );
-
-    const validator = (params: Record<string, string>) => {
-      return (
-        NameID.isValidFormat(params.spaceNameId) &&
-        NameID.isValidFormat(params.subspaceNameId)
-      );
-    };
-    return {
-      urlType: UrlType.SPACE,
-      routes,
-      validator,
-    };
-  }
-
-  private prepareUserRoutes(): UrlTypeParser {
-    const routes: string[] = [];
-    // client-web/src/domain/journey/settings/routes/SpaceSettingsRoute.tsx
-    const userSettingsRoutes = [
-      'profile',
-      'account',
-      'membership',
-      'organizations',
-      'notifications',
-      'settings',
-    ];
-    userSettingsRoutes.forEach(tab =>
-      routes.push(`/user/:userNameId/settings/${tab}`)
-    );
-    routes.push('/user/:userNameId/settings');
-    routes.push('/user/:userNameId');
-
-    const validator = (params: Record<string, string>) => {
-      return NameID.isValidFormat(params.useNameId);
-    };
-    return {
-      urlType: UrlType.USER,
-      routes,
-      validator,
-    };
-  }
-
-  private tryParse(
-    url: string,
-    routeParser: string,
-    validator: (params: Record<string, string>) => boolean = () => true
-  ): Record<string, string> | undefined {
-    try {
-      const result = UrlParser(url, routeParser);
-      if (
-        result.namedParamsValues.length > 0 &&
-        validator(result.namedParams)
-      ) {
-        return result.namedParams;
-      } else {
-        return undefined;
-      }
-    } catch (e) {
-      return undefined;
-    }
-  }
-
-  private getPathElements(url: string): {
-    urlType: UrlType;
-    params: Record<string, string>;
-  } {
+  private getPathElements(url: string): string[] {
     const parsedUrl = new URL(url);
-    // Go from most restrictive to less restrictive
-    const parsers = {
-      L2subspaceRoutes: this.prepareL2SubspaceRoutes(),
-      subspaceRoutes: this.prepareSubspaceRoutes(),
-      spaceRoutes: this.prepareSpaceRoutes(),
-      userRoutes: this.prepareUserRoutes(),
-    };
-
-    for (const parser of Object.values(parsers)) {
-      for (const route of parser.routes) {
-        const result = this.tryParse(url, route, parser.validator);
-        if (result) {
-          return {
-            urlType: parser.urlType,
-            params: result,
-          };
-          // console.log({ result });
-
-          // const pathElements = parsedUrl.pathname.split('/').filter(Boolean);
-          // return pathElements;
-        }
-      }
-    }
 
     const pathElements = parsedUrl.pathname.split('/').filter(Boolean);
     return pathElements;
@@ -491,7 +284,8 @@ export class UrlResolverService {
 
   private createSpaceResult(
     space: ISpace | null,
-    pathElements: string[]
+    agentInfo: AgentInfo,
+    url: string
   ): UrlResolverQueryResultSpace {
     if (!space) {
       throw new ValidationException(
@@ -505,6 +299,12 @@ export class UrlResolverService {
         LogContext.URL_GENERATOR
       );
     }
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ_ABOUT,
+      `resolving url ${url}`
+    );
     const result: UrlResolverQueryResultSpace = {
       id: space.id,
       level: space.level,
@@ -514,7 +314,6 @@ export class UrlResolverService {
         calloutsSetId: space.collaboration.calloutsSet?.id,
       },
       levelZeroSpaceID: space.levelZeroSpaceID,
-      pathElements: pathElements,
     };
     return result;
   }

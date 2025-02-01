@@ -29,7 +29,4 @@ export class UrlResolverQueryResultSpace {
     nullable: false,
   })
   collaboration!: UrlResolverQueryResultCollaboration;
-
-  // The path inside of the space
-  pathElements: string[] = [];
 }

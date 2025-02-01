@@ -13,6 +13,7 @@ export enum UrlType {
   INNOVATION_LIBRARY = 'innovation-library',
   INNOVATION_PACKS = 'innovation-pack',
   ADMIN = 'admin',
+  UNKNOWN = 'unknown',
 }
 
 registerEnumType(UrlType, {
