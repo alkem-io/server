@@ -361,8 +361,6 @@ export class OrganizationService {
       );
     }
 
-    await this.roleSetService.removeAllRoleAssignments(organization.roleSet);
-
     await this.profileService.deleteProfile(organization.profile.id);
 
     if (organization.storageAggregator) {
