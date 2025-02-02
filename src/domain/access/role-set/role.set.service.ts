@@ -527,7 +527,10 @@ export class RoleSetService {
         if (roleName === RoleName.ADMIN && parentRoleSet) {
           // also assign as subspace admin in parent roleSet if there is a parent roleSet
           const subspaceAdminCredential =
-            await this.getCredentialForSubspaceAdminImplicitRole(parentRoleSet);
+            await this.getCredentialSpaceImplicitRole(
+              parentRoleSet,
+              AuthorizationCredential.SPACE_SUBSPACE_ADMIN
+            );
           const alreadyHasSubspaceAdmin =
             await this.agentService.hasValidCredential(
               agent.id,
@@ -1037,8 +1040,10 @@ export class RoleSetService {
     );
 
     if (!hasAnotherAdminRole) {
-      const credential =
-        await this.getCredentialForSubspaceAdminImplicitRole(roleSet);
+      const credential = await this.getCredentialSpaceImplicitRole(
+        roleSet,
+        AuthorizationCredential.SPACE_SUBSPACE_ADMIN
+      );
 
       return await this.agentService.revokeCredential({
         agentID: agent.id,
@@ -1080,20 +1085,21 @@ export class RoleSetService {
     }
   }
 
-  private async getCredentialForSubspaceAdminImplicitRole(
-    parentRoleSet: IRoleSet
+  private async getCredentialSpaceImplicitRole(
+    roleSet: IRoleSet,
+    implicitRoleCredential: AuthorizationCredential
   ): Promise<ICredentialDefinition> {
-    this.validateRoleSetType(parentRoleSet, RoleSetType.SPACE);
+    this.validateRoleSetType(roleSet, RoleSetType.SPACE);
 
     // Use the admin credential to get the resourceID
     const adminCredential = await this.getCredentialDefinitionForRole(
-      parentRoleSet,
+      roleSet,
       RoleName.ADMIN
     );
     const spaceID = adminCredential.resourceID;
 
     return {
-      type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
+      type: implicitRoleCredential,
       resourceID: spaceID,
     };
   }
@@ -1188,8 +1194,10 @@ export class RoleSetService {
     let credential: ICredentialDefinition | undefined = undefined;
     switch (role) {
       case RoleSetRoleImplicit.SUBSPACE_ADMIN:
-        credential =
-          await this.getCredentialForSubspaceAdminImplicitRole(roleSet);
+        credential = await this.getCredentialSpaceImplicitRole(
+          roleSet,
+          AuthorizationCredential.SPACE_SUBSPACE_ADMIN
+        );
         break;
       case RoleSetRoleImplicit.ACCOUNT_ADMIN:
         credential =
