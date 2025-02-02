@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -224,7 +224,7 @@ export class CalendarEventService {
         'subspace.collaborationId = collaboration.id'
       )
       .where('calendarEvent.id = :id', { id: calendarEvent.id })
-      .andWhere('subspace.level != :level', { level: SpaceLevel.SPACE })
+      .andWhere('subspace.level != :level', { level: SpaceLevel.L0 })
       .select('subspace.id as spaceId')
       .getRawOne<{ spaceId: string }>();
 

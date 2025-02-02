@@ -200,11 +200,11 @@ export default class SearchResultBuilderService
     let subsubspace: ISpace | undefined = undefined;
 
     switch (spaceLoaded?.level) {
-      case SpaceLevel.CHALLENGE: {
+      case SpaceLevel.L1: {
         subspace = spaceLoaded;
         break;
       }
-      case SpaceLevel.OPPORTUNITY: {
+      case SpaceLevel.L2: {
         subspace = spaceLoaded.parentSpace;
         subsubspace = spaceLoaded;
         break;
