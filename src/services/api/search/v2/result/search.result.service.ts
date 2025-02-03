@@ -417,6 +417,7 @@ export class SearchResultService {
         contributions: { whiteboard: true },
       },
       select: {
+        id: true,
         framing: {
           id: true,
           whiteboard: {
@@ -535,9 +536,15 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        nameID: true,
+        type: true,
         calloutsSet: {
+          id: true,
           type: true,
         },
+      },
+      relations: {
+        calloutsSet: true,
       },
     });
     const calloutsInSetType = calloutsWithSet.filter(
@@ -573,9 +580,12 @@ export class SearchResultService {
         },
       },
       select: {
+        id: true,
+        level: true,
         collaboration: {
           id: true,
           calloutsSet: {
+            id: true,
             callouts: {
               id: true,
             },
