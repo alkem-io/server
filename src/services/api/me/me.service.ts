@@ -30,6 +30,17 @@ export class MeService {
     private readonly logger: LoggerService
   ) {}
 
+  public async getCommunityInvitationsCountForUser(
+    userId: string,
+    states?: string[]
+  ): Promise<number> {
+    const invitations = await this.rolesService.getCommunityInvitationsForUser(
+      userId,
+      states
+    );
+    return invitations.length;
+  }
+
   public async getCommunityInvitationsForUser(
     userId: string,
     states?: string[]
@@ -172,15 +183,19 @@ export class MeService {
   }
 
   public async getSpaceMembershipsHierarchical(
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    limit?: number
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
       await this.getSpaceMembershipsForAgentInfo(agentInfo);
 
-    const levelZeroSpaces = this.filterSpacesByLevel(
+    const levelZeroSpacesRaw = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
       SpaceLevel.L0
     );
+    if (limit) {
+      levelZeroSpacesRaw.splice(limit);
+    }
     const levelOneSpaces = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
       SpaceLevel.L1
@@ -190,7 +205,7 @@ export class MeService {
       SpaceLevel.L2
     );
 
-    const levelZeroMemberships = levelZeroSpaces.map(levelZeroSpace => {
+    const levelZeroMemberships = levelZeroSpacesRaw.map(levelZeroSpace => {
       const levelZeroMembership: CommunityMembershipResult = {
         id: levelZeroSpace.id,
         space: levelZeroSpace,
