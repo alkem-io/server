@@ -540,6 +540,9 @@ export class RoleSetResolverMutations {
           parentRoleSet: {
             authorization: true,
           },
+          license: {
+            entitlements: true,
+          },
         },
       }
     );
