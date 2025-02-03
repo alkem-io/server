@@ -211,7 +211,8 @@ export class NotificationPayloadBuilder {
       callout.id
     );
     const whiteboardURL = await this.urlGeneratorService.getWhiteboardUrlPath(
-      whiteboard.id
+      whiteboard.id,
+      whiteboard.nameID
     );
     const payload: CollaborationWhiteboardCreatedEventPayload = {
       callout: {
