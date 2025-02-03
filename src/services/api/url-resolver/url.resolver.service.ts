@@ -160,19 +160,21 @@ export class UrlResolverService {
         LogContext.URL_GENERATOR
       );
     }
+    const params = spacePathMatch.params as {
+      spaceNameID?: string | string[];
+      challengeNameID?: string | string[];
+      opportunityNameID?: string | string[];
+      path?: string | string[];
+    };
 
-    const spaceNameID = this.getMatchedResultAsString(
-      spacePathMatch.params.spaceNameID
-    );
+    const spaceNameID = this.getMatchedResultAsString(params.spaceNameID);
     const subspaceNameID = this.getMatchedResultAsString(
-      spacePathMatch.params.challengeNameID
+      params.challengeNameID
     );
     const subsubspaceNameID = this.getMatchedResultAsString(
-      spacePathMatch.params.opportunityNameID
+      params.opportunityNameID
     );
-    const spaceInternalPath = this.getMatchedResultAsPath(
-      spacePathMatch.params.path
-    );
+    const spaceInternalPath = this.getMatchedResultAsPath(params.path);
 
     if (!spaceNameID) {
       throw new ValidationException(
@@ -250,18 +252,19 @@ export class UrlResolverService {
       return result;
     }
 
-    const calloutNameID = this.getMatchedResultAsString(
-      collaborationMatch.params.calloutNameID
-    );
-    const postNameID = this.getMatchedResultAsString(
-      collaborationMatch.params.postNameID
-    );
+    const params = collaborationMatch.params as {
+      calloutNameID?: string | string[];
+      postNameID?: string | string[];
+      whiteboardNameID?: string | string[];
+      path?: string | string[];
+    };
+
+    const calloutNameID = this.getMatchedResultAsString(params.calloutNameID);
+    const postNameID = this.getMatchedResultAsString(params.postNameID);
     const whiteboardNameID = this.getMatchedResultAsString(
-      collaborationMatch.params.whiteboardNameID
+      params.whiteboardNameID
     );
-    const collaborationInternalPath = this.getMatchedResultAsPath(
-      collaborationMatch.params.path
-    );
+    const collaborationInternalPath = this.getMatchedResultAsPath(params.path);
 
     // Assume have a callout
     const callout = await this.entityManager.findOneOrFail(Callout, {
