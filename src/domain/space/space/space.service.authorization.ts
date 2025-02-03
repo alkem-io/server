@@ -285,6 +285,12 @@ export class SpaceAuthorizationService {
         break;
     }
 
+    // An invitee also can always have visibility
+    credentialCriteriasWithAccess.push({
+      type: AuthorizationCredential.SPACE_MEMBER_INVITEE,
+      resourceID: space.id,
+    });
+
     return credentialCriteriasWithAccess;
   }
 
