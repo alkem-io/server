@@ -7,5 +7,5 @@ export type ExceptionExtraDetails = {
    * A probable cause added manually by the developer
    */
   cause?: string;
-  originalException?: Error;
+  originalException?: Error | unknown;
 };
