@@ -48,7 +48,7 @@ export class AdminLicensingResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
-      AuthorizationPrivilege.TRANSFER_RESOURCE,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER, // TODO: this is wrong, need to create a new privilege
       `create Wingback account for account (${accountID})`
     );
 
