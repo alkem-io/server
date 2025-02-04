@@ -48,6 +48,7 @@ import { UpdateContributionCalloutsSortOrderInput } from '../callout-contributio
 import { keyBy } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 
 @Injectable()
 export class CalloutService {
@@ -61,6 +62,7 @@ export class CalloutService {
     private contributionPolicyService: CalloutContributionPolicyService,
     private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private storageBucketService: StorageBucketService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -542,6 +544,83 @@ export class CalloutService {
     }
 
     return this.contributionService.save(contributionsInOrder);
+  }
+
+  public async updateStorageAggregator(
+    calloutID: string,
+    storageAggregator: IStorageAggregator
+  ): Promise<ICallout> {
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: {
+        framing: {
+          profile: {
+            storageBucket: true,
+          },
+          whiteboard: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+        },
+        contributions: {
+          whiteboard: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+          post: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+          link: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+        },
+      },
+    });
+
+    if (!callout.contributions) {
+      throw new EntityNotInitializedException(
+        `Callout (${calloutID}) not initialized as no contributions`,
+        LogContext.COLLABORATION
+      );
+    }
+    await this.updateStorageBucketAggregator(
+      callout.framing.profile.storageBucket,
+      storageAggregator
+    );
+    await this.updateStorageBucketAggregator(
+      callout.framing.whiteboard?.profile.storageBucket,
+      storageAggregator
+    );
+    for (const contribution of callout.contributions) {
+      await this.updateStorageBucketAggregator(
+        contribution.post?.profile.storageBucket,
+        storageAggregator
+      );
+      await this.updateStorageBucketAggregator(
+        contribution.link?.profile.storageBucket,
+        storageAggregator
+      );
+      await this.updateStorageBucketAggregator(
+        contribution.whiteboard?.profile.storageBucket,
+        storageAggregator
+      );
+    }
+
+    return callout;
+  }
+  private async updateStorageBucketAggregator(
+    storageBucket: IStorageBucket | undefined,
+    aggregator: IStorageAggregator
+  ) {
+    if (storageBucket) {
+      storageBucket.storageAggregator = aggregator;
+      await this.storageBucketService.save(storageBucket);
+    }
   }
 
   public async getCalloutFraming(

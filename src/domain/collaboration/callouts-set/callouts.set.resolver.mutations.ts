@@ -25,6 +25,9 @@ import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.call
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { TransferCalloutInput } from './dto/callouts.set.dto.transfer.callout';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Resolver()
 export class CalloutsSetResolverMutations {
@@ -45,30 +48,54 @@ export class CalloutsSetResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
-    description: 'Creates a new Callout on the specified CalloutsSet.',
+    description:
+      'Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet.',
   })
-  async createCallout(
+  async transferCallout(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('calloutData')
-    calloutData: CreateCalloutOnCalloutsSetInput
+    transferData: TransferCalloutInput
   ): Promise<ICallout> {
-    const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(
-      calloutData.calloutsSetID
+    const callout = await this.calloutService.getCalloutOrFail(
+      transferData.calloutID,
+      {
+        relations: {
+          calloutsSet: true,
+        },
+      }
+    );
+    const sourceCalloutsSet = callout.calloutsSet;
+    if (!sourceCalloutsSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load CalloutsSet on callout:  ${callout.id} `,
+        LogContext.COLLABORATION
+      );
+    }
+    const targetCalloutsSet =
+      await this.calloutsSetService.getCalloutsSetOrFail(
+        transferData.targetCalloutsSetID
+      );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      sourceCalloutsSet.authorization,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
+      `callouts set transfer callout: ${callout.id}`
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      calloutsSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `callouts set create callout: ${calloutsSet.id}`
+      targetCalloutsSet.authorization,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+      `callouts set transfer callout: ${callout.id}`
     );
-    const callout = await this.calloutsSetService.createCallout(
-      calloutsSet,
-      calloutData
-    );
+
+    // Transfer is authorized, now try to execute it
+    await this.calloutsSetService.transferCallout(callout, targetCalloutsSet);
+
+    // Reset the authorization policy for the callout
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,
-        calloutsSet.authorization
+        sourceCalloutsSet.authorization
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);

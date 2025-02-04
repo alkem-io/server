@@ -454,6 +454,38 @@ export class CalloutsSetService {
 
     return calloutsInOrder;
   }
+
+  public async transferCallout(
+    callout: ICallout,
+    targetCalloutsSet: ICalloutsSet
+  ): Promise<ICallout> {
+    // Check that the nameID is unique in the target callouts set
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCalloutsSet(
+        targetCalloutsSet.id
+      );
+    if (reservedNameIDs.includes(callout.nameID)) {
+      throw new ValidationException(
+        `Unable to transfer callout, nameID already exists: ${callout.nameID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    // Update all the storage aggregators
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCalloutsSet(
+        targetCalloutsSet.id
+      );
+    // Move the callout
+    callout.calloutsSet = targetCalloutsSet;
+    const updatedCallout = await this.calloutService.save(callout);
+
+    // Fix the storage aggregator
+    return await this.calloutService.updateStorageAggregator(
+      updatedCallout.id,
+      storageAggregator
+    );
+  }
+
   public async getCalloutsFromCollaboration(
     calloutsSet: ICalloutsSet,
     args: CalloutsSetArgsCallouts,

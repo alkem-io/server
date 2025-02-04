@@ -23,6 +23,7 @@ import { CalloutContributionModule } from '../callout-contribution/callout.contr
 import { PostModule } from '../post/post.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     StorageAggregatorResolverModule,
     PostModule,
     TemporaryStorageModule,
+    StorageBucketModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
