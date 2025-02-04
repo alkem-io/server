@@ -20,7 +20,7 @@ import {
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { Post } from '@domain/collaboration/post';
-import { Callout, ICallout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -347,6 +347,7 @@ export class SearchResultService {
     const posts = await this.entityManager.findBy(Post, {
       id: In(postIds),
     });
+
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized post first, then get the parents, and map the results
     const authorizedPosts = posts.filter(post =>
@@ -414,10 +415,13 @@ export class SearchResultService {
       ],
       relations: {
         framing: { whiteboard: true },
-        contributions: { whiteboard: true },
+        contributions: { whiteboard: true, post: true },
+        calloutsSet: true,
       },
       select: {
         id: true,
+        nameID: true,
+        type: true,
         framing: {
           id: true,
           whiteboard: {
@@ -430,6 +434,10 @@ export class SearchResultService {
             id: true,
           },
           post: { id: true },
+        },
+        calloutsSet: {
+          id: true,
+          type: true,
         },
       },
     });
@@ -457,7 +465,7 @@ export class SearchResultService {
 
         if (!rawSearchResult) {
           this.logger.error(
-            `Unable to find raw search result for Whiteboard: ${parent.callout.id}`,
+            `Unable to find raw search result for Whiteboard with Callout ID: ${parent.callout.id}`,
             undefined,
             LogContext.SEARCH
           );
@@ -486,8 +494,42 @@ export class SearchResultService {
 
     const calloutIds = rawSearchResults.map(hit => hit.result.id);
 
-    const callouts = await this.entityManager.findBy(Callout, {
-      id: In(calloutIds),
+    const callouts = await this.entityManager.find(Callout, {
+      where: { id: In(calloutIds) },
+      relations: {
+        calloutsSet: true,
+        framing: {
+          whiteboard: true,
+        },
+        contributions: {
+          post: true,
+          whiteboard: true,
+        },
+      },
+      select: {
+        id: true,
+        nameID: true,
+        type: true,
+        framing: {
+          id: true,
+          whiteboard: {
+            id: true,
+          },
+        },
+        contributions: {
+          id: true,
+          post: {
+            id: true,
+          },
+          whiteboard: {
+            id: true,
+          },
+        },
+        calloutsSet: {
+          id: true,
+          type: true,
+        },
+      },
     });
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized post first, then get the parents, and map the results
@@ -525,40 +567,11 @@ export class SearchResultService {
       .filter((callout): callout is ISearchResultCallout => !!callout);
   }
 
-  private async filterCalloutsBySetType(
-    callouts: ICallout[],
-    setType: CalloutsSetType
-  ): Promise<ICallout[]> {
-    const calloutIds = callouts.map(callout => callout.id);
-    const calloutsWithSet = await this.entityManager.find(Callout, {
-      where: {
-        id: In(calloutIds),
-      },
-      select: {
-        id: true,
-        nameID: true,
-        type: true,
-        calloutsSet: {
-          id: true,
-          type: true,
-        },
-      },
-      relations: {
-        calloutsSet: true,
-      },
-    });
-    const calloutsInSetType = calloutsWithSet.filter(
-      c => c.calloutsSet?.type === setType
-    );
-    return calloutsInSetType;
-  }
-
   private async getCalloutParents(
     callouts: Callout[]
   ): Promise<CalloutParents[]> {
-    const spaceCallouts = await this.filterCalloutsBySetType(
-      callouts,
-      CalloutsSetType.COLLABORATION
+    const spaceCallouts = callouts.filter(
+      callout => callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
     );
     const spaceCalloutIds = spaceCallouts.map(callout => callout.id);
 
@@ -575,7 +588,15 @@ export class SearchResultService {
       relations: {
         collaboration: {
           calloutsSet: {
-            callouts: true,
+            callouts: {
+              framing: {
+                whiteboard: true,
+              },
+              contributions: {
+                post: true,
+                whiteboard: true,
+              },
+            },
           },
         },
       },
@@ -588,6 +609,21 @@ export class SearchResultService {
             id: true,
             callouts: {
               id: true,
+              framing: {
+                id: true,
+                whiteboard: {
+                  id: true,
+                },
+              },
+              contributions: {
+                id: true,
+                post: {
+                  id: true,
+                },
+                whiteboard: {
+                  id: true,
+                },
+              },
             },
           },
         },
@@ -638,6 +674,7 @@ export class SearchResultService {
         contributions: {
           post: true,
         },
+        calloutsSet: true,
       },
       select: {
         id: true,
@@ -646,6 +683,10 @@ export class SearchResultService {
           post: {
             id: true,
           },
+        },
+        calloutsSet: {
+          id: true,
+          type: true,
         },
       },
     });
@@ -664,7 +705,11 @@ export class SearchResultService {
       relations: {
         collaboration: {
           calloutsSet: {
-            callouts: true,
+            callouts: {
+              contributions: {
+                post: true,
+              },
+            },
           },
         },
       },
@@ -689,8 +734,15 @@ export class SearchResultService {
         collaboration: {
           id: true,
           calloutsSet: {
+            id: true,
             callouts: {
               id: true,
+              contributions: {
+                id: true,
+                post: {
+                  id: true,
+                },
+              },
             },
           },
         },
