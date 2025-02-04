@@ -19,6 +19,7 @@ import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.
 import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -69,13 +70,16 @@ export class VirtualContributorAuthorizationService {
       virtual.authorization,
       accountAdminCredential
     );
-    // Allow everyone to see the VirtualContributor for now; note do not cascade to children
-    virtual.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
-        virtual.authorization,
-        AuthorizationPrivilege.READ,
-        false
-      );
+
+    // Allow everyone to Read About the VirtualContributor that are not hidden;
+    if (virtual.searchVisibility !== SearchVisibility.HIDDEN) {
+      virtual.authorization =
+        this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+          virtual.authorization,
+          AuthorizationPrivilege.READ_ABOUT,
+          true
+        );
+    }
 
     updatedAuthorizations.push(virtual.authorization);
 
@@ -122,7 +126,8 @@ export class VirtualContributorAuthorizationService {
     const knowledgeBaseAuthorizations =
       await this.knowledgeBaseAuthorizations.applyAuthorizationPolicy(
         virtual.knowledgeBase,
-        knowledgeBaseParentAuthorization
+        knowledgeBaseParentAuthorization,
+        virtual.settings.privacy.knowledgeBaseContentVisible
       );
     updatedAuthorizations.push(...knowledgeBaseAuthorizations);
 
@@ -205,11 +210,6 @@ export class VirtualContributorAuthorizationService {
         CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE
       );
     newRules.push(globalSupportManage);
-
-    const globalCommunityRead =
-      this.createCredentialRuleAnonymousRegisteredUserRead();
-    globalCommunityRead.cascade = false;
-    newRules.push(globalCommunityRead);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       updatedAuthorization,
