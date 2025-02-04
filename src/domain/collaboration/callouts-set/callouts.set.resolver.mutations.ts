@@ -26,7 +26,10 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { TransferCalloutInput } from './dto/callouts.set.dto.transfer.callout';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 
 @Resolver()
@@ -68,6 +71,12 @@ export class CalloutsSetResolverMutations {
     if (!sourceCalloutsSet) {
       throw new RelationshipNotFoundException(
         `Unable to load CalloutsSet on callout:  ${callout.id} `,
+        LogContext.COLLABORATION
+      );
+    }
+    if (callout.isTemplate) {
+      throw new ValidationException(
+        `Cannot transfer a template callout: ${callout.id}`,
         LogContext.COLLABORATION
       );
     }
