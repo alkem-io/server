@@ -29,6 +29,7 @@ import { CommunityGuidelines } from '@domain/community/community-guidelines/comm
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -263,10 +264,7 @@ export class UrlGeneratorService {
           profile.id
         );
       case ProfileType.WHITEBOARD:
-        return await this.getWhiteboardUrlPathByField(
-          this.FIELD_PROFILE_ID,
-          profile.id
-        );
+        return await this.getWhiteboardUrlPathByProfileID(profile.id);
       case ProfileType.INNOVATION_FLOW:
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
       case ProfileType.TEMPLATE:
@@ -831,77 +829,79 @@ export class UrlGeneratorService {
     return `${calloutUrlPath}/${this.PATH_POSTS}/${result.postNameId}`;
   }
 
-  public async getWhiteboardUrlPath(whiteboardID: string): Promise<string> {
-    return await this.getWhiteboardUrlPathByField(this.FIELD_ID, whiteboardID);
-  }
-
-  private async getWhiteboardUrlPathByField(
-    fieldName: string,
-    fieldID: string
+  private async getWhiteboardUrlPathByProfileID(
+    whiteboardProfileID: string
   ): Promise<string> {
-    const [whiteboard]: {
-      id: string;
-      nameID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-          SELECT whiteboard.id, whiteboard.nameID FROM whiteboard
-          WHERE whiteboard.${fieldName} = '${fieldID}'
-        `
-    );
+    const whiteboard = await this.entityManager.findOne(Whiteboard, {
+      where: {
+        profile: {
+          id: whiteboardProfileID,
+        },
+      },
+      select: {
+        id: true,
+        nameID: true,
+      },
+    });
 
     if (!whiteboard) {
       throw new EntityNotFoundException(
-        `Unable to find whiteboard where profile: ${fieldID}`,
+        `Unable to find whiteboard where profile: ${whiteboardProfileID}`,
         LogContext.URL_GENERATOR
       );
     }
 
+    return await this.getWhiteboardUrlPath(whiteboard.id, whiteboard.nameID);
+  }
+
+  public async getWhiteboardUrlPath(
+    whiteboardID: string,
+    whiteboardNameID: string
+  ): Promise<string> {
     let callout = await this.entityManager.findOne(Callout, {
       where: {
         framing: {
           whiteboard: {
-            id: whiteboard.id,
+            id: whiteboardID,
           },
         },
       },
     });
+
     if (!callout) {
       callout = await this.entityManager.findOne(Callout, {
         where: {
           contributions: {
             whiteboard: {
-              id: whiteboard.id,
+              id: whiteboardID,
             },
           },
         },
       });
     }
+    if (callout) {
+      const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
+      return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${whiteboardNameID}`;
+    }
     if (!callout) {
-      const calloutTemplate = await this.entityManager.findOne(Template, {
+      // Whiteboard can be also a direct template
+      const template = await this.entityManager.findOne(Template, {
         where: {
-          callout: {
-            framing: {
-              whiteboard: {
-                id: whiteboard.id,
-              },
-            },
+          whiteboard: {
+            id: whiteboardID,
           },
         },
         relations: {
           profile: true,
         },
       });
-      if (calloutTemplate) {
-        return await this.getTemplateUrlPathOrFail(calloutTemplate.profile.id);
+      if (template) {
+        return await this.getTemplateUrlPathOrFail(template.profile.id);
       }
-    }
-    if (callout) {
-      const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
-      return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${whiteboard.nameID}`;
     }
 
     throw new EntityNotFoundException(
-      `Unable to find callout or calloutTempalte where whiteboardId: ${whiteboard.id}`,
+      `Unable to find url for whiteboardId: ${whiteboardID}`,
       LogContext.URL_GENERATOR
     );
   }
