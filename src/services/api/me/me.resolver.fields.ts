@@ -47,8 +47,39 @@ export class MeResolverFields {
         LogContext.RESOLVER_FIELD
       );
     }
+    // When the user is just registered, the agentInfo.userID is still null
+    if (email && !agentInfo.userID) {
+      return null;
+    }
 
     return this.userService.getUserOrFail(agentInfo.userID);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('communityInvitationsCount', () => Number, {
+    description:
+      'The number of invitations the current authenticated user can act on.',
+  })
+  public async communityInvitationsCount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({
+      name: 'states',
+      nullable: true,
+      type: () => [String],
+      description: 'The state names you want to filter on',
+    })
+    states: string[]
+  ): Promise<number> {
+    if (agentInfo.userID === '') {
+      throw new ValidationException(
+        'Unable to retrieve invitations as no userID provided.',
+        LogContext.COMMUNITY
+      );
+    }
+    return this.meService.getCommunityInvitationsCountForUser(
+      agentInfo.userID,
+      states
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -109,9 +140,17 @@ export class MeResolverFields {
     description: 'The hierarchy of the Spaces the current user is a member.',
   })
   public spaceMembershipsHierarchical(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Spaces to return; if omitted return all journeys',
+      nullable: true,
+    })
+    limit: number
   ): Promise<CommunityMembershipResult[]> {
-    return this.meService.getSpaceMembershipsHierarchical(agentInfo);
+    return this.meService.getSpaceMembershipsHierarchical(agentInfo, limit);
   }
 
   @UseGuards(GraphqlGuard)

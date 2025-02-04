@@ -90,6 +90,10 @@ import { UpdateUserSettingsCommunicationInput } from '@domain/community/user.set
 import { UpdateUserSettingsPrivacyInput } from '@domain/community/user.settings/dto/user.settings.privacy.dto.update';
 import { UpdateOrganizationSettingsInput } from '@domain/community/organization/dto/organization.dto.update.settings';
 import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
+import { UpdateVirtualContributorSettingsEntityInput } from '@domain/community/virtual-contributor-settings';
+import { UpdateVirtualContributorSettingsInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.update.settings';
+import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/virtual-contributor-settings/dto/virtual.contributor.settings.privacy.dto.update';
+import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -160,6 +164,10 @@ export class BaseHandler extends AbstractHandler {
       UpdateOrganizationSettingsEntityInput,
       UpdateOrganizationSettingsMembershipInput,
       UpdateOrganizationSettingsPrivacyInput,
+      UpdateVirtualContributorSettingsEntityInput,
+      UpdateVirtualContributorSettingsInput,
+      UpdateVirtualContributorSettingsPrivacyInput,
+      UpdatePlatformSettingsInput,
       UpdateUserSettingsEntityInput,
       UpdateUserSettingsInput,
       UpdateUserSettingsCommunicationInput,

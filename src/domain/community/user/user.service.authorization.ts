@@ -25,6 +25,7 @@ import {
   CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
   CREDENTIAL_RULE_USER_READ,
   PRIVILEGE_RULE_READ_USER_SETTINGS,
+  CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
@@ -174,7 +175,8 @@ export class UserAuthorizationService {
   }
 
   async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
-    const { agent } = await this.userLookupService.getUserAndAgent(userID);
+    const { user, agent } =
+      await this.userLookupService.getUserAndAgent(userID);
 
     await this.agentService.grantCredential({
       type: AuthorizationCredential.GLOBAL_REGISTERED,
@@ -184,6 +186,11 @@ export class UserAuthorizationService {
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,
       agentID: agent.id,
       resourceID: userID,
+    });
+    await this.agentService.grantCredential({
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      agentID: agent.id,
+      resourceID: user.accountID,
     });
 
     return await this.userLookupService.getUserOrFail(userID);
@@ -228,6 +235,15 @@ export class UserAuthorizationService {
       );
 
     newRules.push(communityAdmin);
+
+    const globalRegistered =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED
+      );
+
+    newRules.push(globalRegistered);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

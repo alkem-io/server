@@ -162,7 +162,7 @@ export class NotificationPayloadBuilder {
     const post = eventData.post;
 
     const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
         callout.id
       );
 
@@ -199,7 +199,7 @@ export class NotificationPayloadBuilder {
     const callout = eventData.callout;
     const whiteboard = eventData.whiteboard;
     const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
         callout.id
       );
 
@@ -211,7 +211,8 @@ export class NotificationPayloadBuilder {
       callout.id
     );
     const whiteboardURL = await this.urlGeneratorService.getWhiteboardUrlPath(
-      whiteboard.id
+      whiteboard.id,
+      whiteboard.nameID
     );
     const payload: CollaborationWhiteboardCreatedEventPayload = {
       callout: {
@@ -237,7 +238,7 @@ export class NotificationPayloadBuilder {
     callout: ICallout
   ): Promise<CollaborationCalloutPublishedEventPayload> {
     const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
         callout.id
       );
 
@@ -318,7 +319,7 @@ export class NotificationPayloadBuilder {
     messageResult: IMessage
   ): Promise<CollaborationDiscussionCommentEventPayload> {
     const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
         callout.id
       );
 
@@ -583,11 +584,11 @@ export class NotificationPayloadBuilder {
     organizationID: string
   ): Promise<CommunicationOrganizationMessageEventPayload> {
     const basePayload = this.buildBaseEventPayload(senderID);
-    const orgContribtor =
+    const orgContributor =
       await this.getContributorPayloadOrFail(organizationID);
     const payload: CommunicationOrganizationMessageEventPayload = {
       message,
-      organization: orgContribtor,
+      organization: orgContributor,
       ...basePayload,
     };
 

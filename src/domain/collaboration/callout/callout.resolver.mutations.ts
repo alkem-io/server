@@ -111,7 +111,7 @@ export class CalloutResolverMutations {
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID,
-      { relations: { framing: true } }
+      { relations: { framing: true, calloutsSet: true } }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -132,19 +132,21 @@ export class CalloutResolverMutations {
           Date.now()
         );
 
-        if (calloutData.sendNotification) {
-          const notificationInput: NotificationInputCalloutPublished = {
+        if (callout.calloutsSet?.type === CalloutsSetType.COLLABORATION) {
+          if (calloutData.sendNotification) {
+            const notificationInput: NotificationInputCalloutPublished = {
+              triggeredBy: agentInfo.userID,
+              callout: callout,
+            };
+            await this.notificationAdapter.calloutPublished(notificationInput);
+          }
+
+          const activityLogInput: ActivityInputCalloutPublished = {
             triggeredBy: agentInfo.userID,
             callout: callout,
           };
-          await this.notificationAdapter.calloutPublished(notificationInput);
+          this.activityAdapter.calloutPublished(activityLogInput);
         }
-
-        const activityLogInput: ActivityInputCalloutPublished = {
-          triggeredBy: agentInfo.userID,
-          callout: callout,
-        };
-        this.activityAdapter.calloutPublished(activityLogInput);
       }
     }
 
@@ -251,6 +253,30 @@ export class CalloutResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
+    if (contributionData.post && contribution.post) {
+      const postCreatedEvent: CalloutPostCreatedPayload = {
+        eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
+        calloutID: callout.id,
+        contributionID: contribution.id,
+        sortOrder: contribution.sortOrder,
+        post: {
+          // Removing the storageBucket from the post because it cannot be stringified
+          // due to a circular reference (storageBucket => documents[] => storageBucket)
+          // The client is not querying it from the subscription anyway.
+          ...contribution.post,
+          profile: {
+            ...contribution.post.profile,
+            storageBucket: undefined,
+          },
+        },
+      };
+      this.postCreatedSubscription.publish(
+        SubscriptionType.CALLOUT_POST_CREATED,
+        postCreatedEvent
+      );
+    }
+
+    //toDo - rework activities also for CalloutSetType.KNOWLEDGE_BASE
     // Get the levelZeroSpaceID for the callout
     if (callout.calloutsSet.type === CalloutsSetType.COLLABORATION) {
       const levelZeroSpaceID =
@@ -259,27 +285,6 @@ export class CalloutResolverMutations {
         );
 
       if (contributionData.post && contribution.post) {
-        const postCreatedEvent: CalloutPostCreatedPayload = {
-          eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
-          calloutID: callout.id,
-          contributionID: contribution.id,
-          sortOrder: contribution.sortOrder,
-          post: {
-            // Removing the storageBucket from the post because it cannot be stringified
-            // due to a circular reference (storageBucket => documents[] => storageBucket)
-            // The client is not querying it from the subscription anyway.
-            ...contribution.post,
-            profile: {
-              ...contribution.post.profile,
-              storageBucket: undefined,
-            },
-          },
-        };
-        await this.postCreatedSubscription.publish(
-          SubscriptionType.CALLOUT_POST_CREATED,
-          postCreatedEvent
-        );
-
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityPostCreated(
             callout,
@@ -293,7 +298,7 @@ export class CalloutResolverMutations {
 
       if (contributionData.link && contribution.link) {
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
-          await this.processActivityLinkCreated(
+          this.processActivityLinkCreated(
             callout,
             contribution.link,
             levelZeroSpaceID,

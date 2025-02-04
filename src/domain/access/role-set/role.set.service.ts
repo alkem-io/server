@@ -165,6 +165,8 @@ export class RoleSetService {
       );
     }
 
+    await this.removeAllRoleAssignments(roleSet);
+
     for (const role of roleSet.roles) {
       await this.roleService.removeRole(role);
     }
@@ -263,6 +265,42 @@ export class RoleSetService {
         await this.removeUserFromRole(roleSet, roleName, user.id, false);
       }
 
+      // Remove all implicit role assignments
+      if (roleSet.type === RoleSetType.SPACE) {
+        const invitees = await this.getUsersWithImplicitSpaceRole(
+          roleSet,
+          AuthorizationCredential.SPACE_MEMBER_INVITEE
+        );
+        for (const invitee of invitees) {
+          await this.removeUserFromRole(roleSet, roleName, invitee.id, false);
+        }
+        const subspace_admins = await this.getUsersWithImplicitSpaceRole(
+          roleSet,
+          AuthorizationCredential.SPACE_SUBSPACE_ADMIN
+        );
+        for (const subspaceAdmin of subspace_admins) {
+          await this.removeUserFromRole(
+            roleSet,
+            roleName,
+            subspaceAdmin.id,
+            false
+          );
+        }
+      }
+
+      if (roleSet.type === RoleSetType.ORGANIZATION) {
+        const accountAdmins =
+          await this.getUsersWithImplicitOrganizationAccountAdminRole(roleSet);
+        for (const accountAdmin of accountAdmins) {
+          await this.removeUserFromRole(
+            roleSet,
+            roleName,
+            accountAdmin.id,
+            false
+          );
+        }
+      }
+
       const organizations = await this.getOrganizationsWithRole(
         roleSet,
         roleName
@@ -272,6 +310,19 @@ export class RoleSetService {
           roleSet,
           roleName,
           organization.id,
+          false
+        );
+      }
+
+      const virtualContributors = await this.getVirtualContributorsWithRole(
+        roleSet,
+        roleName
+      );
+      for (const virtualContributor of virtualContributors) {
+        await this.removeVirtualFromRole(
+          roleSet,
+          roleName,
+          virtualContributor.id,
           false
         );
       }
@@ -387,6 +438,33 @@ export class RoleSetService {
     );
   }
 
+  private async getUsersWithImplicitSpaceRole(
+    roleSet: IRoleSet,
+    implicitCredential: AuthorizationCredential
+  ): Promise<IUser[]> {
+    const inviteeCredential = await this.getCredentialSpaceImplicitRole(
+      roleSet,
+      implicitCredential
+    );
+
+    return await this.userLookupService.usersWithCredentials({
+      type: inviteeCredential.type,
+      resourceID: inviteeCredential.resourceID,
+    });
+  }
+
+  private async getUsersWithImplicitOrganizationAccountAdminRole(
+    roleSet: IRoleSet
+  ): Promise<IUser[]> {
+    const accountAdminCredential =
+      await this.getCredentialForOrganizationImplicitRole(roleSet);
+
+    return await this.userLookupService.usersWithCredentials({
+      type: accountAdminCredential.type,
+      resourceID: accountAdminCredential.resourceID,
+    });
+  }
+
   public async getVirtualContributorsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName
@@ -495,7 +573,7 @@ export class RoleSetService {
 
   async assignUserToRole(
     roleSet: IRoleSet,
-    roleType: RoleName,
+    roleName: RoleName,
     userID: string,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
@@ -511,38 +589,67 @@ export class RoleSetService {
       );
     }
 
-    const userAlreadyHasRole = await this.isInRole(agent, roleSet, roleType);
+    const userAlreadyHasRole = await this.isInRole(agent, roleSet, roleName);
     if (userAlreadyHasRole) {
       return user;
     }
 
     await this.assignContributorAgentToRole(
       roleSet,
-      roleType,
+      roleName,
       agent,
       RoleSetContributorType.USER
     );
-    if (roleType === RoleName.ADMIN && parentRoleSet) {
-      // also assign as subspace admin in parent roleSet if there is a parent roleSet
-      const credential = await this.getCredentialForImplicitRole(
-        parentRoleSet,
-        RoleSetRoleImplicit.SUBSPACE_ADMIN
-      );
-      const alreadyHasSubspaceAdmin =
-        await this.agentService.hasValidCredential(agent.id, credential);
-      if (!alreadyHasSubspaceAdmin) {
-        await this.assignContributorToImplicitRole(
-          parentRoleSet,
-          agent,
-          RoleSetRoleImplicit.SUBSPACE_ADMIN
-        );
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        if (roleName === RoleName.ADMIN && parentRoleSet) {
+          // also assign as subspace admin in parent roleSet if there is a parent roleSet
+          const subspaceAdminCredential =
+            await this.getCredentialSpaceImplicitRole(
+              parentRoleSet,
+              AuthorizationCredential.SPACE_SUBSPACE_ADMIN
+            );
+          const alreadyHasSubspaceAdmin =
+            await this.agentService.hasValidCredential(
+              agent.id,
+              subspaceAdminCredential
+            );
+          if (!alreadyHasSubspaceAdmin) {
+            await this.agentService.grantCredential({
+              agentID: agent.id,
+              type: subspaceAdminCredential.type,
+              resourceID: subspaceAdminCredential.resourceID,
+            });
+          }
+        }
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        if (roleName === RoleName.ADMIN || roleName === RoleName.OWNER) {
+          // also assign as subspace admin in parent roleSet if there is a parent roleSet
+          const accountAdminCredential =
+            await this.getCredentialForOrganizationImplicitRole(roleSet);
+          const alreadyHasAccountAdmin =
+            await this.agentService.hasValidCredential(
+              agent.id,
+              accountAdminCredential
+            );
+          if (!alreadyHasAccountAdmin) {
+            await this.agentService.grantCredential({
+              agentID: agent.id,
+              type: accountAdminCredential.type,
+              resourceID: accountAdminCredential.resourceID,
+            });
+          }
+        }
+        break;
       }
     }
 
     await this.contributorAddedToRole(
       user,
       roleSet,
-      roleType,
+      roleName,
       agentInfo,
       triggerNewMemberEvents
     );
@@ -573,7 +680,8 @@ export class RoleSetService {
           LogContext.COMMUNITY
         );
       }
-
+      const { agent } =
+        await this.contributorService.getContributorAndAgent(contributorID);
       if (invitation.invitedToParent) {
         if (!roleSet.parentRoleSet) {
           throw new EntityNotInitializedException(
@@ -582,8 +690,6 @@ export class RoleSetService {
           );
         }
         // Check if the user is already a member of the parent roleSet
-        const { agent } =
-          await this.contributorService.getContributorAndAgent(contributorID);
         const isMemberOfParentRoleSet = await this.isMember(
           agent,
           roleSet.parentRoleSet
@@ -607,6 +713,13 @@ export class RoleSetService {
         agentInfo,
         true
       );
+      if (
+        roleSet.type === RoleSetType.SPACE &&
+        invitation.contributorType === RoleSetContributorType.USER
+      ) {
+        // Remove the credential for being an invitee
+        await this.removeSpaceInviteeCredential(agent, roleSet);
+      }
       if (invitation.extraRole) {
         try {
           await this.assignContributorToRole(
@@ -637,6 +750,47 @@ export class RoleSetService {
     }
   }
 
+  private async assignSpaceInviteeCredential(agent: IAgent, roleSet: IRoleSet) {
+    const inviteeCredential = await this.getCredentialSpaceImplicitRole(
+      roleSet,
+      AuthorizationCredential.SPACE_MEMBER_INVITEE
+    );
+    const hasInviteeCredential = await this.agentService.hasValidCredential(
+      agent.id,
+      {
+        type: inviteeCredential.type,
+        resourceID: inviteeCredential.resourceID,
+      }
+    );
+    if (!hasInviteeCredential) {
+      await this.agentService.grantCredential({
+        agentID: agent.id,
+        type: inviteeCredential.type,
+        resourceID: inviteeCredential.resourceID,
+      });
+    }
+  }
+
+  private async removeSpaceInviteeCredential(agent: IAgent, roleSet: IRoleSet) {
+    const inviteeCredential = await this.getCredentialSpaceImplicitRole(
+      roleSet,
+      AuthorizationCredential.SPACE_MEMBER_INVITEE
+    );
+    const hasInviteeCredential = await this.agentService.hasValidCredential(
+      agent.id,
+      {
+        type: inviteeCredential.type,
+        resourceID: inviteeCredential.resourceID,
+      }
+    );
+    if (hasInviteeCredential) {
+      await this.agentService.revokeCredential({
+        agentID: agent.id,
+        type: inviteeCredential.type,
+        resourceID: inviteeCredential.resourceID,
+      });
+    }
+  }
   private async contributorAddedToRole(
     contributor: IContributor,
     roleSet: IRoleSet,
@@ -796,33 +950,38 @@ export class RoleSetService {
       validatePolicyLimits
     );
 
-    const parentRoleSet = await this.getParentRoleSet(roleSet);
-    if (roleType === RoleName.ADMIN && parentRoleSet) {
-      // Check if an admin anywhere else in the roleSet
-      const peerRoleSets = await this.getPeerRoleSets(parentRoleSet, roleSet);
-      const hasAnotherAdminRole = peerRoleSets.some(pc =>
-        this.isInRole(agent, pc, RoleName.ADMIN)
-      );
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        const parentRoleSet = await this.getParentRoleSet(roleSet);
+        if (roleType === RoleName.ADMIN && parentRoleSet) {
+          await this.removeContributorFromSubspaceAdminImplicitRole(
+            roleSet,
+            parentRoleSet,
+            agent
+          );
+        }
+        if (roleType === RoleName.MEMBER) {
+          const communication =
+            await this.communityResolverService.getCommunicationForRoleSet(
+              roleSet.id
+            );
 
-      if (!hasAnotherAdminRole) {
-        await this.removeContributorFromImplicitRole(
-          parentRoleSet,
-          agent,
-          RoleSetRoleImplicit.SUBSPACE_ADMIN
-        );
+          await this.communityCommunicationService.removeMemberFromCommunication(
+            communication,
+            user
+          );
+        }
+        break;
       }
-    }
-
-    if (roleType === RoleName.MEMBER) {
-      const communication =
-        await this.communityResolverService.getCommunicationForRoleSet(
-          roleSet.id
-        );
-
-      await this.communityCommunicationService.removeMemberFromCommunication(
-        communication,
-        user
-      );
+      case RoleSetType.ORGANIZATION: {
+        if (roleType === RoleName.ADMIN || roleType === RoleName.OWNER) {
+          await this.removeContributorFromAccountAdminImplicitRole(
+            roleSet,
+            agent
+          );
+        }
+        break;
+      }
     }
 
     return user;
@@ -992,57 +1151,103 @@ export class RoleSetService {
     });
   }
 
-  private async assignContributorToImplicitRole(
+  private async removeContributorFromSubspaceAdminImplicitRole(
     roleSet: IRoleSet,
-    agent: IAgent,
-    role: RoleSetRoleImplicit
+    parentRoleSet: IRoleSet,
+    agent: IAgent
   ): Promise<IAgent> {
-    const credential = await this.getCredentialForImplicitRole(roleSet, role);
+    this.validateRoleSetType(roleSet, RoleSetType.SPACE);
 
-    return await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: credential.type,
-      resourceID: credential.resourceID,
-    });
+    // Check if an admin anywhere else in the roleSet
+    const peerRoleSets = await this.getPeerRoleSets(parentRoleSet, roleSet);
+    const hasAnotherAdminRole = peerRoleSets.some(pc =>
+      this.isInRole(agent, pc, RoleName.ADMIN)
+    );
+
+    if (!hasAnotherAdminRole) {
+      const credential = await this.getCredentialSpaceImplicitRole(
+        roleSet,
+        AuthorizationCredential.SPACE_SUBSPACE_ADMIN
+      );
+
+      return await this.agentService.revokeCredential({
+        agentID: agent.id,
+        type: credential.type,
+        resourceID: credential.resourceID,
+      });
+    }
+    return agent;
   }
 
-  private async removeContributorFromImplicitRole(
+  private async removeContributorFromAccountAdminImplicitRole(
     roleSet: IRoleSet,
-    agent: IAgent,
-    role: RoleSetRoleImplicit
+    agent: IAgent
   ): Promise<IAgent> {
-    const credential = await this.getCredentialForImplicitRole(roleSet, role);
+    this.validateRoleSetType(roleSet, RoleSetType.ORGANIZATION);
+    // Only two roles, so check if the user has the other one
+    const hasAdminRole = await this.isInRole(agent, roleSet, RoleName.ADMIN);
+    const hasOwnerRole = await this.isInRole(agent, roleSet, RoleName.OWNER);
 
-    return await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: credential.type,
-      resourceID: credential.resourceID,
-    });
+    if (!hasAdminRole && !hasOwnerRole) {
+      const credential =
+        await this.getCredentialForOrganizationImplicitRole(roleSet);
+
+      return await this.agentService.revokeCredential({
+        agentID: agent.id,
+        type: credential.type,
+        resourceID: credential.resourceID,
+      });
+    }
+    return agent;
   }
 
-  private async getCredentialForImplicitRole(
+  private validateRoleSetType(roleSet: IRoleSet, roleSetType: RoleSetType) {
+    if (roleSet.type !== roleSetType) {
+      throw new RoleSetMembershipException(
+        `Invalid roleSet type: ${roleSet.type} when assigning space implicit role`,
+        LogContext.COMMUNITY
+      );
+    }
+  }
+
+  private async getCredentialSpaceImplicitRole(
     roleSet: IRoleSet,
-    role: RoleSetRoleImplicit
+    implicitRoleCredential: AuthorizationCredential
   ): Promise<ICredentialDefinition> {
+    this.validateRoleSetType(roleSet, RoleSetType.SPACE);
+
     // Use the admin credential to get the resourceID
     const adminCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       RoleName.ADMIN
     );
-    const resourceID = adminCredential.resourceID;
-    switch (role) {
-      case RoleSetRoleImplicit.SUBSPACE_ADMIN:
-        return {
-          type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
-          resourceID,
-        };
-      default: {
-        throw new RoleSetMembershipException(
-          `Invalid implicit role: ${role}`,
-          LogContext.COMMUNITY
-        );
-      }
-    }
+    const spaceID = adminCredential.resourceID;
+
+    return {
+      type: implicitRoleCredential,
+      resourceID: spaceID,
+    };
+  }
+
+  private async getCredentialForOrganizationImplicitRole(
+    roleSet: IRoleSet
+  ): Promise<ICredentialDefinition> {
+    this.validateRoleSetType(roleSet, RoleSetType.ORGANIZATION);
+
+    // Use the admin credential to get the organizationID
+    const adminCredential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      RoleName.ADMIN
+    );
+    const organizationID = adminCredential.resourceID;
+    const organization =
+      await this.organizationLookupService.getOrganizationOrFail(
+        organizationID
+      );
+    return {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: organization.accountID,
+    };
   }
 
   private async removeContributorFromRole(
@@ -1111,16 +1316,30 @@ export class RoleSetService {
     roleSet: IRoleSet,
     role: RoleSetRoleImplicit
   ): Promise<boolean> {
-    const membershipCredential = await this.getCredentialForImplicitRole(
-      roleSet,
-      role
-    );
+    let credential: ICredentialDefinition | undefined = undefined;
+    switch (role) {
+      case RoleSetRoleImplicit.SUBSPACE_ADMIN:
+        credential = await this.getCredentialSpaceImplicitRole(
+          roleSet,
+          AuthorizationCredential.SPACE_SUBSPACE_ADMIN
+        );
+        break;
+      case RoleSetRoleImplicit.ACCOUNT_ADMIN:
+        credential =
+          await this.getCredentialForOrganizationImplicitRole(roleSet);
+        break;
+      default:
+        throw new RoleSetMembershipException(
+          `Invalid implicit role: ${role}`,
+          LogContext.COMMUNITY
+        );
+    }
 
     const validCredential = await this.agentService.hasValidCredential(
       agent.id,
       {
-        type: membershipCredential.type,
-        resourceID: membershipCredential.resourceID,
+        type: credential.type,
+        resourceID: credential.resourceID,
       }
     );
     return validCredential;
@@ -1167,7 +1386,13 @@ export class RoleSetService {
     );
     invitation.roleSet = roleSet;
 
-    return await this.invitationService.save(invitation);
+    const result = await this.invitationService.save(invitation);
+    // Ensure that the user that is invited has a credential for the invitation
+    if (roleSet.type === RoleSetType.SPACE) {
+      await this.assignSpaceInviteeCredential(agent, roleSet);
+    }
+
+    return result;
   }
 
   async createPlatformInvitation(
@@ -1356,7 +1581,7 @@ export class RoleSetService {
     return credentialMatches;
   }
 
-  async getCommunityImplicitRoles(
+  async getImplicitRoles(
     agentInfo: AgentInfo,
     roleSet: IRoleSet
   ): Promise<RoleSetRoleImplicit[]> {

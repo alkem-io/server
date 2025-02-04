@@ -30,6 +30,17 @@ export class MeService {
     private readonly logger: LoggerService
   ) {}
 
+  public async getCommunityInvitationsCountForUser(
+    userId: string,
+    states?: string[]
+  ): Promise<number> {
+    const invitations = await this.rolesService.getCommunityInvitationsForUser(
+      userId,
+      states
+    );
+    return invitations.length;
+  }
+
   public async getCommunityInvitationsForUser(
     userId: string,
     states?: string[]
@@ -139,7 +150,7 @@ export class MeService {
 
     for (const space of allSpaces) {
       if (
-        (space.level !== SpaceLevel.SPACE && !space.parentSpace) ||
+        (space.level !== SpaceLevel.L0 && !space.parentSpace) ||
         !space.collaboration
       ) {
         this.logger.warn(
@@ -172,25 +183,29 @@ export class MeService {
   }
 
   public async getSpaceMembershipsHierarchical(
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    limit?: number
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
       await this.getSpaceMembershipsForAgentInfo(agentInfo);
 
-    const levelZeroSpaces = this.filterSpacesByLevel(
+    const levelZeroSpacesRaw = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
-      SpaceLevel.SPACE
+      SpaceLevel.L0
     );
+    if (limit) {
+      levelZeroSpacesRaw.splice(limit);
+    }
     const levelOneSpaces = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
-      SpaceLevel.CHALLENGE
+      SpaceLevel.L1
     );
     const levelTwoSpaces = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
-      SpaceLevel.OPPORTUNITY
+      SpaceLevel.L2
     );
 
-    const levelZeroMemberships = levelZeroSpaces.map(levelZeroSpace => {
+    const levelZeroMemberships = levelZeroSpacesRaw.map(levelZeroSpace => {
       const levelZeroMembership: CommunityMembershipResult = {
         id: levelZeroSpace.id,
         space: levelZeroSpace,

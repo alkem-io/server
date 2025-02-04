@@ -4,12 +4,16 @@ export const CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE =
   'credentialRuleTypes-accountManage';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE =
   'credentialRuleTypes-accountResourcesManage';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT =
+  'credentialRuleTypes-accountResourceTransferAccept';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES =
   'credentialRuleTypes-accountChildEntities';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_COMMUNITY_READ =
   'credentialRuleTypes-spaceGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
+export const CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS =
+  'credentialRuleTypes-virtualContributorPlatformSettings';
 export const CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
 export const CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED =
@@ -24,6 +28,8 @@ export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE =
   'credentialRuleTypes-roleSetEntryRoleInvite';
 export const CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED =
   'credentialRuleTypes-communityReadGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED =
+  'credentialRuleTypes-userReadGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET =
   'credentialRuleTypes-organizationAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ =
@@ -56,6 +62,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS =
   'credentialRuleTypes-platformGrantGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS =
   'credentialRuleTypes-platformPlatformAdmins';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_SETTINGS_ADMINS =
+  'credentialRuleTypes-platformPlatformSettingsAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_MGMT =
   'credentialRuleTypes-platformPlatformMgmt';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET =

@@ -155,7 +155,7 @@ export class OrganizationAuthorizationService {
     const verificationAuthorization =
       await this.organizationVerificationAuthorizationService.applyAuthorizationPolicy(
         organization.verification,
-        organization.id
+        organization.accountID
       );
     updatedAuthorizations.push(verificationAuthorization);
 

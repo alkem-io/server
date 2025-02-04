@@ -109,12 +109,10 @@ export class RoleSetResolverMutations {
       roleData.roleSetID
     );
 
-    if (roleSet.type === RoleSetType.PLATFORM) {
-      throw new ValidationException(
-        `Unable to assign role to user on roleSet of type: ${roleSet.type}`,
-        LogContext.PLATFORM
-      );
-    }
+    this.validateRoleSetTypeOrFail(roleSet, [
+      RoleSetType.SPACE,
+      RoleSetType.ORGANIZATION,
+    ]);
 
     let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
     switch (roleSet.type) {
@@ -177,6 +175,7 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -210,9 +209,14 @@ export class RoleSetResolverMutations {
         },
       }
     );
-    // TODO: remove usage of COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
-    // Rational: the ability to assign the VC is a function of the space and the VC, not of the user
-    // So it is not a privilege, as not dependent on the current user.
+
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+
+    // Note re COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
+    // The ability to assign the VC is a function of the space and the VC, not of the user
+    // So it is a privilege to be able to assign from the same account,
+    // but this is separate from the business logic check that the space and the
+    // account are in the same account.
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === RoleName.MEMBER) {
       const sameAccount =
@@ -267,13 +271,10 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
-
-    if (roleSet.type === RoleSetType.PLATFORM) {
-      throw new ValidationException(
-        `Unable to remove role to user on roleSet of type: ${roleSet.type}`,
-        LogContext.PLATFORM
-      );
-    }
+    this.validateRoleSetTypeOrFail(roleSet, [
+      RoleSetType.SPACE,
+      RoleSetType.ORGANIZATION,
+    ]);
 
     let privilegeRequired = AuthorizationPrivilege.GRANT;
     let extendedAuthorization = roleSet.authorization;
@@ -353,6 +354,8 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
@@ -378,6 +381,7 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     // Extend the authorization policy with a credential rule to assign the GRANT privilege
     // to the user with rights around the incoming virtual being removed.
@@ -418,12 +422,8 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       joiningData.roleSetID
     );
-    if (roleSet.type !== RoleSetType.SPACE) {
-      throw new RoleSetMembershipException(
-        `Unable to join roleSet of type: ${roleSet.type} - ${roleSet.id}`,
-        LogContext.PLATFORM
-      );
-    }
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+
     const membershipStatus = await this.roleSetService.getMembershipStatus(
       agentInfo,
       roleSet
@@ -469,12 +469,7 @@ export class RoleSetResolverMutations {
         },
       }
     );
-    if (roleSet.type !== RoleSetType.SPACE) {
-      throw new RoleSetMembershipException(
-        `Unable to apply for roleSet of type: ${roleSet.type} - ${roleSet.id}`,
-        LogContext.PLATFORM
-      );
-    }
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -531,7 +526,7 @@ export class RoleSetResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => [IInvitation], {
     description:
-      'Invite an existing Contriburor to join the specified RoleSet in the Entry Role.',
+      'Invite an existing Contributor to join the specified RoleSet in the Entry Role.',
   })
   async inviteContributorsEntryRoleOnRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
@@ -545,15 +540,14 @@ export class RoleSetResolverMutations {
           parentRoleSet: {
             authorization: true,
           },
+          license: {
+            entitlements: true,
+          },
         },
       }
     );
-    if (roleSet.type !== RoleSetType.SPACE) {
-      throw new RoleSetMembershipException(
-        `Unable to invite existing contributors on roleSet of type: ${roleSet.type} - ${roleSet.id}`,
-        LogContext.PLATFORM
-      );
-    }
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+
     if (invitationData.invitedContributors.length === 0) {
       throw new RoleSetInvitationException(
         `No contributors were provided to invite: ${roleSet.id}`,
@@ -580,6 +574,18 @@ export class RoleSetResolverMutations {
           }
         );
       contributors.push(contributor);
+    }
+
+    // Check if any of the contributors are VCs and if so check if the entitlement is on
+    if (roleSet.type === RoleSetType.SPACE) {
+      for (const contributor of contributors) {
+        if (contributor instanceof VirtualContributor) {
+          this.licenseService.isEntitlementEnabledOrFail(
+            roleSet.license,
+            LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+          );
+        }
+      }
     }
 
     // Logic is that the ability to invite to a subspace requires the ability to invite to the
@@ -719,12 +725,7 @@ export class RoleSetResolverMutations {
         },
       }
     );
-    if (roleSet.type !== RoleSetType.SPACE) {
-      throw new RoleSetMembershipException(
-        `Unable to do invites on roleSet of type: ${roleSet.type} - ${roleSet.id}`,
-        LogContext.PLATFORM
-      );
-    }
+    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -936,5 +937,17 @@ export class RoleSetResolverMutations {
       roleSet,
       applicationFormData.formData
     );
+  }
+
+  private validateRoleSetTypeOrFail(
+    roleSet: IRoleSet,
+    allowedRoleSetTypes: RoleSetType[]
+  ) {
+    if (!allowedRoleSetTypes.includes(roleSet.type)) {
+      throw new ValidationException(
+        `Unable to carry out mutation on roleSet of type: ${roleSet.type}`,
+        LogContext.PLATFORM
+      );
+    }
   }
 }
