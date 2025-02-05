@@ -301,7 +301,6 @@ export class AccountAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE
       );
-    accountLicenseManage.criterias.push(accountAdminCredential);
     accountLicenseManage.cascade = false;
     newRules.push(accountLicenseManage);
 
