@@ -6,9 +6,12 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { CalloutModule } from '../callout/callout.module';
+import { CalloutTransferResolverMutations } from './callout.transfer.resolver.mutations';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 
 @Module({
   imports: [
+    AuthorizationModule,
     StorageAggregatorResolverModule,
     CalloutModule,
     CalloutsSetModule,
@@ -16,7 +19,7 @@ import { CalloutModule } from '../callout/callout.module';
     ProfileModule,
     TagsetModule,
   ],
-  providers: [CalloutTransferService],
+  providers: [CalloutTransferService, CalloutTransferResolverMutations],
   exports: [CalloutTransferService],
 })
 export class CalloutTransferModule {}
