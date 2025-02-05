@@ -24,6 +24,7 @@ import { PostModule } from '../post/post.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { CalloutTransferService } from '../callout-transfer/callout.transfer.service';
 
 @Module({
   imports: [
@@ -54,7 +55,12 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     CalloutAuthorizationService,
     CalloutResolverFields,
     CalloutResolverSubscriptions,
+    CalloutTransferService,
   ],
-  exports: [CalloutService, CalloutAuthorizationService],
+  exports: [
+    CalloutService,
+    CalloutAuthorizationService,
+    CalloutTransferService,
+  ],
 })
 export class CalloutModule {}

@@ -323,7 +323,7 @@ export class CalloutsSetService {
       if (reservedNameIDs.includes(calloutData.nameID)) {
         throw new ValidationException(
           `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.SPACES
+          LogContext.COLLABORATION
         );
       }
       // Just use the provided nameID
@@ -350,6 +350,20 @@ export class CalloutsSetService {
     callout.calloutsSet = calloutsSet;
 
     return callout;
+  }
+
+  public async validateNameIDNotInUseOrFail(
+    calloutsSetID: string,
+    nameID: string
+  ): Promise<void> {
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCalloutsSet(calloutsSetID);
+    if (reservedNameIDs.includes(nameID)) {
+      throw new ValidationException(
+        `Provided NameID (${nameID}) is already present in calloutSet (${calloutsSetID}): ${reservedNameIDs}`,
+        LogContext.COLLABORATION
+      );
+    }
   }
 
   async createCallout(
@@ -453,37 +467,6 @@ export class CalloutsSetService {
     );
 
     return calloutsInOrder;
-  }
-
-  public async transferCallout(
-    callout: ICallout,
-    targetCalloutsSet: ICalloutsSet
-  ): Promise<ICallout> {
-    // Check that the nameID is unique in the target callouts set
-    const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInCalloutsSet(
-        targetCalloutsSet.id
-      );
-    if (reservedNameIDs.includes(callout.nameID)) {
-      throw new ValidationException(
-        `Unable to transfer callout, nameID already exists: ${callout.nameID}`,
-        LogContext.COLLABORATION
-      );
-    }
-    // Update all the storage aggregators
-    const storageAggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorForCalloutsSet(
-        targetCalloutsSet.id
-      );
-    // Move the callout
-    callout.calloutsSet = targetCalloutsSet;
-    const updatedCallout = await this.calloutService.save(callout);
-
-    // Fix the storage aggregator
-    return await this.calloutService.updateStorageAggregator(
-      updatedCallout.id,
-      storageAggregator
-    );
   }
 
   public async getCalloutsFromCollaboration(
