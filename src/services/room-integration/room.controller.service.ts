@@ -8,6 +8,7 @@ import {
   InvokeEngineResponse,
   InvokeEngineResult,
 } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
+
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
@@ -16,6 +17,7 @@ export class RoomControllerService {
   constructor(
     private roomLookupService: RoomLookupService,
     private subscriptionPublishService: SubscriptionPublishService,
+
     private vcInteractionService: VcInteractionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}

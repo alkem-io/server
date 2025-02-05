@@ -13,12 +13,7 @@ import {
   AUTH_RESET_SERVICE,
   EXCALIDRAW_PUBSUB_PROVIDER,
   SUBSCRIPTION_SUBSPACE_CREATED,
-  VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
-  VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
-  VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-  VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
-  VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import {
@@ -96,44 +91,6 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
-      provide: VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
-      useFactory: clientProxyFactory(
-        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
-        true
-      ),
-
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
-      useFactory: clientProxyFactory(
-        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
-        false
-      ),
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
-      useFactory: clientProxyFactory(
-        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT
-      ),
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
-      useFactory: clientProxyFactory(
-        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC
-      ),
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
-      useFactory: clientProxyFactory(
-        MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT
-      ),
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
       provide: AUTH_RESET_SERVICE,
       useFactory: clientProxyFactory(MessagingQueue.AUTH_RESET),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
@@ -145,11 +102,6 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
     MATRIX_ADAPTER_SERVICE,
-    VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
-    VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
-    VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC,
-    VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT,
-    VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
     AUTH_RESET_SERVICE,
     EXCALIDRAW_PUBSUB_PROVIDER,
   ],

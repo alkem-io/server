@@ -19,6 +19,7 @@ import { ILicensingFramework } from '@platform/licensing/credential-based/licens
 import { SpaceLicenseService } from '@domain/space/space/space.service.license';
 import { SpaceService } from '@domain/space/space/space.service';
 import { AccountService } from '@domain/space/account/account.service';
+import { UUID } from '@domain/common/scalars';
 
 @Resolver()
 export class AdminLicensingResolverMutations {
@@ -32,6 +33,27 @@ export class AdminLicensingResolverMutations {
     private licenseService: LicenseService,
     private adminLicensingService: AdminLicensingService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description: 'Creates an account in Wingback',
+  })
+  @Profiling.api
+  async createWingbackAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('accountID', { type: () => UUID }) accountID: string
+  ): Promise<string> {
+    const account = await this.accountService.getAccountOrFail(accountID);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+      `create Wingback account for account (${accountID})`
+    );
+
+    return this.accountLicenseService.createWingbackAccount(accountID);
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
