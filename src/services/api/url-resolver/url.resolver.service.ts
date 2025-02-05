@@ -4,6 +4,7 @@ import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
 import { ValidationException } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { URL_PATHS } from '@common/constants/url.path.constants';
+import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/forum.discussion.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -32,6 +33,7 @@ export class UrlResolverService {
     private authorizationService: AuthorizationService,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
+    private forumDiscussionLookupService: ForumDiscussionLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private spaceLookupService: SpaceService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -110,9 +112,18 @@ export class UrlResolverService {
       case URL_PATHS.INNOVATION_PACKS:
         result.type = UrlType.INNOVATION_PACKS;
         return result;
-      case URL_PATHS.FORUM:
+      case URL_PATHS.FORUM: {
         result.type = UrlType.FORUM;
+        if (pathElements[1] === URL_PATHS.DISCUSSION) {
+          const discussion =
+            await this.forumDiscussionLookupService.getForumDiscussionByNameIdOrFail(
+              pathElements[2]
+            );
+          result.discussionId = discussion.id;
+          result.type = UrlType.DISCUSSION;
+        }
         return result;
+      }
     }
 
     const urlPath = this.getPath(url);
@@ -239,11 +250,14 @@ export class UrlResolverService {
     result: UrlResolverQueryResults,
     agentInfo: AgentInfo
   ): Promise<UrlResolverQueryResults> {
-    if (!result.space || !result.space.internalPath) {
+    if (!result.space) {
       throw new ValidationException(
         `Space not provided: ${result.type}`,
         LogContext.URL_GENERATOR
       );
+    }
+    if (!result.space.internalPath) {
+      return result;
     }
 
     const internalPath = result.space.internalPath;

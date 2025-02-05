@@ -129,7 +129,6 @@
     "@types/node": "^20.14.10",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
-    "@types/url-params-parser": "^1.0.3",
     "@typescript-eslint/eslint-plugin": "^7.16.0",
     "@typescript-eslint/parser": "^7.16.0",
     "coveralls": "^3.1.1",

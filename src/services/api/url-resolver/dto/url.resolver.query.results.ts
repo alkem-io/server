@@ -29,4 +29,9 @@ export class UrlResolverQueryResults {
     nullable: true,
   })
   vcId?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+  })
+  discussionId?: string;
 }

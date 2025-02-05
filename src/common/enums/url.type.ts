@@ -9,6 +9,7 @@ export enum UrlType {
   VIRTUAL_CONTRIBUTOR = 'vc',
   CONTRIBUTION_WHITEBOARD = 'whiteboard',
   FORUM = 'forum',
+  DISCUSSION = 'discussion',
   INNOVATION_HUB = 'innovation-hub',
   INNOVATION_LIBRARY = 'innovation-library',
   INNOVATION_PACKS = 'innovation-pack',
