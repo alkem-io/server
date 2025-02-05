@@ -29,8 +29,11 @@ export class UrlResolverService {
   private spacePathMatcher = match(
     `/:spaceNameID{/${URL_PATHS.CHALLENGES}/:challengeNameID}{/${URL_PATHS.OPPORTUNITIES}/:opportunityNameID}{/*path}`
   );
-  private spaceInternalPathMatcher = match(
-    `{/${URL_PATHS.COLLABORATION}/:calloutNameID}{/${URL_PATHS.POSTS}/:postNameID}{/${URL_PATHS.WHITEBOARDS}/:whiteboardNameID}{/*path}`
+  private spaceInternalPathMatcherCollaboration = match(
+    `/${URL_PATHS.COLLABORATION}/:calloutNameID{/${URL_PATHS.POSTS}/:postNameID}{/${URL_PATHS.WHITEBOARDS}/:whiteboardNameID}{/*path}`
+  );
+  private spaceInternalPathMatcherSettings = match(
+    `/${URL_PATHS.SETTINGS}/${URL_PATHS.TEMPLATES}{/:templateNameID}{/*path}`
   );
   private innovationPackPathMatcher = match(
     `/${URL_PATHS.INNOVATION_PACKS}/:innovationPackNameID{/:templateNameID}{/*path}`
@@ -143,7 +146,7 @@ export class UrlResolverService {
     // Assumption is that everything else is a Space!
     await this.populateSpaceResult(result, agentInfo, urlPath);
 
-    return await this.populateCollaborationResult(result, agentInfo);
+    return await this.populateSpaceInternalResult(result, agentInfo);
   }
 
   private async populateInnovationPackResult(
@@ -327,7 +330,7 @@ export class UrlResolverService {
     return '/' + pathElements.join('/');
   }
 
-  private async populateCollaborationResult(
+  private async populateSpaceInternalResult(
     result: UrlResolverQueryResults,
     agentInfo: AgentInfo
   ): Promise<UrlResolverQueryResults> {
@@ -342,11 +345,105 @@ export class UrlResolverService {
     }
 
     const internalPath = result.space.internalPath;
-    const collaborationMatch = this.spaceInternalPathMatcher(internalPath);
-    if (!collaborationMatch || !collaborationMatch.params) {
-      return result;
+    const collaborationMatch =
+      this.spaceInternalPathMatcherCollaboration(internalPath);
+    if (collaborationMatch) {
+      return await this.populateSpaceInternalResultCollaboration(
+        collaborationMatch,
+        result,
+        agentInfo,
+        internalPath
+      );
     }
 
+    // Try a settings match
+    const settingsMatch = this.spaceInternalPathMatcherSettings(internalPath);
+    if (settingsMatch) {
+      return await this.populateSpaceInternalResultSettings(
+        settingsMatch,
+        result
+      );
+    }
+    return result;
+  }
+
+  private async populateSpaceInternalResultSettings(
+    settingsMatch: any,
+    result: UrlResolverQueryResults
+  ): Promise<UrlResolverQueryResults> {
+    if (!result.space) {
+      throw new ValidationException(
+        `Space not provided when resolving path: ${result.type}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    if (!settingsMatch.params) {
+      return result;
+    }
+    const params = settingsMatch.params as {
+      templateNameID?: string | string[];
+      path?: string | string[];
+    };
+
+    const templateNameID = this.getMatchedResultAsString(params.templateNameID);
+
+    const space = await this.spaceLookupService.getSpaceOrFail(
+      result.space.levelZeroSpaceID,
+      {
+        relations: {
+          templatesManager: {
+            templatesSet: {
+              templates: true,
+            },
+          },
+        },
+      }
+    );
+    if (
+      !space.templatesManager ||
+      !space.templatesManager.templatesSet ||
+      !space.templatesManager.templatesSet.templates
+    ) {
+      throw new RelationshipNotFoundException(
+        `Space ${space.id} does not have a templates set`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    result.space.templatesSet = {
+      id: space.templatesManager.templatesSet.id,
+    };
+    if (templateNameID) {
+      const template = space.templatesManager.templatesSet.templates.find(
+        t => t.nameID === templateNameID
+      );
+      if (!template) {
+        throw new ValidationException(
+          `Template ${templateNameID} not found in Space ${space.id}`,
+          LogContext.URL_GENERATOR
+        );
+      }
+      result.space.templatesSet.templateId = template.id;
+    }
+
+    return result;
+  }
+
+  private async populateSpaceInternalResultCollaboration(
+    collaborationMatch: any,
+    result: UrlResolverQueryResults,
+    agentInfo: AgentInfo,
+    internalPath: string
+  ): Promise<UrlResolverQueryResults> {
+    if (!result.space) {
+      throw new ValidationException(
+        `Space not provided when resolving path: ${result.type}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    if (!collaborationMatch.params) {
+      return result;
+    }
     const params = collaborationMatch.params as {
       calloutNameID?: string | string[];
       postNameID?: string | string[];

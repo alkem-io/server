@@ -2,6 +2,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { UrlResolverQueryResultCollaboration } from './url.resolver.query.collaboration.result';
+import { UrlResolverQueryResultTemplatesSet } from './url.resolver.query.templates.set.result';
 
 @ObjectType()
 export class UrlResolverQueryResultSpace {
@@ -29,6 +30,11 @@ export class UrlResolverQueryResultSpace {
     nullable: false,
   })
   collaboration!: UrlResolverQueryResultCollaboration;
+
+  @Field(() => UrlResolverQueryResultTemplatesSet, {
+    nullable: true,
+  })
+  templatesSet?: UrlResolverQueryResultTemplatesSet;
 
   internalPath?: string;
 }

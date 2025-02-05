@@ -15,4 +15,6 @@ export const URL_PATHS = {
   DISCUSSION: 'discussion',
   CALENDAR: 'calendar',
   KNOWLEDGE_BASE: 'knowledge-base',
+  SETTINGS: 'settings',
+  TEMPLATES: 'templates',
 } as const;
