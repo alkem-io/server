@@ -2,6 +2,7 @@ import { UrlType } from '@common/enums/url.type';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { UrlResolverQueryResultSpace } from './url.resolver.query.space.result';
+import { UrlResolverQueryResultInnovationPack } from './url.resolver.query.innovation.pack.result';
 
 @ObjectType()
 export class UrlResolverQueryResults {
@@ -34,4 +35,9 @@ export class UrlResolverQueryResults {
     nullable: true,
   })
   discussionId?: string;
+
+  @Field(() => UrlResolverQueryResultInnovationPack, {
+    nullable: true,
+  })
+  innovationPack?: UrlResolverQueryResultInnovationPack;
 }

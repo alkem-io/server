@@ -7,6 +7,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { ForumDiscussionLookupModule } from '@platform/forum-discussion-lookup/forum.discussion.lookup.module';
 import { SpaceModule } from '@domain/space/space/space.module';
+import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { SpaceModule } from '@domain/space/space/space.module';
     VirtualContributorLookupModule,
     ForumDiscussionLookupModule,
     SpaceModule,
+    InnovationPackModule,
   ],
   providers: [UrlResolverService, UrlResolverResolverQueries],
   exports: [],

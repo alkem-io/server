@@ -1,7 +1,10 @@
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
-import { ValidationException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { URL_PATHS } from '@common/constants/url.path.constants';
 import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/forum.discussion.lookup.service';
@@ -19,6 +22,7 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
 import { UrlType } from '@common/enums/url.type';
 import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
 import { match } from 'path-to-regexp';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 
 @Injectable()
 export class UrlResolverService {
@@ -28,6 +32,9 @@ export class UrlResolverService {
   private spaceInternalPathMatcher = match(
     `{/${URL_PATHS.COLLABORATION}/:calloutNameID}{/${URL_PATHS.POSTS}/:postNameID}{/${URL_PATHS.WHITEBOARDS}/:whiteboardNameID}{/*path}`
   );
+  private innovationPackPathMatcher = match(
+    `/${URL_PATHS.INNOVATION_PACKS}/:innovationPackNameID{/:templateNameID}{/*path}`
+  );
 
   constructor(
     private authorizationService: AuthorizationService,
@@ -36,6 +43,7 @@ export class UrlResolverService {
     private forumDiscussionLookupService: ForumDiscussionLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private spaceLookupService: SpaceService,
+    private innovationPackService: InnovationPackService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectEntityManager('default')
@@ -60,6 +68,7 @@ export class UrlResolverService {
     }
 
     const urlPathRoot = pathElements[0];
+    const urlPath = this.getPath(url);
 
     switch (urlPathRoot) {
       case URL_PATHS.USER:
@@ -110,8 +119,7 @@ export class UrlResolverService {
         result.type = UrlType.INNOVATION_LIBRARY;
         return result;
       case URL_PATHS.INNOVATION_PACKS:
-        result.type = UrlType.INNOVATION_PACKS;
-        return result;
+        return await this.populateInnovationPackResult(result, urlPath);
       case URL_PATHS.FORUM: {
         result.type = UrlType.FORUM;
         if (pathElements[1] === URL_PATHS.DISCUSSION) {
@@ -132,12 +140,78 @@ export class UrlResolverService {
       }
     }
 
-    const urlPath = this.getPath(url);
-
     // Assumption is that everything else is a Space!
     await this.populateSpaceResult(result, agentInfo, urlPath);
 
     return await this.populateCollaborationResult(result, agentInfo);
+  }
+
+  private async populateInnovationPackResult(
+    result: UrlResolverQueryResults,
+    urlPath: string
+  ): Promise<UrlResolverQueryResults> {
+    result.type = UrlType.INNOVATION_PACKS;
+    const innovationPackMatch = this.innovationPackPathMatcher(urlPath);
+    if (!innovationPackMatch || !innovationPackMatch.params) {
+      throw new ValidationException(
+        `Invalid URL: ${urlPath}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    const params = innovationPackMatch.params as {
+      innovationPackNameID?: string | string[];
+      templateNameID?: string | string[];
+      path?: string | string[];
+    };
+
+    const innovationPackNameID = this.getMatchedResultAsString(
+      params.innovationPackNameID
+    );
+    const templateNameID = this.getMatchedResultAsString(params.templateNameID);
+
+    if (!innovationPackNameID) {
+      throw new ValidationException(
+        `Invalid URL: ${urlPath}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    const innovationPack =
+      await this.innovationPackService.getInnovationPackByNameIdOrFail(
+        innovationPackNameID,
+        {
+          relations: {
+            templatesSet: {
+              templates: true,
+            },
+          },
+        }
+      );
+    if (!innovationPack.templatesSet) {
+      throw new RelationshipNotFoundException(
+        `Innovation Pack ${innovationPack.id} does not have a templates set`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    result.innovationPack = {
+      id: innovationPack.id,
+      templatesSet: {
+        id: innovationPack.templatesSet.id,
+      },
+    };
+    if (templateNameID) {
+      const template = innovationPack.templatesSet.templates.find(
+        t => t.nameID === templateNameID
+      );
+      if (!template) {
+        throw new ValidationException(
+          `Template ${templateNameID} not found in Innovation Pack ${innovationPack.id}`,
+          LogContext.URL_GENERATOR
+        );
+      }
+      result.innovationPack.templatesSet.templateId = template.id;
+    }
+    return result;
   }
 
   private getMatchedResultAsString(
