@@ -48,7 +48,6 @@ import { UpdateContributionCalloutsSortOrderInput } from '../callout-contributio
 import { keyBy } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 
 @Injectable()
 export class CalloutService {
@@ -62,7 +61,6 @@ export class CalloutService {
     private contributionPolicyService: CalloutContributionPolicyService,
     private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
-    private storageBucketService: StorageBucketService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}

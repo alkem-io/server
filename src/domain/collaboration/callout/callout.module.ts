@@ -23,8 +23,6 @@ import { CalloutContributionModule } from '../callout-contribution/callout.contr
 import { PostModule } from '../post/post.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { CalloutTransferService } from '../callout-transfer/callout.transfer.service';
 
 @Module({
   imports: [
@@ -46,7 +44,6 @@ import { CalloutTransferService } from '../callout-transfer/callout.transfer.ser
     StorageAggregatorResolverModule,
     PostModule,
     TemporaryStorageModule,
-    StorageBucketModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
@@ -55,12 +52,7 @@ import { CalloutTransferService } from '../callout-transfer/callout.transfer.ser
     CalloutAuthorizationService,
     CalloutResolverFields,
     CalloutResolverSubscriptions,
-    CalloutTransferService,
   ],
-  exports: [
-    CalloutService,
-    CalloutAuthorizationService,
-    CalloutTransferService,
-  ],
+  exports: [CalloutService, CalloutAuthorizationService],
 })
 export class CalloutModule {}
