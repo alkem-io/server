@@ -48,7 +48,7 @@ export class AdminLicensingResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
-      AuthorizationPrivilege.TRANSFER_RESOURCE,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
       `create Wingback account for account (${accountID})`
     );
 
