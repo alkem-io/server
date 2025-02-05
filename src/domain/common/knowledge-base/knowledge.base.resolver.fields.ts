@@ -3,7 +3,7 @@ import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IKnowledgeBase } from './knowledge.base.interface';
-import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { Loader } from '@core/dataloader/decorators';
 import { KnowledgeBase } from './knowledge.base.entity';
 import {
@@ -19,13 +19,12 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 export class KnowledgeBaseResolverFields {
   constructor(private knowledgeBaseService: KnowledgeBaseService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for describing this KnowledgeBase.',
   })
-  @Profiling.api
   async profile(
     @Parent() knowledgeBase: IKnowledgeBase,
     @Loader(ProfileLoaderCreator, { parentClassRef: KnowledgeBase })
