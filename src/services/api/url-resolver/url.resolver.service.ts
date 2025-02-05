@@ -212,14 +212,14 @@ export class UrlResolverService {
           space.id,
           this.spaceRelations
         );
-      const parentSpaceID = space.id;
+      const parentSpaces = [space.id];
       result.space = this.createSpaceResult(
         subspace,
         agentInfo,
         url,
         spaceInternalPath
       );
-      result.space.parentSpaces.push(parentSpaceID);
+      result.space.parentSpaces = parentSpaces;
     }
     if (subsubspaceNameID) {
       const subsubspace =
@@ -229,14 +229,15 @@ export class UrlResolverService {
           this.spaceRelations
         );
 
-      const parentSpaceID = space.id;
+      const parentSpaceID = result.space.id;
+      const parentSpaces = [...result.space.parentSpaces, parentSpaceID];
       result.space = this.createSpaceResult(
         subsubspace,
         agentInfo,
         url,
         spaceInternalPath
       );
-      result.space.parentSpaces.push(parentSpaceID);
+      result.space.parentSpaces = parentSpaces;
     }
     return result;
   }
@@ -279,6 +280,9 @@ export class UrlResolverService {
       params.whiteboardNameID
     );
     const collaborationInternalPath = this.getMatchedResultAsPath(params.path);
+    if (!calloutNameID) {
+      return result;
+    }
 
     // Assume have a callout
     const callout = await this.entityManager.findOneOrFail(Callout, {
