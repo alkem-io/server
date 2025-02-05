@@ -63,7 +63,7 @@ export class UrlResolverService {
 
     switch (urlPathRoot) {
       case URL_PATHS.USER:
-        if (pathElements.length !== 2) {
+        if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
             LogContext.URL_GENERATOR
@@ -76,7 +76,7 @@ export class UrlResolverService {
         result.type = UrlType.USER;
         return result;
       case URL_PATHS.VIRTUAL_CONTRIBUTOR:
-        if (pathElements.length !== 2) {
+        if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
             LogContext.URL_GENERATOR
@@ -90,7 +90,7 @@ export class UrlResolverService {
         result.type = UrlType.VIRTUAL_CONTRIBUTOR;
         return result;
       case URL_PATHS.ORGANIZATION:
-        if (pathElements.length !== 2) {
+        if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
             LogContext.URL_GENERATOR
@@ -115,6 +115,12 @@ export class UrlResolverService {
       case URL_PATHS.FORUM: {
         result.type = UrlType.FORUM;
         if (pathElements[1] === URL_PATHS.DISCUSSION) {
+          if (pathElements.length < 2) {
+            throw new ValidationException(
+              `Invalid URL: ${url}`,
+              LogContext.URL_GENERATOR
+            );
+          }
           const discussion =
             await this.forumDiscussionLookupService.getForumDiscussionByNameIdOrFail(
               pathElements[2]
