@@ -8,10 +8,12 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { CalloutModule } from '../callout/callout.module';
 import { CalloutTransferResolverMutations } from './callout.transfer.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationModule,
+    AuthorizationPolicyModule,
     StorageAggregatorResolverModule,
     CalloutModule,
     CalloutsSetModule,
