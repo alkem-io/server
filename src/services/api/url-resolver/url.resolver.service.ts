@@ -36,7 +36,7 @@ export class UrlResolverService {
     `/${URL_PATHS.SETTINGS}/${URL_PATHS.TEMPLATES}{/:templateNameID}{/*path}`
   );
   private innovationPackPathMatcher = match(
-    `/${URL_PATHS.INNOVATION_PACKS}/:innovationPackNameID{/:templateNameID}{/*path}`
+    `/${URL_PATHS.INNOVATION_PACKS}/:innovationPackNameID{/settings}{/:templateNameID}{/*path}`
   );
 
   constructor(
