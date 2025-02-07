@@ -38,7 +38,7 @@ export class CalloutTransferResolverMutations {
   })
   async transferCallout(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('calloutData')
+    @Args('transferData')
     transferData: TransferCalloutInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(

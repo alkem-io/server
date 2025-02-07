@@ -142,7 +142,7 @@ export class ConversionResolverMutations {
     description:
       'Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet.',
   })
-  async transferCallout(
+  async convertVirtualContributorToUseKnowledgeBase(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('conversionData')
     conversionData: ConversionVcSpaceToVcKnowledgeBaseInput
@@ -178,7 +178,26 @@ export class ConversionResolverMutations {
       );
     }
 
-    const spaceID = virtualContributor.aiPersona.bodyOfKnowledge;
+    const aiPersona =
+      await this.virtualContributorService.getAiPersonaOrFail(
+        virtualContributor
+      );
+
+    const vcType =
+      await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeType(
+        aiPersona.aiPersonaServiceID
+      );
+
+    if (vcType !== AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE) {
+      throw new ValidationException(
+        `Virtual Contributor is not of type Space: ${virtualContributor.id}`,
+        LogContext.CONVERSION
+      );
+    }
+    const spaceID =
+      await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeID(
+        aiPersona.aiPersonaServiceID
+      );
     if (!spaceID) {
       throw new ValidationException(
         `Virtual Contributor does not have a body of knowledge: ${virtualContributor.id}`,
@@ -209,7 +228,7 @@ export class ConversionResolverMutations {
       );
     }
 
-    if (virtualContributor.account !== space.account) {
+    if (virtualContributor.account.id !== space.account.id) {
       throw new ValidationException(
         `Virtual Contributor and Space do not belong to the same account: ${virtualContributor.id}`,
         LogContext.CONVERSION
@@ -235,7 +254,7 @@ export class ConversionResolverMutations {
 
     // TODO: Add an update to the AI Server to set the type + BoK ID
     await this.aiServerAdapter.updateAiPersonaService({
-      ID: virtualContributor.aiPersona.id,
+      ID: virtualContributor.aiPersona.aiPersonaServiceID,
       bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE,
       bodyOfKnowledgeID: virtualContributor.knowledgeBase.id,
     });
