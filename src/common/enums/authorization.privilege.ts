@@ -45,6 +45,7 @@ export enum AuthorizationPrivilege {
   UPDATE_CONTENT = 'update-content',
   TRANSFER_RESOURCE_OFFER = 'transfer-resource-offer',
   TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
+  ACCOUNT_LICENSE_MANAGE = 'account-license-manage',
 }
 
 registerEnumType(AuthorizationPrivilege, {

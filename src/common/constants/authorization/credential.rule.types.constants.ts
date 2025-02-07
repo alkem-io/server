@@ -96,6 +96,7 @@ export const CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION =
   'credentialRuleTypes-updateForumDiscussion';
 export const CREDENTIAL_RULE_TYPES_INNOVATION_HUBS =
   'credentialRuleTypes-platformInnovationHubs';
-
 export const CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS =
   'credentialRuleTypes-aiServerGlobalAdmins';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE =
+  'credentialRuleTypes-accountLicenseManage';
