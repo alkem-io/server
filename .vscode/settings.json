@@ -19,8 +19,10 @@
     "kratos",
     "mgmt",
     "NAMEID",
+    "oathkeeper",
     "ROLESET",
     "subsubspace",
-    "oathkeeper"
+    "tagset",
+    "tagsets"
   ]
 }

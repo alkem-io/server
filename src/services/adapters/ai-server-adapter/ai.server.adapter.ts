@@ -2,7 +2,10 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AiServerAdapterInvocationInput } from './dto/ai.server.adapter.dto.invocation';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
-import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
+import {
+  CreateAiPersonaServiceInput,
+  UpdateAiPersonaServiceInput,
+} from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { LogContext } from '@common/enums';
@@ -59,6 +62,10 @@ export class AiServerAdapter {
     personaServiceData: CreateAiPersonaServiceInput
   ) {
     return this.aiServer.createAiPersonaService(personaServiceData);
+  }
+
+  async updateAiPersonaService(updateData: UpdateAiPersonaServiceInput) {
+    return this.aiServer.updateAiPersonaService(updateData);
   }
 
   invoke(invocationInput: AiServerAdapterInvocationInput): Promise<void> {

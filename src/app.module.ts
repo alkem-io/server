@@ -88,6 +88,7 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
+import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 
 @Module({
   imports: [
@@ -302,6 +303,7 @@ import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
     InAppNotificationReaderModule,
     InAppNotificationReceiverModule,
     WingbackWebhookModule,
+    CalloutTransferModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

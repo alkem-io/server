@@ -323,7 +323,7 @@ export class CalloutsSetService {
       if (reservedNameIDs.includes(calloutData.nameID)) {
         throw new ValidationException(
           `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.SPACES
+          LogContext.COLLABORATION
         );
       }
       // Just use the provided nameID
@@ -350,6 +350,20 @@ export class CalloutsSetService {
     callout.calloutsSet = calloutsSet;
 
     return callout;
+  }
+
+  public async validateNameIDNotInUseOrFail(
+    calloutsSetID: string,
+    nameID: string
+  ): Promise<void> {
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCalloutsSet(calloutsSetID);
+    if (reservedNameIDs.includes(nameID)) {
+      throw new ValidationException(
+        `Provided NameID (${nameID}) is already present in calloutSet (${calloutsSetID}): ${reservedNameIDs}`,
+        LogContext.COLLABORATION
+      );
+    }
   }
 
   async createCallout(
@@ -454,6 +468,7 @@ export class CalloutsSetService {
 
     return calloutsInOrder;
   }
+
   public async getCalloutsFromCollaboration(
     calloutsSet: ICalloutsSet,
     args: CalloutsSetArgsCallouts,

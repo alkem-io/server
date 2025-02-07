@@ -9,6 +9,9 @@ import { AccountModule } from '@domain/space/account/account.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -21,6 +24,9 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     AuthorizationPolicyModule,
     NamingModule,
     CommunicationModule,
+    CalloutTransferModule,
+    VirtualContributorModule,
+    AiServerAdapterModule,
   ],
   providers: [ConversionService, ConversionResolverMutations],
   exports: [ConversionService, ConversionResolverMutations],

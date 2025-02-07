@@ -9,9 +9,13 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
+  CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT,
+  CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_OFFER,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
   POLICY_RULE_COLLABORATION_CREATE,
 } from '@common/constants';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 
 @Injectable()
 export class CalloutsSetAuthorizationService {
@@ -44,11 +48,15 @@ export class CalloutsSetAuthorizationService {
         calloutsSet.authorization,
         parentAuthorization
       );
-    updatedAuthorizations.push(calloutsSet.authorization);
     calloutsSet.authorization = await this.appendPrivilegeRules(
       calloutsSet.authorization,
       spaceSettings
     );
+    calloutsSet.authorization.credentialRules.push(
+      ...this.createTransferCalloutCredentialRules()
+    );
+
+    updatedAuthorizations.push(calloutsSet.authorization);
 
     if (calloutsSet.callouts) {
       for (const callout of calloutsSet.callouts) {
@@ -64,6 +72,31 @@ export class CalloutsSetAuthorizationService {
     }
 
     return updatedAuthorizations;
+  }
+
+  private createTransferCalloutCredentialRules(): IAuthorizationPolicyRuleCredential[] {
+    const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Two separate rules so can enforce different criterias moving forward.
+    const globalAdminTransferCalloutOffer =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_OFFER
+      );
+    globalAdminTransferCalloutOffer.cascade = false;
+    credentialRules.push(globalAdminTransferCalloutOffer);
+
+    const globalAdminTransferCalloutAccept =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT
+      );
+    globalAdminTransferCalloutAccept.cascade = false;
+    credentialRules.push(globalAdminTransferCalloutAccept);
+
+    return credentialRules;
   }
 
   private async appendPrivilegeRules(

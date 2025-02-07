@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
+import { IProfile } from '../profile';
 
 @ObjectType('Tagset')
 export abstract class ITagset extends IAuthorizable {
@@ -15,4 +16,5 @@ export abstract class ITagset extends IAuthorizable {
   tags!: string[];
 
   tagsetTemplate?: ITagsetTemplate;
+  profile?: IProfile;
 }
