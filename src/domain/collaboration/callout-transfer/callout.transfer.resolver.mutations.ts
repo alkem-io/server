@@ -34,7 +34,7 @@ export class CalloutTransferResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description:
-      'Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet.',
+      'Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.',
   })
   async transferCallout(
     @CurrentUser() agentInfo: AgentInfo,
@@ -82,7 +82,8 @@ export class CalloutTransferResolverMutations {
     // Transfer is authorized, now try to execute it
     await this.calloutTransferService.transferCallout(
       callout,
-      targetCalloutsSet
+      targetCalloutsSet,
+      agentInfo
     );
 
     // Reset the authorization policy for the callout

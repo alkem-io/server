@@ -16,6 +16,7 @@ import { ICallout } from '../callout/callout.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 
 @Injectable()
 export class CalloutTransferService {
@@ -30,7 +31,8 @@ export class CalloutTransferService {
 
   public async transferCallout(
     callout: ICallout,
-    targetCalloutsSet: ICalloutsSet
+    targetCalloutsSet: ICalloutsSet,
+    agentInfo: AgentInfo
   ): Promise<ICallout> {
     // Check that the nameID is unique in the target callouts set
     await this.calloutsSetService.validateNameIDNotInUseOrFail(
@@ -45,6 +47,8 @@ export class CalloutTransferService {
       );
     // Move the callout
     callout.calloutsSet = targetCalloutsSet;
+    // Update the user
+    callout.createdBy = agentInfo.userID;
     const updatedCallout = await this.calloutService.save(callout);
 
     // Fix the storage aggregator
@@ -53,15 +57,16 @@ export class CalloutTransferService {
     const tagsetTemplateSet =
       await this.calloutsSetService.getTagsetTemplatesSet(targetCalloutsSet.id);
 
-    // finally update the tagsets
+    // Update the tagsets
     await this.updateTagsetsFromTemplates(
       updatedCallout.id,
       tagsetTemplateSet.tagsetTemplates
     );
+
     return await this.calloutService.getCalloutOrFail(updatedCallout.id);
   }
 
-  public async updateStorageAggregator(
+  private async updateStorageAggregator(
     calloutID: string,
     storageAggregator: IStorageAggregator
   ): Promise<void> {
@@ -137,7 +142,7 @@ export class CalloutTransferService {
     }
   }
 
-  public async updateTagsetsFromTemplates(
+  private async updateTagsetsFromTemplates(
     calloutID: string,
     tagsetTemplates: ITagsetTemplate[]
   ): Promise<void> {

@@ -140,7 +140,7 @@ export class ConversionResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => IVirtualContributor, {
     description:
-      'Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet.',
+      'Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.',
   })
   async convertVirtualContributorToUseKnowledgeBase(
     @CurrentUser() agentInfo: AgentInfo,
@@ -248,11 +248,12 @@ export class ConversionResolverMutations {
     for (const callout of space.collaboration.calloutsSet.callouts) {
       await this.calloutTransferService.transferCallout(
         callout,
-        targetCalloutsSet
+        targetCalloutsSet,
+        agentInfo
       );
     }
 
-    // TODO: Add an update to the AI Server to set the type + BoK ID
+    // Update the information on the AI Persona Service
     await this.aiServerAdapter.updateAiPersonaService({
       ID: virtualContributor.aiPersona.aiPersonaServiceID,
       bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE,
