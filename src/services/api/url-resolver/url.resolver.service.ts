@@ -23,6 +23,7 @@ import { UrlType } from '@common/enums/url.type';
 import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';
 import { match } from 'path-to-regexp';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
+import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.callouts.set.result';
 
 @Injectable()
 export class UrlResolverService {
@@ -36,7 +37,10 @@ export class UrlResolverService {
     `/${URL_PATHS.SETTINGS}/${URL_PATHS.TEMPLATES}{/:templateNameID}{/*path}`
   );
   private innovationPackPathMatcher = match(
-    `/${URL_PATHS.INNOVATION_PACKS}/:innovationPackNameID{/settings}{/:templateNameID}{/*path}`
+    `/${URL_PATHS.INNOVATION_PACKS}/:innovationPackNameID{/${URL_PATHS.SETTINGS}}{/:templateNameID}{/*path}`
+  );
+  private virtualContributorPathMatcher = match(
+    `/${URL_PATHS.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${URL_PATHS.KNOWLEDGE_BASE}/:calloutNameID}{/${URL_PATHS.POSTS}/:postNameID}{/*path}`
   );
 
   constructor(
@@ -66,7 +70,7 @@ export class UrlResolverService {
     if (pathElements.length === 0) {
       throw new ValidationException(
         `Invalid URL: ${url}`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
 
@@ -78,7 +82,7 @@ export class UrlResolverService {
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
-            LogContext.URL_GENERATOR
+            LogContext.URL_RESOLVER
           );
         }
         const user = await this.userLookupService.getUserByNameIdOrFail(
@@ -88,24 +92,16 @@ export class UrlResolverService {
         result.type = UrlType.USER;
         return result;
       case URL_PATHS.VIRTUAL_CONTRIBUTOR:
-        if (pathElements.length < 2) {
-          throw new ValidationException(
-            `Invalid URL: ${url}`,
-            LogContext.URL_GENERATOR
-          );
-        }
-        const vc =
-          await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
-            pathElements[1]
-          );
-        result.vcId = vc.id;
-        result.type = UrlType.VIRTUAL_CONTRIBUTOR;
-        return result;
+        return await this.populateVirtualContributorResult(
+          result,
+          urlPath,
+          agentInfo
+        );
       case URL_PATHS.ORGANIZATION:
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
-            LogContext.URL_GENERATOR
+            LogContext.URL_RESOLVER
           );
         }
         const organization =
@@ -129,7 +125,7 @@ export class UrlResolverService {
           if (pathElements.length < 2) {
             throw new ValidationException(
               `Invalid URL: ${url}`,
-              LogContext.URL_GENERATOR
+              LogContext.URL_RESOLVER
             );
           }
           const discussion =
@@ -149,6 +145,85 @@ export class UrlResolverService {
     return await this.populateSpaceInternalResult(result, agentInfo);
   }
 
+  private async populateVirtualContributorResult(
+    result: UrlResolverQueryResults,
+    urlPath: string,
+    agentInfo: AgentInfo
+  ): Promise<UrlResolverQueryResults> {
+    result.type = UrlType.VIRTUAL_CONTRIBUTOR;
+    const virtualContributorMatch = this.virtualContributorPathMatcher(urlPath);
+    if (!virtualContributorMatch || !virtualContributorMatch.params) {
+      throw new ValidationException(
+        `Invalid URL: ${urlPath}`,
+        LogContext.URL_RESOLVER
+      );
+    }
+    const params = virtualContributorMatch.params as {
+      virtualContributorNameID?: string | string[];
+      calloutNameID?: string | string[];
+      postNameID?: string | string[];
+      path?: string | string[];
+    };
+
+    const virtualContributorNameID = this.getMatchedResultAsString(
+      params.virtualContributorNameID
+    );
+    const calloutNameID = this.getMatchedResultAsString(params.calloutNameID);
+    const postNameID = this.getMatchedResultAsString(params.postNameID);
+
+    if (!virtualContributorNameID) {
+      throw new ValidationException(
+        `Invalid URL, unable to retrieve virtual contributor identifier: ${urlPath}`,
+        LogContext.URL_RESOLVER
+      );
+    }
+
+    const virtualContributor =
+      await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
+        virtualContributorNameID,
+        {
+          relations: {
+            knowledgeBase: {
+              calloutsSet: {
+                callouts: {
+                  contributions: {
+                    post: true,
+                    whiteboard: true,
+                  },
+                },
+              },
+            },
+          },
+        }
+      );
+
+    if (
+      !virtualContributor.knowledgeBase ||
+      !virtualContributor.knowledgeBase.calloutsSet ||
+      !virtualContributor.knowledgeBase.calloutsSet.callouts
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load all entities on Virtual Contributor ${virtualContributor.id}`,
+        LogContext.URL_RESOLVER
+      );
+    }
+    const calloutsSetResult = await this.populateCalloutsSetResult(
+      virtualContributor.knowledgeBase.calloutsSet.id,
+      agentInfo,
+      urlPath,
+      calloutNameID,
+      postNameID,
+      undefined
+    );
+
+    result.virtualContributor = {
+      id: virtualContributor.id,
+      calloutsSet: calloutsSetResult,
+    };
+
+    return result;
+  }
+
   private async populateInnovationPackResult(
     result: UrlResolverQueryResults,
     urlPath: string
@@ -158,7 +233,7 @@ export class UrlResolverService {
     if (!innovationPackMatch || !innovationPackMatch.params) {
       throw new ValidationException(
         `Invalid URL: ${urlPath}`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
     const params = innovationPackMatch.params as {
@@ -175,7 +250,7 @@ export class UrlResolverService {
     if (!innovationPackNameID) {
       throw new ValidationException(
         `Invalid URL: ${urlPath}`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
 
@@ -193,7 +268,7 @@ export class UrlResolverService {
     if (!innovationPack.templatesSet) {
       throw new RelationshipNotFoundException(
         `Innovation Pack ${innovationPack.id} does not have a templates set`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
     result.innovationPack = {
@@ -209,7 +284,7 @@ export class UrlResolverService {
       if (!template) {
         throw new ValidationException(
           `Template ${templateNameID} not found in Innovation Pack ${innovationPack.id}`,
-          LogContext.URL_GENERATOR
+          LogContext.URL_RESOLVER
         );
       }
       result.innovationPack.templatesSet.templateId = template.id;
@@ -251,7 +326,7 @@ export class UrlResolverService {
     if (!spacePathMatch || !spacePathMatch.params) {
       throw new ValidationException(
         `Invalid URL: ${url}`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
     const params = spacePathMatch.params as {
@@ -273,7 +348,7 @@ export class UrlResolverService {
     if (!spaceNameID) {
       throw new ValidationException(
         `Invalid URL: ${url}`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
 
@@ -337,7 +412,7 @@ export class UrlResolverService {
     if (!result.space) {
       throw new ValidationException(
         `Space not provided: ${result.type}`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
     if (!result.space.internalPath) {
@@ -374,7 +449,7 @@ export class UrlResolverService {
     if (!result.space) {
       throw new ValidationException(
         `Space not provided when resolving path: ${result.type}`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
     if (!settingsMatch.params) {
@@ -406,7 +481,7 @@ export class UrlResolverService {
     ) {
       throw new RelationshipNotFoundException(
         `Space ${space.id} does not have a templates set`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
 
@@ -420,7 +495,7 @@ export class UrlResolverService {
       if (!template) {
         throw new ValidationException(
           `Template ${templateNameID} not found in Space ${space.id}`,
-          LogContext.URL_GENERATOR
+          LogContext.URL_RESOLVER
         );
       }
       result.space.templatesSet.templateId = template.id;
@@ -435,10 +510,10 @@ export class UrlResolverService {
     agentInfo: AgentInfo,
     internalPath: string
   ): Promise<UrlResolverQueryResults> {
-    if (!result.space) {
+    if (!result.space || !result.space.collaboration.calloutsSet) {
       throw new ValidationException(
         `Space not provided when resolving path: ${result.type}`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
     if (!collaborationMatch.params) {
@@ -457,6 +532,33 @@ export class UrlResolverService {
       params.whiteboardNameID
     );
     const collaborationInternalPath = this.getMatchedResultAsPath(params.path);
+    const calloutsSetResult = await this.populateCalloutsSetResult(
+      result.space.collaboration.calloutsSet.id,
+      agentInfo,
+      collaborationInternalPath || internalPath,
+      calloutNameID,
+      postNameID,
+      whiteboardNameID
+    );
+
+    result.space.collaboration.calloutsSet = calloutsSetResult;
+
+    return result;
+  }
+
+  private async populateCalloutsSetResult(
+    calloutsSetId: string,
+    agentInfo: AgentInfo,
+    urlPath: string,
+    calloutNameID: string | undefined,
+    postNameID: string | undefined,
+    whiteboardNameID: string | undefined
+  ): Promise<UrlResolverQueryResultCalloutsSet> {
+    const result: UrlResolverQueryResultCalloutsSet = {
+      id: calloutsSetId,
+      type: UrlType.CALLOUTS_SET,
+    };
+
     if (!calloutNameID) {
       return result;
     }
@@ -478,11 +580,10 @@ export class UrlResolverService {
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.READ,
-      `resolving url for callout ${internalPath}`
+      `resolving url for callout ${urlPath}`
     );
-    result.space.collaboration.calloutId = callout.id;
+    result.calloutId = callout.id;
     result.type = UrlType.CALLOUT;
-    result.space.internalPath = collaborationInternalPath;
     if (!postNameID && !whiteboardNameID) {
       return result;
     }
@@ -510,11 +611,11 @@ export class UrlResolverService {
         agentInfo,
         contribution.authorization,
         AuthorizationPrivilege.READ,
-        `resolving url for post on callout ${internalPath}`
+        `resolving url for post on callout ${urlPath}`
       );
-      result.space.collaboration.contributionId = contribution.id;
+      result.contributionId = contribution.id;
+      result.postId = contribution?.post?.id;
       result.type = UrlType.CONTRIBUTION_POST;
-      result.space.collaboration.postId = contribution?.post?.id;
       return result;
     }
 
@@ -541,11 +642,11 @@ export class UrlResolverService {
         agentInfo,
         contribution.authorization,
         AuthorizationPrivilege.READ,
-        `resolving url for whiteboard on callout ${internalPath}`
+        `resolving url for whiteboard on callout ${urlPath}`
       );
-      result.space.collaboration.contributionId = contribution.id;
+      result.contributionId = contribution.id;
+      result.whiteboardId = contribution?.whiteboard?.id;
       result.type = UrlType.CONTRIBUTION_WHITEBOARD;
-      result.space.collaboration.whiteboardId = contribution?.whiteboard?.id;
       return result;
     }
 
@@ -574,13 +675,13 @@ export class UrlResolverService {
     if (!space) {
       throw new ValidationException(
         'Space not provided',
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
-    if (!space.collaboration) {
+    if (!space.collaboration || !space.collaboration.calloutsSet) {
       throw new ValidationException(
         `Space ${space.id} does not have a collaboration`,
-        LogContext.URL_GENERATOR
+        LogContext.URL_RESOLVER
       );
     }
     this.authorizationService.grantAccessOrFail(
@@ -595,7 +696,10 @@ export class UrlResolverService {
       parentSpaces: [],
       collaboration: {
         id: space.collaboration.id,
-        calloutsSetId: space.collaboration.calloutsSet?.id,
+        calloutsSet: {
+          id: space.collaboration.calloutsSet?.id,
+          type: UrlType.CALLOUTS_SET,
+        },
       },
       levelZeroSpaceID: space.levelZeroSpaceID,
       internalPath: internalSpacePath,

@@ -3,7 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { UrlResolverQueryResultCalloutsSet } from './url.resolver.query.callouts.set.result';
 
 @ObjectType()
-export class UrlResolverQueryResultCollaboration {
+export class UrlResolverQueryResultVirtualContributor {
   @Field(() => UUID, {
     nullable: false,
   })

@@ -3,6 +3,7 @@ import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { UrlResolverQueryResultSpace } from './url.resolver.query.space.result';
 import { UrlResolverQueryResultInnovationPack } from './url.resolver.query.innovation.pack.result';
+import { UrlResolverQueryResultVirtualContributor } from './url.resolver.query.virtual.contributor.result';
 
 @ObjectType()
 export class UrlResolverQueryResults {
@@ -26,10 +27,10 @@ export class UrlResolverQueryResults {
   })
   userId?: string;
 
-  @Field(() => UUID, {
+  @Field(() => UrlResolverQueryResultVirtualContributor, {
     nullable: true,
   })
-  vcId?: string;
+  virtualContributor?: UrlResolverQueryResultVirtualContributor;
 
   @Field(() => UUID, {
     nullable: true,
