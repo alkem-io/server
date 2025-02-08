@@ -24,6 +24,7 @@ import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.resu
 import { match } from 'path-to-regexp';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.callouts.set.result';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 
 @Injectable()
 export class UrlResolverService {
@@ -42,6 +43,9 @@ export class UrlResolverService {
   private virtualContributorPathMatcher = match(
     `/${URL_PATHS.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${URL_PATHS.KNOWLEDGE_BASE}/:calloutNameID}{/${URL_PATHS.POSTS}/:postNameID}{/*path}`
   );
+  private innovationHubPathMatcher = match(
+    `/${URL_PATHS.ADMIN}/${URL_PATHS.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
+  );
 
   constructor(
     private authorizationService: AuthorizationService,
@@ -51,6 +55,7 @@ export class UrlResolverService {
     private virtualContributorLookupService: VirtualContributorLookupService,
     private spaceLookupService: SpaceService,
     private innovationPackService: InnovationPackService,
+    private innovationHubService: InnovationHubService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectEntityManager('default')
@@ -112,8 +117,7 @@ export class UrlResolverService {
         result.type = UrlType.ORGANIZATION;
         return result;
       case URL_PATHS.ADMIN:
-        result.type = UrlType.ADMIN;
-        return result;
+        return await this.populateAdminResult(result, urlPath);
       case URL_PATHS.INNOVATION_LIBRARY:
         result.type = UrlType.INNOVATION_LIBRARY;
         return result;
@@ -220,6 +224,41 @@ export class UrlResolverService {
       id: virtualContributor.id,
       calloutsSet: calloutsSetResult,
     };
+
+    return result;
+  }
+
+  private async populateAdminResult(
+    result: UrlResolverQueryResults,
+    urlPath: string
+  ): Promise<UrlResolverQueryResults> {
+    result.type = UrlType.ADMIN;
+    const innovationHubMatch = this.innovationHubPathMatcher(urlPath);
+    if (!innovationHubMatch || !innovationHubMatch.params) {
+      return result;
+    }
+    const params = innovationHubMatch.params as {
+      innovationHubNameID?: string | string[];
+      path?: string | string[];
+    };
+
+    const innovationHubNameID = this.getMatchedResultAsString(
+      params.innovationHubNameID
+    );
+
+    if (!innovationHubNameID) {
+      throw new ValidationException(
+        `Unable to resolve innovation hub from URL: ${urlPath}`,
+        LogContext.URL_RESOLVER
+      );
+    }
+
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubByNameIdOrFail(
+        innovationHubNameID
+      );
+    result.innovationHubId = innovationHub.id;
+    result.type = UrlType.INNOVATION_HUB;
 
     return result;
   }

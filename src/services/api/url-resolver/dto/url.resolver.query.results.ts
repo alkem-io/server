@@ -37,6 +37,11 @@ export class UrlResolverQueryResults {
   })
   discussionId?: string;
 
+  @Field(() => UUID, {
+    nullable: true,
+  })
+  innovationHubId?: string;
+
   @Field(() => UrlResolverQueryResultInnovationPack, {
     nullable: true,
   })

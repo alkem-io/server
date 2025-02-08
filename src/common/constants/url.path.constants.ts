@@ -5,6 +5,7 @@ export const URL_PATHS = {
   ORGANIZATION: 'organization',
   INNOVATION_LIBRARY: 'innovation-library',
   INNOVATION_PACKS: 'innovation-packs',
+  INNOVATION_HUBS: 'innovation-hubs',
   CHALLENGES: 'challenges',
   OPPORTUNITIES: 'opportunities',
   COLLABORATION: 'collaboration',
