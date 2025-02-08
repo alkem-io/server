@@ -291,6 +291,7 @@ export class AccountAuthorizationService {
       );
     acceptResourceTransfers.criterias.push(accountAdminCredential);
     acceptResourceTransfers.cascade = false;
+    newRules.push(acceptResourceTransfers);
 
     const accountLicenseManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
