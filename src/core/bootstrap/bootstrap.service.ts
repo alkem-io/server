@@ -64,6 +64,7 @@ import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 
 @Injectable()
 export class BootstrapService {
@@ -76,6 +77,7 @@ export class BootstrapService {
     private userLookupService: UserLookupService,
     private userAuthorizationService: UserAuthorizationService,
     private organizationService: OrganizationService,
+    private organizationLookupService: OrganizationLookupService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
@@ -442,9 +444,10 @@ export class BootstrapService {
 
   private async ensureOrganizationSingleton() {
     // create a default host org
-    let hostOrganization = await this.organizationService.getOrganization(
-      DEFAULT_HOST_ORG_NAMEID
-    );
+    let hostOrganization =
+      await this.organizationLookupService.getOrganizationByNameId(
+        DEFAULT_HOST_ORG_NAMEID
+      );
     if (!hostOrganization) {
       const adminAgentInfo = await this.getAdminAgentInfo();
       hostOrganization = await this.organizationService.createOrganization(
@@ -504,7 +507,7 @@ export class BootstrapService {
         LogContext.BOOTSTRAP
       );
       const hostOrganization =
-        await this.organizationService.getOrganizationOrFail(
+        await this.organizationLookupService.getOrganizationByNameIdOrFail(
           DEFAULT_HOST_ORG_NAMEID
         );
 
@@ -554,7 +557,7 @@ export class BootstrapService {
 
       // Get admin account:
       const hostOrganization =
-        await this.organizationService.getOrganizationOrFail(
+        await this.organizationLookupService.getOrganizationByNameIdOrFail(
           DEFAULT_HOST_ORG_NAMEID
         );
       const account =

@@ -7,6 +7,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { IForum } from './forum.interface';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionsInput } from './dto/forum.dto.discussions.input';
+import { UUID } from '@domain/common/scalars';
 
 @Resolver(() => IForum)
 export class ForumResolverFields {
@@ -40,7 +41,13 @@ export class ForumResolverFields {
   @Profiling.api
   async discussion(
     @Parent() forum: IForum,
-    @Args('ID') discussionID: string
+    @Args({
+      name: 'ID',
+      type: () => UUID,
+      description: 'The ID of the Discussion to return',
+      nullable: false,
+    })
+    discussionID: string
   ): Promise<IDiscussion> {
     return await this.forumService.getDiscussionOrFail(forum, discussionID);
   }

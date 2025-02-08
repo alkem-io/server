@@ -110,16 +110,28 @@ export class OrganizationLookupService {
     return organization;
   }
 
-  async getOrganizationByNameIdOrFail(
+  async getOrganizationByNameId(
     organizationNameID: string,
     options?: FindOneOptions<Organization>
-  ): Promise<IOrganization> {
+  ): Promise<IOrganization | null> {
     const organization: IOrganization | null = await this.entityManager.findOne(
       Organization,
       {
         ...options,
         where: { ...options?.where, nameID: organizationNameID },
       }
+    );
+
+    return organization;
+  }
+
+  async getOrganizationByNameIdOrFail(
+    organizationNameID: string,
+    options?: FindOneOptions<Organization>
+  ): Promise<IOrganization> {
+    const organization = await this.getOrganizationByNameId(
+      organizationNameID,
+      options
     );
     if (!organization)
       throw new EntityNotFoundException(

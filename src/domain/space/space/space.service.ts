@@ -1,4 +1,3 @@
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
@@ -669,21 +668,13 @@ export class SpaceService {
     spaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
-    let space: ISpace | null = null;
-    const { where, ...restOfOptions } = options ?? {};
-    if (spaceID.length === UUID_LENGTH) {
-      space = await this.spaceRepository.findOne({
-        where: where ? { ...where, id: spaceID } : { id: spaceID },
-        ...restOfOptions,
-      });
-    }
-    if (!space) {
-      // look up based on nameID
-      space = await this.spaceRepository.findOne({
-        where: where ? { ...where, nameID: spaceID } : { nameID: spaceID },
-        ...restOfOptions,
-      });
-    }
+    const space = await this.spaceRepository.findOne({
+      where: {
+        id: spaceID,
+      },
+      ...options,
+    });
+
     return space;
   }
 
@@ -691,20 +682,17 @@ export class SpaceService {
     spaceNameID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace> {
-    const { where, ...restOfOptions } = options ?? {};
-
     const space = await this.spaceRepository.findOne({
-      where: where
-        ? { ...where, nameID: spaceNameID }
-        : { nameID: spaceNameID },
-      ...restOfOptions,
+      where: {
+        nameID: spaceNameID,
+        level: SpaceLevel.L0,
+      },
+      ...options,
     });
     if (!space) {
       if (!space)
         throw new EntityNotFoundException(
-          `Unable to find Space with nameID: ${spaceNameID} using options '${JSON.stringify(
-            options
-          )}`,
+          `Unable to find L0 Space with nameID: ${spaceNameID}`,
           LogContext.SPACES
         );
     }
@@ -1102,31 +1090,18 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  async getSubspaceInLevelZeroSpace(
-    subspaceID: string,
+  async getSubspaceByNameIdInLevelZeroSpace(
+    subspaceNameID: string,
     levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
-    let subspace: ISpace | null = null;
-    if (subspaceID.length == UUID_LENGTH) {
-      subspace = await this.spaceRepository.findOne({
-        where: {
-          id: subspaceID,
-          levelZeroSpaceID: levelZeroSpaceID,
-        },
-        ...options,
-      });
-    }
-    if (!subspace) {
-      // look up based on nameID
-      subspace = await this.spaceRepository.findOne({
-        where: {
-          nameID: subspaceID,
-          levelZeroSpaceID: levelZeroSpaceID,
-        },
-        ...options,
-      });
-    }
+    const subspace = await this.spaceRepository.findOne({
+      where: {
+        nameID: subspaceNameID,
+        levelZeroSpaceID: levelZeroSpaceID,
+      },
+      ...options,
+    });
 
     return subspace;
   }
@@ -1136,7 +1111,7 @@ export class SpaceService {
     levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | never> {
-    const subspace = await this.getSubspaceInLevelZeroSpace(
+    const subspace = await this.getSubspaceByNameIdInLevelZeroSpace(
       subspaceID,
       levelZeroSpaceID,
       options

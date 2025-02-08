@@ -501,7 +501,7 @@ export class UserService {
         LogContext.COMMUNITY
       );
     }
-    const user = await this.getUserByEmailIdUUID(userID, options);
+    const user = await this.userLookupService.getUserByUUID(userID, options);
 
     if (!user) {
       throw new EntityNotFoundException(
@@ -511,16 +511,6 @@ export class UserService {
     }
 
     return user;
-  }
-
-  private async getUserByEmailIdUUID(
-    userID: string,
-    options: FindOneOptions<User> | undefined
-  ): Promise<IUser | null> {
-    return this.userRepository.findOne({
-      where: [{ id: userID }, { nameID: userID }, { email: userID }],
-      ...options,
-    });
   }
 
   async getUserByEmail(
