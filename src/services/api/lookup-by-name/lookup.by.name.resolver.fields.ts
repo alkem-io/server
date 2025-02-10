@@ -113,6 +113,7 @@ export class LookupByNameResolverFields {
     return user.id;
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description: 'Lookup the ID of the specified Organization using a NameID',
@@ -127,18 +128,27 @@ export class LookupByNameResolverFields {
     return organization.id;
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description:
       'Lookup the ID of the specified Virtual Contributor using a NameID',
   })
   async virtualContributor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const virtualContributor =
       await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
         nameid
       );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.READ_ABOUT,
+      `lookup virtual contributor by NameID: ${virtualContributor.id}`
+    );
 
     return virtualContributor.id;
   }

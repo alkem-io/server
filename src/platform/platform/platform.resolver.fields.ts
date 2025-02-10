@@ -15,6 +15,7 @@ import { IForum } from '@platform/forum';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
 import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -69,6 +70,15 @@ export class PlatformResolverFields {
     @Parent() platform: IPlatform
   ): Promise<IStorageAggregator> {
     return this.platformService.getStorageAggregator(platform);
+  }
+
+  @ResolveField('chatGuidanceVirtualContributor', () => IVirtualContributor, {
+    nullable: false,
+    description:
+      'The Virtual Contributor that is used to provide chat help on the platform.',
+  })
+  chatGuidanceVirtualContributor(): Promise<IVirtualContributor> {
+    return this.platformService.getGuidanceVirtualContributorOrFail();
   }
 
   @ResolveField('licensingFramework', () => ILicensingFramework, {
