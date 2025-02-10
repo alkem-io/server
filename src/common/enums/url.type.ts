@@ -1,6 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum UrlType {
+  HOME = 'home',
   SPACE = 'space',
   CALLOUT = 'callout',
   CALLOUTS_SET = 'callouts-set',

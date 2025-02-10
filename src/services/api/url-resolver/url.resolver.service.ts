@@ -73,16 +73,18 @@ export class UrlResolverService {
     };
 
     if (pathElements.length === 0) {
-      throw new ValidationException(
-        `Invalid URL: ${url}`,
-        LogContext.URL_RESOLVER
-      );
+      result.type = UrlType.HOME;
+      return result;
     }
 
     const urlPathRoot = pathElements[0];
     const urlPath = this.getPath(url);
 
     switch (urlPathRoot) {
+      case URL_PATHS.HOME: {
+        result.type = UrlType.HOME;
+        return result;
+      }
       case URL_PATHS.USER:
         if (pathElements.length < 2) {
           throw new ValidationException(

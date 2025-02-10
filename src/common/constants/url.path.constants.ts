@@ -1,4 +1,5 @@
 export const URL_PATHS = {
+  HOME: 'home',
   USER: 'user',
   ADMIN: 'admin',
   VIRTUAL_CONTRIBUTOR: 'vc',
