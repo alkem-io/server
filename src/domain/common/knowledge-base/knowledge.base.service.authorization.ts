@@ -7,6 +7,7 @@ import { IKnowledgeBase } from './knowledge.base.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Injectable()
 export class KnowledgeBaseAuthorizationService {
@@ -19,7 +20,8 @@ export class KnowledgeBaseAuthorizationService {
 
   public async applyAuthorizationPolicy(
     knowledgeBaseInput: IKnowledgeBase,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    knowledgeBaseVisible: boolean
   ): Promise<IAuthorizationPolicy[]> {
     const knowledgeBase =
       await this.knowledgeBaseService.getKnowledgeBaseOrFail(
@@ -46,6 +48,14 @@ export class KnowledgeBaseAuthorizationService {
         knowledgeBase.authorization,
         parentAuthorization
       );
+    if (knowledgeBaseVisible) {
+      knowledgeBase.authorization =
+        this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+          knowledgeBase.authorization,
+          AuthorizationPrivilege.READ,
+          true
+        );
+    }
     updatedAuthorizations.push(knowledgeBase.authorization);
 
     const profileAuthorizations =

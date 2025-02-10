@@ -225,10 +225,10 @@ export class SpaceService {
         type: RoleSetType.SPACE,
       },
       guidelines: {
-        // TODO: get this from defaults service
+        // TODO: get this from defaults service, currently create with empty
         profile: {
-          displayName: spaceData.profileData.displayName,
-          description: spaceData.profileData.description,
+          displayName: '',
+          description: '',
         },
       },
     };
