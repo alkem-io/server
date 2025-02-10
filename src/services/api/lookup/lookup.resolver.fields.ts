@@ -224,7 +224,7 @@ export class LookupResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtualContributor.authorization,
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.READ_ABOUT,
       `lookup VirtualContributor: ${virtualContributor.id}`
     );
     return virtualContributor;

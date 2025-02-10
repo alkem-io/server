@@ -12,6 +12,7 @@ import {
   POLICY_RULE_CALLOUT_CONTRIBUTE,
   POLICY_RULE_COLLABORATION_CREATE,
 } from '@common/constants';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CalloutsSetAuthorizationService {
@@ -25,7 +26,8 @@ export class CalloutsSetAuthorizationService {
     calloutsSetInput: ICalloutsSet,
     parentAuthorization: IAuthorizationPolicy | undefined,
     roleSet?: IRoleSet,
-    spaceSettings?: ISpaceSettings
+    spaceSettings?: ISpaceSettings,
+    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
   ): Promise<IAuthorizationPolicy[]> {
     const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(
       calloutsSetInput.id,
@@ -48,6 +50,9 @@ export class CalloutsSetAuthorizationService {
     calloutsSet.authorization = await this.appendPrivilegeRules(
       calloutsSet.authorization,
       spaceSettings
+    );
+    calloutsSet.authorization.credentialRules.push(
+      ...credentialRulesFromParent
     );
 
     if (calloutsSet.callouts) {
