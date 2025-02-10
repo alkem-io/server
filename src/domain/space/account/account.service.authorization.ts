@@ -25,6 +25,7 @@ import {
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
   CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
@@ -291,6 +292,18 @@ export class AccountAuthorizationService {
     acceptResourceTransfers.criterias.push(accountAdminCredential);
     acceptResourceTransfers.cascade = false;
     newRules.push(acceptResourceTransfers);
+
+    const accountLicenseManage =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE
+      );
+    accountLicenseManage.cascade = false;
+    newRules.push(accountLicenseManage);
 
     // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
     const accountHostManage =
