@@ -44,7 +44,7 @@ export class UrlResolverService {
     `/${URL_PATHS.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${URL_PATHS.KNOWLEDGE_BASE}/:calloutNameID}{/${URL_PATHS.POSTS}/:postNameID}{/*path}`
   );
   private innovationHubPathMatcher = match(
-    `/${URL_PATHS.ADMIN}/${URL_PATHS.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
+    `/${URL_PATHS.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
   );
 
   constructor(
@@ -118,6 +118,8 @@ export class UrlResolverService {
         return result;
       case URL_PATHS.ADMIN:
         return await this.populateAdminResult(result, urlPath);
+      case URL_PATHS.INNOVATION_HUBS:
+        return await this.populateInnovationHubResult(result, urlPath);
       case URL_PATHS.INNOVATION_LIBRARY:
         result.type = UrlType.INNOVATION_LIBRARY;
         return result;
@@ -227,12 +229,19 @@ export class UrlResolverService {
 
     return result;
   }
-
   private async populateAdminResult(
+    result: UrlResolverQueryResults,
+    _urlPath: string
+  ): Promise<UrlResolverQueryResults> {
+    // Not yet needed
+    result.type = UrlType.ADMIN;
+    return Promise.resolve(result);
+  }
+
+  private async populateInnovationHubResult(
     result: UrlResolverQueryResults,
     urlPath: string
   ): Promise<UrlResolverQueryResults> {
-    result.type = UrlType.ADMIN;
     const innovationHubMatch = this.innovationHubPathMatcher(urlPath);
     if (!innovationHubMatch || !innovationHubMatch.params) {
       return result;

@@ -273,8 +273,7 @@ export class UrlGeneratorService {
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        //I am not sure whether actually we shouldn't return the subdomain of the innovation hub here? It's either that or the admin
-        return `${this.endpoint_cluster}/admin/innovation-hubs/${innovationHubEntityInfo.entityNameID}`;
+        return `${this.endpoint_cluster}/innovation-hubs/${innovationHubEntityInfo.entityNameID}/settings`;
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
         return `${this.endpoint_cluster}`;
