@@ -13,6 +13,7 @@ export enum UrlType {
   FORUM = 'forum',
   DISCUSSION = 'discussion',
   SPACE_EXPLORER = 'spaces',
+  CONTRIBUTORS_EXPLORER = 'contributors',
   INNOVATION_HUB = 'innovation-hub',
   INNOVATION_LIBRARY = 'innovation-library',
   INNOVATION_PACKS = 'innovation-pack',

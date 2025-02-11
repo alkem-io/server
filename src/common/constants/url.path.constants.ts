@@ -15,6 +15,7 @@ export const URL_PATHS = {
   WHITEBOARDS: 'whiteboards',
   FORUM: 'forum',
   SPACE_EXPLORER: 'spaces',
+  CONTRIBUTORS_EXPLORER: 'contributors',
   DISCUSSION: 'discussion',
   CALENDAR: 'calendar',
   KNOWLEDGE_BASE: 'knowledge-base',

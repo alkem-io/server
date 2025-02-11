@@ -131,6 +131,10 @@ export class UrlResolverService {
         result.type = UrlType.SPACE_EXPLORER;
         return result;
       }
+      case URL_PATHS.CONTRIBUTORS_EXPLORER: {
+        result.type = UrlType.CONTRIBUTORS_EXPLORER;
+        return result;
+      }
       case URL_PATHS.FORUM: {
         result.type = UrlType.FORUM;
         if (pathElements[1] === URL_PATHS.DISCUSSION) {
