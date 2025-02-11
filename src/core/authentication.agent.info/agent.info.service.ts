@@ -103,6 +103,10 @@ export class AgentInfoService {
   }
 
   public async buildAgentInfoForUser(userId: string): Promise<AgentInfo> {
+    if (!userId) {
+      return this.createAnonymousAgentInfo();
+    }
+
     const user = await this.entityManager.findOneOrFail(User, {
       where: { id: userId },
       relations: {
