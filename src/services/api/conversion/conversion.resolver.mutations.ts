@@ -207,7 +207,6 @@ export class ConversionResolverMutations {
 
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
-        account: true,
         collaboration: {
           calloutsSet: {
             callouts: true,
@@ -219,16 +218,18 @@ export class ConversionResolverMutations {
     if (
       !space.collaboration ||
       !space.collaboration.calloutsSet ||
-      !space.account ||
       !space.collaboration.calloutsSet.callouts
     ) {
       throw new RelationshipNotFoundException(
-        `Missing entities on Virtual Contributor when converting to KnowledgeBase: ${virtualContributor.id}`,
+        `Missing entities on space when converting VC to KnowledgeBase: ${virtualContributor.id}`,
         LogContext.CONVERSION
       );
     }
 
-    if (virtualContributor.account.id !== space.account.id) {
+    const spaceAccount =
+      await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
+
+    if (virtualContributor.account.id !== spaceAccount.id) {
       throw new ValidationException(
         `Virtual Contributor and Space do not belong to the same account: ${virtualContributor.id}`,
         LogContext.CONVERSION
