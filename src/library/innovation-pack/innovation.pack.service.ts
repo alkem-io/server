@@ -25,6 +25,7 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { InnovationPack } from './innovation.pack.entity';
+import { InnovationPackDefaultsService } from './innovation.pack.defaults/innovation.pack.defaults.service';
 
 @Injectable()
 export class InnovationPackService {
@@ -32,15 +33,38 @@ export class InnovationPackService {
     private profileService: ProfileService,
     private templatesSetService: TemplatesSetService,
     private accountLookupService: AccountLookupService,
+    private innovationPackDefaultsService: InnovationPackDefaultsService,
     @InjectRepository(InnovationPack)
     private innovationPackRepository: Repository<InnovationPack>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  private async checkNameIdOrFail(nameID: string) {
+    const innovationPackCount = await this.innovationPackRepository.countBy({
+      nameID: nameID,
+    });
+    if (innovationPackCount >= 1)
+      throw new ValidationException(
+        `InnovationPack: the provided nameID is already taken: ${nameID}`,
+        LogContext.COMMUNITY
+      );
+  }
+
   async createInnovationPack(
     innovationPackData: CreateInnovationPackInput,
     storageAggregator: IStorageAggregator
   ): Promise<IInnovationPack> {
+    if (innovationPackData.nameID) {
+      // Convert nameID to lower case
+      innovationPackData.nameID = innovationPackData.nameID.toLowerCase();
+      await this.checkNameIdOrFail(innovationPackData.nameID);
+    } else {
+      innovationPackData.nameID =
+        await this.innovationPackDefaultsService.createVirtualContributorNameID(
+          innovationPackData.profileData?.displayName || ''
+        );
+    }
+
     const innovationPack: IInnovationPack =
       InnovationPack.create(innovationPackData);
     innovationPack.authorization = new AuthorizationPolicy(

@@ -10,12 +10,14 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { InnovationPackDefaultsModule } from './innovation.pack.defaults/innovation.pack.defaults.module';
 
 @Module({
   imports: [
     TemplatesSetModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InnovationPackDefaultsModule,
     ProfileModule,
     AccountLookupModule,
     TypeOrmModule.forFeature([InnovationPack]),
