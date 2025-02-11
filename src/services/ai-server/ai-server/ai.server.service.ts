@@ -15,6 +15,7 @@ import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.servic
 import {
   CreateAiPersonaServiceInput,
   isInputValidForAction,
+  UpdateAiPersonaServiceInput,
 } from '../ai-persona-service/dto';
 import { AiPersonaServiceInvocationInput } from '../ai-persona-service/dto/ai.persona.service.invocation.dto.input';
 import {
@@ -296,6 +297,15 @@ export class AiServerService {
       );
       return false;
     }
+  }
+
+  async updateAiPersonaService(updateData: UpdateAiPersonaServiceInput) {
+    const aiPersonaService =
+      await this.aiPersonaServiceService.updateAiPersonaService(updateData);
+
+    // TBD: trigger a re-ingest?
+
+    return aiPersonaService;
   }
 
   async createAiPersonaService(

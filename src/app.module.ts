@@ -89,6 +89,7 @@ import { WingbackManagerModule } from '@services/external/wingback/wingback.mana
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
+import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 
 @Module({
   imports: [
@@ -304,6 +305,7 @@ import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.modul
     InAppNotificationReaderModule,
     InAppNotificationReceiverModule,
     WingbackWebhookModule,
+    CalloutTransferModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
