@@ -7,9 +7,5 @@ export class FixProfileType1739270527860 implements MigrationInterface {
     );
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `UPDATE profile SET type = 'whiteboard-rt' WHERE type = 'whiteboard'`
-    );
-  }
+  public async down(queryRunner: QueryRunner): Promise<void> {}
 }
