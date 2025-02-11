@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  LoggerService,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
@@ -25,10 +30,13 @@ import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LicenseService } from '../license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class WhiteboardService {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -256,13 +264,29 @@ export class WhiteboardService {
       if (!file.url) {
         continue;
       }
+      let newDocUrl: string | undefined;
+      try {
+        newDocUrl =
+          await this.profileDocumentsService.reuploadFileOnStorageBucket(
+            file.url,
+            profile.storageBucket,
+            true
+          );
+      } catch (e: any) {
+        if (e instanceof NotFoundException) {
+          this.logger.warn?.(
+            `Tried to re-upload file (${file.url}) but file was not found: ${e?.message}`,
+            LogContext.WHITEBOARDS
+          );
+        } else {
+          this.logger.warn?.(
+            `Tried to re-upload file (${file.url}) but an error occurred: ${e?.message}`,
+            LogContext.WHITEBOARDS
+          );
+        }
 
-      const newDocUrl =
-        await this.profileDocumentsService.reuploadFileOnStorageBucket(
-          file.url,
-          profile.storageBucket,
-          true
-        );
+        newDocUrl = undefined;
+      }
 
       if (!newDocUrl || newDocUrl === file.url) {
         continue;
