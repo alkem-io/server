@@ -12,6 +12,7 @@ export enum UrlType {
   CONTRIBUTION_WHITEBOARD = 'whiteboard',
   FORUM = 'forum',
   DISCUSSION = 'discussion',
+  SPACE_EXPLORER = 'spaces',
   INNOVATION_HUB = 'innovation-hub',
   INNOVATION_LIBRARY = 'innovation-library',
   INNOVATION_PACKS = 'innovation-pack',

@@ -127,6 +127,10 @@ export class UrlResolverService {
         return result;
       case URL_PATHS.INNOVATION_PACKS:
         return await this.populateInnovationPackResult(result, urlPath);
+      case URL_PATHS.SPACE_EXPLORER: {
+        result.type = UrlType.SPACE_EXPLORER;
+        return result;
+      }
       case URL_PATHS.FORUM: {
         result.type = UrlType.FORUM;
         if (pathElements[1] === URL_PATHS.DISCUSSION) {
