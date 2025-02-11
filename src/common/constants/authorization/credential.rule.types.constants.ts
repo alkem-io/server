@@ -6,6 +6,10 @@ export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE =
   'credentialRuleTypes-accountResourcesManage';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT =
   'credentialRuleTypes-accountResourceTransferAccept';
+export const CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_OFFER =
+  'credentialRule-calloutsSetTransferOffer';
+export const CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT =
+  'credentialRule-calloutsSetTransferAccept';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES =
   'credentialRuleTypes-accountChildEntities';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_COMMUNITY_READ =

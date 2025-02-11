@@ -8,6 +8,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { LogContext } from '@common/enums/logging.context';
 import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums';
+import { POLICY_RULE_READ_ABOUT } from '@common/constants';
 
 @Injectable()
 export class KnowledgeBaseAuthorizationService {
@@ -71,6 +72,15 @@ export class KnowledgeBaseAuthorizationService {
         knowledgeBase.authorization
       );
     updatedAuthorizations.push(...calloutsSetAuthorizations);
+
+    knowledgeBase.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        knowledgeBase.authorization,
+        AuthorizationPrivilege.READ,
+        [AuthorizationPrivilege.READ_ABOUT],
+        POLICY_RULE_READ_ABOUT
+      );
+    updatedAuthorizations.push(knowledgeBase.authorization);
 
     return updatedAuthorizations;
   }
