@@ -34,6 +34,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
 import { UserModule } from '@domain/community/user/user.module';
 import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
+import { RoleSetCacheService } from './role.set.cache.service';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.member
     RoleSetServiceLifecycleInvitation,
     RoleSetAgentRolesDataLoader,
     RoleSetMembershipStatusDataLoader,
+    RoleSetCacheService,
   ],
   exports: [RoleSetService, RoleSetAuthorizationService, RoleSetLicenseService],
 })

@@ -62,6 +62,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { RoleSetType } from '@common/enums/role.set.type';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { RoleSetCacheService } from './role.set.cache.service';
 
 @Injectable()
 export class RoleSetService {
@@ -87,7 +88,8 @@ export class RoleSetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache
+    private readonly cacheManager: Cache,
+    private readonly roleSetCacheService: RoleSetCacheService
   ) {}
 
   async createRoleSet(roleSetData: CreateRoleSetInput): Promise<IRoleSet> {
@@ -395,19 +397,23 @@ export class RoleSetService {
       return CommunityMembershipStatus.NOT_MEMBER;
     }
 
-    const cacheKey = `membershipStatus:${agentInfo.agentID}:${roleSet.id}`;
-    const cached =
-      await this.cacheManager.get<CommunityMembershipStatus>(cacheKey);
-    if (cached !== undefined && cached !== null) {
+    const cached = await this.roleSetCacheService.getMembershipFromCache(
+      agentInfo.agentID,
+      roleSet.id
+    );
+    if (cached) {
       return cached;
     }
 
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const isMember = await this.isMember(agent, roleSet);
     if (isMember) {
-      await this.cacheManager.set(cacheKey, CommunityMembershipStatus.MEMBER, {
-        ttl: 300,
-      });
+      await this.roleSetCacheService.setMembershipStatusCache(
+        agent.id,
+        roleSet.id,
+        CommunityMembershipStatus.MEMBER
+      );
+
       return CommunityMembershipStatus.MEMBER;
     }
 
@@ -416,10 +422,10 @@ export class RoleSetService {
       roleSet.id
     );
     if (openApplication) {
-      await this.cacheManager.set(
-        cacheKey,
-        CommunityMembershipStatus.APPLICATION_PENDING,
-        { ttl: 300 }
+      await this.roleSetCacheService.setMembershipStatusCache(
+        agent.id,
+        roleSet.id,
+        CommunityMembershipStatus.APPLICATION_PENDING
       );
       return CommunityMembershipStatus.APPLICATION_PENDING;
     }
@@ -432,19 +438,20 @@ export class RoleSetService {
       openInvitation &&
       (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
     ) {
-      await this.cacheManager.set(
-        cacheKey,
-        CommunityMembershipStatus.INVITATION_PENDING,
-        { ttl: 300 }
+      await this.roleSetCacheService.setMembershipStatusCache(
+        agent.id,
+        roleSet.id,
+        CommunityMembershipStatus.INVITATION_PENDING
       );
       return CommunityMembershipStatus.INVITATION_PENDING;
     }
 
-    await this.cacheManager.set(
-      cacheKey,
-      CommunityMembershipStatus.NOT_MEMBER,
-      { ttl: 300 }
+    await this.roleSetCacheService.setMembershipStatusCache(
+      agent.id,
+      roleSet.id,
+      CommunityMembershipStatus.NOT_MEMBER
     );
+
     return CommunityMembershipStatus.NOT_MEMBER;
   }
 
