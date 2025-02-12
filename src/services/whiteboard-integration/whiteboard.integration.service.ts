@@ -30,6 +30,7 @@ import {
 } from './outputs';
 import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { setTimeout } from 'timers/promises';
 
 @Injectable()
 export class WhiteboardIntegrationService {
@@ -123,16 +124,9 @@ export class WhiteboardIntegrationService {
         content
       );
     } catch (e: any) {
-      this.logger.error(
-        e?.message,
-        e?.stack,
-        LogContext.WHITEBOARD_INTEGRATION
-      );
-      return new SaveOutputData(
-        new SaveErrorData(
-          'An error occurred while saving the whiteboard content.'
-        )
-      );
+      const message = e?.message ?? JSON.stringify(e);
+      this.logger.error(message, e?.stack, LogContext.WHITEBOARD_INTEGRATION);
+      return new SaveOutputData(new SaveErrorData(message));
     }
     // return success on successful save
     return new SaveOutputData(new SaveContentData());
