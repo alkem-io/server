@@ -4,6 +4,7 @@ export const URL_PATHS = {
   ADMIN: 'admin',
   VIRTUAL_CONTRIBUTOR: 'vc',
   ORGANIZATION: 'organization',
+  DOCUMENTATION: 'documentation',
   INNOVATION_LIBRARY: 'innovation-library',
   INNOVATION_PACKS: 'innovation-packs',
   INNOVATION_HUBS: 'innovation-hubs',

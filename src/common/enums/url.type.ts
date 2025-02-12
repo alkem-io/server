@@ -18,6 +18,7 @@ export enum UrlType {
   INNOVATION_LIBRARY = 'innovation-library',
   INNOVATION_PACKS = 'innovation-pack',
   ADMIN = 'admin',
+  DOCUMENTATION = 'documentation',
   UNKNOWN = 'unknown',
 }
 
