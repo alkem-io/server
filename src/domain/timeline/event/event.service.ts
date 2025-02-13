@@ -162,18 +162,12 @@ export class CalendarEventService {
 
   public getCalendarEvent(
     calendarId: string,
-    idOrNameId: string
+    eventID: string
   ): Promise<ICalendarEvent> {
     return this.calendarEventRepository.findOneOrFail({
       where: [
         {
-          id: idOrNameId,
-          calendar: {
-            id: calendarId,
-          },
-        },
-        {
-          nameID: idOrNameId,
+          id: eventID,
           calendar: {
             id: calendarId,
           },

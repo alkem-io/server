@@ -7,7 +7,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { PostService } from '../post/post.service';
@@ -168,13 +167,10 @@ export class CalloutContributionService {
     calloutContributionID: string,
     options?: FindOneOptions<CalloutContribution>
   ): Promise<ICalloutContribution | never> {
-    let calloutContribution: ICalloutContribution | null = null;
-    if (calloutContributionID.length === UUID_LENGTH) {
-      calloutContribution = await this.contributionRepository.findOne({
-        where: { id: calloutContributionID },
-        ...options,
-      });
-    }
+    const calloutContribution = await this.contributionRepository.findOne({
+      where: { id: calloutContributionID },
+      ...options,
+    });
 
     if (!calloutContribution)
       throw new EntityNotFoundException(

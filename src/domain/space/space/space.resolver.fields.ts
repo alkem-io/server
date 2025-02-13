@@ -2,7 +2,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Space } from '@domain/space/space/space.entity';
 import { INVP } from '@domain/common/nvp';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { NameID } from '@domain/common/scalars';
 import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
@@ -181,19 +181,20 @@ export class SpaceResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('subspace', () => ISpace, {
+  @ResolveField('subspaceByNameID', () => ISpace, {
     nullable: false,
-    description: 'A particular subspace, either by its ID or nameID',
+    description: 'A particular subspace by its nameID',
   })
   async subspace(
-    @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @Args('NAMEID', { type: () => NameID }) id: string,
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: ISpace
   ): Promise<ISpace> {
-    const subspace = await this.spaceService.getSubspaceInLevelZeroSpace(
-      id,
-      space.levelZeroSpaceID
-    );
+    const subspace =
+      await this.spaceService.getSubspaceByNameIdInLevelZeroSpace(
+        id,
+        space.levelZeroSpaceID
+      );
     if (!subspace) {
       throw new EntityNotFoundException(
         `Unable to find subspace with ID: '${id}'`,
