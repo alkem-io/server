@@ -31,7 +31,8 @@ export class RoleSetMembershipStatusDataLoader {
       },
       {
         // Assuming agentInfo and roleSet have an id property
-        cacheKeyFn: (key: AgentRoleKey) => `${key.agentInfo.agentID}`,
+        cacheKeyFn: (key: AgentRoleKey) =>
+          `${key.agentInfo.agentID}-${key.roleSet.id}`,
       }
     );
   }
