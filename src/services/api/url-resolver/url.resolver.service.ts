@@ -34,6 +34,9 @@ export class UrlResolverService {
   private spaceInternalPathMatcherCollaboration = match(
     `/${URL_PATHS.COLLABORATION}/:calloutNameID{/${URL_PATHS.POSTS}/:postNameID}{/${URL_PATHS.WHITEBOARDS}/:whiteboardNameID}{/*path}`
   );
+  private spaceInternalPathMatcherCalendar = match(
+    `/${URL_PATHS.CALENDAR}/:calendarEventNameId`
+  );
   private spaceInternalPathMatcherSettings = match(
     `/${URL_PATHS.SETTINGS}/${URL_PATHS.TEMPLATES}{/:templateNameID}{/*path}`
   );
@@ -124,6 +127,9 @@ export class UrlResolverService {
         return await this.populateInnovationHubResult(result, urlPath);
       case URL_PATHS.INNOVATION_LIBRARY:
         result.type = UrlType.INNOVATION_LIBRARY;
+        return result;
+      case URL_PATHS.DOCUMENTATION:
+        result.type = UrlType.DOCUMENTATION;
         return result;
       case URL_PATHS.INNOVATION_PACKS:
         return await this.populateInnovationPackResult(result, urlPath);
@@ -489,6 +495,15 @@ export class UrlResolverService {
       );
     }
 
+    const calendarMatch = this.spaceInternalPathMatcherCalendar(internalPath);
+    if (calendarMatch) {
+      return await this.populateSpaceInternalResultCalendar(
+        calendarMatch,
+        result
+        // agentInfo
+      );
+    }
+
     // Try a settings match
     const settingsMatch = this.spaceInternalPathMatcherSettings(internalPath);
     if (settingsMatch) {
@@ -706,6 +721,74 @@ export class UrlResolverService {
       result.whiteboardId = contribution?.whiteboard?.id;
       result.type = UrlType.CONTRIBUTION_WHITEBOARD;
       return result;
+    }
+
+    return result;
+  }
+
+  private async populateSpaceInternalResultCalendar(
+    calendarMatch: any,
+    result: UrlResolverQueryResults
+    // agentInfo: AgentInfo
+  ): Promise<UrlResolverQueryResults> {
+    if (!result.space) {
+      throw new ValidationException(
+        `Space not provided when resolving path: ${result.type}`,
+        LogContext.URL_RESOLVER
+      );
+    }
+    if (!calendarMatch.params) {
+      return result;
+    }
+    const params = calendarMatch.params as {
+      calendarEventNameId?: string | string[];
+      path?: string | string[];
+    };
+
+    const calendarEventNameId = this.getMatchedResultAsString(
+      params.calendarEventNameId
+    );
+
+    const space = await this.spaceLookupService.getSpaceOrFail(
+      result.space.id,
+      {
+        relations: {
+          collaboration: {
+            timeline: {
+              calendar: {
+                events: true,
+              },
+            },
+          },
+        },
+      }
+    );
+    if (
+      !space.collaboration ||
+      !space.collaboration.timeline ||
+      !space.collaboration.timeline.calendar ||
+      !space.collaboration.timeline.calendar.events
+    ) {
+      throw new RelationshipNotFoundException(
+        `Space ${space.id} does not have a calendar`,
+        LogContext.URL_RESOLVER
+      );
+    }
+
+    result.space.calendar = {
+      id: space.collaboration.timeline.calendar.id,
+    };
+    if (calendarEventNameId) {
+      const calendarEvent = space.collaboration.timeline.calendar.events.find(
+        calendarEvent => calendarEvent.nameID === calendarEventNameId
+      );
+      if (!calendarEvent) {
+        throw new ValidationException(
+          `CalendarEvent ${calendarEventNameId} not found in Space ${space.id} Calendar ${space.collaboration.timeline.calendar.id}`,
+          LogContext.URL_RESOLVER
+        );
+      }
+      result.space.calendar.calendarEventId = calendarEvent.id;
     }
 
     return result;

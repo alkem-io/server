@@ -3,6 +3,7 @@ import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { UrlResolverQueryResultCollaboration } from './url.resolver.query.collaboration.result';
 import { UrlResolverQueryResultTemplatesSet } from './url.resolver.query.templates.set.result';
+import { UrlResolverQueryResultCalendar } from './url.resolver.query.calendar.result';
 
 @ObjectType()
 export class UrlResolverQueryResultSpace {
@@ -35,6 +36,11 @@ export class UrlResolverQueryResultSpace {
     nullable: true,
   })
   templatesSet?: UrlResolverQueryResultTemplatesSet;
+
+  @Field(() => UrlResolverQueryResultCalendar, {
+    nullable: true,
+  })
+  calendar?: UrlResolverQueryResultCalendar;
 
   internalPath?: string;
 }
