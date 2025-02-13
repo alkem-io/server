@@ -89,6 +89,12 @@ export class RoleSetCacheService {
     );
   }
 
+  public async cleanAgentMembershipCache(agentId: string, roleSetId: string) {
+    await this.deleteMembershipStatusFromCache(agentId, roleSetId);
+    await this.deleteAgentRolesFromCache(agentId, roleSetId);
+    await this.deleteAgentIsMemberFromCache(agentId, roleSetId);
+  }
+
   public async deleteOpenInvitationFromCache(
     userId: string,
     roleSetId: string

@@ -1079,6 +1079,11 @@ export class RoleSetService {
       }
     }
 
+    await this.roleSetCacheService.cleanAgentMembershipCache(
+      agent.id,
+      roleSet.id
+    );
+
     return user;
   }
 
