@@ -8,7 +8,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, In, Not, Repository } from 'typeorm';
+import { FindOneOptions, Not, Repository } from 'typeorm';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LogContext } from '@common/enums/logging.context';
@@ -140,23 +140,6 @@ export class RoleSetService {
         LogContext.COMMUNITY
       );
     return roleSet;
-  }
-
-  async getRoleSetsWithRolesOrFail(
-    roleSetIDs: string[]
-  ): Promise<IRoleSet[] | never> {
-    const roleSets = await this.roleSetRepository.find({
-      where: { id: In(roleSetIDs) },
-      relations: {
-        roles: true,
-      },
-    });
-    if (!roleSets)
-      throw new EntityNotFoundException(
-        `Unable to find RoleSets with IDs: ${roleSetIDs}`,
-        LogContext.COMMUNITY
-      );
-    return roleSets;
   }
 
   async removeRoleSetOrFail(roleSetID: string): Promise<boolean | never> {
