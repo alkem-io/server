@@ -2,35 +2,36 @@ import { Injectable, Scope } from '@nestjs/common';
 import DataLoader from 'dataloader';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleSetService } from './role.set.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IRoleSet } from './role.set.interface';
-
-export type MembershipStatusKey = {
-  agentInfo: AgentInfo;
-  roleSet: IRoleSet;
-};
+import { AgentRoleKey } from './role.set.data.loaders.agent.roles';
 
 @Injectable({ scope: Scope.REQUEST })
 export class RoleSetMembershipStatusDataLoader {
   public readonly loader: DataLoader<
-    MembershipStatusKey,
-    CommunityMembershipStatus
+    AgentRoleKey,
+    CommunityMembershipStatus,
+    string
   >;
 
   constructor(private readonly roleSetService: RoleSetService) {
     this.loader = new DataLoader<
-      MembershipStatusKey,
-      CommunityMembershipStatus
+      AgentRoleKey,
+      CommunityMembershipStatus,
+      string
     >(
-      async (keys: readonly MembershipStatusKey[]) => {
+      async (keys: readonly AgentRoleKey[]) => {
+        // Batch each key concurrently using getRolesForAgentInfo.
         return Promise.all(
           keys.map(({ agentInfo, roleSet }) =>
-            this.roleSetService.getMembershipStatus(agentInfo, roleSet)
+            this.roleSetService.getMembershipStatusByAgentInfo(
+              agentInfo,
+              roleSet
+            )
           )
         );
       },
       {
-        cacheKeyFn: (key: MembershipStatusKey) => key,
+        // Assuming agentInfo and roleSet have an id property
+        cacheKeyFn: (key: AgentRoleKey) => `${key.agentInfo.agentID}`,
       }
     );
   }

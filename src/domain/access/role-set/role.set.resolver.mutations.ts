@@ -424,10 +424,11 @@ export class RoleSetResolverMutations {
     );
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    const membershipStatus = await this.roleSetService.getMembershipStatus(
-      agentInfo,
-      roleSet
-    );
+    const membershipStatus =
+      await this.roleSetService.getMembershipStatusByAgentInfo(
+        agentInfo,
+        roleSet
+      );
     if (membershipStatus === CommunityMembershipStatus.INVITATION_PENDING) {
       throw new RoleSetMembershipException(
         `Unable to join RoleSet (${roleSet.id}): invitation to join is pending.`,

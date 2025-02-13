@@ -4,18 +4,24 @@ import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleName } from '@common/enums/role.name';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 
 export type AgentRoleKey = {
   agentInfo: AgentInfo;
   roleSet: IRoleSet;
 };
 
+export type RoleSetCommunityMembershipStatus = {
+  roleSetId: string;
+  membershipStatus: CommunityMembershipStatus;
+};
+
 @Injectable({ scope: Scope.REQUEST })
 export class RoleSetAgentRolesDataLoader {
-  public readonly loader: DataLoader<AgentRoleKey, RoleName[]>;
+  public readonly loader: DataLoader<AgentRoleKey, RoleName[], string>;
 
   constructor(private readonly roleSetService: RoleSetService) {
-    this.loader = new DataLoader<AgentRoleKey, RoleName[]>(
+    this.loader = new DataLoader<AgentRoleKey, RoleName[], string>(
       async (keys: readonly AgentRoleKey[]) => {
         // Batch each key concurrently using getRolesForAgentInfo.
         return Promise.all(
@@ -26,7 +32,8 @@ export class RoleSetAgentRolesDataLoader {
       },
       {
         // Use a composite key string to avoid duplicate lookups in a single request.
-        cacheKeyFn: (key: AgentRoleKey) => key,
+        cacheKeyFn: (key: AgentRoleKey) =>
+          `${key.agentInfo.agentID}-${key.roleSet.id}`,
       }
     );
   }
