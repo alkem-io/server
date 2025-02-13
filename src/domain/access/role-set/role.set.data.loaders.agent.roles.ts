@@ -1,20 +1,8 @@
 import { Injectable, Scope } from '@nestjs/common';
 import DataLoader from 'dataloader';
-import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleName } from '@common/enums/role.name';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-
-export type AgentRoleKey = {
-  agentInfo: AgentInfo;
-  roleSet: IRoleSet;
-};
-
-export type RoleSetCommunityMembershipStatus = {
-  roleSetId: string;
-  membershipStatus: CommunityMembershipStatus;
-};
+import { AgentRoleKey } from './types';
 
 @Injectable({ scope: Scope.REQUEST })
 export class RoleSetAgentRolesDataLoader {

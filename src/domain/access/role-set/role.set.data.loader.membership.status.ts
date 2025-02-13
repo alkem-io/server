@@ -2,7 +2,7 @@ import { Injectable, Scope } from '@nestjs/common';
 import DataLoader from 'dataloader';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleSetService } from './role.set.service';
-import { AgentRoleKey } from './role.set.data.loaders.agent.roles';
+import { AgentRoleKey } from './types';
 
 @Injectable({ scope: Scope.REQUEST })
 export class RoleSetMembershipStatusDataLoader {
