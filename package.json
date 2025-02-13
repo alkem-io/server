@@ -32,7 +32,7 @@
     "test:watch": "jest --watch --config ./test/config/jest.config.js",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:ci": "jest --forceExit --config ./test/config/jest.config.ci.js && cat ./coverage-ci/lcov.info | coveralls",
+    "test:ci": "jest --forceExit --config ./test/config/jest.config.ci.js && cat ./coverage-ci/lcov.info",
     "test:ci:no:coverage": "jest --forceExit --config ./test/config/jest.config.ci.js",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.create.config.ts",
     "typeorm-no-entities": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.config.ts",
