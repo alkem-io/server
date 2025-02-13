@@ -10,7 +10,6 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext, ProfileType } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -121,13 +120,11 @@ export class CommunityGuidelinesService {
     communityGuidelinesID: string,
     options?: FindOneOptions<CommunityGuidelines>
   ): Promise<ICommunityGuidelines | never> {
-    let communityGuidelines: ICommunityGuidelines | null = null;
-    if (communityGuidelinesID.length === UUID_LENGTH) {
-      communityGuidelines = await this.communityGuidelinesRepository.findOne({
+    const communityGuidelines =
+      await this.communityGuidelinesRepository.findOne({
         where: { id: communityGuidelinesID },
         ...options,
       });
-    }
 
     if (!communityGuidelines)
       throw new EntityNotFoundException(

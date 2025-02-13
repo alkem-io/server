@@ -1,4 +1,3 @@
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
@@ -330,13 +329,10 @@ export class InnovationFlowService {
     innovationFlowID: string,
     options?: FindOneOptions<InnovationFlow>
   ): Promise<IInnovationFlow | never> {
-    let innovationFlow: IInnovationFlow | null = null;
-    if (innovationFlowID.length === UUID_LENGTH) {
-      innovationFlow = await this.innovationFlowRepository.findOne({
-        where: { id: innovationFlowID },
-        ...options,
-      });
-    }
+    const innovationFlow = await this.innovationFlowRepository.findOne({
+      where: { id: innovationFlowID },
+      ...options,
+    });
 
     if (!innovationFlow)
       throw new EntityNotFoundException(
