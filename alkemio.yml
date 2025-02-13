@@ -397,7 +397,7 @@ notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
 
 collaboration:
-  memberships:
+  membership:
     cache_ttl: ${MEMBERSHIP_TTL}:14400
   whiteboards:
     enabled: ${WHITEBOARDS_ENABLED}:true
