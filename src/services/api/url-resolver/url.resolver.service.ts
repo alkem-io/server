@@ -88,7 +88,7 @@ export class UrlResolverService {
         result.type = UrlType.HOME;
         return result;
       }
-      case URL_PATHS.USER:
+      case URL_PATHS.USER: {
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
@@ -101,13 +101,15 @@ export class UrlResolverService {
         result.userId = user.id;
         result.type = UrlType.USER;
         return result;
-      case URL_PATHS.VIRTUAL_CONTRIBUTOR:
+      }
+      case URL_PATHS.VIRTUAL_CONTRIBUTOR: {
         return await this.populateVirtualContributorResult(
           result,
           urlPath,
           agentInfo
         );
-      case URL_PATHS.ORGANIZATION:
+      }
+      case URL_PATHS.ORGANIZATION: {
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
@@ -121,6 +123,7 @@ export class UrlResolverService {
         result.organizationId = organization.id;
         result.type = UrlType.ORGANIZATION;
         return result;
+      }
       case URL_PATHS.ADMIN:
         return await this.populateAdminResult(result, urlPath);
       case URL_PATHS.INNOVATION_HUBS:

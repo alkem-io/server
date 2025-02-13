@@ -46,7 +46,7 @@ export class InnovationPackService {
     if (innovationPackCount >= 1)
       throw new ValidationException(
         `InnovationPack: the provided nameID is already taken: ${nameID}`,
-        LogContext.COMMUNITY
+        LogContext.LIBRARY
       );
   }
 
