@@ -23,6 +23,7 @@ import { SpaceReservedName } from '@common/enums/space.reserved.name';
 import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
 import { Template } from '@domain/template/template/template.entity';
 import { IRoleSet } from '@domain/access/role-set';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 
 export class NamingService {
   constructor(
@@ -124,6 +125,15 @@ export class NamingService {
       },
     });
     return events?.map(event => event.nameID) ?? [];
+  }
+
+  public async getReservedNameIDsInInnovationPacks(): Promise<string[]> {
+    const packs = await this.entityManager.find(InnovationPack, {
+      select: {
+        nameID: true,
+      },
+    });
+    return packs.map(pack => pack.nameID);
   }
 
   public async getReservedNameIDsInHubs(): Promise<string[]> {

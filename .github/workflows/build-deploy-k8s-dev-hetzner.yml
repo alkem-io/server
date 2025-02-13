@@ -60,11 +60,11 @@ jobs:
       - name: Delete old job
         continue-on-error: true
         run: |
-          kubectl delete job alkemio-server-migration-job
+          kubectl delete job server-migration-job
 
       - name: Create migration job
         run: |
-          kubectl create job --from=cronjob/alkemio-server-migration alkemio-server-migration-job
+          kubectl create job --from=cronjob/server-migration server-migration-job
 
   deploy:
     needs: migrate

@@ -95,8 +95,12 @@ export class AccountLicenseService {
     }
 
     const { user, organization } = accountDetails;
-    const name = user?.name ?? organization?.name;
-    const mainEmail = user?.email ?? organization?.email;
+    const name =
+      user?.name ?? (organization?.legalName || organization?.displayName);
+    const mainEmail =
+      user?.email ??
+      (organization?.email ||
+        `dummy-${organization?.nameID}@${organization?.nameID}.com`);
 
     const { id: wingbackCustomerID } =
       await this.licensingWingbackSubscriptionService.createCustomer({

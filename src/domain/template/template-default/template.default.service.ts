@@ -12,7 +12,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
@@ -64,13 +63,10 @@ export class TemplateDefaultService {
     templateDefaultID: string,
     options?: FindOneOptions<TemplateDefault>
   ): Promise<ITemplateDefault | never> {
-    let templateDefault: ITemplateDefault | null = null;
-    if (templateDefaultID.length === UUID_LENGTH) {
-      templateDefault = await this.templateDefaultRepository.findOne({
-        where: { id: templateDefaultID },
-        ...options,
-      });
-    }
+    const templateDefault = await this.templateDefaultRepository.findOne({
+      where: { id: templateDefaultID },
+      ...options,
+    });
 
     if (!templateDefault)
       throw new EntityNotFoundException(

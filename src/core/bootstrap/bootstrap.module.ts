@@ -24,6 +24,7 @@ import { AiPersonaServiceModule } from '@services/ai-server/ai-persona-service/a
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { LicensePlanModule } from '@platform/licensing/credential-based/license-plan/license.plan.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     ContributorModule,
     SpaceModule,
     OrganizationModule,
+    OrganizationLookupModule,
     AccountModule,
     SpaceModule,
     UserModule,

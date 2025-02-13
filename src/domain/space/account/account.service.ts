@@ -226,13 +226,15 @@ export class AccountService {
     const [account] = await this.accountRepository.query(
       `
         SELECT
-          a.id as accountId, a.externalSubscriptionID as externalSubscriptionID,
-          o.id as orgId, o.contactEmail as orgContactEmail, o.legalEntityName as orgName,
-          u.id as userId, u.email as userEmail, CONCAT(u.firstName, ' ', u.lastName) as userName
-        FROM account as a
-        LEFT JOIN user as u on a.id = u.accountID
-        LEFT JOIN organization as o on a.id = o.accountID
-        WHERE a.id = ?
+          account.id as accountId, account.externalSubscriptionID as externalSubscriptionID,
+          organization.id as orgId, organization.contactEmail as orgContactEmail, organization.legalEntityName as orgLegalName, organization.nameID as orgNameID,
+          profile.displayName as orgDisplayName,
+          user.id as userId, user.email as userEmail, CONCAT(user.firstName, ' ', user.lastName) as userName
+        FROM account
+        LEFT JOIN user on account.id = user.accountID
+        LEFT JOIN organization on account.id = organization.accountID
+        left join profile on organization.profileId = profile.id
+        WHERE account.id = ?
     `,
       [accountID]
     );
@@ -255,7 +257,10 @@ export class AccountService {
         ? {
             id: account.orgId,
             email: account.orgContactEmail,
-            name: account.orgName,
+            legalName: account.orgLegalName,
+            orgLegalName: account.orgLegalName,
+            displayName: account.orgDisplayName,
+            nameID: account.orgNameID,
           }
         : undefined,
     };
