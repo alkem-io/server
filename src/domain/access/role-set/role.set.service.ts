@@ -60,8 +60,6 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import { RoleSetCacheService } from './role.set.cache.service';
 
 @Injectable()
@@ -87,8 +85,6 @@ export class RoleSetService {
     private roleSetRepository: Repository<RoleSet>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache,
     private readonly roleSetCacheService: RoleSetCacheService
   ) {}
 
@@ -343,8 +339,11 @@ export class RoleSetService {
     if (!agentInfo.agentID) {
       return [];
     }
-    const cacheKey = `agentRoles:${agentInfo.agentID}:${roleSet.id}`;
-    const cached = await this.cacheManager.get<RoleName[]>(cacheKey);
+
+    const cached = await this.roleSetCacheService.getAgentRolesFromCache(
+      agentInfo.agentID,
+      roleSet.id
+    );
     if (cached) {
       return cached;
     }
@@ -356,19 +355,25 @@ export class RoleSetService {
         return hasAgentRole ? role : undefined;
       })
     );
-    const res = rolesThatAgentHas.filter(
+    const agentRoles = rolesThatAgentHas.filter(
       (role): role is RoleName => role !== undefined
     );
-    await this.cacheManager.set(cacheKey, res, { ttl: 300 }); // cache for 5 minutes
-    return res;
+    await this.roleSetCacheService.setAgentRolesCache(
+      agent.id,
+      roleSet.id,
+      agentRoles
+    );
+    return agentRoles;
   }
 
   public async findOpenApplication(
     userID: string,
     roleSetID: string
   ): Promise<IApplication | undefined> {
-    const cacheKey = `openApplication:${userID}:${roleSetID}`;
-    const cached = await this.cacheManager.get<IApplication>(cacheKey);
+    const cached = await this.roleSetCacheService.getOpenApplicationFromCache(
+      userID,
+      roleSetID
+    );
     if (cached) {
       return cached;
     }
@@ -383,7 +388,11 @@ export class RoleSetService {
         application.id
       );
       if (isFinalized) continue;
-      await this.cacheManager.set(cacheKey, application, { ttl: 300 }); // cache for 5 minutes
+      await this.roleSetCacheService.setOpenApplicationCache(
+        userID,
+        roleSetID,
+        application
+      );
       return application;
     }
     return undefined;
@@ -397,7 +406,7 @@ export class RoleSetService {
       return CommunityMembershipStatus.NOT_MEMBER;
     }
 
-    const cached = await this.roleSetCacheService.getMembershipFromCache(
+    const cached = await this.roleSetCacheService.getMembershipStatusFromCache(
       agentInfo.agentID,
       roleSet.id
     );
@@ -459,8 +468,10 @@ export class RoleSetService {
     contributorID: string,
     roleSetID: string
   ): Promise<IInvitation | undefined> {
-    const cacheKey = `openInvitation:${contributorID}:${roleSetID}`;
-    const cached = await this.cacheManager.get<IInvitation>(cacheKey);
+    const cached = await this.roleSetCacheService.getOpenInvitationFromCache(
+      contributorID,
+      roleSetID
+    );
     if (cached) {
       return cached;
     }
@@ -477,7 +488,11 @@ export class RoleSetService {
       if (isFinalized) {
         continue;
       }
-      await this.cacheManager.set(cacheKey, invitation, { ttl: 300 }); // cache for 5 minutes
+      await this.roleSetCacheService.setOpenInvitationCache(
+        contributorID,
+        roleSetID,
+        invitation
+      );
       return invitation;
     }
     return undefined;
@@ -1339,8 +1354,10 @@ export class RoleSetService {
   }
 
   public async isMember(agent: IAgent, roleSet: IRoleSet): Promise<boolean> {
-    const cacheKey = `agentCredential:${agent.id}:${roleSet.id}`;
-    const cached = await this.cacheManager.get<boolean>(cacheKey);
+    const cached = await this.roleSetCacheService.getAgentIsMemberFromCache(
+      agent.id,
+      roleSet.id
+    );
     if (cached) {
       return cached;
     }
@@ -1356,7 +1373,12 @@ export class RoleSetService {
         resourceID: membershipCredential.resourceID,
       }
     );
-    await this.cacheManager.set(cacheKey, validCredential, { ttl: 300 });
+    await this.roleSetCacheService.setAgentIsMemberCache(
+      agent.id,
+      roleSet.id,
+      validCredential
+    );
+
     return validCredential;
   }
 
