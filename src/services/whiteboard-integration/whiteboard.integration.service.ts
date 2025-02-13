@@ -30,7 +30,6 @@ import {
 } from './outputs';
 import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { setTimeout } from 'timers/promises';
 
 @Injectable()
 export class WhiteboardIntegrationService {
