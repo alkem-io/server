@@ -833,6 +833,10 @@ export class RoleSetService {
           );
         }
       }
+      await this.roleSetCacheService.deleteOpenInvitationFromCache(
+        contributorID,
+        roleSet.id
+      );
     } catch (e: any) {
       this.logger.error?.(
         `Error adding member to community: ${e}`,
@@ -1898,6 +1902,11 @@ export class RoleSetService {
       userID,
       agentInfo,
       true
+    );
+
+    await this.roleSetCacheService.deleteOpenApplicationFromCache(
+      userID,
+      roleSet.id
     );
   }
 

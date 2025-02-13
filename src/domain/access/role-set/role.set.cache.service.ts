@@ -71,7 +71,7 @@ export class RoleSetCacheService {
     );
   }
 
-  public async deleteMembershipStatusFromCache(
+  private async deleteMembershipStatusFromCache(
     agentId: string,
     roleSetId: string
   ): Promise<any> {
@@ -80,12 +80,21 @@ export class RoleSetCacheService {
     );
   }
 
-  public async deleteAgentRolesFromCache(
+  private async deleteAgentRolesFromCache(
     agentId: string,
     roleSetId: string
   ): Promise<any> {
     return await this.cacheManager.del(
       this.getAgentRolesCacheKey(agentId, roleSetId)
+    );
+  }
+
+  private async deleteAgentIsMemberFromCache(
+    agentId: string,
+    roleSetId: string
+  ): Promise<any> {
+    return await this.cacheManager.del(
+      this.getAgentIsMemberCacheKey(agentId, roleSetId)
     );
   }
 
@@ -110,15 +119,6 @@ export class RoleSetCacheService {
   ): Promise<any> {
     return await this.cacheManager.del(
       this.getOpenApplicationCacheKey(userId, roleSetId)
-    );
-  }
-
-  public async deleteAgentIsMemberFromCache(
-    agentId: string,
-    roleSetId: string
-  ): Promise<any> {
-    return await this.cacheManager.del(
-      this.getAgentIsMemberCacheKey(agentId, roleSetId)
     );
   }
 
