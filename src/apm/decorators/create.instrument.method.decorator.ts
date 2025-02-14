@@ -13,11 +13,17 @@ export const createInstrumentMethodDecorator = (type: string) => () => {
           return Reflect.apply(target, thisArg, argArray);
         }
 
-        const span = apmAgent.currentTransaction.startSpan(methodName, type);
+        const span = apmAgent.currentTransaction.startSpan(
+          methodName,
+          'graphql'
+          // { exitSpan: true }
+        );
 
         if (!span) {
           return Reflect.apply(target, thisArg, argArray);
         }
+
+        span.subtype = type;
 
         const func = Reflect.apply(target, thisArg, argArray);
         const isPromise = func instanceof Promise;

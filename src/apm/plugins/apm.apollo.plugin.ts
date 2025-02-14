@@ -15,11 +15,19 @@ export const ApmApolloPlugin: ApolloServerPlugin<any> = {
           return;
         }
 
-        apmAgent.currentTransaction.name =
-          requestContext.operationName ?? 'Unnamed';
-        apmAgent.currentTransaction.type =
+        const operationName = assignOperationName(requestContext);
+        const operationType =
           requestContext.operation?.operation ?? 'unknown type';
+
+        apmAgent.currentTransaction.type = operationType;
+        apmAgent.currentTransaction.name = `[${operationType}] ${operationName}`;
       },
     };
   },
+};
+
+const assignOperationName = (
+  requestContext: GraphQLRequestContextDidResolveOperation<any>
+) => {
+  return requestContext.operationName ?? requestContext.queryHash;
 };

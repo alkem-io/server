@@ -6,4 +6,7 @@ export const apmAgent = apm.start({
   serverUrl: '',
   verifyServerCert: false,
   environment: 'local',
+  spanCompressionEnabled: true,
+  spanCompressionSameKindMaxDuration: '50ms',
+  spanCompressionExactMatchMaxDuration: '50ms',
 });
