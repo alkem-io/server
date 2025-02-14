@@ -12,7 +12,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountModule } from '@domain/space/account/account.module';
-import { SearchIngestModule } from '@services/api/search/v2/ingest';
+import { SearchIngestModule } from '@services/api/search/ingest';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { Space } from '@domain/space/space/space.entity';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';

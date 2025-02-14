@@ -3,15 +3,15 @@ import { MockSearchExtractService } from '@test/mocks/search/search.extract.serv
 import { MockSearchResultsService } from '@test/mocks/search/search.result.service.mock';
 import { MockEntityManagerProvider } from '@test/mocks';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { Search2Service } from './search2.service';
+import { SearchService } from './search.service';
 
 describe('Search2Service', () => {
-  let service: Search2Service;
+  let service: SearchService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        Search2Service,
+        SearchService,
         MockEntityManagerProvider,
         MockSearchExtractService,
         MockSearchResultsService,
@@ -20,7 +20,7 @@ describe('Search2Service', () => {
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get<Search2Service>(Search2Service);
+    service = module.get<SearchService>(SearchService);
   });
 
   it('should be defined', () => {

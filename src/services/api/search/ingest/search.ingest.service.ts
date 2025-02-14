@@ -18,7 +18,7 @@ import { asyncMap } from '@common/utils/async.map';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { SpaceLevel } from '@common/enums/space.level';
 import { getIndexPattern } from './get.index.pattern';
-import { SearchEntityTypes } from '../../search.entity.types';
+import { SearchEntityTypes } from '../search.entity.types';
 import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
