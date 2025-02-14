@@ -16,6 +16,7 @@ import { IUser } from './user.interface';
 import { UserFilterInput } from '@core/filtering';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { UsersQueryArgs } from './dto/users.query.args';
+import { InstrumentQuery } from '@src/apm/decorators';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -32,11 +33,12 @@ export class UserResolverQueries {
     description: 'The users who have profiles on this platform',
   })
   @Profiling.api
+  @InstrumentQuery()
   async users(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: UsersQueryArgs
   ): Promise<IUser[]> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
