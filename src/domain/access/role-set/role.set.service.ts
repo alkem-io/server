@@ -60,7 +60,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
-import { RoleSetCacheService } from './role.set.cache.service';
+import { RoleSetCacheService } from './role.set.service.cache';
 
 @Injectable()
 export class RoleSetService {
