@@ -9,7 +9,7 @@ import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user';
+import { User } from '@domain/community/user/user.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Tagset } from '@domain/common/tagset';
 import { LogContext } from '@common/enums';
@@ -22,6 +22,7 @@ import { SearchEntityTypes } from '../../search.entity.types';
 import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
+import { AlkemioConfig } from '@src/types';
 
 const profileRelationOptions = {
   location: true,
@@ -51,6 +52,7 @@ const journeyFindOptions: FindManyOptions<Space> = {
   select: {
     id: true,
     level: true,
+    visibility: true,
     context: {
       vision: true,
       impact: true,
@@ -101,7 +103,7 @@ export class SearchIngestService {
     private elasticClient: ElasticClient | undefined,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private taskService: TaskService
   ) {
     this.indexPattern = getIndexPattern(this.configService);
@@ -303,11 +305,25 @@ export class SearchIngestService {
 
     const total = await countFn();
 
+    if (total === 0) {
+      return [
+        {
+          success: true,
+          message: `[${index}] - 0 documents indexed`,
+          total: 0,
+        },
+      ];
+    }
+
     while (start <= total) {
       const fetched = await fetchFn(start, batchSize);
-      if (fetched.length) {
-        const result = await this.ingestBulk(fetched, index, task);
-        results.push(result);
+      const result = await this.ingestBulk(fetched, index, task);
+      results.push(result);
+
+      if (result.erroredDocuments?.length) {
+        this.logger.error(result.message, undefined, LogContext.SEARCH_INGEST);
+      } else {
+        this.logger.verbose?.(result.message, LogContext.SEARCH_INGEST);
       }
 
       start += batchSize;
@@ -335,7 +351,7 @@ export class SearchIngestService {
       return {
         success: true,
         total: 0,
-        message: 'No data indexed',
+        message: `[${index}] - 0 documents indexed`,
       };
     }
 
@@ -370,7 +386,6 @@ export class SearchIngestService {
       } documents errored. ${
         data.length - erroredDocuments.length
       } documents indexed.`;
-      this.logger.error(message, undefined, LogContext.SEARCH_INGEST);
       this.taskService.updateTaskErrors(task.id, message);
       return {
         success: false,
@@ -380,7 +395,6 @@ export class SearchIngestService {
       };
     } else {
       const message = `[${index}] - ${data.length} documents indexed`;
-      this.logger.verbose?.(message, LogContext.SEARCH_INGEST);
       this.taskService.updateTaskResults(task.id, message);
       return {
         success: true,
@@ -393,8 +407,8 @@ export class SearchIngestService {
   private fetchSpacesLevel0Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
-        level: SpaceLevel.SPACE,
+        visibility: Not(SpaceVisibility.ARCHIVED),
+        level: SpaceLevel.L0,
       },
     });
   }
@@ -403,16 +417,15 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
-          level: SpaceLevel.SPACE,
+          visibility: Not(SpaceVisibility.ARCHIVED),
+          level: SpaceLevel.L0,
         },
         relations: {
           ...journeyFindOptions.relations,
-          account: { license: true },
         },
         select: {
           ...journeyFindOptions.select,
-          account: { id: true, license: { visibility: true } },
+          visibility: true,
         },
         skip: start,
         take: limit,
@@ -422,7 +435,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           type: SearchEntityTypes.SPACE,
-          license: { visibility: space?.account?.license?.visibility },
+          visibility: space?.visibility,
           spaceID: space.id, // spaceID is the same as the space's id
           profile: {
             ...space.profile,
@@ -436,8 +449,8 @@ export class SearchIngestService {
   private fetchSpacesLevel1Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
-        level: SpaceLevel.CHALLENGE,
+        visibility: Not(SpaceVisibility.ARCHIVED),
+        level: SpaceLevel.L1,
       },
     });
   }
@@ -446,17 +459,16 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
-          level: SpaceLevel.CHALLENGE,
+          visibility: Not(SpaceVisibility.ARCHIVED),
+          level: SpaceLevel.L1,
         },
         relations: {
           ...journeyFindOptions.relations,
-          account: { license: true },
           parentSpace: true,
         },
         select: {
           ...journeyFindOptions.select,
-          account: { id: true, license: { visibility: true } },
+          visibility: true,
           parentSpace: { id: true },
         },
         skip: start,
@@ -467,8 +479,8 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SPACE,
-          license: { visibility: space?.account?.license?.visibility },
+          type: SearchEntityTypes.SUBSPACE,
+          visibility: space?.visibility,
           spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
             ...space.profile,
@@ -482,8 +494,8 @@ export class SearchIngestService {
   private fetchSpacesLevel2Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
-        level: SpaceLevel.OPPORTUNITY,
+        visibility: Not(SpaceVisibility.ARCHIVED),
+        level: SpaceLevel.L2,
       },
     });
   }
@@ -492,17 +504,16 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
-          level: SpaceLevel.OPPORTUNITY,
+          visibility: Not(SpaceVisibility.ARCHIVED),
+          level: SpaceLevel.L2,
         },
         relations: {
           ...journeyFindOptions.relations,
-          account: { license: true },
           parentSpace: { parentSpace: true },
         },
         select: {
           ...journeyFindOptions.select,
-          account: { id: true, license: { visibility: true } },
+          visibility: true,
           parentSpace: { id: true, parentSpace: { id: true } },
         },
         skip: start,
@@ -513,8 +524,8 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SPACE,
-          license: { visibility: space?.account?.license?.visibility },
+          type: SearchEntityTypes.SUBSPACE,
+          visibility: space?.visibility,
           spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
             ...space.profile,
@@ -581,7 +592,6 @@ export class SearchIngestService {
           email: undefined,
           phone: undefined,
           serviceProfile: undefined,
-          gender: undefined,
           type: SearchEntityTypes.USER,
           profile: {
             ...user.profile,
@@ -596,9 +606,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        account: {
-          license: { visibility: Not(SpaceVisibility.ARCHIVED) },
-        },
+        visibility: Not(SpaceVisibility.ARCHIVED),
       },
     });
   }
@@ -607,37 +615,39 @@ export class SearchIngestService {
       .find<Space>(Space, {
         loadEagerRelations: false,
         where: {
-          account: {
-            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
-          },
+          visibility: Not(SpaceVisibility.ARCHIVED),
         },
         relations: {
-          account: { license: true },
           parentSpace: {
             parentSpace: true,
           },
           collaboration: {
-            callouts: {
-              framing: {
-                profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  profile: profileRelationOptions,
+                },
               },
             },
           },
         },
         select: {
           id: true,
-          account: { id: true, license: { visibility: true } },
+          visibility: true,
           parentSpace: { id: true, parentSpace: { id: true } },
           collaboration: {
             id: true,
-            callouts: {
+            calloutsSet: {
               id: true,
-              createdBy: true,
-              createdDate: true,
-              nameID: true,
-              framing: {
+              callouts: {
                 id: true,
-                profile: profileSelectOptions,
+                createdBy: true,
+                createdDate: true,
+                nameID: true,
+                framing: {
+                  id: true,
+                  profile: profileSelectOptions,
+                },
               },
             },
           },
@@ -647,12 +657,12 @@ export class SearchIngestService {
       })
       .then(spaces =>
         spaces.flatMap(space =>
-          space.collaboration?.callouts?.map(callout => ({
+          space.collaboration?.calloutsSet?.callouts?.map(callout => ({
             ...callout,
             framing: undefined,
             type: SearchEntityTypes.CALLOUT,
             license: {
-              visibility: space?.account?.license?.visibility ?? EMPTY_VALUE,
+              visibility: space?.visibility ?? EMPTY_VALUE,
             },
             spaceID:
               space.parentSpace?.parentSpace?.id ??
@@ -673,9 +683,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        account: {
-          license: { visibility: Not(SpaceVisibility.ARCHIVED) },
-        },
+        visibility: Not(SpaceVisibility.ARCHIVED),
       },
     });
   }
@@ -684,22 +692,21 @@ export class SearchIngestService {
       .find<Space>(Space, {
         loadEagerRelations: false,
         where: {
-          account: {
-            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
-          },
+          visibility: Not(SpaceVisibility.ARCHIVED),
         },
         relations: {
-          account: { license: true },
           collaboration: {
-            callouts: {
-              framing: {
-                whiteboard: {
-                  profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  whiteboard: {
+                    profile: profileRelationOptions,
+                  },
                 },
-              },
-              contributions: {
-                whiteboard: {
-                  profile: profileRelationOptions,
+                contributions: {
+                  whiteboard: {
+                    profile: profileRelationOptions,
+                  },
                 },
               },
             },
@@ -710,28 +717,31 @@ export class SearchIngestService {
         },
         select: {
           id: true,
-          account: { id: true, license: { visibility: true } },
+          visibility: true,
           collaboration: {
             id: true,
-            callouts: {
+            calloutsSet: {
               id: true,
-              createdBy: true,
-              createdDate: true,
-              nameID: true,
-              framing: {
+              callouts: {
                 id: true,
-                whiteboard: {
+                createdBy: true,
+                createdDate: true,
+                nameID: true,
+                framing: {
                   id: true,
-                  content: true,
-                  profile: profileSelectOptions,
+                  whiteboard: {
+                    id: true,
+                    content: true,
+                    profile: profileSelectOptions,
+                  },
                 },
-              },
-              contributions: {
-                id: true,
-                whiteboard: {
+                contributions: {
                   id: true,
-                  content: true,
-                  profile: profileSelectOptions,
+                  whiteboard: {
+                    id: true,
+                    content: true,
+                    profile: profileSelectOptions,
+                  },
                 },
               },
             },
@@ -748,7 +758,7 @@ export class SearchIngestService {
       })
       .then(spaces => {
         return spaces.flatMap(space => {
-          const callouts = space.collaboration?.callouts;
+          const callouts = space.collaboration?.calloutsSet?.callouts;
           return callouts
             ?.flatMap(callout => {
               // a callout can have whiteboard in the framing
@@ -768,8 +778,7 @@ export class SearchIngestService {
                   content,
                   type: SearchEntityTypes.WHITEBOARD,
                   license: {
-                    visibility:
-                      space?.account?.license?.visibility ?? EMPTY_VALUE,
+                    visibility: space?.visibility ?? EMPTY_VALUE,
                   },
                   spaceID:
                     space?.parentSpace?.parentSpace?.id ??
@@ -807,8 +816,7 @@ export class SearchIngestService {
                   ),
                   type: SearchEntityTypes.WHITEBOARD,
                   license: {
-                    visibility:
-                      space?.account?.license?.visibility ?? EMPTY_VALUE,
+                    visibility: space?.visibility ?? EMPTY_VALUE,
                   },
                   spaceID:
                     space?.parentSpace?.parentSpace?.id ??
@@ -837,9 +845,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        account: {
-          license: { visibility: Not(SpaceVisibility.ARCHIVED) },
-        },
+        visibility: Not(SpaceVisibility.ARCHIVED),
       },
     });
   }
@@ -848,17 +854,16 @@ export class SearchIngestService {
       .find<Space>(Space, {
         loadEagerRelations: false,
         where: {
-          account: {
-            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
-          },
+          visibility: Not(SpaceVisibility.ARCHIVED),
         },
         relations: {
-          account: { license: true },
           collaboration: {
-            callouts: {
-              contributions: {
-                post: {
-                  profile: profileRelationOptions,
+            calloutsSet: {
+              callouts: {
+                contributions: {
+                  post: {
+                    profile: profileRelationOptions,
+                  },
                 },
               },
             },
@@ -869,19 +874,22 @@ export class SearchIngestService {
         },
         select: {
           id: true,
-          account: { id: true, license: { visibility: true } },
+          visibility: true,
           collaboration: {
             id: true,
-            callouts: {
+            calloutsSet: {
               id: true,
-              contributions: {
+              callouts: {
                 id: true,
-                post: {
+                contributions: {
                   id: true,
-                  createdBy: true,
-                  createdDate: true,
-                  nameID: true,
-                  profile: profileSelectOptions,
+                  post: {
+                    id: true,
+                    createdBy: true,
+                    createdDate: true,
+                    nameID: true,
+                    profile: profileSelectOptions,
+                  },
                 },
               },
             },
@@ -899,7 +907,7 @@ export class SearchIngestService {
       .then(spaces => {
         const posts: any[] = [];
         spaces.forEach(space => {
-          const callouts = space?.collaboration?.callouts;
+          const callouts = space?.collaboration?.calloutsSet?.callouts;
           callouts?.forEach(callout => {
             const contributions = callout?.contributions;
             contributions?.forEach(contribution => {
@@ -910,8 +918,7 @@ export class SearchIngestService {
                 ...contribution.post,
                 type: SearchEntityTypes.POST,
                 license: {
-                  visibility:
-                    space?.account?.license?.visibility ?? EMPTY_VALUE,
+                  visibility: space?.visibility ?? EMPTY_VALUE,
                 },
                 spaceID:
                   space.parentSpace?.parentSpace?.id ??

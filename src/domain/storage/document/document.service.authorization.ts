@@ -11,37 +11,50 @@ import {
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_DOCUMENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
 @Injectable()
 export class DocumentAuthorizationService {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     document: IDocument,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IDocument {
-    if (!document.tagset) {
+  ): Promise<IAuthorizationPolicy[]> {
+    if (!document.tagset || !document.tagset.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to find entities required to reset auth for Document ${document.id} `,
         LogContext.STORAGE_BUCKET
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     document.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         document.authorization,
         parentAuthorization
       );
+    // If can READ_ABOUT on Document, then also allow general READ
+    document.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        document.authorization,
+        AuthorizationPrivilege.READ_ABOUT,
+        [AuthorizationPrivilege.READ],
+        POLICY_RULE_READ_ABOUT
+      );
 
     // Extend to give the user creating the document more rights
     document.authorization = this.appendCredentialRules(document);
+    updatedAuthorizations.push(document.authorization);
 
     document.tagset.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         document.tagset.authorization,
         document.authorization
       );
+    updatedAuthorizations.push(document.tagset.authorization);
 
-    return document;
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return [];
   }
 
   private appendCredentialRules(document: IDocument): IAuthorizationPolicy {

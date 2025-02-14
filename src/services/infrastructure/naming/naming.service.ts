@@ -1,6 +1,5 @@
 import { EntityManager, Not, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -9,55 +8,63 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
-import { Inject, LoggerService } from '@nestjs/common';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { ICallout } from '@domain/collaboration/callout';
-import { NAMEID_LENGTH } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { SpaceReservedName } from '@common/enums/space.reserved.name';
+import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
+import { Template } from '@domain/template/template/template.entity';
+import { IRoleSet } from '@domain/access/role-set';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
 export class NamingService {
-  replaceSpecialCharacters = require('replace-special-characters');
-
   constructor(
-    @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(InnovationHub)
     private innovationHubRepository: Repository<InnovationHub>,
     @InjectEntityManager('default')
-    private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private entityManager: EntityManager
   ) {}
 
-  public async getReservedNameIDsInAccount(
-    accountID: string
+  public async getReservedNameIDsInLevelZeroSpace(
+    levelZeroSpaceID: string
   ): Promise<string[]> {
     const subspaces = await this.entityManager.find(Space, {
       where: {
-        account: {
-          id: accountID,
-        },
-        level: Not(SpaceLevel.SPACE),
+        levelZeroSpaceID: levelZeroSpaceID,
+        level: Not(SpaceLevel.L0),
       },
       select: {
         nameID: true,
       },
     });
-    const nameIDs = subspaces.map(space => space.nameID);
-    return nameIDs;
+    return subspaces.map(space => space.nameID);
+  }
+
+  public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
+    const levelZeroSpaces = await this.entityManager.find(Space, {
+      where: {
+        level: SpaceLevel.L0,
+      },
+      select: {
+        nameID: true,
+      },
+    });
+    const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
+    const reservedTopLevelSpaces = Object.values(SpaceReservedName) as string[];
+
+    return nameIDs.concat(reservedTopLevelSpaces);
   }
 
   public async getReservedNameIDsInForum(forumID: string): Promise<string[]> {
@@ -71,25 +78,39 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = discussions?.map(discussion => discussion.nameID) || [];
-    return nameIDs;
+    return discussions?.map(discussion => discussion.nameID) || [];
   }
 
-  public async getReservedNameIDsInCollaboration(
-    collaborationID: string
+  public async getReservedNameIDsInCalloutsSet(
+    calloutsSetID: string
   ): Promise<string[]> {
     const callouts = await this.entityManager.find(Callout, {
       where: {
-        collaboration: {
-          id: collaborationID,
+        calloutsSet: {
+          id: calloutsSetID,
         },
       },
       select: {
         nameID: true,
       },
     });
-    const nameIDs = callouts?.map(callout => callout.nameID) || [];
-    return nameIDs;
+    return callouts?.map(callout => callout.nameID) ?? [];
+  }
+
+  public async getReservedNameIDsInTemplatesSet(
+    templatesSetID: string
+  ): Promise<string[]> {
+    const templates = await this.entityManager.find(Template, {
+      where: {
+        templatesSet: {
+          id: templatesSetID,
+        },
+      },
+      select: {
+        nameID: true,
+      },
+    });
+    return templates?.map(template => template.nameID) ?? [];
   }
 
   public async getReservedNameIDsInCalendar(
@@ -105,25 +126,16 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = events?.map(event => event.nameID) || [];
-    return nameIDs;
+    return events?.map(event => event.nameID) ?? [];
   }
 
-  public async getReservedNameIDsInLibrary(
-    libraryID: string
-  ): Promise<string[]> {
-    const innovationPacks = await this.entityManager.find(InnovationPack, {
-      where: {
-        library: {
-          id: libraryID,
-        },
-      },
+  public async getReservedNameIDsInInnovationPacks(): Promise<string[]> {
+    const packs = await this.entityManager.find(InnovationPack, {
       select: {
         nameID: true,
       },
     });
-    const nameIDs = innovationPacks?.map(pack => pack.nameID) || [];
-    return nameIDs;
+    return packs.map(pack => pack.nameID);
   }
 
   public async getReservedNameIDsInHubs(): Promise<string[]> {
@@ -132,8 +144,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = hubs.map(hub => hub.nameID);
-    return nameIDs;
+    return hubs.map(hub => hub.nameID);
   }
 
   public async getReservedNameIDsInUsers(): Promise<string[]> {
@@ -142,8 +153,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = users.map(user => user.nameID);
-    return nameIDs;
+    return users.map(user => user.nameID);
   }
 
   public async getReservedNameIDsInVirtualContributors(): Promise<string[]> {
@@ -152,8 +162,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = vcs.map(vc => vc.nameID);
-    return nameIDs;
+    return vcs.map(vc => vc.nameID);
   }
 
   public async getReservedNameIDsInOrganizations(): Promise<string[]> {
@@ -162,8 +171,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = organizations.map(organization => organization.nameID);
-    return nameIDs;
+    return organizations.map(organization => organization.nameID);
   }
 
   public async getReservedNameIDsInCalloutContributions(
@@ -220,24 +228,11 @@ export class NamingService {
     const innovationHubsCount = await this.innovationHubRepository.countBy({
       subdomain: subdomain,
     });
-    if (innovationHubsCount > 0) return false;
-    return true;
+    return innovationHubsCount === 0;
   }
 
-  public createNameID(base: string): string {
-    const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
-
-    const baseMaxLength = base.slice(0, NAMEID_LENGTH);
-    // replace spaces + trim to NAMEID_LENGTH characters
-    const nameID = `${baseMaxLength}`.replace(/\s/g, '');
-    // replace characters with umlouts etc to normal characters
-    const nameIDNoSpecialCharacters: string =
-      this.replaceSpecialCharacters(nameID);
-    // Remove any characters that are not allowed
-    return nameIDNoSpecialCharacters
-      .replace(nameIDExcludedCharacters, '')
-      .toLowerCase()
-      .slice(0, NAMEID_LENGTH);
+  private createNameID(base: string): string {
+    return generateNameId(base);
   }
 
   public createNameIdAvoidingReservedNameIDs(
@@ -255,64 +250,65 @@ export class NamingService {
     return result;
   }
 
-  async getCommunityPolicyWithSettingsForCollaboration(
-    collaborationID: string
-  ): Promise<ICommunityPolicy> {
+  async getRoleSetAndSettingsForCollaborationCalloutsSet(
+    calloutsSetID: string
+  ): Promise<{
+    roleSet: IRoleSet;
+    spaceSettings: ISpaceSettings;
+  }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          id: collaborationID,
-        },
-      },
-      relations: {
-        community: {
-          policy: true,
-        },
-      },
-    });
-    if (!space || !space.community || !space.community.policy) {
-      throw new EntityNotInitializedException(
-        `Unable to load all entities for space with collaboration ${collaborationID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    // Directly parse the settings string to avoid the need to load the settings service
-    const policy = space.community.policy;
-    const settings: ISpaceSettings = JSON.parse(space.settingsStr);
-    policy.settings = settings;
-    return policy;
-  }
-
-  async getCommunityPolicyWithSettingsForCallout(
-    calloutID: string
-  ): Promise<ICommunityPolicy> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          callouts: {
-            id: calloutID,
+          calloutsSet: {
+            id: calloutsSetID,
           },
         },
       },
       relations: {
         community: {
-          policy: true,
+          roleSet: true,
         },
       },
     });
-    if (!space || !space.community || !space.community.policy) {
+    if (!space || !space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
-        `Unable to load all entities for space with callout ${calloutID}`,
+        `Unable to load all entities for roleSet + settings for collaboration ${calloutsSetID}`,
         LogContext.COMMUNITY
       );
     }
+    // Directly parse the settings string to avoid the need to load the settings service
+    const roleSet = space.community.roleSet;
+    const spaceSettings: ISpaceSettings = space.settings;
+    return { roleSet, spaceSettings };
+  }
+
+  async getRoleSetAndSettingsForCallout(calloutID: string): Promise<{
+    roleSet?: IRoleSet;
+    spaceSettings?: ISpaceSettings;
+  }> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              id: calloutID,
+            },
+          },
+        },
+      },
+      relations: {
+        community: {
+          roleSet: true,
+        },
+      },
+    });
 
     // Directly parse the settings string to avoid the need to load the settings service
-    const policy = space.community.policy;
-    const settings: ISpaceSettings = JSON.parse(space.settingsStr);
-    policy.settings = settings;
+    // We have 2 types of CalloutSet parents now, and KnowledgeBase doesn't have a roleSet and spaceSettings
+    const roleSet: IRoleSet | undefined = space?.community?.roleSet;
+    const spaceSettings: ISpaceSettings | undefined = space?.settings;
 
-    return policy;
+    return { roleSet: roleSet, spaceSettings };
   }
 
   async getPostForRoom(roomID: string): Promise<IPost> {
@@ -335,6 +331,9 @@ export class NamingService {
     const result = await this.entityManager.findOne(Callout, {
       where: {
         comments: { id: commentsID },
+      },
+      relations: {
+        calloutsSet: true,
       },
     });
     if (!result) {

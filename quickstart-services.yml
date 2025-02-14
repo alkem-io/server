@@ -204,8 +204,10 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.19.0
+    image: alkemio/notifications:v0.20.0
     platform: linux/x86_64
+    depends_on:
+      - rabbitmq
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -214,6 +216,10 @@ services:
       - LOGGING_LEVEL_CONSOLE
       - EMAIL_SMTP_HOST
       - EMAIL_MULTI_PROVIDER_STRATEGY
+      - EMAIL_SMTP_SECURE
+      - EMAIL_SMTP_PORT
+      - EMAIL_SMTP_USER
+      - EMAIL_SMTP_PASSWORD
       - ENVIRONMENT=dev
       - ALKEMIO_SERVER_ENDPOINT
       - ALKEMIO_WEBCLIENT_ENDPOINT
@@ -236,6 +242,8 @@ services:
     hostname: matrix-adapter
     image: alkemio/matrix-adapter:v0.4.5
     platform: linux/x86_64
+    depends_on:
+      - rabbitmq
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -272,8 +280,10 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.3.1
+    image: alkemio/whiteboard-collaboration-service:v0.5.0
     platform: linux/x86_64
+    depends_on:
+      - rabbitmq
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -292,6 +302,8 @@ services:
     hostname: file-service
     image: alkemio/file-service:v0.1.2
     platform: linux/x86_64
+    depends_on:
+        - rabbitmq
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER

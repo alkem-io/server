@@ -22,11 +22,13 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class ForumResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private notificationAdapter: NotificationAdapter,
     private forumService: ForumService,
     private namingService: NamingService,
@@ -81,14 +83,14 @@ export class ForumResolverMutations {
       agentInfo.userID,
       agentInfo.communicationID
     );
+    discussion = await this.discussionService.save(discussion);
 
-    discussion =
+    const updatedDiscussions =
       await this.discussionAuthorizationService.applyAuthorizationPolicy(
         discussion,
         forum.authorization
       );
-
-    discussion = await this.discussionService.save(discussion);
+    await this.authorizationPolicyService.saveAll(updatedDiscussions);
 
     // Send the notification
     const notificationInput: NotificationInputForumDiscussionCreated = {
@@ -114,6 +116,6 @@ export class ForumResolverMutations {
       subscriptionPayload
     );
 
-    return discussion;
+    return await this.discussionService.getDiscussionOrFail(discussion.id);
   }
 }

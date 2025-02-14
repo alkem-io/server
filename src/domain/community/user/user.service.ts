@@ -1,8 +1,8 @@
-import { UUID_LENGTH } from '@common/constants';
-import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   RelationshipNotFoundException,
   UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
@@ -10,13 +10,7 @@ import {
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import {
-  Credential,
-  CredentialsSearchInput,
-  ICredential,
-} from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -24,9 +18,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
   DeleteUserInput,
-  IUser,
   UpdateUserInput,
-  User,
 } from '@domain/community/user';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -34,12 +26,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -50,19 +41,36 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
-import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
-import { CommunityCredentials } from './dto/user.dto.community.credentials';
-import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
-import { VisualType } from '@common/enums/visual.type';
+import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
+import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { AvatarService } from '@domain/common/visual/avatar.service';
-import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
+import { IUser } from './user.interface';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AgentType } from '@common/enums/agent.type';
+import { ContributorService } from '../contributor/contributor.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountType } from '@common/enums/account.type';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomType } from '@common/enums/room.type';
+import { IUserSettings } from '../user.settings/user.settings.interface';
+import { UserSettingsService } from '../user.settings/user.settings.service';
+import { UpdateUserSettingsEntityInput } from '../user.settings/dto/user.settings.dto.update';
+import { PreferenceType } from '@common/enums/preference.type';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
+import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class UserService {
@@ -72,13 +80,19 @@ export class UserService {
     private profileService: ProfileService,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
+    private roomLookupService: RoomLookupService,
     private namingService: NamingService,
     private agentService: AgentService,
+    private agentInfoCacheService: AgentInfoCacheService,
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
-    private avatarService: AvatarService,
-    private documentService: DocumentService,
+    private accountLookupService: AccountLookupService,
+    private userLookupService: UserLookupService,
+    private accountHostService: AccountHostService,
+    private userSettingsService: UserSettingsService,
+    private contributorService: ContributorService,
+    private kratosService: KratosService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -97,55 +111,54 @@ export class UserService {
       this.cacheOptions
     );
   }
+
   private async clearUserCache(user: IUser) {
     await this.cacheManager.del(
       this.getUserCommunicationIdCacheKey(user.communicationID)
     );
+    await this.agentInfoCacheService.deleteAgentInfoFromCache(user.email);
   }
 
-  async createUser(userData: CreateUserInput): Promise<IUser> {
-    await this.validateUserProfileCreationRequest(userData);
-    if (!userData.nameID) {
-      if (userData.firstName && userData.lastName) {
-        userData.nameID = await this.createUserNameID(
-          userData.firstName || '',
-          userData.lastName
-        );
-      } else {
-        throw new ValidationException(
-          `User creation: NameID not provided and first/last name not available: ${userData.email}`,
-          LogContext.COMMUNITY
-        );
-      }
+  async createUser(
+    userData: CreateUserInput,
+    agentInfo?: AgentInfo
+  ): Promise<IUser> {
+    if (userData.nameID) {
+      // Convert nameID to lower case
+      userData.nameID = userData.nameID.toLowerCase();
+      await this.isUserNameIdAvailableOrFail(userData.nameID);
+    } else {
+      userData.nameID = await this.createUserNameID(userData);
     }
 
-    const user: IUser = User.create(userData);
-    user.authorization = new AuthorizationPolicy();
+    await this.validateUserProfileCreationRequest(userData);
+
+    let user: IUser = User.create({
+      ...userData,
+      accountUpn: userData.accountUpn ?? userData.email,
+    });
+    user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
+    user.settings = this.getDefaultUserSettings();
+
+    if (!user.serviceProfile) {
+      user.serviceProfile = false;
+    }
 
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
     user.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.USER
+      );
+    // Do not create the guidance room here, it will be created on demand
+
     user.profile = await this.profileService.createProfile(
       profileData,
       ProfileType.USER,
       user.storageAggregator
     );
 
-    // Set the visuals
-    let avatarURL = profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        user.firstName,
-        user.lastName
-      );
-    }
-    await this.profileService.addVisualOnProfile(
-      user.profile,
-      VisualType.AVATAR,
-      avatarURL
-    );
     await this.profileService.addTagsetOnProfile(user.profile, {
       name: TagsetReservedName.SKILLS,
       tags: [],
@@ -154,13 +167,20 @@ export class UserService {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
+    await this.contributorService.addAvatarVisualToContributorProfile(
+      user.profile,
+      userData.profileData,
+      agentInfo,
+      userData.firstName,
+      userData.lastName
+    );
 
     user.agent = await this.agentService.createAgent({
-      parentDisplayID: user.email,
+      type: AgentType.USER,
     });
 
     this.logger.verbose?.(
-      `Created a new user with nameID: ${user.nameID}`,
+      `Created a new user with email: ${user.email}`,
       LogContext.COMMUNITY
     );
 
@@ -169,35 +189,72 @@ export class UserService {
       this.createPreferenceDefaults()
     );
 
-    const response = await this.save(user);
+    const account = await this.accountHostService.createAccount(
+      AccountType.USER
+    );
+    user.accountID = account.id;
+
+    user = await this.save(user);
+
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      user.profile.id,
+      user.id
+    );
+    // Reload to ensure have the updated avatar URL
+    user = await this.getUserOrFail(user.id);
+
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
     // register the user asynchronously - we don't want to block the creation operation
-    this.communicationAdapter.tryRegisterNewUser(user.email).then(
-      async communicationID => {
-        try {
-          if (!communicationID) {
-            this.logger.warn(
-              `User registration failed on user creation ${user.id}.`
-            );
-            return user;
-          }
-
-          response.communicationID = communicationID;
-
-          await this.save(response);
-          await this.setUserCache(response);
-        } catch (e: any) {
-          this.logger.error(e, e?.stack, LogContext.USER);
-        }
-      },
-      error => this.logger.error(error, error?.stack, LogContext.USER)
+    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
+      user.email
     );
 
-    await this.setUserCache(response);
+    try {
+      if (!communicationID) {
+        this.logger.warn(
+          `User registration failed on user creation ${user.id}.`
+        );
+        return user;
+      }
 
-    return response;
+      user.communicationID = communicationID;
+
+      await this.save(user);
+      await this.setUserCache(user);
+    } catch (e: any) {
+      this.logger.error(e, e?.stack, LogContext.USER);
+    }
+
+    await this.setUserCache(user);
+
+    return user;
+  }
+
+  private getDefaultUserSettings(): IUserSettings {
+    const settings: IUserSettings = {
+      communication: {
+        allowOtherUsersToSendMessages: true,
+      },
+      privacy: {
+        // Note: not currently used but will be near term.
+        contributionRolesPubliclyVisible: true,
+      },
+    };
+    return settings;
+  }
+
+  public async updateUserSettings(
+    user: IUser,
+    settingsData: UpdateUserSettingsEntityInput
+  ): Promise<IUser> {
+    user.settings = this.userSettingsService.updateSettings(
+      user.settings,
+      settingsData
+    );
+
+    return await this.save(user);
   }
 
   private async extendProfileDataWithReferences(
@@ -239,58 +296,48 @@ export class UserService {
 
   private createPreferenceDefaults(): Map<PreferenceType, string> {
     const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN,
+      PreferenceType.NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN,
       'true'
     );
 
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
+      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
       'true'
     );
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED_ADMIN,
+      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED_ADMIN,
       'true'
     );
 
-    defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_SUBMITTED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_SUBMITTED, 'true');
 
-    defaults.set(UserPreferenceType.NOTIFICATION_WHITEBOARD_CREATED, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_POST_CREATED, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_POST_CREATED_ADMIN, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_POST_COMMENT_CREATED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_WHITEBOARD_CREATED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_POST_CREATED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_POST_CREATED_ADMIN, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_POST_COMMENT_CREATED, 'true');
 
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER,
+      PreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER,
       'true'
     );
     defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
+      PreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
       'true'
     );
-    defaults.set(
-      UserPreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER,
-      'true'
-    );
-    defaults.set(UserPreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
     // messaging & mentions
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MESSAGE, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
 
-    defaults.set(
-      UserPreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED,
-      'false'
-    );
-    defaults.set(
-      UserPreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT,
-      'true'
-    );
+    defaults.set(PreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED, 'false');
+    defaults.set(PreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT, 'true');
 
-    defaults.set(UserPreferenceType.NOTIFICATION_COMMENT_REPLY, 'true');
+    defaults.set(PreferenceType.NOTIFICATION_COMMENT_REPLY, 'true');
 
     return defaults;
   }
@@ -304,69 +351,37 @@ export class UserService {
       );
     }
 
-    if (await this.isRegisteredUser(email)) {
+    if (await this.userLookupService.isRegisteredUser(email)) {
       throw new UserAlreadyRegisteredException(
         `User with email: ${email} already registered`
       );
     }
 
-    const isAlkemioDocumentURL = this.documentService.isAlkemioDocumentURL(
-      agentInfo.avatarURL
-    );
-
-    const nameID = await this.createUserNameID(
-      agentInfo.firstName,
-      agentInfo.lastName
-    );
-    const user = await this.createUser({
-      nameID,
+    const userData: CreateUserInput = {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
       accountUpn: email,
       profileData: {
-        avatarURL: isAlkemioDocumentURL ? agentInfo.avatarURL : undefined,
+        visuals: [
+          {
+            name: VisualType.AVATAR,
+            uri: agentInfo.avatarURL,
+          },
+        ],
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
-    });
+    };
 
-    // Used for creating an avatar from a linkedin profile picture
-    // BUG: https://github.com/alkem-io/server/issues/3944
-
-    // if (!isAlkemioDocumentURL) {
-    //   if (!user.profile?.storageBucket?.id) {
-    //     throw new EntityNotInitializedException(
-    //       `User profile storage bucket not initialized for user with id: ${user.id}`,
-    //       LogContext.COMMUNITY
-    //     );
-    //   }
-
-    //   if (!user.profile.visuals) {
-    //     throw new EntityNotInitializedException(
-    //       `Visuals not initialized for profile with id: ${user.profile.id}`,
-    //       LogContext.COMMUNITY
-    //     );
-    //   }
-
-    //   const { visual, document } = await this.avatarService.createAvatarFromURL(
-    //     user.profile?.storageBucket?.id,
-    //     user.id,
-    //     agentInfo.avatarURL ?? user.profile.visuals[0].uri
-    //   );
-
-    //   user.profile.visuals = [visual];
-    //   user.profile.storageBucket.documents = [document];
-    //   user = await this.save(user);
-    // }
-
-    return user;
+    return await this.createUser(userData, agentInfo);
   }
 
   private async validateUserProfileCreationRequest(
     userData: CreateUserInput
   ): Promise<boolean> {
-    await this.isNameIdAvailableOrFail(userData.nameID);
-    const userCheck = await this.isRegisteredUser(userData.email);
+    const userCheck = await this.userLookupService.isRegisteredUser(
+      userData.email
+    );
     if (userCheck)
       throw new ValidationException(
         `User profile with the specified email (${userData.email}) already exists`,
@@ -377,7 +392,7 @@ export class UserService {
     return true;
   }
 
-  private async isNameIdAvailableOrFail(nameID: string) {
+  private async isUserNameIdAvailableOrFail(nameID: string) {
     const userCount = await this.userRepository.countBy({
       nameID: nameID,
     });
@@ -396,9 +411,21 @@ export class UserService {
         agent: true,
         preferenceSet: true,
         storageAggregator: true,
+        guidanceRoom: true,
       },
     });
+
+    // TODO: give additional feedback?
+    const accountHasResources =
+      await this.accountLookupService.areResourcesInAccount(user.accountID);
+    if (accountHasResources) {
+      throw new ForbiddenException(
+        'Unable to delete User: account contains one or more resources',
+        LogContext.SPACES
+      );
+    }
     const { id } = user;
+
     await this.clearUserCache(user);
 
     if (user.profile) {
@@ -423,6 +450,14 @@ export class UserService {
       await this.storageAggregatorService.delete(user.storageAggregator.id);
     }
 
+    if (user.guidanceRoom) {
+      await this.roomService.deleteRoom(user.guidanceRoom);
+    }
+
+    if (deleteData.deleteIdentity) {
+      await this.kratosService.deleteIdentityByEmail(user.email);
+    }
+
     const result = await this.userRepository.remove(user as User);
 
     // Note: Should we unregister the user from communications?
@@ -431,6 +466,10 @@ export class UserService {
       ...result,
       id,
     };
+  }
+
+  public async getAccount(user: IUser): Promise<IAccount> {
+    return await this.accountLookupService.getAccountOrFail(user.accountID);
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
@@ -444,7 +483,7 @@ export class UserService {
 
     if (!user.preferenceSet) {
       throw new EntityNotInitializedException(
-        `User preferences not initialized or not found for user with nameID: ${user.nameID}`,
+        `User preferences not initialized or not found for user with nameID: ${user.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -456,7 +495,13 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | never> {
-    const user = await this.getUserByEmailIdUUID(userID, options);
+    if (userID === '') {
+      throw new EntityNotFoundException(
+        `No userID provided: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const user = await this.userLookupService.getUserByUUID(userID, options);
 
     if (!user) {
       throw new EntityNotFoundException(
@@ -465,69 +510,7 @@ export class UserService {
       );
     }
 
-    // check if the user is registered for communications
-    // should go through this block only once
-    // we want this to happen synchronously
-    if (!Boolean(user.communicationID)) {
-      const communicationID = await this.tryRegisterUserCommunication(user);
-
-      if (!communicationID) {
-        this.logger.warn(
-          `Unable to register user for communication: ${user.email}`,
-          LogContext.COMMUNICATION
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      // need to update the cache in case the user is already in it
-      // but the previous registration attempt has failed
-      await this.setUserCache(user);
-    }
-
     return user;
-  }
-
-  private async getUserByEmailIdUUID(
-    userID: string,
-    options: FindOneOptions<User> | undefined
-  ): Promise<IUser | null> {
-    let user: IUser | null = null;
-
-    if (await this.isUserIdEmail(userID)) {
-      user = await this.userRepository.findOne({
-        where: {
-          email: userID,
-        },
-        ...options,
-      });
-    } else if (userID.length === UUID_LENGTH) {
-      {
-        user = await this.userRepository.findOne({
-          where: {
-            id: userID,
-          },
-          ...options,
-        });
-      }
-    }
-
-    if (!user)
-      user = await this.userRepository.findOne({
-        where: {
-          nameID: userID,
-        },
-        ...options,
-      });
-
-    return user;
-  }
-
-  private async isUserIdEmail(userId: string): Promise<boolean> {
-    if (userId.includes('@')) return true;
-    return false;
   }
 
   async getUserByEmail(
@@ -541,89 +524,17 @@ export class UserService {
       );
     }
 
-    const user = await this.userRepository.findOne({
+    return this.userRepository.findOne({
       where: { email: email },
       ...options,
     });
-
-    // same as in getUserOrFail
-    if (user && !Boolean(user?.communicationID)) {
-      const communicationID = await this.tryRegisterUserCommunication(user);
-
-      if (!communicationID) {
-        this.logger.warn(
-          `User could not be registered for communication ${user.id}`,
-          LogContext.COMMUNICATION
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      await this.setUserCache(user);
-    }
-
-    return user;
   }
 
   async save(user: IUser): Promise<IUser> {
     return await this.userRepository.save(user);
   }
 
-  async isRegisteredUser(email: string): Promise<boolean> {
-    const user = await this.userRepository.findOneBy({ email: email });
-    if (user) return true;
-    return false;
-  }
-
-  async getUserAndCredentials(
-    userID: string
-  ): Promise<{ user: IUser; credentials: ICredential[] }> {
-    const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent || !user.agent.credentials) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-    }
-    return { user: user, credentials: user.agent.credentials };
-  }
-
-  async getUserAndAgent(
-    userID: string
-  ): Promise<{ user: IUser; agent: IAgent }> {
-    const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-    }
-    return { user: user, agent: user.agent };
-  }
-
-  async getUserWithAgent(userID: string): Promise<IUser> {
-    const user = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent || !user.agent.credentials) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-    }
-    return user;
-  }
-
-  async getUsers(args: UsersQueryArgs): Promise<IUser[]> {
+  async getUsersForQuery(args: UsersQueryArgs): Promise<IUser[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
 
@@ -656,9 +567,19 @@ export class UserService {
 
   async getPaginatedUsers(
     paginationArgs: PaginationArgs,
+    withTags?: boolean,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const qb = this.userRepository.createQueryBuilder('user');
+
+    if (withTags !== undefined) {
+      qb.leftJoin('user.profile', 'profile')
+        .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
+        // cannot use object or operators here
+        // because typeorm cannot construct the query properly
+        .where(`tagset.tags ${withTags ? '!=' : '='} ''`);
+    }
+
     if (filter) {
       applyUserFilter(qb, filter);
     }
@@ -666,36 +587,37 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  public async getPaginatedAvailableMemberUsers(
-    communityCredentials: CommunityMemberCredentials,
+  public async getPaginatedAvailableEntryRoleUsers(
+    entryRoleCredentials: RoleSetRoleWithParentCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const currentMemberUsers = await this.usersWithCredentials(
-      communityCredentials.member
-    );
+    const currentEntryRoleUsers =
+      await this.userLookupService.usersWithCredentials(
+        entryRoleCredentials.role
+      );
     const qb = this.userRepository.createQueryBuilder('user').select();
 
-    if (communityCredentials.parentCommunityMember) {
+    if (entryRoleCredentials.parentRoleSetRole) {
       qb.leftJoin('user.agent', 'agent')
         .leftJoin('agent.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({
-          type: communityCredentials.parentCommunityMember.type,
-          resourceID: communityCredentials.parentCommunityMember.resourceID,
+          type: entryRoleCredentials.parentRoleSetRole.type,
+          resourceID: entryRoleCredentials.parentRoleSetRole.resourceID,
         });
     }
 
-    if (currentMemberUsers.length > 0) {
+    if (currentEntryRoleUsers.length > 0) {
       const hasWhere =
         qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
 
       qb[hasWhere ? 'andWhere' : 'where'](
         'NOT user.id IN (:memberUsers)'
       ).setParameters({
-        memberUsers: currentMemberUsers.map(user => user.id),
+        memberUsers: currentEntryRoleUsers.map(user => user.id),
       });
     }
 
@@ -706,14 +628,15 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  public async getPaginatedAvailableLeadUsers(
-    communityCredentials: CommunityCredentials,
+  public async getPaginatedAvailableElevatedRoleUsers(
+    roleSetCredentials: RoleSetRoleSelectionCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const currentLeadUsers = await this.usersWithCredentials(
-      communityCredentials.lead
-    );
+    const currentElevatedRoleUsers =
+      await this.userLookupService.usersWithCredentials(
+        roleSetCredentials.elevatedRole
+      );
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
@@ -723,13 +646,13 @@ export class UserService {
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
       .setParameters({
-        type: communityCredentials.member.type,
-        resourceID: communityCredentials.member.resourceID,
+        type: roleSetCredentials.entryRole.type,
+        resourceID: roleSetCredentials.entryRole.resourceID,
       });
 
-    if (currentLeadUsers.length > 0) {
+    if (currentElevatedRoleUsers.length > 0) {
       qb.andWhere('NOT user.id IN (:leadUsers)').setParameters({
-        leadUsers: currentLeadUsers.map(user => user.id),
+        leadUsers: currentElevatedRoleUsers.map(user => user.id),
       });
     }
 
@@ -748,7 +671,7 @@ export class UserService {
     if (userInput.nameID) {
       if (userInput.nameID.toLowerCase() !== user.nameID.toLowerCase()) {
         // new NameID, check for uniqueness
-        await this.isNameIdAvailableOrFail(userInput.nameID);
+        await this.isUserNameIdAvailableOrFail(userInput.nameID);
         user.nameID = userInput.nameID;
       }
     }
@@ -761,10 +684,6 @@ export class UserService {
     }
     if (userInput.phone !== undefined) {
       user.phone = userInput.phone;
-    }
-
-    if (userInput.gender !== undefined) {
-      user.gender = userInput.gender;
     }
 
     if (userInput.serviceProfile !== undefined) {
@@ -791,7 +710,7 @@ export class UserService {
     if (updateData.nameID) {
       if (updateData.nameID !== user.nameID) {
         // updating the nameID, check new value is allowed
-        await this.isNameIdAvailableOrFail(updateData.nameID);
+        await this.isUserNameIdAvailableOrFail(updateData.nameID);
 
         user.nameID = updateData.nameID;
       }
@@ -799,7 +718,9 @@ export class UserService {
 
     if (updateData.email) {
       if (updateData.email !== user.email) {
-        const userCheck = await this.isRegisteredUser(updateData.email);
+        const userCheck = await this.userLookupService.isRegisteredUser(
+          updateData.email
+        );
         if (userCheck) {
           throw new ValidationException(
             `User profile with the specified email (${updateData.email}) already exists`,
@@ -814,20 +735,6 @@ export class UserService {
     return await this.save(user);
   }
 
-  async getAgent(userID: string): Promise<IAgent> {
-    const userWithAgent = await this.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-    const agent = userWithAgent.agent;
-    if (!agent)
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-
-    return agent;
-  }
-
   async getProfile(user: IUser): Promise<IProfile> {
     const userWithProfile = await this.getUserOrFail(user.id, {
       relations: { profile: true },
@@ -835,50 +742,11 @@ export class UserService {
     const profile = userWithProfile.profile;
     if (!profile)
       throw new RelationshipNotFoundException(
-        `Unable to load Profile for User: ${user.nameID} `,
+        `Unable to load Profile for User: ${user.id} `,
         LogContext.COMMUNITY
       );
 
     return profile;
-  }
-
-  async usersWithCredentials(
-    credentialCriteria: CredentialsSearchInput,
-    limit?: number
-  ): Promise<IUser[]> {
-    const credResourceID = credentialCriteria.resourceID || '';
-
-    return this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .take(limit)
-      .getMany();
-  }
-
-  async countUsersWithCredentials(
-    credentialCriteria: CredentialsSearchInput
-  ): Promise<number> {
-    const credResourceID = credentialCriteria.resourceID || '';
-    const userMatchesCount = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .getCount();
-
-    return userMatchesCount;
   }
 
   async getStorageAggregatorOrFail(
@@ -901,14 +769,43 @@ export class UserService {
     return storageAggregator;
   }
 
-  private async tryRegisterUserCommunication(
-    user: IUser
-  ): Promise<string | undefined> {
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      user.email
+  async getGuidanceRoom(userID: string): Promise<IRoom | undefined> {
+    const userWithGuidanceRoom = await this.getUserOrFail(userID, {
+      relations: {
+        guidanceRoom: true,
+      },
+    });
+    return userWithGuidanceRoom.guidanceRoom;
+  }
+
+  public async createGuidanceRoom(userId: string): Promise<IRoom> {
+    const user = await this.getUserOrFail(userId, {
+      relations: {
+        guidanceRoom: true,
+      },
+    });
+
+    if (user.guidanceRoom) {
+      throw new Error(
+        `Guidance room already exists for user with ID: ${userId}`
+      );
+    }
+
+    const room = await this.roomService.createRoom(
+      `${user.communicationID}-guidance`,
+      RoomType.GUIDANCE
     );
 
-    return communicationID;
+    user.guidanceRoom = room;
+    await this.save(user);
+
+    return room;
+  }
+
+  private tryRegisterUserCommunication(
+    user: IUser
+  ): Promise<string | undefined> {
+    return this.communicationAdapter.tryRegisterNewUser(user.email);
   }
 
   async getCommunityRooms(user: IUser): Promise<CommunicationRoomResult[]> {
@@ -916,7 +813,7 @@ export class UserService {
       user.communicationID
     );
 
-    await this.roomService.populateRoomsMessageSenders(communityRooms);
+    await this.roomLookupService.populateRoomsMessageSenders(communityRooms);
 
     return communityRooms;
   }
@@ -926,83 +823,29 @@ export class UserService {
       user.communicationID
     );
 
-    await this.roomService.populateRoomsMessageSenders(directRooms);
+    await this.roomLookupService.populateRoomsMessageSenders(directRooms);
 
     return directRooms;
   }
 
-  public async createUserNameID(
-    firstName: string,
-    lastName: string
-  ): Promise<string> {
-    const base = `${firstName}-${lastName}`;
+  private async createUserNameID(userData: CreateUserInput): Promise<string> {
+    let base = '';
+    if (userData.firstName && userData.lastName) {
+      base = `${userData.firstName}-${userData.lastName}`;
+    } else if (userData.firstName) {
+      base = `${userData.firstName}`;
+    } else if (userData.lastName) {
+      base = `${userData.lastName}`;
+    } else if (userData.profileData?.displayName) {
+      base = userData.profileData.displayName;
+    } else {
+      base = userData.email.split('@')[0];
+    }
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsInUsers(); // This will need to be smarter later
     return this.namingService.createNameIdAvoidingReservedNameIDs(
       base,
       reservedNameIDs
     );
-  }
-
-  async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
-    const users = await this.userRepository.find({
-      where: {
-        id: In(userIds),
-      },
-      relations: { profile: true },
-      select: ['id'],
-    });
-
-    const results = users.filter(user => userIds.includes(user.id));
-    const mappedResults = userIds.map(
-      id =>
-        results.find(result => result.id === id)?.profile ||
-        new Error(`Could not load user ${id}`)
-    );
-    return mappedResults;
-  }
-
-  public getAgentInfoMetadata(
-    email: string
-  ): Promise<AgentInfoMetadata> | never {
-    return this.userRepository
-      .createQueryBuilder('user')
-      .leftJoin('user.agent', 'agent')
-      .leftJoin('agent.credentials', 'credentials')
-      .select([
-        'user.id as userID',
-        'user.communicationID as communicationID',
-        'agent.id as agentID',
-        'credentials.id as id',
-        'credentials.resourceId as resourceID',
-        'credentials.type as type',
-      ])
-      .where('user.email = :email', { email: email })
-      .getRawMany<AgentInfoMetadata & Credential>()
-      .then(agentsWithCredentials => {
-        if (agentsWithCredentials.length === 0) {
-          throw new EntityNotFoundException(
-            `Unable to load User, Agent or Credentials for User: ${email}`,
-            LogContext.COMMUNITY
-          );
-        }
-
-        const agentInfo = new AgentInfoMetadata();
-        const credentials: ICredential[] = [];
-        for (const agent of agentsWithCredentials) {
-          credentials.push({
-            id: agent.id,
-            resourceID: agent.resourceID,
-            type: agent.type,
-          });
-        }
-
-        agentInfo.credentials = credentials;
-        agentInfo.agentID = agentsWithCredentials[0].agentID;
-        agentInfo.userID = agentsWithCredentials[0].userID;
-        agentInfo.communicationID = agentsWithCredentials[0].communicationID;
-
-        return agentInfo;
-      });
   }
 }

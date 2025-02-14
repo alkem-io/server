@@ -14,9 +14,9 @@ export class VcInteractionService {
     private interactionRepository: Repository<VcInteraction>
   ) {}
 
-  public createVcInteraction(
+  public buildVcInteraction(
     interactionData: CreateVcInteractionInput
-  ): IVcInteraction {
+  ): VcInteraction {
     const interaction = new VcInteraction();
     interaction.threadID = interactionData.threadID;
     interaction.virtualContributorID = interactionData.virtualContributorID;
@@ -39,6 +39,10 @@ export class VcInteractionService {
         LogContext.SPACES
       );
     return interaction;
+  }
+
+  async save(vcInteraction: IVcInteraction): Promise<IVcInteraction> {
+    return this.interactionRepository.save(vcInteraction);
   }
 
   async getVcInteraction(interactionID: string): Promise<IVcInteraction> {

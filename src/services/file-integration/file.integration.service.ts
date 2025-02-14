@@ -37,9 +37,8 @@ export class FileIntegrationService {
       });
     }
 
-    const requesterAgentInfo = await this.authenticationService.getAgentInfo(
-      auth
-    );
+    const requesterAgentInfo =
+      await this.authenticationService.getAgentInfo(auth);
 
     let document: IDocument | undefined;
     try {

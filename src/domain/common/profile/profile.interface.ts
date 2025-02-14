@@ -16,16 +16,16 @@ export abstract class IProfile extends IAuthorizable {
   displayName!: string;
 
   @Field(() => String, {
-    nullable: false,
-    description: 'The taglie for this entity.',
+    nullable: true,
+    description: 'The tagline for this entity.',
   })
-  tagline!: string;
+  tagline?: string;
 
   @Field(() => Markdown, {
     nullable: true,
     description: 'A description of the entity associated with this profile.',
   })
-  description!: string;
+  description?: string;
 
   storageBucket?: IStorageBucket;
 
@@ -41,5 +41,5 @@ export abstract class IProfile extends IAuthorizable {
     nullable: true,
     description: 'A type of entity that this Profile is being used with.',
   })
-  type!: string;
+  type!: ProfileType;
 }

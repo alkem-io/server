@@ -3,19 +3,16 @@ import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @ObjectType('CalendarEvent')
 export abstract class ICalendarEvent extends INameable {
   @Field(() => CalendarEventType, {
     description: 'The event type, e.g. webinar, meetup etc.',
   })
-  type!: string;
+  type!: CalendarEventType;
 
   calendar?: ICalendar;
-
-  // Expose the date at which the event was created from parent entity
-  @Field(() => Date)
-  createdDate!: Date;
 
   createdBy!: string;
 
@@ -50,5 +47,18 @@ export abstract class ICalendarEvent extends INameable {
     nullable: true,
     description: 'The length of the event in days.',
   })
-  durationDays!: number;
+  durationDays?: number;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Is the event visible on the parent calendar.',
+  })
+  visibleOnParentCalendar!: boolean;
+
+  @Field(() => ISpace, {
+    nullable: true,
+    description:
+      'Which Subspace is this event part of. Only applicable if the Space has this option enabled.',
+  })
+  subspace?: ISpace;
 }

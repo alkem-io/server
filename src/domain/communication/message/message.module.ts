@@ -1,16 +1,11 @@
 import { Module } from '@nestjs/common';
 import { MessageResolverFields } from './message.resolver.fields';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { VirtualContributor } from '@domain/community/virtual-contributor';
-import { MessageService } from './message.service';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 
 @Module({
-  imports: [
-    ContributorLookupModule,
-    TypeOrmModule.forFeature([VirtualContributor]),
-  ],
-  providers: [MessageResolverFields, MessageService],
-  exports: [MessageResolverFields, MessageService],
+  imports: [UserLookupModule, VirtualContributorLookupModule],
+  providers: [MessageResolverFields],
+  exports: [MessageResolverFields],
 })
 export class MessageModule {}

@@ -34,7 +34,7 @@ export class CalloutContributionMoveService {
         {
           relations: {
             callout: {
-              collaboration: true,
+              calloutsSet: true,
             },
             post: {
               profile: true,
@@ -48,7 +48,7 @@ export class CalloutContributionMoveService {
     const sourceCallout = contribution.callout;
     const targetCallout = await this.calloutRepository.findOne({
       where: { id: calloutID },
-      relations: { collaboration: true },
+      relations: { calloutsSet: true },
     });
 
     if (!targetCallout) {
@@ -86,9 +86,9 @@ export class CalloutContributionMoveService {
       );
     }
 
-    if (targetCallout.collaboration?.id !== sourceCallout?.collaboration?.id) {
+    if (targetCallout.calloutsSet?.id !== sourceCallout?.calloutsSet?.id) {
       throw new NotSupportedException(
-        'A Contribution can only be moved between Callouts in the same Collaboration.',
+        'A Contribution can only be moved between Callouts in the same CalloutsSet.',
         LogContext.COLLABORATION
       );
     }

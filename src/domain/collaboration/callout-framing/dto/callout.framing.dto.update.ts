@@ -2,8 +2,7 @@ import { InputType, Field } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
-import { UpdateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.update';
-import { UpdateWhiteboardContentInput } from '@domain/common/whiteboard/dto/whiteboard.dto.update.content';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 
 @InputType()
 export class UpdateCalloutFramingInput {
@@ -16,11 +15,10 @@ export class UpdateCalloutFramingInput {
   @Type(() => UpdateProfileInput)
   profile?: UpdateProfileInput;
 
-  @Field(() => UpdateWhiteboardInput, { nullable: true })
+  @Field(() => WhiteboardContent, {
+    nullable: true,
+    description: 'The new content to be used.',
+  })
   @IsOptional()
-  whiteboard?: UpdateWhiteboardInput;
-
-  @Field(() => UpdateWhiteboardContentInput, { nullable: true })
-  @IsOptional()
-  whiteboardContent?: UpdateWhiteboardContentInput;
+  whiteboardContent?: string;
 }

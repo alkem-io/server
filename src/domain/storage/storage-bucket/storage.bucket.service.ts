@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -31,6 +30,10 @@ import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
@@ -40,6 +43,7 @@ export class StorageBucketService {
 
   constructor(
     private documentService: DocumentService,
+    private avatarCreatorService: AvatarCreatorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService,
@@ -53,11 +57,13 @@ export class StorageBucketService {
     private profileRepository: Repository<Profile>
   ) {}
 
-  public async createStorageBucket(
+  public createStorageBucket(
     storageBucketData: CreateStorageBucketInput
-  ): Promise<IStorageBucket> {
+  ): IStorageBucket {
     const storage: IStorageBucket = new StorageBucket();
-    storage.authorization = new AuthorizationPolicy();
+    storage.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.STORAGE_BUCKET
+    );
     storage.documents = [];
     storage.allowedMimeTypes =
       storageBucketData?.allowedMimeTypes || DEFAULT_ALLOWED_MIME_TYPES;
@@ -65,7 +71,7 @@ export class StorageBucketService {
       storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
     storage.storageAggregator = storageBucketData.storageAggregator;
 
-    return await this.storageBucketRepository.save(storage);
+    return storage;
   }
 
   async deleteStorageBucket(storageID: string): Promise<IStorageBucket> {
@@ -89,6 +95,10 @@ export class StorageBucketService {
     );
     result.id = storageID;
     return result;
+  }
+
+  public async save(storage: IStorageBucket): Promise<IStorageBucket> {
+    return this.storageBucketRepository.save(storage);
   }
 
   async getStorageBucketOrFail(
@@ -133,7 +143,8 @@ export class StorageBucketService {
     readStream: ReadStream,
     filename: string,
     mimeType: string,
-    userID: string
+    userID: string,
+    temporaryDocument = false
   ): Promise<IDocument> {
     const buffer = await streamToBuffer(readStream);
 
@@ -142,7 +153,8 @@ export class StorageBucketService {
       buffer,
       filename,
       mimeType,
-      userID
+      userID,
+      temporaryDocument
     );
   }
 
@@ -152,7 +164,7 @@ export class StorageBucketService {
     filename: string,
     mimeType: string,
     userID: string,
-    anonymousReadAccess = false
+    temporaryLocation = false
   ): Promise<IDocument | never> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: {},
@@ -171,7 +183,7 @@ export class StorageBucketService {
       displayName: filename,
       size: size,
       createdBy: userID,
-      anonymousReadAccess,
+      temporaryLocation: temporaryLocation,
     };
 
     try {
@@ -251,29 +263,29 @@ export class StorageBucketService {
     }
   }
 
-  public async addDocumentToBucketOrFail(
+  public async addDocumentToStorageBucketOrFail(
+    storageBucket: IStorageBucket,
+    document: IDocument
+  ): Promise<IDocument> | never {
+    this.validateMimeTypes(storageBucket, document.mimeType);
+    this.validateSize(storageBucket, document.size);
+    document.storageBucket = storageBucket;
+    if (!storageBucket.documents.includes(document)) {
+      storageBucket.documents.push(document);
+    }
+    this.logger.verbose?.(
+      `Added document '${document.externalID}' on storage bucket: ${storageBucket.id}`,
+      LogContext.STORAGE_BUCKET
+    );
+    return document;
+  }
+
+  public async addDocumentToStorageBucketByIdOrFail(
     storageBucketId: string,
     document: IDocument
   ): Promise<IDocument> | never {
-    const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: {},
-    });
-    if (!storage.documents) {
-      throw new EntityNotInitializedException(
-        `StorageBucket (${storage}) not initialised`,
-        LogContext.STORAGE_BUCKET
-      );
-    }
-
-    this.validateMimeTypes(storage, document.mimeType);
-    this.validateSize(storage, document.size);
-    document.storageBucket = storage;
-
-    this.logger.verbose?.(
-      `Added document '${document.externalID}' on storage bucket: ${storage.id}`,
-      LogContext.STORAGE_BUCKET
-    );
-    return await this.documentService.save(document);
+    const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
+    return this.addDocumentToStorageBucketOrFail(storageBucket, document);
   }
 
   public async size(storage: IStorageBucket): Promise<number> {
@@ -402,5 +414,42 @@ export class StorageBucketService {
     }
 
     return null;
+  }
+
+  public async ensureAvatarUrlIsDocument(
+    avatarURL: string,
+    storageBucketId: string,
+    userId: string
+  ): Promise<IDocument> {
+    if (this.documentService.isAlkemioDocumentURL(avatarURL)) {
+      const document = await this.documentService.getDocumentFromURL(avatarURL);
+      if (!document) {
+        throw new EntityNotFoundException(
+          `Document not found: ${avatarURL}`,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+      return document;
+    }
+
+    // Not stored on Alkemio, download + store
+    const imageBuffer = await this.avatarCreatorService.urlToBuffer(avatarURL);
+    let fileType = await this.avatarCreatorService.getFileType(imageBuffer);
+    if (!fileType) {
+      fileType = MimeTypeVisual.PNG;
+    }
+
+    const document = await this.uploadFileAsDocumentFromBuffer(
+      storageBucketId,
+      imageBuffer,
+      VisualType.AVATAR,
+      fileType,
+      userId
+    );
+
+    const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
+    document.storageBucket = storageBucket;
+
+    return await this.documentService.saveDocument(document);
   }
 }

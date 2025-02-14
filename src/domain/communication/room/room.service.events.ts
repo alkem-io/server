@@ -107,15 +107,15 @@ export class RoomServiceEvents {
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
         room.id
       );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
+    const levelZeroSpaceID =
+      await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+        community.id
       );
     this.contributionReporter.calloutPostCommentCreated(
       {
         id: post.id,
         name: post.profile.displayName,
-        space: spaceID,
+        space: levelZeroSpaceID,
       },
       {
         id: agentInfo.userID,
@@ -151,16 +151,16 @@ export class RoomServiceEvents {
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
         room.id
       );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
+    const levelZeroSpaceID =
+      await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+        community.id
       );
 
     this.contributionReporter.updateCreated(
       {
         id: room.id,
         name: '',
-        space: spaceID,
+        space: levelZeroSpaceID,
       },
       {
         id: agentInfo.userID,
@@ -193,19 +193,19 @@ export class RoomServiceEvents {
     this.activityAdapter.calloutCommentCreated(activityLogInput);
 
     const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
         callout.id
       );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
+    const levelZeroSpaceID =
+      await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+        community.id
       );
 
     this.contributionReporter.calloutCommentCreated(
       {
         id: callout.id,
         name: callout.nameID,
-        space: spaceID,
+        space: levelZeroSpaceID,
       },
       {
         id: agentInfo.userID,

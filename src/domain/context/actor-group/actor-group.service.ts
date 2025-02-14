@@ -3,9 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   ActorGroup,
-  IActorGroup,
   CreateActorGroupInput,
   DeleteActorGroupInput,
+  IActorGroup,
 } from '@domain/context/actor-group';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorService } from '@domain/context/actor/actor.service';
@@ -18,6 +18,7 @@ import { LogContext } from '@common/enums';
 import { CreateActorInput, IActor } from '@domain/context/actor';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ActorGroupService {
@@ -29,15 +30,14 @@ export class ActorGroupService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createActorGroup(
-    actorGroupData: CreateActorGroupInput
-  ): Promise<IActorGroup> {
-    const actorGroup: IActorGroup = ActorGroup.create({
+  public createActorGroup(actorGroupData: CreateActorGroupInput): IActorGroup {
+    return ActorGroup.create({
       ...actorGroupData,
+      authorization: new AuthorizationPolicy(
+        AuthorizationPolicyType.ACTOR_GROUP
+      ),
+      actors: [],
     });
-    actorGroup.authorization = new AuthorizationPolicy();
-    actorGroup.actors = [];
-    return await this.actorGroupRepository.save(actorGroup);
   }
 
   async deleteActorGroup(

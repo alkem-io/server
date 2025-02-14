@@ -1,4 +1,3 @@
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
@@ -22,12 +21,10 @@ import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
@@ -35,10 +32,7 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceType } from '@common/enums/space.type';
-import { IAccount } from '../account/account.interface';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
@@ -55,48 +49,89 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunityRole } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AgentType } from '@common/enums/agent.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { ISpaceSubscription } from './space.license.subscription.interface';
+import { IAccount } from '../account/account.interface';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
+import { TemplateType } from '@common/enums/template.type';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
+import { ITemplatesManager } from '@domain/template/templates-manager';
+import { Activity } from '@platform/activity';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
+import { getDiff, hasOnlyAllowedFields } from '@common/utils';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { RoleSetType } from '@common/enums/role.set.type';
+
+const EXPLORE_SPACES_LIMIT = 30;
+const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
+
+type SpaceSortingData = {
+  id: string;
+  subspacesCount: number;
+  visibility: SpaceVisibility;
+  accessModeIsPublic: boolean;
+};
 
 @Injectable()
 export class SpaceService {
   constructor(
+    private accountLookupService: AccountLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spacesFilterService: SpaceFilterService,
     private contextService: ContextService,
     private agentService: AgentService,
     private communityService: CommunityService,
-    private communityRoleService: CommunityRoleService,
+    private roleSetService: RoleSetService,
     private namingService: NamingService,
     private profileService: ProfileService,
     private spaceSettingsService: SpaceSettingsService,
     private spaceDefaultsService: SpaceDefaultsService,
     private storageAggregatorService: StorageAggregatorService,
+    private templatesManagerService: TemplatesManagerService,
     private collaborationService: CollaborationService,
+    private licensingFrameworkService: LicensingFrameworkService,
+    private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createSpace(
+  public async createSpace(
     spaceData: CreateSpaceInput,
-    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
     if (!spaceData.type) {
       // default to match the level if not specified
       switch (spaceData.level) {
-        case SpaceLevel.SPACE:
+        case SpaceLevel.L0:
           spaceData.type = SpaceType.SPACE;
           break;
-        case SpaceLevel.CHALLENGE:
+        case SpaceLevel.L1:
           spaceData.type = SpaceType.CHALLENGE;
           break;
-        case SpaceLevel.OPPORTUNITY:
+        case SpaceLevel.L2:
           spaceData.type = SpaceType.OPPORTUNITY;
           break;
         default:
@@ -106,7 +141,7 @@ export class SpaceService {
     }
     // Hard code / overwrite for now for root space level
     if (
-      spaceData.level === SpaceLevel.SPACE &&
+      spaceData.level === SpaceLevel.L0 &&
       spaceData.type !== SpaceType.SPACE
     ) {
       throw new NotSupportedException(
@@ -116,43 +151,84 @@ export class SpaceService {
     }
 
     const space: ISpace = Space.create(spaceData);
+    // default to demo space
+    space.visibility = SpaceVisibility.ACTIVE;
 
-    return await this.initialise(space, spaceData, account, agentInfo);
-  }
-
-  public async initialise(
-    space: ISpace,
-    spaceData: CreateSpaceInput,
-    account: IAccount,
-    agentInfo: AgentInfo | undefined
-  ): Promise<ISpace> {
-    space.authorization = new AuthorizationPolicy();
-    space.account = account;
-    space.settingsStr = this.spaceSettingsService.serializeSettings(
-      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
+    space.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.SPACE
+    );
+    space.settings = this.spaceDefaultsService.getDefaultSpaceSettings(
+      spaceData.type
     );
 
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.SPACE,
         spaceData.storageAggregatorParent
       );
     space.storageAggregator = storageAggregator;
 
-    const communityPolicy = this.spaceDefaultsService.getCommunityPolicy(
+    space.license = this.licenseService.createLicense({
+      type: LicenseType.SPACE,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE_FREE,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_PLUS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_PREMIUM,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: true,
+        },
+      ],
+    });
+
+    const roleSetRolesData = this.spaceDefaultsService.getRoleSetCommunityRoles(
       space.level
     );
     const applicationFormData =
-      this.spaceDefaultsService.getCommunityApplicationForm(space.level);
+      this.spaceDefaultsService.getRoleSetCommunityApplicationForm(space.level);
 
     const communityData: CreateCommunityInput = {
       name: spaceData.profileData.displayName,
-      policy: communityPolicy,
-      applicationForm: applicationFormData,
+      roleSetData: {
+        roles: roleSetRolesData,
+        applicationForm: applicationFormData,
+        entryRoleName: RoleName.MEMBER,
+        type: RoleSetType.SPACE,
+      },
       guidelines: {
-        // TODO: get this from defaults service
+        // TODO: get this from defaults service, currently create with empty
         profile: {
-          displayName: spaceData.profileData.displayName,
-          description: spaceData.profileData.description,
+          displayName: '',
+          description: '',
         },
       },
     };
@@ -162,10 +238,7 @@ export class SpaceService {
       storageAggregator
     );
 
-    if (!spaceData.context) {
-      spaceData.context = {};
-    }
-    space.context = await this.contextService.createContext(spaceData.context);
+    space.context = this.contextService.createContext(spaceData.context);
 
     const profileType = this.spaceDefaultsService.getProfileType(space.level);
     space.profile = await this.profileService.createProfile(
@@ -179,103 +252,147 @@ export class SpaceService {
     });
 
     // add the visuals
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       space.profile,
-      VisualType.AVATAR
-    );
-    await this.profileService.addVisualOnProfile(
-      space.profile,
-      VisualType.BANNER
-    );
-    await this.profileService.addVisualOnProfile(
-      space.profile,
-      VisualType.CARD
+      spaceData.profileData.visuals,
+      [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
     );
 
-    //// Collaboration
-
-    space.collaboration = await this.collaborationService.createCollaboration(
-      {
-        ...spaceData.collaborationData,
-      },
-      space.storageAggregator,
-      account,
-      space.type
-    );
-
-    const calloutGroupDefault =
-      this.spaceDefaultsService.getCalloutGroupDefault(space.type);
-    await this.collaborationService.addCalloutGroupTagsetTemplate(
-      space.collaboration,
-      calloutGroupDefault
-    );
-
-    const calloutInputsFromCollaborationTemplate =
-      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
-        spaceData.collaborationData?.collaborationTemplateID
-      );
-    const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
-      space.type
-    );
-    const calloutInputs =
-      await this.spaceDefaultsService.getCreateCalloutInputs(
-        defaultCallouts,
-        calloutInputsFromCollaborationTemplate,
-        spaceData.collaborationData
-      );
-    space.collaboration = await this.collaborationService.addDefaultCallouts(
-      space.collaboration,
-      calloutInputs,
-      space.storageAggregator,
-      agentInfo?.userID
-    );
-
-    /////////// Agents
-
-    space.agent = await this.agentService.createAgent({
-      parentDisplayID: `${space.nameID}`,
-    });
-
+    space.levelZeroSpaceID = '';
+    // save the collaboration and all it's template sets
     await this.save(space);
 
-    ////// Community
-    // set immediate community parent + resourceID
-    space.community.parentID = space.id;
-    space.community.policy =
-      await this.communityService.updateCommunityPolicyResourceID(
-        space.community,
-        space.id
+    if (spaceData.level === SpaceLevel.L0) {
+      space.levelZeroSpaceID = space.id;
+    }
+
+    //// Collaboration
+    let collaborationData: CreateCollaborationInput =
+      spaceData.collaborationData;
+    collaborationData.isTemplate = false;
+    // Pick up the default template that is applicable
+    collaborationData =
+      await this.spaceDefaultsService.createCollaborationInput(
+        collaborationData,
+        space.type,
+        spaceData.templatesManagerParent
       );
+    space.collaboration = await this.collaborationService.createCollaboration(
+      collaborationData,
+      space.storageAggregator,
+      agentInfo
+    );
+
+    space.agent = await this.agentService.createAgent({
+      type: AgentType.SPACE,
+    });
+
+    if (space.level === SpaceLevel.L0) {
+      space.templatesManager = await this.createTemplatesManager();
+    }
+
+    // Community:
+    // set immediate community parent + resourceID
+    if (!space.community || !space.community.roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Community with RoleSet: ${space.id}`,
+        LogContext.SPACES
+      );
+    }
+    space.community.parentID = space.id;
+    space.community.roleSet = await this.roleSetService.updateRoleResourceID(
+      space.community.roleSet,
+      space.id
+    );
 
     return await this.save(space);
+  }
+
+  private async createTemplatesManager(): Promise<ITemplatesManager> {
+    const templateDefaultData: CreateTemplateDefaultInput = {
+      type: TemplateDefaultType.SPACE_SUBSPACE,
+      allowedTemplateType: TemplateType.COLLABORATION,
+    };
+    const templatesManagerData: CreateTemplatesManagerInput = {
+      templateDefaultsData: [templateDefaultData],
+    };
+
+    const templatesManager =
+      await this.templatesManagerService.createTemplatesManager(
+        templatesManagerData
+      );
+    return templatesManager;
   }
 
   async save(space: ISpace): Promise<ISpace> {
     return await this.spaceRepository.save(space);
   }
 
-  async deleteSpace(deleteData: DeleteSpaceInput): Promise<ISpace> {
+  async deleteSpaceOrFail(
+    deleteData: DeleteSpaceInput
+  ): Promise<ISpace | never> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {
         subspaces: true,
+        collaboration: true,
+        community: true,
+        context: true,
+        agent: true,
+        profile: true,
+        storageAggregator: true,
+        templatesManager: true,
+        license: true,
       },
     });
 
-    if (!space.subspaces) {
+    if (
+      !space.subspaces ||
+      !space.collaboration ||
+      !space.community ||
+      !space.context ||
+      !space.agent ||
+      !space.profile ||
+      !space.storageAggregator ||
+      !space.authorization ||
+      !space.license
+    ) {
       throw new RelationshipNotFoundException(
-        `Unable to load all entities for deletion of space ${space.id} `,
+        `Unable to load entities to delete Space: ${space.id} `,
         LogContext.SPACES
       );
     }
 
     // Do not remove a space that has subspaces, require these to be individually first removed
-    if (space.subspaces.length > 0)
+    if (space.subspaces.length > 0) {
       throw new OperationNotAllowedException(
-        `Unable to remove Space (${space.nameID}) as it contains ${space.subspaces.length} subspaces`,
+        `Unable to remove Space (${space.id}), with level ${space.level}, as it contains ${space.subspaces.length} subspaces`,
         LogContext.SPACES
       );
+    }
 
-    await this.deleteEntities(space.id);
+    await this.contextService.removeContext(space.context.id);
+    await this.collaborationService.deleteCollaborationOrFail(
+      space.collaboration.id
+    );
+    await this.communityService.removeCommunityOrFail(space.community.id);
+    await this.profileService.deleteProfile(space.profile.id);
+    await this.agentService.deleteAgent(space.agent.id);
+    await this.licenseService.removeLicenseOrFail(space.license.id);
+    await this.authorizationPolicyService.delete(space.authorization);
+
+    if (space.level === SpaceLevel.L0) {
+      if (!space.templatesManager || !space.templatesManager) {
+        throw new RelationshipNotFoundException(
+          `Unable to load entities to delete base subspace: ${space.id} `,
+          LogContext.SPACES
+        );
+      }
+      await this.templatesManagerService.deleteTemplatesManager(
+        space.templatesManager.id
+      );
+    }
+
+    await this.storageAggregatorService.delete(space.storageAggregator.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
@@ -297,11 +414,8 @@ export class SpaceService {
       }
 
       return this.spaceRepository.findBy({
-        account: {
-          license: {
-            visibility: spaceVisibilityFilter,
-          },
-        },
+        visibility: spaceVisibilityFilter,
+        level: SpaceLevel.L0,
       });
     }
 
@@ -328,38 +442,6 @@ export class SpaceService {
     );
   }
 
-  /***
-   * Checks if Spaces exists against a list of IDs
-   * @param ids List of Space ids
-   * @returns  <i>true</i> if all Spaces exist; list of ids of the Spaces that doesn't, otherwise
-   */
-  public async spacesExist(ids: string[]): Promise<true | string[]> {
-    if (!ids.length) {
-      return true;
-    }
-
-    const spaces = await this.spaceRepository.find({
-      where: { id: In(ids) },
-      select: { id: true },
-    });
-
-    if (!spaces.length) {
-      return ids;
-    }
-
-    const notExist = [...ids];
-
-    spaces.forEach(space => {
-      const idIndex = notExist.findIndex(x => x === space.id);
-
-      if (idIndex >= -1) {
-        notExist.splice(idIndex, 1);
-      }
-    });
-
-    return notExist.length > 0 ? notExist : true;
-  }
-
   async getSpacesSorted(
     args: SpacesQueryArgs,
     options?: FindManyOptions<Space>
@@ -384,23 +466,16 @@ export class SpaceService {
       spaces = await this.spaceRepository.find({
         where: {
           id: In(args.IDs),
-          level: SpaceLevel.SPACE,
-          account: {
-            license: {
-              visibility: In(visibilities),
-            },
-          },
+          level: SpaceLevel.L0,
+          visibility: In(visibilities),
         },
         ...options,
       });
     } else {
       spaces = await this.spaceRepository.find({
         where: {
-          account: {
-            license: {
-              visibility: In(visibilities),
-            },
-          },
+          visibility: In(visibilities),
+          level: SpaceLevel.L0,
         },
         ...options,
       });
@@ -411,97 +486,23 @@ export class SpaceService {
     return spaces;
   }
 
-  public async getSpacesWithChildJourneys(
-    args: SpacesQueryArgs,
-    options?: FindManyOptions<Space>
-  ): Promise<ISpace[]> {
-    const visibilities = this.spacesFilterService.getAllowedVisibilities(
-      args.filter
-    );
-    // Load the spaces
-    let spaces: ISpace[];
-    if (args && args.IDs) {
-      spaces = await this.spaceRepository.find({
-        where: {
-          id: In(args.IDs),
-          account: {
-            license: {
-              visibility: In(visibilities),
-            },
-          },
-        },
-        ...options,
-        relations: {
-          ...options?.relations,
-          collaboration: true,
-          subspaces: {
-            collaboration: true,
-            subspaces: {
-              collaboration: true,
-            },
-          },
-        },
-      });
-    } else {
-      spaces = await this.spaceRepository.find({
-        where: {
-          account: {
-            license: {
-              visibility: In(visibilities),
-            },
-          },
-        },
-        ...options,
-        relations: {
-          ...options?.relations,
-          collaboration: true,
-          subspaces: {
-            collaboration: true,
-            subspaces: {
-              collaboration: true,
-            },
-          },
-        },
-      });
-    }
+  public async getSpacesInList(spaceIDs: string[]): Promise<ISpace[]> {
+    const visibilities = [SpaceVisibility.ACTIVE, SpaceVisibility.DEMO];
+
+    const spaces = await this.spaceRepository.find({
+      where: {
+        id: In(spaceIDs),
+        visibility: In(visibilities),
+      },
+      relations: {
+        parentSpace: true,
+        collaboration: true,
+      },
+    });
 
     if (spaces.length === 0) return [];
 
     return spaces;
-  }
-
-  // Returns a map of all collaboration IDs with parent space ID
-  public getSpaceMembershipCollaborationInfo(
-    spaces: ISpace[]
-  ): SpaceMembershipCollaborationInfo {
-    const spaceMembershipCollaborationInfo: SpaceMembershipCollaborationInfo =
-      new Map();
-
-    for (const space of spaces) {
-      if (space.collaboration?.id)
-        spaceMembershipCollaborationInfo.set(space.collaboration.id, space.id);
-
-      if (space.subspaces) {
-        for (const subspace of space.subspaces) {
-          if (subspace.collaboration?.id)
-            spaceMembershipCollaborationInfo.set(
-              subspace.collaboration.id,
-              space.id
-            );
-
-          if (subspace.subspaces) {
-            for (const subsubspace of subspace.subspaces) {
-              if (subsubspace.collaboration?.id)
-                spaceMembershipCollaborationInfo.set(
-                  subsubspace.collaboration.id,
-                  space.id
-                );
-            }
-          }
-        }
-      }
-    }
-    return spaceMembershipCollaborationInfo;
   }
 
   public async orderSpacesDefault(spaces: ISpace[]): Promise<ISpace[]> {
@@ -534,16 +535,10 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoinAndSelect('space.account', 'account');
-      qb.leftJoinAndSelect('account.license', 'license');
       qb.leftJoinAndSelect('space.authorization', 'authorization');
       qb.where({
-        level: SpaceLevel.SPACE,
-        account: {
-          license: {
-            visibility: In(visibilities),
-          },
-        },
+        level: SpaceLevel.L0,
+        visibility: In(visibilities),
       });
     }
 
@@ -557,12 +552,10 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoinAndSelect('space.account', 'account');
-    qb.leftJoinAndSelect('account.license', 'license');
     qb.leftJoinAndSelect('space.authorization', 'authorization_policy');
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
-      level: SpaceLevel.SPACE,
+      level: SpaceLevel.L0,
       id: In(IDs),
     });
     const spacesDataForSorting = await qb.getMany();
@@ -571,51 +564,37 @@ export class SpaceService {
   }
 
   private sortSpacesDefault(spacesData: Space[]): string[] {
-    const sortedSpaces = spacesData.sort((a, b) => {
-      const visibilityA = a.account?.license?.visibility;
-      const visibilityB = b.account?.license?.visibility;
+    const spacesDataForSorting: SpaceSortingData[] = [];
+    for (const space of spacesData) {
+      const settings = space.settings;
+      let subspacesCount = 0;
+      if (space.subspaces) {
+        subspacesCount = this.getSubspaceAndSubsubspacesCount(space.subspaces);
+      }
+      const spaceSortingData: SpaceSortingData = {
+        id: space.id,
+        visibility: space.visibility,
+        accessModeIsPublic: settings.privacy.mode === SpacePrivacyMode.PUBLIC,
+        subspacesCount,
+      };
+      spacesDataForSorting.push(spaceSortingData);
+    }
+    const sortedSpaces = spacesDataForSorting.sort((a, b) => {
       if (
-        visibilityA !== visibilityB &&
-        (visibilityA === SpaceVisibility.DEMO ||
-          visibilityB === SpaceVisibility.DEMO)
+        a.visibility !== b.visibility &&
+        (a.visibility === SpaceVisibility.DEMO ||
+          b.visibility === SpaceVisibility.DEMO)
       )
-        return visibilityA === SpaceVisibility.DEMO ? 1 : -1;
+        return a.visibility === SpaceVisibility.DEMO ? 1 : -1;
 
-      if (
-        a.authorization?.anonymousReadAccess === true &&
-        b.authorization?.anonymousReadAccess === false
-      )
-        return -1;
-      if (
-        a.authorization?.anonymousReadAccess === false &&
-        b.authorization?.anonymousReadAccess === true
-      )
-        return 1;
+      if (a.accessModeIsPublic && !b.accessModeIsPublic) return -1;
+      if (!a.accessModeIsPublic && b.accessModeIsPublic) return 1;
 
-      if (!a.subspaces && b.subspaces) return 1;
-      if (a.subspaces && !b.subspaces) return -1;
-      if (!a.subspaces && !b.subspaces) return 0;
-
-      // Shouldn't get there
-      if (!a.subspaces || !b.subspaces)
-        throw new ValidationException(
-          `Critical error when comparing Spaces! Critical error when loading Subspaces for Space ${a} and Space ${b}`,
-          LogContext.SPACES
-        );
-
-      const subspacesCountA = this.getSubspaceAndSubsubspacesCount(
-        a?.subspaces
-      );
-      const subspacesCountB = this.getSubspaceAndSubsubspacesCount(
-        b?.subspaces
-      );
-
-      if (subspacesCountA > subspacesCountB) return -1;
-      if (subspacesCountA < subspacesCountB) return 1;
+      if (a.subspacesCount > b.subspacesCount) return -1;
+      if (a.subspacesCount < b.subspacesCount) return 1;
 
       return 0;
     });
-
     const sortedIDs: string[] = [];
     for (const space of sortedSpaces) {
       sortedIDs.push(space.id);
@@ -640,34 +619,8 @@ export class SpaceService {
     return this.spaceRepository.find({
       where: {
         id: In(spaceIds),
-        account: {
-          license: {
-            visibility: visibilities.length ? In(visibilities) : undefined,
-          },
-        },
+        visibility: visibilities.length ? In(visibilities) : undefined,
       },
-    });
-  }
-
-  public getSpacesById(
-    spaceIdsOrNameIds: string[],
-    options?: FindManyOptions<Space>
-  ) {
-    return this.spaceRepository.find({
-      ...options,
-      where: options?.where
-        ? Array.isArray(options.where)
-          ? [
-              { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
-              ...options.where,
-            ]
-          : [
-              { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
-              options.where,
-            ]
-        : [{ id: In(spaceIdsOrNameIds) }, { nameID: In(spaceIdsOrNameIds) }],
     });
   }
 
@@ -686,24 +639,62 @@ export class SpaceService {
     return space;
   }
 
+  public getExploreSpaces(
+    limit = EXPLORE_SPACES_LIMIT,
+    daysOld = EXPLORE_SPACES_ACTIVITY_DAYS_OLD
+  ): Promise<ISpace[]> {
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - daysOld);
+
+    return (
+      this.spaceRepository
+        .createQueryBuilder('s')
+        .leftJoinAndSelect('s.authorization', 'authorization') // eager load the authorization
+        .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
+        .where({
+          level: SpaceLevel.L0,
+          visibility: SpaceVisibility.ACTIVE,
+        })
+        // activities in the past "daysOld" days
+        .andWhere('a.createdDate >= :daysAgo', { daysAgo })
+        .groupBy('s.id')
+        .orderBy('COUNT(a.id)', 'DESC')
+        .limit(limit)
+        .getMany()
+    );
+  }
+
   async getSpace(
     spaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
-    let space: ISpace | null = null;
-    const { where, ...restOfOptions } = options ?? {};
-    if (spaceID.length === UUID_LENGTH) {
-      space = await this.spaceRepository.findOne({
-        where: where ? { ...where, id: spaceID } : { id: spaceID },
-        ...restOfOptions,
-      });
-    }
+    const space = await this.spaceRepository.findOne({
+      where: {
+        id: spaceID,
+      },
+      ...options,
+    });
+
+    return space;
+  }
+
+  public async getSpaceByNameIdOrFail(
+    spaceNameID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
+    const space = await this.spaceRepository.findOne({
+      where: {
+        nameID: spaceNameID,
+        level: SpaceLevel.L0,
+      },
+      ...options,
+    });
     if (!space) {
-      // look up based on nameID
-      space = await this.spaceRepository.findOne({
-        where: where ? { ...where, nameID: spaceID } : { nameID: spaceID },
-        ...restOfOptions,
-      });
+      if (!space)
+        throw new EntityNotFoundException(
+          `Unable to find L0 Space with nameID: ${spaceNameID}`,
+          LogContext.SPACES
+        );
     }
     return space;
   }
@@ -718,10 +709,36 @@ export class SpaceService {
     space: ISpace,
     updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
-    if (updateData.nameID !== space.nameID) {
+    if (updateData.visibility && updateData.visibility !== space.visibility) {
+      // Only update visibility on L0 spaces
+      if (space.level !== SpaceLevel.L0) {
+        throw new ValidationException(
+          `Unable to update visibility on Space ${space.id} as it is not a L0 space`,
+          LogContext.SPACES
+        );
+      }
+      await this.updateSpaceVisibilityAllSubspaces(
+        space.id,
+        updateData.visibility
+      );
+
+      space.visibility = updateData.visibility;
+    }
+
+    if (updateData.nameID && updateData.nameID !== space.nameID) {
+      let reservedNameIDs: string[] = [];
+      if (space.level === SpaceLevel.L0) {
+        reservedNameIDs =
+          await this.namingService.getReservedNameIDsLevelZeroSpaces();
+      } else {
+        reservedNameIDs =
+          await this.namingService.getReservedNameIDsInLevelZeroSpace(
+            space.levelZeroSpaceID
+          );
+      }
       // updating the nameID, check new value is allowed
-      const updateAllowed = await this.isNameIdAvailable(updateData.nameID);
-      if (!updateAllowed) {
+      const existingNameID = reservedNameIDs.includes(updateData.nameID);
+      if (existingNameID) {
         throw new ValidationException(
           `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
           LogContext.ACCOUNT
@@ -729,7 +746,23 @@ export class SpaceService {
       }
       space.nameID = updateData.nameID;
     }
+
     return await this.save(space);
+  }
+
+  private async updateSpaceVisibilityAllSubspaces(
+    levelZeroSpaceID: string,
+    visibility: SpaceVisibility
+  ) {
+    const spaces = await this.spaceRepository.find({
+      where: {
+        levelZeroSpaceID: levelZeroSpaceID,
+      },
+    });
+    for (const space of spaces) {
+      space.visibility = visibility;
+      await this.save(space);
+    }
   }
 
   public async updateSpaceSettings(
@@ -739,17 +772,50 @@ export class SpaceService {
     return await this.updateSettings(space, settingsData.settings);
   }
 
-  async isNameIdAvailable(nameID: string): Promise<boolean> {
-    const spaceCount = await this.spaceRepository.countBy({
-      nameID: nameID,
+  /**
+   * Should the authorization policy be updated based on the update settings.
+   * Some setting do not require an update to the authorization policy.
+   * @param spaceId
+   * @param settingsData
+   */
+  public async shouldUpdateAuthorizationPolicy(
+    spaceId: string,
+    settingsData: UpdateSpaceSettingsEntityInput
+  ): Promise<boolean> {
+    const space = await this.spaceRepository.findOneOrFail({
+      where: { id: spaceId },
+      select: {
+        id: true,
+        settings: {
+          collaboration: {
+            allowEventsFromSubspaces: true,
+            allowMembersToCreateCallouts: true,
+            allowMembersToCreateSubspaces: true,
+            inheritMembershipRights: true,
+          },
+          membership: {
+            allowSubspaceAdminsToInviteMembers: true,
+            policy: true,
+          },
+          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
+        },
+      },
     });
-    if (spaceCount != 0) return false;
 
-    // check restricted space names
-    const restrictedSpaceNames = ['user', 'organization'];
-    if (restrictedSpaceNames.includes(nameID.toLowerCase())) return false;
-
-    return true;
+    const originalSettings = space.settings;
+    // compare the new values from the incoming update request with the original settings
+    const difference = getDiff(settingsData, originalSettings);
+    // if there is no difference, then no need to update the authorization policy
+    if (difference === null) {
+      return false;
+    }
+    // if a difference was detected, check if the difference is in the allowed fields
+    // if another field was updated, outside the allowed list, the auth policy has to be updated
+    return !hasOnlyAllowedFields(difference, {
+      collaboration: {
+        allowEventsFromSubspaces: true,
+      },
+    });
   }
 
   async getSubspaces(
@@ -802,25 +868,60 @@ export class SpaceService {
     return sortedSubspaces;
   }
 
+  async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
+    const space = await this.getSpaceOrFail(spaceInput.id, {
+      relations: {
+        agent: {
+          credentials: true,
+        },
+      },
+    });
+    if (!space.agent || !space.agent.credentials) {
+      throw new EntityNotFoundException(
+        `Unable to find agent with credentials for space: ${spaceInput.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    const subscriptions: ISpaceSubscription[] = [];
+    for (const credential of space.agent.credentials) {
+      if (
+        Object.values(LicensingCredentialBasedCredentialType).includes(
+          credential.type as LicensingCredentialBasedCredentialType
+        )
+      ) {
+        subscriptions.push({
+          name: credential.type as LicensingCredentialBasedCredentialType,
+          expires: credential.expires,
+        });
+      }
+    }
+    return subscriptions;
+  }
+
   async createSubspace(
     subspaceData: CreateSubspaceInput,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {
       relations: {
-        account: true,
         storageAggregator: true,
-        community: true,
+        templatesManager: true,
+        community: {
+          roleSet: true,
+        },
       },
     });
-    if (!space.account || !space.storageAggregator || !space.community) {
+
+    if (!space.storageAggregator || !space.community) {
       throw new EntityNotFoundException(
         `Unable to retrieve entities on space for creating subspace: ${space.id}`,
         LogContext.SPACES
       );
     }
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInAccount(space.account.id);
+      await this.namingService.getReservedNameIDsInLevelZeroSpace(
+        space.levelZeroSpaceID
+      );
     if (!subspaceData.nameID) {
       subspaceData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
@@ -838,63 +939,85 @@ export class SpaceService {
 
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
+    subspaceData.templatesManagerParent = space.templatesManager;
     subspaceData.level = space.level + 1;
-    let subspace = await this.createSpace(
-      subspaceData,
-      space.account,
-      agentInfo
-    );
+    let subspace = await this.createSpace(subspaceData, agentInfo);
 
     subspace = await this.addSubspaceToSpace(space, subspace);
+    subspace = await this.save(subspace);
+
+    subspace = await this.getSpaceOrFail(subspace.id, {
+      relations: {
+        profile: true,
+        community: {
+          roleSet: true,
+        },
+      },
+    });
 
     // Before assigning roles in the subspace check that the user is a member
     if (agentInfo) {
+      if (!subspace.community || !subspace.community.roleSet) {
+        throw new EntityNotInitializedException(
+          `unable to load community with role set: ${subspace.id}`,
+          LogContext.SPACES
+        );
+      }
+      const roleSet = subspace.community.roleSet;
+      const parentRoleSet = space.community.roleSet;
       const agent = await this.agentService.getAgentOrFail(agentInfo?.agentID);
-      const isMember = await this.communityRoleService.isMember(
-        agent,
-        space.community
-      );
+      const isMember = await this.roleSetService.isMember(agent, parentRoleSet);
       if (isMember) {
-        await this.assignUserToRoles(subspace, agentInfo);
+        await this.assignUserToRoles(roleSet, agentInfo);
       }
     }
 
     return subspace;
   }
 
-  async addSubspaceToSpace(space: ISpace, subspace: ISpace): Promise<ISpace> {
-    if (!space.community)
+  public async addSubspaceToSpace(
+    space: ISpace,
+    subspace: ISpace
+  ): Promise<ISpace> {
+    if (
+      !space.community ||
+      !subspace.community ||
+      !space.community.roleSet ||
+      !subspace.community.roleSet
+    ) {
       throw new ValidationException(
-        `Unable to add Subspace to space, missing relations: ${space.id}`,
+        `Unable to add Subspace to space, missing community or roleset relations: ${space.id}`,
         LogContext.SPACES
       );
+    }
 
     // Set the parent space directly, avoiding saving the whole parent
     subspace.parentSpace = space;
+    subspace.levelZeroSpaceID = space.levelZeroSpaceID;
 
     // Finally set the community relationship
-    await this.setCommunityHierarchyForSubspace(
+    subspace.community = await this.setRoleSetHierarchyForSubspace(
       space.community,
       subspace.community
     );
 
-    return await this.spaceRepository.save(subspace);
+    return subspace;
   }
 
   async getSubspace(subspaceID: string, space: ISpace): Promise<ISpace> {
-    return await this.getSubspaceInAccountScopeOrFail(
+    return await this.getSubspaceInLevelZeroScopeOrFail(
       subspaceID,
-      space.account.id
+      space.levelZeroSpaceID
     );
   }
 
   public async assignContributorToRole(
     space: ISpace,
     contributor: IContributor,
-    role: CommunityRole,
-    type: CommunityContributorType
+    role: RoleName,
+    type: RoleSetContributorType
   ) {
-    if (!space.community) {
+    if (!space.community || !space.community.roleSet) {
       throw new EntityNotInitializedException(
         `Community not initialised on Space for assigning contributor to role: ${space.id}`,
         LogContext.SPACES
@@ -907,54 +1030,41 @@ export class SpaceService {
       );
     }
 
-    await this.communityRoleService.assignContributorAgentToRole(
-      space.community,
-      contributor.agent,
+    await this.roleSetService.assignContributorAgentToRole(
+      space.community.roleSet,
       role,
+      contributor.agent,
       type
     );
   }
 
-  public async assignUserToRoles(
-    space: ISpace,
-    agentInfo: AgentInfo | undefined
-  ) {
-    if (!space.community) {
-      throw new EntityNotInitializedException(
-        `Community not initialised on Space: ${space.id}`,
-        LogContext.SPACES
-      );
-    }
-    if (agentInfo) {
-      await this.communityRoleService.assignUserToRole(
-        space.community,
-        agentInfo.userID,
-        CommunityRole.MEMBER,
-        agentInfo
-      );
+  public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      RoleName.MEMBER,
+      agentInfo.userID,
+      agentInfo
+    );
 
-      await this.communityRoleService.assignUserToRole(
-        space.community,
-        agentInfo.userID,
-        CommunityRole.LEAD,
-        agentInfo
-      );
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      RoleName.LEAD,
+      agentInfo.userID,
+      agentInfo
+    );
 
-      await this.communityRoleService.assignUserToRole(
-        space.community,
-        agentInfo.userID,
-        CommunityRole.ADMIN,
-        agentInfo
-      );
-    }
+    await this.roleSetService.assignUserToRole(
+      roleSet,
+      RoleName.ADMIN,
+      agentInfo.userID,
+      agentInfo
+    );
   }
 
   public async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(spaceData.ID, {
       relations: {
-        account: true,
         context: true,
-        community: true,
         profile: true,
       },
     });
@@ -980,85 +1090,30 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  private async deleteEntities(spaceID: string) {
-    const space = await this.getSpaceOrFail(spaceID, {
-      relations: {
-        collaboration: true,
-        community: true,
-        context: true,
-        agent: true,
-        profile: true,
-        storageAggregator: true,
-      },
-    });
-
-    if (
-      !space.collaboration ||
-      !space.community ||
-      !space.context ||
-      !space.agent ||
-      !space.profile ||
-      !space.storageAggregator ||
-      !space.authorization
-    ) {
-      throw new RelationshipNotFoundException(
-        `Unable to load entities to delete base subspace: ${space.id} `,
-        LogContext.SPACES
-      );
-    }
-
-    await this.contextService.removeContext(space.context.id);
-    await this.collaborationService.deleteCollaboration(space.collaboration.id);
-    await this.communityRoleService.removeAllCommunityRoles(space.community);
-    await this.communityService.removeCommunity(space.community.id);
-    await this.profileService.deleteProfile(space.profile.id);
-    await this.agentService.deleteAgent(space.agent.id);
-    await this.authorizationPolicyService.delete(space.authorization);
-
-    await this.storageAggregatorService.delete(space.storageAggregator.id);
-  }
-
-  async getSubspaceInAccount(
-    subspaceID: string,
-    accountID: string,
+  async getSubspaceByNameIdInLevelZeroSpace(
+    subspaceNameID: string,
+    levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
-    let subspace: ISpace | null = null;
-    if (subspaceID.length == UUID_LENGTH) {
-      subspace = await this.spaceRepository.findOne({
-        where: {
-          id: subspaceID,
-          account: {
-            id: accountID,
-          },
-        },
-        ...options,
-      });
-    }
-    if (!subspace) {
-      // look up based on nameID
-      subspace = await this.spaceRepository.findOne({
-        where: {
-          nameID: subspaceID,
-          account: {
-            id: accountID,
-          },
-        },
-        ...options,
-      });
-    }
+    const subspace = await this.spaceRepository.findOne({
+      where: {
+        nameID: subspaceNameID,
+        levelZeroSpaceID: levelZeroSpaceID,
+      },
+      ...options,
+    });
 
     return subspace;
   }
 
-  async getSubspaceInAccountScopeOrFail(
+  async getSubspaceInLevelZeroScopeOrFail(
     subspaceID: string,
-    accountID: string,
+    levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | never> {
-    const subspace = await this.getSubspaceInAccount(
+    const subspace = await this.getSubspaceByNameIdInLevelZeroSpace(
       subspaceID,
-      accountID,
+      levelZeroSpaceID,
       options
     );
 
@@ -1072,103 +1127,61 @@ export class SpaceService {
     return subspace;
   }
 
-  public getSettings(space: ISpace): ISpaceSettings {
-    return this.spaceSettingsService.getSettings(space.settingsStr);
-  }
-
-  public async setCommunityHierarchyForSubspace(
+  private async setRoleSetHierarchyForSubspace(
     parentCommunity: ICommunity,
     childCommunity: ICommunity | undefined
-  ) {
-    if (!childCommunity) {
-      throw new RelationshipNotFoundException(
-        `Unable to set subspace community relationship, child community not provied: ${parentCommunity.id}`,
-        LogContext.SPACES
+  ): Promise<ICommunity> {
+    if (
+      !childCommunity ||
+      !childCommunity.roleSet ||
+      !parentCommunity ||
+      !parentCommunity.roleSet
+    ) {
+      throw new EntityNotInitializedException(
+        `Unable to set the parent relationship for rolesets: ${childCommunity?.id} and ${parentCommunity?.id}`,
+        LogContext.COMMUNITY
       );
     }
-    // Finally set the community relationship
-    await this.communityService.setParentCommunity(
-      childCommunity,
-      parentCommunity
-    );
-  }
 
-  public async getSpaceForCommunityOrFail(
-    communityId: string
-  ): Promise<ISpace> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        community: {
-          id: communityId,
-        },
-      },
-      relations: {
-        profile: true,
-      },
-    });
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find space for community: ${communityId}`,
-        LogContext.SPACES
+    childCommunity.roleSet =
+      await this.roleSetService.setParentRoleSetAndCredentials(
+        childCommunity.roleSet,
+        parentCommunity.roleSet
       );
-    }
-    return space;
-  }
-
-  public async getSpaceForCollaborationOrFail(
-    collaborationID: string,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        collaboration: {
-          id: collaborationID,
-        },
-      },
-      relations: {
-        ...options?.relations,
-        profile: true,
-      },
-    });
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find space for collaboration: ${collaborationID}`,
-        LogContext.SPACES
-      );
-    }
-    return space;
+    return childCommunity;
   }
 
   public async updateSettings(
     space: ISpace,
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
-    const settings = this.spaceSettingsService.getSettings(space.settingsStr);
+    const settings = space.settings;
     const updatedSettings = this.spaceSettingsService.updateSettings(
       settings,
       settingsData
     );
-    space.settingsStr =
-      this.spaceSettingsService.serializeSettings(updatedSettings);
+    space.settings = updatedSettings;
     return await this.save(space);
   }
 
-  public async getAccountOrFail(spaceId: string): Promise<IAccount> {
-    const space = await this.spaceRepository.findOne({
-      where: { id: spaceId },
+  public async getAccountForLevelZeroSpaceOrFail(
+    space: ISpace
+  ): Promise<IAccount> {
+    const spaceWithAccount = await this.spaceRepository.findOne({
+      where: { id: space.levelZeroSpaceID },
       relations: {
         account: true,
       },
     });
 
-    if (!space) {
+    if (!spaceWithAccount || !spaceWithAccount.account) {
       throw new EntityNotFoundException(
-        `Unable to find base subspace with ID: ${spaceId}`,
+        `Unable to find account for space with ID: ${space.id} + level zero space ID: ${space.levelZeroSpaceID}`,
         LogContext.SPACES
       );
     }
 
-    return space.account;
+    return spaceWithAccount.account;
   }
 
   public async getCommunity(spaceId: string): Promise<ICommunity> {
@@ -1184,9 +1197,107 @@ export class SpaceService {
     return community;
   }
 
-  public async getCommunityPolicy(spaceId: string): Promise<ICommunityPolicy> {
-    const community = await this.getCommunity(spaceId);
-    return this.communityService.getCommunityPolicy(community);
+  public async getCommunityRoleSet(spaceId: string): Promise<IRoleSet> {
+    const subspaceWithCommunityRoleSet = await this.getSpaceOrFail(spaceId, {
+      relations: {
+        community: {
+          roleSet: true,
+        },
+      },
+    });
+    const community = subspaceWithCommunityRoleSet.community;
+    if (!community || !community.roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load community with RoleSet for space ${spaceId} `,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return community.roleSet;
+  }
+
+  async getTemplatesManagerOrFail(
+    rootSpaceID: string
+  ): Promise<ITemplatesManager> {
+    const levelZeroSpace = await this.getSpaceOrFail(rootSpaceID, {
+      relations: {
+        templatesManager: true,
+      },
+    });
+
+    if (!levelZeroSpace?.templatesManager) {
+      throw new EntityNotFoundException(
+        `Unable to find templatesManager for level zero space with id: ${rootSpaceID}`,
+        LogContext.SPACES
+      );
+    }
+
+    return levelZeroSpace.templatesManager;
+  }
+
+  public async activeSubscription(
+    space: ISpace
+  ): Promise<ISpaceSubscription | undefined> {
+    const today = new Date();
+    let plans: ILicensePlan[] = [];
+
+    try {
+      const licensingFramework =
+        await this.licensingFrameworkService.getDefaultLicensingOrFail();
+
+      plans = await this.licensingFrameworkService.getLicensePlansOrFail(
+        licensingFramework.id
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to retrieve licensing framework',
+        error,
+        LogContext.LICENSE
+      );
+      return undefined;
+    }
+
+    return (await this.getSubscriptions(space))
+      .filter(
+        subscription => !subscription.expires || subscription.expires > today
+      )
+      .map(subscription => {
+        return {
+          subscription,
+          plan: plans.find(
+            plan => plan.licenseCredential === subscription.name
+          ),
+        };
+      })
+      .filter(
+        item => item.plan?.type === LicensingCredentialBasedPlanType.SPACE_PLAN
+      )
+      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0]?.subscription;
+  }
+
+  public async getProvider(spaceInput: ISpace): Promise<IContributor> {
+    const space = await this.spaceRepository.findOne({
+      where: {
+        id: spaceInput.levelZeroSpaceID,
+      },
+      relations: {
+        account: true,
+      },
+    });
+    if (!space || !space.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Space with account to get Provider ${spaceInput.id} `,
+        LogContext.LIBRARY
+      );
+    }
+    const provider = await this.accountLookupService.getHost(space.account);
+    if (!provider) {
+      throw new RelationshipNotFoundException(
+        `Unable to load provider for Space ${space.id} `,
+        LogContext.LIBRARY
+      );
+    }
+    return provider;
   }
 
   public async getContext(spaceID: string): Promise<IContext> {
@@ -1204,7 +1315,9 @@ export class SpaceService {
     return context;
   }
 
-  public async getStorageAggregatorOrFail(spaceID: string): Promise<IContext> {
+  public async getStorageAggregatorOrFail(
+    spaceID: string
+  ): Promise<IStorageAggregator> {
     const space = await this.getSpaceOrFail(spaceID, {
       relations: {
         storageAggregator: true,
@@ -1214,7 +1327,7 @@ export class SpaceService {
     if (!storageAggregator)
       throw new RelationshipNotFoundException(
         `Unable to load storage aggregator for space ${spaceID} `,
-        LogContext.CONTEXT
+        LogContext.SPACES
       );
     return storageAggregator;
   }
@@ -1232,19 +1345,23 @@ export class SpaceService {
     return profile;
   }
 
-  public async getCollaborationOrFail(
-    subspaceId: string
-  ): Promise<ICollaboration> | never {
-    const subspaceWithCollaboration = await this.getSpaceOrFail(subspaceId, {
-      relations: { collaboration: true },
+  public async getCalloutsSetOrFail(
+    spaceId: string
+  ): Promise<ICalloutsSet> | never {
+    const subspaceWithCollaboration = await this.getSpaceOrFail(spaceId, {
+      relations: {
+        collaboration: {
+          calloutsSet: true,
+        },
+      },
     });
-    const collaboration = subspaceWithCollaboration.collaboration;
-    if (!collaboration)
+    const calloutsSet = subspaceWithCollaboration.collaboration?.calloutsSet;
+    if (!calloutsSet)
       throw new RelationshipNotFoundException(
-        `Unable to load collaboration for subspace ${subspaceId} `,
+        `Unable to load calloutsSet for sspace ${spaceId} `,
         LogContext.COLLABORATION
       );
-    return collaboration;
+    return calloutsSet;
   }
 
   public async getAgent(subspaceId: string): Promise<IAgent> {
@@ -1260,20 +1377,15 @@ export class SpaceService {
     return agent;
   }
 
-  public async getMembersCount(space: ISpace): Promise<number> {
-    const community = await this.getCommunity(space.id);
-    return await this.communityRoleService.getMembersCount(community);
-  }
-
   public async getPostsCount(space: ISpace): Promise<number> {
-    const collaboration = await this.getCollaborationOrFail(space.id);
+    const calloutsSet = await this.getCalloutsSetOrFail(space.id);
 
-    return await this.collaborationService.getPostsCount(collaboration);
+    return await this.collaborationService.getPostsCount(calloutsSet);
   }
 
   public async getWhiteboardsCount(space: ISpace): Promise<number> {
-    const collaboration = await this.getCollaborationOrFail(space.id);
-    return await this.collaborationService.getWhiteboardsCount(collaboration);
+    const calloutsSet = await this.getCalloutsSetOrFail(space.id);
+    return await this.collaborationService.getWhiteboardsCount(calloutsSet);
   }
 
   async getSubspacesInSpaceCount(parentSpaceId: string): Promise<number> {
@@ -1297,24 +1409,16 @@ export class SpaceService {
   async getMetrics(space: ISpace): Promise<INVP[]> {
     const metrics: INVP[] = [];
 
-    if (!space.account) {
-      throw new EntityNotInitializedException(
-        'Space account not initialized',
-        LogContext.SPACES
-      );
-    }
     // Subspaces
     const subspacesCount = await this.getSubspacesInSpaceCount(space.id);
     const subspacesTopic = new NVP('subspaces', subspacesCount.toString());
     subspacesTopic.id = `subspaces-${space.id}`;
     metrics.push(subspacesTopic);
 
-    const community = await this.getCommunity(space.id);
+    const roleSet = await this.getCommunityRoleSet(space.id);
 
     // Members
-    const membersCount = await this.communityRoleService.getMembersCount(
-      community
-    );
+    const membersCount = await this.roleSetService.getMembersCount(roleSet);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${space.id}`;
     metrics.push(membersTopic);

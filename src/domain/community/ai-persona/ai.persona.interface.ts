@@ -9,16 +9,16 @@ export class IAiPersona extends IAuthorizable {
   aiPersonaServiceID!: string;
 
   @Field(() => Markdown, {
-    nullable: false,
+    nullable: true,
     description: 'The description for this AI Persona.',
   })
-  description!: string;
+  description?: string;
 
   @Field(() => Markdown, {
-    nullable: false,
+    nullable: true,
     description: 'A overview of knowledge provided by this AI Persona.',
   })
-  bodyOfKnowledge!: string;
+  bodyOfKnowledge?: string;
 
   @Field(() => AiPersonaDataAccessMode, {
     nullable: false,

@@ -1,6 +1,5 @@
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
 import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
 import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
@@ -9,6 +8,7 @@ import { OrganizationFilterInput } from '@core/filtering';
 import { UseGuards } from '@nestjs/common';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
 @Resolver()
 export class OrganizationResolverQueries {
@@ -18,7 +18,6 @@ export class OrganizationResolverQueries {
     nullable: false,
     description: 'The Organizations on this platform',
   })
-  @Profiling.api
   async organizations(
     @Args({ nullable: true }) args: ContributorQueryArgs
   ): Promise<IOrganization[]> {
@@ -29,9 +28,8 @@ export class OrganizationResolverQueries {
     nullable: false,
     description: 'A particular Organization',
   })
-  @Profiling.api
   async organization(
-    @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IOrganization> {
     return await this.organizationService.getOrganizationOrFail(id);
   }
@@ -41,14 +39,20 @@ export class OrganizationResolverQueries {
     nullable: false,
     description: 'The Organizations on this platform in paginated format',
   })
-  @Profiling.api
   async organizationsPaginated(
     @Args() pagination: PaginationArgs,
+    @Args('status', {
+      nullable: true,
+      description: 'Return only Organizations with this verification status',
+      type: () => OrganizationVerificationEnum,
+    })
+    status?: OrganizationVerificationEnum,
     @Args('filter', { nullable: true }) filter?: OrganizationFilterInput
   ): Promise<PaginatedOrganization> {
     return this.organizationService.getPaginatedOrganizations(
       pagination,
-      filter
+      filter,
+      status
     );
   }
 }

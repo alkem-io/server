@@ -14,8 +14,8 @@ import { Visual } from './visual.entity';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { DocumentService } from '@domain/storage/document/document.service';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class VisualResolverMutations {
@@ -23,7 +23,7 @@ export class VisualResolverMutations {
     private authorizationService: AuthorizationService,
     private visualService: VisualService,
     private documentService: DocumentService,
-    private storageBucketService: StorageBucketService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
@@ -101,13 +101,15 @@ export class VisualResolverMutations {
       agentInfo.userID
     );
 
+    await this.documentService.saveDocument(visualDocument);
     // Ensure authorization is updated
-    const documentAuthorized =
-      this.documentAuthorizationService.applyAuthorizationPolicy(
+    const documentAuthorizations =
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
         visualDocument,
         storageBucket.authorization
       );
-    await this.documentService.saveDocument(documentAuthorized);
+    await this.authorizationPolicyService.saveAll(documentAuthorizations);
+
     const updateData: UpdateVisualInput = {
       visualID: visual.id,
       uri: this.documentService.getPubliclyAccessibleURL(visualDocument),

@@ -3,7 +3,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { StorageAggregatorService } from './storage.aggregator.service';
 import { IStorageAggregator } from './storage.aggregator.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { StorageBucketAuthorizationService } from '../storage-bucket/storage.bucket.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
@@ -18,7 +18,7 @@ export class StorageAggregatorAuthorizationService {
   async applyAuthorizationPolicy(
     storageAggregatorInput: IStorageAggregator,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IStorageAggregator> {
+  ): Promise<IAuthorizationPolicy[]> {
     const storageAggregator =
       await this.storageAggregatorService.getStorageAggregatorOrFail(
         storageAggregatorInput.id,
@@ -38,6 +38,7 @@ export class StorageAggregatorAuthorizationService {
         `Unable to load entities on StorageAggregator: ${storageAggregator.id} `,
         LogContext.STORAGE_BUCKET
       );
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     storageAggregator.authorization = this.authorizationPolicyService.reset(
       storageAggregator.authorization
@@ -47,13 +48,20 @@ export class StorageAggregatorAuthorizationService {
         storageAggregator.authorization,
         parentAuthorization
       );
+    storageAggregator.authorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        storageAggregator.authorization,
+        AuthorizationPrivilege.READ
+      );
+    updatedAuthorizations.push(storageAggregator.authorization);
 
-    storageAggregator.directStorage =
-      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+    const bucketAuthorizations =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         storageAggregator.directStorage,
         storageAggregator.authorization
       );
+    updatedAuthorizations.push(...bucketAuthorizations);
 
-    return storageAggregator;
+    return updatedAuthorizations;
   }
 }

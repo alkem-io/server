@@ -20,7 +20,6 @@ export const getSpaceRolesForContributorEntityData = async (
     };
 
     let relations: any = {
-      account: true,
       profile: true,
     };
 
@@ -28,17 +27,10 @@ export const getSpaceRolesForContributorEntityData = async (
       where = {
         id: In(ids),
         level: In(levels),
-        account: {
-          license: {
-            visibility: In(visibility),
-          },
-        },
+        visibility: In(visibility),
       };
       relations = {
         profile: true,
-        account: {
-          license: true,
-        },
       };
     }
     const results = entityManager.find(ref, {
@@ -48,18 +40,14 @@ export const getSpaceRolesForContributorEntityData = async (
         profile: {
           displayName: true,
         },
-        account: {
-          id: true,
-          license: true,
-        },
       },
     } as FindManyOptions);
     return results;
   };
 
   const [spaces, subspaces] = await Promise.all([
-    fetchData(Space, spaceIds, [SpaceLevel.SPACE], spaceAllowedVisibilities),
-    fetchData(Space, spaceIds, [SpaceLevel.CHALLENGE, SpaceLevel.OPPORTUNITY]),
+    fetchData(Space, spaceIds, [SpaceLevel.L0], spaceAllowedVisibilities),
+    fetchData(Space, spaceIds, [SpaceLevel.L1, SpaceLevel.L2]),
   ]);
 
   return { spaces, subspaces };

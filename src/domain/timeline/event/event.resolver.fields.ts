@@ -6,10 +6,11 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => ICalendarEvent)
 export class CalendarEventResolverFields {
@@ -17,7 +18,7 @@ export class CalendarEventResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private calendarEventService: CalendarEventService,
-    private userLookupService: ContributorLookupService
+    private userLookupService: UserLookupService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
@@ -54,7 +55,7 @@ export class CalendarEventResolverFields {
   })
   @Profiling.api
   async profile(@Parent() calendarEvent: ICalendarEvent): Promise<IProfile> {
-    return await this.calendarEventService.getProfile(calendarEvent);
+    return await this.calendarEventService.getProfileOrFail(calendarEvent);
   }
 
   @ResolveField('startDate', () => Date, {
@@ -63,5 +64,14 @@ export class CalendarEventResolverFields {
   })
   startDate(@Parent() event: ICalendarEvent): Date {
     return event.startDate;
+  }
+
+  @ResolveField('subspace', () => ISpace, {
+    nullable: true,
+    description:
+      'The subspace associated with this CalendarEvent. Only applicable if the event is not part of this Space calendar',
+  })
+  subspace(@Parent() event: ICalendarEvent): Promise<ISpace | undefined> {
+    return this.calendarEventService.getSubspace(event);
   }
 }

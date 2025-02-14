@@ -4,9 +4,8 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
@@ -26,10 +25,12 @@ import {
   CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
   CREDENTIAL_RULE_USER_READ,
   PRIVILEGE_RULE_READ_USER_SETTINGS,
+  CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { UserLookupService } from '../user-lookup/user.lookup.service';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -41,18 +42,61 @@ export class UserAuthorizationService {
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private agentService: AgentService,
-    private userService: UserService
+    private userLookupService: UserLookupService
   ) {}
 
-  async applyAuthorizationPolicy(userInput: IUser): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(userInput.id, {
+  async applyAuthorizationPolicy(
+    userID: string
+  ): Promise<IAuthorizationPolicy[]> {
+    const user = await this.userLookupService.getUserOrFail(userID, {
+      loadEagerRelations: false,
       relations: {
-        agent: true,
-        profile: true,
+        authorization: true,
+        agent: { authorization: true },
+        profile: { authorization: true },
         preferenceSet: {
-          preferences: true,
+          authorization: true,
+          preferences: { authorization: true },
         },
-        storageAggregator: true,
+        storageAggregator: {
+          authorization: true,
+          directStorage: { authorization: true },
+        },
+      },
+      select: {
+        id: true,
+        authorization:
+          this.authorizationPolicyService.authorizationSelectOptions,
+        agent: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        profile: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        preferenceSet: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          preferences: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+          },
+        },
+        storageAggregator: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          directStorage: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+          },
+        },
       },
     });
     if (
@@ -66,6 +110,9 @@ export class UserAuthorizationService {
         `Unable to load agent or profile or preferences or storage for User ${user.id} `,
         LogContext.COMMUNITY
       );
+
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Ensure always applying from a clean state
     user.authorization = this.authorizationPolicyService.reset(
       user.authorization
@@ -81,55 +128,72 @@ export class UserAuthorizationService {
     );
 
     user.authorization = this.appendPrivilegeRules(user.authorization);
+    updatedAuthorizations.push(user.authorization);
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedAnonymousReadAccessAuthorization =
+    let clonedAnonymousReadAccessAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         user.authorization
       );
     // To ensure that profile + context on a space are always publicly visible, even for private spaces
-    clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
-
-    // cascade
-    user.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        user.profile,
-        clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
+    clonedAnonymousReadAccessAuthorization =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        clonedAnonymousReadAccessAuthorization,
+        AuthorizationPrivilege.READ
       );
 
-    user.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
-      user.agent,
-      user.authorization
-    );
+    // cascade
+    const profileAuthorizations =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        user.profile.id,
+        clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
+      );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    user.preferenceSet =
+    const agentAuthorization =
+      this.agentAuthorizationService.applyAuthorizationPolicy(
+        user.agent,
+        user.authorization
+      );
+    updatedAuthorizations.push(agentAuthorization);
+
+    const preferenceSetAuthorizations =
       this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         user.preferenceSet,
         user.authorization
       );
+    updatedAuthorizations.push(...preferenceSetAuthorizations);
 
-    user.storageAggregator =
+    const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         user.storageAggregator,
         user.authorization
       );
+    updatedAuthorizations.push(...storageAuthorizations);
 
-    return await this.userService.save(user);
+    return updatedAuthorizations;
   }
 
-  async grantCredentials(user: IUser): Promise<IUser> {
-    const agent = await this.userService.getAgent(user.id);
+  async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
+    const { user, agent } =
+      await this.userLookupService.getUserAndAgent(userID);
 
-    user.agent = await this.agentService.grantCredential({
+    await this.agentService.grantCredential({
       type: AuthorizationCredential.GLOBAL_REGISTERED,
       agentID: agent.id,
     });
-    user.agent = await this.agentService.grantCredential({
+    await this.agentService.grantCredential({
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,
       agentID: agent.id,
-      resourceID: user.id,
+      resourceID: userID,
     });
-    return await this.userService.save(user);
+    await this.agentService.grantCredential({
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      agentID: agent.id,
+      resourceID: user.accountID,
+    });
+
+    return await this.userLookupService.getUserOrFail(userID);
   }
 
   private appendGlobalCredentialRules(
@@ -171,6 +235,15 @@ export class UserAuthorizationService {
       );
 
     newRules.push(communityAdmin);
+
+    const globalRegistered =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED
+      );
+
+    newRules.push(globalRegistered);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -228,7 +301,7 @@ export class UserAuthorizationService {
     newRules.push(communityReader);
 
     // Determine who is able to see the PII designated fields for a User
-    const { credentials } = await this.userService.getUserAndCredentials(
+    const { credentials } = await this.userLookupService.getUserAndCredentials(
       user.id
     );
     const readUserPiiCredentials: ICredentialDefinition[] = [

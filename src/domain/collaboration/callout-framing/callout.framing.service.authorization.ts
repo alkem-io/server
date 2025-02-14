@@ -20,16 +20,27 @@ export class CalloutFramingAuthorizationService {
   public async applyAuthorizationPolicy(
     calloutFramingInput: ICalloutFraming,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICalloutFraming> {
+  ): Promise<IAuthorizationPolicy[]> {
     const calloutFraming =
       await this.calloutFramingService.getCalloutFramingOrFail(
         calloutFramingInput.id,
         {
+          loadEagerRelations: false,
           relations: {
-            whiteboard: {
-              profile: true,
-            },
+            authorization: true,
             profile: true,
+            whiteboard: true,
+          },
+          select: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            profile: {
+              id: true,
+            },
+            whiteboard: {
+              id: true,
+            },
           },
         }
       );
@@ -40,27 +51,31 @@ export class CalloutFramingAuthorizationService {
         LogContext.COLLABORATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     calloutFraming.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         calloutFraming.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(calloutFraming.authorization);
 
-    calloutFraming.profile =
+    const framingAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        calloutFraming.profile,
+        calloutFraming.profile.id,
         calloutFraming.authorization
       );
+    updatedAuthorizations.push(...framingAuthorizations);
 
     if (calloutFraming.whiteboard) {
-      calloutFraming.whiteboard =
+      const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-          calloutFraming.whiteboard,
+          calloutFraming.whiteboard.id,
           calloutFraming.authorization
         );
+      updatedAuthorizations.push(...whiteboardAuthorizations);
     }
 
-    return calloutFraming;
+    return updatedAuthorizations;
   }
 }

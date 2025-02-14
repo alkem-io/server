@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsSelect, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ForbiddenException,
@@ -24,18 +24,35 @@ import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/a
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
 @Injectable()
 export class AuthorizationPolicyService {
+  private readonly authChunkSize: number;
   constructor(
     @InjectRepository(AuthorizationPolicy)
     private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
-  ) {}
+    private readonly logger: LoggerService,
+    private readonly configService: ConfigService<AlkemioConfig, true>
+  ) {
+    this.authChunkSize = this.configService.get('authorization.chunk', {
+      infer: true,
+    });
+  }
+
+  public authorizationSelectOptions: FindOptionsSelect<AuthorizationPolicy> = {
+    id: true,
+    credentialRules: true,
+    privilegeRules: true,
+    verifiedCredentialRules: true,
+  };
 
   createCredentialRule(
     grantedPrivileges: AuthorizationPrivilege[],
@@ -121,7 +138,9 @@ export class AuthorizationPolicyService {
     privileges: AuthorizationPrivilege[],
     name: string
   ): IAuthorizationPolicy {
-    const authorization = new AuthorizationPolicy();
+    const authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.IN_MEMORY
+    );
     const rule = this.createCredentialRuleGlobalAdmins(
       privileges,
       globalRoles,
@@ -134,7 +153,7 @@ export class AuthorizationPolicyService {
     return authorization;
   }
 
-  reset(
+  public reset(
     authorizationPolicy: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     if (!authorizationPolicy) {
@@ -143,9 +162,9 @@ export class AuthorizationPolicyService {
         LogContext.AUTH
       );
     }
-    authorizationPolicy.credentialRules = '';
-    authorizationPolicy.verifiedCredentialRules = '';
-    authorizationPolicy.privilegeRules = '';
+    authorizationPolicy.credentialRules = [];
+    authorizationPolicy.verifiedCredentialRules = [];
+    authorizationPolicy.privilegeRules = [];
     return authorizationPolicy;
   }
 
@@ -175,7 +194,25 @@ export class AuthorizationPolicyService {
   async save(
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
-    return await this.authorizationPolicyRepository.save(authorizationPolicy);
+    return this.authorizationPolicyRepository.save(authorizationPolicy);
+  }
+
+  async saveAll(authorizationPolicies: IAuthorizationPolicy[]): Promise<void> {
+    if (authorizationPolicies.length > 500)
+      this.logger.warn?.(
+        `Saving ${authorizationPolicies.length} authorization policies of type ${authorizationPolicies[0].type}`,
+        LogContext.AUTH
+      );
+    else {
+      this.logger.verbose?.(
+        `Saving ${authorizationPolicies.length} authorization policies`,
+        LogContext.AUTH
+      );
+    }
+
+    await this.authorizationPolicyRepository.save(authorizationPolicies, {
+      chunk: this.authChunkSize,
+    });
   }
 
   cloneAuthorizationPolicy(
@@ -206,9 +243,7 @@ export class AuthorizationPolicyService {
     name: string
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
-    const rules = this.authorizationService.convertCredentialRulesStr(
-      auth.credentialRules
-    );
+    const rules = auth.credentialRules;
     const newRule = new AuthorizationPolicyRuleCredential(
       grantedPrivileges,
       {
@@ -218,7 +253,61 @@ export class AuthorizationPolicyService {
       name
     );
     rules.push(newRule);
-    auth.credentialRules = JSON.stringify(rules);
+    auth.credentialRules = rules;
+    return auth;
+  }
+
+  public appendCredentialRuleRegisteredAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege,
+    cascade = true
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [AuthorizationCredential.GLOBAL_REGISTERED],
+      `Anonymous agent granted '${privilege}' registered access`
+    );
+    newRule.cascade = cascade;
+    auth.credentialRules.push(newRule);
+    return auth;
+  }
+
+  public appendCredentialRuleAnonymousAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege,
+    cascade = true
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [AuthorizationCredential.GLOBAL_ANONYMOUS],
+      `Anonymous agent granted '${privilege}' anonymous access`
+    );
+    newRule.cascade = cascade;
+    auth.credentialRules.push(newRule);
+    return auth;
+  }
+
+  public appendCredentialRuleAnonymousRegisteredAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    privilege: AuthorizationPrivilege,
+    cascade = true
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const newRule = this.createCredentialRuleUsingTypesOnly(
+      [privilege],
+      [
+        AuthorizationCredential.GLOBAL_ANONYMOUS,
+        AuthorizationCredential.GLOBAL_REGISTERED,
+      ],
+      `Anonymous agent granted '${privilege}' anonymous registered access`
+    );
+    newRule.cascade = cascade;
+    auth.credentialRules.push(newRule);
     return auth;
   }
 
@@ -228,14 +317,12 @@ export class AuthorizationPolicyService {
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
-    const existingRules = this.authorizationService.convertCredentialRulesStr(
-      auth.credentialRules
-    );
+    const existingRules = auth.credentialRules;
     for (const additionalRule of additionalRules) {
       existingRules.push(additionalRule);
     }
 
-    auth.credentialRules = JSON.stringify(existingRules);
+    auth.credentialRules = existingRules;
     return auth;
   }
 
@@ -244,13 +331,30 @@ export class AuthorizationPolicyService {
     privilegeRules: IAuthorizationPolicyRulePrivilege[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
-    const existingRules = this.authorizationService.convertPrivilegeRulesStr(
-      auth.privilegeRules
-    );
+    const existingRules = auth.privilegeRules;
     for (const additionalRule of privilegeRules) {
       existingRules.push(additionalRule);
     }
-    auth.privilegeRules = JSON.stringify(existingRules);
+    auth.privilegeRules = existingRules;
+    return auth;
+  }
+
+  public appendPrivilegeAuthorizationRuleMapping(
+    authorization: IAuthorizationPolicy | undefined,
+    sourcePrivilege: AuthorizationPrivilege,
+    grantedPrivileges: AuthorizationPrivilege[],
+    name: string
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+    const existingRules = auth.privilegeRules;
+    const newPrivilegeRule = new AuthorizationPolicyRulePrivilege(
+      grantedPrivileges,
+      sourcePrivilege,
+      name
+    );
+    existingRules.push(newPrivilegeRule);
+
+    auth.privilegeRules = existingRules;
     return auth;
   }
 
@@ -260,24 +364,12 @@ export class AuthorizationPolicyService {
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
-    const existingRules =
-      this.authorizationService.convertVerifiedCredentialRulesStr(
-        auth.verifiedCredentialRules
-      );
+    const existingRules = auth.verifiedCredentialRules;
     for (const additionalRule of additionalRules) {
       existingRules.push(additionalRule);
     }
 
-    auth.verifiedCredentialRules = JSON.stringify(existingRules);
-    return auth;
-  }
-
-  setAnonymousAccess(
-    authorization: IAuthorizationPolicy | undefined,
-    newValue: boolean
-  ): IAuthorizationPolicy {
-    const auth = this.validateAuthorization(authorization);
-    auth.anonymousReadAccess = newValue;
+    auth.verifiedCredentialRules = existingRules;
     return auth;
   }
 
@@ -295,34 +387,30 @@ export class AuthorizationPolicyService {
         )}`,
         LogContext.AUTH
       );
-      child = new AuthorizationPolicy();
+      child = new AuthorizationPolicy(AuthorizationPolicyType.UNKNOWN);
     }
     const parent = this.validateAuthorization(parentAuthorization);
     const resetAuthPolicy = this.reset(child);
-    // (a) Inherit the visibility
-    resetAuthPolicy.anonymousReadAccess = parent.anonymousReadAccess;
-    // (b) Inherit the credential rules
-    const inheritedRules = this.authorizationService.convertCredentialRulesStr(
-      parent.credentialRules
-    );
+
+    // (a) Inherit the credential rules
+    const inheritedRules = parent.credentialRules;
+
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     for (const inheritedRule of inheritedRules) {
       if (inheritedRule.cascade) {
         newRules.push(inheritedRule);
       }
     }
-    resetAuthPolicy.credentialRules = JSON.stringify(newRules);
+    resetAuthPolicy.credentialRules = newRules;
 
-    // (c) Inherit the verified credential rules
-    const inheritedVCRules =
-      this.authorizationService.convertVerifiedCredentialRulesStr(
-        parent.verifiedCredentialRules
-      );
+    // (b) Inherit the verified credential rules
+    const inheritedVCRules = parent.verifiedCredentialRules;
+
     const newVcRules: IAuthorizationPolicyRuleVerifiedCredential[] = [];
     for (const inheritedVcRule of inheritedVCRules) {
       newVcRules.push(inheritedVcRule);
     }
-    resetAuthPolicy.verifiedCredentialRules = JSON.stringify(newVcRules);
+    resetAuthPolicy.verifiedCredentialRules = newVcRules;
 
     return resetAuthPolicy;
   }
@@ -330,28 +418,19 @@ export class AuthorizationPolicyService {
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
-    const rules = this.authorizationService.convertCredentialRulesStr(
-      authorization.credentialRules
-    );
-    return rules;
+    return authorization.credentialRules;
   }
 
   getVerifiedCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleVerifiedCredential[] {
-    const result = this.authorizationService.convertVerifiedCredentialRulesStr(
-      authorization.verifiedCredentialRules
-    );
-    return result;
+    return authorization.verifiedCredentialRules;
   }
 
   getPrivilegeRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRulePrivilege[] {
-    const result = this.authorizationService.convertPrivilegeRulesStr(
-      authorization.privilegeRules
-    );
-    return result;
+    return authorization.privilegeRules ?? [];
   }
 
   getAgentPrivileges(

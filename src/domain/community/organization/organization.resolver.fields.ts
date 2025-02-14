@@ -7,7 +7,6 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
-import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/common/profile';
 import {
   AuthorizationAgentPrivilege,
@@ -19,8 +18,6 @@ import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { IPreference } from '@domain/common/preference';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -31,19 +28,17 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
-import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { ContributorService } from '../contributor/contributor.service';
+import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
-    private groupService: UserGroupService,
-    private preferenceSetService: PreferenceSetService,
-    private contributorService: ContributorService
+    private groupService: UserGroupService
   ) {}
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -62,14 +57,24 @@ export class OrganizationResolverFields {
       parent.id
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read user groups on org: ${organization.nameID}`
+      `read user groups on org: ${organization.id}`
     );
 
-    return await this.organizationService.getUserGroups(organization);
+    return this.organizationService.getUserGroups(organization);
+  }
+
+  // Note: do not check for READ so that it is accessible to check for authorization
+  @UseGuards(GraphqlGuard)
+  @ResolveField('roleSet', () => IRoleSet, {
+    nullable: false,
+    description: 'The RoleSet for this Organization.',
+  })
+  async roleSet(@Parent() organization: IOrganization): Promise<IRoleSet> {
+    return this.organizationService.getRoleSet(organization);
   }
 
   @UseGuards(GraphqlGuard)
@@ -88,11 +93,11 @@ export class OrganizationResolverFields {
       parent.id
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read single usergroup on org: ${organization.nameID}`
+      `read single usergroup on org: ${organization.id}`
     );
 
     const userGroup = await this.groupService.getUserGroupOrFail(groupID, {
@@ -112,100 +117,35 @@ export class OrganizationResolverFields {
     return userGroup;
   }
 
-  @UseGuards(GraphqlGuard)
-  @ResolveField('accounts', () => [IAccount], {
+  @ResolveField('settings', () => IOrganizationSettings, {
     nullable: false,
-    description: 'The accounts hosted by this Organization.',
+    description: 'The settings for this Organization.',
   })
-  @Profiling.api
-  async accounts(
+  @UseGuards(GraphqlGuard)
+  settings(@Parent() organization: IOrganization): IOrganizationSettings {
+    return organization.settings;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The account hosted by this Organization.',
+  })
+  async account(
     @Parent() organization: IOrganization,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IAccount[]> {
-    const accountsVisible = await this.authorizationService.isAccessGranted(
+  ): Promise<IAccount | undefined> {
+    const accountVisible = this.authorizationService.isAccessGranted(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.UPDATE
     );
-    if (accountsVisible) {
-      return await this.contributorService.getAccountsHostedByContributor(
-        organization
-      );
+    if (accountVisible) {
+      return await this.organizationService.getAccount(organization);
     }
-    return [];
+    return undefined;
   }
 
-  @UseGuards(GraphqlGuard)
-  @ResolveField('associates', () => [IUser], {
-    nullable: true,
-    description: 'All Users that are associated with this Organization.',
-  })
-  @Profiling.api
-  async associates(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser[]> {
-    // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `read associates on org: ${organization.nameID}`
-    );
-
-    return await this.organizationService.getAssociates(organization);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('admins', () => [IUser], {
-    nullable: true,
-    description: 'All Users that are admins of this Organization.',
-  })
-  @Profiling.api
-  async admins(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser[]> {
-    // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `read admins on org: ${organization.nameID}`
-    );
-
-    return await this.organizationService.getAdmins(organization);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('owners', () => [IUser], {
-    nullable: true,
-    description: 'All Users that are owners of this Organization.',
-  })
-  @Profiling.api
-  async owners(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser[]> {
-    // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `read owners on org: ${organization.nameID}`
-    );
-
-    return await this.organizationService.getOwners(organization);
-  }
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Organization.',
@@ -284,44 +224,5 @@ export class OrganizationResolverFields {
   @Profiling.api
   async metrics(@Parent() organization: Organization) {
     return await this.organizationService.getMetrics(organization);
-  }
-
-  @ResolveField('preferences', () => [IPreference], {
-    nullable: false,
-    description: 'The preferences for this Organization',
-  })
-  @UseGuards(GraphqlGuard)
-  async preferences(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IPreference[]> {
-    // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `read preferences on org: ${organization.nameID}`
-    );
-    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
-      organization.id
-    );
-    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('myRoles', () => [OrganizationRole], {
-    nullable: true,
-    description:
-      'The roles on this Organization for the currently logged in user.',
-  })
-  @Profiling.api
-  async myRoles(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() organization: IOrganization
-  ): Promise<OrganizationRole[]> {
-    return this.organizationService.getMyRoles(agentInfo, organization);
   }
 }

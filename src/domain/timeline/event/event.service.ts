@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -17,6 +17,13 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Calendar } from '@domain/timeline/calendar/calendar.entity';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
+import { Collaboration } from '@domain/collaboration/collaboration';
+import { Space } from '@domain/space/space/space.entity';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class CalendarEventService {
@@ -24,6 +31,7 @@ export class CalendarEventService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomService: RoomService,
     private profileService: ProfileService,
+    @InjectRepository(Space) private spaceRepository: Repository<Space>,
     @InjectRepository(CalendarEvent)
     private calendarEventRepository: Repository<CalendarEvent>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -45,7 +53,9 @@ export class CalendarEventService {
       name: TagsetReservedName.DEFAULT,
       tags: calendarEventInput.tags || [],
     });
-    calendarEvent.authorization = new AuthorizationPolicy();
+    calendarEvent.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALENDAR_EVENT
+    );
     calendarEvent.createdBy = userID;
 
     calendarEvent.comments = await this.roomService.createRoom(
@@ -137,9 +147,11 @@ export class CalendarEventService {
       calendarEvent.type = calendarEventData.type;
     }
 
-    await this.calendarEventRepository.save(calendarEvent);
+    calendarEvent.visibleOnParentCalendar =
+      calendarEventData.visibleOnParentCalendar ??
+      calendarEvent.visibleOnParentCalendar;
 
-    return calendarEvent;
+    return this.calendarEventRepository.save(calendarEvent);
   }
 
   public async saveCalendarEvent(
@@ -148,7 +160,31 @@ export class CalendarEventService {
     return await this.calendarEventRepository.save(calendarEvent);
   }
 
-  public async getProfile(calendarEvent: ICalendarEvent): Promise<IProfile> {
+  public getCalendarEvent(
+    calendarId: string,
+    eventID: string
+  ): Promise<ICalendarEvent> {
+    return this.calendarEventRepository.findOneOrFail({
+      where: [
+        {
+          id: eventID,
+          calendar: {
+            id: calendarId,
+          },
+        },
+      ],
+    });
+  }
+
+  public getCalendarEvents(eventIds: string[]): Promise<ICalendarEvent[]> {
+    return this.calendarEventRepository.findBy({
+      id: In(eventIds),
+    });
+  }
+
+  public async getProfileOrFail(
+    calendarEvent: ICalendarEvent
+  ): Promise<IProfile> {
     const calendarEventLoaded = await this.getCalendarEventOrFail(
       calendarEvent.id,
       {
@@ -162,6 +198,39 @@ export class CalendarEventService {
       );
 
     return calendarEventLoaded.profile;
+  }
+
+  public async getSubspace(
+    calendarEvent: ICalendarEvent
+  ): Promise<ISpace | undefined> {
+    const spaceParentOfTheEvent = await this.calendarEventRepository
+      .createQueryBuilder('calendarEvent')
+      .leftJoin(Calendar, 'calendar', 'calendar.id = calendarEvent.calendarId')
+      .leftJoin(Timeline, 'timeline', 'timeline.calendarId = calendar.id')
+      .leftJoin(
+        Collaboration,
+        'collaboration',
+        'collaboration.timelineId = timeline.id'
+      )
+      .leftJoin(
+        Space,
+        'subspace',
+        'subspace.collaborationId = collaboration.id'
+      )
+      .where('calendarEvent.id = :id', { id: calendarEvent.id })
+      .andWhere('subspace.level != :level', { level: SpaceLevel.L0 })
+      .select('subspace.id as spaceId')
+      .getRawOne<{ spaceId: string }>();
+
+    if (!spaceParentOfTheEvent) {
+      return undefined;
+    }
+
+    const space = await this.spaceRepository.findOne({
+      where: { id: spaceParentOfTheEvent.spaceId },
+    });
+
+    return space ?? undefined;
   }
 
   public async getComments(calendarEventID: string) {

@@ -5,12 +5,10 @@ import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
 import { PostAuthorizationService } from '../post/post.service.authorization';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CommunityRole } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import {
   CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
@@ -18,6 +16,10 @@ import {
   CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE,
 } from '@common/constants';
 import { LinkAuthorizationService } from '../link/link.service.authorization';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
@@ -29,34 +31,78 @@ export class CalloutContributionAuthorizationService {
     private postAuthorizationService: PostAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private linkAuthorizationService: LinkAuthorizationService,
-    private communityPolicyService: CommunityPolicyService
+    private roleSetService: RoleSetService
   ) {}
 
   public async applyAuthorizationPolicy(
-    contributionInput: ICalloutContribution,
+    contributionID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
-  ): Promise<ICalloutContribution> {
+    roleSet?: IRoleSet,
+    spaceSettings?: ISpaceSettings
+  ): Promise<IAuthorizationPolicy[]> {
     const contribution =
       await this.contributionService.getCalloutContributionOrFail(
-        contributionInput.id,
+        contributionID,
         {
+          loadEagerRelations: false,
           relations: {
+            authorization: true,
             post: {
-              profile: true,
+              authorization: true,
+              profile: {
+                authorization: true,
+              },
               comments: {
                 authorization: true,
               },
             },
             whiteboard: {
-              profile: true,
+              authorization: true,
+              profile: {
+                authorization: true,
+              },
             },
             link: {
-              profile: true,
+              authorization: true,
+              profile: {
+                authorization: true,
+              },
+            },
+          },
+          select: {
+            id: true,
+            createdBy: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            post: {
+              id: true,
+              createdBy: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+              },
+              comments: {
+                id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
+              },
+            },
+            whiteboard: {
+              id: true,
+            },
+            link: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+              },
             },
           },
         }
       );
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     contribution.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -65,43 +111,50 @@ export class CalloutContributionAuthorizationService {
       );
 
     // Extend to give the user creating the contribution more rights
-    contribution.authorization = this.appendCredentialRules(
+    contribution.authorization = await this.appendCredentialRules(
       contribution,
-      communityPolicy
+      roleSet,
+      spaceSettings
     );
+    updatedAuthorizations.push(contribution.authorization);
 
     if (contribution.post) {
-      contribution.post =
+      const postAuthorizations =
         await this.postAuthorizationService.applyAuthorizationPolicy(
           contribution.post,
           contribution.authorization,
-          communityPolicy
+          roleSet,
+          spaceSettings
         );
+      updatedAuthorizations.push(...postAuthorizations);
     }
     if (contribution.whiteboard) {
-      contribution.whiteboard =
+      const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-          contribution.whiteboard,
+          contribution.whiteboard.id,
           contribution.authorization
         );
+      updatedAuthorizations.push(...whiteboardAuthorizations);
     }
 
     if (contribution.link) {
-      contribution.link =
+      const linkAuthorizations =
         await this.linkAuthorizationService.applyAuthorizationPolicy(
           contribution.link,
           contribution.authorization,
           contribution.createdBy
         );
+      updatedAuthorizations.push(...linkAuthorizations);
     }
 
-    return contribution;
+    return updatedAuthorizations;
   }
 
-  private appendCredentialRules(
+  private async appendCredentialRules(
     contribution: ICalloutContribution,
-    communityPolicy: ICommunityPolicy
-  ): IAuthorizationPolicy {
+    communityPolicy?: IRoleSet,
+    spaceSettings?: ISpaceSettings
+  ): Promise<IAuthorizationPolicy> {
     const authorization = contribution.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -145,15 +198,21 @@ export class CalloutContributionAuthorizationService {
     }
 
     // Allow space admins to move post
-    const credentials =
-      this.communityPolicyService.getCredentialsForRoleWithParents(
-        communityPolicy,
-        CommunityRole.ADMIN
-      );
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
+    const credentials: ICredentialDefinition[] = [
+      {
+        type: AuthorizationCredential.GLOBAL_ADMIN,
+        resourceID: '',
+      },
+    ];
+    if (communityPolicy && spaceSettings) {
+      const roleCredentials =
+        await this.roleSetService.getCredentialsForRoleWithParents(
+          communityPolicy,
+          RoleName.ADMIN,
+          spaceSettings
+        );
+      credentials.push(...roleCredentials);
+    }
     const adminsMoveContributionRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_CONTRIBUTION],

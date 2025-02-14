@@ -5,51 +5,56 @@ import { AccountService } from '@domain/space/account/account.service';
 import { AccountResolverFields } from '@domain/space/account/account.resolver.fields';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
-import { LicenseModule } from '@domain/license/license/license.module';
-import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AccountResolverMutations } from './account.resolver.mutations';
 import { SpaceModule } from '../space/space.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
-import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
-import { LicensingModule } from '@platform/licensing/licensing.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
-import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
+import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { AccountHostModule } from '../account.host/account.host.module';
-import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { LicensingCredentialBasedModule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { CommunityModule } from '@domain/community/community/community.module';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
+import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
+import { LicenseModule } from '@domain/common/license/license.module';
+import { AccountLicenseService } from './account.service.license';
+import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
+import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
+import { AccountLookupModule } from '../account.lookup/account.lookup.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 
 @Module({
   imports: [
     AccountHostModule,
+    AccountLookupModule,
     AgentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     ContributorModule,
-    VirtualContributorModule,
-    TemplatesSetModule,
-    SpaceModule,
-    SpaceDefaultsModule,
     StorageAggregatorModule,
+    TemporaryStorageModule,
     PlatformAuthorizationPolicyModule,
-    InnovationFlowTemplateModule,
-    LicenseModule,
-    LicensingModule,
+    LicensingFrameworkModule,
     LicenseIssuerModule,
-    LicenseEngineModule,
+    LicensingCredentialBasedModule,
+    LicensingWingbackSubscriptionModule,
+    LicenseModule,
+    SpaceModule,
+    InnovationHubModule,
+    InnovationPackModule,
+    VirtualContributorModule,
+    VirtualContributorLookupModule,
     NameReporterModule,
-    CommunityPolicyModule,
+    NamingModule,
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,
-    CommunityModule,
   ],
   providers: [
     AccountService,
@@ -57,7 +62,8 @@ import { CommunityModule } from '@domain/community/community/community.module';
     AccountResolverFields,
     AccountResolverMutations,
     AccountResolverQueries,
+    AccountLicenseService,
   ],
-  exports: [AccountService, AccountAuthorizationService],
+  exports: [AccountService, AccountAuthorizationService, AccountLicenseService],
 })
 export class AccountModule {}

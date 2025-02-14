@@ -12,7 +12,6 @@ import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionService } from '../forum-discussion/discussion.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { ForumCreateDiscussionInput } from './dto/forum.dto.create.discussion';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { RoomType } from '@common/enums/room.type';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
@@ -23,6 +22,7 @@ import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category
 import { IForum } from './forum.interface';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ForumService {
@@ -40,7 +40,9 @@ export class ForumService {
     discussionCategories: ForumDiscussionCategory[]
   ): Promise<IForum> {
     const forum: IForum = new Forum();
-    forum.authorization = new AuthorizationPolicy();
+    forum.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.FORUM
+    );
 
     forum.discussions = [];
     forum.discussionCategories = discussionCategories;
@@ -112,7 +114,7 @@ export class ForumService {
     return discussion;
   }
 
-  async getDiscussions(
+  public async getDiscussions(
     forum: IForum,
     limit?: number,
     orderBy: DiscussionsOrderBy = DiscussionsOrderBy.DISCUSSIONS_CREATEDATE_DESC
@@ -145,23 +147,16 @@ export class ForumService {
     forum: IForum,
     discussionID: string
   ): Promise<IDiscussion> {
-    const discussions = await this.getDiscussions(forum);
-    let discussion: IDiscussion | undefined;
-    if (discussionID.length === UUID_LENGTH) {
-      discussion = discussions.find(
-        discussion => discussion.id === discussionID
-      );
-    }
-    if (!discussion) {
-      // look up based on nameID
-      discussion = discussions.find(
-        discussion => discussion.nameID === discussionID
-      );
-    }
-
-    if (!discussion) {
+    const discussion = await this.discussionService.getDiscussionOrFail(
+      discussionID,
+      {
+        relations: { forum: true },
+      }
+    );
+    // Check the requested discussion is in the forum
+    if (!discussion.forum || !(discussion.forum.id === forum.id)) {
       throw new EntityNotFoundException(
-        `Unable to find Discussion with ID: ${discussionID}`,
+        `Unable to find Forum for Discussion with ID: ${discussionID}`,
         LogContext.PLATFORM_FORUM
       );
     }

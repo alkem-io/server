@@ -3,17 +3,14 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import { FactoryProvider, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  AlkemioErrorStatus,
-  ConfigurationTypes,
-  LogContext,
-} from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 import { APP_ID, EXCALIDRAW_SERVER } from '@constants/index';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { getExcalidrawBaseServerOrFail } from '../../utils/get.excalidraw.base.server';
+import { AlkemioConfig } from '@src/types';
 
 export const ExcalidrawRedisServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
@@ -28,16 +25,16 @@ export const ExcalidrawRedisServerFactoryProvider: FactoryProvider = {
   useFactory: async (
     appId: string,
     logger: LoggerService,
-    configService: ConfigService
+    configService: ConfigService<AlkemioConfig, true>
   ) => factory(appId, logger, configService),
 };
 
 const factory = async (
   appId: string,
   logger: LoggerService,
-  configService: ConfigService
+  configService: ConfigService<AlkemioConfig, true>
 ) => {
-  const { host, port } = configService.get(ConfigurationTypes.STORAGE).redis;
+  const { host, port } = configService.get('storage.redis', { infer: true });
 
   if (!host) {
     throw new BaseException(

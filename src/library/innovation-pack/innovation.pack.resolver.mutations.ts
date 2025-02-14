@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { InnovationPackService } from './innovaton.pack.service';
+import { InnovationPackService } from './innovation.pack.service';
 
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -35,7 +35,7 @@ export class InnovationPackResolverMutations {
       agentInfo,
       innovationPack.authorization,
       AuthorizationPrivilege.UPDATE,
-      `updateInnovationPack: ${innovationPack.nameID}`
+      `updateInnovationPack: ${innovationPack.id}`
     );
 
     // ensure working with UUID
@@ -58,7 +58,7 @@ export class InnovationPackResolverMutations {
       agentInfo,
       innovationPack.authorization,
       AuthorizationPrivilege.DELETE,
-      `deleteInnovationPack: ${innovationPack.nameID}`
+      `deleteInnovationPack: ${innovationPack.id}`
     );
     return await this.innovationPackService.deleteInnovationPack(deleteData);
   }

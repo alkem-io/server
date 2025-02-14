@@ -1,10 +1,11 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 
 @InputType()
+@ObjectType('CreateCalloutFramingData')
 export class CreateCalloutFramingInput {
   @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested({ each: true })

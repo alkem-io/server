@@ -6,17 +6,20 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AiPersona } from './ai.persona.entity';
 import { IAiPersona } from './ai.persona.interface';
-import { CreateAiPersonaInput as CreateAiPersonaInput } from './dto/ai.persona.dto.create';
-import { DeleteAiPersonaInput as DeleteAiPersonaInput } from './dto/ai.persona.dto.delete';
+import { CreateAiPersonaInput } from './dto/ai.persona.dto.create';
+import { DeleteAiPersonaInput } from './dto/ai.persona.dto.delete';
 import { UpdateAiPersonaInput } from './dto/ai.persona.dto.update';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
+import {
+  AiServerAdapterInvocationInput,
+  InvocationResultAction,
+} from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AiPersonaService {
@@ -33,7 +36,9 @@ export class AiPersonaService {
   ): Promise<IAiPersona> {
     let aiPersona: IAiPersona = new AiPersona();
     aiPersona.description = aiPersonaData.description ?? '';
-    aiPersona.authorization = new AuthorizationPolicy();
+    aiPersona.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.AI_PERSONA
+    );
     aiPersona.bodyOfKnowledge = aiPersonaData.bodyOfKnowledge ?? '';
     aiPersona.dataAccessMode =
       AiPersonaDataAccessMode.SPACE_PROFILE_AND_CONTENTS;
@@ -44,7 +49,7 @@ export class AiPersonaService {
         aiPersonaData.aiPersonaServiceID
       );
 
-      this.aiServerAdapter.refreshBodyOfKnowlege(personaService.id);
+      this.aiServerAdapter.refreshBodyOfKnowledge(personaService.id);
       aiPersona.aiPersonaServiceID = personaService.id;
     } else if (aiPersonaData.aiPersonaService) {
       const aiPersonaService =
@@ -71,6 +76,29 @@ export class AiPersonaService {
     });
 
     return await this.aiPersonaRepository.save(aiPersona);
+  }
+
+  async refreshAllBodiesOfKnowledge(): Promise<boolean> {
+    try {
+      const allAiPersonaIDs = (
+        await this.aiPersonaRepository.find({
+          select: ['aiPersonaServiceID'],
+        })
+      ).map(persona => persona.aiPersonaServiceID);
+
+      for (const personaID of allAiPersonaIDs) {
+        this.aiServerAdapter.refreshBodyOfKnowledge(personaID);
+      }
+    } catch (error: unknown) {
+      this.logger.error(
+        `Error refreshing all bodies of knowledge: ${error}`,
+        error,
+        LogContext.PLATFORM
+      );
+      return false;
+    }
+
+    return true;
   }
 
   async deleteAiPersona(deleteData: DeleteAiPersonaInput): Promise<IAiPersona> {
@@ -124,22 +152,26 @@ export class AiPersonaService {
     return await this.aiPersonaRepository.save(aiPersona);
   }
 
-  public async askQuestion(
+  public invoke(
     aiPersona: IAiPersona,
-    question: string,
+    message: string,
     agentInfo: AgentInfo,
     contextSpaceID: string
-  ): Promise<IMessageAnswerToQuestion> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Asking question to AI Persona from user ${agentInfo.userID} + with context ${contextSpaceID}`,
       LogContext.PLATFORM
     );
 
-    const input: AiServerAdapterAskQuestionInput = {
-      question: question,
+    const input: AiServerAdapterInvocationInput = {
+      message,
+      displayName: '',
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
+      resultHandler: {
+        action: InvocationResultAction.POST_REPLY,
+      },
     };
 
-    return await this.aiServerAdapter.askQuestion(input);
+    return this.aiServerAdapter.invoke(input);
   }
 }

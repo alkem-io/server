@@ -1,6 +1,7 @@
 import DataLoader from 'dataloader';
 import { EntityManager, FindOptionsSelect } from 'typeorm';
 import { Type } from '@nestjs/common';
+import { EntityNotFoundException } from '@common/exceptions';
 import { DataLoaderCreatorOptions } from '../creators/base';
 import { ILoader } from '../loader.interface';
 import { selectOptionsFromFields } from './selectOptionsFromFields';
@@ -11,9 +12,9 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
   classRef: Type<TResult>,
   name: string,
   options?: DataLoaderCreatorOptions<TResult, TResult>
-): ILoader<TResult> => {
+): ILoader<TResult | null | EntityNotFoundException> => {
   const { fields, ...restOptions } = options ?? {};
-
+  // if fields ia specified, select specific fields, otherwise select all fields
   const selectOptions = fields
     ? Array.isArray(fields)
       ? {
@@ -21,9 +22,9 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
           ...selectOptionsFromFields(fields),
         }
       : fields
-    : { id: true };
+    : undefined;
 
-  return new DataLoader<string, TResult>(
+  return new DataLoader<string, TResult | null | EntityNotFoundException>(
     keys =>
       findByBatchIdsSimple(manager, classRef, keys as string[], {
         ...restOptions,

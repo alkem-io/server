@@ -11,6 +11,7 @@ import { compressText, decompressText } from '@common/utils/compression.util';
 import { IWhiteboard } from './whiteboard.interface';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
@@ -23,7 +24,13 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @BeforeUpdate()
   async compressValue() {
     if (this.content !== '') {
-      this.content = await compressText(this.content);
+      try {
+        this.content = await compressText(this.content);
+      } catch (e) {
+        this.content = '';
+        // rethrow to be caught higher, does not crash the server
+        throw new Error('Failed to compress content');
+      }
     }
   }
   @AfterInsert()
@@ -31,20 +38,25 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @AfterLoad()
   async decompressValue() {
     if (this.content !== '') {
-      this.content = await decompressText(this.content);
+      try {
+        this.content = await decompressText(this.content);
+      } catch (e: any) {
+        this.content = '';
+        // rethrow to be caught higher, does not crash the server
+        throw new Error(`Failed to decompress content: ${e?.message}`);
+      }
     }
   }
 
   @Column('longtext', { nullable: false })
   content!: string;
 
-  @Column('char', { length: 36, nullable: true })
-  createdBy!: string;
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  createdBy?: string;
 
   @Column('varchar', {
-    length: 255,
+    length: ENUM_LENGTH,
     nullable: false,
-    default: ContentUpdatePolicy.ADMINS,
   })
   contentUpdatePolicy!: ContentUpdatePolicy;
 }

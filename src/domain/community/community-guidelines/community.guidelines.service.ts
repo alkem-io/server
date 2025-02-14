@@ -10,12 +10,12 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext, ProfileType } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CommunityGuidelinesService {
@@ -30,7 +30,9 @@ export class CommunityGuidelinesService {
     storageAggregator: IStorageAggregator
   ): Promise<ICommunityGuidelines> {
     const communityGuidelines: ICommunityGuidelines = new CommunityGuidelines();
-    communityGuidelines.authorization = new AuthorizationPolicy();
+    communityGuidelines.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COMMUNITY_GUIDELINES
+    );
 
     const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
@@ -49,12 +51,13 @@ export class CommunityGuidelinesService {
       storageAggregator
     );
 
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       communityGuidelines.profile,
-      VisualType.CARD
+      communityGuidelinesData.profile.visuals,
+      [VisualType.CARD]
     );
 
-    return await this.communityGuidelinesRepository.save(communityGuidelines);
+    return communityGuidelines;
   }
 
   async save(
@@ -71,6 +74,25 @@ export class CommunityGuidelinesService {
       communityGuidelines.profile,
       communityGuidelinesData.profile
     );
+
+    return await this.communityGuidelinesRepository.save(communityGuidelines);
+  }
+
+  async eraseContent(
+    communityGuidelines: ICommunityGuidelines
+  ): Promise<ICommunityGuidelines> {
+    communityGuidelines.profile = await this.profileService.updateProfile(
+      communityGuidelines.profile,
+      {
+        displayName: '',
+        description: '',
+      }
+    );
+
+    await this.profileService.deleteAllReferencesFromProfile(
+      communityGuidelines.profile.id
+    );
+    communityGuidelines.profile.references = [];
 
     return await this.communityGuidelinesRepository.save(communityGuidelines);
   }
@@ -98,13 +120,11 @@ export class CommunityGuidelinesService {
     communityGuidelinesID: string,
     options?: FindOneOptions<CommunityGuidelines>
   ): Promise<ICommunityGuidelines | never> {
-    let communityGuidelines: ICommunityGuidelines | null = null;
-    if (communityGuidelinesID.length === UUID_LENGTH) {
-      communityGuidelines = await this.communityGuidelinesRepository.findOne({
+    const communityGuidelines =
+      await this.communityGuidelinesRepository.findOne({
         where: { id: communityGuidelinesID },
         ...options,
       });
-    }
 
     if (!communityGuidelines)
       throw new EntityNotFoundException(

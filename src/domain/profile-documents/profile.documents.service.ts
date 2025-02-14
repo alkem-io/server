@@ -1,102 +1,136 @@
-import { Injectable } from '@nestjs/common';
-import { BaseException } from '@common/exceptions/base.exception';
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { LogContext } from '@common/enums';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { ProfileService } from '@domain/common/profile/profile.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class ProfileDocumentsService {
   constructor(
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
-    private documentAuthorizationService: DocumentAuthorizationService,
-    private profileService: ProfileService
+    private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
   /***
-   * Checks if a document is living under the storage bucket
-   * of a profile and adds it if not there
+   * Checks if a url is living under the storage bucket
+   * of a profile and re-uploads it if not there
+   * @param fileUrl The url of the file to check
+   * @param storageBucket The StorageBucket in which the file should be
+   * @param internalUrlRequired If true, the file must be inside Alkemio: if the url passed is outside Alkemio will return undefined.
+   *                            If false, the file can be outside Alkemio: if the url passed is outside Alkemio will return the same url (will never download it, just let it pass)
    */
-  public async reuploadDocumentsToProfile(
+  public async reuploadFileOnStorageBucket(
     fileUrl: string,
-    profileId: string
+    storageBucket: IStorageBucket,
+    internalUrlRequired: boolean = false
   ): Promise<string | undefined> {
     if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
-      throw new BaseException(
-        'File URL not inside Alkemio',
-        LogContext.COLLABORATION,
-        AlkemioErrorStatus.UNSPECIFIED
-      );
+      // If image is not inside Alkemio just return url (or undefined if image needs to be inside Alkemio, but never refetch it)
+      if (internalUrlRequired) {
+        return undefined;
+      } else {
+        return fileUrl;
+      }
     }
 
-    const profile = await this.profileService.getProfileOrFail(profileId, {
-      relations: {
-        storageBucket: {
-          documents: true,
-        },
-      },
-    });
-
-    const storageBucketToCheck = profile.storageBucket;
-
-    if (!storageBucketToCheck) {
+    if (!storageBucket.documents) {
       throw new EntityNotInitializedException(
-        `Storage bucket not initialized on Profile: '${profile.id}'`,
+        `Documents not initialized on storage bucket: '${storageBucket.id}'`,
         LogContext.PROFILE
       );
     }
 
-    if (!storageBucketToCheck.documents) {
-      throw new EntityNotInitializedException(
-        `Documents not initialized on storage bucket: '${storageBucketToCheck.id}'`,
-        LogContext.PROFILE
-      );
-    }
-
-    const docInContent = await this.documentService.getDocumentFromURL(fileUrl);
+    const docInContent = await this.documentService.getDocumentFromURL(
+      fileUrl,
+      {
+        relations: { storageBucket: true },
+      }
+    );
 
     if (!docInContent) {
-      throw new BaseException(
+      throw new NotFoundException(
         `File with URL '${fileUrl}' not found`,
-        LogContext.COLLABORATION,
-        AlkemioErrorStatus.NOT_FOUND
+        LogContext.COLLABORATION
       );
     }
 
-    const docInThisBucket = storageBucketToCheck.documents.find(
+    const docInThisBucket = storageBucket.documents.find(
       doc => doc.id === docInContent.id
     );
 
     if (docInThisBucket) {
-      return undefined;
-    }
-
-    if (!docInThisBucket) {
+      // It should be just `fileUrl` but rewrite it just in case
+      return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
+    } else if (docInContent.temporaryLocation) {
+      // If it was temporary just move the document to the new bucket
+      docInContent.storageBucket = storageBucket;
+      docInContent.temporaryLocation = false;
+      storageBucket.documents.push(docInContent);
+      return this.documentService.getPubliclyAccessibleURL(docInContent);
+    } else {
       // if not in this bucket - create it inside it
       const newDoc = await this.documentService.createDocument({
-        createdBy: docInContent.createdBy,
+        createdBy: docInContent.createdBy, // TODO: This should be the current user
         displayName: docInContent.displayName,
-        externalID: docInContent.externalID,
+        externalID: docInContent.externalID, // Point to the same content
         mimeType: docInContent.mimeType,
         size: docInContent.size,
-        anonymousReadAccess: false,
+        temporaryLocation: false,
       });
-      await this.storageBucketService.addDocumentToBucketOrFail(
-        storageBucketToCheck.id,
+      await this.storageBucketService.addDocumentToStorageBucketOrFail(
+        storageBucket,
         newDoc
       );
-      const docAuth =
-        this.documentAuthorizationService.applyAuthorizationPolicy(
-          newDoc,
-          storageBucketToCheck.authorization
-        );
-      await this.documentService.saveDocument(docAuth);
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
+        newDoc,
+        storageBucket.authorization
+      );
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
+  }
 
-    return undefined;
+  /***
+   * Checks if a markdown profile has documents living under the storage bucket
+   * of a profile and re-uploads them if not there
+   */
+  public async reuploadDocumentsInMarkdownProfile(
+    markdown: string,
+    storageBucket: IStorageBucket
+  ): Promise<string> {
+    const baseUrl = this.documentService.getDocumentsBaseUrlPath() + '/';
+    const escapedBaseUrl = this.escapeRegExp(baseUrl);
+    const uuidPattern =
+      '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
+    const regex = new RegExp(`${escapedBaseUrl}(${uuidPattern})`, 'ig');
+
+    const matches = markdown.match(regex);
+    if (matches?.length) {
+      for (const match of matches) {
+        const newUrl = await this.reuploadFileOnStorageBucket(
+          match,
+          storageBucket,
+          false
+        );
+        if (newUrl && newUrl !== match) {
+          markdown = this.replaceAll(markdown, match, newUrl);
+        }
+      }
+    }
+
+    return markdown;
+  }
+
+  private escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private replaceAll(str: string, search: string, replace: string): string {
+    const escapedSearch = this.escapeRegExp(search);
+    const regexMatch = new RegExp(escapedSearch, 'g');
+    return str.replace(regexMatch, replace);
   }
 }

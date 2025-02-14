@@ -2,7 +2,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Space } from '@domain/space/space/space.entity';
 import { INVP } from '@domain/common/nvp';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { NameID } from '@domain/common/scalars';
 import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
@@ -26,20 +26,23 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { IAccount } from '../account/account.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { ISpaceSubscription } from './space.license.subscription.interface';
+import { ITemplatesManager } from '@domain/template/templates-manager';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
-  constructor(
-    private spaceService: SpaceService,
-    private authorizationService: AuthorizationService
-  ) {}
+  constructor(private spaceService: SpaceService) {}
 
   // Check authorization inside the field resolver directly on the Community
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: false,
@@ -52,16 +55,10 @@ export class SpaceResolverFields {
   ): Promise<ICommunity> {
     const community = await loader.load(space.id);
     // Do not check for READ access here, rely on per field check on resolver in Community
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   community.authorization,
-    //   AuthorizationPrivilege.READ,
-    //   `read community on space: ${community.id}`
-    // );
     return community;
   }
 
-  // Check authorization inside the field resolver directly on the Context
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: false,
@@ -69,22 +66,30 @@ export class SpaceResolverFields {
   })
   async context(
     @Parent() space: Space,
-    @CurrentUser() agentInfo: AgentInfo,
     @Loader(JourneyContextLoaderCreator, { parentClassRef: Space })
     loader: ILoader<IContext>
   ): Promise<IContext> {
     const context = await loader.load(space.id);
-    // Check if the user can read the Context entity, not the space
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      context.authorization,
-      AuthorizationPrivilege.READ,
-      `read context on space: ${context.id}`
-    );
     return context;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('subscriptions', () => [ISpaceSubscription], {
+    nullable: false,
+    description: 'The subscriptions active for this Space.',
+  })
+  async subscriptions(@Parent() space: ISpace) {
+    return await this.spaceService.getSubscriptions(space);
+  }
+
+  @ResolveField('activeSubscription', () => ISpaceSubscription, {
+    nullable: true,
+    description: 'The "highest" subscription active for this Space.',
+  })
+  async activeSubscription(@Parent() space: ISpace) {
+    return this.spaceService.activeSubscription(space);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
@@ -95,6 +100,20 @@ export class SpaceResolverFields {
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Space })
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
+    return loader.load(space.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('license', () => ILicense, {
+    nullable: false,
+    description: 'The License operating on this Space.',
+  })
+  async license(
+    @Parent() space: ISpace,
+    @Loader(LicenseLoaderCreator, { parentClassRef: Space })
+    loader: ILoader<ILicense>
+  ): Promise<ILicense> {
     return loader.load(space.id);
   }
 
@@ -135,7 +154,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getSubspaces(space, args);
   }
 
-  // Check authorization inside the field resolver
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
@@ -143,36 +162,39 @@ export class SpaceResolverFields {
   })
   async profile(
     @Parent() space: Space,
-    @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: Space })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     const profile = await loader.load(space.id);
-    // Check if the user can read the profile entity, not the space
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on space: ${profile.displayName}`
-    );
     return profile;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('subspace', () => ISpace, {
+  @ResolveField('account', () => IAccount, {
     nullable: false,
-    description: 'A particular subspace, either by its ID or nameID',
+    description: 'The Account that this Space is part of.',
+  })
+  async account(@Parent() space: ISpace): Promise<IAccount> {
+    return await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('subspaceByNameID', () => ISpace, {
+    nullable: false,
+    description: 'A particular subspace by its nameID',
   })
   async subspace(
-    @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @Args('NAMEID', { type: () => NameID }) id: string,
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: ISpace
   ): Promise<ISpace> {
-    const subspace = await this.spaceService.getSubspaceInAccount(
-      id,
-      space.account.id
-    );
+    const subspace =
+      await this.spaceService.getSubspaceByNameIdInLevelZeroSpace(
+        id,
+        space.levelZeroSpaceID
+      );
     if (!subspace) {
       throw new EntityNotFoundException(
         `Unable to find subspace with ID: '${id}'`,
@@ -195,6 +217,7 @@ export class SpaceResolverFields {
     nullable: true,
     description: 'The date for the creation of this Space.',
   })
+  @UseGuards(GraphqlGuard)
   async createdDate(@Parent() space: Space): Promise<Date> {
     const createdDate = (space as Space).createdDate;
     return new Date(createdDate);
@@ -204,7 +227,29 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'The settings for this Space.',
   })
-  states(@Parent() space: ISpace): ISpaceSettings {
-    return this.spaceService.getSettings(space);
+  @UseGuards(GraphqlGuard)
+  settings(@Parent() space: ISpace): ISpaceSettings {
+    return space.settings;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('templatesManager', () => ITemplatesManager, {
+    nullable: true,
+    description: 'The TemplatesManager in use by this Space',
+  })
+  @UseGuards(GraphqlGuard)
+  async templatesManager(@Parent() space: ISpace): Promise<ITemplatesManager> {
+    return await this.spaceService.getTemplatesManagerOrFail(
+      space.levelZeroSpaceID
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('provider', () => IContributor, {
+    nullable: false,
+    description: 'The Space provider.',
+  })
+  async provider(@Parent() space: ISpace): Promise<IContributor> {
+    return await this.spaceService.getProvider(space);
   }
 }

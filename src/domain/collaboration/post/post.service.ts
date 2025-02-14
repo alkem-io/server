@@ -17,6 +17,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
@@ -42,16 +43,16 @@ export class PostService {
       ProfileType.POST,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       post.profile,
-      VisualType.BANNER
+      postInput.profileData.visuals,
+      [VisualType.BANNER, VisualType.CARD]
     );
-    await this.profileService.addVisualOnProfile(post.profile, VisualType.CARD);
     await this.profileService.addTagsetOnProfile(post.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: postInput.tags || [],
     });
-    post.authorization = new AuthorizationPolicy();
+    post.authorization = new AuthorizationPolicy(AuthorizationPolicyType.POST);
     post.createdBy = userID;
 
     post.comments = await this.roomService.createRoom(
@@ -59,7 +60,7 @@ export class PostService {
       RoomType.POST
     );
 
-    return await this.savePost(post);
+    return post;
   }
 
   public async deletePost(postId: string): Promise<IPost> {
@@ -115,9 +116,6 @@ export class PostService {
         post.profile,
         postData.profileData
       );
-    }
-    if (postData.type) {
-      post.type = postData.type;
     }
 
     await this.savePost(post);

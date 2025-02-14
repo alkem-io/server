@@ -10,7 +10,10 @@ export class ContentModifiedInputData extends BaseInputData {
    * @param {string} triggeredBy - The user that triggered the content modification.
    * @param {string} whiteboardId - The ID of the whiteboard where the content was modified.
    */
-  constructor(public triggeredBy: string, public whiteboardId: string) {
+  constructor(
+    public triggeredBy: string,
+    public whiteboardId: string
+  ) {
     super('content-modified');
   }
 }

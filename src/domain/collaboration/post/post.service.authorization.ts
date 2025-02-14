@@ -8,8 +8,6 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_POST_CREATED_BY,
@@ -17,8 +15,12 @@ import {
 } from '@common/constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
-import { CommunityRole } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
@@ -27,21 +29,23 @@ export class PostAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private communityPolicyService: CommunityPolicyService,
+    private roleSetService: RoleSetService,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     post: IPost,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
-  ): Promise<IPost> {
+    roleSet?: IRoleSet,
+    spaceSettings?: ISpaceSettings
+  ): Promise<IAuthorizationPolicy[]> {
     if (!post.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on post reset auth:  ${post.id} `,
         LogContext.COLLABORATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     post.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         post.authorization,
@@ -51,38 +55,47 @@ export class PostAuthorizationService {
     // Inherit for comments before extending so that the creating user does not
     // have rights to delete comments
     if (post.comments) {
-      post.comments = this.roomAuthorizationService.applyAuthorizationPolicy(
-        post.comments,
-        post.authorization
-      );
+      let commentsAuthorization =
+        this.roomAuthorizationService.applyAuthorizationPolicy(
+          post.comments,
+          post.authorization
+        );
 
-      post.comments.authorization =
+      commentsAuthorization =
         this.roomAuthorizationService.allowContributorsToCreateMessages(
-          post.comments.authorization
+          commentsAuthorization
         );
-      post.comments.authorization =
+      commentsAuthorization =
         this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-          post.comments.authorization
+          commentsAuthorization
         );
+      updatedAuthorizations.push(commentsAuthorization);
     }
 
     // Extend to give the user creating the post more rights
-    post.authorization = this.appendCredentialRules(post, communityPolicy);
+    post.authorization = await this.appendCredentialRules(
+      post,
+      roleSet,
+      spaceSettings
+    );
+    updatedAuthorizations.push(post.authorization);
 
     // cascade
-    post.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        post.profile,
+        post.profile.id,
         post.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    return post;
+    return updatedAuthorizations;
   }
 
-  private appendCredentialRules(
+  private async appendCredentialRules(
     post: IPost,
-    communityPolicy: ICommunityPolicy
-  ): IAuthorizationPolicy {
+    roleSet?: IRoleSet,
+    spaceSettings?: ISpaceSettings
+  ): Promise<IAuthorizationPolicy> {
     const authorization = post.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -106,15 +119,22 @@ export class PostAuthorizationService {
     newRules.push(manageCreatedPostPolicy);
 
     // Allow space admins to move post
-    const credentials =
-      this.communityPolicyService.getCredentialsForRoleWithParents(
-        communityPolicy,
-        CommunityRole.ADMIN
-      );
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
+    const credentials: ICredentialDefinition[] = [
+      {
+        type: AuthorizationCredential.GLOBAL_ADMIN,
+        resourceID: '',
+      },
+    ];
+
+    if (roleSet && spaceSettings) {
+      const roleCredentials =
+        await this.roleSetService.getCredentialsForRoleWithParents(
+          roleSet,
+          RoleName.ADMIN,
+          spaceSettings
+        );
+      credentials.push(...roleCredentials);
+    }
     const adminsMovePostRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_POST],

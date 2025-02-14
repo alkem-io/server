@@ -9,11 +9,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
@@ -32,7 +32,7 @@ export class LinkService {
   ): Promise<ILink> {
     const link: ILink = Link.create(linkData);
 
-    link.authorization = new AuthorizationPolicy();
+    link.authorization = new AuthorizationPolicy(AuthorizationPolicyType.LINK);
 
     link.profile = await this.profileService.createProfile(
       linkData.profile,
@@ -86,13 +86,10 @@ export class LinkService {
     linkID: string,
     options?: FindOneOptions<Link>
   ): Promise<ILink | never> {
-    let link: ILink | null = null;
-    if (linkID.length === UUID_LENGTH) {
-      link = await this.linkRepository.findOne({
-        where: { id: linkID },
-        ...options,
-      });
-    }
+    const link = await this.linkRepository.findOne({
+      where: { id: linkID },
+      ...options,
+    });
 
     if (!link)
       throw new EntityNotFoundException(

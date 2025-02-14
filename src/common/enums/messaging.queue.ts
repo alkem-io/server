@@ -2,6 +2,8 @@ export enum MessagingQueue {
   VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE = 'virtual-contributor-engine-guidance',
   VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER = 'virtual-contributor-engine-community-manager',
   VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT = 'virtual-contributor-engine-expert',
+  VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC = 'virtual-contributor-engine-generic',
+  VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT = 'virtual-contributor-engine-openai-assistant',
   //
   WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
@@ -12,6 +14,7 @@ export enum MessagingQueue {
   EXCALIDRAW_EVENTS = 'alkemio-excalidraw-events',
   //
   SUBSCRIPTION_WHITEBOARD_CONTENT = 'alkemio-subscriptions-whiteboard-content',
+  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED = 'alkemio-subscriptions-virtual-contributor-updated',
   SUBSCRIPTION_WHITEBOARD_SAVED = 'alkemio-subscriptions-whiteboard-saved',
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
   SUBSCRIPTION_CALLOUT_POST_CREATED = 'alkemio-subscriptions-callout-post-created',
@@ -20,6 +23,7 @@ export enum MessagingQueue {
   SUBSCRIPTION_ACTIVITY_CREATED = 'alkemio-subscriptions-activity-created',
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
   //
-  AUTH = 'auth',
+  WHITEBOARDS = 'alkemio-whiteboards',
   FILES = 'alkemio-files',
+  IN_APP_NOTIFICATIONS = 'alkemio-in-app-notifications',
 }

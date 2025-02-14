@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -11,13 +12,9 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import {
-  CreateCalloutInput,
-  UpdateCalloutInput,
-} from '@domain/collaboration/callout/dto/index';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
 import { limitAndShuffle } from '@common/utils';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -25,7 +22,6 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
@@ -37,9 +33,14 @@ import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.
 import { CreatePostInput } from '../post/dto/post.dto.create';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
-import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UpdateCalloutInput } from './dto/callout.dto.update';
+import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { keyBy } from 'lodash';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
@@ -49,7 +50,7 @@ export class CalloutService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private namingService: NamingService,
     private roomService: RoomService,
-    private userLookupService: ContributorLookupService,
+    private userLookupService: UserLookupService,
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionPolicyService: CalloutContributionPolicyService,
@@ -72,7 +73,9 @@ export class CalloutService {
     }
 
     const callout: ICallout = Callout.create(calloutData);
-    callout.authorization = new AuthorizationPolicy();
+    callout.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALLOUT
+    );
     callout.createdBy = userID ?? undefined;
     callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
     callout.contributions = [];
@@ -105,14 +108,14 @@ export class CalloutService {
         policyData
       );
 
-    if (calloutData.type === CalloutType.POST) {
+    if (calloutData.type === CalloutType.POST && calloutData.enableComments) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
       );
     }
 
-    return this.calloutRepository.save(callout);
+    return callout;
   }
 
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {
@@ -138,10 +141,10 @@ export class CalloutService {
   }
 
   private async getStorageAggregator(
-    callout: ICallout
+    calloutID: string
   ): Promise<IStorageAggregator> {
     return await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
-      callout.id
+      calloutID
     );
   }
 
@@ -149,20 +152,11 @@ export class CalloutService {
     calloutID: string,
     options?: FindOneOptions<Callout>
   ): Promise<ICallout | never> {
-    let callout: ICallout | null = null;
-    if (calloutID.length === UUID_LENGTH) {
-      callout = await this.calloutRepository.findOne({
-        where: { id: calloutID },
-        ...options,
-      });
-    }
-    if (!callout) {
-      // look up based on nameID
-      callout = await this.calloutRepository.findOne({
-        where: { nameID: calloutID },
-        ...options,
-      });
-    }
+    const callout = await this.calloutRepository.findOne({
+      where: { id: calloutID },
+      ...options,
+    });
+
     if (!callout)
       throw new EntityNotFoundException(
         `No Callout found with the given id: ${calloutID}, using options: ${JSON.stringify(
@@ -203,13 +197,17 @@ export class CalloutService {
   }
 
   public async updateCallout(
+    calloutInput: ICallout,
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
-    const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
+    const callout = await this.getCalloutOrFail(calloutInput.id, {
       relations: {
         contributionDefaults: true,
         contributionPolicy: true,
-        framing: true,
+        framing: {
+          profile: true,
+          whiteboard: true,
+        },
       },
     });
 
@@ -303,46 +301,8 @@ export class CalloutService {
     return result;
   }
 
-  public async createCalloutInputFromCallout(
-    calloutInput: ICallout
-  ): Promise<CreateCalloutInput> {
-    const callout = await this.getCalloutOrFail(calloutInput.id, {
-      relations: {
-        contributionDefaults: true,
-        contributionPolicy: true,
-        framing: {
-          profile: {
-            references: true,
-            location: true,
-            tagsets: true,
-          },
-          whiteboard: {
-            profile: true,
-          },
-        },
-      },
-    });
-    const calloutGroupTagset =
-      await this.calloutFramingService.getCalloutGroupTagset(callout.framing);
-    return {
-      nameID: callout.nameID,
-      type: callout.type,
-      visibility: callout.visibility,
-      groupName: calloutGroupTagset.tags[0],
-      framing:
-        this.calloutFramingService.createCalloutFramingInputFromCalloutFraming(
-          callout.framing
-        ),
-      contributionDefaults:
-        this.contributionDefaultsService.createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-          callout.contributionDefaults
-        ),
-      contributionPolicy:
-        this.contributionPolicyService.createCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          callout.contributionPolicy
-        ),
-      sortOrder: callout.sortOrder,
-    };
+  public getCallouts(options: FindManyOptions<Callout>): Promise<ICallout[]> {
+    return this.calloutRepository.find(options);
   }
 
   public async getActivityCount(callout: ICallout): Promise<number> {
@@ -444,7 +404,7 @@ export class CalloutService {
     } else {
       whiteboardData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboardData.profileData.displayName}`,
+          `${whiteboardData.profile?.displayName ?? 'Whiteboard'}`,
           reservedNameIDs
         );
     }
@@ -456,7 +416,7 @@ export class CalloutService {
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: { contributionPolicy: true },
+      relations: { contributions: true },
     });
     if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
@@ -482,7 +442,28 @@ export class CalloutService {
       );
     }
 
-    const storageAggregator = await this.getStorageAggregator(callout);
+    if (!callout.contributions) {
+      throw new EntityNotInitializedException(
+        'Not able to load Contributions for this callout',
+        LogContext.COLLABORATION,
+        { calloutId: calloutID }
+      );
+    }
+
+    // set default sort order as the minimum of the existing contributions
+    // we want the new one to be first
+    if (contributionData.sortOrder === undefined) {
+      const contributionsSortOrder = callout.contributions.map(
+        c => c.sortOrder
+      );
+      const minOrder = Math.min(...contributionsSortOrder);
+      // first contribution
+      contributionData.sortOrder = !contributionsSortOrder.length
+        ? 1
+        : minOrder - 1;
+    }
+
+    const storageAggregator = await this.getStorageAggregator(callout.id);
     const contribution =
       await this.contributionService.createCalloutContribution(
         contributionData,
@@ -491,7 +472,62 @@ export class CalloutService {
         userID
       );
     contribution.callout = callout;
+
     return await this.contributionService.save(contribution);
+  }
+
+  public async getStorageBucket(calloutID: string): Promise<IStorageBucket> {
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: {
+        framing: {
+          profile: {
+            storageBucket: true,
+          },
+        },
+      },
+    });
+    const storageBucket = callout?.framing?.profile?.storageBucket;
+    if (!storageBucket) {
+      throw new RelationshipNotFoundException(
+        `Unable to find storage bucket to use for Callout: ${calloutID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return storageBucket;
+  }
+
+  public async updateContributionCalloutsSortOrder(
+    calloutId: string,
+    sortOrderData: UpdateContributionCalloutsSortOrderInput
+  ): Promise<ICalloutContribution[]> {
+    const callout = await this.getCalloutOrFail(calloutId, {
+      relations: { contributionPolicy: true, contributions: true },
+    });
+
+    if (!callout.contributions)
+      throw new EntityNotFoundException(
+        `No collaborations found: ${calloutId}`,
+        LogContext.COLLABORATION
+      );
+
+    const contributionsById = keyBy(callout.contributions, 'id');
+
+    const contributionsInOrder: ICalloutContribution[] = [];
+    let index = 1;
+    for (const id of sortOrderData.contributionIDs) {
+      const contribution = contributionsById[id];
+      if (!contribution || !contribution.id) {
+        throw new EntityNotFoundException(
+          `Callout with requested ID (${id}) not located within current Contribution: ${calloutId}`,
+          LogContext.COLLABORATION
+        );
+      }
+      contribution.sortOrder = index;
+      contributionsInOrder.push(contribution);
+      index++;
+    }
+
+    return this.contributionService.save(contributionsInOrder);
   }
 
   public async getCalloutFraming(
@@ -512,92 +548,40 @@ export class CalloutService {
 
   public async getContributions(
     callout: ICallout,
-    relations?: FindOptionsRelations<ICallout>,
     contributionIDs?: string[],
-    filter?: CalloutContributionFilterArgs,
     limit?: number,
     shuffle?: boolean
   ): Promise<ICalloutContribution[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
       relations: {
         contributions: {
+          post: true,
           whiteboard: true,
+          link: true,
         },
-        ...relations,
       },
     });
     if (!calloutLoaded.contributions)
       throw new EntityNotFoundException(
-        `Callout not initialised, no contributions: ${callout.id}`,
+        `Callout not initialized, no contributions: ${callout.id}`,
         LogContext.COLLABORATION
       );
 
     const results: ICalloutContribution[] = [];
     if (!contributionIDs) {
-      if (!filter) {
-        const limitAndShuffled = limitAndShuffle(
-          calloutLoaded.contributions,
-          limit,
-          shuffle
+      results.push(...calloutLoaded.contributions);
+    } else {
+      for (const contributionID of contributionIDs) {
+        const contribution = calloutLoaded.contributions.find(
+          contribution => contribution.id === contributionID
         );
-        return limitAndShuffled;
-      }
-
-      for (const contribution of calloutLoaded.contributions) {
-        if (
-          contribution.whiteboard &&
-          filter.whiteboardIDs &&
-          !filter.whiteboardIDs.includes(contribution.whiteboard.id) &&
-          !filter.whiteboardIDs.includes(contribution.whiteboard.nameID)
-        )
-          continue;
-        if (
-          contribution.post &&
-          filter.postIDs &&
-          !filter.postIDs.includes(contribution.post.id) &&
-          !filter.postIDs.includes(contribution.post.nameID)
-        )
-          continue;
-        if (
-          contribution.link &&
-          filter.linkIDs &&
-          !filter.linkIDs.includes(contribution.link.id)
-        )
-          continue;
+        if (!contribution) continue;
 
         results.push(contribution);
       }
-      return results;
     }
 
-    for (const contributionID of contributionIDs) {
-      const contribution = calloutLoaded.contributions.find(
-        contribution => contribution.id === contributionID
-      );
-      if (!contribution) continue;
-      if (
-        contribution.whiteboard &&
-        filter?.whiteboardIDs &&
-        (!filter.whiteboardIDs.includes(contribution.whiteboard.id) ||
-          !filter.whiteboardIDs.includes(contribution.whiteboard.nameID))
-      )
-        continue;
-      if (
-        contribution.post &&
-        filter?.postIDs &&
-        (!filter.postIDs.includes(contribution.post.id) ||
-          !filter.postIDs.includes(contribution.post.nameID))
-      )
-        continue;
-      if (
-        contribution.link &&
-        filter?.linkIDs &&
-        !filter.linkIDs.includes(contribution.link.id)
-      )
-        continue;
-
-      results.push(contribution);
-    }
-    return results;
+    const limitAndShuffled = limitAndShuffle(results, limit, shuffle);
+    return limitAndShuffled;
   }
 }

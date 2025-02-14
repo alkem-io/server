@@ -27,10 +27,13 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MutationType } from '@common/enums/subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoomServiceMentions } from './room.service.mentions';
 import { Mention } from '../messaging/mention.interface';
 import { IRoom } from './room.interface';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { VirtualContributorMessageService } from '../virtual.contributor.message/virtual.contributor.message.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { RoomMentionsService } from '../room-mentions/room.mentions.service';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -40,9 +43,11 @@ export class RoomResolverMutations {
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
-    private roomServiceMentions: RoomServiceMentions,
+    private roomLookupService: RoomLookupService,
+    private roomMentionsService: RoomMentionsService,
     private subscriptionPublishService: SubscriptionPublishService,
-    private virtualContributorsService: VirtualContributorService,
+    private virtualContributorMessageService: VirtualContributorMessageService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -57,7 +62,9 @@ export class RoomResolverMutations {
     @Args('messageData') messageData: RoomSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IMessage> {
-    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+    const room = await this.roomService.getRoomOrFail(messageData.roomID, {
+      relations: { authorization: true },
+    });
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -70,22 +77,16 @@ export class RoomResolverMutations {
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
 
-    const mentions = this.roomServiceMentions.getMentionsFromText(
+    const mentions = await this.roomMentionsService.getMentionsFromText(
       messageData.message
     );
 
-    const message = await this.roomService.sendMessage(
+    const message = await this.roomLookupService.sendMessage(
       room,
       agentInfo.communicationID,
       messageData
     );
     const threadID = message.id;
-
-    this.subscriptionPublishService.publishRoomEvent(
-      room.id,
-      MutationType.CREATE,
-      message
-    );
 
     switch (room.type) {
       case RoomType.POST:
@@ -93,7 +94,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           post.id,
           post.nameID,
@@ -118,7 +119,7 @@ export class RoomResolverMutations {
           agentInfo
         );
         if (accessVirtualContributors) {
-          this.roomServiceMentions.processVirtualContributorMentions(
+          await this.roomMentionsService.processVirtualContributorMentions(
             mentions,
             message.message,
             threadID,
@@ -133,7 +134,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           calendar.id,
           calendar.nameID,
@@ -149,7 +150,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           discussion.id,
           discussion.nameID,
@@ -163,7 +164,7 @@ export class RoomResolverMutations {
         const discussionForum = await this.namingService.getDiscussionForRoom(
           messageData.roomID
         );
-        this.roomServiceMentions.processNotificationMentions(
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           discussionForum.id,
           discussionForum.nameID,
@@ -192,8 +193,8 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        // Mentions notificaitons should be sent regardless of callout visibility per client-web#5557
-        this.roomServiceMentions.processNotificationMentions(
+        // Mentions notifications should be sent regardless of callout visibility per client-web#5557
+        this.roomMentionsService.processNotificationMentions(
           mentions,
           callout.id,
           callout.nameID,
@@ -204,7 +205,7 @@ export class RoomResolverMutations {
         );
 
         if (accessVirtualContributors) {
-          this.roomServiceMentions.processVirtualContributorMentions(
+          await this.roomMentionsService.processVirtualContributorMentions(
             mentions,
             message.message,
             threadID,
@@ -213,7 +214,10 @@ export class RoomResolverMutations {
           );
         }
 
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (
+          callout.visibility === CalloutVisibility.PUBLISHED &&
+          callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
+        ) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             message,
@@ -230,7 +234,11 @@ export class RoomResolverMutations {
       default:
       // ignore for now, later likely to be an exception
     }
-
+    this.subscriptionPublishService.publishRoomEvent(
+      room,
+      MutationType.CREATE,
+      message
+    );
     return message;
   }
 
@@ -264,7 +272,7 @@ export class RoomResolverMutations {
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
       AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
@@ -272,9 +280,8 @@ export class RoomResolverMutations {
     );
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
-    const mentions: Mention[] = this.roomServiceMentions.getMentionsFromText(
-      messageData.message
-    );
+    const mentions: Mention[] =
+      await this.roomMentionsService.getMentionsFromText(messageData.message);
     const threadID = messageData.threadID;
 
     const messageOwnerId = await this.roomService.getUserIdForMessage(
@@ -282,7 +289,7 @@ export class RoomResolverMutations {
       threadID
     );
 
-    const reply = await this.roomService.sendMessageReply(
+    const reply = await this.roomLookupService.sendMessageReply(
       room,
       agentInfo.communicationID,
       messageData,
@@ -290,7 +297,7 @@ export class RoomResolverMutations {
     );
 
     this.subscriptionPublishService.publishRoomEvent(
-      room.id,
+      room,
       MutationType.CREATE,
       reply
     );
@@ -316,6 +323,48 @@ export class RoomResolverMutations {
           reply,
           agentInfo
         );
+
+        // TODO extract in a helper function
+        if (accessVirtualContributors) {
+          // Check before processing so as not to reply to same message where interaction started
+          const vcInteraction =
+            await this.roomMentionsService.getVcInteractionByThread(
+              room.id,
+              threadID
+            );
+
+          await this.roomMentionsService.processVirtualContributorMentions(
+            mentions,
+            messageData.message,
+            threadID,
+            agentInfo,
+            room
+          );
+
+          if (vcInteraction) {
+            this.logger.verbose?.(
+              `VC Interaction found in thread ${messageData.threadID} in room ${room.id}`,
+              LogContext.VIRTUAL_CONTRIBUTOR
+            );
+            const contextSpaceID =
+              await this.roomMentionsService.getSpaceIdForRoom(room);
+
+            const vcMentioned =
+              await this.virtualContributorLookupService.getVirtualContributorOrFail(
+                vcInteraction.virtualContributorID
+              );
+
+            await this.virtualContributorMessageService.invokeVirtualContributor(
+              vcMentioned.id,
+              messageData.message,
+              threadID,
+              agentInfo,
+              contextSpaceID,
+              room,
+              vcInteraction
+            );
+          }
+        }
 
         break;
       case RoomType.CALENDAR_EVENT:
@@ -372,11 +421,12 @@ export class RoomResolverMutations {
 
         if (accessVirtualContributors) {
           // Check before processing so as not to reply to same message where interaction started
-          const vcInteraction = await this.roomService.getVcInteractionByThread(
-            room.id,
-            threadID
-          );
-          this.roomServiceMentions.processVirtualContributorMentions(
+          const vcInteraction =
+            await this.roomMentionsService.getVcInteractionByThread(
+              room.id,
+              threadID
+            );
+          await this.roomMentionsService.processVirtualContributorMentions(
             mentions,
             messageData.message,
             threadID,
@@ -390,14 +440,14 @@ export class RoomResolverMutations {
               LogContext.VIRTUAL_CONTRIBUTOR
             );
             const vcMentioned =
-              await this.virtualContributorsService.getVirtualContributorOrFail(
+              await this.virtualContributorLookupService.getVirtualContributorOrFail(
                 vcInteraction.virtualContributorID
               );
             const contextSpaceID =
-              await this.roomServiceMentions.getSpaceIdForRoom(room);
+              await this.roomMentionsService.getSpaceIdForRoom(room);
 
-            await this.roomServiceMentions.askQuestionToVirtualContributor(
-              vcMentioned?.nameID,
+            await this.virtualContributorMessageService.invokeVirtualContributor(
+              vcMentioned.id,
               messageData.message,
               threadID,
               agentInfo,
@@ -423,7 +473,7 @@ export class RoomResolverMutations {
             agentInfo,
             messageOwnerId
           );
-          this.roomServiceMentions.processNotificationMentions(
+          this.roomMentionsService.processNotificationMentions(
             mentions,
             callout.id,
             callout.nameID,
@@ -452,7 +502,7 @@ export class RoomResolverMutations {
   ): Promise<IMessageReaction> {
     const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
       AuthorizationPrivilege.CREATE_MESSAGE_REACTION,
@@ -466,7 +516,7 @@ export class RoomResolverMutations {
     );
 
     this.subscriptionPublishService.publishRoomEvent(
-      room.id,
+      room,
       MutationType.CREATE,
       reaction,
       reactionData.messageID
@@ -498,7 +548,7 @@ export class RoomResolverMutations {
         room,
         messageData.messageID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       extendedAuthorization,
       AuthorizationPrivilege.DELETE,
@@ -515,7 +565,7 @@ export class RoomResolverMutations {
     );
 
     this.subscriptionPublishService.publishRoomEvent(
-      room.id,
+      room,
       MutationType.DELETE,
       // send empty data, because the resource is deleted
       {
@@ -568,7 +618,7 @@ export class RoomResolverMutations {
 
     if (isDeleted) {
       this.subscriptionPublishService.publishRoomEvent(
-        room.id,
+        room,
         MutationType.DELETE,
         // send empty data, because the resource is deleted
         {

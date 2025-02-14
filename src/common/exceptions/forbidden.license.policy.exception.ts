@@ -1,11 +1,11 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from './base.exception';
-import { LicensePrivilege } from '@common/enums/license.privilege';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 
 export class ForbiddenLicensePolicyException extends BaseException {
   constructor(
     error: string,
-    public checkedPrivilege: LicensePrivilege,
+    public checkedEntitlement: LicenseEntitlementType,
     public licensePolicyId: string,
     public licenseId: string
   ) {

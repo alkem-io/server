@@ -1,15 +1,17 @@
 {
   "agent": {
-    "parentDisplayID": "organization-united-nations",
+    "type": "organization",
     "did": "",
     "password": "",
     "id": "8f5c08b1-444a-42c0-8f48-58b3ddef53b0",
     "authorization": {
-      "anonymousReadAccess": false,
       "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-admin\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-owner\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"grant\",\"create\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"organization-associate\",\"resourceID\":\"03bb5b07-f134-4074-97b9-1dd7950c7fa4\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-registered\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
       "verifiedCredentialRules": "[]",
       "privilegeRules": "",
-      "id": "28b65c95-a2ff-49aa-a654-a04bad7991aa"
+      "id": "28b65c95-a2ff-49aa-a654-a04bad7991aa",
+      "did": "did:sov:WRfRBn8JUu9JZv7J9k7oeY",
+      "password": "mockPassword",
+      "type": "organization"
     },
     "credentials": [
       {

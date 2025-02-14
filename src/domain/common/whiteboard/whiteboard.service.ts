@@ -1,12 +1,11 @@
-import EventEmitter = require('node:events');
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import {
-  EntityManager,
-  FindOneOptions,
-  FindOptionsRelations,
-  Repository,
-} from 'typeorm';
+  Inject,
+  Injectable,
+  LoggerService,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -17,11 +16,9 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { UpdateWhiteboardContentInput } from './dto/whiteboard.dto.update.content';
 import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
-import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
@@ -30,32 +27,25 @@ import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
-import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
-import { WHITEBOARD_CONTENT_UPDATE } from './events/event.names';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
-import { LicensePrivilege } from '@common/enums/license.privilege';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { isEqual } from 'lodash';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LicenseService } from '../license/license.service';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
 @Injectable()
 export class WhiteboardService {
-  // The eventEmitter is used for cross-service communication.
-  // It allows services to send and receive messages, enabling them to coordinate activities or share data.
-  public eventEmitter = new EventEmitter();
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private licenseEngineService: LicenseEngineService,
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
-    private whiteboardAuthService: WhiteboardAuthorizationService,
-    private subscriptionPublishService: SubscriptionPublishService,
     private communityResolverService: CommunityResolverService,
-    @InjectEntityManager() private entityManager: EntityManager
+    private licenseService: LicenseService
   ) {}
 
   async createWhiteboard(
@@ -66,25 +56,30 @@ export class WhiteboardService {
     const whiteboard: IWhiteboard = Whiteboard.create({
       ...whiteboardData,
     });
-    whiteboard.authorization = new AuthorizationPolicy();
+    whiteboard.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.WHITEBOARD
+    );
     whiteboard.createdBy = userID;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
     whiteboard.profile = await this.profileService.createProfile(
-      whiteboardData.profileData,
+      whiteboardData.profile ?? {
+        displayName: 'Whiteboard',
+      },
       ProfileType.WHITEBOARD,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
+    await this.profileService.addVisualsOnProfile(
       whiteboard.profile,
-      VisualType.CARD
+      whiteboardData.profile?.visuals,
+      [VisualType.CARD]
     );
     await this.profileService.addTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
-    return this.save(whiteboard);
+    return whiteboard;
   }
 
   async getWhiteboardOrFail(
@@ -140,81 +135,44 @@ export class WhiteboardService {
     whiteboardInput: IWhiteboard,
     updateWhiteboardData: UpdateWhiteboardInput
   ): Promise<IWhiteboard> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
+    let whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
       relations: {
         profile: true,
       },
     });
 
-    if (updateWhiteboardData.profileData) {
+    if (updateWhiteboardData.profile) {
       whiteboard.profile = await this.profileService.updateProfile(
         whiteboard.profile,
-        updateWhiteboardData.profileData
+        updateWhiteboardData.profile
       );
     }
 
     if (updateWhiteboardData.contentUpdatePolicy) {
       whiteboard.contentUpdatePolicy = updateWhiteboardData.contentUpdatePolicy;
-
-      const framing = await this.entityManager.findOne(CalloutFraming, {
-        where: {
-          whiteboard: { id: whiteboard.id },
-        },
-      });
-
-      if (framing) {
-        const whiteboardAuth =
-          await this.whiteboardAuthService.applyAuthorizationPolicy(
-            whiteboard,
-            framing.authorization
-          );
-        await this.save(whiteboardAuth);
-      } else {
-        const contribution = await this.entityManager.findOne(
-          CalloutContribution,
-          {
-            where: {
-              whiteboard: { id: whiteboard.id },
-            },
-          }
-        );
-        if (contribution) {
-          const whiteboardAuth =
-            await this.whiteboardAuthService.applyAuthorizationPolicy(
-              whiteboard,
-              contribution.authorization
-            );
-          await this.save(whiteboardAuth);
-        }
-      }
     }
+    whiteboard = await this.save(whiteboard);
 
-    return this.save(whiteboard);
+    return whiteboard;
   }
 
   async updateWhiteboardContent(
-    whiteboardInput: IWhiteboard,
-    updateWhiteboardContentData: UpdateWhiteboardContentInput
+    whiteboardInputId: string,
+    updateWhiteboardContent: string
   ): Promise<IWhiteboard> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
+    const whiteboard = await this.getWhiteboardOrFail(whiteboardInputId, {
+      loadEagerRelations: false,
       relations: {
         profile: true,
       },
+      select: {
+        id: true,
+        profile: {
+          id: true,
+        },
+      },
     });
-    const currentWhiteboardContent = JSON.parse(whiteboard.content);
-    const newWhiteboardContent = JSON.parse(
-      updateWhiteboardContentData.content
-    );
-
-    if (isEqual(currentWhiteboardContent, newWhiteboardContent)) {
-      whiteboard.updatedDate = new Date();
-
-      this.subscriptionPublishService.publishWhiteboardSaved(
-        whiteboard.id,
-        whiteboard.updatedDate
-      );
-      return this.save(whiteboard);
-    }
+    const newWhiteboardContent = JSON.parse(updateWhiteboardContent);
 
     if (!whiteboard?.profile) {
       throw new EntityNotInitializedException(
@@ -223,40 +181,28 @@ export class WhiteboardService {
       );
     }
 
+    // TODO: is this still needed? It is a lot of work to be doing on every
+    // whiteboard content save. Plus I think it is an inherent risk.
     const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
       newWhiteboardContent,
       whiteboard?.profile.id
     );
 
     whiteboard.content = JSON.stringify(newContentWithFiles);
-    const savedWhiteboard = await this.save(whiteboard);
 
-    this.eventEmitter.emit(WHITEBOARD_CONTENT_UPDATE, savedWhiteboard.id);
-
-    this.subscriptionPublishService.publishWhiteboardSaved(
-      whiteboard.id,
-      savedWhiteboard.updatedDate
-    );
-
-    return savedWhiteboard;
+    return this.save(whiteboard);
   }
 
-  async isMultiUser(whiteboardId: string): Promise<boolean> {
-    const community =
-      await this.communityResolverService.getCommunityFromWhiteboardOrFail(
+  public async isMultiUser(whiteboardId: string): Promise<boolean> {
+    const license =
+      await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
         whiteboardId
       );
-    const license =
-      await this.communityResolverService.getAccountAgentFromCommunityOrFail(
-        community
-      );
 
-    const enabled = await this.licenseEngineService.isAccessGranted(
-      LicensePrivilege.WHITEBOARD_MULTI_USER,
-      license
+    return this.licenseService.isEntitlementEnabled(
+      license,
+      LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER
     );
-
-    return enabled;
   }
 
   public async getProfile(
@@ -282,7 +228,9 @@ export class WhiteboardService {
   public save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
     return this.whiteboardRepository.save(whiteboard);
   }
-
+  // todo: use one optimized query with a "where not exists"
+  // to return just the ones not in the bucket
+  // https://github.com/alkem-io/server/issues/4559
   private async reuploadDocumentsIfNotInBucket(
     whiteboardContent: ExcalidrawContent,
     profileIdToCheck: string
@@ -297,18 +245,52 @@ export class WhiteboardService {
       return whiteboardContent;
     }
 
+    const profile = await this.profileService.getProfileOrFail(
+      profileIdToCheck,
+      {
+        relations: {
+          storageBucket: {
+            documents: true,
+          },
+        },
+      }
+    );
+    if (!profile.storageBucket) {
+      throw new EntityNotInitializedException(
+        'Profile: no definition of StorageBucket',
+        LogContext.PROFILE
+      );
+    }
+
     for (const [, file] of files) {
       if (!file.url) {
         continue;
       }
+      let newDocUrl: string | undefined;
+      try {
+        newDocUrl =
+          await this.profileDocumentsService.reuploadFileOnStorageBucket(
+            file.url,
+            profile.storageBucket,
+            true
+          );
+      } catch (e: any) {
+        if (e instanceof NotFoundException) {
+          this.logger.warn?.(
+            `Tried to re-upload file (${file.url}) but file was not found: ${e?.message}`,
+            LogContext.WHITEBOARDS
+          );
+        } else {
+          this.logger.warn?.(
+            `Tried to re-upload file (${file.url}) but an error occurred: ${e?.message}`,
+            LogContext.WHITEBOARDS
+          );
+        }
 
-      const newDocUrl =
-        await this.profileDocumentsService.reuploadDocumentsToProfile(
-          file.url,
-          profileIdToCheck
-        );
+        newDocUrl = undefined;
+      }
 
-      if (!newDocUrl) {
+      if (!newDocUrl || newDocUrl === file.url) {
         continue;
       }
 
@@ -320,18 +302,5 @@ export class WhiteboardService {
     }
 
     return whiteboardContent;
-  }
-
-  public createWhiteboardInputFromWhiteboard(
-    whiteboard?: IWhiteboard
-  ): CreateWhiteboardInput | undefined {
-    if (!whiteboard) return undefined;
-    return {
-      profileData: this.profileService.createProfileInputFromProfile(
-        whiteboard.profile
-      ),
-      content: whiteboard.content,
-      nameID: whiteboard.nameID,
-    };
   }
 }

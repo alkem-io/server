@@ -10,14 +10,23 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganization } from './organization.interface';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
-import { PreferenceSet } from '@domain/common/preference-set';
 import { ContributorBase } from '../contributor/contributor.base.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { UUID_LENGTH } from '@common/constants';
+import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
 
 @Entity()
 export class Organization
   extends ContributorBase
   implements IOrganization, IGroupable
 {
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  accountID!: string;
+
+  @Column('json', { nullable: false })
+  settings!: IOrganizationSettings;
+
   @Column({
     unique: true,
   })
@@ -50,15 +59,19 @@ export class Organization
   @JoinColumn()
   verification!: OrganizationVerification;
 
-  @OneToOne(() => PreferenceSet, {
+  @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  preferenceSet?: PreferenceSet;
+  storageAggregator?: StorageAggregator;
 
-  constructor() {
-    super();
-  }
+  @OneToOne(() => RoleSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  roleSet!: RoleSet;
 }

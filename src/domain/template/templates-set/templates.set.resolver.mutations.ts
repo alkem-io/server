@@ -3,203 +3,104 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TemplatesSetService } from './templates.set.service';
-import { IPostTemplate } from '../post-template/post.template.interface';
+import { ITemplate } from '../template/template.interface';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
-import { PostTemplateAuthorizationService } from '../post-template/post.template.service.authorization';
-import { WhiteboardTemplateAuthorizationService } from '../whiteboard-template/whiteboard.template.service.authorization';
-import { InnovationFlowTemplateAuthorizationService } from '../innovation-flow-template/innovation.flow.template.service.authorization';
-import { CreateWhiteboardTemplateOnTemplatesSetInput } from './dto/whiteboard.template.dto.create.on.templates.set';
-import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
-import { CreateInnovationFlowTemplateOnTemplatesSetInput } from './dto/innovation.flow.template.dto.create.on.templates.set';
-import { CreatePostTemplateOnTemplatesSetInput } from './dto/post.template.dto.create.on.templates.set';
-import { ICalloutTemplate } from '../callout-template/callout.template.interface';
-import { CreateCalloutTemplateOnTemplatesSetInput } from './dto/callout.template.dto.create.on.templates.set';
-import { CalloutTemplateAuthorizationService } from '../callout-template/callout.template.service.authorization';
-import { CommunityGuidelinesTemplateAuthorizationService } from '../community-guidelines-template/community.guidelines.template.service.authorization';
-import { CreateCommunityGuidelinesTemplateOnTemplatesSetInput } from './dto/community.guidelines.template.dto.create.on.templates.set';
-import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
+import { TemplateAuthorizationService } from '../template/template.service.authorization';
+import { CreateTemplateOnTemplatesSetInput } from './dto/templates.set.dto.create.template';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { TemplateService } from '../template/template.service';
+import { CreateTemplateFromCollaborationOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.collaboration';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetService: TemplatesSetService,
-    private calloutTemplateAuthorizationService: CalloutTemplateAuthorizationService,
-    private postTemplateAuthorizationService: PostTemplateAuthorizationService,
-    private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
-    private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService,
-    private communityGuidelinesTemplateAuthorizationService: CommunityGuidelinesTemplateAuthorizationService,
+    private templateAuthorizationService: TemplateAuthorizationService,
+    private templateService: TemplateService,
+    private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICalloutTemplate, {
-    description: 'Creates a new CalloutTemplate on the specified TemplatesSet.',
+  @Mutation(() => ITemplate, {
+    description: 'Creates a new Template on the specified TemplatesSet.',
   })
-  async createCalloutTemplate(
+  async createTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('calloutTemplateInput')
-    calloutTemplateInput: CreateCalloutTemplateOnTemplatesSetInput
-  ): Promise<ICalloutTemplate> {
+    @Args('templateData')
+    templateData: CreateTemplateOnTemplatesSetInput
+  ): Promise<ITemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      calloutTemplateInput.templatesSetID,
-      {
-        relations: {
-          calloutTemplates: true,
-        },
-      }
+      templateData.templatesSetID
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
-      `templates set create callout template: ${templatesSet.id}`
+      `templates set create template: ${templatesSet.id}`
     );
-    const calloutTemplate =
-      await this.templatesSetService.createCalloutTemplate(
-        templatesSet,
-        calloutTemplateInput,
-        agentInfo
-      );
-    await this.calloutTemplateAuthorizationService.applyAuthorizationPolicy(
-      calloutTemplate,
-      templatesSet.authorization
-    );
-    return calloutTemplate;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IPostTemplate, {
-    description: 'Creates a new PostTemplate on the specified TemplatesSet.',
-  })
-  async createPostTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('postTemplateInput')
-    postTemplateInput: CreatePostTemplateOnTemplatesSetInput
-  ): Promise<IPostTemplate> {
-    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      postTemplateInput.templatesSetID,
-      {
-        relations: { postTemplates: true },
-      }
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      templatesSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `templates set create post template: ${templatesSet.id}`
-    );
-    const postTemplate = await this.templatesSetService.createPostTemplate(
+    const template = await this.templatesSetService.createTemplate(
       templatesSet,
-      postTemplateInput
+      templateData
     );
-    await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
-      postTemplate,
-      templatesSet.authorization
-    );
-    return postTemplate;
+    const authorizations =
+      await this.templateAuthorizationService.applyAuthorizationPolicy(
+        template,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return this.templateService.getTemplateOrFail(template.id);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IWhiteboardTemplate, {
+  @Mutation(() => ITemplate, {
     description:
-      'Creates a new WhiteboardTemplate on the specified TemplatesSet.',
+      'Creates a new Template on the specified TemplatesSet using the provided Collaboration as content.',
   })
-  async createWhiteboardTemplate(
+  async createTemplateFromCollaboration(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('whiteboardTemplateInput')
-    whiteboardTemplateInput: CreateWhiteboardTemplateOnTemplatesSetInput
-  ): Promise<IWhiteboardTemplate> {
+    @Args('templateData')
+    templateData: CreateTemplateFromCollaborationOnTemplatesSetInput
+  ): Promise<ITemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      whiteboardTemplateInput.templatesSetID,
-      {
-        relations: { whiteboardTemplates: true },
-      }
+      templateData.templatesSetID
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
-      `templates set create whiteboard template: ${templatesSet.id}`
+      `templatesSet create template from Collaboration, templatesSetId: ${templatesSet.id}`
     );
-    const whiteboardTemplate =
-      await this.templatesSetService.createWhiteboardTemplate(
-        templatesSet,
-        whiteboardTemplateInput
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        templateData.collaborationID
       );
-    await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
-      whiteboardTemplate,
-      templatesSet.authorization
-    );
-    return whiteboardTemplate;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationFlowTemplate, {
-    description:
-      'Creates a new InnovationFlowTemplate on the specified TemplatesSet.',
-  })
-  async createInnovationFlowTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowTemplateInput')
-    innovationFlowTemplateInput: CreateInnovationFlowTemplateOnTemplatesSetInput
-  ): Promise<IInnovationFlowTemplate> {
-    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      innovationFlowTemplateInput.templatesSetID,
-      {
-        relations: { innovationFlowTemplates: true },
-      }
-    );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      templatesSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `templates set create innovationFlow template: ${templatesSet.id}`
+      collaboration.authorization,
+      AuthorizationPrivilege.READ,
+      `templatesSet create template from Collaboration, read access, collaborationId:${collaboration.id} templatesSetId:${templatesSet.id}`
     );
-    const innovationFlowTemplate =
-      await this.templatesSetService.createInnovationFlowTemplate(
+    const template =
+      await this.templatesSetService.createTemplateFromCollaboration(
         templatesSet,
-        innovationFlowTemplateInput
+        templateData,
+        collaboration
       );
-    await this.innovationFlowTemplateAuthorizationService.applyAuthorizationPolicy(
-      innovationFlowTemplate,
-      templatesSet.authorization
-    );
-    return innovationFlowTemplate;
-  }
+    const authorizations =
+      await this.templateAuthorizationService.applyAuthorizationPolicy(
+        template,
+        templatesSet.authorization
+      );
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ICommunityGuidelinesTemplate, {
-    description:
-      'Creates a new CommunityGuidelinesTemplate on the specified TemplatesSet.',
-  })
-  async createCommunityGuidelinesTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('communityGuidelinesTemplateInput')
-    communityGuidelinesTemplateInput: CreateCommunityGuidelinesTemplateOnTemplatesSetInput
-  ): Promise<ICommunityGuidelinesTemplate> {
-    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      communityGuidelinesTemplateInput.templatesSetID
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      templatesSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `templates set create communityGuidelines template: ${templatesSet.id}`
-    );
-    const communityGuidelinesTemplate =
-      await this.templatesSetService.createCommunityGuidelinesTemplate(
-        templatesSet,
-        communityGuidelinesTemplateInput
-      );
-    await this.communityGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
-      communityGuidelinesTemplate,
-      templatesSet.authorization
-    );
-    return communityGuidelinesTemplate;
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return this.templateService.getTemplateOrFail(template.id);
   }
 }

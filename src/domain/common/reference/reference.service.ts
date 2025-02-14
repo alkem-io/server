@@ -12,6 +12,7 @@ import {
 } from '../reference';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ReferenceService {
@@ -21,16 +22,16 @@ export class ReferenceService {
     private referenceRepository: Repository<Reference>
   ) {}
 
-  async createReference(
-    referenceInput: CreateReferenceInput
-  ): Promise<IReference> {
+  public createReference(referenceInput: CreateReferenceInput): IReference {
     const reference = new Reference(
       referenceInput.name,
       referenceInput.uri || '',
       referenceInput.description
     );
-    reference.authorization = new AuthorizationPolicy();
-    await this.referenceRepository.save(reference);
+    reference.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.REFERENCE
+    );
+
     return reference;
   }
 
@@ -125,26 +126,5 @@ export class ReferenceService {
 
   async saveReference(reference: IReference): Promise<IReference> {
     return await this.referenceRepository.save(reference);
-  }
-
-  public createReferenceInputFromReference(
-    reference: IReference
-  ): CreateReferenceInput {
-    return {
-      name: reference.name,
-      uri: reference.uri,
-      description: reference.description,
-    };
-  }
-
-  public createReferencesInputFromReferences(
-    references?: IReference[]
-  ): CreateReferenceInput[] {
-    const result: CreateReferenceInput[] = [];
-    if (!references) return result;
-    for (const reference of references) {
-      result.push(this.createReferenceInputFromReference(reference));
-    }
-    return result;
   }
 }

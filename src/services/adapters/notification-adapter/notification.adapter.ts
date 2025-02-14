@@ -274,7 +274,7 @@ export class NotificationAdapter {
       const entityMentionNotificationInput: NotificationInputEntityMention = {
         triggeredBy: eventData.triggeredBy,
         comment: eventData.comment,
-        mentionedEntityID: mention.nameId,
+        mentionedEntityID: mention.id,
         commentsId: eventData.roomId,
         originEntity: eventData.originEntity,
         commentType: eventData.commentType,
@@ -366,7 +366,6 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildSpaceCreatedPayload(
         eventData.triggeredBy,
-        eventData.account,
         eventData.community
       );
     this.notificationsClient.emit<number>(event, payload);

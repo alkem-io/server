@@ -6,7 +6,6 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { CloseCode } from 'graphql-ws';
-import { ConfigurationTypes } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
 import {
@@ -32,6 +31,7 @@ import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import {
+  AlkemioConfig,
   ConnectionContext,
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
@@ -39,18 +39,17 @@ import {
 import { RegistrationModule } from '@services/api/registration/registration.module';
 import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
-import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
 import { GeoLocationModule } from '@services/external/geo-location';
-import { PlatformModule } from '@platform/platfrom/platform.module';
+import { PlatformModule } from '@platform/platform/platform.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
-import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
@@ -61,12 +60,10 @@ import {
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
-import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
 import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
-import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
@@ -74,17 +71,44 @@ import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ing
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
-import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
+import { DomainPlatformSettingsModule } from '@platform/domain-settings/domain.platform.settings.module';
 import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
-import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
+import { LookupByNameModule } from '@services/api/lookup-by-name';
+import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
+import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
+import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
+import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
+import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
+import { InAppNotificationReaderModule } from '@domain/in-app-notification-reader/in.app.notification.reader.module';
+import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
+import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
+import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
+import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
+import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
+import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
+import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import type { GraphQLRequestContextDidResolveOperation } from '@apollo/server/dist/externalTypes/requestPipeline';
 import { apm } from './apm';
 
 @Module({
   imports: [
+    EncryptionModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const key = configService.get('security.encryption_key', {
+          infer: true,
+        });
+
+        return {
+          key,
+          cipher: Cipher.AES_256_CBC,
+        };
+      },
+    }),
     ConfigModule.forRoot({
       envFilePath: ['.env'],
       isGlobal: true,
@@ -93,41 +117,43 @@ import { apm } from './apm';
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        store: redisStore,
-        host: configService.get(ConfigurationTypes.STORAGE)?.redis?.host,
-        port: configService.get(ConfigurationTypes.STORAGE)?.redis?.port,
-        redisOptions: {
-          connectTimeout:
-            configService.get(ConfigurationTypes.STORAGE)?.redis?.timeout *
-            1000, // Connection timeout in milliseconds
-        },
-      }),
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const { host, port, timeout } = configService.get('storage.redis', {
+          infer: true,
+        });
+        return {
+          store: redisStore,
+          host,
+          port,
+          redisOptions: { connectTimeout: timeout * 1000 }, // Connection timeout in milliseconds
+        };
+      },
       inject: [ConfigService],
     }),
     TypeOrmModule.forRootAsync({
       name: 'default',
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        type: 'mysql',
-        insecureAuth: true,
-        synchronize: false,
-        cache: true,
-        entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        host: configService.get(ConfigurationTypes.STORAGE)?.database?.host,
-        port: configService.get(ConfigurationTypes.STORAGE)?.database?.port,
-        charset: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.charset,
-        username: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.username,
-        password: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.password,
-        database: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.schema,
-        logging: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.logging,
-      }),
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const dbOptions = configService.get('storage.database', {
+          infer: true,
+        });
+        return {
+          type: 'mysql',
+          insecureAuth: true,
+          synchronize: false,
+          cache: true,
+          entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+          host: dbOptions.host,
+          port: dbOptions.port,
+          timezone: dbOptions.timezone,
+          charset: dbOptions.charset,
+          username: dbOptions.username,
+          password: dbOptions.password,
+          database: dbOptions.database,
+          logging: dbOptions.logging,
+        };
+      },
     }),
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
@@ -136,48 +162,44 @@ import { apm } from './apm';
       driver: ApolloDriver,
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
-        uploads: false,
-        autoSchemaFile: true,
-        introspection: true,
-        playground: {
-          settings: {
-            'request.credentials': 'include',
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const endpointCluster = configService.get('hosting.endpoint_cluster', {
+          infer: true,
+        });
+        return {
+          cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
+          uploads: false,
+          autoSchemaFile: true,
+          introspection: true,
+          playground: {
+            settings: {
+              'request.credentials': 'include',
+            },
+            tabs: [
+              {
+                name: 'Me',
+                endpoint: `${endpointCluster}/api/private/graphql`,
+                query: print(meQuery),
+              },
+              {
+                name: 'Spaces',
+                endpoint: `${endpointCluster}/api/private/graphql`,
+                query: print(spacesQuery),
+              },
+              {
+                name: 'Configuration',
+                endpoint: `${endpointCluster}/api/public/graphql`,
+                query: print(configQuery),
+              },
+              {
+                name: 'Server Metadata',
+                endpoint: `${endpointCluster}/api/public/graphql`,
+                query: print(platformMetadataQuery),
+              },
+            ],
           },
-          tabs: [
-            {
-              name: 'Me',
-              endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-              }/api/private/graphql`,
-              query: print(meQuery),
-            },
-            {
-              name: 'Spaces',
-              endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-              }/api/private/graphql`,
-              query: print(spacesQuery),
-            },
-            {
-              name: 'Configuration',
-              endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-              }/api/public/graphql`,
-              query: print(configQuery),
-            },
-            {
-              name: 'Server Metadata',
-              endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-              }/api/public/graphql`,
-              query: print(platformMetadataQuery),
-            },
-          ],
-        },
-        fieldResolverEnhancers: ['guards', 'filters'],
-        plugins: [
+          fieldResolverEnhancers: ['guards', 'filters'],
+          plugins: [
           {
             async requestDidStart() {
               return {
@@ -213,42 +235,45 @@ import { apm } from './apm';
             };
           }
 
-          return { req: ctx.req };
-        },
-        subscriptions: {
-          'subscriptions-transport-ws': {
-            /***
-             * subscriptions-transport-ws required passing the request object
-             * through the onConnect method
-             */
-            onConnect: (
-              connectionParams: Record<string, any>,
-              websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
-            ) => {
-              return {
-                req: { headers: websocket?.upgradeReq?.headers },
-              };
-            },
+            return { req: ctx.req };
           },
-          'graphql-ws': {
-            onNext: (ctx, message, args, result) => {
-              const context = args.contextValue as IGraphQLContext;
-              const expiry = context.req.user.expiry;
-              // if the session has expired, close the socket
-              if (expiry && expiry < Date.now()) {
-                (ctx as WebsocketContext).extra.socket.close(
-                  CloseCode.Unauthorized,
-                  'Session expired'
-                );
-                return;
-              }
+          subscriptions: {
+            'subscriptions-transport-ws': {
+              /***
+               * subscriptions-transport-ws required passing the request object
+               * through the onConnect method
+               */
+              onConnect: (
+                connectionParams: Record<string, any>,
+                websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
+              ) => {
+                return {
+                  req: { headers: websocket?.upgradeReq?.headers },
+                };
+              },
+            },
+            'graphql-ws': {
+              onNext: (ctx, message, args, result) => {
+                const context = args.contextValue as IGraphQLContext;
+                const expiry = context.req.user.expiry;
+                // if the session has expired, close the socket
+                if (expiry && expiry < Date.now()) {
+                  (ctx as WebsocketContext).extra.socket.close(
+                    CloseCode.Unauthorized,
+                    'Session expired'
+                  );
+                  return;
+                }
 
-              return result;
+                return result;
+              },
             },
           },
-        },
-      }),
+        };
+      },
     }),
+    UrlResolverModule,
+    LoaderCreatorModule,
     ScalarsModule,
     AuthenticationModule,
     AuthorizationModule,
@@ -259,37 +284,46 @@ import { apm } from './apm';
     ActivityLogModule,
     RolesModule,
     KonfigModule,
+    AdminContributorsModule,
+    AdminUsersModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
+    LicensingWingbackSubscriptionModule,
+    WingbackManagerModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
     RegistrationModule,
-    RedisLockModule,
     ConversionModule,
     LibraryModule,
     PlatformModule,
-    PlatformRoleModule,
+    PlatformHubModule,
     ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
-    IpfsLogModule,
     MeModule,
-    ExcalidrawServerModule,
     ChatGuidanceModule,
     VirtualContributorModule,
+    InputCreatorModule,
     LookupModule,
+    LookupByNameModule,
     AuthResetSubscriberModule,
     TaskGraphqlModule,
     ActivityFeedModule,
     EventBusModule,
     WhiteboardIntegrationModule,
     FileIntegrationModule,
-    PlatformSettingsModule,
+    DomainPlatformSettingsModule,
+    PlatformRoleModule,
+    TemplateApplierModule,
+    InAppNotificationReaderModule,
+    InAppNotificationReceiverModule,
+    WingbackWebhookModule,
+    CalloutTransferModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

@@ -12,6 +12,7 @@ import { IPreferenceSet } from '.';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
 import { IPreference } from '../preference/preference.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class PreferenceSetService {
@@ -28,7 +29,9 @@ export class PreferenceSetService {
     preferenceDefaults: Map<PreferenceType, string>
   ): Promise<IPreferenceSet> {
     const preferenceSet: IPreferenceSet = PreferenceSet.create();
-    preferenceSet.authorization = new AuthorizationPolicy();
+    preferenceSet.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.PREFERENCE_SET
+    );
     preferenceSet.preferences = [];
     const definitions = await this.preferenceService.getAllDefinitionsInSet(
       preferenceDefinitionSet

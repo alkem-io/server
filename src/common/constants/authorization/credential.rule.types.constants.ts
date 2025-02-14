@@ -1,31 +1,39 @@
-export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET =
-  'credentialRuleTypes-accountAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES =
+  'credentialRuleTypes-accountManageGlobalRoles';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE =
   'credentialRuleTypes-accountManage';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE =
+  'credentialRuleTypes-accountResourcesManage';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT =
+  'credentialRuleTypes-accountResourceTransferAccept';
+export const CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_OFFER =
+  'credentialRule-calloutsSetTransferOffer';
+export const CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT =
+  'credentialRule-calloutsSetTransferAccept';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES =
   'credentialRuleTypes-accountChildEntities';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_COMMUNITY_READ =
   'credentialRuleTypes-spaceGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
+export const CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS =
+  'credentialRuleTypes-virtualContributorPlatformSettings';
 export const CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
-export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED =
-  'credentialRuleTypes-spaceCommunityApplyGlobalRegistered';
-export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED =
-  'credentialRuleTypes-spaceCommunityJoinGlobalRegistered';
-export const CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS =
-  'credentialRuleTypes-accessVirtualContributors';
-export const CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE =
-  'credentialRuleTypes-calloutSaveAsTemplate';
+export const CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED =
+  'credentialRuleTypes-roleSetApplyGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_SPACE_ROLESET_JOIN_GLOBAL_REGISTERED =
+  'credentialRuleTypes-roleSetJoinGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =
   'credentialRuleTypes-calloutUpdatePublisherGlobalAdmins';
-export const CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS =
-  'credentialRuleTypes-communityAddMembers';
-export const CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS =
-  'credentialRuleTypes-communityInviteMembers';
+export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN =
+  'credentialRuleTypes-roleSetEntryRoleAdd';
+export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE =
+  'credentialRuleTypes-roleSetEntryRoleInvite';
 export const CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED =
   'credentialRuleTypes-communityReadGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED =
+  'credentialRuleTypes-userReadGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET =
   'credentialRuleTypes-organizationAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ =
@@ -58,6 +66,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS =
   'credentialRuleTypes-platformGrantGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS =
   'credentialRuleTypes-platformPlatformAdmins';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_SETTINGS_ADMINS =
+  'credentialRuleTypes-platformPlatformSettingsAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_MGMT =
   'credentialRuleTypes-platformPlatformMgmt';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET =
@@ -72,15 +82,21 @@ export const CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION =
   'credentialRuleTypes-platformCreateOrganization';
 export const CREDENTIAL_RULE_PLATFORM_CREATE_SPACE =
   'credentialRuleTypes-platformCreateSpace';
+export const CREDENTIAL_RULE_PLATFORM_CREATE_VC =
+  'credentialRuleTypes-platformCreateVC';
+export const CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK =
+  'credentialRuleTypes-platformCreateInnovationPack';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =
   'credentialRuleTypes-platformAccessDashboard';
-export const CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER =
-  'credentialRuleTypes-libraryFileUploadAnyUser';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER =
   'credentialRuleTypes-platformFileUploadAnyUser';
 export const CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION =
   'credentialRuleTypes-updateForumDiscussion';
 export const CREDENTIAL_RULE_TYPES_INNOVATION_HUBS =
   'credentialRuleTypes-platformInnovationHubs';
+export const CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS =
+  'credentialRuleTypes-aiServerGlobalAdmins';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE =
+  'credentialRuleTypes-accountLicenseManage';

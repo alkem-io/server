@@ -1,6 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
+import { IngestionPurpose } from '@services/infrastructure/event-bus/messages';
 
 @InputType()
 export class IngestSpaceInput {
@@ -10,9 +10,9 @@ export class IngestSpaceInput {
   })
   spaceID!: string;
 
-  @Field(() => SpaceIngestionPurpose, {
+  @Field(() => IngestionPurpose, {
     nullable: false,
     description: 'The purpose of the ingestions - either knowledge or context.',
   })
-  purpose!: SpaceIngestionPurpose;
+  purpose!: IngestionPurpose;
 }

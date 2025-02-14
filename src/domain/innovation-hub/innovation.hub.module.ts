@@ -2,33 +2,31 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InnovationHubService } from './innovation.hub.service';
 import { InnovationHub } from './innovation.hub.entity';
-import { InnovationHubFieldResolver } from './innovation.hub.field.resolver';
-import { SpaceModule } from '@domain/space/space/space.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
-import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
-import { AccountModule } from '@domain/space/account/account.module';
+import { InnovationHubResolverFields } from './innovation.hub.resolver.fields';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InnovationHub]),
-    SpaceModule,
+    AccountLookupModule,
+    SpaceLookupModule,
     ProfileModule,
-    PlatformAuthorizationPolicyModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     NamingModule,
     StorageAggregatorResolverModule,
-    AccountModule,
+    TypeOrmModule.forFeature([InnovationHub]),
   ],
   providers: [
     InnovationHubService,
-    InnovationHubFieldResolver,
+    InnovationHubResolverFields,
     InnovationHubResolverMutations,
     InnovationHubAuthorizationService,
   ],

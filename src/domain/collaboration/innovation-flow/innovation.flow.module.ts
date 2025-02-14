@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InnovationFlow } from './innovation.flow.entity';
-import { InnovationFlowService } from './innovaton.flow.service';
+import { InnovationFlowService } from './innovation.flow.service';
 import { InnovationFlowAuthorizationService } from './innovation.flow.service.authorization';
 import { InnovationFlowResolverFields } from './innovation.flow.resolver.fields';
 import { InnovationFlowResolverMutations } from './innovation.flow.resolver.mutations';
@@ -11,7 +11,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { InnovationFlowStatesModule } from '../innovation-flow-states/innovation.flow.state.module';
-import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 
 @Module({
   imports: [
@@ -21,7 +20,6 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     ProfileModule,
     TagsetModule,
     TagsetTemplateModule,
-    InnovationFlowTemplateModule,
     TypeOrmModule.forFeature([InnovationFlow]),
   ],
   providers: [

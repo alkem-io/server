@@ -2,7 +2,7 @@
 name: User Story
 about: A valuable increment of functionality, testable by the users
 title: ''
-labels: 'user story, server'
+labels: 'user story, server, Atlas Team'
 assignees: ''
 ---
 
@@ -21,6 +21,6 @@ So that <some business value>
 
 Screen shots / UX designs / data that are relevant.
 
-## Areas that will be affected 
- 
+## Areas that will be affected
+
 _To be added during the refinement_

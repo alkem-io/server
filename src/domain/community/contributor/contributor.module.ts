@@ -1,31 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { KonfigModule } from '@src/platform/configuration/config/config.module';
-import { ConfigModule } from '@nestjs/config';
-import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
-import { PreferenceModule } from '@domain/common/preference';
 import { ContributorService } from './contributor.service';
-import { ContributorAuthorizationService } from './contributor.service.authorization';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { DocumentModule } from '@domain/storage/document/document.module';
 
 @Module({
   imports: [
     ProfileModule,
-    AgentModule,
     ContributorLookupModule,
-    NamingModule,
-    AuthorizationPolicyModule,
-    AuthorizationModule,
-    PreferenceModule,
-    PreferenceSetModule,
-    KonfigModule,
-    ConfigModule,
+    AvatarCreatorModule,
+    DocumentModule,
+    StorageBucketModule,
   ],
-  providers: [ContributorService, ContributorAuthorizationService],
-  exports: [ContributorService, ContributorAuthorizationService],
+  providers: [ContributorService],
+  exports: [ContributorService],
 })
 export class ContributorModule {}

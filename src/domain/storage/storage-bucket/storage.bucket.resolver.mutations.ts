@@ -12,11 +12,13 @@ import { DocumentService } from '../document/document.service';
 import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.file';
 import { IStorageBucket } from './storage.bucket.interface';
 import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class StorageBucketResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private storageBucketService: StorageBucketService,
     private documentAuthorizationService: DocumentAuthorizationService,
     private documentService: DocumentService
@@ -47,21 +49,24 @@ export class StorageBucketResolverMutations {
 
     const readStream = createReadStream();
 
-    const document = await this.storageBucketService.uploadFileAsDocument(
+    let document = await this.storageBucketService.uploadFileAsDocument(
       storageBucket.id,
       readStream,
       filename,
       mimetype,
-      agentInfo.userID
+      agentInfo.userID,
+      uploadData.temporaryLocation
     );
+    document = await this.documentService.saveDocument(document);
 
-    const documentAuthorized =
+    const documentAuthorizations =
       await this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
         storageBucket.authorization
       );
-    await this.documentService.saveDocument(documentAuthorized);
-    return this.documentService.getPubliclyAccessibleURL(documentAuthorized);
+    await this.authorizationPolicyService.saveAll(documentAuthorizations);
+
+    return this.documentService.getPubliclyAccessibleURL(document);
   }
 
   @UseGuards(GraphqlGuard)

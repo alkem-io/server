@@ -3,7 +3,7 @@ import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '@domain/community/user';
+import { User } from '@domain/community/user/user.entity';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
 import { AgentModule } from '@domain/agent/agent/agent.module';
@@ -14,45 +14,48 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
-import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { MessagingModule } from '@domain/communication/messaging/messaging.module';
-import {
-  AgentLoaderCreator,
-  ProfileLoaderCreator,
-} from '@core/dataloader/creators/loader.creators';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { AvatarModule } from '@domain/common/visual/avatar.module';
 import { ContributorModule } from '../contributor/contributor.module';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
+import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
+import { UserSettingsModule } from '../user.settings/user.settings.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
+import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
+import { UserLookupModule } from '../user-lookup/user.lookup.module';
+import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 
 @Module({
   imports: [
     ProfileModule,
+    UserSettingsModule,
     NotificationAdapterModule,
     CommunicationAdapterModule,
     AgentModule,
+    AuthenticationAgentInfoModule,
+    AccountHostModule,
+    AccountLookupModule,
+    UserLookupModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     EntityResolverModule,
     RoomModule,
+    RoomLookupModule,
     MicroservicesModule,
     PlatformAuthorizationPolicyModule,
     PreferenceModule,
     PreferenceSetModule,
-    KonfigModule,
-    MessagingModule,
     StorageAggregatorModule,
     StorageBucketModule,
     DocumentModule,
-    AvatarModule,
+    KratosModule,
     ContributorModule,
     TypeOrmModule.forFeature([User]),
   ],
@@ -62,9 +65,6 @@ import { ContributorModule } from '../contributor/contributor.module';
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
-    AgentLoaderCreator,
-    ProfileLoaderCreator,
-    UserStorageAggregatorLoaderCreator,
   ],
   exports: [UserService, UserAuthorizationService],
 })

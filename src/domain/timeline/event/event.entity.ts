@@ -3,13 +3,22 @@ import { ICalendarEvent } from './event.interface';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Room } from '@domain/communication/room/room.entity';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import { CalendarEventType } from '@common/enums/calendar.event.type';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
-  @Column('text')
-  type!: string;
+  @Column('varchar', { nullable: false, length: ENUM_LENGTH })
+  type!: CalendarEventType;
 
-  @Column('char', { length: 36, nullable: true })
+  // toDo fix createdBy circular dependency https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4529
+  // @OneToOne(() => User, {
+  //   eager: false,
+  //   cascade: true,
+  //   onDelete: 'SET NULL',
+  // })
+  // @JoinColumn()
+  @Column('char', { length: UUID_LENGTH, nullable: false })
   createdBy!: string;
 
   @OneToOne(() => Room, {
@@ -27,20 +36,23 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   })
   calendar?: Calendar;
 
-  @Column('datetime')
+  @Column('datetime', { nullable: false })
   startDate!: Date;
 
-  @Column('boolean', { default: true })
-  wholeDay = true;
+  @Column('boolean', { nullable: false })
+  wholeDay!: boolean;
 
-  @Column('boolean', { default: true })
-  multipleDays = true;
+  @Column('boolean', { nullable: false })
+  multipleDays!: boolean;
 
-  @Column('int')
+  @Column('int', { nullable: false })
   durationMinutes!: number;
 
-  @Column('int')
-  durationDays!: number;
+  @Column('int', { nullable: true })
+  durationDays?: number;
+
+  @Column('boolean', { nullable: false })
+  visibleOnParentCalendar!: boolean;
 
   constructor() {
     super();

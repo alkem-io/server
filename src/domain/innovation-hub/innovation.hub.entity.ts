@@ -1,14 +1,27 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
-import { SUBDOMAIN_LENGTH } from '@common/constants';
+import {
+  ENUM_LENGTH,
+  NAMEID_MAX_LENGTH_SCHEMA,
+  SUBDOMAIN_LENGTH,
+} from '@common/constants';
 import { InnovationHubType } from './innovation.hub.type.enum';
 import { Account } from '@domain/space/account/account.entity';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Entity()
 export class InnovationHub extends NameableEntity implements IInnovationHub {
-  @Column({
+  @ManyToOne(() => Account, account => account.innovationHubs, {
+    eager: false,
+    onDelete: 'SET NULL',
+  })
+  account!: Account;
+
+  @Column('varchar', {
+    length: NAMEID_MAX_LENGTH_SCHEMA,
+    nullable: false,
     unique: true,
   })
   nameID!: string;
@@ -33,11 +46,13 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
   })
   spaceListFilter?: string[];
 
-  @OneToOne(() => Account, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
+  @Column('boolean', { nullable: false })
+  listedInStore!: boolean;
+
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: false,
+    default: SearchVisibility.ACCOUNT,
   })
-  @JoinColumn()
-  account!: Account;
+  searchVisibility!: SearchVisibility;
 }

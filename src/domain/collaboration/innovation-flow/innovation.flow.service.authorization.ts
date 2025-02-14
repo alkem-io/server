@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { InnovationFlowService } from './innovaton.flow.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -7,8 +6,6 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE } from '@common/constants/authorization/policy.rule.constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
@@ -16,20 +13,20 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 export class InnovationFlowAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    private innovationFlowService: InnovationFlowService
+    private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     innovationFlow: IInnovationFlow,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IInnovationFlow> {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!innovationFlow.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for innovationFlow ${innovationFlow.id} `,
         LogContext.INNOVATION_FLOW
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     // Ensure always applying from a clean state
     innovationFlow.authorization = this.authorizationPolicyService.reset(
       innovationFlow.authorization
@@ -42,15 +39,23 @@ export class InnovationFlowAuthorizationService {
     innovationFlow.authorization = this.appendCredentialRules(
       innovationFlow.authorization
     );
-    innovationFlow.authorization = this.appendPrivilegeRules(
-      innovationFlow.authorization
-    );
+    innovationFlow.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        innovationFlow.authorization,
+        AuthorizationPrivilege.CREATE,
+        [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+        PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE
+      );
+    updatedAuthorizations.push(innovationFlow.authorization);
 
-    // Cascade down
-    const innovationFlowPropagated =
-      await this.propagateAuthorizationToChildEntities(innovationFlow);
+    const profileAuthorizations =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        innovationFlow.profile.id,
+        innovationFlow.authorization
+      );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    return innovationFlowPropagated;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(
@@ -74,40 +79,5 @@ export class InnovationFlowAuthorizationService {
     const rules: IAuthorizationPolicyRuleCredential[] = [];
 
     return rules;
-  }
-
-  private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.SPACES
-      );
-    const privilegeRules: IAuthorizationPolicyRulePrivilege[] = [];
-
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
-      AuthorizationPrivilege.CREATE,
-      PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
-    );
-  }
-
-  private async propagateAuthorizationToChildEntities(
-    innovationFlow: IInnovationFlow
-  ): Promise<IInnovationFlow> {
-    innovationFlow.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        innovationFlow.profile,
-        innovationFlow.authorization
-      );
-
-    return innovationFlow;
   }
 }

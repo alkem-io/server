@@ -1,22 +1,20 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import {
   IsOptional,
   MaxLength,
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import {
-  HUGE_TEXT_LENGTH,
-  MID_TEXT_LENGTH,
-  SMALL_TEXT_LENGTH,
-} from '@src/common/constants';
+import { HUGE_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { CreateReferenceInput } from '@domain/common/reference';
 import { CreateLocationInput } from '@domain/common/location/dto';
 import { Type } from 'class-transformer';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateTagsetInput } from '@domain/common/tagset';
+import { CreateVisualOnProfileInput } from './profile.dto.create.visual';
 
 @InputType()
+@ObjectType('CreateProfileData')
 export class CreateProfileInput {
   @Field({
     nullable: false,
@@ -57,11 +55,12 @@ export class CreateProfileInput {
   @Type(() => CreateTagsetInput)
   tagsets?: CreateTagsetInput[];
 
-  @Field({
+  @Field(() => [CreateVisualOnProfileInput], {
     nullable: true,
-    description: 'The URL of the avatar of the user',
+    description: 'The visuals URLs',
   })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
-  avatarURL?: string;
+  @ValidateNested({ each: true })
+  @Type(() => CreateVisualOnProfileInput)
+  visuals?: CreateVisualOnProfileInput[];
 }

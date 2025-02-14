@@ -1,9 +1,9 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IVirtualContributor } from './virtual.contributor.interface';
@@ -11,14 +11,23 @@ import {
   DeleteVirtualContributorInput,
   UpdateVirtualContributorInput,
 } from './dto';
-import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowlege';
+import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowledge';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UpdateVirtualContributorSettingsInput } from './dto/virtual.contributor.dto.update.settings';
+import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
-@ObjectType('MigrateEmbeddings')
+@ObjectType('MigrateEmbeddings') // TODO: what is this about?
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverMutations {
   constructor(
     private virtualContributorService: VirtualContributorService,
-    private authorizationService: AuthorizationService
+    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
+    private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -39,11 +48,67 @@ export class VirtualContributorResolverMutations {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
-      `orgUpdate: ${virtual.nameID}`
+      `virtual contribtor Update: ${virtual.id}`
     );
 
     return await this.virtualContributorService.updateVirtualContributor(
       virtualContributorData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtualContributor, {
+    description: 'Updates one of the Setting on an Organization',
+  })
+  async updateVirtualContributorSettings(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('settingsData')
+    settingsData: UpdateVirtualContributorSettingsInput
+  ): Promise<IVirtualContributor> {
+    let virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        settingsData.virtualContributorID,
+        {
+          relations: {
+            account: {
+              authorization: true,
+            },
+          },
+        }
+      );
+
+    const accountAuthorization = virtualContributor.account?.authorization;
+    if (!accountAuthorization) {
+      throw new RelationshipNotFoundException(
+        `Unable to load authorizing account for VC ${virtualContributor.id}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `virtualContributor settings update: ${virtualContributor.id}`
+    );
+
+    virtualContributor =
+      await this.virtualContributorService.updateVirtualContributorSettings(
+        virtualContributor,
+        settingsData.settings
+      );
+    virtualContributor =
+      await this.virtualContributorService.save(virtualContributor);
+    // As the settings may update the authorization for the Space, the authorization policy will need to be reset
+
+    const updatedAuthorizations =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtualContributor
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return this.virtualContributorService.getVirtualContributorOrFail(
+      virtualContributor.id
     );
   }
 
@@ -63,7 +128,7 @@ export class VirtualContributorResolverMutations {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.DELETE,
-      `deleteOrg: ${virtual.nameID}`
+      `delete virtual contributor: ${virtual.id}`
     );
     return await this.virtualContributorService.deleteVirtualContributor(
       deleteData.ID
@@ -80,6 +145,11 @@ export class VirtualContributorResolverMutations {
     @Args('refreshData')
     refreshData: RefreshVirtualContributorBodyOfKnowledgeInput
   ): Promise<boolean> {
+    this.logger.verbose?.(
+      `Refresh body of knowledge mutation invoked for VC ${refreshData.virtualContributorID}`,
+      LogContext.VIRTUAL_CONTRIBUTOR
+    );
+
     const virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
         refreshData.virtualContributorID,
@@ -89,13 +159,18 @@ export class VirtualContributorResolverMutations {
           },
         }
       );
+    this.logger.verbose?.(
+      `VC ${refreshData.virtualContributorID} found`,
+      LogContext.VIRTUAL_CONTRIBUTOR
+    );
+
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
-      `deleteOrg: ${virtual.nameID}`
+      `refresh body of knowledge: ${virtual.id}`
     );
-    return await this.virtualContributorService.refershBodyOfKnowledge(
+    return await this.virtualContributorService.refreshBodyOfKnowledge(
       virtual,
       agentInfo
     );

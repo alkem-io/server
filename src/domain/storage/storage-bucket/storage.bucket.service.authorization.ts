@@ -9,8 +9,8 @@ import {
   POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
   POLICY_RULE_PLATFORM_DELETE,
   POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
+  POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
-import { IDocument } from '../document';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
@@ -20,16 +20,18 @@ export class StorageBucketAuthorizationService {
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     storageBucket: IStorageBucket,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IStorageBucket {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!storageBucket.documents) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to reset auth for StorageBucket ${storageBucket.id} `,
         LogContext.STORAGE_BUCKET
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Ensure always applying from a clean state
     storageBucket.authorization = this.authorizationPolicyService.reset(
       storageBucket.authorization
@@ -44,19 +46,27 @@ export class StorageBucketAuthorizationService {
       storageBucket.authorization
     );
 
+    storageBucket.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        storageBucket.authorization,
+        AuthorizationPrivilege.READ_ABOUT,
+        [AuthorizationPrivilege.READ],
+        POLICY_RULE_READ_ABOUT
+      );
+    updatedAuthorizations.push(storageBucket.authorization);
+
     // Cascade down
-    const updatedDocuments: IDocument[] = [];
     for (const document of storageBucket.documents) {
-      document.authorization =
-        this.documentAuthorizationService.applyAuthorizationPolicy(
+      const documentAuthorizations =
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
           document,
           storageBucket.authorization
-        ).authorization;
-      updatedDocuments.push(document);
+        );
+      updatedAuthorizations.push(...documentAuthorizations);
     }
-    storageBucket.documents = updatedDocuments;
 
-    return storageBucket;
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return [];
   }
 
   private appendPrivilegeRules(

@@ -4,126 +4,207 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import {
-  EntityNotInitializedException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
+  CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
+  CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS,
+  POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
-import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
+import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
   constructor(
     private virtualService: VirtualContributorService,
     private agentAuthorizationService: AgentAuthorizationService,
-    private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
+    private knowledgeBaseAuthorizations: KnowledgeBaseAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
-    virtualInput: IVirtualContributor,
-    parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IVirtualContributor> {
+    virtualInput: IVirtualContributor
+  ): Promise<IAuthorizationPolicy[]> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
       virtualInput.id,
       {
         relations: {
-          storageAggregator: true,
+          account: true,
           profile: true,
           agent: true,
           aiPersona: true,
+          knowledgeBase: true,
         },
       }
     );
     if (
+      !virtual.account ||
       !virtual.profile ||
-      !virtual.storageAggregator ||
       !virtual.agent ||
-      !virtual.aiPersona
+      !virtual.aiPersona ||
+      !virtual.knowledgeBase ||
+      !virtual.account
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual: ${virtual.id} `,
         LogContext.COMMUNITY
       );
-    virtual.authorization = await this.authorizationPolicyService.reset(
-      virtual.authorization
-    );
-    virtual.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        virtual.authorization,
-        parentAuthorization
-      );
-    virtual.authorization = this.appendCredentialRules(
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: virtual.account.id,
+    };
+
+    virtual.authorization = this.resetToBaseVirtualContributorAuthorization(
       virtual.authorization,
-      virtual.id
+      accountAdminCredential
     );
 
+    // Allow everyone to Read About the VirtualContributor that are not hidden;
+    if (virtual.searchVisibility !== SearchVisibility.HIDDEN) {
+      virtual.authorization =
+        this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+          virtual.authorization,
+          AuthorizationPrivilege.READ_ABOUT,
+          true
+        );
+    }
+
+    updatedAuthorizations.push(virtual.authorization);
+
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedVirtualAuthorizationAnonymousAccess =
+    let clonedVirtualAuthorizationAnonymousAccess =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         virtual.authorization
       );
     // To ensure that profile on an virtual is always publicly visible, even for non-authenticated users
-    clonedVirtualAuthorizationAnonymousAccess.anonymousReadAccess = true;
-    virtual.profile =
+    clonedVirtualAuthorizationAnonymousAccess =
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
+        clonedVirtualAuthorizationAnonymousAccess,
+        AuthorizationPrivilege.READ
+      );
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        virtual.profile,
+        virtual.profile.id,
         clonedVirtualAuthorizationAnonymousAccess
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    virtual.storageAggregator =
-      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
-        virtual.storageAggregator,
+    const agentAuthorization =
+      this.agentAuthorizationService.applyAuthorizationPolicy(
+        virtual.agent,
         virtual.authorization
       );
+    updatedAuthorizations.push(agentAuthorization);
 
-    virtual.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
-      virtual.agent,
-      virtual.authorization
-    );
-
-    virtual.aiPersona =
+    const aiPersonaAuthorization =
       this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
         virtual.aiPersona,
-        virtual.authorization
+        clonedVirtualAuthorizationAnonymousAccess
       );
+    updatedAuthorizations.push(aiPersonaAuthorization);
 
-    return virtual;
+    // Decide whether the knowledge base inherits from the virtual without public access, or
+    // from the cloned authorization with public access added
+    let knowledgeBaseParentAuthorization = virtual.authorization;
+    if (virtual.settings.privacy.knowledgeBaseContentVisible) {
+      knowledgeBaseParentAuthorization =
+        clonedVirtualAuthorizationAnonymousAccess;
+    }
+
+    const knowledgeBaseAuthorizations =
+      await this.knowledgeBaseAuthorizations.applyAuthorizationPolicy(
+        virtual.knowledgeBase,
+        knowledgeBaseParentAuthorization,
+        virtual.settings.privacy.knowledgeBaseContentVisible
+      );
+    updatedAuthorizations.push(...knowledgeBaseAuthorizations);
+
+    virtual.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        virtual.authorization,
+        AuthorizationPrivilege.READ,
+        [AuthorizationPrivilege.READ_ABOUT],
+        POLICY_RULE_READ_ABOUT
+      );
+    updatedAuthorizations.push(virtual.authorization);
+    return updatedAuthorizations;
   }
 
-  private appendCredentialRules(
-    authorization: IAuthorizationPolicy | undefined,
-    accountID: string
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for virtual: ${accountID}`,
-        LogContext.COMMUNITY
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
+  private createCredentialRuleAnonymousRegisteredUserRead(): IAuthorizationPolicyRuleCredential {
     const globalCommunityRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
         [
           AuthorizationCredential.GLOBAL_REGISTERED,
-          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+          AuthorizationCredential.GLOBAL_ANONYMOUS,
         ],
         CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
       );
-    newRules.push(globalCommunityRead);
+
+    return globalCommunityRead;
+  }
+
+  private resetToBaseVirtualContributorAuthorization(
+    authorizationPolicy: IAuthorizationPolicy | undefined,
+    accountAdminCredential: ICredentialDefinition
+  ): IAuthorizationPolicy {
+    let updatedAuthorization =
+      this.authorizationPolicyService.reset(authorizationPolicy);
+    updatedAuthorization =
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+        updatedAuthorization
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Allow global admins to manage platform settings
+    const platformSettings =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS
+      );
+    platformSettings.cascade = false;
+    newRules.push(platformSettings);
+
+    // Allow Global Spaces Read to view VCs
+    const globalSpacesReader =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
+      );
+    newRules.push(globalSpacesReader);
+
+    const accountAdminManage =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.CONTRIBUTE,
+        ],
+        [accountAdminCredential],
+        CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE
+      );
+    newRules.push(accountAdminManage);
 
     // TODO: rule that for now allows global support ability to manage VCs, this to be removed later
     const globalSupportManage =
@@ -139,12 +220,9 @@ export class VirtualContributorAuthorizationService {
       );
     newRules.push(globalSupportManage);
 
-    const updatedAuthorization =
-      this.authorizationPolicy.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      updatedAuthorization,
+      newRules
+    );
   }
 }

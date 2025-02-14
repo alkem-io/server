@@ -1,4 +1,4 @@
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { IVirtualContributor } from './virtual.contributor.interface';
@@ -10,8 +10,6 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
-import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
-import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Resolver()
 export class VirtualContributorResolverQueries {
@@ -24,7 +22,8 @@ export class VirtualContributorResolverQueries {
   @UseGuards(GraphqlGuard)
   @Query(() => [IVirtualContributor], {
     nullable: false,
-    description: 'The VirtualContributors on this platform',
+    description:
+      'The VirtualContributors on this platform; only accessible to platform admins',
   })
   async virtualContributors(
     @Args({ nullable: true }) args: ContributorQueryArgs,
@@ -51,35 +50,8 @@ export class VirtualContributorResolverQueries {
     description: 'A particular VirtualContributor',
   })
   async virtualContributor(
-    @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
     return await this.virtualContributorService.getVirtualContributorOrFail(id);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Query(() => IMessageAnswerToQuestion, {
-    nullable: false,
-    description: 'Ask the virtual contributor a question directly.',
-  })
-  async askVirtualContributorQuestion(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('virtualContributorQuestionInput')
-    virtualContributorQuestionInput: VirtualContributorQuestionInput
-  ): Promise<IMessageAnswerToQuestion> {
-    const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        virtualContributorQuestionInput.virtualContributorID
-      );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      virtualContributor.authorization,
-      AuthorizationPrivilege.READ,
-      `asking a question to virtual contributor (${virtualContributor.id}): $chatData.question`
-    );
-    virtualContributorQuestionInput.userID =
-      virtualContributorQuestionInput.userID ?? agentInfo.userID;
-    return this.virtualContributorService.askQuestion(
-      virtualContributorQuestionInput
-    );
   }
 }

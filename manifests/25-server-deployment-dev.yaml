@@ -40,11 +40,23 @@ spec:
                 secretKeyRef:
                   name: alkemio-rabbitmq-cluster-default-user
                   key: password
+            - name: ELASTICSEARCH_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-elastic-config
+                  key: SERVER_ELASTIC_API_KEY
+            - name: LOGGING_LEVEL_CONSOLE
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: SERVER_LOGGING_LEVEL
           envFrom:
             - secretRef:
                 name: alkemio-secrets
             - configMapRef:
                 name: alkemio-config
+            - configMapRef:
+                name: alkemio-elastic-config
           ports:
             - name: graphql
               containerPort: 4000
@@ -54,4 +66,4 @@ spec:
       volumes:
         - name: file-storage
           persistentVolumeClaim:
-            claimName: file-storage-pvc
+            claimName: file-storage-pvc2

@@ -29,10 +29,28 @@ export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
    */
   cache?: boolean;
   /***
-   * What to return when resolving the unresolved result for a key.
-   * The default behaviour is to return an error - set to true to return NULL instead.
-   * This is useful when an a result is expected to be null and it's not an
-   * exceptional case.
+   * Overwrites the default behaviour of what to return when resolving the unresolved result for a key.
+   * This is useful when the result is expected to be null, and it's not an exceptional case.
+   * ---
+   * The default behaviour is determined by the Loader decorator on the dataloader`s creation.
+   * If the underlying graphql field, for which the dataloader is created, is nullable - the result can be resolved to null.
+   * <br/>
+   * Example:
+   * ```
+   * @ResolveField(() => ICallout, {
+   *   nullable: true,
+   *   description: 'The Callout that was published.',
+   * })
+   * public callout(
+   *   @Parent() { payload }: InAppNotificationCalloutPublished,
+   *   @Loader(CalloutLoaderCreator) loader: ILoader<ICallout | null>
+   * ) {
+   *   return loader.load(payload.calloutID);
+   * }
+   * ```
+   * The `callout` is decorated as nullable, so the dataloader will auto-resolve to `null` if the result is not found.
+   * <br/>
+   * You can override this behaviour by setting the option to `false`. That way the problematic values will always be resolved to errors.
    */
   resolveToNull?: boolean;
 }

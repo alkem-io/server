@@ -11,38 +11,41 @@ import {
 } from '@test/mocks';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
-import { UserService } from '@domain/community/user/user.service';
-import { ApplicationService } from '@domain/community/application/application.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
-import { CommunityService } from '@domain/community/community/community.service';
+import { ApplicationService } from '@domain/access/application/application.service';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
-import { asyncToThrow, testData } from '@test/utils';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import { testData } from '@test/utils';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
 import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
-import { SpaceService } from '@domain/space/space/space.service';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { ProfileType } from '@common/enums/profile.type';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { Space } from '@domain/space/space/space.entity';
-import { License } from '@domain/license/license/license.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
+import { IUser } from '@domain/community/user/user.interface';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { AccountType } from '@common/enums/account.type';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
+import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
+import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
-  let userService: UserService;
   let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
-  let organizationService: OrganizationService;
-  let communityService: CommunityService;
-  let spaceService: SpaceService;
+  let userLookupService: UserLookupService;
+  let organizationLookupService: OrganizationLookupService;
+  let communityResolverService: CommunityResolverService;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -54,23 +57,25 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
+        MockVirtualContributorLookupService,
+        MockOrganizationLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
         MockEntityManagerProvider,
         MockSpaceService,
         MockUserLookupService,
         MockVirtualContributorService,
+        MockContributorLookupService,
         RolesService,
       ],
     }).compile();
 
     rolesService = moduleRef.get(RolesService);
-    userService = moduleRef.get(UserService);
+    userLookupService = moduleRef.get(UserLookupService);
     applicationService = moduleRef.get(ApplicationService);
-    organizationService = moduleRef.get(OrganizationService);
-    communityService = moduleRef.get(CommunityService);
+    organizationLookupService = moduleRef.get(OrganizationLookupService);
+    communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
-    spaceService = moduleRef.get(SpaceService);
   });
 
   describe('User Roles', () => {
@@ -81,6 +86,8 @@ describe('RolesService', () => {
         roles: spaceRolesData.roles,
         displayName: spaceRolesData.displayName,
       });
+      const user = testData.user as IUser;
+
       const subspaceRolesData = spaceRolesData.subspaces;
       const subspaceRolesMocks: RolesResultCommunity[] = [];
       for (const subspaceRoleData of subspaceRolesData) {
@@ -96,9 +103,7 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      jest
-        .spyOn(userService, 'getUserWithAgent')
-        .mockResolvedValue(testData.user);
+      jest.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
 
       jest
         .spyOn(spaceFilterService, 'getAllowedVisibilities')
@@ -127,13 +132,11 @@ describe('RolesService', () => {
         .mockResolvedValue(false);
 
       jest
-        .spyOn(applicationService, 'getApplicationState')
+        .spyOn(applicationService, 'getLifecycleState')
         .mockResolvedValue('new');
 
-      jest.spyOn(communityService, 'isSpaceCommunity').mockResolvedValue(true);
-
       jest
-        .spyOn(spaceService, 'getSpaceForCommunityOrFail')
+        .spyOn(communityResolverService, 'getSpaceForCommunityOrFail')
         .mockResolvedValue(testData.space as any);
     });
 
@@ -142,9 +145,8 @@ describe('RolesService', () => {
         userID: testData.user.id,
       });
 
-      const organizationRoles = await rolesService.getOrganizationRolesForUser(
-        roles
-      );
+      const organizationRoles =
+        await rolesService.getOrganizationRolesForUser(roles);
       const spaceRoles = await rolesService.getSpaceRolesForContributor(
         roles,
         testData.agentInfo
@@ -181,27 +183,16 @@ describe('RolesService', () => {
         ])
       );
     });
-
-    it.skip('Should throw exception when community parent is not found', async () => {
-      jest
-        .spyOn(communityService, 'isSpaceCommunity')
-        .mockResolvedValueOnce(false);
-
-      await asyncToThrow(
-        rolesService.getCommunityApplicationsForUser(testData.user.id),
-        RelationshipNotFoundException
-      );
-    });
   });
 
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
       jest
-        .spyOn(organizationService, 'getOrganizationAndAgent')
+        .spyOn(organizationLookupService, 'getOrganizationAndAgent')
         .mockResolvedValue({
           organization: testData.organization as any,
           agent: testData.agent,
-        });
+        } as any);
 
       const roles = await rolesService.getRolesForOrganization({
         organizationID: testData.organization.id,
@@ -223,6 +214,24 @@ describe('RolesService', () => {
   });
 });
 
+const spaceSettings = {
+  privacy: {
+    mode: SpacePrivacyMode.PUBLIC,
+    allowPlatformSupportAsAdmin: false,
+  },
+  membership: {
+    policy: CommunityMembershipPolicy.OPEN,
+    trustedOrganizations: [],
+    allowSubspaceAdminsToInviteMembers: false,
+  },
+  collaboration: {
+    inheritMembershipRights: true,
+    allowMembersToCreateSubspaces: true,
+    allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
+  },
+};
+
 const getSpaceRoleResultMock = ({
   id,
   roles,
@@ -236,16 +245,17 @@ const getSpaceRoleResultMock = ({
     id,
     displayName,
     type: SpaceType.SPACE,
-    level: SpaceLevel.SPACE,
+    level: SpaceLevel.L0,
     spaceID: id,
     nameID: `space-${id}`,
     visibility: SpaceVisibility.ACTIVE,
     roles,
     space: {
       id,
-      settingsStr: JSON.stringify({}),
+      settings: spaceSettings,
       rowId: parseInt(id),
       nameID: `space-${id}`,
+      levelZeroSpaceID: '',
       profile: {
         id: `profile-${id}`,
         displayName: `Space ${id}`,
@@ -255,15 +265,16 @@ const getSpaceRoleResultMock = ({
         ...getEntityMock<Profile>(),
       },
       type: SpaceType.SPACE,
-      level: SpaceLevel.SPACE,
+      level: SpaceLevel.L0,
+      visibility: SpaceVisibility.ACTIVE,
       account: {
         id: `account-${id}`,
         virtualContributors: [],
-        license: {
-          id: `license-${id}`,
-          visibility: SpaceVisibility.ACTIVE,
-          ...getEntityMock<License>(),
-        },
+        innovationHubs: [],
+        innovationPacks: [],
+        externalSubscriptionID: '',
+        spaces: [],
+        type: AccountType.ORGANIZATION,
       },
       ...getEntityMock<Space>(),
     },
@@ -276,6 +287,7 @@ const getSubpaceRoleResultMock = ({
   roles,
   displayName,
   type,
+  level,
 }: {
   id: string;
   roles: string[];
@@ -289,7 +301,7 @@ const getSubpaceRoleResultMock = ({
     nameID: `subspace-${id}`,
     roles,
     type,
-    level: SpaceLevel.SPACE,
+    level,
   };
 };
 

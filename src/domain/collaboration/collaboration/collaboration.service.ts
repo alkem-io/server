@@ -4,106 +4,165 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  ForbiddenException,
   RelationshipNotFoundException,
-  ValidationException,
 } from '@common/exceptions';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
-import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
-import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
-import {
-  CreateTagsetTemplateInput,
-  ITagsetTemplate,
-} from '@domain/common/tagset-template';
-import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
-import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { keyBy } from 'lodash';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
-import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
-import { SpaceDefaultsService } from '@domain/space/space.defaults/space.defaults.service';
+import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 import { Space } from '@domain/space/space/space.entity';
-import { ICalloutGroup } from '../callout-groups/callout.group.interface';
-import { CalloutGroupsService } from '../callout-groups/callout.group.service';
-import { IAccount } from '@domain/space/account/account.interface';
-import { SpaceType } from '@common/enums/space.type';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceLevel } from '@common/enums/space.level';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { CalloutsSetService } from '../callouts-set/callouts.set.service';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 @Injectable()
 export class CollaborationService {
   constructor(
-    private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private calloutService: CalloutService,
-    private namingService: NamingService,
-    private relationService: RelationService,
-    private tagsetTemplateSetService: TagsetTemplateSetService,
+    private calloutsSetService: CalloutsSetService,
     private innovationFlowService: InnovationFlowService,
-    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private timelineService: TimelineService,
-    private spaceDefaultsService: SpaceDefaultsService,
-    private calloutGroupsService: CalloutGroupsService
+    private licenseService: LicenseService
   ) {}
 
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    account: IAccount,
-    spaceType: SpaceType
+    agentInfo?: AgentInfo
   ): Promise<ICollaboration> {
-    const collaboration: ICollaboration = Collaboration.create();
-    collaboration.authorization = new AuthorizationPolicy();
-    collaboration.relations = [];
-    collaboration.callouts = [];
-    collaboration.timeline = await this.timelineService.createTimeline();
-    const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);
-    collaboration.groupsStr =
-      this.calloutGroupsService.serializeGroups(calloutGroups);
-
-    collaboration.tagsetTemplateSet =
-      await this.tagsetTemplateSetService.createTagsetTemplateSet();
-
-    // Rely on the logic in Space Defaults to create the right innovation flow input
-    const innovationFlowInput =
-      await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        account.id,
-        spaceType,
-        collaborationData.innovationFlowTemplateID
+    if (
+      !collaborationData.calloutsSetData ||
+      !collaborationData.innovationFlowData
+    ) {
+      throw new RelationshipNotFoundException(
+        'Unable to create Collaboration: missing required data',
+        LogContext.COLLABORATION
       );
-    const allowedStates = innovationFlowInput.states.map(
-      state => state.displayName
+    }
+    const collaboration: ICollaboration = Collaboration.create();
+    collaboration.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COLLABORATION
     );
 
+    collaboration.calloutsSet = this.calloutsSetService.createCalloutsSet(
+      collaborationData.calloutsSetData,
+      CalloutsSetType.COLLABORATION
+    );
+
+    const innovationFlowStatesTagsetInput =
+      this.createInnovationFlowStatesTagsetTemplateInput(
+        collaborationData.innovationFlowData
+      );
+    collaboration.calloutsSet.tagsetTemplateSet =
+      this.calloutsSetService.addTagsetTemplate(
+        collaboration.calloutsSet,
+        innovationFlowStatesTagsetInput
+      );
+
+    // save the calloutsSet with the tagsetTemplates so can use it in the innovation flow as a template for it's tags
+    await this.calloutsSetService.save(collaboration.calloutsSet);
+
+    collaboration.isTemplate = collaborationData.isTemplate || false;
+
+    if (!collaboration.isTemplate) {
+      collaboration.timeline = this.timelineService.createTimeline();
+    }
+
+    collaboration.license = this.licenseService.createLicense({
+      type: LicenseType.COLLABORATION,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+      ],
+    });
+
+    const statesTagsetTemplate = this.calloutsSetService.getTagsetTemplate(
+      collaboration.calloutsSet.tagsetTemplateSet,
+      TagsetReservedName.FLOW_STATE
+    );
+
+    const groupsTagsetTemplate = this.calloutsSetService.getTagsetTemplate(
+      collaboration.calloutsSet.tagsetTemplateSet,
+      TagsetReservedName.CALLOUT_GROUP
+    );
+
+    if (!statesTagsetTemplate || !groupsTagsetTemplate) {
+      throw new RelationshipNotFoundException(
+        'Unable to create tagst template for flow states',
+        LogContext.COLLABORATION
+      );
+    }
+    // Note: need to create the innovation flow after creation of
+    // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
+    collaboration.innovationFlow =
+      await this.innovationFlowService.createInnovationFlow(
+        collaborationData.innovationFlowData,
+        [statesTagsetTemplate],
+        storageAggregator
+      );
+
+    if (collaborationData.calloutsSetData.calloutsData) {
+      collaboration.calloutsSet.callouts =
+        await this.calloutsSetService.addCallouts(
+          collaboration.calloutsSet,
+          collaborationData.calloutsSetData.calloutsData,
+          storageAggregator,
+          agentInfo?.userID
+        );
+    }
+
+    this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
+      groupsTagsetTemplate.allowedValues,
+      statesTagsetTemplate.allowedValues,
+      collaboration.calloutsSet.callouts
+    );
+
+    return collaboration;
+  }
+
+  private createInnovationFlowStatesTagsetTemplateInput(
+    innovationFlowData: CreateInnovationFlowInput
+  ): CreateTagsetTemplateInput {
+    this.innovationFlowService.validateInnovationFlowDefinition(
+      innovationFlowData.states
+    );
+    const allowedStates = innovationFlowData.states.map(
+      state => state.displayName
+    );
     const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
       name: TagsetReservedName.FLOW_STATE,
       type: TagsetType.SELECT_ONE,
@@ -111,100 +170,7 @@ export class CollaborationService {
       defaultSelectedValue:
         allowedStates.length > 0 ? allowedStates[0] : undefined,
     };
-    const statesTagsetTemplate =
-      await this.tagsetTemplateSetService.addTagsetTemplate(
-        collaboration.tagsetTemplateSet,
-        tagsetTemplateDataStates
-      );
-
-    // Note: need to create the innovation flow after creation of
-    // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
-    collaboration.innovationFlow =
-      await this.innovationFlowService.createInnovationFlow(
-        innovationFlowInput,
-        [statesTagsetTemplate],
-        storageAggregator
-      );
-
-    return await this.save(collaboration);
-  }
-
-  public getCalloutGroupNames(collaboration: ICollaboration): string[] {
-    return this.calloutGroupsService.getGroupNames(collaboration.groupsStr);
-  }
-
-  public async addCalloutGroupTagsetTemplate(
-    collaboration: ICollaboration,
-    defaultGroup: CalloutGroupName
-  ) {
-    const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.CALLOUT_GROUP,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: this.getCalloutGroupNames(collaboration),
-      defaultSelectedValue: defaultGroup,
-    };
-    await this.addTagsetTemplate(collaboration, tagsetTemplateData);
-  }
-
-  public async addTagsetTemplate(
-    collaboration: ICollaboration,
-    tagsetTemplateData: CreateTagsetTemplateInput
-  ): Promise<ITagsetTemplate> {
-    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
-      collaboration.id
-    );
-
-    const tagsetTemplate =
-      await this.tagsetTemplateSetService.addTagsetTemplate(
-        collaboration.tagsetTemplateSet,
-        tagsetTemplateData
-      );
-    await this.save(collaboration);
-    return tagsetTemplate;
-  }
-
-  public async addDefaultCallouts(
-    collaboration: ICollaboration,
-    calloutsData: CreateCalloutInput[],
-    storageAggregator: IStorageAggregator,
-    userID: string | undefined
-  ): Promise<ICollaboration> {
-    collaboration.callouts = await this.getCalloutsOnCollaboration(
-      collaboration
-    );
-
-    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
-      collaboration.id
-    );
-    for (const calloutDefault of calloutsData) {
-      const callout = await this.calloutService.createCallout(
-        calloutDefault,
-        collaboration.tagsetTemplateSet.tagsetTemplates,
-        storageAggregator,
-        userID
-      );
-      // default callouts are already published
-      callout.visibility = CalloutVisibility.PUBLISHED;
-      collaboration.callouts.push(callout);
-    }
-    return await this.save(collaboration);
-  }
-
-  public async createCalloutInputsFromCollaboration(
-    collaborationSource: ICollaboration
-  ): Promise<CreateCalloutInput[]> {
-    const calloutsData: CreateCalloutInput[] = [];
-
-    const sourceCallouts = await this.getCalloutsOnCollaboration(
-      collaborationSource
-    );
-
-    for (const sourceCallout of sourceCallouts) {
-      const sourceCalloutInput =
-        await this.calloutService.createCalloutInputFromCallout(sourceCallout);
-      calloutsData.push(sourceCalloutInput);
-    }
-    return calloutsData;
+    return tagsetTemplateDataStates;
   }
 
   async save(collaboration: ICollaboration): Promise<ICollaboration> {
@@ -231,25 +197,12 @@ export class CollaborationService {
     return collaboration;
   }
 
-  public async createCalloutInputsFromCollaborationTemplate(
-    collaborationTemplateID?: string
-  ): Promise<CreateCalloutInput[]> {
-    if (collaborationTemplateID) {
-      const collaboration = await this.getCollaborationOrFail(
-        collaborationTemplateID
-      );
-      return await this.createCalloutInputsFromCollaboration(collaboration);
-    }
-    return [];
-  }
-
   public async getChildCollaborationsOrFail(
     collaborationID: string
   ): Promise<ICollaboration[] | never> {
     const space = await this.entityManager.findOne(Space, {
       where: { collaboration: { id: collaborationID } },
       relations: {
-        account: true,
         subspaces: {
           collaboration: true,
         },
@@ -261,15 +214,12 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
-    const accountID = space.account.id;
 
     switch (space.level) {
-      case SpaceLevel.SPACE:
+      case SpaceLevel.L0:
         const spacesInAccount = await this.entityManager.find(Space, {
           where: {
-            account: {
-              id: accountID,
-            },
+            levelZeroSpaceID: space.id,
           },
           relations: {
             collaboration: true,
@@ -289,7 +239,7 @@ export class CollaborationService {
           }
           return x.collaboration;
         });
-      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.L1:
         const subsubspaces = space.subspaces;
         if (!subsubspaces) {
           throw new EntityNotInitializedException(
@@ -312,40 +262,38 @@ export class CollaborationService {
     return [];
   }
 
-  public async deleteCollaboration(
+  public async deleteCollaborationOrFail(
     collaborationID: string
-  ): Promise<ICollaboration> {
+  ): Promise<ICollaboration | never> {
     // Note need to load it in with all contained entities so can remove fully
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: {
-        callouts: true,
+        calloutsSet: true,
         timeline: true,
         innovationFlow: true,
-        relations: true,
         authorization: true,
+        license: true,
       },
     });
 
     if (
-      !collaboration.callouts ||
-      !collaboration.timeline ||
+      !collaboration.calloutsSet ||
       !collaboration.innovationFlow ||
-      !collaboration.relations ||
-      !collaboration.authorization
+      !collaboration.authorization ||
+      !collaboration.license
     )
       throw new RelationshipNotFoundException(
         `Unable to remove Collaboration: missing child entities ${collaboration.id} `,
         LogContext.CONTEXT
       );
 
-    for (const callout of collaboration.callouts) {
-      await this.calloutService.deleteCallout(callout.id);
-    }
+    await this.calloutsSetService.deleteCalloutsSet(
+      collaboration.calloutsSet.id
+    );
 
-    await this.timelineService.deleteTimeline(collaboration.timeline.id);
-
-    for (const relation of collaboration.relations) {
-      await this.relationService.deleteRelation({ ID: relation.id });
+    if (collaboration.timeline) {
+      // There's no timeline for collaboration templates
+      await this.timelineService.deleteTimeline(collaboration.timeline.id);
     }
 
     await this.authorizationPolicyService.delete(collaboration.authorization);
@@ -353,72 +301,11 @@ export class CollaborationService {
     await this.innovationFlowService.deleteInnovationFlow(
       collaboration.innovationFlow.id
     );
+    await this.licenseService.removeLicenseOrFail(collaboration.license.id);
 
     return await this.collaborationRepository.remove(
       collaboration as Collaboration
     );
-  }
-
-  public getGroups(collaboration: ICollaboration): ICalloutGroup[] {
-    return this.calloutGroupsService.getGroups(collaboration.groupsStr);
-  }
-
-  public async createCalloutOnCollaboration(
-    calloutData: CreateCalloutOnCollaborationInput,
-    userID: string
-  ): Promise<ICallout> {
-    const collaborationID = calloutData.collaborationID;
-    const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: { callouts: true, tagsetTemplateSet: true },
-    });
-    if (!collaboration.callouts || !collaboration.tagsetTemplateSet)
-      throw new EntityNotInitializedException(
-        `Collaboration (${collaborationID}) not initialised`,
-        LogContext.CONTEXT
-      );
-    if (!calloutData.sortOrder) {
-      calloutData.sortOrder =
-        1 +
-        Math.max(
-          ...collaboration.callouts.map(callout => callout.sortOrder),
-          0 // Needed in case there are no callouts. In that case the first callout will have sortOrder = 1
-        );
-    }
-
-    const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInCollaboration(
-        collaboration.id
-      );
-    if (calloutData.nameID && calloutData.nameID.length > 0) {
-      const nameIdAlreadyTaken = reservedNameIDs.includes(calloutData.nameID);
-      if (nameIdAlreadyTaken)
-        throw new ValidationException(
-          `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.SPACES
-        );
-    } else {
-      calloutData.nameID =
-        this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${calloutData.framing.profile.displayName}`,
-          reservedNameIDs
-        );
-    }
-
-    const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
-    const storageAggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
-        collaboration.id
-      );
-    const callout = await this.calloutService.createCallout(
-      calloutData,
-      tagsetTemplates,
-      storageAggregator,
-      userID
-    );
-    // this has the effect of adding the callout to the collaboration
-    callout.collaboration = collaboration;
-
-    return this.calloutService.save(callout);
   }
 
   async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {
@@ -435,165 +322,6 @@ export class CollaborationService {
     }
 
     return timeline;
-  }
-
-  public async getCalloutsFromCollaboration(
-    collaboration: ICollaboration,
-    args: CollaborationArgsCallouts,
-    agentInfo: AgentInfo
-  ): Promise<ICallout[]> {
-    const collaborationLoaded = await this.getCollaborationOrFail(
-      collaboration.id,
-      {
-        relations: {
-          callouts: {
-            framing: {
-              profile: {
-                tagsets: true,
-              },
-            },
-          },
-        },
-      }
-    );
-    const allCallouts = collaborationLoaded.callouts;
-    if (!allCallouts) {
-      throw new EntityNotFoundException(
-        `Callouts not initialised on Collaboration: ${collaboration.id}`,
-        LogContext.COLLABORATION
-      );
-    }
-
-    // Single pass filter operation
-    const groupNames: string[] = [];
-    if (args.groups && args.groups.length) {
-      const allowedGroups = await this.calloutGroupsService.getGroups(
-        collaboration.groupsStr
-      );
-
-      for (const group of args.groups) {
-        // Validate that the groups are valid
-        const groupAllowed = allowedGroups.find(g => g.displayName === group);
-        if (!groupAllowed) {
-          throw new ValidationException(
-            `Specified group not found: ${group}; allowed groups: ${allowedGroups
-              .map(g => g.displayName)
-              .join(', ')}`,
-            LogContext.COLLABORATION
-          );
-        }
-        groupNames.push(group);
-      }
-    }
-    const availableCallouts = allCallouts.filter(callout => {
-      // Check for READ privilege
-      const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
-      if (!hasAccess) return false;
-
-      // Filter by Callout groups
-      if (groupNames.length > 0) {
-        const hasMatchingTagset = callout.framing.profile.tagsets?.some(
-          tagset =>
-            tagset.name === TagsetReservedName.CALLOUT_GROUP &&
-            tagset.tags.length > 0 &&
-            groupNames?.includes(tagset.tags[0])
-        );
-        if (!hasMatchingTagset) return false;
-      }
-
-      // Filter by tagsets
-      const tagsetCheck =
-        args.tagsets && args.tagsets.length
-          ? callout.framing.profile?.tagsets?.some(calloutTagset =>
-              args.tagsets?.some(
-                argTagset =>
-                  argTagset.name === calloutTagset.name &&
-                  argTagset.tags.some(argTag =>
-                    calloutTagset.tags.includes(argTag)
-                  )
-              )
-            )
-          : true;
-
-      return tagsetCheck;
-    });
-
-    // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
-    // (a) by IDs, results in order specified by IDs
-    if (args.IDs) {
-      const results: ICallout[] = [];
-      for (const calloutID of args.IDs) {
-        let callout;
-        if (calloutID.length === UUID_LENGTH)
-          callout = allCallouts.find(callout => callout.id === calloutID);
-        else
-          callout = allCallouts.find(callout => callout.nameID === calloutID);
-
-        if (!callout)
-          throw new EntityNotFoundException(
-            `Callout with requested ID (${calloutID}) not located within current Collaboration: ${collaboration.id}`,
-            LogContext.COLLABORATION
-          );
-
-        if (!this.hasAgentAccessToCallout(callout, agentInfo)) {
-          throw new ForbiddenException(
-            `User does not have access to callout: ${callout.id}`,
-            LogContext.COLLABORATION
-          );
-        }
-
-        results.push(callout);
-      }
-      return results;
-    }
-
-    // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
-    if (args.sortByActivity) {
-      for (const callout of availableCallouts) {
-        callout.activity = await this.calloutService.getActivityCount(callout);
-      }
-      const sortedCallouts = availableCallouts.sort((a, b) =>
-        a.activity < b.activity ? 1 : -1
-      );
-      if (args.limit) {
-        return sortedCallouts.slice(0, args.limit);
-      }
-      return sortedCallouts;
-    }
-
-    // (c) shuffle
-    if (args.shuffle) {
-      // No need to sort
-      return limitAndShuffle(availableCallouts, args.limit, args.shuffle);
-    }
-
-    // (d) by sort order
-    let results = availableCallouts;
-    if (args.limit) {
-      results = limitAndShuffle(availableCallouts, args.limit, false);
-    }
-
-    return results.sort((a, b) => (a.sortOrder > b.sortOrder ? 1 : -1));
-  }
-
-  private hasAgentAccessToCallout(
-    callout: ICallout,
-    agentInfo: AgentInfo
-  ): boolean {
-    switch (callout.visibility) {
-      case CalloutVisibility.PUBLISHED:
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          callout.authorization,
-          AuthorizationPrivilege.READ
-        );
-      case CalloutVisibility.DRAFT:
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          callout.authorization,
-          AuthorizationPrivilege.UPDATE
-        );
-    }
   }
 
   async getInnovationFlow(collaborationID: string): Promise<IInnovationFlow> {
@@ -613,177 +341,35 @@ export class CollaborationService {
     return innovationFlow;
   }
 
-  public async getCalloutsOnCollaboration(
-    collaboration: ICollaboration
-  ): Promise<ICallout[]> {
-    const loadedCollaboration = await this.getCollaborationOrFail(
-      collaboration.id,
-      {
-        relations: { callouts: true },
-      }
-    );
-    if (!loadedCollaboration.callouts)
-      throw new EntityNotFoundException(
-        `Callouts not initialised on collaboration: ${collaboration.id}`,
-        LogContext.CONTEXT
-      );
-
-    return loadedCollaboration.callouts;
-  }
-
-  public async createRelationOnCollaboration(
-    relationData: CreateRelationOnCollaborationInput
-  ): Promise<IRelation> {
-    const collaborationId = relationData.collaborationID;
-    const collaboration = await this.getCollaborationOrFail(collaborationId, {
-      relations: { relations: true },
-    });
-
-    if (!collaboration.relations)
-      throw new EntityNotInitializedException(
-        `Collaboration (${collaborationId}) not initialised`,
-        LogContext.COLLABORATION
-      );
-
-    const relation = await this.relationService.createRelation(relationData);
-    collaboration.relations.push(relation);
-    await this.collaborationRepository.save(collaboration);
-    return relation;
-  }
-
-  public async getTagsetTemplatesSet(
-    collaborationID: string
-  ): Promise<ITagsetTemplateSet> {
-    const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: { tagsetTemplateSet: true },
-    });
-
-    if (!collaboration.tagsetTemplateSet) {
-      throw new EntityNotInitializedException(
-        `No tagset template set found for collaboration the given id: ${collaborationID}`,
-        LogContext.COLLABORATION
-      );
-    }
-
-    return collaboration.tagsetTemplateSet;
-  }
-
-  public async getRelationsOnCollaboration(
-    collaboration: ICollaboration
-  ): Promise<IRelation[]> {
-    const loadedCollaboration = await this.getCollaborationOrFail(
-      collaboration.id,
-      {
-        relations: { relations: true },
-      }
-    );
-
-    if (!loadedCollaboration.relations)
-      throw new EntityNotInitializedException(
-        `Collaboration not initialised: ${collaboration.id}`,
-        LogContext.COLLABORATION
-      );
-
-    return loadedCollaboration.relations;
-  }
-
-  public async getPostsCount(collaboration: ICollaboration): Promise<number> {
+  public async getPostsCount(calloutsSet: ICalloutsSet): Promise<number> {
     const [result]: {
       postsCount: number;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as postsCount FROM \`collaboration\`
-      RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      SELECT COUNT(*) as postsCount FROM \`callouts_set\`
+      RIGHT JOIN \`callout\` ON \`callout\`.\`calloutsSetId\` = \`callouts_set\`.\`id\`
       RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}' AND \`callout\`.\`type\` = '${CalloutType.POST_COLLECTION}';
+      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}' AND \`callout\`.\`type\` = '${CalloutType.POST_COLLECTION}';
       `
     );
 
     return result.postsCount;
   }
 
-  public async getWhiteboardsCount(
-    collaboration: ICollaboration
-  ): Promise<number> {
+  public async getWhiteboardsCount(calloutsSet: ICalloutsSet): Promise<number> {
     const [result]: {
       whiteboardsCount: number;
     }[] = await this.entityManager.connection.query(
       `
       SELECT COUNT(*) as whiteboardsCount
-      FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      FROM \`callouts_set\` RIGHT JOIN \`callout\` ON \`callout\`.\`calloutsSetId\` = \`callouts_set\`.\`id\`
       RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}'
+      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}'
         AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
         AND \`callout\`.\`type\` = '${CalloutType.WHITEBOARD_COLLECTION}';
       `
     );
 
     return result.whiteboardsCount;
-  }
-
-  public async getCommunityPolicy(
-    collaborationID: string
-  ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
-      collaborationID
-    );
-  }
-
-  public async updateCalloutsSortOrder(
-    collaboration: ICollaboration,
-    sortOrderData: UpdateCollaborationCalloutsSortOrderInput
-  ): Promise<ICallout[]> {
-    const collaborationLoaded = await this.getCollaborationOrFail(
-      collaboration.id,
-      {
-        relations: { callouts: true },
-      }
-    );
-    const allCallouts = collaborationLoaded.callouts;
-    if (!allCallouts)
-      throw new EntityNotFoundException(
-        `Callout not initialised, no Callouts: ${collaboration.id}`,
-        LogContext.COLLABORATION
-      );
-
-    const calloutsByID = {
-      ...keyBy(allCallouts, 'nameID'),
-      ...keyBy(allCallouts, 'id'),
-    };
-
-    const minimumSortOrder = Math.min(
-      ...sortOrderData.calloutIDs
-        .map(calloutId => calloutsByID[calloutId]?.sortOrder)
-        .filter(sortOrder => sortOrder)
-    );
-    const modifiedCallouts: ICallout[] = [];
-
-    // Get the callouts specified
-    const calloutsInOrder: ICallout[] = [];
-    let index = 1;
-    for (const calloutID of sortOrderData.calloutIDs) {
-      const callout = calloutsByID[calloutID];
-      if (!callout) {
-        throw new EntityNotFoundException(
-          `Callout with requested ID (${calloutID}) not located within current Collaboration: ${collaboration.id}`,
-          LogContext.COLLABORATION
-        );
-      }
-      calloutsInOrder.push(callout);
-      const newSortOrder = minimumSortOrder + index;
-      if (callout.sortOrder !== newSortOrder) {
-        callout.sortOrder = newSortOrder;
-        modifiedCallouts.push(callout);
-      }
-      index++;
-    }
-
-    await Promise.all(
-      modifiedCallouts.map(
-        async callout => await this.calloutService.save(callout)
-      )
-    );
-
-    return calloutsInOrder;
   }
 }

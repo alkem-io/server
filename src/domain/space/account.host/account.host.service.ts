@@ -1,123 +1,143 @@
-import { AuthorizationCredential, LogContext } from '@common/enums';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAccount } from '../account/account.interface';
-import { AccountException, EntityNotFoundException } from '@common/exceptions';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { User } from '@domain/community/user';
-import { Organization } from '@domain/community/organization';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
+import { Account } from '../account/account.entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountType } from '@common/enums/account.type';
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { LicenseType } from '@common/enums/license.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 
 @Injectable()
 export class AccountHostService {
   constructor(
-    private contributorService: ContributorService,
     private agentService: AgentService,
+    private licenseIssuerService: LicenseIssuerService,
+    private licensingFrameworkService: LicensingFrameworkService,
+    private licenseService: LicenseService,
+    private storageAggregatorService: StorageAggregatorService,
+    @InjectRepository(Account)
+    private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async getHosts(account: IAccount): Promise<IContributor[]> {
-    const contributors =
-      await this.contributorService.contributorsWithCredentials({
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    return contributors;
-  }
-
-  async getHost(account: IAccount): Promise<IContributor | null> {
-    const contributors =
-      await this.contributorService.contributorsWithCredentials({
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    if (contributors.length === 1) {
-      return contributors[0];
-    } else if (contributors.length > 1) {
-      this.logger.error(
-        `Account with ID: ${account.id} has multiple hosts. This should not happen.`,
-        LogContext.ACCOUNT
+  async createAccount(accountType: AccountType): Promise<IAccount> {
+    const account: IAccount = new Account();
+    account.type = accountType;
+    account.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ACCOUNT
+    );
+    account.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.ACCOUNT
       );
-    }
 
-    return null;
-  }
-
-  public async getHostCredentials(
-    account: IAccount
-  ): Promise<ICredentialDefinition[]> {
-    const accountHost = await this.getHostOrFail(account);
-    const accountHostCredentials: ICredentialDefinition[] = [];
-    if (accountHost instanceof User) {
-      const userCriteria: ICredentialDefinition = {
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      };
-      accountHostCredentials.push(userCriteria);
-    } else if (accountHost instanceof Organization) {
-      const organizationCriteriaAdmin: ICredentialDefinition = {
-        type: AuthorizationCredential.ORGANIZATION_ADMIN,
-        resourceID: accountHost.id,
-      };
-      const organizationCriteriaOwner: ICredentialDefinition = {
-        type: AuthorizationCredential.ORGANIZATION_OWNER,
-        resourceID: accountHost.id,
-      };
-      accountHostCredentials.push(organizationCriteriaAdmin);
-      accountHostCredentials.push(organizationCriteriaOwner);
-    } else {
-      throw new AccountException(
-        `Unable to determine host type for: ${account.id}, of type '${accountHost.constructor.name}'`,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return accountHostCredentials;
-  }
-
-  public async getHostOrFail(account: IAccount): Promise<IContributor> {
-    const host = await this.getHost(account);
-    if (!host)
-      throw new EntityNotFoundException(
-        `Unable to find Host for account with ID: ${account.id}`,
-        LogContext.COMMUNITY
-      );
-    return host;
-  }
-
-  public async getHostByID(contributorID: string): Promise<IContributor> {
-    return this.contributorService.getContributorOrFail(contributorID, {
-      relations: {
-        agent: true,
-      },
-    });
-  }
-
-  async setAccountHost(
-    account: IAccount,
-    hostContributorID: string
-  ): Promise<IContributor> {
-    const contributor = await this.getHostByID(hostContributorID);
-
-    const existingHost = await this.getHost(account);
-
-    if (existingHost) {
-      await this.agentService.revokeCredential({
-        agentID: existingHost.agent.id,
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    }
-
-    // assign the credential
-    contributor.agent = await this.agentService.grantCredential({
-      agentID: contributor.agent.id,
-      type: AuthorizationCredential.ACCOUNT_HOST,
-      resourceID: account.id,
+    account.agent = await this.agentService.createAgent({
+      type: AgentType.ACCOUNT,
     });
 
-    return contributor;
+    account.license = this.licenseService.createLicense({
+      type: LicenseType.ACCOUNT,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+          dataType: LicenseEntitlementDataType.LIMIT,
+          limit: 0,
+          enabled: false,
+        },
+      ],
+    });
+
+    return await this.accountRepository.save(account);
+  }
+
+  public async assignLicensePlansToSpace(
+    spaceAgent: IAgent,
+    spaceID: string,
+    type: AccountType,
+    licensePlanID?: string
+  ): Promise<IAgent> {
+    const licensingFramework =
+      await this.licensingFrameworkService.getDefaultLicensingOrFail();
+    const licensePlansToAssign: ILicensePlan[] = [];
+    const licensePlans =
+      await this.licensingFrameworkService.getLicensePlansOrFail(
+        licensingFramework.id
+      );
+    for (const plan of licensePlans) {
+      if (type === AccountType.USER && plan.assignToNewUserAccounts) {
+        licensePlansToAssign.push(plan);
+      } else if (
+        type === AccountType.ORGANIZATION &&
+        plan.assignToNewOrganizationAccounts
+      ) {
+        licensePlansToAssign.push(plan);
+      }
+    }
+    if (licensePlanID) {
+      const licensePlanAlreadyAssigned = licensePlansToAssign.find(
+        plan => plan.id === licensePlanID
+      );
+      if (!licensePlanAlreadyAssigned) {
+        const additionalPlan =
+          await this.licensingFrameworkService.getLicensePlanOrFail(
+            licensingFramework.id,
+            licensePlanID
+          );
+
+        licensePlansToAssign.push(additionalPlan);
+      }
+    }
+
+    for (const licensePlan of licensePlansToAssign) {
+      await this.licenseIssuerService.assignLicensePlan(
+        spaceAgent,
+        licensePlan,
+        spaceID
+      );
+    }
+    return await this.agentService.getAgentOrFail(spaceAgent.id);
   }
 }

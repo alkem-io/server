@@ -9,26 +9,34 @@ import {
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Room } from '@domain/communication/room/room.entity';
 import { CalloutFraming } from '../callout-framing/callout.framing.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { CalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.entity';
 import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
 import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
+import {
+  ENUM_LENGTH,
+  NAMEID_MAX_LENGTH_SCHEMA,
+  UUID_LENGTH,
+} from '@common/constants';
+import { CalloutsSet } from '../callouts-set/callouts.set.entity';
 
 @Entity()
 export class Callout extends AuthorizableEntity implements ICallout {
-  @Column()
+  @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
   nameID!: string;
 
   @Column('text', { nullable: false })
   type!: CalloutType;
 
-  @Column('char', { length: 36, nullable: true })
-  createdBy!: string;
+  @Column({ type: 'boolean', nullable: false, default: false })
+  isTemplate!: boolean;
 
-  @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  createdBy?: string;
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   visibility!: CalloutVisibility;
 
   @OneToOne(() => CalloutFraming, {
@@ -69,23 +77,23 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @JoinColumn()
   comments!: Room;
 
-  @ManyToOne(() => Collaboration, collaboration => collaboration.callouts, {
+  @ManyToOne(() => CalloutsSet, calloutsSet => calloutsSet.callouts, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  collaboration?: Collaboration;
+  calloutsSet?: CalloutsSet;
 
-  @Column('int', { default: 10 })
+  @Column('int', { nullable: false })
   sortOrder!: number;
 
   activity!: number;
 
-  @Column('char', { length: 36, nullable: true })
-  publishedBy!: string;
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  publishedBy?: string;
 
-  @Column('datetime')
-  publishedDate!: Date;
+  @Column('datetime', { nullable: true })
+  publishedDate?: Date;
 
   constructor() {
     super();

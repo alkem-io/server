@@ -3,41 +3,35 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
-import { Configuration, FrontendApi } from '@ory/kratos-client';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { ApiRestrictedAccessException } from '@common/exceptions/auth';
 import { AuthenticationService } from './authentication.service';
-import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { IncomingMessage } from 'http';
+import { AlkemioConfig } from '@src/types';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { Session } from '@ory/kratos-client';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
   Strategy,
   'oathkeeper-api-token'
 ) {
-  private readonly kratosClient: FrontendApi;
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authService: AuthenticationService,
+    private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
-
-    const kratosPublicBaseUrl = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.kratos_public_base_url_server;
-
-    this.kratosClient = new FrontendApi(
-      new Configuration({
-        basePath: kratosPublicBaseUrl,
-      })
-    );
   }
 
   async validate(payload: IncomingMessage) {
-    const apiAccessEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
-      .authentication.api_access_enabled;
+    const apiAccessEnabled = this.configService.get(
+      'identity.authentication.api_access_enabled',
+      { infer: true }
+    );
 
     if (!apiAccessEnabled) {
       throw new ApiRestrictedAccessException('API access is restricted!');
@@ -53,9 +47,8 @@ export class OryApiStrategy extends PassportStrategy(
       return this.authService.createAgentInfo();
     }
 
-    const { data } = await this.kratosClient.toSession({
-      xSessionToken: bearerToken,
-    });
+    const data: Session =
+      await this.kratosService.getSessionFromBearerToken(bearerToken);
 
     if (!data) {
       this.logger.verbose?.('No Ory Kratos API session', LogContext.AUTH);

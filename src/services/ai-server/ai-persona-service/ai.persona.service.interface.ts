@@ -5,6 +5,7 @@ import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mo
 import { IAiServer } from '../ai-server/ai.server.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { IExternalConfig } from './dto/external.config';
 
 @ObjectType('AiPersonaService')
 export class IAiPersonaService extends IAuthorizable {
@@ -16,11 +17,11 @@ export class IAiPersonaService extends IAuthorizable {
   })
   engine!: AiPersonaEngine;
 
-  @Field(() => String, {
+  @Field(() => [String], {
     nullable: false,
     description: 'The prompt used by this Virtual Persona',
   })
-  prompt!: string;
+  prompt!: string[];
 
   @Field(() => AiPersonaDataAccessMode, {
     nullable: false,
@@ -29,7 +30,7 @@ export class IAiPersonaService extends IAuthorizable {
   dataAccessMode!: AiPersonaDataAccessMode;
 
   @Field(() => AiPersonaBodyOfKnowledgeType, {
-    nullable: true,
+    nullable: false,
     description: 'The body of knowledge type used for the AI Persona Service',
   })
   bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
@@ -39,4 +40,12 @@ export class IAiPersonaService extends IAuthorizable {
     description: 'The body of knowledge ID used for the AI Persona Service',
   })
   bodyOfKnowledgeID!: string;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: 'When wat the body of knowledge of the VC last updated.',
+  })
+  bodyOfKnowledgeLastUpdated!: Date | null;
+
+  externalConfig?: IExternalConfig;
 }

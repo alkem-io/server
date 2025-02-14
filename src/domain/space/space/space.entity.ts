@@ -9,16 +9,30 @@ import {
 } from 'typeorm';
 import { ISpace } from '@domain/space/space/space.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { TINY_TEXT_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { SpaceType } from '@common/enums/space.type';
-import { Collaboration } from '@domain/collaboration/collaboration';
-import { Community } from '@domain/community/community';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Community } from '@domain/community/community/community.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Account } from '../account/account.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { Profile } from '@domain/common/profile';
+import { TemplatesManager } from '@domain/template/templates-manager';
+import { License } from '@domain/common/license/license.entity';
+import { SpaceLevel } from '@common/enums/space.level';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
+  @OneToOne(() => Profile, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  profile!: Profile;
+
   @OneToMany(() => Space, space => space.parentSpace, {
     eager: false,
     cascade: false,
@@ -31,13 +45,12 @@ export class Space extends NameableEntity implements ISpace {
   })
   parentSpace?: Space;
 
-  // Note: no counter OneToMany as this is a pre ManyToOne relationship
-  @ManyToOne(() => Account, {
-    eager: true, // TODO: really would like to drop this, not least for performance reasons...
+  @ManyToOne(() => Account, account => account.spaces, {
+    eager: false,
     cascade: false,
     onDelete: 'SET NULL',
   })
-  account!: Account;
+  account?: Account;
 
   @Column({
     unique: true,
@@ -73,8 +86,8 @@ export class Space extends NameableEntity implements ISpace {
   @JoinColumn()
   agent?: Agent;
 
-  @Column('text')
-  settingsStr: string = '';
+  @Column('json', { nullable: false })
+  settings: ISpaceSettings;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,
@@ -84,16 +97,40 @@ export class Space extends NameableEntity implements ISpace {
   @JoinColumn()
   storageAggregator?: StorageAggregator;
 
-  @Column({
-    length: TINY_TEXT_LENGTH,
-  })
+  @Column('varchar', { length: ENUM_LENGTH })
   type!: SpaceType;
 
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  levelZeroSpaceID!: string;
+
   @Column('int', { nullable: false })
-  level!: number;
+  level!: SpaceLevel;
+
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: false,
+  })
+  visibility!: SpaceVisibility;
+
+  @OneToOne(() => TemplatesManager, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  templatesManager?: TemplatesManager;
+
+  @OneToOne(() => License, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  license?: License;
 
   constructor() {
     super();
     this.nameID = '';
+    this.settings = {} as ISpaceSettings;
   }
 }

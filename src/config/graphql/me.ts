@@ -17,8 +17,11 @@ export const meQuery = gql`
           }
         }
       }
-      spaceMemberships {
-        nameID
+      spaceMembershipsFlat {
+        space {
+          nameID
+          level
+        }
       }
     }
   }

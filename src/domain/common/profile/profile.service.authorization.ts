@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { IProfile } from '@domain/common/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from './profile.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -7,6 +6,9 @@ import { VisualAuthorizationService } from '../visual/visual.service.authorizati
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { InstrumentService } from '@common/decorators/instrumentation';
 
 @InstrumentService
@@ -20,25 +22,61 @@ export class ProfileAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    profileInput: IProfile,
-    parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IProfile> {
-    const profile = await this.profileService.getProfileOrFail(
-      profileInput.id,
-      {
-        relations: {
-          references: true,
-          tagsets: true,
+    profileID: string,
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
+  ): Promise<IAuthorizationPolicy[]> {
+    const profile = await this.profileService.getProfileOrFail(profileID, {
+      loadEagerRelations: false,
+      relations: {
+        authorization: true,
+        references: { authorization: true },
+        tagsets: { authorization: true },
+        visuals: { authorization: true },
+        storageBucket: {
           authorization: true,
-          visuals: true,
-          storageBucket: {
-            documents: {
-              tagset: true,
+          documents: {
+            authorization: true,
+            tagset: { authorization: true },
+          },
+        },
+      },
+      select: {
+        id: true,
+        authorization:
+          this.authorizationPolicyService.authorizationSelectOptions,
+        references: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        tagsets: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        visuals: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        storageBucket: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          documents: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            tagset: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
             },
           },
         },
-      }
-    );
+      },
+    });
     if (
       !profile.references ||
       !profile.tagsets ||
@@ -47,10 +85,11 @@ export class ProfileAuthorizationService {
       !profile.storageBucket
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load Profile with entities at start of auth reset: ${profileInput.id} `,
+        `Unable to load Profile with entities at start of auth reset: ${profileID} `,
         LogContext.ACCOUNT
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Inherit from the parent
     profile.authorization =
@@ -58,6 +97,17 @@ export class ProfileAuthorizationService {
         profile.authorization,
         parentAuthorization
       );
+    // If can READ_ABOUT on Profile, then also allow general READ
+    profile.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        profile.authorization,
+        AuthorizationPrivilege.READ_ABOUT,
+        [AuthorizationPrivilege.READ],
+        POLICY_RULE_READ_ABOUT
+      );
+    profile.authorization.credentialRules.push(...credentialRulesFromParent);
+
+    updatedAuthorizations.push(profile.authorization);
 
     for (const reference of profile.references) {
       reference.authorization =
@@ -65,6 +115,7 @@ export class ProfileAuthorizationService {
           reference.authorization,
           profile.authorization
         );
+      updatedAuthorizations.push(reference.authorization);
     }
 
     for (const tagset of profile.tagsets) {
@@ -73,21 +124,25 @@ export class ProfileAuthorizationService {
           tagset.authorization,
           profile.authorization
         );
+      updatedAuthorizations.push(tagset.authorization);
     }
 
     for (const visual of profile.visuals) {
-      this.visualAuthorizationService.applyAuthorizationPolicy(
-        visual,
-        profile.authorization
-      );
+      visual.authorization =
+        this.visualAuthorizationService.applyAuthorizationPolicy(
+          visual,
+          profile.authorization
+        );
+      updatedAuthorizations.push(visual.authorization);
     }
 
-    profile.storageBucket =
-      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+    const storageBucketAuthorizations =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );
+    updatedAuthorizations.push(...storageBucketAuthorizations);
 
-    return profile;
+    return updatedAuthorizations;
   }
 }

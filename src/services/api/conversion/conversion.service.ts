@@ -8,24 +8,24 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { CommunityRole } from '@common/enums/community.role';
+import { RoleName } from '@common/enums/role.name';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceType } from '@common/enums/space.type';
-import { CreateAccountInput } from '@domain/space/account/dto';
 import { AccountService } from '@domain/space/account/account.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceLevel } from '@common/enums/space.level';
-import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { CommunityService } from '@domain/community/community/community.service';
+import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
+import { IRoleSet } from '@domain/access/role-set';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 
 export class ConversionService {
   constructor(
@@ -33,29 +33,32 @@ export class ConversionService {
     private spaceService: SpaceService,
     private namingService: NamingService,
     private communityService: CommunityService,
-    private communityRoleService: CommunityRoleService,
+    private roleSetService: RoleSetService,
     private communicationService: CommunicationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async convertChallengeToSpace(
+  async convertChallengeToSpaceOrFail(
     conversionData: ConvertSubspaceToSpaceInput,
     agentInfo: AgentInfo
-  ): Promise<ISpace> {
-    // TODO: needs to create a new ACCOUNT etc.
+  ): Promise<ISpace | never> {
+    // TODO: needs to create a new ACCOUNT etc. NOT TRUE!
     const subspace = await this.spaceService.getSpaceOrFail(
       conversionData.subspaceID,
       {
         relations: {
-          account: true,
-          community: true,
+          community: {
+            roleSet: true,
+          },
           context: true,
           profile: true,
           collaboration: {
-            callouts: {
-              framing: {
-                profile: {
-                  tagsets: true,
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  profile: {
+                    tagsets: true,
+                  },
                 },
               },
             },
@@ -66,64 +69,60 @@ export class ConversionService {
     );
     if (
       !subspace.community ||
-      !subspace.account ||
+      !subspace.community.roleSet ||
       !subspace.context ||
       !subspace.profile ||
       !subspace.collaboration ||
-      !subspace.collaboration.callouts ||
+      !subspace.collaboration.calloutsSet?.callouts ||
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on subspace: ${subspace.nameID}`,
+        `Unable to locate all entities on on subspace: ${subspace.id}`,
         LogContext.CONVERSION
       );
     }
+
+    // Need to get the containing account for the space
+    const account =
+      await this.spaceService.getAccountForLevelZeroSpaceOrFail(subspace);
+
     // check the community is in a fit state
     const challengeCommunityLeadOrgs =
-      await this.communityRoleService.getOrganizationsWithRole(
-        subspace.community,
-        CommunityRole.LEAD
+      await this.roleSetService.getOrganizationsWithRole(
+        subspace.community.roleSet,
+        RoleName.LEAD
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
-        `A Subspace must have exactly one Lead organization to be converted to a Space: ${subspace.nameID} has ${challengeCommunityLeadOrgs.length}`,
+        `A Subspace must have exactly one Lead organization to be converted to a Space: ${subspace.id} has ${challengeCommunityLeadOrgs.length}`,
         LogContext.CONVERSION
       );
     }
-    const hostOrg = challengeCommunityLeadOrgs[0];
-    const createAccountInput: CreateAccountInput = {
-      hostID: hostOrg.nameID,
-      spaceData: {
-        nameID: subspace.nameID,
-        profileData: {
-          displayName: subspace.profile.displayName,
-        },
-        level: SpaceLevel.SPACE,
-        type: SpaceType.SPACE,
+
+    const createSpaceInput: CreateSpaceOnAccountInput = {
+      accountID: account.id,
+      nameID: subspace.nameID,
+      profileData: {
+        displayName: subspace.profile.displayName,
+      },
+      level: SpaceLevel.L0,
+      type: SpaceType.SPACE,
+      collaborationData: {
+        calloutsSetData: {},
       },
     };
-    const emptyAccount = await this.accountService.createAccount(
-      createAccountInput
-    );
+    let space =
+      await this.accountService.createSpaceOnAccount(createSpaceInput);
 
-    if (!emptyAccount.space) {
-      throw new EntityNotInitializedException(
-        `Unable to locate space on new Account: ${emptyAccount.id}`,
-        LogContext.CONVERSION
-      );
-    }
-    const space = await this.spaceService.getSpaceOrFail(
-      emptyAccount.space.id,
-      {
-        relations: {
-          community: true,
-          context: true,
-          profile: true,
-          collaboration: true,
-          storageAggregator: true,
-        },
-      }
-    );
+    space = await this.spaceService.getSpaceOrFail(space.id, {
+      relations: {
+        community: true,
+        context: true,
+        profile: true,
+        collaboration: true,
+        storageAggregator: true,
+      },
+    });
     if (
       !space.community ||
       !space.context ||
@@ -132,37 +131,38 @@ export class ConversionService {
       !space.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on new Space: ${space.nameID}`,
+        `Unable to locate all entities on new Space: ${space.id}`,
         LogContext.CONVERSION
       );
     }
+    const spaceRoleSet = space.community.roleSet;
 
-    const userMembers = await this.communityRoleService.getUsersWithRole(
-      space.community,
-      CommunityRole.MEMBER
+    const userMembers = await this.roleSetService.getUsersWithRole(
+      spaceRoleSet,
+      RoleName.MEMBER
     );
-    const userLeads = await this.communityRoleService.getUsersWithRole(
-      space.community,
-      CommunityRole.LEAD
+    const userLeads = await this.roleSetService.getUsersWithRole(
+      spaceRoleSet,
+      RoleName.LEAD
     );
-    const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
-      space.community,
-      CommunityRole.MEMBER
+    const orgMembers = await this.roleSetService.getOrganizationsWithRole(
+      spaceRoleSet,
+      RoleName.MEMBER
     );
 
     // Remove the contributors from old roles
     await this.removeContributors(
-      space.community,
+      spaceRoleSet,
       userMembers,
       userLeads,
       orgMembers,
       challengeCommunityLeadOrgs
     );
 
-    await this.communityRoleService.removeUserFromRole(
-      space.community,
-      agentInfo.userID,
-      CommunityRole.MEMBER
+    await this.roleSetService.removeUserFromRole(
+      spaceRoleSet,
+      RoleName.MEMBER,
+      agentInfo.userID
     );
 
     // Swap the communications
@@ -180,7 +180,7 @@ export class ConversionService {
     space.collaboration = challengeCollaboration;
     space.collaboration = spaceCollaboration;
     // Update display locations for callouts to use space locations
-    this.updateSpaceCalloutsGroups(space.collaboration.callouts);
+    this.updateSpaceCalloutsGroups(space.collaboration.calloutsSet?.callouts);
 
     // Swap the profiles
     const challengeProfile = space.profile;
@@ -203,7 +203,7 @@ export class ConversionService {
 
     // Assign users to roles in new space
     await this.assignContributors(
-      space.community,
+      spaceRoleSet,
       userMembers,
       userLeads,
       orgMembers
@@ -212,39 +212,37 @@ export class ConversionService {
     // Now migrate all the child subsubspaces...
     const subsubspaces = await this.spaceService.getSubspaces(updatedSubspace);
     for (const subsubspace of subsubspaces) {
-      await this.convertOpportunityToChallenge(
-        subsubspace.id,
-        space.id,
-        agentInfo,
-        space.storageAggregator
-      );
+      await this.convertOpportunityToChallengeOrFail(subsubspace.id, agentInfo);
     }
     // Finally delete the Challenge
-    await this.spaceService.deleteSpace({
+    await this.spaceService.deleteSpaceOrFail({
       ID: updatedSubspace.id,
     });
     return space;
   }
 
-  async convertOpportunityToChallenge(
+  async convertOpportunityToChallengeOrFail(
     subsubspaceID: string,
-    spaceID: string,
-    agentInfo: AgentInfo,
-    spaceStorageAggregator: IStorageAggregator,
-    innovationFlowTemplateIdInput?: string
-  ): Promise<ISpace> {
+    agentInfo: AgentInfo
+  ): Promise<ISpace | never> {
     const subsubspace = await this.spaceService.getSpaceOrFail(subsubspaceID, {
       relations: {
+        parentSpace: {
+          storageAggregator: {
+            parentStorageAggregator: true,
+          },
+        },
         community: true,
         context: true,
         profile: true,
-        account: true,
         storageAggregator: true,
         collaboration: {
-          callouts: {
-            framing: {
-              profile: {
-                tagsets: true,
+          calloutsSet: {
+            callouts: {
+              framing: {
+                profile: {
+                  tagsets: true,
+                },
               },
             },
           },
@@ -252,23 +250,25 @@ export class ConversionService {
       },
     });
     if (
+      !subsubspace.parentSpace ||
+      !subsubspace.parentSpace.storageAggregator ||
+      !subsubspace.parentSpace.storageAggregator.parentStorageAggregator ||
       !subsubspace.community ||
       !subsubspace.context ||
       !subsubspace.profile ||
-      !subsubspace.account ||
       !subsubspace.collaboration ||
       !subsubspace.storageAggregator ||
-      !subsubspace.collaboration.callouts
+      !subsubspace.collaboration.calloutsSet?.callouts
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on Opportunity: ${subsubspace.nameID}`,
+        `Unable to locate all entities on on Opportunity: ${subsubspace.id}`,
         LogContext.CONVERSION
       );
     }
 
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInAccount(
-        subsubspace.account.id
+      await this.namingService.getReservedNameIDsInLevelZeroSpace(
+        subsubspace.levelZeroSpaceID
       );
     const subspaceNameID =
       this.namingService.createNameIdAvoidingReservedNameIDs(
@@ -276,27 +276,19 @@ export class ConversionService {
         reservedNameIDs
       );
 
-    // TODO: need to check if the space has a default innovation flow template
-    const innovationFlowTemplateID = innovationFlowTemplateIdInput;
-    // if (!innovationFlowTemplateID) {
-    //   const defaultChallengeLifecycleTemplate =
-    //     await this.spaceService.getDefaultInnovationFlowTemplate(
-    //       spaceID,
-    //       InnovationFlowType.CHALLENGE
-    //     );
-    //   innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
-    // }
+    const levelZeroSpaceStorageAggregator =
+      subsubspace.parentSpace.storageAggregator.parentStorageAggregator;
     const subspaceData: CreateSubspaceInput = {
-      spaceID: spaceID,
+      spaceID: subsubspace.parentSpace.id,
       nameID: subspaceNameID,
       collaborationData: {
-        innovationFlowTemplateID: innovationFlowTemplateID,
+        calloutsSetData: {},
       },
       profileData: {
         displayName: subsubspace.profile.displayName,
       },
-      storageAggregatorParent: spaceStorageAggregator,
-      level: SpaceLevel.CHALLENGE,
+      storageAggregatorParent: levelZeroSpaceStorageAggregator,
+      level: SpaceLevel.L1,
       type: SpaceType.CHALLENGE,
     };
     const emptyChallenge = await this.spaceService.createSubspace(
@@ -321,31 +313,32 @@ export class ConversionService {
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on new Challenge for converting opportunity: ${subspace.nameID}`,
+        `Unable to locate all entities on new Subspace for converting subsubspace: ${subspace.id}`,
         LogContext.CONVERSION
       );
     }
 
-    const userMembers = await this.communityRoleService.getUsersWithRole(
-      subsubspace.community,
-      CommunityRole.MEMBER
+    const roleSet = subsubspace.community.roleSet;
+    const userMembers = await this.roleSetService.getUsersWithRole(
+      roleSet,
+      RoleName.MEMBER
     );
-    const userLeads = await this.communityRoleService.getUsersWithRole(
-      subsubspace.community,
-      CommunityRole.LEAD
+    const userLeads = await this.roleSetService.getUsersWithRole(
+      roleSet,
+      RoleName.LEAD
     );
-    const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
-      subsubspace.community,
-      CommunityRole.MEMBER
+    const orgMembers = await this.roleSetService.getOrganizationsWithRole(
+      roleSet,
+      RoleName.MEMBER
     );
-    const orgLeads = await this.communityRoleService.getOrganizationsWithRole(
-      subsubspace.community,
-      CommunityRole.LEAD
+    const orgLeads = await this.roleSetService.getOrganizationsWithRole(
+      roleSet,
+      RoleName.LEAD
     );
 
     // Remove the contributors from old roles
     await this.removeContributors(
-      subsubspace.community,
+      subsubspace.community.roleSet,
       userMembers,
       userLeads,
       orgMembers,
@@ -353,15 +346,15 @@ export class ConversionService {
     );
 
     // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
-    await this.communityRoleService.removeUserFromRole(
-      subspace.community,
-      agentInfo.userID,
-      CommunityRole.MEMBER
+    await this.roleSetService.removeUserFromRole(
+      subspace.community.roleSet,
+      RoleName.MEMBER,
+      agentInfo.userID
     );
-    await this.communityRoleService.removeUserFromRole(
-      subspace.community,
-      agentInfo.userID,
-      CommunityRole.LEAD
+    await this.roleSetService.removeUserFromRole(
+      subspace.community.roleSet,
+      RoleName.LEAD,
+      agentInfo.userID
     );
 
     // Swap the communication
@@ -382,7 +375,9 @@ export class ConversionService {
     subspace.collaboration = opportunityCollaboration;
     subsubspace.collaboration = challengeCollaboration;
     // Update display locations for callouts to use space locations
-    this.updateChallengeCalloutGroups(subspace.collaboration.callouts);
+    this.updateChallengeCalloutGroups(
+      subspace.collaboration.calloutsSet?.callouts
+    );
 
     // Swap the profiles
     const opportunityProfile = subsubspace.profile;
@@ -400,7 +395,7 @@ export class ConversionService {
     // and set the parent storage aggregator on the new challenge
     if (subspace.storageAggregator) {
       subspace.storageAggregator.parentStorageAggregator =
-        spaceStorageAggregator;
+        levelZeroSpaceStorageAggregator;
     }
     if (subsubspace.storageAggregator) {
       subsubspace.storageAggregator.parentStorageAggregator = undefined;
@@ -409,11 +404,11 @@ export class ConversionService {
     // Save both + then re-assign the roles
     await this.spaceService.save(subspace);
     const updatedOpportunity = await this.spaceService.save(subsubspace);
-    await this.spaceService.deleteSpace({ ID: updatedOpportunity.id });
+    await this.spaceService.deleteSpaceOrFail({ ID: updatedOpportunity.id });
 
     // Assign users to roles in new challenge
     await this.assignContributors(
-      challengeCommunityUpdated,
+      challengeCommunityUpdated.roleSet,
       userMembers,
       userLeads,
       orgMembers,
@@ -421,12 +416,15 @@ export class ConversionService {
     );
 
     // Add the new challenge to the space
-    const space = await this.spaceService.getSpaceOrFail(spaceID, {
-      relations: {
-        subspaces: true,
-        community: true,
-      },
-    });
+    const space = await this.spaceService.getSpaceOrFail(
+      subsubspace.levelZeroSpaceID,
+      {
+        relations: {
+          subspaces: true,
+          community: true,
+        },
+      }
+    );
     return await this.spaceService.addSubspaceToSpace(space, subspace);
   }
 
@@ -444,7 +442,7 @@ export class ConversionService {
         !callout.framing.profile.tagsets
       ) {
         throw new EntityNotInitializedException(
-          `Unable to locate all child entities on callout: ${callout.nameID}`,
+          `Unable to locate all child entities on callout: ${callout.id}`,
           LogContext.CONVERSION
         );
       }
@@ -484,7 +482,7 @@ export class ConversionService {
         !callout.framing.profile.tagsets
       ) {
         throw new EntityNotInitializedException(
-          `Unable to locate all child entities on challenge callout: ${callout.nameID}`,
+          `Unable to locate all child entities on challenge callout: ${callout.id}`,
           LogContext.CONVERSION
         );
       }
@@ -527,7 +525,7 @@ export class ConversionService {
     await this.communityService.save(childCommunity);
     parentCommunity.communication = childCommunication;
     await this.communityService.save(parentCommunity);
-    // And remove the old parent Communicaiton that is no longer used
+    // And remove the old parent Communication that is no longer used
     if (parentCommunication) {
       await this.communicationService.removeCommunication(
         parentCommunication.id
@@ -536,76 +534,76 @@ export class ConversionService {
   }
 
   private async removeContributors(
-    community: ICommunity,
+    roleSet: IRoleSet,
     userMembers: IUser[],
     userLeads: IUser[],
     orgMembers: IOrganization[],
     orgLeads: IOrganization[]
   ) {
     for (const userMember of userMembers) {
-      await this.communityRoleService.removeUserFromRole(
-        community,
-        userMember.id,
-        CommunityRole.MEMBER
+      await this.roleSetService.removeUserFromRole(
+        roleSet,
+        RoleName.MEMBER,
+        userMember.id
       );
     }
     for (const userLead of userLeads) {
-      await this.communityRoleService.removeUserFromRole(
-        community,
-        userLead.id,
-        CommunityRole.LEAD
+      await this.roleSetService.removeUserFromRole(
+        roleSet,
+        RoleName.LEAD,
+        userLead.id
       );
     }
     for (const orgMember of orgMembers) {
-      await this.communityRoleService.removeOrganizationFromRole(
-        community,
-        orgMember.id,
-        CommunityRole.MEMBER
+      await this.roleSetService.removeOrganizationFromRole(
+        roleSet,
+        RoleName.MEMBER,
+        orgMember.id
       );
     }
     for (const orgLead of orgLeads) {
-      await this.communityRoleService.removeOrganizationFromRole(
-        community,
-        orgLead.id,
-        CommunityRole.LEAD
+      await this.roleSetService.removeOrganizationFromRole(
+        roleSet,
+        RoleName.LEAD,
+        orgLead.id
       );
     }
   }
 
   private async assignContributors(
-    community: ICommunity,
+    roleSet: IRoleSet,
     userMembers: IUser[],
     userLeads: IUser[],
     orgMembers: IOrganization[],
     orgLeads?: IOrganization[]
   ) {
     for (const userMember of userMembers) {
-      await this.communityRoleService.assignUserToRole(
-        community,
-        userMember.id,
-        CommunityRole.MEMBER
+      await this.roleSetService.assignUserToRole(
+        roleSet,
+        RoleName.MEMBER,
+        userMember.id
       );
     }
     for (const userLead of userLeads) {
-      await this.communityRoleService.assignUserToRole(
-        community,
-        userLead.id,
-        CommunityRole.LEAD
+      await this.roleSetService.assignUserToRole(
+        roleSet,
+        RoleName.LEAD,
+        userLead.id
       );
     }
     for (const orgMember of orgMembers) {
-      await this.communityRoleService.assignOrganizationToRole(
-        community,
-        orgMember.id,
-        CommunityRole.MEMBER
+      await this.roleSetService.assignOrganizationToRole(
+        roleSet,
+        RoleName.MEMBER,
+        orgMember.id
       );
     }
     if (orgLeads) {
       for (const orgLead of orgLeads) {
-        await this.communityRoleService.assignOrganizationToRole(
-          community,
-          orgLead.id,
-          CommunityRole.LEAD
+        await this.roleSetService.assignOrganizationToRole(
+          roleSet,
+          RoleName.LEAD,
+          orgLead.id
         );
       }
     }

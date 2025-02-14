@@ -17,14 +17,12 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IUser, User } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { Post } from '@domain/collaboration/post';
 import { Callout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UserService } from '@domain/community/user/user.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import {
   ISearchResults,
   ISearchResultOrganization,
@@ -32,6 +30,10 @@ import {
   ISearchResultPost,
 } from '../../dto';
 import { SearchEntityTypes } from '@services/api/search/search.entity.types';
+import { User } from '@domain/community/user/user.entity';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
 
 type PostParents = {
   post: Post;
@@ -50,8 +52,8 @@ export class SearchResultService {
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private authorizationService: AuthorizationService,
-    private userService: UserService,
-    private organizationService: OrganizationService
+    private userLookupService: UserLookupService,
+    private organizationLookupService: OrganizationLookupService
   ) {}
 
   /**
@@ -107,6 +109,7 @@ export class SearchResultService {
       'score',
       'desc'
     );
+
     return {
       contributorResults,
       contributorResultsCount: -1,
@@ -180,13 +183,10 @@ export class SearchResultService {
     const subspaceIds = rawSearchResults.map(hit => hit.result.id);
 
     const subspaces = await this.entityManager.find(Space, {
-      where: { id: In(subspaceIds) },
-      relations: { parentSpace: true },
-      select: {
-        id: true,
-        level: true,
-        parentSpace: { id: true, level: true },
+      where: {
+        id: In(subspaceIds),
       },
+      relations: { parentSpace: true },
     });
 
     return subspaces
@@ -347,6 +347,7 @@ export class SearchResultService {
     const posts = await this.entityManager.findBy(Post, {
       id: In(postIds),
     });
+
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized post first, then get the parents, and map the results
     const authorizedPosts = posts.filter(post =>
@@ -414,9 +415,13 @@ export class SearchResultService {
       ],
       relations: {
         framing: { whiteboard: true },
-        contributions: { whiteboard: true },
+        contributions: { whiteboard: true, post: true },
+        calloutsSet: true,
       },
       select: {
+        id: true,
+        nameID: true,
+        type: true,
         framing: {
           id: true,
           whiteboard: {
@@ -429,6 +434,10 @@ export class SearchResultService {
             id: true,
           },
           post: { id: true },
+        },
+        calloutsSet: {
+          id: true,
+          type: true,
         },
       },
     });
@@ -456,7 +465,7 @@ export class SearchResultService {
 
         if (!rawSearchResult) {
           this.logger.error(
-            `Unable to find raw search result for Whiteboard: ${parent.callout.id}`,
+            `Unable to find raw search result for Whiteboard with Callout ID: ${parent.callout.id}`,
             undefined,
             LogContext.SEARCH
           );
@@ -485,8 +494,42 @@ export class SearchResultService {
 
     const calloutIds = rawSearchResults.map(hit => hit.result.id);
 
-    const callouts = await this.entityManager.findBy(Callout, {
-      id: In(calloutIds),
+    const callouts = await this.entityManager.find(Callout, {
+      where: { id: In(calloutIds) },
+      relations: {
+        calloutsSet: true,
+        framing: {
+          whiteboard: true,
+        },
+        contributions: {
+          post: true,
+          whiteboard: true,
+        },
+      },
+      select: {
+        id: true,
+        nameID: true,
+        type: true,
+        framing: {
+          id: true,
+          whiteboard: {
+            id: true,
+          },
+        },
+        contributions: {
+          id: true,
+          post: {
+            id: true,
+          },
+          whiteboard: {
+            id: true,
+          },
+        },
+        calloutsSet: {
+          id: true,
+          type: true,
+        },
+      },
     });
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized post first, then get the parents, and map the results
@@ -527,35 +570,70 @@ export class SearchResultService {
   private async getCalloutParents(
     callouts: Callout[]
   ): Promise<CalloutParents[]> {
-    const calloutIds = callouts.map(callout => callout.id);
+    const spaceCallouts = callouts.filter(
+      callout => callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
+    );
+    const spaceCalloutIds = spaceCallouts.map(callout => callout.id);
 
     const parentSpaces = await this.entityManager.find(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: In(calloutIds),
+          calloutsSet: {
+            callouts: {
+              id: In(spaceCalloutIds),
+            },
           },
         },
       },
       relations: {
         collaboration: {
-          callouts: true,
+          calloutsSet: {
+            callouts: {
+              framing: {
+                whiteboard: true,
+              },
+              contributions: {
+                post: true,
+                whiteboard: true,
+              },
+            },
+          },
         },
       },
       select: {
+        id: true,
+        level: true,
         collaboration: {
           id: true,
-          callouts: {
+          calloutsSet: {
             id: true,
+            callouts: {
+              id: true,
+              framing: {
+                id: true,
+                whiteboard: {
+                  id: true,
+                },
+              },
+              contributions: {
+                id: true,
+                post: {
+                  id: true,
+                },
+                whiteboard: {
+                  id: true,
+                },
+              },
+            },
           },
         },
       },
     });
 
-    return callouts
+    return spaceCallouts
       .map(callout => {
         const space = parentSpaces.find(space =>
-          space?.collaboration?.callouts?.some(
+          space?.collaboration?.calloutsSet?.callouts?.some(
             spaceCallout => spaceCallout.id === callout.id
           )
         );
@@ -596,6 +674,7 @@ export class SearchResultService {
         contributions: {
           post: true,
         },
+        calloutsSet: true,
       },
       select: {
         id: true,
@@ -605,6 +684,10 @@ export class SearchResultService {
             id: true,
           },
         },
+        calloutsSet: {
+          id: true,
+          type: true,
+        },
       },
     });
     const calloutIds = callouts.map(callout => callout.id);
@@ -612,23 +695,55 @@ export class SearchResultService {
     const spaces = await this.entityManager.find(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: In(calloutIds),
+          calloutsSet: {
+            callouts: {
+              id: In(calloutIds),
+            },
           },
         },
       },
       relations: {
         collaboration: {
-          callouts: true,
+          calloutsSet: {
+            callouts: {
+              contributions: {
+                post: true,
+              },
+            },
+          },
         },
       },
       select: {
         id: true,
         type: true,
+        level: true,
+        settings: {
+          collaboration: {
+            allowEventsFromSubspaces: true,
+            allowMembersToCreateCallouts: true,
+            allowMembersToCreateSubspaces: true,
+            inheritMembershipRights: true,
+          },
+          membership: {
+            allowSubspaceAdminsToInviteMembers: true,
+            policy: true,
+          },
+          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
+        },
+        visibility: true,
         collaboration: {
           id: true,
-          callouts: {
+          calloutsSet: {
             id: true,
+            callouts: {
+              id: true,
+              contributions: {
+                id: true,
+                post: {
+                  id: true,
+                },
+              },
+            },
           },
         },
       },
@@ -652,7 +767,7 @@ export class SearchResultService {
         }
 
         const space = spaces.find(space =>
-          space?.collaboration?.callouts?.some(
+          space?.collaboration?.calloutsSet?.callouts?.some(
             spaceCallout => spaceCallout.id === callout.id
           )
         );
@@ -678,13 +793,13 @@ export class SearchResultService {
   private async getUsersInSpace(spaceId: string): Promise<string[]> {
     const usersFilter = [];
 
-    const membersInSpace = await this.userService.usersWithCredentials({
+    const membersInSpace = await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.SPACE_MEMBER,
       resourceID: spaceId,
     });
     usersFilter.push(...membersInSpace.map(user => user.id));
 
-    const adminsInSpace = await this.userService.usersWithCredentials({
+    const adminsInSpace = await this.userLookupService.usersWithCredentials({
       type: AuthorizationCredential.SPACE_ADMIN,
       resourceID: spaceId,
     });
@@ -697,21 +812,21 @@ export class SearchResultService {
     const orgsInSpace = [];
 
     const membersInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_MEMBER,
         resourceID: spaceId,
       });
     orgsInSpace.push(...membersInSpace.map(org => org.id));
 
     const adminsInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_ADMIN,
         resourceID: spaceId,
       });
     orgsInSpace.push(...adminsInSpace.map(org => org.id));
 
     const leadsInSpace =
-      await this.organizationService.organizationsWithCredentials({
+      await this.organizationLookupService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_LEAD,
         resourceID: spaceId,
       });

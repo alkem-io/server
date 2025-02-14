@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
@@ -19,11 +19,13 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { STORAGE_SERVICE } from '@common/constants';
 import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
 import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
+import { AlkemioConfig } from '@src/types';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class DocumentService {
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
     @Inject(STORAGE_SERVICE)
@@ -37,12 +39,14 @@ export class DocumentService {
     documentInput: CreateDocumentInput
   ): Promise<IDocument> {
     const document: IDocument = Document.create({ ...documentInput });
-    document.tagset = await this.tagsetService.createTagset({
+    document.tagset = this.tagsetService.createTagset({
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
-    document.authorization = new AuthorizationPolicy();
+    document.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.DOCUMENT
+    );
 
     return await this.documentRepository.save(document);
   }
@@ -54,8 +58,8 @@ export class DocumentService {
     const document = await this.getDocumentOrFail(documentID, {
       relations: { tagset: true },
     });
-    const DELETE_IPFS_CONTENTS = false;
-    if (DELETE_IPFS_CONTENTS) {
+    const DELETE_FILE = false;
+    if (DELETE_FILE) {
       // Delete the underlying document
       try {
         await this.removeFile(document.externalID);
@@ -175,16 +179,19 @@ export class DocumentService {
     return `${documentsBaseUrlPath}/${document.id}`;
   }
 
-  public async getDocumentFromURL(url: string): Promise<IDocument | undefined> {
+  public async getDocumentFromURL(
+    url: string,
+    options?: FindOneOptions<Document>
+  ): Promise<IDocument | undefined> {
     const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
 
-    if (!url.startsWith(documentsBaseUrlPath)) {
+    if (!this.isAlkemioDocumentURL(url)) {
       return undefined;
     }
 
     const documentID = url.substring(documentsBaseUrlPath.length + 1);
     try {
-      return await this.getDocumentOrFail(documentID);
+      return await this.getDocumentOrFail(documentID, options);
     } catch (error: any) {
       this.logger.error(
         `Unable to find document '${documentID}': ${error}`,
@@ -200,9 +207,10 @@ export class DocumentService {
     return url.startsWith(this.getDocumentsBaseUrlPath());
   }
 
-  private getDocumentsBaseUrlPath(): string {
+  public getDocumentsBaseUrlPath(): string {
     const { endpoint_cluster, path_api_private_rest } = this.configService.get(
-      ConfigurationTypes.HOSTING
+      'hosting',
+      { infer: true }
     );
     return `${endpoint_cluster}${path_api_private_rest}/storage/document`;
   }
@@ -213,7 +221,7 @@ export class DocumentService {
     } catch (error: any) {
       throw new DocumentDeleteFailedException(
         `Removing file ${CID} failed!`,
-        LogContext.IPFS,
+        LogContext.LOCAL_STORAGE,
         {
           message: error?.message,
           originalException: error,
@@ -229,7 +237,7 @@ export class DocumentService {
     } catch (error: any) {
       throw new DocumentSaveFailedException(
         `Uploading ${fileName} failed!`,
-        LogContext.IPFS,
+        LogContext.LOCAL_STORAGE,
         {
           message: error?.message,
           originalException: error,

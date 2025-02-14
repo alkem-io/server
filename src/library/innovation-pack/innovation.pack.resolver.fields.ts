@@ -1,32 +1,21 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { IOrganization } from '@domain/community/organization/';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { IInnovationPack } from './innovation.pack.interface';
-import { InnovationPackService } from './innovaton.pack.service';
+import { InnovationPackService } from './innovation.pack.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationPack } from './innovation.pack.entity';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @Resolver(() => IInnovationPack)
 export class InnovationPackResolverFields {
   constructor(private innovationPackService: InnovationPackService) {}
-
-  @ResolveField('provider', () => IOrganization, {
-    nullable: true,
-    description: 'The InnovationPack provider.',
-  })
-  @Profiling.api
-  async provider(
-    @Parent() innovationPack: IInnovationPack
-  ): Promise<IOrganization | undefined> {
-    return await this.innovationPackService.getProvider(innovationPack.id);
-  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
@@ -43,9 +32,9 @@ export class InnovationPackResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('templates', () => ITemplatesSet, {
+  @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,
-    description: 'The templates in use by this InnovationPack',
+    description: 'The templatesSet in use by this InnovationPack',
   })
   @UseGuards(GraphqlGuard)
   async templatesSet(
@@ -54,5 +43,16 @@ export class InnovationPackResolverFields {
     return await this.innovationPackService.getTemplatesSetOrFail(
       innovationPack.id
     );
+  }
+
+  @ResolveField('provider', () => IContributor, {
+    nullable: false,
+    description: 'The InnovationPack provider.',
+  })
+  @Profiling.api
+  async provider(
+    @Parent() innovationPack: IInnovationPack
+  ): Promise<IContributor> {
+    return await this.innovationPackService.getProvider(innovationPack.id);
   }
 }

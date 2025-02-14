@@ -1,8 +1,10 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
-import { IsOptional } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { Type } from 'class-transformer';
+import { UpdateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
 @InputType()
 export class UpdateVirtualContributorInput extends UpdateContributorInput {
   // Override the type of entry accepted
@@ -26,4 +28,13 @@ export class UpdateVirtualContributorInput extends UpdateContributorInput {
   })
   @IsOptional()
   searchVisibility?: SearchVisibility;
+
+  @Field(() => UpdateKnowledgeBaseInput, {
+    nullable: true,
+    description: 'The KnowledgeBase to use for this Collaboration.',
+  })
+  @ValidateNested()
+  @IsOptional()
+  @Type(() => UpdateKnowledgeBaseInput)
+  knowledgeBaseData!: UpdateKnowledgeBaseInput;
 }

@@ -6,6 +6,8 @@ import { Visual } from '@domain/common/visual/visual.entity';
 import { Location } from '@domain/common/location/location.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
+import { ProfileType } from '@common/enums';
+import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
@@ -28,16 +30,16 @@ export class Profile extends AuthorizableEntity implements IProfile {
   visuals?: Visual[];
 
   @Column('text', { nullable: false })
-  displayName = '';
+  displayName!: string;
 
   @Column('text', { nullable: true })
-  tagline = '';
+  tagline?: string;
 
   @Column('text', { nullable: true })
-  description = '';
+  description?: string;
 
-  @Column('text', { nullable: false })
-  type!: string;
+  @Column('varchar', { nullable: false, length: ENUM_LENGTH })
+  type!: ProfileType;
 
   @OneToOne(() => Location, {
     eager: false,

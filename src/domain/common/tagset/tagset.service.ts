@@ -19,6 +19,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '../tagset-template';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TagsetService {
@@ -29,13 +30,14 @@ export class TagsetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
-    if (!tagsetData.type) tagsetData.type = TagsetType.FREEFORM;
-    const tagset: ITagset = Tagset.create({ ...tagsetData });
-    tagset.authorization = new AuthorizationPolicy();
-    if (!tagset.tags) tagset.tags = [];
-    tagset.tagsetTemplate = tagsetData.tagsetTemplate;
-    return await this.tagsetRepository.save(tagset);
+  public createTagset(tagsetData: CreateTagsetInput): ITagset {
+    return Tagset.create({
+      ...tagsetData,
+      authorization: new AuthorizationPolicy(AuthorizationPolicyType.TAGSET),
+      type: tagsetData.type ?? TagsetType.FREEFORM,
+      tags: tagsetData?.tags ?? [],
+      tagsetTemplate: tagsetData.tagsetTemplate,
+    });
   }
 
   async getTagsetOrFail(
@@ -153,7 +155,7 @@ export class TagsetService {
     return tagsets;
   }
 
-  async getAllowedValues(tagset: ITagset): Promise<string[]> {
+  async getAllowedValuesOrFail(tagset: ITagset): Promise<string[]> {
     if (tagset.type === TagsetType.FREEFORM) return [];
 
     const tagsetTemplate = await this.getTagsetTemplateOrFail(tagset.id);
@@ -166,14 +168,14 @@ export class TagsetService {
   ): Promise<ITagsetTemplate> {
     const tagset = await this.getTagsetOrFail(tagsetID, {
       relations: loadTagsets
-        ? ['tagsetTemplate', 'tagsetTemplate.tagsets']
-        : ['tagsetTemplate'],
+        ? { tagsetTemplate: { tagsets: true } }
+        : { tagsetTemplate: true },
     });
 
     const tagsetTemplate = tagset.tagsetTemplate;
     if (!tagsetTemplate)
       throw new RelationshipNotFoundException(
-        `Unable to load tagsetTemplate for Tagset: ${tagsetID} `,
+        `Unable to load tagsetTemplate for Tagset: ${tagsetID}`,
         LogContext.PROFILE
       );
 
@@ -224,7 +226,7 @@ export class TagsetService {
     const tagset = this.getTagsetByName(tagsets, name);
     if (!tagset) {
       throw new TagsetNotFoundException(
-        `Unable to find tagset with the name: + ${name} in provided tagsets: ${JSON.stringify(
+        `Unable to find tagset with the name: '${name}' in provided tagsets: ${JSON.stringify(
           tagsets
         )}`,
         LogContext.PROFILE
@@ -233,10 +235,10 @@ export class TagsetService {
     return tagset;
   }
 
-  async createTagsetWithName(
+  public createTagsetWithName(
     existingTagsets: ITagset[],
     tagsetData: CreateTagsetInput
-  ): Promise<ITagset> {
+  ): ITagset {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(existingTagsets, tagsetData.name)) {
       throw new ValidationException(
@@ -245,30 +247,10 @@ export class TagsetService {
       );
     }
 
-    return await this.createTagset(tagsetData);
+    return this.createTagset(tagsetData);
   }
 
   async save(tagset: ITagset): Promise<ITagset> {
     return await this.tagsetRepository.save(tagset);
-  }
-
-  public createTagsetInputFromTagset(tagset: ITagset): CreateTagsetInput {
-    return {
-      name: tagset.name,
-      tags: tagset.tags,
-      type: tagset.type,
-      tagsetTemplate: tagset.tagsetTemplate,
-    };
-  }
-
-  public createTagsetsInputFromTagsets(
-    tagsets?: ITagset[]
-  ): CreateTagsetInput[] {
-    const tagsetInputs: CreateTagsetInput[] = [];
-    if (!tagsets) return tagsetInputs;
-    for (const tagset of tagsets) {
-      tagsetInputs.push(this.createTagsetInputFromTagset(tagset));
-    }
-    return tagsetInputs;
   }
 }

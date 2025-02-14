@@ -1,7 +1,9 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IStorageAggregator } from './storage.aggregator.interface';
 import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class StorageAggregator
@@ -23,4 +25,7 @@ export class StorageAggregator
   })
   @JoinColumn()
   directStorage?: StorageBucket;
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
+  type!: StorageAggregatorType;
 }

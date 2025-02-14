@@ -1,13 +1,9 @@
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@common/decorators';
+import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
-import { IUser, User } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -19,7 +15,6 @@ import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import {
@@ -30,8 +25,14 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ContributorService } from '../contributor/contributor.service';
 import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
+import { AuthenticationType } from '@common/enums/authentication.type';
+import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { Identity } from '@ory/kratos-client';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { IUserSettings } from '../user.settings/user.settings.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -39,9 +40,8 @@ export class UserResolverFields {
     private authorizationService: AuthorizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
-    private messagingService: MessagingService,
-    private contributorService: ContributorService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -59,7 +59,7 @@ export class UserResolverFields {
     const profile = await loader.load(user.id);
     // Note: the user profile is public.
     // Check if the user can read the profile entity, not the actual User entity
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.READ,
@@ -68,11 +68,19 @@ export class UserResolverFields {
     return profile;
   }
 
+  @ResolveField('settings', () => IUserSettings, {
+    nullable: false,
+    description: 'The settings for this User.',
+  })
+  @UseGuards(GraphqlGuard)
+  settings(@Parent() user: IUser): IUserSettings {
+    return user.settings;
+  }
+
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
   })
-  @Profiling.api
   async agent(
     @Parent() user: User,
     @Loader(AgentLoaderCreator, { parentClassRef: User })
@@ -86,7 +94,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The Authorization for this User.',
   })
-  @Profiling.api
   async authorization(
     @Parent() user: User,
     @Loader(AuthorizationLoaderCreator, { parentClassRef: User })
@@ -134,7 +141,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'The direct rooms this user is a member of',
   })
-  @Profiling.api
   async directRooms(@Parent() user: User): Promise<DirectRoomResult[]> {
     return this.userService.getDirectRooms(user);
   }
@@ -144,7 +150,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The email address for this User.',
   })
-  @Profiling.api
   async email(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -163,14 +168,13 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('phone', () => String, {
-    nullable: false,
+    nullable: true,
     description: 'The phone number for this User.',
   })
-  @Profiling.api
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string | 'not accessible'> {
+  ): Promise<string | null | 'not accessible'> {
     if (
       await this.isAccessGranted(
         user,
@@ -178,30 +182,31 @@ export class UserResolverFields {
         AuthorizationPrivilege.READ_USER_PII
       )
     ) {
-      return user.phone;
+      return user.phone ?? null;
     }
     return 'not accessible';
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('accounts', () => [IAccount], {
-    nullable: false,
-    description: 'The accounts hosted by this User.',
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The account hosted by this User.',
   })
-  @Profiling.api
-  async accounts(
+  async account(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IAccount[]> {
-    const accountsVisible = await this.isAccessGranted(
-      user,
-      agentInfo,
-      AuthorizationPrivilege.READ_USER_PII
-    );
-    if (accountsVisible) {
-      return await this.contributorService.getAccountsHostedByContributor(user);
+  ): Promise<IAccount | undefined> {
+    const accountVisible =
+      user.id === agentInfo.userID || // user can see their own account
+      (await this.isAccessGranted(
+        user,
+        agentInfo,
+        AuthorizationPrivilege.READ_USER_PII
+      ));
+    if (accountVisible) {
+      return await this.userService.getAccount(user);
     }
-    return [];
+    return undefined;
   }
 
   @UseGuards(GraphqlGuard)
@@ -209,7 +214,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'Can a message be sent to this User.',
   })
-  @Profiling.api
   async isContactable(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -221,13 +225,7 @@ export class UserResolverFields {
       `user: ${agentInfo.email} can contact user: ${user.email}`
     );
 
-    const preferenceSet = await this.userService.getPreferenceSetOrFail(
-      user.id
-    );
-
-    return await this.messagingService.isContactableWithDirectMessage(
-      preferenceSet
-    );
+    return user.settings.communication.allowOtherUsersToSendMessages;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -243,6 +241,87 @@ export class UserResolverFields {
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(user.id);
+  }
+
+  @ResolveField('authentication', () => UserAuthenticationResult, {
+    nullable: true,
+    description: 'Details about the authentication used for this User.',
+  })
+  @UseGuards(GraphqlGuard)
+  async authentication(
+    @Parent() user: IUser,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<UserAuthenticationResult> {
+    const isCurrentUser = user.id === agentInfo.userID;
+    const platformAccessGranted = this.authorizationService.isAccessGranted(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_ADMIN
+    );
+    const result: UserAuthenticationResult = {
+      method: AuthenticationType.UNKNOWN,
+      createdAt: undefined,
+    };
+    if (isCurrentUser || platformAccessGranted) {
+      const identity = await this.kratosService.getIdentityByEmail(user.email);
+      if (identity) {
+        result.method = await this.getAuthenticationTypeFromIdentity(identity);
+        result.createdAt = await this.getCreatedAtByEmail(identity);
+      }
+    }
+
+    return result;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IRoom, {
+    nullable: true,
+    description: 'Guidance Chat Room for this user',
+  })
+  async guidanceRoom(
+    @Parent() user: User,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IRoom | undefined> {
+    const { guidanceRoom } = await this.userService.getUserOrFail(user.id, {
+      relations: { guidanceRoom: true },
+    });
+    if (!guidanceRoom) {
+      return undefined;
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      guidanceRoom.authorization,
+      AuthorizationPrivilege.READ,
+      `guidance Room: ${guidanceRoom.id}`
+    );
+    return guidanceRoom;
+  }
+
+  /**
+   * Retrieves the authentication type associated with a given email.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  private async getAuthenticationTypeFromIdentity(
+    identity: Identity
+  ): Promise<AuthenticationType> {
+    if (!identity) return AuthenticationType.UNKNOWN;
+    return this.kratosService.mapAuthenticationType(identity);
+  }
+
+  /**
+   * Retrieves the date at which the account associated with a given email was created.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  private async getCreatedAtByEmail(
+    identity: Identity
+  ): Promise<Date | undefined> {
+    if (!identity || !identity.created_at) return undefined;
+    return new Date(identity.created_at);
   }
 
   private async isAccessGranted(

@@ -1,18 +1,18 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { LogContext } from '@common/enums/logging.context';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMessageReaction } from './message.reaction.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => IMessageReaction)
 export class MessageReactionResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userLookupService: ContributorLookupService
+    private userLookupService: UserLookupService
   ) {}
 
   @ResolveField('sender', () => IUser, {

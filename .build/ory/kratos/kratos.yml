@@ -26,13 +26,14 @@ selfservice:
       config:
         providers:
           - id: linkedin
-            provider: linkedin
-            client_id: 77tjjnhvonojf4
-            client_secret: s66LUXd3nj2jxB4G
+            provider: linkedin_v2
+            client_id: 775c24tex2bnn8
+            client_secret: RWqM6Qaa1H3QIZo9
             mapper_url: file:///etc/config/kratos/oidc/oidc.linkedin.jsonnet
             scope:
-              - r_emailaddress
-              - r_liteprofile
+              - openid
+              - profile
+              - email
           - id: microsoft # this is `<provider-id>` in the Authorization callback URL. DO NOT CHANGE IT ONCE SET!
             provider: microsoft
             client_id: 1045418f-c674-44d5-808c-060922be5a4a # This is the the Application (client) ID from the App Registration
@@ -81,7 +82,6 @@ selfservice:
             - hook: require_verified_address
 
     registration:
-      enable_legacy_one_step: true
       lifespan: 10m
       ui_url: http://localhost:3000/registration
       after:

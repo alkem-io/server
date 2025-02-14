@@ -6,20 +6,20 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { IPost } from './post.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Post } from '@domain/collaboration/post/post.entity';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Resolver(() => IPost)
 export class PostResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userLookupService: ContributorLookupService
+    private userLookupService: UserLookupService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {

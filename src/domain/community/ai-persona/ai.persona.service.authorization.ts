@@ -19,7 +19,7 @@ export class AiPersonaAuthorizationService {
   applyAuthorizationPolicy(
     aiPersona: IAiPersona,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAiPersona {
+  ): IAuthorizationPolicy {
     if (!aiPersona.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual persona: ${aiPersona.id} `,
@@ -40,7 +40,7 @@ export class AiPersonaAuthorizationService {
       aiPersona.id
     );
 
-    return aiPersona;
+    return aiPersona.authorization;
   }
 
   private appendCredentialRules(

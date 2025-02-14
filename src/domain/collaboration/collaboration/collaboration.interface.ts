@@ -1,26 +1,23 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { ILicense } from '@domain/common/license/license.interface';
+import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
 
 @ObjectType('Collaboration')
 export abstract class ICollaboration extends IAuthorizable {
-  callouts?: ICallout[];
-
-  @Field(() => [IRelation], {
-    nullable: true,
-    description: 'List of relations',
-  })
-  relations?: IRelation[];
-
-  tagsetTemplateSet?: ITagsetTemplateSet;
+  calloutsSet?: ICalloutsSet;
 
   timeline?: ITimeline;
 
   innovationFlow?: IInnovationFlow;
 
-  groupsStr!: string;
+  license?: ILicense;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Whether this Collaboration is a Template or not.',
+  })
+  isTemplate!: boolean;
 }

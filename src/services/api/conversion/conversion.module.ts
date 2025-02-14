@@ -7,8 +7,11 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -16,11 +19,14 @@ import { CommunityModule } from '@domain/community/community/community.module';
     AccountModule,
     SpaceModule,
     CommunityModule,
-    CommunityRoleModule,
+    RoleSetModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     NamingModule,
     CommunicationModule,
+    CalloutTransferModule,
+    VirtualContributorModule,
+    AiServerAdapterModule,
   ],
   providers: [ConversionService, ConversionResolverMutations],
   exports: [ConversionService, ConversionResolverMutations],

@@ -2,7 +2,7 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@src/common/decorators';
-import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
+import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
@@ -40,7 +40,7 @@ export class WhiteboardResolverFields {
   })
   async createdBy(
     @Parent() whiteboard: IWhiteboard,
-    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+    @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
     const createdBy = whiteboard.createdBy;
     if (!createdBy) {
@@ -51,25 +51,7 @@ export class WhiteboardResolverFields {
       return null;
     }
 
-    try {
-      return await loader
-        .load(createdBy)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => {
-          return !Object.keys(x).length ? null : x;
-        });
-    } catch (e: unknown) {
-      if (e instanceof EntityNotFoundException) {
-        this.logger?.warn(
-          `createdBy '${createdBy}' unable to be resolved when resolving whiteboard '${whiteboard.id}'`,
-          LogContext.COLLABORATION
-        );
-        return null;
-      } else {
-        throw e;
-      }
-    }
+    return loader.load(createdBy);
   }
 
   @UseGuards(GraphqlGuard)

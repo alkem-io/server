@@ -10,9 +10,10 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Platform } from '@platform/platfrom/platform.entity';
+import { Platform } from '@platform/platform/platform.entity';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class PlatformAuthorizationPolicyService {
@@ -55,7 +56,9 @@ export class PlatformAuthorizationPolicyService {
   }
 
   private createRootAuthorizationPolicy(): IAuthorizationPolicy {
-    const rootAuthorization = new AuthorizationPolicy();
+    const rootAuthorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.PLATFORM
+    );
 
     const credentialRules = this.createRootCredentialRules();
 

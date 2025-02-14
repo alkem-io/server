@@ -1,9 +1,9 @@
 import { PubSubEngine } from 'graphql-subscriptions';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_ROOM_EVENT,
-  SUBSCRIPTION_WHITEBOARD_SAVED,
+  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
@@ -13,8 +13,12 @@ import { IMessageReaction } from '@domain/communication/message.reaction/message
 import {
   ActivityCreatedSubscriptionPayload,
   RoomEventSubscriptionPayload,
-  WhiteboardSavedSubscriptionPayload,
+  VirtualContributorUpdatedSubscriptionPayload,
 } from './dto';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class SubscriptionPublishService {
@@ -23,8 +27,10 @@ export class SubscriptionPublishService {
     private activityCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private roomEventsSubscription: PubSubEngine,
-    @Inject(SUBSCRIPTION_WHITEBOARD_SAVED)
-    private whiteboardSavedSubscription: PubSubEngine
+    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    private virtualContributorUpdatedSubscription: PubSubEngine,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   public publishActivity(
@@ -44,14 +50,15 @@ export class SubscriptionPublishService {
   }
 
   public publishRoomEvent(
-    roomId: string,
+    room: IRoom,
     type: MutationType,
     data: IMessage | IMessageReaction,
     messageID?: string
   ): Promise<void> {
     const payload: RoomEventSubscriptionPayload = {
       eventID: `room-event-${randomInt()}`,
-      roomID: roomId,
+      roomID: room.id,
+      room: room,
     };
 
     if (isMessage(data)) {
@@ -73,19 +80,22 @@ export class SubscriptionPublishService {
     );
   }
 
-  public publishWhiteboardSaved(
-    whiteboardId: string,
-    updatedDate: Date
-  ): Promise<void> {
-    const payload: WhiteboardSavedSubscriptionPayload = {
-      eventID: `whiteboard-saved-${randomInt()}`,
-      whiteboardID: whiteboardId,
-      updatedDate,
+  public publishVirtualContributorUpdated(
+    virtualContributor: IVirtualContributor
+  ): void {
+    const payload: VirtualContributorUpdatedSubscriptionPayload = {
+      eventID: `virtual-contributor-updated${randomInt()}`,
+      virtualContributor,
     };
 
-    return this.whiteboardSavedSubscription.publish(
-      SubscriptionType.WHITEBOARD_SAVED,
+    this.virtualContributorUpdatedSubscription.publish(
+      SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED,
       payload
+    );
+
+    this.logger.verbose?.(
+      `VirtualContributorUpdated published. VC id: ${virtualContributor.id}`,
+      LogContext.SUBSCRIPTION_PUBLISH
     );
   }
 }

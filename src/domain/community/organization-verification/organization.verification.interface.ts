@@ -10,8 +10,8 @@ export abstract class IOrganizationVerification extends IAuthorizable {
   @Field(() => OrganizationVerificationEnum, {
     description: 'Organization verification type',
   })
-  status!: string;
+  status!: OrganizationVerificationEnum;
 
   @Field(() => ILifecycle, { nullable: false })
-  lifecycle?: ILifecycle;
+  lifecycle!: ILifecycle;
 }

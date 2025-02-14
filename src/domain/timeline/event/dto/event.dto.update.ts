@@ -9,7 +9,7 @@ export class UpdateCalendarEventInput extends UpdateNameableInput {
   @Field(() => CalendarEventType, { nullable: true })
   @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
-  type?: string;
+  type?: CalendarEventType;
 
   @Field(() => Date, {
     nullable: false,
@@ -42,4 +42,10 @@ export class UpdateCalendarEventInput extends UpdateNameableInput {
   })
   @IsOptional()
   durationDays!: number;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Is the event visible on the parent calendar.',
+  })
+  visibleOnParentCalendar?: boolean;
 }

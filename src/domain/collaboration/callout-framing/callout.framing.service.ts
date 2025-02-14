@@ -9,7 +9,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
@@ -23,6 +22,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITagset } from '@domain/common/tagset';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CalloutFramingService {
@@ -44,7 +44,9 @@ export class CalloutFramingService {
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
 
-    calloutFraming.authorization = new AuthorizationPolicy();
+    calloutFraming.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALLOUT_FRAMING
+    );
 
     const { profile, whiteboard, tags } = calloutFramingData;
 
@@ -77,7 +79,7 @@ export class CalloutFramingService {
       const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
       whiteboard.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboard.profileData.displayName}`,
+          `${whiteboard.profile?.displayName ?? 'whiteboard'}`,
           reservedNameIDs
         );
       calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -85,9 +87,10 @@ export class CalloutFramingService {
         storageAggregator,
         userID
       );
-      await this.profileService.addVisualOnProfile(
+      await this.profileService.addVisualsOnProfile(
         calloutFraming.whiteboard.profile,
-        VisualType.BANNER
+        whiteboard.profile?.visuals,
+        [VisualType.BANNER]
       );
     }
 
@@ -105,24 +108,10 @@ export class CalloutFramingService {
       );
     }
 
-    if (calloutFraming.whiteboard && calloutFramingData.whiteboard) {
-      calloutFraming.whiteboard = await this.whiteboardService.updateWhiteboard(
-        calloutFraming.whiteboard,
-        calloutFramingData.whiteboard
-      );
-    }
-
-    if (calloutFraming.whiteboard && calloutFramingData.whiteboard) {
-      calloutFraming.whiteboard = await this.whiteboardService.updateWhiteboard(
-        calloutFraming.whiteboard,
-        calloutFramingData.whiteboard
-      );
-    }
-
     if (calloutFraming.whiteboard && calloutFramingData.whiteboardContent) {
       calloutFraming.whiteboard =
         await this.whiteboardService.updateWhiteboardContent(
-          calloutFraming.whiteboard,
+          calloutFraming.whiteboard.id,
           calloutFramingData.whiteboardContent
         );
     }
@@ -172,13 +161,10 @@ export class CalloutFramingService {
     calloutFramingID: string,
     options?: FindOneOptions<CalloutFraming>
   ): Promise<ICalloutFraming | never> {
-    let calloutFraming: ICalloutFraming | null = null;
-    if (calloutFramingID.length === UUID_LENGTH) {
-      calloutFraming = await this.calloutFramingRepository.findOne({
-        where: { id: calloutFramingID },
-        ...options,
-      });
-    }
+    const calloutFraming = await this.calloutFramingRepository.findOne({
+      where: { id: calloutFramingID },
+      ...options,
+    });
 
     if (!calloutFraming)
       throw new EntityNotFoundException(
@@ -200,7 +186,7 @@ export class CalloutFramingService {
     );
     if (!calloutFraming.profile)
       throw new EntityNotFoundException(
-        `Callout profile not initialised: ${calloutFramingInput.id}`,
+        `Callout profile not initialized: ${calloutFramingInput.id}`,
         LogContext.COLLABORATION
       );
 
@@ -222,19 +208,6 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.whiteboard;
-  }
-
-  public createCalloutFramingInputFromCalloutFraming(
-    calloutFraming: ICalloutFraming
-  ): CreateCalloutFramingInput {
-    return {
-      profile: this.profileService.createProfileInputFromProfile(
-        calloutFraming.profile
-      ),
-      whiteboard: this.whiteboardService.createWhiteboardInputFromWhiteboard(
-        calloutFraming.whiteboard
-      ),
-    };
   }
 
   updateCalloutGroupTagsetValue(

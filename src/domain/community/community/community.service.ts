@@ -11,44 +11,30 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { CreateUserGroupInput } from '@domain/community/user-group/dto';
 import { Community, ICommunity } from '@domain/community/community';
-import { ApplicationService } from '@domain/community/application/application.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunityRole } from '@common/enums/community.role';
-import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
-import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { CommunityPolicyService } from '../community-policy/community.policy.service';
-import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
-import { IForm } from '@domain/common/form/form.interface';
-import { FormService } from '@domain/common/form/form.service';
-import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
-import { InvitationService } from '../invitation/invitation.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CommunityGuidelinesService } from '../community-guidelines/community.guidelines.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
-import { IContributor } from '../contributor/contributor.interface';
-import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
-import { IUser } from '../user/user.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IRoleSet } from '@domain/access/role-set';
 
 @Injectable()
 export class CommunityService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupService: UserGroupService,
-    private applicationService: ApplicationService,
-    private invitationService: InvitationService,
-    private platformInvitationService: PlatformInvitationService,
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private communityGuidelinesService: CommunityGuidelinesService,
-    private formService: FormService,
-    private communityPolicyService: CommunityPolicyService,
+    private roleSetService: RoleSetService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
@@ -60,12 +46,11 @@ export class CommunityService {
     storageAggregator: IStorageAggregator
   ): Promise<ICommunity> {
     const community: ICommunity = new Community();
-    community.authorization = new AuthorizationPolicy();
-    const policy = communityData.policy as ICommunityPolicyDefinition;
-    community.policy = await this.communityPolicyService.createCommunityPolicy(
-      policy.member,
-      policy.lead,
-      policy.admin
+    community.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COMMUNITY
+    );
+    community.roleSet = await this.roleSetService.createRoleSet(
+      communityData.roleSetData
     );
 
     community.guidelines =
@@ -73,13 +58,6 @@ export class CommunityService {
         communityData.guidelines,
         storageAggregator
       );
-    community.applicationForm = await this.formService.createForm(
-      communityData.applicationForm
-    );
-
-    community.applications = [];
-    community.invitations = [];
-    community.platformInvitations = [];
 
     community.groups = [];
     community.communication =
@@ -87,7 +65,7 @@ export class CommunityService {
         communityData.name,
         ''
       );
-    return await this.communityRepository.save(community);
+    return community;
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
@@ -175,35 +153,30 @@ export class CommunityService {
     return community;
   }
 
-  async removeCommunity(communityID: string): Promise<boolean> {
+  async removeCommunityOrFail(communityID: string): Promise<boolean | never> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
       relations: {
-        applications: true,
-        invitations: true,
-        platformInvitations: true,
+        roleSet: true,
         groups: true,
         communication: true,
-        applicationForm: true,
         guidelines: true,
       },
     });
     if (
       !community.communication ||
       !community.communication.updates ||
-      !community.policy ||
+      !community.roleSet ||
       !community.groups ||
-      !community.applications ||
-      !community.invitations ||
-      !community.platformInvitations ||
-      !community.guidelines ||
-      !community.applicationForm
+      !community.guidelines
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for community for deletion: ${community.id} `,
         LogContext.COMMUNITY
       );
     }
+
+    await this.roleSetService.removeAllRoleAssignments(community.roleSet);
 
     // Remove all groups
     for (const group of community.groups) {
@@ -215,33 +188,11 @@ export class CommunityService {
     if (community.authorization)
       await this.authorizationPolicyService.delete(community.authorization);
 
-    // Remove all applications
-    for (const application of community.applications) {
-      await this.applicationService.deleteApplication({
-        ID: application.id,
-      });
-    }
-
-    // Remove all invitations
-    for (const invitation of community.invitations) {
-      await this.invitationService.deleteInvitation({
-        ID: invitation.id,
-      });
-    }
-
-    for (const externalInvitation of community.platformInvitations) {
-      await this.platformInvitationService.deletePlatformInvitation({
-        ID: externalInvitation.id,
-      });
-    }
-
     await this.communicationService.removeCommunication(
       community.communication.id
     );
 
-    await this.formService.removeForm(community.applicationForm);
-
-    await this.communityPolicyService.removeCommunityPolicy(community.policy);
+    await this.roleSetService.removeRoleSetOrFail(community.roleSet.id);
 
     await this.communityGuidelinesService.deleteCommunityGuidelines(
       community.guidelines.id
@@ -255,102 +206,24 @@ export class CommunityService {
     return await this.communityRepository.save(community);
   }
 
-  async getParentCommunity(
-    community: ICommunity
-  ): Promise<ICommunity | undefined> {
-    const communityWithParent = await this.getCommunityOrFail(community.id, {
-      relations: { parentCommunity: true },
-    });
-
-    const parentCommunity = communityWithParent?.parentCommunity;
-    if (parentCommunity) {
-      return await this.getCommunityOrFail(parentCommunity.id);
-    }
-    return undefined;
-  }
-
-  async updateApplicationForm(
-    community: ICommunity,
-    formData: UpdateFormInput
-  ): Promise<ICommunity> {
-    const applicationForm = await this.getApplicationForm(community);
-    community.applicationForm = await this.formService.updateForm(
-      applicationForm,
-      formData
-    );
-    return await this.save(community);
-  }
-
-  async setParentCommunity(
-    community?: ICommunity,
-    parentCommunity?: ICommunity
-  ): Promise<ICommunity> {
-    if (!community || !parentCommunity)
-      throw new EntityNotInitializedException(
-        'Community not set',
-        LogContext.COMMUNITY
-      );
-    community.parentCommunity = parentCommunity;
-    // Also update the communityPolicy
-    community.policy =
-      await this.communityPolicyService.inheritParentCredentials(
-        this.getCommunityPolicy(parentCommunity),
-        this.getCommunityPolicy(community)
-      );
-    return await this.communityRepository.save(community);
-  }
-
   public async getDisplayName(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getDisplayNameForCommunityOrFail(
+    return await this.communityResolverService.getDisplayNameForRoleSetOrFail(
       community.id
     );
   }
 
-  public async addMemberToCommunication(
-    contributor: IContributor,
-    community: ICommunity
-  ): Promise<void> {
-    // register the user for the community rooms
-    const communication = await this.getCommunication(community.id);
-    this.communicationService
-      .addContributorToCommunications(
-        communication,
-        contributor.communicationID
-      )
-      .catch(error =>
-        this.logger.error(
-          `Unable to add user to community messaging (${community.id}): ${error}`,
-          error?.stack,
-          LogContext.COMMUNICATION
-        )
-      );
-  }
+  public async getRoleSet(community: ICommunity): Promise<IRoleSet> {
+    const communityWithRoleSet = await this.getCommunityOrFail(community.id, {
+      relations: { roleSet: true },
+    });
 
-  public async removeMemberFromCommunication(
-    community: ICommunity,
-    user: IUser
-  ): Promise<void> {
-    const communication = await this.getCommunication(community.id);
-    this.communicationService
-      .removeUserFromCommunications(communication, user)
-      .catch(error =>
-        this.logger.error(
-          `Unable remove user from community messaging (${community.id}): ${error}`,
-          error?.stack,
-          LogContext.COMMUNICATION
-        )
-      );
-  }
-
-  public getCommunityPolicy(community: ICommunity): ICommunityPolicy {
-    const policy = community.policy;
-    if (!policy) {
+    if (!communityWithRoleSet.roleSet) {
       throw new EntityNotInitializedException(
-        `Unable to locate policy for community: ${community.id}`,
+        `Unable to locate RoleSet for community: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
-    return policy;
+    return communityWithRoleSet.roleSet;
   }
 
   public async getCommunityGuidelines(
@@ -390,74 +263,11 @@ export class CommunityService {
     return communication;
   }
 
-  public async getPeerCommunites(
-    parentCommunity: ICommunity,
-    childCommunity: ICommunity
-  ): Promise<ICommunity[]> {
-    const peerCommunities = await this.communityRepository.find({
-      where: {
-        parentCommunity: {
-          id: parentCommunity.id,
-        },
-      },
-    });
-    return peerCommunities.filter(
-      community => community.id !== childCommunity.id
+  public async getLevelZeroSpaceIdForCommunity(
+    community: ICommunity
+  ): Promise<string> {
+    return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+      community.id
     );
-  }
-
-  public async isCommunityAccountMatchingVcAccount(
-    communityID: string,
-    virtualContributorID: string
-  ): Promise<boolean> {
-    return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
-      communityID,
-      virtualContributorID
-    );
-  }
-
-  public async getRootSpaceID(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-      community
-    );
-  }
-
-  public getCommunityPolicyForRole(
-    community: ICommunity,
-    role: CommunityRole
-  ): ICommunityRolePolicy {
-    const policy = this.getCommunityPolicy(community);
-    return this.communityPolicyService.getCommunityRolePolicy(policy, role);
-  }
-
-  public updateCommunityPolicyResourceID(
-    community: ICommunity,
-    resourceID: string
-  ): Promise<ICommunityPolicy> {
-    const policy = this.getCommunityPolicy(community);
-    return this.communityPolicyService.updateCommunityPolicyResourceID(
-      policy,
-      resourceID
-    );
-  }
-
-  async getApplicationForm(community: ICommunity): Promise<IForm> {
-    const communityForm = await this.getCommunityOrFail(community.id, {
-      relations: { applicationForm: true },
-    });
-    const applicationForm = communityForm.applicationForm;
-    if (!applicationForm) {
-      throw new EntityNotFoundException(
-        `Unable to find Application Form for Community with ID: ${community.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return applicationForm;
-  }
-
-  async isSpaceCommunity(community: ICommunity): Promise<boolean> {
-    const parentCommunity = await this.getParentCommunity(community);
-
-    return parentCommunity === undefined;
   }
 }

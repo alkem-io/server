@@ -14,7 +14,7 @@ export default () => {
   const envConfig = process.env;
 
   YAML.visit(doc, {
-    Scalar(key, node) {
+    Scalar(_key, node) {
       if (node.type === 'PLAIN') {
         node.value = buildYamlNodeValue(node.value, envConfig);
       }

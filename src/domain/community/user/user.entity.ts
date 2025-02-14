@@ -8,38 +8,49 @@ import {
   Generated,
 } from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
-import { Application } from '@domain/community/application/application.entity';
+import { Application } from '@domain/access/application/application.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { Room } from '@domain/communication/room/room.entity';
+import {
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@common/constants';
+import { IUserSettings } from '../user.settings/user.settings.interface';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  accountID!: string;
+
   @Column({
     unique: true,
   })
   @Generated('increment')
   rowId!: number;
 
-  @Column()
-  accountUpn: string = '';
+  @Column('json', { nullable: false })
+  settings!: IUserSettings;
 
-  @Column()
-  firstName: string = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  accountUpn!: string;
 
-  @Column()
-  lastName: string = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  firstName!: string;
 
-  @Column()
-  email: string = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  lastName!: string;
 
-  @Column()
-  phone: string = '';
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: false })
+  email!: string;
 
-  @Column()
-  gender: string = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
+  phone?: string;
 
-  @Column({ type: 'boolean' })
-  serviceProfile: boolean = false;
+  @Column({ type: 'boolean', nullable: false })
+  serviceProfile!: boolean;
 
   @OneToMany(() => Application, application => application.id, {
     eager: false,
@@ -55,7 +66,19 @@ export class User extends ContributorBase implements IUser {
   @JoinColumn()
   preferenceSet?: PreferenceSet;
 
-  constructor() {
-    super();
-  }
+  @OneToOne(() => StorageAggregator, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageAggregator?: StorageAggregator;
+
+  @OneToOne(() => Room, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  guidanceRoom?: Room;
 }

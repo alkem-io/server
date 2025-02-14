@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationVerification } from './organization.verification.entity';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { organizationVerificationLifecycleConfig } from '@domain/community/organization-verification/organization.verification.lifecycle.config';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { CreateOrganizationVerificationInput } from './dto/organization.verification.dto.create';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,6 +10,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class OrganizationVerificationService {
@@ -28,7 +28,9 @@ export class OrganizationVerificationService {
       OrganizationVerification.create({ ...organizationVerificationData });
 
     organizationVerification.status = OrganizationVerificationEnum.NOT_VERIFIED;
-    organizationVerification.authorization = new AuthorizationPolicy();
+    organizationVerification.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ORGANIZATION_VERIFICATION
+    );
 
     // save the user to get the id assigned
     await this.organizationVerificationRepository.save(
@@ -37,10 +39,7 @@ export class OrganizationVerificationService {
 
     // Create the lifecycle
     organizationVerification.lifecycle =
-      await this.lifecycleService.createLifecycle(
-        organizationVerification.id,
-        organizationVerificationLifecycleConfig
-      );
+      await this.lifecycleService.createLifecycle();
 
     return organizationVerification;
   }

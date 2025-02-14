@@ -1,12 +1,12 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
 
 @InputType()
 export class UpdateUserInput extends UpdateContributorInput {
-  @Field(() => UUID_NAMEID_EMAIL, { nullable: false })
+  @Field(() => UUID, { nullable: false })
   ID!: string;
 
   @Field({ nullable: true })
@@ -28,11 +28,6 @@ export class UpdateUserInput extends UpdateContributorInput {
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   phone?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  gender?: string;
 
   @Field({
     nullable: true,

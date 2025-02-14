@@ -1,21 +1,11 @@
-import { ICredential } from '@src/domain';
 import { AuthorizationCredential } from '@common/enums';
-import { AccountRole } from '@common/enums/account.role';
-import { OrganizationRole } from '@common/enums/organization.role';
-import { CommunityRole } from '@common/enums/community.role';
-import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
-export type CredentialRole =
-  | AccountRole
-  | OrganizationRole
-  | CommunityRole
-  | CommunityRoleImplicit;
+export type CredentialRole = RoleName | RoleSetRoleImplicit;
 
-export type EntityCredentialType =
-  | 'accounts'
-  | 'spaces'
-  | 'organizations'
-  | 'groups';
+export type EntityCredentialType = 'spaces' | 'organizations' | 'groups';
 
 export type CredentialMap = Map<
   EntityCredentialType,
@@ -32,11 +22,11 @@ export type CredentialMap = Map<
  * The types are represented by an array because they are guaranteed unique,
  * meaning an User (whose credentials are parsed here) can't have two credentials of type 'space-admin' for the same Space
  */
-export const groupCredentialsByEntity = (credentials: ICredential[]) => {
+export const groupCredentialsByEntity = (
+  credentials: ICredentialDefinition[]
+) => {
   return credentials.reduce<CredentialMap>((map, credential) => {
-    if (credential.type === AuthorizationCredential.ACCOUNT_HOST) {
-      return setMap(map, 'accounts', credential);
-    } else if (
+    if (
       credential.type === AuthorizationCredential.SPACE_ADMIN ||
       credential.type === AuthorizationCredential.SPACE_LEAD ||
       credential.type === AuthorizationCredential.SPACE_MEMBER ||
@@ -58,7 +48,7 @@ export const groupCredentialsByEntity = (credentials: ICredential[]) => {
 const setMap = (
   map: CredentialMap,
   type: EntityCredentialType,
-  credential: ICredential
+  credential: ICredentialDefinition
 ) => {
   const roleMap = map.get(type);
   if (roleMap) {
@@ -85,19 +75,17 @@ const credentialTypeToRole = (
   type: AuthorizationCredential
 ): CredentialRole => {
   const roleMap: Partial<Record<AuthorizationCredential, CredentialRole>> = {
-    [AuthorizationCredential.ACCOUNT_HOST]: AccountRole.HOST,
-    [AuthorizationCredential.SPACE_ADMIN]: CommunityRole.ADMIN,
-    [AuthorizationCredential.SPACE_LEAD]: CommunityRole.LEAD,
-    [AuthorizationCredential.SPACE_MEMBER]: CommunityRole.MEMBER,
+    [AuthorizationCredential.SPACE_ADMIN]: RoleName.ADMIN,
+    [AuthorizationCredential.SPACE_LEAD]: RoleName.LEAD,
+    [AuthorizationCredential.SPACE_MEMBER]: RoleName.MEMBER,
     [AuthorizationCredential.SPACE_SUBSPACE_ADMIN]:
-      CommunityRoleImplicit.SUBSPACE_ADMIN,
+      RoleSetRoleImplicit.SUBSPACE_ADMIN,
 
-    [AuthorizationCredential.ORGANIZATION_ADMIN]: OrganizationRole.ADMIN,
-    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]:
-      OrganizationRole.ASSOCIATE,
-    [AuthorizationCredential.ORGANIZATION_OWNER]: OrganizationRole.OWNER,
+    [AuthorizationCredential.ORGANIZATION_ADMIN]: RoleName.ADMIN,
+    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: RoleName.ASSOCIATE,
+    [AuthorizationCredential.ORGANIZATION_OWNER]: RoleName.OWNER,
 
-    [AuthorizationCredential.USER_GROUP_MEMBER]: CommunityRole.MEMBER, // hack for now; not used
+    [AuthorizationCredential.USER_GROUP_MEMBER]: RoleName.MEMBER, // hack for now; not used
   };
 
   const role = roleMap[type];

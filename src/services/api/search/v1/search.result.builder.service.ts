@@ -1,7 +1,5 @@
-import { UserService } from '@domain/community/user/user.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
 import { SpaceService } from '@domain/space/space/space.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { ISearchResultBase } from '@services/api/search/dto/search.result.dto.entry.base.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
@@ -26,6 +24,8 @@ import { EntityManager } from 'typeorm';
 import { ISearchResultCallout } from '@services/api/search/dto/search.result.dto.entry.callout';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 export type PostParents = {
   callout: ICallout;
@@ -40,8 +40,8 @@ export default class SearchResultBuilderService
   constructor(
     private readonly searchResultBase: ISearchResultBase,
     private readonly spaceService: SpaceService,
-    private readonly userService: UserService,
-    private readonly organizationService: OrganizationService,
+    private readonly userLookupService: UserLookupService,
+    private readonly organizationLookupService: OrganizationLookupService,
     private readonly userGroupService: UserGroupService,
     private readonly postService: PostService,
     private readonly calloutService: CalloutService,
@@ -58,28 +58,21 @@ export default class SearchResultBuilderService
     return searchResultSpace;
   }
 
+  async [SearchResultType.SUBSPACE](rawSearchResult: ISearchResult) {
+    return this[SearchResultType.SPACE](rawSearchResult);
+  }
+
   async [SearchResultType.CHALLENGE](rawSearchResult: ISearchResult) {
     const subspace = await this.spaceService.getSpaceOrFail(
-      rawSearchResult.result.id,
-      {
-        relations: {
-          account: {
-            space: true,
-          },
-        },
-      }
+      rawSearchResult.result.id
     );
-    if (!subspace.account || !subspace.account.space) {
-      throw new RelationshipNotFoundException(
-        `Unable to find account for ${subspace.nameID}`,
-        LogContext.SEARCH
-      );
-    }
-    const space = subspace.account.space;
+    const levelZeroSpace = await this.spaceService.getSpaceOrFail(
+      subspace.levelZeroSpaceID
+    );
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
       subspace: subspace,
-      space,
+      space: levelZeroSpace,
     };
     return searchResultChallenge;
   }
@@ -90,22 +83,21 @@ export default class SearchResultBuilderService
       {
         relations: {
           parentSpace: true,
-          account: {
-            space: true,
-          },
         },
       }
     );
-    if (!subsubspace.account || !subsubspace.account.space) {
+    if (!subsubspace.parentSpace) {
       throw new RelationshipNotFoundException(
-        `Unable to find account for ${subsubspace.nameID}`,
+        `Unable to find parentSpace for ${subsubspace.nameID}`,
         LogContext.SEARCH
       );
     }
-    const space = subsubspace.account.space;
+    const levelZeroSpace = await this.spaceService.getSpaceOrFail(
+      subsubspace.levelZeroSpaceID
+    );
     if (!subsubspace.parentSpace) {
       throw new RelationshipNotFoundException(
-        `Unable to find parent subspace for ${subsubspace.nameID}`,
+        `Unable to find parent subspace for ${subsubspace.id}`,
         LogContext.SEARCH
       );
     }
@@ -115,14 +107,14 @@ export default class SearchResultBuilderService
     const searchResultOpportunity: ISearchResultOpportunity = {
       ...this.searchResultBase,
       subsubspace,
-      space,
+      space: levelZeroSpace,
       subspace,
     };
     return searchResultOpportunity;
   }
 
   async [SearchResultType.USER](rawSearchResult: ISearchResult) {
-    const user = await this.userService.getUserOrFail(
+    const user = await this.userLookupService.getUserOrFail(
       rawSearchResult.result.id
     );
     const searchResultUser: ISearchResultUser = {
@@ -133,9 +125,10 @@ export default class SearchResultBuilderService
   }
 
   async [SearchResultType.ORGANIZATION](rawSearchResult: ISearchResult) {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      rawSearchResult.result.id
-    );
+    const organization =
+      await this.organizationLookupService.getOrganizationOrFail(
+        rawSearchResult.result.id
+      );
     const searchResultOrganization: ISearchResultOrganization = {
       ...this.searchResultBase,
       organization,
@@ -176,46 +169,49 @@ export default class SearchResultBuilderService
     const spaceLoaded = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
-          callouts: {
-            id: callout.id,
+          calloutsSet: {
+            callouts: {
+              id: callout.id,
+            },
           },
         },
       },
       relations: {
         parentSpace: true,
-        account: {
-          space: true,
-        },
         collaboration: {
-          callouts: true,
+          calloutsSet: {
+            callouts: true,
+          },
         },
       },
     });
 
-    if (!spaceLoaded || !spaceLoaded.account || !spaceLoaded.account.space) {
+    if (!spaceLoaded) {
       throw new EntityNotFoundException(
         `Unable to find parents for post with ID: ${postId}`,
         LogContext.SEARCH
       );
     }
 
-    const space = spaceLoaded.account.space;
+    const levelZeroSpace = await this.spaceService.getSpaceOrFail(
+      spaceLoaded.levelZeroSpaceID
+    );
     let subspace: ISpace | undefined = undefined;
     let subsubspace: ISpace | undefined = undefined;
 
     switch (spaceLoaded?.level) {
-      case SpaceLevel.CHALLENGE: {
+      case SpaceLevel.L1: {
         subspace = spaceLoaded;
         break;
       }
-      case SpaceLevel.OPPORTUNITY: {
+      case SpaceLevel.L2: {
         subspace = spaceLoaded.parentSpace;
         subsubspace = spaceLoaded;
         break;
       }
     }
 
-    return { subspace, subsubspace, callout, space };
+    return { subspace, subsubspace, callout, space: levelZeroSpace };
   }
 
   async [SearchResultType.POST](rawSearchResult: ISearchResult) {

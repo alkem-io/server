@@ -4,6 +4,11 @@ import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type
 import { ISpace } from './space.interface';
 import { sortSpacesByActivity } from './sort.spaces.by.activity';
 import { SpaceType } from '@common/enums/space.type';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { ProfileType } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {
@@ -19,22 +24,47 @@ const createTestActivity = (createdDate: Date): IActivity => {
   };
 };
 
+const spaceSettings = {
+  privacy: {
+    mode: SpacePrivacyMode.PUBLIC,
+    allowPlatformSupportAsAdmin: false,
+  },
+  membership: {
+    policy: CommunityMembershipPolicy.OPEN,
+    trustedOrganizations: [],
+    allowSubspaceAdminsToInviteMembers: false,
+  },
+  collaboration: {
+    inheritMembershipRights: true,
+    allowMembersToCreateSubspaces: true,
+    allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
+  },
+};
+
 const createTestSpace = (id: string): ISpace => {
   return {
     id,
     rowId: 1,
     nameID: 'space1',
-    settingsStr: '',
+    settings: spaceSettings,
+    levelZeroSpaceID: '',
+    visibility: SpaceVisibility.ACTIVE,
     profile: {
       id: '1',
       displayName: 'Space 1',
       description: '',
       tagline: '',
-      type: 'space',
+      type: ProfileType.SPACE,
     },
     account: {
       id: `account${id}`,
       virtualContributors: [],
+      innovationHubs: [],
+      innovationPacks: [],
+      externalSubscriptionID: '',
+      spaces: [],
+      type: AccountType.ORGANIZATION,
     },
     type: SpaceType.SPACE,
     level: 0,

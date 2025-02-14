@@ -3,7 +3,6 @@
 
 import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { UpdateSpaceInput } from '@domain/space/space/dto/space.dto.update';
-import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -25,23 +24,18 @@ import {
   CreateTagsetOnProfileInput,
   UpdateProfileInput,
 } from '@domain/common/profile/dto';
-import { ApplicationEventInput } from '@domain/community/application/dto/application.dto.event';
+import { ApplicationEventInput } from '@domain/access/application/dto/application.dto.event';
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
-import { UpdateWhiteboardDirectInput } from '@domain/common/whiteboard/types';
+import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
-import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
-import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
-import { CreateCalloutTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/callout.template.dto.create.on.templates.set';
-import { CreatePostTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/post.template.dto.create.on.templates.set';
-import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/whiteboard.template.dto.create.on.templates.set';
-import { UpdatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.update';
-import { UpdateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.update';
+import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
+import { UpdateTemplateInput } from '@domain/template/template/dto/template.dto.update';
 import { CreateDocumentInput } from '@domain/storage/document/dto/document.dto.create';
 import {
   DeleteDocumentInput,
@@ -61,10 +55,7 @@ import {
   CreateCalloutContributionDefaultsInput,
   UpdateCalloutContributionDefaultsInput,
 } from '@domain/collaboration/callout-contribution-defaults/dto';
-import { UpdateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.update';
-import { CreateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.create';
 import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
-import { UpdateLicenseInput } from '@domain/license/license/dto/license.dto.update';
 import {
   CreateLinkInput,
   UpdateLinkInput,
@@ -74,16 +65,35 @@ import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { UpdateSpaceSettingsEntityInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
 import { UpdateSpaceSettingsInput } from '@domain/space/space/dto/space.dto.update.settings';
-import {
-  CreateAccountInput,
-  UpdateAccountPlatformSettingsInput,
-} from '@domain/space/account/dto';
-import { UpdateAccountDefaultsInput } from '@domain/space/account/dto/account.dto.update.defaults';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
-import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/community.role.dto.apply';
-import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.invite.contributor';
-import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.platform.invitation.community';
+import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
+import { InviteNewContributorForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.platform.invitation.community';
+import { ApplyForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.apply';
+import { InviteForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.invite';
+import { AssignRoleOnRoleSetToUserInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.user';
+import { AssignRoleOnRoleSetToOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.organization';
+import { AssignRoleOnRoleSetToVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.virtual';
+import { RemoveRoleOnRoleSetFromUserInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.user';
+import { RemoveRoleOnRoleSetFromOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.organization';
+import { RemoveRoleOnRoleSetFromVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.virtual';
+import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.update.application.form';
+import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
+import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
+import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
+import { UpdateOrganizationSettingsEntityInput } from '@domain/community/organization.settings/dto/organization.settings.dto.update';
+import { UpdateOrganizationSettingsMembershipInput } from '@domain/community/organization.settings/dto/organization.settings.membership.dto.update';
+import { UpdateOrganizationSettingsPrivacyInput } from '@domain/community/organization.settings/dto/organization.settings.privacy.dto.update';
+import { UpdateUserSettingsEntityInput } from '@domain/community/user.settings';
+import { UpdateUserSettingsInput } from '@domain/community/user/dto/user.dto.update.settings';
+import { UpdateUserSettingsCommunicationInput } from '@domain/community/user.settings/dto/user.settings.communications.dto.update';
+import { UpdateUserSettingsPrivacyInput } from '@domain/community/user.settings/dto/user.settings.privacy.dto.update';
+import { UpdateOrganizationSettingsInput } from '@domain/community/organization/dto/organization.dto.update.settings';
+import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
+import { UpdateVirtualContributorSettingsEntityInput } from '@domain/community/virtual-contributor-settings';
+import { UpdateVirtualContributorSettingsInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.update.settings';
+import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/virtual-contributor-settings/dto/virtual.contributor.settings.privacy.dto.update';
+import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -91,10 +101,23 @@ export class BaseHandler extends AbstractHandler {
     metatype: Function
   ): Promise<ValidationError[]> {
     const types: Function[] = [
+      AssignRoleOnRoleSetToUserInput,
+      AssignRoleOnRoleSetToOrganizationInput,
+      AssignRoleOnRoleSetToVirtualContributorInput,
+      InvitationEventInput,
       ApplicationEventInput,
+      OrganizationVerificationEventInput,
+      RemoveRoleOnRoleSetFromUserInput,
+      RemoveRoleOnRoleSetFromOrganizationInput,
+      RemoveRoleOnRoleSetFromVirtualContributorInput,
+      UpdateApplicationFormOnRoleSetInput,
+      JoinAsEntryRoleOnRoleSetInput,
+      ApplyForEntryRoleOnRoleSetInput,
+      RolesUserInput,
+      InviteForEntryRoleOnRoleSetInput,
+      InviteNewContributorForRoleOnRoleSetInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
-      OrganizationVerificationEventInput,
       CreateCalloutFramingInput,
       CreateCalloutContributionPolicyInput,
       CreateCalloutContributionDefaultsInput,
@@ -102,38 +125,29 @@ export class BaseHandler extends AbstractHandler {
       CreateActorInput,
       CreateContributionOnCalloutInput,
       CreateCollaborationInput,
+      CreateCollaborationOnSpaceInput,
       CreateDocumentInput,
-      CreateCalloutTemplateInput,
-      CreateCalloutTemplateOnTemplatesSetInput,
-      CreatePostTemplateOnTemplatesSetInput,
-      CreateWhiteboardTemplateOnTemplatesSetInput,
+      CreateTemplateOnTemplatesSetInput,
       CreateSubspaceInput,
       CreateLinkInput,
       CreateOrganizationInput,
       CreateUserGroupInput,
-      CreateRelationInput,
       CreateUserInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
-      CreateAccountInput,
       DeleteDocumentInput,
       UpdateActorInput,
-      UpdateAccountPlatformSettingsInput,
-      UpdateAccountDefaultsInput,
       UpdatePostInput,
       UpdateDocumentInput,
       UpdateCalloutFramingInput,
       UpdateCalloutContributionDefaultsInput,
       UpdateCalloutContributionPolicyInput,
-      UpdateCalloutTemplateInput,
-      UpdatePostTemplateInput,
-      UpdateCommunityApplicationFormInput,
+      UpdateTemplateInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,
       UpdateSpaceSettingsEntityInput,
       UpdateOrganizationInput,
-      UpdateLicenseInput,
       UpdateLinkInput,
       UpdateCalendarEventInput,
       UpdateInnovationFlowStateInput,
@@ -141,19 +155,27 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserInput,
       UpdateUserPlatformSettingsInput,
       UpdateProfileInput,
-      UpdateWhiteboardDirectInput,
-      UpdateWhiteboardTemplateInput,
+      UpdateWhiteboardEntityInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
+      UpdateOrganizationSettingsInput,
+      UpdateOrganizationSettingsEntityInput,
+      UpdateOrganizationSettingsMembershipInput,
+      UpdateOrganizationSettingsPrivacyInput,
+      UpdateVirtualContributorSettingsEntityInput,
+      UpdateVirtualContributorSettingsInput,
+      UpdateVirtualContributorSettingsPrivacyInput,
+      UpdatePlatformSettingsInput,
+      UpdateUserSettingsEntityInput,
+      UpdateUserSettingsInput,
+      UpdateUserSettingsCommunicationInput,
+      UpdateUserSettingsPrivacyInput,
       VisualUploadImageInput,
-      CommunityRoleApplyInput,
-      CreateInvitationForContributorsOnCommunityInput,
-      CreatePlatformInvitationOnCommunityInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
-      CreateCalloutOnCollaborationInput,
+      CreateCalloutOnCalloutsSetInput,
     ];
 
     if (types.includes(metatype)) {

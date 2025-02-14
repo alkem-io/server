@@ -1,39 +1,40 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
 import { getEmailDomain } from '@common/utils';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
-import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
-import { IInvitation } from '@domain/community/invitation/invitation.interface';
-import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
-import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
+import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
+import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
-import { InvitationService } from '@domain/community/invitation/invitation.service';
-import { ApplicationService } from '@domain/community/application/application.service';
-import { OrganizationRole } from '@common/enums/organization.role';
-import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
-import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
-import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { ApplicationService } from '@domain/access/application/application.service';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AccountService } from '@domain/space/account/account.service';
+import { IOrganization } from '@domain/community/organization';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleName } from '@common/enums/role.name';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { RelationshipNotFoundException } from '@common/exceptions';
 
 export class RegistrationService {
   constructor(
+    private accountService: AccountService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
+    private organizationLookupService: OrganizationLookupService,
     private organizationService: OrganizationService,
-    private preferenceSetService: PreferenceSetService,
-    private userAuthorizationService: UserAuthorizationService,
-    private communityRoleService: CommunityRoleService,
     private platformInvitationService: PlatformInvitationService,
-    private platformRoleService: PlatformRoleService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationService: InvitationService,
     private applicationService: ApplicationService,
+    private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -45,21 +46,23 @@ export class RegistrationService {
       );
     }
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    let user = await this.userService.createUserFromAgentInfo(agentInfo);
-    user = await this.userAuthorizationService.grantCredentials(user);
+    const user = await this.userService.createUserFromAgentInfo(agentInfo);
 
-    await this.assignUserToOrganizationByDomain(agentInfo, user);
+    await this.assignUserToOrganizationByDomain(user);
     return user;
   }
 
-  async assignUserToOrganizationByDomain(
-    agentInfo: AgentInfo,
-    user: IUser
-  ): Promise<boolean> {
+  async assignUserToOrganizationByDomain(user: IUser): Promise<boolean> {
     const userEmailDomain = getEmailDomain(user.email);
 
-    const org = await this.organizationService.getOrganizationByDomain(
-      userEmailDomain
+    const org = await this.organizationLookupService.getOrganizationByDomain(
+      userEmailDomain,
+      {
+        relations: {
+          roleSet: true,
+          verification: true,
+        },
+      }
     );
 
     if (!org) {
@@ -70,42 +73,43 @@ export class RegistrationService {
       return false;
     }
 
-    const preferences = await this.organizationService.getPreferenceSetOrFail(
-      org.id
-    );
+    const orgSettings = org.settings;
+
     const orgMatchDomain =
-      this.preferenceSetService.getPreferenceOrFail(
-        preferences,
-        OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN
-      ).value === 'true';
+      orgSettings.membership.allowUsersMatchingDomainToJoin;
     if (!orgMatchDomain) {
       this.logger.verbose?.(
-        `Organization '${org.nameID}' preference ${OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN} is disabled`,
+        `Organization '${org.id}' setting 'allowUsersMatchingDomainToJoin is disabled`,
         LogContext.COMMUNITY
       );
       return false;
     }
 
-    const verification = await this.organizationService.getVerification(org);
+    if (!org.verification || !org.roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load roleSet of Verification for Organization for matching user domain ${org.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     if (
-      verification.status !==
+      org.verification.status !==
       OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
     ) {
       this.logger.verbose?.(
-        `Organization '${org.nameID}' not verified`,
+        `Organization '${org.id}' not verified`,
         LogContext.COMMUNITY
       );
       return false;
     }
 
-    await this.organizationService.assignOrganizationRoleToUser({
-      organizationID: org.id,
-      userID: user.id,
-      role: OrganizationRole.ASSOCIATE,
-    });
+    await this.roleSetService.assignUserToRole(
+      org.roleSet,
+      RoleName.ASSOCIATE,
+      user.id
+    );
 
     this.logger.verbose?.(
-      `User ${user.nameID} successfully added to Organization '${org.nameID}'`,
+      `User ${user.id} successfully added to Organization '${org.id}'`,
       LogContext.COMMUNITY
     );
     return true;
@@ -117,47 +121,45 @@ export class RegistrationService {
         user.email
       );
 
-    const communityInvitations: IInvitation[] = [];
+    const roleSetInvitations: IInvitation[] = [];
     for (const platformInvitation of platformInvitations) {
-      const community = platformInvitation.community;
-
-      // Process community invitations
-      if (community) {
-        const invitationInput: CreateInvitationInput = {
-          invitedContributor: user.id,
-          communityID: community.id,
-          createdBy: platformInvitation.createdBy,
-          invitedToParent: platformInvitation.communityInvitedToParent,
-        };
-        let invitation =
-          await this.communityRoleService.createInvitationExistingContributor(
-            invitationInput
-          );
-        invitation.invitedToParent =
-          platformInvitation.communityInvitedToParent;
-        invitation =
-          await this.invitationAuthorizationService.applyAuthorizationPolicy(
-            invitation,
-            community.authorization
-          );
-        invitation = await this.invitationService.save(invitation);
-
-        communityInvitations.push(invitation);
+      const roleSet = platformInvitation.roleSet;
+      if (!roleSet) {
+        this.logger.error?.(
+          `Platform invitation ${platformInvitation.id} has no role set`,
+          LogContext.COMMUNITY
+        );
+        continue;
       }
 
-      // Proces platform role invitations
-      if (platformInvitation.platformRole) {
-        const membershipData = {
-          userID: user.id,
-          role: platformInvitation.platformRole,
-        };
-        await this.platformRoleService.assignPlatformRoleToUser(membershipData);
-      }
+      const invitationInput: CreateInvitationInput = {
+        invitedContributorID: user.id,
+        roleSetID: roleSet.id,
+        createdBy: platformInvitation.createdBy,
+        extraRole: platformInvitation.roleSetExtraRole,
+        invitedToParent: platformInvitation.roleSetInvitedToParent,
+      };
+      let invitation =
+        await this.roleSetService.createInvitationExistingContributor(
+          invitationInput
+        );
+      invitation.invitedToParent = platformInvitation.roleSetInvitedToParent;
+
+      invitation = await this.invitationService.save(invitation);
+      const authorization =
+        await this.invitationAuthorizationService.applyAuthorizationPolicy(
+          invitation,
+          roleSet.authorization
+        );
+      await this.authorizationPolicyService.save(authorization);
+
+      roleSetInvitations.push(invitation);
+
       await this.platformInvitationService.recordProfileCreated(
         platformInvitation
       );
     }
-    return communityInvitations;
+    return roleSetInvitations;
   }
 
   async deleteUserWithPendingMemberships(
@@ -171,13 +173,43 @@ export class RegistrationService {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }
 
-    const applications = await this.applicationService.findApplicationsForUser(
-      userID
-    );
+    const applications =
+      await this.applicationService.findApplicationsForUser(userID);
     for (const application of applications) {
       await this.applicationService.deleteApplication({ ID: application.id });
     }
 
-    return await this.userService.deleteUser(deleteData);
+    let user = await this.userService.getUserOrFail(userID);
+    const account = await this.userService.getAccount(user);
+
+    user = await this.userService.deleteUser(deleteData);
+    await this.accountService.deleteAccountOrFail(account);
+    return user;
+  }
+
+  async deleteOrganizationWithPendingMemberships(
+    deleteData: DeleteUserInput
+  ): Promise<IOrganization> {
+    const organizationID = deleteData.ID;
+
+    const invitations =
+      await this.invitationService.findInvitationsForContributor(
+        organizationID
+      );
+    for (const invitation of invitations) {
+      await this.invitationService.deleteInvitation({ ID: invitation.id });
+    }
+
+    let organization =
+      await this.organizationLookupService.getOrganizationOrFail(
+        organizationID
+      );
+    const account = await this.organizationService.getAccount(organization);
+
+    organization =
+      await this.organizationService.deleteOrganization(deleteData);
+    await this.accountService.deleteAccountOrFail(account);
+    organization.id = organizationID;
+    return organization;
   }
 }

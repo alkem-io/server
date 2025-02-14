@@ -1,10 +1,9 @@
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, In } from 'typeorm';
+import { EntityManager, FindOneOptions } from 'typeorm';
 import { IContributor } from './contributor.interface';
-import { User } from '../user';
-import { Organization } from '../organization';
+import { User } from '../user/user.entity';
+import { Organization } from '../organization/organization.entity';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -12,43 +11,143 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { VirtualContributor } from '../virtual-contributor';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { IAccount } from '@domain/space/account/account.interface';
-import { Credential } from '@domain/agent/credential/credential.entity';
-import { AuthorizationCredential } from '@common/enums';
-import { Account } from '@domain/space/account/account.entity';
+import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
+import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { CreateProfileInput } from '@domain/common/profile/dto';
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { VisualType } from '@common/enums/visual.type';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class ContributorService {
   constructor(
     private contributorLookupService: ContributorLookupService,
+    private profileService: ProfileService,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    private avatarCreatorService: AvatarCreatorService,
+    private storageBucketService: StorageBucketService,
+    private documentService: DocumentService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
-  async contributorsWithCredentials(
-    credentialCriteria: CredentialsSearchInput,
-    limit?: number
-  ): Promise<IContributor[]> {
-    return await this.contributorLookupService.contributorsWithCredentials(
-      credentialCriteria,
-      limit
-    );
+  private isValidHttpUrl(urlString: string): boolean {
+    let url;
+
+    try {
+      url = new URL(urlString);
+    } catch (_) {
+      return false;
+    }
+
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  }
+
+  public async addAvatarVisualToContributorProfile(
+    profile: IProfile,
+    profileData: CreateProfileInput,
+    agentInfo?: AgentInfo,
+    firstName?: string,
+    lastName?: string
+  ): Promise<void> {
+    let avatarURL: string | undefined = undefined;
+    const avatarUrlFromProfile = profileData.visuals?.find(
+      visual => visual.name === VisualType.AVATAR
+    )?.uri;
+    const avatarUrlFromAgent = agentInfo?.avatarURL;
+    if (avatarUrlFromProfile && this.isValidHttpUrl(avatarUrlFromProfile)) {
+      // Avatar has been explicitly set
+      avatarURL = avatarUrlFromProfile;
+    } else if (avatarUrlFromAgent && this.isValidHttpUrl(avatarUrlFromAgent)) {
+      // Pick up the avatar from the user request context
+      avatarURL = avatarUrlFromAgent;
+    } else {
+      // Generate a random avatar
+      let avatarFirstName = profileData.displayName;
+      if (firstName) {
+        avatarFirstName = firstName;
+      }
+      avatarURL = this.avatarCreatorService.generateRandomAvatarURL(
+        avatarFirstName,
+        lastName
+      );
+    }
+    const avatarVisual = [
+      {
+        name: VisualType.AVATAR,
+        uri: avatarURL,
+      },
+    ];
+    await this.profileService.addVisualsOnProfile(profile, avatarVisual, [
+      VisualType.AVATAR,
+    ]);
+  }
+
+  public async ensureAvatarIsStoredInLocalStorageBucket(
+    profileID: string,
+    userID: string
+  ): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(profileID, {
+      relations: {
+        visuals: true,
+        storageBucket: true,
+      },
+    });
+    try {
+      if (!profile.visuals || !profile.storageBucket) {
+        throw new EntityNotInitializedException(
+          `Profile could not be loaded with all entities for avatar check: ${profile.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+      const avatarVisual = profile.visuals.find(
+        visual => visual.name === VisualType.AVATAR
+      );
+      if (!avatarVisual) {
+        throw new EntityNotFoundException(
+          `Unable to load avatar visual on profile: ${profile.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+
+      const uri = avatarVisual.uri;
+      const avatarDocument =
+        await this.storageBucketService.ensureAvatarUrlIsDocument(
+          uri,
+          profile.storageBucket.id,
+          userID
+        );
+      const avatartURI =
+        this.documentService.getPubliclyAccessibleURL(avatarDocument);
+      avatarVisual.uri = avatartURI;
+    } catch (error) {
+      // This method should never stop the creation of a contributor
+      this.logger.error(
+        `Unable to ensure Avatar for profile ${profile.id} is stored in local storage bucket: ${error}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return await this.profileService.save(profile);
   }
 
   async getContributor(
     contributorID: string,
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor | null> {
-    return await this.contributorLookupService.getContributor(
+    return await this.contributorLookupService.getContributorByUUID(
       contributorID,
       options
     );
   }
 
-  async getContributorOrFail(
+  async getContributorByUuidOrFail(
     contributorID: string,
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor | never> {
@@ -64,7 +163,7 @@ export class ContributorService {
   async getContributorAndAgent(
     contributorID: string
   ): Promise<{ contributor: IContributor; agent: IAgent }> {
-    const contributor = await this.getContributorOrFail(contributorID, {
+    const contributor = await this.getContributorByUuidOrFail(contributorID, {
       relations: { agent: true },
     });
 
@@ -89,13 +188,13 @@ export class ContributorService {
     const type = this.getContributorType(contributor);
     let contributorWithRelations: IContributor | null = null;
     switch (type) {
-      case CommunityContributorType.USER:
+      case RoleSetContributorType.USER:
         contributorWithRelations = await this.entityManager.findOne(User, {
           ...options,
           where: { ...options?.where, id: contributor.id },
         });
         break;
-      case CommunityContributorType.ORGANIZATION:
+      case RoleSetContributorType.ORGANIZATION:
         contributorWithRelations = await this.entityManager.findOne(
           Organization,
           {
@@ -104,7 +203,7 @@ export class ContributorService {
           }
         );
         break;
-      case CommunityContributorType.VIRTUAL:
+      case RoleSetContributorType.VIRTUAL:
         contributorWithRelations = await this.entityManager.findOne(
           VirtualContributor,
           {
@@ -121,40 +220,5 @@ export class ContributorService {
       );
     }
     return contributorWithRelations;
-  }
-
-  public async getAccountsHostedByContributor(
-    contributor: IContributor,
-    includeSpace = false
-  ): Promise<IAccount[]> {
-    let agent = contributor.agent;
-    if (!agent) {
-      const contributorWithAgent = await this.getContributorWithRelations(
-        contributor,
-        {
-          relations: { agent: true },
-        }
-      );
-      agent = contributorWithAgent.agent;
-    }
-    const hostedAccountCredentials = await this.entityManager.find(Credential, {
-      where: {
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        agent: {
-          id: agent.id,
-        },
-      },
-    });
-    const accountIDs = hostedAccountCredentials.map(cred => cred.resourceID);
-    const accounts = await this.entityManager.find(Account, {
-      where: {
-        id: In(accountIDs),
-      },
-      relations: {
-        space: includeSpace,
-      },
-    });
-
-    return accounts;
   }
 }

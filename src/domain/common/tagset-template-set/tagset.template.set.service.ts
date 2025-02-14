@@ -22,11 +22,10 @@ export class TagsetTemplateSetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagsetTemplateSet(): Promise<ITagsetTemplateSet> {
-    const tagsetTemplateSet: ITagsetTemplateSet = TagsetTemplateSet.create();
-    tagsetTemplateSet.tagsetTemplates = [];
-
-    return await this.save(tagsetTemplateSet);
+  public createTagsetTemplateSet(): ITagsetTemplateSet {
+    return TagsetTemplateSet.create({
+      tagsetTemplates: [],
+    });
   }
 
   async deleteTagsetTemplateSet(
@@ -50,7 +49,7 @@ export class TagsetTemplateSetService {
     );
   }
 
-  async getTagsetTemplateSetOrFail(
+  private async getTagsetTemplateSetOrFail(
     tagsetTemplateSetID: string,
     options?: FindOneOptions<TagsetTemplateSet>
   ): Promise<ITagsetTemplateSet | never> {
@@ -66,7 +65,7 @@ export class TagsetTemplateSetService {
     return tagsetTemplateSet;
   }
 
-  async save(
+  public async save(
     tagsetTemplateSet: ITagsetTemplateSet
   ): Promise<ITagsetTemplateSet> {
     return await this.tagsetTemplateSetRepository.save(tagsetTemplateSet);
@@ -85,7 +84,7 @@ export class TagsetTemplateSetService {
     return tagsetTemplates;
   }
 
-  hasTagsetTemplateWithName(
+  private hasTagsetTemplateWithName(
     tagsetTemplateSet: ITagsetTemplateSet,
     name: string
   ): boolean {
@@ -98,10 +97,10 @@ export class TagsetTemplateSetService {
     return false;
   }
 
-  async addTagsetTemplate(
+  public addTagsetTemplate(
     tagsetTemplateSet: ITagsetTemplateSet,
     tagsetTemplateData: CreateTagsetTemplateInput
-  ): Promise<ITagsetTemplate> {
+  ): ITagsetTemplateSet {
     // Check if the group already exists, if so log a warning
     if (
       this.hasTagsetTemplateWithName(tagsetTemplateSet, tagsetTemplateData.name)
@@ -113,10 +112,9 @@ export class TagsetTemplateSetService {
     }
 
     const tagsetTemplate =
-      await this.tagsetTemplateService.createTagsetTemplate(tagsetTemplateData);
+      this.tagsetTemplateService.createTagsetTemplate(tagsetTemplateData);
     tagsetTemplateSet.tagsetTemplates.push(tagsetTemplate);
 
-    await this.save(tagsetTemplateSet);
-    return tagsetTemplate;
+    return tagsetTemplateSet;
   }
 }

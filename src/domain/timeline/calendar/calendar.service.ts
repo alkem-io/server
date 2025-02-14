@@ -2,12 +2,10 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -17,13 +15,21 @@ import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventService } from '../event/event.service';
 import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
-import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
 import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ISpace } from '@domain/space/space/space.interface';
+import { PrefixKeys } from '@src/types';
+import { Space } from '@domain/space/space/space.entity';
+import { convertToEntity } from '@common/utils/convert-to-entity';
+import { Collaboration } from '@domain/collaboration/collaboration';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
+import { CalendarEvent } from '@domain/timeline/event';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class CalendarService {
@@ -41,12 +47,14 @@ export class CalendarService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createCalendar(): Promise<ICalendar> {
+  public createCalendar(): ICalendar {
     const calendar: ICalendar = new Calendar();
-    calendar.authorization = new AuthorizationPolicy();
+    calendar.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALENDAR
+    );
     calendar.events = [];
 
-    return await this.calendarRepository.save(calendar);
+    return calendar;
   }
 
   async deleteCalendar(calendarID: string): Promise<ICalendar> {
@@ -84,17 +92,37 @@ export class CalendarService {
     return calendar;
   }
 
-  public async getCalendarEvents(
-    calendar: ICalendar
+  public async getCalendarEventsFromSubspaces(
+    rootSpaceId: string
   ): Promise<ICalendarEvent[]> {
-    const events = calendar.events;
-    if (!events)
-      throw new EntityNotFoundException(
-        `Undefined calendar events found: ${calendar.id}`,
-        LogContext.CALENDAR
-      );
+    const result = await this.calendarRepository.manager
+      .createQueryBuilder(Space, 'subspace')
+      // if all the subspaces must be included change the statement
+      // to be levelZeroSpace = spaceId and level > space level
+      .where({
+        parentSpace: { id: rootSpaceId },
+        level: SpaceLevel.L1,
+      })
+      .leftJoin(
+        Collaboration,
+        'collaboration',
+        'collaboration.id = subspace.collaborationId'
+      )
+      .leftJoin(Timeline, 'timeline', 'timeline.id = collaboration.timelineId')
+      .leftJoin(Calendar, 'calendar', 'calendar.id = timeline.calendarId')
+      .leftJoin(
+        CalendarEvent,
+        'calendarEvent',
+        'calendarEvent.calendarId = calendar.id'
+      )
+      // cannot find alias when using relations https://github.com/typeorm/typeorm/issues/2707
+      .andWhere('calendarEvent.visibleOnParentCalendar = true')
+      .andWhere('calendarEvent.id IS NOT NULL')
+      .select('calendarEvent.id')
+      .getRawMany<PrefixKeys<{ id: string }, 'calendarEvent_'>>();
 
-    return events;
+    const ids = result.map(({ calendarEvent_id }) => calendarEvent_id);
+    return this.calendarEventService.getCalendarEvents(ids);
   }
 
   public async createCalendarEvent(
@@ -138,58 +166,49 @@ export class CalendarService {
     return await this.calendarEventService.save(calendarEvent);
   }
 
-  public async getCommunityPolicy(
-    collaborationID: string
-  ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
-      collaborationID
-    );
-  }
-
-  public async getCalendarEventsArgs(
+  public async getCalendarEvents(
     calendar: ICalendar,
-    args: CalendarArgsEvents,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    rootSpaceId?: string
   ): Promise<ICalendarEvent[]> {
     const calendarLoaded = await this.getCalendarOrFail(calendar.id, {
       relations: { events: true },
     });
-    const allEvents = calendarLoaded.events;
-    if (!allEvents)
+    const events = calendarLoaded.events;
+    if (!events) {
       throw new EntityNotFoundException(
-        `Calendar not initialised, no events: ${calendar.id}`,
+        `Events not initialized on Calendar: ${calendar.id}`,
         LogContext.CALENDAR
       );
+    }
+
+    if (rootSpaceId) {
+      const subspaceEvents =
+        await this.getCalendarEventsFromSubspaces(rootSpaceId);
+      events.push(...subspaceEvents);
+    }
 
     // First filter the events the current user has READ privilege to
-    const readableEvents = allEvents.filter(event =>
-      this.hasAgentAccessToEvent(event, agentInfo)
+    return events.filter(event => this.hasAgentAccessToEvent(event, agentInfo));
+  }
+
+  public async getCalendarEvent(
+    calendarId: string,
+    idOrNameId: string
+  ): Promise<ICalendarEvent> {
+    const event = await this.calendarEventService.getCalendarEvent(
+      calendarId,
+      idOrNameId
     );
-
-    // (a) by IDs, results in order specified by IDs
-    if (args.IDs) {
-      const results: ICalendarEvent[] = [];
-      for (const eventID of args.IDs) {
-        const event = readableEvents.find(
-          e => e.id === eventID || e.nameID === eventID
-        );
-
-        if (!event)
-          throw new EntityNotFoundException(
-            `Event with requested ID (${eventID}) not located within current Calendar: ${calendar.id}`,
-            LogContext.CALENDAR
-          );
-        results.push(event);
-      }
-      return results;
+    if (!event) {
+      throw new EntityNotFoundException(
+        'Event not found in Calendar',
+        LogContext.CALENDAR,
+        { calendarId, eventId: idOrNameId }
+      );
     }
 
-    // (b) limit number of results
-    if (args.limit) {
-      return limitAndShuffle(readableEvents, args.limit, false);
-    }
-
-    return readableEvents;
+    return event;
   }
 
   private hasAgentAccessToEvent(
@@ -201,6 +220,35 @@ export class CalendarService {
       event.authorization,
       AuthorizationPrivilege.READ
     );
+  }
+
+  public async getSpaceFromCalendarOrFail(calendarId: string): Promise<ISpace> {
+    const spaceAlias = 'space';
+    const rawSpace = await this.calendarRepository
+      .createQueryBuilder('calendar')
+      .where({ id: calendarId })
+      .leftJoin('timeline', 'timeline', 'timeline.calendarId = calendar.id')
+      .leftJoin(
+        'collaboration',
+        'collaboration',
+        'collaboration.timelineId = timeline.id'
+      )
+      .leftJoinAndSelect(
+        'space',
+        spaceAlias,
+        'space.collaborationId = collaboration.id'
+      )
+      .getRawOne<PrefixKeys<Space, `${typeof spaceAlias}_`>>();
+
+    if (!rawSpace) {
+      throw new EntityNotFoundException(
+        'Space not found for Calendar',
+        LogContext.CALENDAR,
+        { calendarId }
+      );
+    }
+    // todo: not needed when using select instead of leftJoinAndSelect
+    return convertToEntity(rawSpace, 'space_');
   }
 
   public async processActivityCalendarEventCreated(

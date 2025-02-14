@@ -1,4 +1,4 @@
-import { NAMEID_LENGTH } from '@common/constants';
+import { NAMEID_MAX_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
@@ -8,10 +8,10 @@ import { Kind, ValueNode } from 'graphql';
 @Scalar('NameID')
 export class NameID implements CustomScalar<string, string> {
   static MIN_LENGTH = 3;
-  static MAX_LENGTH = NAMEID_LENGTH;
+  static MAX_LENGTH = NAMEID_MAX_LENGTH + 3; // the sliced 25 symbols, concatenated with '-' and a digit (or two), for nameIDs generated with 25 characters and overlapping a reserved nameID
   static REGEX = /^[a-zA-Z0-9\-]+$/;
   description =
-    'A human readable identifier, 3 <= length <= 25. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
+    'A human readable identifier, 3 <= length <= 28. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
 
   parseValue(value: unknown): string {
     return this.validate(value);

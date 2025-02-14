@@ -41,7 +41,7 @@ export class ProfileResolverMutations {
     const profile = await this.profileService.getProfileOrFail(
       tagsetData.profileID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.CREATE,

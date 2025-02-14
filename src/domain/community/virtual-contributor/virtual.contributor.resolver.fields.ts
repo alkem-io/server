@@ -9,7 +9,6 @@ import { IProfile } from '@domain/common/profile';
 import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';
 import {
@@ -18,20 +17,18 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IVirtualContributor } from './virtual.contributor.interface';
-import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/virtual.storage.aggregator.loader.creator';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IAiPersona } from '../ai-persona';
+import { IContributor } from '../contributor/contributor.interface';
+import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
+import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
-  constructor(
-    private authorizationService: AuthorizationService,
-    private virtualContributorService: VirtualContributorService
-  ) {}
+  constructor(private virtualContributorService: VirtualContributorService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @ResolveField('account', () => IAccount, {
     nullable: true,
     description: 'The Account of the Virtual Contributor.',
@@ -51,31 +48,17 @@ export class VirtualContributorResolverFields {
     return account;
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Virtual.',
   })
-  async authorization(
-    @Parent() parent: VirtualContributor,
-    @CurrentUser() agentInfo: AgentInfo
-  ) {
-    // Reload to ensure the authorization is loaded
-    const virtual =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        parent.id
-      );
-
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      virtual.authorization,
-      AuthorizationPrivilege.READ,
-      `virtual authorization access: ${virtual.nameID}`
-    );
-
-    return virtual.authorization;
+  async authorization(@Parent() parent: VirtualContributor) {
+    return parent.authorization;
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this Virtual.',
@@ -88,17 +71,10 @@ export class VirtualContributorResolverFields {
     loader: ILoader<IProfile>
   ) {
     const profile = await loader.load(virtualContributor.id);
-    // Note: the Virtual profile is public.
-    // Check if the user can read the profile entity, not the actual Virtual entity
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on Virtual: ${profile.displayName}`
-    );
     return profile;
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
@@ -111,22 +87,7 @@ export class VirtualContributorResolverFields {
     return loader.load(virtualContributor.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('storageAggregator', () => IStorageAggregator, {
-    nullable: true,
-    description:
-      'The StorageAggregator for managing storage buckets in use by this Virtual',
-  })
-  @UseGuards(GraphqlGuard)
-  async storageAggregator(
-    @Parent() virtualContributor: VirtualContributor,
-    @Loader(VirtualStorageAggregatorLoaderCreator)
-    loader: ILoader<IStorageAggregator>
-  ): Promise<IStorageAggregator> {
-    return loader.load(virtualContributor.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @ResolveField('aiPersona', () => IAiPersona, {
     nullable: true,
     description: 'The AI persona being used by this virtual contributor',
@@ -138,5 +99,49 @@ export class VirtualContributorResolverFields {
     return this.virtualContributorService.getAiPersonaOrFail(
       virtualContributor
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @ResolveField('knowledgeBase', () => IKnowledgeBase, {
+    nullable: true,
+    description: 'The KnowledgeBase being used by this virtual contributor',
+  })
+  @UseGuards(GraphqlGuard)
+  async knowledgeBase(
+    @Parent() virtualContributor: VirtualContributor
+  ): Promise<IKnowledgeBase> {
+    return this.virtualContributorService.getKnowledgeBaseOrFail(
+      virtualContributor
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @ResolveField('provider', () => IContributor, {
+    nullable: false,
+    description: 'The Virtual Contributor provider.',
+  })
+  async provider(
+    @Parent() virtualContributor: IVirtualContributor
+  ): Promise<IContributor> {
+    return await this.virtualContributorService.getProvider(virtualContributor);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @ResolveField('status', () => VirtualContributorStatus, {
+    nullable: false,
+    description: 'The status of the virtual contributor',
+  })
+  async status(
+    @Parent() virtualContributor: IVirtualContributor
+  ): Promise<VirtualContributorStatus> {
+    const lastUpdated =
+      await this.virtualContributorService.getBodyOfKnowledgeLastUpdated(
+        virtualContributor
+      );
+
+    if (!!lastUpdated) {
+      return VirtualContributorStatus.READY;
+    }
+    return VirtualContributorStatus.INITIALIZING;
   }
 }

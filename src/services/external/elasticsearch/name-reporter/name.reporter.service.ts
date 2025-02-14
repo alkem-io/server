@@ -3,9 +3,10 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { NamingDocument } from './types';
 import { handleElasticError } from '@services/external/elasticsearch/utils/handle.elastic.error';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class NameReporterService {
@@ -16,17 +17,17 @@ export class NameReporterService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {
-    const elasticsearch = this.configService.get(
-      ConfigurationTypes.INTEGRATIONS
-    )?.elasticsearch;
+    const elasticsearch = this.configService.get('integrations.elasticsearch', {
+      infer: true,
+    });
 
-    this.environment = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.environment;
+    this.environment = this.configService.get('hosting.environment', {
+      infer: true,
+    });
 
     const { indices, policies } = elasticsearch;
     this.indexName = indices?.namings;

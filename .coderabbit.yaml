@@ -1,0 +1,51 @@
+language: en
+early_access: false
+reviews:
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!**/.github/workflows/*"
+    - "!**/node_modules/**"  # Exclude dependencies
+    - "!**/dist/**"          # Exclude build files
+  path_instructions:
+    - path: "src/**/*.{ts,js}"
+      instructions: |
+        Review the TypeScript/JavaScript code for NestJS best practices, dependency injection, module structure, and potential bugs.
+
+        **Context Files (Do Not Review):**
+        - `docs/Design.md` - Design overview of the project
+        - `docs/Pagination.md` - Pagination design overview
+        - `docs/Developing.md` - Development setup overview
+        - `docs/graphql-typeorm-usage.md` - overview of GraphQL and TypeORM usage and how they are used together with NestJS in the project
+        - `docs/database-definitions.md` - guidelines for creating TypeORM entity defnitions
+        - `src/core/error-handling/graphql.exception.filter.ts` - GraphQL error handling
+        - `src/core/error-handling/http.exception.filter.ts` - HTTP error handling
+        - `src/core/error-handling/rest.error.response.ts` - REST error response
+        - `src/core/error-handling/unhandled.exception.filter.ts` - Global exception handler
+
+        **Guidelines:**
+        - Our project uses global exception handlers (`UnhandledExceptionFilter`), so avoid suggesting additional `try/catch` blocks unless handling specific cases.
+        - Use NestJS latest documentation from `https://docs.nestjs.com/` for reference on NestJS best practices.
+        - Use TypeORM latest documentation from `https://typeorm.io/` for reference on TypeORM best practices.
+        - Refer to the design overview in the context files for better understanding.
+
+    - path: "src/**/*.spec.ts"
+      instructions: "Review the unit tests, ensuring proper NestJS testing techniques (using TestingModule, mocks, etc.). Check for completeness and coverage."
+    - path: "manifests/**/*.{yaml,yml}"
+      instructions: "Review the kubernetes manifests used in Github workflows."
+    - path: "**/Dockerfile"
+      instructions: "Review the Dockerfile for best practices in building, optimizing, and running a NestJS application."
+    - path: "**/quickstart-services.yml"
+      instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
+    - path: "**/quickstart-services-ai.yml"
+      instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
+    - path: "**/quickstart-services-ai-debug.yml"
+      instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
+    - path: "**/quickstart-services-kratos-debug.yml"
+      instructions: "Review Docker Compose configurations for environment setup, ensuring proper service configuration, network setup, and environment variables handling."
+    - path: "**/*.md"
+      instructions: "Ensure the documentation is clear, concise, and up-to-date, with accurate instructions for running the NestJS application in Docker."
+chat:
+  auto_reply: true

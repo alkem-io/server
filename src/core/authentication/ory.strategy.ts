@@ -1,8 +1,4 @@
-import {
-  AlkemioErrorStatus,
-  ConfigurationTypes,
-  LogContext,
-} from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
@@ -10,16 +6,17 @@ import { Strategy, ExtractJwt } from 'passport-jwt';
 import { AuthenticationService } from './authentication.service';
 import { passportJwtSecret } from 'jwks-rsa';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
-import { KratosPayload } from './kratos.payload';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
 import { SessionExpiredException } from '@common/exceptions/session.expired.exception';
+import { AlkemioConfig } from '@src/types';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authService: AuthenticationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
@@ -28,11 +25,15 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
         cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
-        jwksUri: configService.get(ConfigurationTypes.IDENTITY)?.authentication
-          ?.providers?.ory?.jwks_uri,
+        jwksUri: configService.get(
+          'identity.authentication.providers.ory.jwks_uri',
+          { infer: true }
+        ),
       }),
-      issuer: configService.get(ConfigurationTypes.IDENTITY)?.authentication
-        ?.providers?.ory?.issuer,
+      issuer: configService.get(
+        'identity.authentication.providers.ory.issuer',
+        { infer: true }
+      ),
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: true,
     });

@@ -26,12 +26,10 @@ describe('GeoLocationService', () => {
   MockConfigService.useValue = {
     ...MockConfigService.useValue,
     get: () => ({
-      geo: {
-        service_endpoint: 'mock',
-        allowed_calls_to_service: 1,
-        allowed_calls_to_service_window: 1,
-        cache_entry_ttl: 14440,
-      },
+      service_endpoint: 'mock',
+      allowed_calls_to_service: 1,
+      allowed_calls_to_service_window: 1,
+      cache_entry_ttl: 1,
     }),
   };
 
@@ -160,12 +158,21 @@ describe('GeoLocationService', () => {
     // execute
     const result = await geoLocationService.getGeo('ip');
     // assert
-    expect(spySet).toBeCalledWith(
+    expect(spySet).toBeCalledTimes(2);
+    // incrementCacheMetadata
+    expect(spySet).toHaveBeenNthCalledWith(
+      1,
+      'geo-service-call-limit',
+      { start: 1, calls: 1 },
+      { ttl: 1 }
+    );
+    // set data in cache
+    expect(spySet).toHaveBeenNthCalledWith(
+      2,
       'ip',
       { latitude: 1, longitude: 2 },
-      { ttl: 14440 }
+      { ttl: 1 }
     );
-    expect(spySet).toBeCalledTimes(2);
     expect(result).toStrictEqual({
       latitude: 1,
       longitude: 2,

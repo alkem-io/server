@@ -4,6 +4,9 @@
     "id": "31ad6631-2004-4b08-a6d7-07b9df2c49db",
     "spaceID": "00655835-4d15-4546-801e-1ab80ac3078a",
     "type": "challenge",
+    "agent": {
+      "type": "space"
+    },
     "profile": {
       "id": "08c6ec54-524a-4d7f-9f58-a4c50f0c0496",
       "tagline": "",
@@ -11,7 +14,6 @@
       "type": "challenge",
       "displayName": "12 Responsible Consumption + Production",
       "authorization": {
-        "anonymousReadAccess": false,
         "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "",
@@ -29,7 +31,6 @@
       "updatedDate": {},
       "version": 3,
       "authorization": {
-        "anonymousReadAccess": false,
         "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"community-apply\"],\"cascade\":false}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "[]",
@@ -37,7 +38,6 @@
       }
     },
     "authorization": {
-      "anonymousReadAccess": false,
       "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
       "verifiedCredentialRules": "[]",
       "privilegeRules": "",
@@ -48,7 +48,6 @@
       "name": "default",
       "id": "d7b970ba-13c7-4657-a205-6d2334d789dc",
       "authorization": {
-        "anonymousReadAccess": false,
         "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "",
