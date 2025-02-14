@@ -6,6 +6,7 @@ import { SearchExtractService } from './extract/search.extract.service';
 import { SearchResultService } from './result/search.result.service';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { SearchResolverQueries } from './search.resolver.queries';
 
 @Module({
   imports: [AuthorizationModule, UserLookupModule, OrganizationLookupModule],
@@ -14,7 +15,8 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     SearchExtractService,
     SearchResultService,
     ElasticsearchClientProvider,
+    SearchResolverQueries,
   ],
   exports: [SearchService, SearchExtractService, SearchResultService],
 })
-export class Search2Module {}
+export class SearchModule {}

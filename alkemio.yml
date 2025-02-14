@@ -77,8 +77,6 @@ innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
 
 search:
-  # use the new search implementation; alternatively it will use the original mysql search implementation
-  use_new: ${SEARCH_USE_NEW}:true
   # max results per search
   max_results: ${SEARCH_MAX_RESULTS}:40
   # the index pattern used when ingesting data in Elasticsearch, e.g. alkemio-data-[organization];

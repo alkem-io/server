@@ -5,7 +5,7 @@ import { MockEntityManagerProvider } from '@test/mocks';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { SearchService } from './search.service';
 
-describe('Search2Service', () => {
+describe('SearchService', () => {
   let service: SearchService;
 
   beforeEach(async () => {
