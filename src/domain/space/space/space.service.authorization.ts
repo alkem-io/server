@@ -444,13 +444,6 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...storageAuthorizations);
 
-    const aboutAuthorizations =
-      await this.spaceAboutAuthorizationService.applyAuthorizationPolicy(
-        space.about,
-        space.authorization
-      );
-    updatedAuthorizations.push(...aboutAuthorizations);
-
     // Level zero space only entities
     if (space.level === SpaceLevel.L0) {
       if (!space.templatesManager) {
@@ -506,6 +499,14 @@ export class SpaceAuthorizationService {
         spaceExtraCredentialRulesNonCascaded
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
+
+    const aboutAuthorizations =
+      await this.spaceAboutAuthorizationService.applyAuthorizationPolicy(
+        space.about,
+        space.authorization,
+        spaceExtraCredentialRulesCascaded
+      );
+    updatedAuthorizations.push(...aboutAuthorizations);
 
     const licenseAuthorizations =
       this.licenseAuthorizationService.applyAuthorizationPolicy(
