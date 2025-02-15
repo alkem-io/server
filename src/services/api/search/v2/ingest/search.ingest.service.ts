@@ -55,8 +55,8 @@ const journeyFindOptions: FindManyOptions<Space> = {
     level: true,
     visibility: true,
     about: {
-      vision: true,
-      impact: true,
+      why: true,
+      when: true,
       who: true,
       profile: profileSelectOptions,
     },

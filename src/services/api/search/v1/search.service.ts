@@ -416,8 +416,8 @@ export class SearchService {
           space.about.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          space.about?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          space.about?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          space.about?.when?.toLowerCase().includes(lowerCasedTerm) ||
+          space.about?.why?.toLowerCase().includes(lowerCasedTerm) ||
           space.about?.who?.toLowerCase().includes(lowerCasedTerm) ||
           space.about.profile.location?.country
             ?.toLowerCase()
@@ -518,8 +518,8 @@ export class SearchService {
           subspace.about.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          subspace.about?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.about?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.about?.when?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.about?.why?.toLowerCase().includes(lowerCasedTerm) ||
           subspace.about?.who?.toLowerCase().includes(lowerCasedTerm) ||
           subspace.about.profile.location?.country
             ?.toLowerCase()
@@ -599,8 +599,8 @@ export class SearchService {
           subsubspace.about.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          subsubspace.about?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          subsubspace.about?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.about?.when?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.about?.why?.toLowerCase().includes(lowerCasedTerm) ||
           subsubspace.about?.who?.toLowerCase().includes(lowerCasedTerm) ||
           subsubspace.about.profile.location?.country
             ?.toLowerCase()

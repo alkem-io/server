@@ -77,10 +77,10 @@ export class SpaceAboutService {
   ): Promise<ISpaceAbout> {
     const spaceAbout = await this.getSpaceAboutOrFail(spaceAboutInput.id);
     if (spaceAboutUpdateData.vision) {
-      spaceAbout.vision = spaceAboutUpdateData.vision;
+      spaceAbout.why = spaceAboutUpdateData.vision;
     }
     if (spaceAboutUpdateData.impact) {
-      spaceAbout.impact = spaceAboutUpdateData.impact;
+      spaceAbout.when = spaceAboutUpdateData.impact;
     }
     if (spaceAboutUpdateData.who) {
       spaceAbout.who = spaceAboutUpdateData.who;
