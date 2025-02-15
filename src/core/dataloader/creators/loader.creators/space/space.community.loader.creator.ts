@@ -1,18 +1,18 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { ICollaboration } from '@domain/collaboration/collaboration';
+import { ICommunity } from '@domain/community/community';
+import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
 
 @Injectable()
-export class JourneyCollaborationLoaderCreator
-  implements DataLoaderCreator<ICollaboration>
+export class SpaceCommunityLoaderCreator
+  implements DataLoaderCreator<ICommunity>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ICollaboration>) {
+  create(options?: DataLoaderCreatorOptions<ICommunity>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`
@@ -22,7 +22,7 @@ export class JourneyCollaborationLoaderCreator
     return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
-      { collaboration: true },
+      { community: true },
       this.constructor.name,
       options
     );

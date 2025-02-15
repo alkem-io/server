@@ -3,23 +3,25 @@ import { SpaceType } from '@common/enums/space.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateContextInput } from '@domain/context/context/dto/context.dto.create';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 import { CreateCollaborationOnSpaceInput } from './space.dto.create.collaboration';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ITemplatesManager } from '@domain/template/templates-manager';
+import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
 
 @InputType()
-export class CreateSpaceInput extends CreateNameableInput {
-  @Field(() => CreateContextInput, { nullable: true })
+export class CreateSpaceInput {
+  @Field(() => NameID, {
+    nullable: true,
+    description: 'A readable identifier, unique within the containing scope.',
+  })
+  nameID?: string;
+
+  @Field(() => CreateSpaceAboutInput, { nullable: true })
   @IsOptional()
   @ValidateNested()
-  @Type(() => CreateContextInput)
-  context?: CreateContextInput;
-
-  @Field(() => [String], { nullable: true })
-  @IsOptional()
-  tags?: string[];
+  @Type(() => CreateSpaceAboutInput)
+  about!: CreateSpaceAboutInput;
 
   @Field(() => CreateCollaborationOnSpaceInput, { nullable: false })
   @ValidateNested()

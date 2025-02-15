@@ -284,7 +284,7 @@ export class CollaborationService {
     )
       throw new RelationshipNotFoundException(
         `Unable to remove Collaboration: missing child entities ${collaboration.id} `,
-        LogContext.CONTEXT
+        LogContext.SPACE_ABOUT
       );
 
     await this.calloutsSetService.deleteCalloutsSet(

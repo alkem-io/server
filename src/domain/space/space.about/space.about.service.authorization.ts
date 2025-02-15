@@ -1,53 +1,49 @@
 import { Injectable } from '@nestjs/common';
-import { ContextService } from './context.service';
-import { IContext } from '@domain/context/context';
-import { EcosystemModelAuthorizationService } from '@domain/context/ecosystem-model/ecosystem-model.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { ISpaceAbout } from './space.about.interface';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 @Injectable()
-export class ContextAuthorizationService {
+export class SpaceAboutAuthorizationService {
   constructor(
-    private contextService: ContextService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private ecosysteModelAuthorizationService: EcosystemModelAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
-    context: IContext,
+    spaceAbout: ISpaceAbout,
     parentAuthorization: IAuthorizationPolicy | undefined,
     credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
   ): Promise<IAuthorizationPolicy[]> {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    context.authorization =
+    spaceAbout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        context.authorization,
+        spaceAbout.authorization,
         parentAuthorization
       );
 
-    // If can READ_ABOUT on Context, then also allow general READ
-    context.authorization =
+    // If can READ_ABOUT on SpaceAbout, then also allow general READ
+    spaceAbout.authorization =
       this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
-        context.authorization,
+        spaceAbout.authorization,
         AuthorizationPrivilege.READ_ABOUT,
         [AuthorizationPrivilege.READ],
         POLICY_RULE_READ_ABOUT
       );
-    context.authorization.credentialRules.push(...credentialRulesFromParent);
-    updatedAuthorizations.push(context.authorization);
+    spaceAbout.authorization.credentialRules.push(...credentialRulesFromParent);
+    updatedAuthorizations.push(spaceAbout.authorization);
 
     // cascade
-    context.ecosystemModel =
-      await this.contextService.getEcosystemModel(context);
-    const ecosystemAuthorizations =
-      await this.ecosysteModelAuthorizationService.applyAuthorizationPolicy(
-        context.ecosystemModel,
-        context.authorization
+    const profileAuthorizations =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        spaceAbout.profile.id,
+        spaceAbout.authorization
       );
-    updatedAuthorizations.push(...ecosystemAuthorizations);
+    updatedAuthorizations.push(...profileAuthorizations);
 
     return updatedAuthorizations;
   }

@@ -1,10 +1,10 @@
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
-import { IContext } from '@domain/context/context/context.interface';
-import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { ISpaceAbout } from './space.about.interface';
 
 @Entity()
-export class Context extends AuthorizableEntity implements IContext {
+export class SpaceAbout extends AuthorizableEntity implements ISpaceAbout {
   @Column('text', { nullable: true })
   vision?: string = '';
 
@@ -14,15 +14,11 @@ export class Context extends AuthorizableEntity implements IContext {
   @Column('text', { nullable: true })
   who?: string = '';
 
-  @OneToOne(() => EcosystemModel, {
+  @OneToOne(() => Profile, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  ecosystemModel?: EcosystemModel;
-
-  constructor() {
-    super();
-  }
+  profile!: Profile;
 }

@@ -392,12 +392,13 @@ export class SearchService {
     for (const term of terms) {
       const spaces = await this.spaceRepository.find({
         relations: {
-          context: true,
-          collaboration: true,
-          profile: {
-            location: true,
-            tagsets: true,
+          about: {
+            profile: {
+              location: true,
+              tagsets: true,
+            },
           },
+          collaboration: true,
         },
       });
 
@@ -405,19 +406,25 @@ export class SearchService {
       const filteredSpaceMatches = spaces.filter(space => {
         return (
           space.nameID.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.description?.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.tagsets?.some(tagset =>
-            tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
-          ) ||
-          space.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          space.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
-          space.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.location?.country
+          space.about.profile.displayName
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
+          space.about.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
+          space.about.profile.description
             ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          space.profile.location?.city?.toLowerCase().includes(lowerCasedTerm)
+          space.about.profile.tagsets?.some(tagset =>
+            tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
+          ) ||
+          space.about?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          space.about?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          space.about?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          space.about.profile.location?.country
+            ?.toLowerCase()
+            .includes(lowerCasedTerm) ||
+          space.about.profile.location?.city
+            ?.toLowerCase()
+            .includes(lowerCasedTerm)
         );
       });
 
@@ -485,12 +492,13 @@ export class SearchService {
       const subspaces = await this.spaceRepository.find({
         where: challengeIDsFilter ? { id: In(challengeIDsFilter) } : undefined,
         relations: {
-          context: true,
-          collaboration: true,
-          profile: {
-            location: true,
-            tagsets: true,
+          about: {
+            profile: {
+              location: true,
+              tagsets: true,
+            },
           },
+          collaboration: true,
         },
       });
       const lowerCasedTerm = term.toLowerCase();
@@ -498,21 +506,25 @@ export class SearchService {
       const filteredChallengeMatches = subspaces.filter(subspace => {
         return (
           subspace.nameID.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.profile.description
+          subspace.about.profile.displayName
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
+          subspace.about.profile.tagline
             ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          subspace.profile.tagsets?.some(tagset =>
+          subspace.about.profile.description
+            ?.toLowerCase()
+            .includes(lowerCasedTerm) ||
+          subspace.about.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          subspace.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.profile.location?.country
+          subspace.about?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.about?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.about?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.about.profile.location?.country
             ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          subspace.profile.location?.city
+          subspace.about.profile.location?.city
             ?.toLowerCase()
             .includes(lowerCasedTerm)
         );
@@ -560,12 +572,13 @@ export class SearchService {
           ? { id: In(opportunityIDsFilter) }
           : undefined,
         relations: {
-          context: true,
-          collaboration: true,
-          profile: {
-            location: true,
-            tagsets: true,
+          about: {
+            profile: {
+              location: true,
+              tagsets: true,
+            },
           },
+          collaboration: true,
         },
       });
 
@@ -574,23 +587,25 @@ export class SearchService {
       const filteredOpportunityMatches = subsubspaces.filter(subsubspace => {
         return (
           subsubspace.nameID.toLowerCase().includes(lowerCasedTerm) ||
-          subsubspace.profile.displayName
+          subsubspace.about.profile.displayName
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          subsubspace.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
-          subsubspace.profile.description
+          subsubspace.about.profile.tagline
             ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          subsubspace.profile.tagsets?.some(tagset =>
+          subsubspace.about.profile.description
+            ?.toLowerCase()
+            .includes(lowerCasedTerm) ||
+          subsubspace.about.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          subsubspace.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          subsubspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
-          subsubspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
-          subsubspace.profile.location?.country
+          subsubspace.about?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.about?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.about?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.about.profile.location?.country
             ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          subsubspace.profile.location?.city
+          subsubspace.about.profile.location?.city
             ?.toLowerCase()
             .includes(lowerCasedTerm)
         );

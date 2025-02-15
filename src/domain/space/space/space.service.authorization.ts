@@ -12,9 +12,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
-import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { RoleName } from '@common/enums/role.name';
 import {
@@ -39,6 +37,7 @@ import { LicenseAuthorizationService } from '@domain/common/license/license.serv
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { EntityNotFoundException } from '@common/exceptions';
+import { SpaceAboutAuthorizationService } from '../space.about/space.about.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -48,11 +47,10 @@ export class SpaceAuthorizationService {
     private agentAuthorizationService: AgentAuthorizationService,
     private roleSetService: RoleSetService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
+    private spaceAboutAuthorizationService: SpaceAboutAuthorizationService,
     private spaceService: SpaceService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -78,8 +76,7 @@ export class SpaceAuthorizationService {
           roleSet: true,
         },
         collaboration: true,
-        context: true,
-        profile: true,
+        about: true,
         storageAggregator: true,
         subspaces: true,
         templatesManager: true,
@@ -408,9 +405,9 @@ export class SpaceAuthorizationService {
       !space.collaboration ||
       !space.community ||
       !space.community.roleSet ||
-      !space.context ||
-      !space.profile ||
+      !space.about ||
       !space.storageAggregator ||
+      !space.about ||
       !space.license
     ) {
       throw new RelationshipNotFoundException(
@@ -446,6 +443,13 @@ export class SpaceAuthorizationService {
         space.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
+
+    const aboutAuthorizations =
+      await this.spaceAboutAuthorizationService.applyAuthorizationPolicy(
+        space.about,
+        space.authorization
+      );
+    updatedAuthorizations.push(...aboutAuthorizations);
 
     // Level zero space only entities
     if (space.level === SpaceLevel.L0) {
@@ -502,22 +506,6 @@ export class SpaceAuthorizationService {
         spaceExtraCredentialRulesNonCascaded
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
-
-    const profileAuthorizations =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        space.profile.id,
-        space.authorization,
-        spaceExtraCredentialRulesCascaded
-      );
-    updatedAuthorizations.push(...profileAuthorizations);
-
-    const contextAuthorizations =
-      await this.contextAuthorizationService.applyAuthorizationPolicy(
-        space.context,
-        space.authorization,
-        spaceExtraCredentialRulesCascaded
-      );
-    updatedAuthorizations.push(...contextAuthorizations);
 
     const licenseAuthorizations =
       this.licenseAuthorizationService.applyAuthorizationPolicy(

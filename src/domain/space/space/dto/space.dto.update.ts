@@ -2,8 +2,8 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.update';
-import { UpdateContextInput } from '@domain/context/context/dto/context.dto.update';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
+import { UpdateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.update';
 
 @InputType()
 export class UpdateSpaceInput extends UpdateNameableInput {
@@ -16,12 +16,12 @@ export class UpdateSpaceInput extends UpdateNameableInput {
   @Type(() => UpdateInnovationFlowInput)
   innovationFlowData?: UpdateInnovationFlowInput;
 
-  @Field(() => UpdateContextInput, {
+  @Field(() => UpdateSpaceAboutInput, {
     nullable: true,
-    description: 'Update the contained Context entity.',
+    description: 'Update the Space About information.',
   })
   @IsOptional()
   @ValidateNested()
-  @Type(() => UpdateContextInput)
-  context?: UpdateContextInput;
+  @Type(() => UpdateSpaceAboutInput)
+  about?: UpdateSpaceAboutInput;
 }

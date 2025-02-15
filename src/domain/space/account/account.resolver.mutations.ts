@@ -113,11 +113,13 @@ export class AccountResolverMutations {
 
     space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
-        profile: true,
+        about: {
+          profile: true,
+        },
         community: true,
       },
     });
-    if (!space.profile || !space.community) {
+    if (!space.about.profile || !space.community) {
       throw new RelationshipNotFoundException(
         `Unable to load space profile or community: ${space.id}`,
         LogContext.ACCOUNT
@@ -126,7 +128,7 @@ export class AccountResolverMutations {
 
     await this.namingReporter.createOrUpdateName(
       space.id,
-      space.profile.displayName
+      space.about.profile.displayName
     );
 
     const notificationInput: NotificationInputSpaceCreated = {

@@ -231,7 +231,7 @@ export class StorageAggregatorService {
             storageAggregator
           );
         result.id = space.id;
-        result.displayName = space.profile.displayName;
+        result.displayName = space.about.profile.displayName;
         result.level = space.level;
         result.url = await this.getStorageAggregatorUrlForSpace(space);
         break;

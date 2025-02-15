@@ -78,7 +78,7 @@ export class AccountService {
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
     if (!spaceData.nameID) {
       spaceData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
-        spaceData.profileData.displayName,
+        spaceData.about.profileData.displayName,
         reservedNameIDs
       );
     } else {

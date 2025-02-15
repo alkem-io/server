@@ -723,7 +723,7 @@ export class NotificationPayloadBuilder {
         community.id
       );
     const url = await this.urlGeneratorService.generateUrlForProfile(
-      space.profile
+      space.about.profile
     );
     const communityAdminURL =
       await this.urlGeneratorService.createJourneyAdminCommunityURL(space);
@@ -733,7 +733,7 @@ export class NotificationPayloadBuilder {
         nameID: space.nameID,
         type: space.type,
         profile: {
-          displayName: space.profile.displayName,
+          displayName: space.about.profile.displayName,
           url: url,
         },
         adminURL: communityAdminURL,

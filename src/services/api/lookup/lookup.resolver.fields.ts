@@ -12,8 +12,6 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { IContext } from '@domain/context/context/context.interface';
-import { ContextService } from '@domain/context/context/context.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -74,6 +72,8 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
+import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
+import { ISpaceAbout } from '@domain/space/space.about';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -86,7 +86,7 @@ export class LookupResolverFields {
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private collaborationService: CollaborationService,
-    private contextService: ContextService,
+    private spaceAboutService: SpaceAboutService,
     private whiteboardService: WhiteboardService,
     private innovationPackService: InnovationPackService,
     private organizationLookupService: OrganizationLookupService,
@@ -526,20 +526,20 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => IContext, {
+  @ResolveField(() => ISpaceAbout, {
     nullable: true,
-    description: 'Lookup the specified Context',
+    description: 'Lookup the specified SpaceAbout',
   })
   async context(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IContext> {
-    const context = await this.contextService.getContextOrFail(id);
+  ): Promise<ISpaceAbout> {
+    const context = await this.spaceAboutService.getSpaceAboutOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
       AuthorizationPrivilege.READ,
-      `lookup Context: ${context.id}`
+      `lookup SpaceAbout: ${context.id}`
     );
 
     return context;

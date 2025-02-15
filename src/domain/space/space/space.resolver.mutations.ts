@@ -50,7 +50,9 @@ export class SpaceResolverMutations {
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceData.ID, {
       relations: {
-        profile: true,
+        about: {
+          profile: true,
+        },
       },
     });
     await this.authorizationService.grantAccessOrFail(
@@ -68,7 +70,7 @@ export class SpaceResolverMutations {
     this.contributionReporter.spaceContentEdited(
       {
         id: updatedSpace.id,
-        name: updatedSpace.profile.displayName,
+        name: updatedSpace.about.profile.displayName,
         space: updatedSpace.id,
       },
       {
@@ -79,7 +81,7 @@ export class SpaceResolverMutations {
 
     if (
       spaceData?.profileData?.displayName &&
-      spaceData?.profileData?.displayName !== space.profile.displayName
+      spaceData?.profileData?.displayName !== space.about.profile.displayName
     ) {
       this.namingReporter.createOrUpdateName(
         space.id,
@@ -198,7 +200,7 @@ export class SpaceResolverMutations {
       agentInfo
     );
     // Save here so can reuse it later without another load
-    const displayName = subspace.profile.displayName;
+    const displayName = subspace.about.profile.displayName;
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(
         subspace.id,
