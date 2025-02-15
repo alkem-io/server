@@ -79,7 +79,7 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
         'space-about'
       );
       await queryRunner.query(
-        `INSERT INTO space_about (id, version, why, who, when, authorizationId, profileId) VALUES
+        `INSERT INTO space_about (id, version, why, who, space_about.when, authorizationId, profileId) VALUES
                             ('${aboutID}',
                             1,
                             '${context.vision}',
