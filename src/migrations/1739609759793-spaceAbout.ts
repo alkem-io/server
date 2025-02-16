@@ -88,6 +88,10 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
                             '${aboutAuthID}',
                             '${space.profileId}')`
       );
+      await queryRunner.query(
+        `UPDATE \`space\` SET aboutId = '${aboutID}' WHERE id = ?`,
+        [space.id]
+      );
     }
 
     // Delete the actor, actor group and ecosystem entities + data
