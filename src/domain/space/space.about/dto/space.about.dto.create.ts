@@ -12,14 +12,10 @@ export class CreateSpaceAboutInput {
   @Type(() => CreateProfileInput)
   profileData!: CreateProfileInput;
 
-  @Field(() => [String], { nullable: true })
-  @IsOptional()
-  tags?: string[];
-
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
-  vision?: string;
+  why?: string;
 
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
@@ -29,5 +25,5 @@ export class CreateSpaceAboutInput {
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
-  impact?: string;
+  when?: string;
 }

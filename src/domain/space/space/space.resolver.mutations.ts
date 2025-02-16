@@ -80,12 +80,12 @@ export class SpaceResolverMutations {
     );
 
     if (
-      spaceData?.profileData?.displayName &&
-      spaceData?.profileData?.displayName !== space.about.profile.displayName
+      spaceData?.about?.profile?.displayName &&
+      spaceData?.about?.profile?.displayName !== space.about.profile.displayName
     ) {
       this.namingReporter.createOrUpdateName(
         space.id,
-        spaceData?.profileData?.displayName
+        spaceData?.about?.profile?.displayName
       );
     }
 

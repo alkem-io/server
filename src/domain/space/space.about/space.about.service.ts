@@ -43,7 +43,7 @@ export class SpaceAboutService {
     );
     await this.profileService.addTagsetOnProfile(spaceAbout.profile, {
       name: TagsetReservedName.DEFAULT,
-      tags: spaceAboutData.tags,
+      tags: spaceAboutData.profileData.tags,
     });
 
     // add the visuals
@@ -76,14 +76,21 @@ export class SpaceAboutService {
     spaceAboutUpdateData: UpdateSpaceAboutInput
   ): Promise<ISpaceAbout> {
     const spaceAbout = await this.getSpaceAboutOrFail(spaceAboutInput.id);
-    if (spaceAboutUpdateData.vision) {
-      spaceAbout.why = spaceAboutUpdateData.vision;
+    if (spaceAboutUpdateData.why) {
+      spaceAbout.why = spaceAboutUpdateData.why;
     }
-    if (spaceAboutUpdateData.impact) {
-      spaceAbout.when = spaceAboutUpdateData.impact;
+    if (spaceAboutUpdateData.when) {
+      spaceAbout.when = spaceAboutUpdateData.when;
     }
     if (spaceAboutUpdateData.who) {
       spaceAbout.who = spaceAboutUpdateData.who;
+    }
+
+    if (spaceAboutUpdateData.profile) {
+      spaceAbout.profile = await this.profileService.updateProfile(
+        spaceAbout.profile,
+        spaceAboutUpdateData.profile
+      );
     }
 
     return await this.spaceAboutRepository.save(spaceAbout);

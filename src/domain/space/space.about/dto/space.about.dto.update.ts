@@ -9,17 +9,17 @@ import { Type } from 'class-transformer';
 export class UpdateSpaceAboutInput {
   @Field(() => UpdateProfileInput, {
     nullable: true,
-    description: 'The Profile of this entity.',
+    description: 'The Profile of this Space.',
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => UpdateProfileInput)
-  profileData?: UpdateProfileInput;
+  profile?: UpdateProfileInput;
 
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
-  vision?: string;
+  why?: string;
 
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
@@ -29,5 +29,5 @@ export class UpdateSpaceAboutInput {
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
-  impact?: string;
+  when?: string;
 }

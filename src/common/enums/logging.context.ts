@@ -4,7 +4,7 @@ export enum LogContext {
   CONTRIBUTION_REPORTER = 'contribution-reporter',
   NAME_REPORTER = 'name-reporter',
   SPACES = 'spaces',
-  SPACE_ABOUT = 'spaceabout',
+  SPACE_ABOUT = 'space-about',
   PROFILE = 'profile',
   COMMUNITY = 'community',
   DATA_LOADER = 'data-loader',
