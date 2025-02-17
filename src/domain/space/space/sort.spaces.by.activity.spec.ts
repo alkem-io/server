@@ -50,12 +50,15 @@ const createTestSpace = (id: string): ISpace => {
     settings: spaceSettings,
     levelZeroSpaceID: '',
     visibility: SpaceVisibility.ACTIVE,
-    profile: {
+    about: {
       id: '1',
-      displayName: 'Space 1',
-      description: '',
-      tagline: '',
-      type: ProfileType.SPACE,
+      profile: {
+        id: '1',
+        displayName: 'Space 1',
+        description: '',
+        tagline: '',
+        type: ProfileType.SPACE,
+      },
     },
     account: {
       id: `account${id}`,
