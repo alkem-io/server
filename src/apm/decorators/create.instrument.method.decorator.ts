@@ -12,7 +12,7 @@ export const createInstrumentMethodDecorator = (type: string) => () => {
         if (!apmAgent.currentTransaction) {
           return Reflect.apply(target, thisArg, argArray);
         }
-
+        // start span
         const span = apmAgent.currentTransaction.startSpan(
           methodName,
           'graphql'
@@ -28,7 +28,6 @@ export const createInstrumentMethodDecorator = (type: string) => () => {
         const func = Reflect.apply(target, thisArg, argArray);
         const isPromise = func instanceof Promise;
         const isFunction = func instanceof Function;
-        // start span
         // execute and measure
         if (isPromise) {
           return (func as PromiseLike<any>).then(x => {
