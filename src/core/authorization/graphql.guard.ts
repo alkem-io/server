@@ -22,7 +22,9 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
   'oathkeeper-jwt',

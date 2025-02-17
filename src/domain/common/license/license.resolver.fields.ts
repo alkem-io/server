@@ -3,6 +3,7 @@ import { ILicense } from './license.interface';
 import { LicenseService } from './license.service';
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { InstrumentField } from '@src/apm/decorators';
 
 @Resolver(() => ILicense)
 export class LicenseResolverFields {
@@ -23,6 +24,7 @@ export class LicenseResolverFields {
     nullable: true,
     description: 'The set of License Entitlement Types on that entity.',
   })
+  @InstrumentField()
   async availableEntitlements(
     @Parent() license: ILicense
   ): Promise<LicenseEntitlementType[]> {

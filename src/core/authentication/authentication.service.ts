@@ -13,7 +13,9 @@ import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/
 import { OryTraits } from '@services/infrastructure/kratos/types/ory.traits';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService
 @Injectable()
 export class AuthenticationService {
   private readonly extendSessionMinRemainingTTL: number | undefined; // min time before session expires when it's already allowed to be extended (in milliseconds)

@@ -9,6 +9,7 @@ import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
+import { InstrumentField } from '@src/apm/decorators';
 
 @Resolver(() => IAuthorizationPolicy)
 export class AuthorizationPolicyResolverFields {
@@ -63,6 +64,7 @@ export class AuthorizationPolicyResolverFields {
       'The privileges granted to the current user based on this Authorization Policy.',
   })
   @Profiling.api
+  @InstrumentField()
   myPrivileges(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() authorization: IAuthorizationPolicy

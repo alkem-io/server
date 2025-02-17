@@ -1,7 +1,9 @@
 import apm from 'elastic-apm-node';
 
-const API_KEY = process.env.ELASTICSEARCH_API_KEY;
-const SERVER_URL = process.env.ELASTICSEARCH_URL;
+const SERVER_URL = 'https://sandbox-apm.alkem.io';
+const API_KEY = 'b01ON3Q1UUJwMU5lUmNTWXJyVUg6MnZpQ1FUZ0xUeFdRbWdQalBldzdhdw==';
+// const API_KEY = process.env.ELASTICSEARCH_API_KEY;
+// const APM_SERVER_URL = process.env.APM_SERVER_URL;
 const TRANSACTION_SAMPLE_RATE_PERCENTAGE = 100;
 const CERTIFICATE_PATH =
   process.env.ELASTIC_TLS_CA_CERT_PATH === 'none'
@@ -10,7 +12,7 @@ const CERTIFICATE_PATH =
 
 export const apmAgent = apm.start({
   // https://www.elastic.co/guide/en/apm/agent/nodejs/4.x/configuration.html
-  active: process.env.NODE_ENV === 'production',
+  // active: process.env.NODE_ENV === 'production',
   serviceName: process.env.npm_package_name,
   serviceVersion: process.env.npm_package_version,
   apiKey: API_KEY,
@@ -32,18 +34,18 @@ export const apmAgent = apm.start({
    * and removes clutter from the UI. The tradeoff is that some information,
    * such as DB statements of all the compressed spans, will not be collected.
    */
-  spanCompressionEnabled: true,
+  // spanCompressionEnabled: true,
   /**
    * Consecutive spans to the same destination that are under this threshold will be compressed into a single composite span.
    * This option does not apply to composite spans. This reduces the collection, processing,
    * and storage overhead, and removes clutter from the UI.
    * The tradeoff is that the DB statements of all the compressed spans will not be collected.
    */
-  spanCompressionSameKindMaxDuration: '30ms',
+  // spanCompressionSameKindMaxDuration: '30ms',
   /**
    * Consecutive spans that are exact match and that are under this threshold will be compressed into a single composite span.
    * This option does not apply to composite spans. This reduces the collection, processing, and storage overhead, and removes clutter from the UI.
    * The tradeoff is that the DB statements of all the compressed spans will not be collected.
    */
-  spanCompressionExactMatchMaxDuration: '50ms',
+  // spanCompressionExactMatchMaxDuration: '50ms',
 });

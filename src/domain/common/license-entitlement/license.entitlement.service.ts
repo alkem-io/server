@@ -15,7 +15,9 @@ import { ILicense } from '../license/license.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementNotSupportedException } from '@common/exceptions/license.entitlement.not.supported';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService
 @Injectable()
 export class LicenseEntitlementService {
   constructor(

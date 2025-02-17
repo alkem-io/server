@@ -152,6 +152,7 @@ export class UserResolverFields {
     nullable: false,
     description: 'The email address for this User.',
   })
+  @InstrumentField()
   async email(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -173,6 +174,7 @@ export class UserResolverFields {
     nullable: true,
     description: 'The phone number for this User.',
   })
+  @InstrumentField()
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo

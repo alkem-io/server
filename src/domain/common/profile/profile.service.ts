@@ -35,7 +35,9 @@ import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 import { CreateReferenceInput } from '../reference';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService
 @Injectable()
 export class ProfileService {
   constructor(

@@ -15,7 +15,9 @@ import { AuthorizationPolicyService } from '../authorization-policy/authorizatio
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService
 @Injectable()
 export class LicenseService {
   constructor(
