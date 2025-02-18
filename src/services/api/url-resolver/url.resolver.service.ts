@@ -684,6 +684,9 @@ export class UrlResolverService {
     const callout = await this.entityManager.findOneOrFail(Callout, {
       where: {
         nameID: calloutNameID,
+        calloutsSet: {
+          id: calloutsSetId,
+        },
       },
       relations: {
         authorization: true,
