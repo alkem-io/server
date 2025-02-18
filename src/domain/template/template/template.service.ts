@@ -251,6 +251,7 @@ export class TemplateService {
       select: {
         id: true,
         type: true,
+        nameID: true,
         postDefaultDescription: templateInput.type === TemplateType.POST,
         whiteboard:
           templateInput.type === TemplateType.WHITEBOARD
