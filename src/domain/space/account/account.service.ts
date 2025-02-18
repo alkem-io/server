@@ -41,7 +41,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 export class AccountService {
   constructor(
     private accountHostService: AccountHostService,
-    private authoriztionPolicyService: AuthorizationPolicyService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
     private agentService: AgentService,
     private storageAggregatorService: StorageAggregatorService,
@@ -329,7 +329,7 @@ export class AccountService {
         hub,
         account.authorization
       );
-    await this.authoriztionPolicyService.saveAll(authorizations);
+    await this.authorizationPolicyService.saveAll(authorizations);
     return hub;
   }
 
@@ -358,7 +358,7 @@ export class AccountService {
         ip,
         account.authorization
       );
-    await this.authoriztionPolicyService.saveAll(authorizations);
+    await this.authorizationPolicyService.saveAll(authorizations);
     return ip;
   }
 

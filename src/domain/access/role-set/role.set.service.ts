@@ -259,7 +259,7 @@ export class RoleSetService {
     return roleSet;
   }
 
-  public async removeAllRoleAssignments(roleSet: IRoleSet) {
+  private async removeAllRoleAssignments(roleSet: IRoleSet) {
     // Remove all issued role credentials for contributors
     const roleNames = await this.getRoleNames(roleSet);
     for (const roleName of roleNames) {
