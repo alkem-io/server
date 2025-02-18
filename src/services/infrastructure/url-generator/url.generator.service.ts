@@ -29,8 +29,9 @@ import { CommunityGuidelines } from '@domain/community/community-guidelines/comm
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { URL_PATHS } from '@common/constants/url.path.constants';
+import { UrlPathElement } from '@common/enums/url.path.element';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { UrlPathBase } from '@common/enums/url.path.base';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -229,7 +230,7 @@ export class UrlGeneratorService {
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        return `${this.endpoint_cluster}/${URL_PATHS.VIRTUAL_CONTRIBUTOR}/${vcEntityInfo.entityNameID}`;
+        return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vcEntityInfo.entityNameID}`;
       case ProfileType.ORGANIZATION:
         const organizationEntityInfo = await this.getNameableEntityInfoOrFail(
           'organization',
@@ -282,34 +283,34 @@ export class UrlGeneratorService {
           await this.getVirtualContributorFromKnowledgeBaseProfileOrFail(
             profile.id
           );
-        return `${this.endpoint_cluster}/${URL_PATHS.VIRTUAL_CONTRIBUTOR}/${vc.nameID}/${URL_PATHS.KNOWLEDGE_BASE}`;
+        return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vc.nameID}/${UrlPathElement.KNOWLEDGE_BASE}`;
     }
     return '';
   }
 
   public createUrlForContributor(contributor: IContributor): string {
     const type = this.getContributorType(contributor);
-    let path: string = URL_PATHS.VIRTUAL_CONTRIBUTOR;
+    let path: string = UrlPathBase.VIRTUAL_CONTRIBUTOR;
     switch (type) {
       case RoleSetContributorType.USER:
-        path = URL_PATHS.USER;
+        path = UrlPathBase.USER;
         break;
       case RoleSetContributorType.ORGANIZATION:
-        path = URL_PATHS.ORGANIZATION;
+        path = UrlPathBase.ORGANIZATION;
         break;
       case RoleSetContributorType.VIRTUAL:
-        path = URL_PATHS.VIRTUAL_CONTRIBUTOR;
+        path = UrlPathBase.VIRTUAL_CONTRIBUTOR;
         break;
     }
     return `${this.endpoint_cluster}/${path}/${contributor.nameID}`;
   }
 
   public createUrlForOrganizationNameID(organizationNameID: string): string {
-    return `${this.endpoint_cluster}/${URL_PATHS.ORGANIZATION}/${organizationNameID}`;
+    return `${this.endpoint_cluster}/${UrlPathBase.ORGANIZATION}/${organizationNameID}`;
   }
 
   public createUrlFoUserNameID(userNameID: string): string {
-    return `${this.endpoint_cluster}/${URL_PATHS.USER}/${userNameID}`;
+    return `${this.endpoint_cluster}/${UrlPathBase.USER}/${userNameID}`;
   }
 
   private getContributorType(contributor: IContributor) {
@@ -420,7 +421,7 @@ export class UrlGeneratorService {
       );
     }
 
-    return `${this.endpoint_cluster}/${URL_PATHS.INNOVATION_PACKS}/${innovationPack.nameID}`;
+    return `${this.endpoint_cluster}/${UrlPathBase.INNOVATION_PACKS}/${innovationPack.nameID}`;
   }
 
   private async getSpaceUrlPath(
@@ -683,7 +684,7 @@ export class UrlGeneratorService {
           'collaborationId',
           collaboration.id
         );
-        return `${collaborationJourneyUrlPath}/${URL_PATHS.COLLABORATION}/${callout.nameID}`;
+        return `${collaborationJourneyUrlPath}/${UrlPathElement.COLLABORATION}/${callout.nameID}`;
       } else if (callout.calloutsSet.type === CalloutsSetType.KNOWLEDGE_BASE) {
         const virtualContributor = await this.entityManager.findOne(
           VirtualContributor,
@@ -704,7 +705,7 @@ export class UrlGeneratorService {
           );
         }
         const vcUrl = await this.generateUrlForVC(virtualContributor.nameID);
-        return `${vcUrl}/${URL_PATHS.KNOWLEDGE_BASE}/${callout.nameID}`;
+        return `${vcUrl}/${UrlPathElement.KNOWLEDGE_BASE}/${callout.nameID}`;
       }
     }
 
@@ -810,7 +811,7 @@ export class UrlGeneratorService {
     const calloutUrlPath = await this.getCalloutUrlPath(
       contribution.callout.id
     );
-    return `${calloutUrlPath}/${URL_PATHS.POSTS}/${result.postNameId}`;
+    return `${calloutUrlPath}/${UrlPathElement.POSTS}/${result.postNameId}`;
   }
 
   private async getWhiteboardUrlPathByProfileID(
@@ -864,7 +865,7 @@ export class UrlGeneratorService {
     }
     if (callout) {
       const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
-      return `${calloutUrlPath}/${URL_PATHS.WHITEBOARDS}/${whiteboardNameID}`;
+      return `${calloutUrlPath}/${UrlPathElement.WHITEBOARDS}/${whiteboardNameID}`;
     }
     if (!callout) {
       // Whiteboard can be also a direct template
@@ -895,7 +896,7 @@ export class UrlGeneratorService {
       this.FIELD_PROFILE_ID,
       profileID
     );
-    return `${this.endpoint_cluster}/${URL_PATHS.INNOVATION_PACKS}/${innovationPackInfo.entityNameID}`;
+    return `${this.endpoint_cluster}/${UrlPathBase.INNOVATION_PACKS}/${innovationPackInfo.entityNameID}`;
   }
 
   public async getForumDiscussionUrlPath(
@@ -971,7 +972,7 @@ export class UrlGeneratorService {
       'collaborationId',
       collaboration.id
     );
-    return `${journeyUrlPath}/${URL_PATHS.CALENDAR}/${calendarEventInfo.entityNameID}`;
+    return `${journeyUrlPath}/${UrlPathElement.CALENDAR}/${calendarEventInfo.entityNameID}`;
   }
 
   private async getVirtualContributorFromKnowledgeBaseProfileOrFail(
