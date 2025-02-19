@@ -14,7 +14,11 @@ import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.poli
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService({
+  skipMethods: ['isCredentialMatch'],
+})
 @Injectable()
 export class AuthorizationService {
   constructor(

@@ -33,8 +33,9 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { Identity } from '@ory/kratos-client';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUserSettings } from '../user.settings/user.settings.interface';
-import { InstrumentField } from '@src/apm/decorators';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
@@ -51,7 +52,6 @@ export class UserResolverFields {
     description: 'The Profile for this User.',
   })
   @UseGuards(GraphqlGuard)
-  @InstrumentField()
   async profile(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo,
@@ -152,7 +152,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The email address for this User.',
   })
-  @InstrumentField()
   async email(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -174,7 +173,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'The phone number for this User.',
   })
-  @InstrumentField()
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -196,7 +194,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'The account hosted by this User.',
   })
-  @InstrumentField()
   async account(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo

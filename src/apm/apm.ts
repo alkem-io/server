@@ -1,9 +1,5 @@
 import apm from 'elastic-apm-node';
 
-const SERVER_URL = 'https://sandbox-apm.alkem.io';
-const API_KEY = 'b01ON3Q1UUJwMU5lUmNTWXJyVUg6MnZpQ1FUZ0xUeFdRbWdQalBldzdhdw==';
-// const API_KEY = process.env.ELASTICSEARCH_API_KEY;
-// const APM_SERVER_URL = process.env.APM_SERVER_URL;
 const TRANSACTION_SAMPLE_RATE_PERCENTAGE = 100;
 const CERTIFICATE_PATH =
   process.env.ELASTIC_TLS_CA_CERT_PATH === 'none'
@@ -15,11 +11,11 @@ export const apmAgent = apm.start({
   // active: process.env.NODE_ENV === 'production',
   serviceName: process.env.npm_package_name,
   serviceVersion: process.env.npm_package_version,
-  apiKey: API_KEY,
-  serverUrl: SERVER_URL,
+  // serverUrl: process.env.APM_SERVER_URL,
+  // apiKey: process.env.ELASTICSEARCH_API_KEY,
   verifyServerCert: !!CERTIFICATE_PATH,
   serverCaCertFile: CERTIFICATE_PATH,
-  environment: 'local',
+  environment: process.env.ENVIRONMENT ?? 'local',
   /**
    * Specify the sampling rate to use when deciding whether to trace a request.
    * This must be a value between 0.0 and 1.0, where 1.0 means 100% of requests are traced.

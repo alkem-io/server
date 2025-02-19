@@ -47,7 +47,9 @@ import { AgentInfoCacheService } from '../../../core/authentication.agent.info/a
 import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
 import { AlkemioConfig } from '@src/types';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService()
 @Injectable()
 export class AgentService {
   private readonly cache_ttl: number;
