@@ -84,12 +84,13 @@ export class LookupByNameResolverFields {
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceByNameIdOrFail(nameid);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup L0 Space by NameID: ${space.id}`
-    );
+    //toDo fix this, but for now that is uniform with lookupByID
+    // this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   space.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `lookup L0 Space by NameID: ${space.id}`
+    // );
 
     return space;
   }
