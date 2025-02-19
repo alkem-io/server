@@ -937,6 +937,12 @@ export class RoleSetResolverMutations {
       invitation.id
     );
     if (invitationState === InvitationLifecycleState.ACCEPTING) {
+      if (invitation.roleSet && agentInfo.userID) {
+        await this.roleSetCacheService.deleteOpenInvitationFromCache(
+          agentInfo.userID,
+          invitation.roleSet.id
+        );
+      }
       await this.roleSetService.acceptInvitationToRoleSet(
         eventData.invitationID,
         agentInfo

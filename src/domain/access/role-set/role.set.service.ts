@@ -658,6 +658,15 @@ export class RoleSetService {
   ): Promise<IUser> {
     const { user, agent } =
       await this.userLookupService.getUserAndAgent(userID);
+
+    await this.roleSetCacheService.deleteOpenApplicationFromCache(
+      userID,
+      roleSet.id
+    );
+    await this.roleSetCacheService.deleteOpenInvitationFromCache(
+      userID,
+      roleSet.id
+    );
     const { isMember: hasMemberRoleInParent, parentRoleSet } =
       await this.isMemberInParentRoleSet(agent, roleSet.id);
     if (!hasMemberRoleInParent) {
@@ -750,6 +759,7 @@ export class RoleSetService {
           },
         }
       );
+
       const contributorID = invitation.invitedContributorID;
       const roleSet = invitation.roleSet;
       if (!contributorID || !roleSet) {
