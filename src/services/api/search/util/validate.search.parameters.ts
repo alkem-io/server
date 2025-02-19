@@ -1,7 +1,7 @@
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { SearchInput } from '@services/api/search/v1';
 import { SearchEntityTypes } from '../search.entity.types';
+import { SearchInput } from '../dto';
 
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
