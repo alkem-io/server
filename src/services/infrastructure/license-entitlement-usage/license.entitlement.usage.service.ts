@@ -10,9 +10,7 @@ import { LogContext } from '@common/enums';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { Account } from '@domain/space/account/account.entity';
 import { ISpace } from '@domain/space/space/space.interface';
-import { InstrumentService } from '@src/apm/decorators';
 
-@InstrumentService
 export class LicenseEntitlementUsageService {
   constructor(
     @InjectEntityManager('default')

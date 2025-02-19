@@ -29,7 +29,6 @@ import { IAccountSubscription } from './account.license.subscription.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
-import { InstrumentField } from '@src/apm/decorators';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -58,7 +57,6 @@ export class AccountResolverFields {
     nullable: false,
     description: 'The License operating on this Account.',
   })
-  @InstrumentField()
   async license(
     @Parent() account: Account,
     @Loader(LicenseLoaderCreator, { parentClassRef: Account })
@@ -79,7 +77,6 @@ export class AccountResolverFields {
     nullable: false,
     description: 'The Authorization for this Account.',
   })
-  @InstrumentField()
   async authorization(
     @Parent() account: Account,
     @Loader(AuthorizationLoaderCreator, { parentClassRef: Account })

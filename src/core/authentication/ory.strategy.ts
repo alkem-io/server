@@ -12,9 +12,7 @@ import { SessionExpiredException } from '@common/exceptions/session.expired.exce
 import { AlkemioConfig } from '@src/types';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
-import { InstrumentService } from '@src/apm/decorators';
 
-@InstrumentService
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   constructor(

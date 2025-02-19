@@ -71,9 +71,7 @@ import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { VisualType } from '@common/enums/visual.type';
-import { InstrumentService } from '@src/apm/decorators';
 
-@InstrumentService
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };

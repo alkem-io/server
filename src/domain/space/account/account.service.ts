@@ -36,9 +36,7 @@ import { AccountHostService } from '../account.host/account.host.service';
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicenseService } from '@domain/common/license/license.service';
-import { InstrumentService } from '@src/apm/decorators';
 
-@InstrumentService
 @Injectable()
 export class AccountService {
   constructor(

@@ -12,9 +12,7 @@ import { AlkemioConfig } from '@src/types';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { Session } from '@ory/kratos-client';
-import { InstrumentService } from '@src/apm/decorators';
 
-@InstrumentService
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
   Strategy,

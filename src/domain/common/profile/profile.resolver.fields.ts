@@ -26,7 +26,6 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { ProfileStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/profile/profile.storage.bucket.loader.creator';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
-import { InstrumentField } from '@src/apm/decorators';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
@@ -42,7 +41,6 @@ export class ProfileResolverFields {
     description: 'A particular type of visual for this Profile.',
   })
   @Profiling.api
-  @InstrumentField()
   async visual(
     @Parent() profile: IProfile,
     @Args('type', { type: () => VisualType }) type: VisualType
@@ -55,7 +53,6 @@ export class ProfileResolverFields {
     nullable: false,
     description: 'A list of visuals for this Profile.',
   })
-  @InstrumentField()
   async visuals(
     @Parent() profile: IProfile,
     @Loader(VisualLoaderCreator, { parentClassRef: Profile })
@@ -69,7 +66,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'A list of URLs to relevant information.',
   })
-  @InstrumentField()
   async references(
     @Parent() profile: IProfile,
     @Loader(ProfileReferencesLoaderCreator) loader: ILoader<IReference[]>
@@ -83,7 +79,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'The default or named tagset.',
   })
-  @InstrumentField()
   async tagset(
     @Parent() profile: IProfile,
     @Args('tagsetName', {
@@ -126,7 +121,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'A list of named tagsets, each of which has a list of tags.',
   })
-  @InstrumentField()
   async tagsets(
     @Parent() profile: IProfile,
     @Loader(ProfileTagsetsLoaderCreator) loader: ILoader<ITagset[]>
@@ -139,7 +133,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'The location for this Profile.',
   })
-  @InstrumentField()
   async location(
     @Parent() profile: IProfile,
     @Loader(ProfileLocationLoaderCreator) loader: ILoader<ILocation>

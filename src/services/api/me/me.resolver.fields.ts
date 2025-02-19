@@ -17,7 +17,6 @@ import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
-import { InstrumentField } from '@src/apm/decorators';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -40,7 +39,6 @@ export class MeResolverFields {
     description:
       'The current authenticated User;  null if not yet registered on the platform',
   })
-  @InstrumentField()
   async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser | null> {
     const email = agentInfo.email;
     if (!email) {
