@@ -6,21 +6,9 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISearchResults } from '@services/api/search/dto/search.result.dto';
 import { SearchService } from './search.service';
-import { Search2Service } from '@services/api/search/v2/search2.service';
-import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
 @Resolver()
 export class SearchResolverQueries {
-  private readonly useNewSearch: boolean;
-  constructor(
-    private configService: ConfigService<AlkemioConfig, true>,
-    private searchService: SearchService,
-    private search2Service: Search2Service
-  ) {
-    this.useNewSearch = this.configService.get('search.use_new', {
-      infer: true,
-    });
-  }
+  constructor(private searchService: SearchService) {}
 
   @UseGuards(GraphqlGuard)
   @Query(() => ISearchResults, {
@@ -32,8 +20,6 @@ export class SearchResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('searchData') searchData: SearchInput
   ): Promise<ISearchResults> {
-    return this.useNewSearch
-      ? this.search2Service.search(searchData, agentInfo)
-      : this.searchService.search(searchData, agentInfo);
+    return this.searchService.search(searchData, agentInfo);
   }
 }

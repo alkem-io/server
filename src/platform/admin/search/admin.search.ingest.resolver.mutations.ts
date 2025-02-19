@@ -6,7 +6,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
+import { SearchIngestService } from '@services/api/search/ingest/search.ingest.service';
 import { TaskService } from '@services/task';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';

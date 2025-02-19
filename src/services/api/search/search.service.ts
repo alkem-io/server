@@ -6,13 +6,12 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { SearchInput } from '../v1';
 import { SearchExtractService } from './extract/search.extract.service';
 import { SearchResultService } from './result/search.result.service';
-import { ISearchResults } from '../dto';
+import { ISearchResults, SearchInput } from './dto';
 
 @Injectable()
-export class Search2Service {
+export class SearchService {
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
     private searchExtractService: SearchExtractService,

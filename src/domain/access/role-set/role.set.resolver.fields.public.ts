@@ -1,5 +1,5 @@
 import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { RoleSetService } from './role.set.service';
@@ -11,11 +11,19 @@ import { IRole } from '../role/role.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
+import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
+import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 
 // Resolver for fields on RoleSet that are available without READ access
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFieldsPublic {
-  constructor(private roleSetService: RoleSetService) {}
+  constructor(
+    private roleSetService: RoleSetService,
+    @Inject(RoleSetAgentRolesDataLoader)
+    private readonly agentRolesLoader: RoleSetAgentRolesDataLoader,
+    @Inject(RoleSetMembershipStatusDataLoader)
+    private readonly membershipStatusLoader: RoleSetMembershipStatusDataLoader
+  ) {}
 
   @UseGuards(GraphqlGuard)
   @ResolveField('applicationForm', () => IForm, {
@@ -72,9 +80,10 @@ export class RoleSetResolverFieldsPublic {
   })
   async myMembershipStatus(
     @CurrentUser() agentInfo: AgentInfo,
-    @Parent() roleSet: IRoleSet
+    @Parent() roleSet: RoleSet
   ): Promise<CommunityMembershipStatus> {
-    return this.roleSetService.getMembershipStatus(agentInfo, roleSet);
+    // Uses the DataLoader to batch load membership statuses
+    return this.membershipStatusLoader.loader.load({ agentInfo, roleSet });
   }
 
   @UseGuards(GraphqlGuard)
@@ -84,10 +93,11 @@ export class RoleSetResolverFieldsPublic {
       'The roles on this community for the currently logged in user.',
   })
   async myRoles(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() roleSet: IRoleSet
+    @Parent() roleSet: RoleSet,
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<RoleName[]> {
-    return this.roleSetService.getRolesForAgentInfo(agentInfo, roleSet);
+    // Utilize the loader to batch getRolesForAgentInfo calls.
+    return this.agentRolesLoader.loader.load({ agentInfo, roleSet });
   }
 
   @UseGuards(GraphqlGuard)

@@ -77,8 +77,6 @@ innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
 
 search:
-  # use the new search implementation; alternatively it will use the original mysql search implementation
-  use_new: ${SEARCH_USE_NEW}:true
   # max results per search
   max_results: ${SEARCH_MAX_RESULTS}:40
   # the index pattern used when ingesting data in Elasticsearch, e.g. alkemio-data-[organization];
@@ -397,6 +395,8 @@ notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
 
 collaboration:
+  membership:
+    cache_ttl: ${MEMBERSHIP_TTL}:14400
   whiteboards:
     enabled: ${WHITEBOARDS_ENABLED}:true
     # the window in which contributions are accepted to be counted towards a single contribution event;

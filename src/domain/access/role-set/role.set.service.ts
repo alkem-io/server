@@ -60,6 +60,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { RoleSetCacheService } from './role.set.service.cache';
 
 @Injectable()
 export class RoleSetService {
@@ -82,7 +83,9 @@ export class RoleSetService {
     private licenseService: LicenseService,
     @InjectRepository(RoleSet)
     private roleSetRepository: Repository<RoleSet>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private readonly roleSetCacheService: RoleSetCacheService
   ) {}
 
   async createRoleSet(roleSetData: CreateRoleSetInput): Promise<IRoleSet> {
@@ -256,7 +259,7 @@ export class RoleSetService {
     return roleSet;
   }
 
-  public async removeAllRoleAssignments(roleSet: IRoleSet) {
+  private async removeAllRoleAssignments(roleSet: IRoleSet) {
     // Remove all issued role credentials for contributors
     const roleNames = await this.getRoleNames(roleSet);
     for (const roleName of roleNames) {
@@ -337,23 +340,44 @@ export class RoleSetService {
       return [];
     }
 
-    const result: RoleName[] = [];
+    const cached = await this.roleSetCacheService.getAgentRolesFromCache(
+      agentInfo.agentID,
+      roleSet.id
+    );
+    if (cached) {
+      return cached;
+    }
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const roles: RoleName[] = await this.getRoleNames(roleSet);
-    for (const role of roles) {
-      const hasAgentRole = await this.isInRole(agent, roleSet, role);
-      if (hasAgentRole) {
-        result.push(role);
-      }
-    }
-
-    return result;
+    const rolesThatAgentHas = await Promise.all(
+      roles.map(async role => {
+        const hasAgentRole = await this.isInRole(agent, roleSet, role);
+        return hasAgentRole ? role : undefined;
+      })
+    );
+    const agentRoles = rolesThatAgentHas.filter(
+      (role): role is RoleName => role !== undefined
+    );
+    await this.roleSetCacheService.setAgentRolesCache(
+      agent.id,
+      roleSet.id,
+      agentRoles
+    );
+    return agentRoles;
   }
 
   public async findOpenApplication(
     userID: string,
     roleSetID: string
   ): Promise<IApplication | undefined> {
+    const cached = await this.roleSetCacheService.getOpenApplicationFromCache(
+      userID,
+      roleSetID
+    );
+    if (cached) {
+      return cached;
+    }
+
     const applications = await this.applicationService.findExistingApplications(
       userID,
       roleSetID
@@ -364,39 +388,78 @@ export class RoleSetService {
         application.id
       );
       if (isFinalized) continue;
+      await this.roleSetCacheService.setOpenApplicationCache(
+        userID,
+        roleSetID,
+        application
+      );
       return application;
     }
     return undefined;
   }
 
-  async getMembershipStatus(
+  async getMembershipStatusByAgentInfo(
     agentInfo: AgentInfo,
     roleSet: IRoleSet
   ): Promise<CommunityMembershipStatus> {
     if (!agentInfo.agentID) {
       return CommunityMembershipStatus.NOT_MEMBER;
     }
+
+    const cached = await this.roleSetCacheService.getMembershipStatusFromCache(
+      agentInfo.agentID,
+      roleSet.id
+    );
+    if (cached) {
+      return cached;
+    }
+
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const isMember = await this.isMember(agent, roleSet);
-    if (isMember) return CommunityMembershipStatus.MEMBER;
+    if (isMember) {
+      await this.roleSetCacheService.setMembershipStatusCache(
+        agent.id,
+        roleSet.id,
+        CommunityMembershipStatus.MEMBER
+      );
+
+      return CommunityMembershipStatus.MEMBER;
+    }
 
     const openApplication = await this.findOpenApplication(
       agentInfo.userID,
       roleSet.id
     );
-    if (openApplication) return CommunityMembershipStatus.APPLICATION_PENDING;
+    if (openApplication) {
+      await this.roleSetCacheService.setMembershipStatusCache(
+        agent.id,
+        roleSet.id,
+        CommunityMembershipStatus.APPLICATION_PENDING
+      );
+      return CommunityMembershipStatus.APPLICATION_PENDING;
+    }
 
     const openInvitation = await this.findOpenInvitation(
       agentInfo.userID,
       roleSet.id
     );
-
     if (
       openInvitation &&
       (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
     ) {
+      await this.roleSetCacheService.setMembershipStatusCache(
+        agent.id,
+        roleSet.id,
+        CommunityMembershipStatus.INVITATION_PENDING
+      );
       return CommunityMembershipStatus.INVITATION_PENDING;
     }
+
+    await this.roleSetCacheService.setMembershipStatusCache(
+      agent.id,
+      roleSet.id,
+      CommunityMembershipStatus.NOT_MEMBER
+    );
 
     return CommunityMembershipStatus.NOT_MEMBER;
   }
@@ -405,16 +468,31 @@ export class RoleSetService {
     contributorID: string,
     roleSetID: string
   ): Promise<IInvitation | undefined> {
+    const cached = await this.roleSetCacheService.getOpenInvitationFromCache(
+      contributorID,
+      roleSetID
+    );
+    if (cached) {
+      return cached;
+    }
+
     const invitations = await this.invitationService.findExistingInvitations(
       contributorID,
       roleSetID
     );
     for (const invitation of invitations) {
-      // skip any finalized applications; only want to return pending applications
+      // skip any finalized invitations; only return pending invitations
       const isFinalized = await this.invitationService.isFinalizedInvitation(
         invitation.id
       );
-      if (isFinalized) continue;
+      if (isFinalized) {
+        continue;
+      }
+      await this.roleSetCacheService.setOpenInvitationCache(
+        contributorID,
+        roleSetID,
+        invitation
+      );
       return invitation;
     }
     return undefined;
@@ -738,6 +816,10 @@ export class RoleSetService {
           );
         }
       }
+      await this.roleSetCacheService.deleteOpenInvitationFromCache(
+        contributorID,
+        roleSet.id
+      );
     } catch (e: any) {
       this.logger.error?.(
         `Error adding member to community: ${e}`,
@@ -983,6 +1065,11 @@ export class RoleSetService {
         break;
       }
     }
+
+    await this.roleSetCacheService.cleanAgentMembershipCache(
+      agent.id,
+      roleSet.id
+    );
 
     return user;
   }
@@ -1276,6 +1363,13 @@ export class RoleSetService {
   }
 
   public async isMember(agent: IAgent, roleSet: IRoleSet): Promise<boolean> {
+    const cached = await this.roleSetCacheService.getAgentIsMemberFromCache(
+      agent.id,
+      roleSet.id
+    );
+    if (cached) {
+      return cached;
+    }
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
       RoleName.MEMBER
@@ -1288,6 +1382,12 @@ export class RoleSetService {
         resourceID: membershipCredential.resourceID,
       }
     );
+    await this.roleSetCacheService.setAgentIsMemberCache(
+      agent.id,
+      roleSet.id,
+      validCredential
+    );
+
     return validCredential;
   }
 
@@ -1785,6 +1885,11 @@ export class RoleSetService {
       userID,
       agentInfo,
       true
+    );
+
+    await this.roleSetCacheService.deleteOpenApplicationFromCache(
+      userID,
+      roleSet.id
     );
   }
 
