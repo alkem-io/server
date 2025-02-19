@@ -95,7 +95,7 @@ export class CommunityResolverService {
     });
     if (!community || !community.communication) {
       throw new EntityNotFoundException(
-        `Unable to find Community for given RoleSet id: ${roleSetID}`,
+        `Unable to find Communication for given RoleSet id: ${roleSetID}`,
         LogContext.COMMUNITY
       );
     }

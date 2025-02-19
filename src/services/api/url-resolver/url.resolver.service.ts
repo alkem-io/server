@@ -6,7 +6,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { URL_PATHS } from '@common/constants/url.path.constants';
+import { UrlPathElement } from '@common/enums/url.path.element';
 import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/forum.discussion.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
@@ -25,29 +25,30 @@ import { match } from 'path-to-regexp';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.callouts.set.result';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
+import { UrlPathBase } from '@common/enums/url.path.base';
 
 @Injectable()
 export class UrlResolverService {
   private spacePathMatcher = match(
-    `/:spaceNameID{/${URL_PATHS.CHALLENGES}/:challengeNameID}{/${URL_PATHS.OPPORTUNITIES}/:opportunityNameID}{/*path}`
+    `/:spaceNameID{/${UrlPathElement.CHALLENGES}/:challengeNameID}{/${UrlPathElement.OPPORTUNITIES}/:opportunityNameID}{/*path}`
   );
   private spaceInternalPathMatcherCollaboration = match(
-    `/${URL_PATHS.COLLABORATION}/:calloutNameID{/${URL_PATHS.POSTS}/:postNameID}{/${URL_PATHS.WHITEBOARDS}/:whiteboardNameID}{/*path}`
+    `/${UrlPathElement.COLLABORATION}/:calloutNameID{/${UrlPathElement.POSTS}/:postNameID}{/${UrlPathElement.WHITEBOARDS}/:whiteboardNameID}{/*path}`
   );
   private spaceInternalPathMatcherCalendar = match(
-    `/${URL_PATHS.CALENDAR}/:calendarEventNameId`
+    `/${UrlPathElement.CALENDAR}/:calendarEventNameId`
   );
   private spaceInternalPathMatcherSettings = match(
-    `/${URL_PATHS.SETTINGS}/${URL_PATHS.TEMPLATES}{/:templateNameID}{/*path}`
+    `/${UrlPathElement.SETTINGS}/${UrlPathElement.TEMPLATES}{/:templateNameID}{/*path}`
   );
   private innovationPackPathMatcher = match(
-    `/${URL_PATHS.INNOVATION_PACKS}/:innovationPackNameID{/${URL_PATHS.SETTINGS}}{/:templateNameID}{/*path}`
+    `/${UrlPathBase.INNOVATION_PACKS}/:innovationPackNameID{/${UrlPathElement.SETTINGS}}{/:templateNameID}{/*path}`
   );
   private virtualContributorPathMatcher = match(
-    `/${URL_PATHS.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${URL_PATHS.KNOWLEDGE_BASE}/:calloutNameID}{/${URL_PATHS.POSTS}/:postNameID}{/*path}`
+    `/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${UrlPathElement.KNOWLEDGE_BASE}/:calloutNameID}{/${UrlPathElement.POSTS}/:postNameID}{/*path}`
   );
   private innovationHubPathMatcher = match(
-    `/${URL_PATHS.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
+    `/${UrlPathBase.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
   );
 
   constructor(
@@ -80,15 +81,56 @@ export class UrlResolverService {
       return result;
     }
 
-    const urlPathRoot = pathElements[0];
+    const urlPathBase = pathElements[0];
     const urlPath = this.getPath(url);
 
-    switch (urlPathRoot) {
-      case URL_PATHS.HOME: {
+    // First check for reserved top level base routes
+    const baseRoute = this.getBaseRoute(urlPathBase);
+    if (baseRoute) {
+      return await this.resolveBaseRoute(
+        baseRoute,
+        pathElements,
+        url,
+        agentInfo
+      );
+    }
+
+    // Assumption is that everything else is a Space!
+    await this.populateSpaceResult(result, agentInfo, urlPath);
+
+    return await this.populateSpaceInternalResult(result, agentInfo);
+  }
+
+  private getBaseRoute(urlPathRoot: string): UrlPathBase | undefined {
+    return Object.values(UrlPathBase).includes(urlPathRoot as UrlPathBase)
+      ? (urlPathRoot as UrlPathBase)
+      : undefined;
+  }
+
+  private async resolveBaseRoute(
+    baseRoute: UrlPathBase,
+    pathElements: string[],
+    url: string,
+    agentInfo: AgentInfo
+  ): Promise<UrlResolverQueryResults | never> {
+    const result: UrlResolverQueryResults = {
+      type: UrlType.UNKNOWN,
+    };
+    const urlPath = this.getPath(url);
+    switch (baseRoute) {
+      case UrlPathBase.HOME: {
         result.type = UrlType.HOME;
         return result;
       }
-      case URL_PATHS.USER: {
+      case UrlPathBase.CREATE_SPACE: {
+        result.type = UrlType.FLOW;
+        return result;
+      }
+      case UrlPathBase.DOCS: {
+        result.type = UrlType.DOCUMENTATION;
+        return result;
+      }
+      case UrlPathBase.USER: {
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
@@ -102,14 +144,14 @@ export class UrlResolverService {
         result.type = UrlType.USER;
         return result;
       }
-      case URL_PATHS.VIRTUAL_CONTRIBUTOR: {
+      case UrlPathBase.VIRTUAL_CONTRIBUTOR: {
         return await this.populateVirtualContributorResult(
           result,
           urlPath,
           agentInfo
         );
       }
-      case URL_PATHS.ORGANIZATION: {
+      case UrlPathBase.ORGANIZATION: {
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
@@ -124,29 +166,29 @@ export class UrlResolverService {
         result.type = UrlType.ORGANIZATION;
         return result;
       }
-      case URL_PATHS.ADMIN:
+      case UrlPathBase.ADMIN:
         return await this.populateAdminResult(result, urlPath);
-      case URL_PATHS.INNOVATION_HUBS:
+      case UrlPathBase.INNOVATION_HUBS:
         return await this.populateInnovationHubResult(result, urlPath);
-      case URL_PATHS.INNOVATION_LIBRARY:
+      case UrlPathBase.INNOVATION_LIBRARY:
         result.type = UrlType.INNOVATION_LIBRARY;
         return result;
-      case URL_PATHS.DOCUMENTATION:
+      case UrlPathBase.DOCUMENTATION:
         result.type = UrlType.DOCUMENTATION;
         return result;
-      case URL_PATHS.INNOVATION_PACKS:
+      case UrlPathBase.INNOVATION_PACKS:
         return await this.populateInnovationPackResult(result, urlPath);
-      case URL_PATHS.SPACE_EXPLORER: {
+      case UrlPathBase.SPACE_EXPLORER: {
         result.type = UrlType.SPACE_EXPLORER;
         return result;
       }
-      case URL_PATHS.CONTRIBUTORS_EXPLORER: {
+      case UrlPathBase.CONTRIBUTORS_EXPLORER: {
         result.type = UrlType.CONTRIBUTORS_EXPLORER;
         return result;
       }
-      case URL_PATHS.FORUM: {
+      case UrlPathBase.FORUM: {
         result.type = UrlType.FORUM;
-        if (pathElements[1] === URL_PATHS.DISCUSSION) {
+        if (pathElements[1] === UrlPathElement.DISCUSSION) {
           if (pathElements.length < 2) {
             throw new ValidationException(
               `Invalid URL: ${url}`,
@@ -163,11 +205,10 @@ export class UrlResolverService {
         return result;
       }
     }
-
-    // Assumption is that everything else is a Space!
-    await this.populateSpaceResult(result, agentInfo, urlPath);
-
-    return await this.populateSpaceInternalResult(result, agentInfo);
+    throw new ValidationException(
+      `Unknown base route (${baseRoute}), from URL: ${url}`,
+      LogContext.URL_RESOLVER
+    );
   }
 
   private async populateVirtualContributorResult(
@@ -643,6 +684,9 @@ export class UrlResolverService {
     const callout = await this.entityManager.findOneOrFail(Callout, {
       where: {
         nameID: calloutNameID,
+        calloutsSet: {
+          id: calloutsSetId,
+        },
       },
       relations: {
         authorization: true,

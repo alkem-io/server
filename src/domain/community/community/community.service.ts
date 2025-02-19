@@ -176,7 +176,7 @@ export class CommunityService {
       );
     }
 
-    await this.roleSetService.removeAllRoleAssignments(community.roleSet);
+    await this.roleSetService.removeRoleSetOrFail(community.roleSet.id);
 
     // Remove all groups
     for (const group of community.groups) {
@@ -191,8 +191,6 @@ export class CommunityService {
     await this.communicationService.removeCommunication(
       community.communication.id
     );
-
-    await this.roleSetService.removeRoleSetOrFail(community.roleSet.id);
 
     await this.communityGuidelinesService.deleteCommunityGuidelines(
       community.guidelines.id
