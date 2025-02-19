@@ -868,20 +868,16 @@ export class RoleSetResolverMutations {
     }
 
     if (agentInfo.userID && application.roleSet) {
-      const isOpenApplication =
-        await this.applicationService.isFinalizedApplication(application.id);
       applicationState = this.lifecycleService.getState(
         application.lifecycle,
         this.roleSetServiceLifecycleApplication.getApplicationMachine()
       );
       const isMember = applicationState === ApplicationLifecycleState.APPROVED;
       if (agentInfo.userID && application.roleSet) {
-        if (!isOpenApplication) {
-          await this.roleSetCacheService.deleteOpenApplicationFromCache(
-            agentInfo.userID,
-            application.roleSet?.id
-          );
-        }
+        await this.roleSetCacheService.deleteOpenApplicationFromCache(
+          agentInfo.userID,
+          application.roleSet?.id
+        );
         await this.roleSetCacheService.setAgentIsMemberCache(
           agentInfo.agentID,
           application.roleSet?.id,
