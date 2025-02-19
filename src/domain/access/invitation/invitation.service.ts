@@ -64,7 +64,11 @@ export class InvitationService {
     deleteData: DeleteInvitationInput
   ): Promise<IInvitation> {
     const invitationID = deleteData.ID;
-    const invitation = await this.getInvitationOrFail(invitationID);
+    const invitation = await this.getInvitationOrFail(invitationID, {
+      relations: {
+        roleSet: true,
+      },
+    });
     await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id);
 
     if (invitation.authorization)

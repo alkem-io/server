@@ -62,7 +62,9 @@ export class ApplicationService {
     deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
     const applicationID = deleteData.ID;
-    const application = await this.getApplicationOrFail(applicationID);
+    const application = await this.getApplicationOrFail(applicationID, {
+      relations: { roleSet: true },
+    });
     if (application.questions) {
       for (const question of application.questions) {
         await this.nvpService.removeNVP(question.id);
