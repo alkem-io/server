@@ -34,44 +34,79 @@ export class InnovationFlowStates1740065242887 implements MigrationInterface {
         );
         break;
       }
-      switch (space.level) {
-        case 0:
-          await queryRunner.query(
-            `UPDATE \`innovation_flow\` SET settings = '${JSON.stringify(
-              spaceFlowSettings
-            )}' WHERE id = '${space.innovationFlowId}'`
-          );
-          // also update the states
-          await queryRunner.query(
-            `UPDATE \`innovation_flow\` SET states = '${JSON.stringify(
-              spaceFlowStates.states
-            )}' WHERE id = '${space.innovationFlowId}'`
-          );
-          break;
-        case 1:
-        case 2:
-          await queryRunner.query(
-            `UPDATE \`innovation_flow\` SET settings = '${JSON.stringify(
-              subspaceFlowSettings
-            )}' WHERE id = '${space.innovationFlowId}'`
-          );
-          break;
-      }
+      await this.updateInnovationFlow(
+        queryRunner,
+        space.innovationFlowId,
+        space.level
+      );
     }
 
     // Update all templates
-    const collaborations: {
-      id: string;
-      innovationFlowId: string;
+    const templates: {
+      templateId: string;
+      nameID: string;
+      collaborationId: string | null;
+      innovationFlowId: string | null;
     }[] = await queryRunner.query(
-      `SELECT id, innovationFlowId FROM \`collaboration\` where isTemplate = 1`
+      `SELECT
+          s.id AS templateId,
+          s.nameID,
+          s.collaborationId,
+          c.innovationFlowId
+        FROM \`template\` s
+        LEFT JOIN \`collaboration\` c ON s.collaborationId = c.id
+        WHERE type='collaboration'`
     );
-    for (const collaboration of collaborations) {
-      await queryRunner.query(
-        `UPDATE \`innovation_flow\` SET settings = '${JSON.stringify(
-          subspaceFlowSettings
-        )}' WHERE id = '${collaboration.innovationFlowId}'`
-      );
+    for (const template of templates) {
+      if (!template.innovationFlowId) {
+        console.error(
+          `Template ${template.innovationFlowId} does not have an innovation flow.`
+        );
+        break;
+      }
+      if (template.nameID === 'spacetemplate') {
+        await this.updateInnovationFlow(
+          queryRunner,
+          template.innovationFlowId,
+          0
+        );
+      } else {
+        await this.updateInnovationFlow(
+          queryRunner,
+          template.innovationFlowId,
+          1
+        );
+      }
+    }
+  }
+
+  private async updateInnovationFlow(
+    queryRunner: QueryRunner,
+    innovationFlowId: string,
+    level: number
+  ) {
+    switch (level) {
+      case 0:
+        await queryRunner.query(
+          `UPDATE \`innovation_flow\` SET settings = '${JSON.stringify(
+            spaceFlowSettings
+          )}' WHERE id = '${innovationFlowId}'`
+        );
+        // also update the states
+        await queryRunner.query(
+          `UPDATE \`innovation_flow\` SET states = '${JSON.stringify(
+            spaceFlowStates.states
+          )}' WHERE id = '${innovationFlowId}'`
+        );
+        break;
+      case 1:
+      case 2:
+        await queryRunner.query(
+          `UPDATE \`innovation_flow\` SET settings = '${JSON.stringify(
+            subspaceFlowSettings
+          )}' WHERE id = '${innovationFlowId}'`
+        );
+        break;
     }
   }
 
