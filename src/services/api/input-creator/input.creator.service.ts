@@ -204,6 +204,7 @@ export class InputCreatorService {
     }
     // Note: no profile currently present, so use the one from the template for now
     const result: CreateInnovationFlowInput = {
+      settings: innovationFlow.settings,
       profile: {
         displayName: innovationFlow.profile.displayName,
         description: innovationFlow.profile.description,

@@ -120,7 +120,8 @@ export class InnovationFlowService {
 
     if (innovationFlowData.states) {
       this.innovationFlowStatesService.validateDefinition(
-        innovationFlowData.states
+        innovationFlowData.states,
+        innovationFlow.settings
       );
       const newStateNames = innovationFlowData.states.map(
         state => state.displayName
@@ -264,7 +265,10 @@ export class InnovationFlowService {
       newStates.push(state);
     }
     // Check that the new states setup is valid
-    this.innovationFlowStatesService.validateDefinition(newStates);
+    this.innovationFlowStatesService.validateDefinition(
+      newStates,
+      innovationFlow.settings
+    );
 
     innovationFlow.states =
       this.innovationFlowStatesService.serializeStates(newStates);

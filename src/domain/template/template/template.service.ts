@@ -150,6 +150,10 @@ export class TemplateService {
             profile: {
               displayName: 'Default Innovation Flow State',
             },
+            settings: {
+              maximumNumberOfStates: 8,
+              minimumNumberOfStates: 1,
+            },
           };
         }
         // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
