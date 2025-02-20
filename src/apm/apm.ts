@@ -9,13 +9,11 @@ const CERTIFICATE_PATH =
 
 export const apmAgent = apm.start({
   // https://www.elastic.co/guide/en/apm/agent/nodejs/4.x/configuration.html
-  // active: process.env.NODE_ENV === 'production',
+  active: process.env.APM_ACTIVE === 'true',
   serviceName: process.env.npm_package_name,
   serviceVersion: process.env.npm_package_version,
-  // serverUrl: process.env.APM_SERVER_URL,
-  // apiKey: process.env.ELASTICSEARCH_API_KEY,
-  serverUrl: 'https://sandbox-apm.alkem.io',
-  apiKey: 'b01ON3Q1UUJwMU5lUmNTWXJyVUg6MnZpQ1FUZ0xUeFdRbWdQalBldzdhdw==',
+  serverUrl: process.env.APM_SERVER_URL,
+  apiKey: process.env.ELASTICSEARCH_API_KEY,
   verifyServerCert: !!CERTIFICATE_PATH,
   serverCaCertFile: CERTIFICATE_PATH,
   environment: process.env.ENVIRONMENT ?? 'local',
