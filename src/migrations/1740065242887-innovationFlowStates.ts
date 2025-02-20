@@ -8,6 +8,10 @@ export class InnovationFlowStates1740065242887 implements MigrationInterface {
       `ALTER TABLE \`innovation_flow\` ADD \`settings\` json NOT NULL`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` CHANGE \`states\` \`states\` json NOT NULL`
+    );
+
     // Update all L0 spaces, L1/L2 Spaces
     const spaces: {
       spaceId: string;

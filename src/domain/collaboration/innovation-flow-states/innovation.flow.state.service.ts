@@ -13,22 +13,8 @@ export class InnovationFlowStatesService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public getStates(statesStr: string): IInnovationFlowState[] {
-    const states: IInnovationFlowState[] = this.deserializeStates(statesStr);
-    return states;
-  }
-
-  public getStateNames(statesStr: string): string[] {
-    const states = this.getStates(statesStr);
+  public getStateNames(states: IInnovationFlowState[]): string[] {
     return states.map(state => state.displayName);
-  }
-
-  public serializeStates(states: IInnovationFlowState[]): string {
-    return JSON.stringify(states);
-  }
-
-  private deserializeStates(statesStr: string): IInnovationFlowState[] {
-    return JSON.parse(statesStr);
   }
 
   public convertInputsToStates(
