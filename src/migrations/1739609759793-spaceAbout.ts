@@ -23,7 +23,6 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
                                                                \`version\` int NOT NULL,
                                                                \`why\` text NULL,
                                                                \`who\` text NULL,
-                                                               \`when\` text NULL,
                                                                \`authorizationId\` char(36) NULL,
                                                                \`profileId\` char(36) NULL,
                                                                UNIQUE INDEX \`REL_8ce1fdaa7405b062b0102ce5f1\` (\`authorizationId\`),
@@ -73,20 +72,39 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
         `SELECT id, who, vision, impact FROM context WHERE id = ?`,
         [space.contextId]
       );
+      const [profile]: {
+        id: string;
+        description: string;
+      }[] = await queryRunner.query(
+        `SELECT id, description FROM profile WHERE id = ?`,
+        [space.profileId]
+      );
+      const origImpact = context.impact;
+      const origVision = context.vision;
+      const origWho = context.who;
+      const origDescription = profile.description;
+
+      const newWhy = `${origImpact} \n====== Impact === ${origVision}`;
+      const newDescription = `${origDescription}`;
+
       const aboutID = randomUUID();
       const aboutAuthID = await this.createAuthorizationPolicy(
         queryRunner,
         'space-about'
       );
       await queryRunner.query(
-        `INSERT INTO space_about (id, version, why, who, space_about.when, authorizationId, profileId) VALUES
+        `INSERT INTO space_about (id, version, why, who, authorizationId, profileId) VALUES
                             ('${aboutID}',
                             1,
-                            '${context.vision}',
-                            '${context.who}',
-                            '${context.impact}',
+                            '${newWhy}',
+                            '${origWho}',
                             '${aboutAuthID}',
                             '${space.profileId}')`
+      );
+      // Update the profile description
+      await queryRunner.query(
+        `UPDATE profile SET description = '${newDescription}' WHERE id = ?`,
+        [profile.id]
       );
       await queryRunner.query(
         `UPDATE \`space\` SET aboutId = '${aboutID}' WHERE id = ?`,
