@@ -1,7 +1,7 @@
 import apm from 'elastic-apm-node';
 
 const TRANSACTION_SAMPLE_RATE =
-  Number(process.env.APM_TRANSACTION_SAMPLE_RATE_PERCENTAGE ?? 100) / 100;
+  Number(process.env.APM_TRANSACTION_PERCENTAGE ?? 100) / 100;
 const CERTIFICATE_PATH =
   process.env.ELASTIC_TLS_CA_CERT_PATH === 'none'
     ? undefined
@@ -12,7 +12,7 @@ export const apmAgent = apm.start({
   active: process.env.APM_ACTIVE === 'true',
   serviceName: process.env.npm_package_name,
   serviceVersion: process.env.npm_package_version,
-  serverUrl: process.env.APM_SERVER_URL,
+  serverUrl: process.env.APM_ENDPOINT,
   apiKey: process.env.ELASTICSEARCH_API_KEY,
   verifyServerCert: !!CERTIFICATE_PATH,
   serverCaCertFile: CERTIFICATE_PATH,
