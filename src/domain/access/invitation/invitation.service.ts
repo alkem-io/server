@@ -24,6 +24,7 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { IUser } from '@domain/community/user/user.interface';
 import { InvitationLifecycleService } from './invitation.service.lifecycle';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { RoleSetCacheService } from '../role-set/role.set.service.cache';
 
 @Injectable()
 export class InvitationService {
@@ -35,6 +36,7 @@ export class InvitationService {
     private contributorService: ContributorService,
     private lifecycleService: LifecycleService,
     private invitationLifecycleService: InvitationLifecycleService,
+    private roleSetCacheService: RoleSetCacheService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -62,7 +64,11 @@ export class InvitationService {
     deleteData: DeleteInvitationInput
   ): Promise<IInvitation> {
     const invitationID = deleteData.ID;
-    const invitation = await this.getInvitationOrFail(invitationID);
+    const invitation = await this.getInvitationOrFail(invitationID, {
+      relations: {
+        roleSet: true,
+      },
+    });
     await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id);
 
     if (invitation.authorization)
@@ -72,6 +78,14 @@ export class InvitationService {
       invitation as Invitation
     );
     result.id = invitationID;
+
+    if (invitation.invitedContributorID && invitation.roleSet) {
+      await this.roleSetCacheService.deleteOpenInvitationFromCache(
+        invitation.invitedContributorID,
+        invitation.roleSet.id
+      );
+    }
+
     return result;
   }
 

@@ -29,7 +29,6 @@ export type AlkemioConfig = {
     header: string;
   };
   search: {
-    use_new: boolean;
     max_results: number;
     index_pattern: string;
   };

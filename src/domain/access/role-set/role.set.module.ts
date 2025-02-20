@@ -34,7 +34,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
 import { UserModule } from '@domain/community/user/user.module';
 import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
-import { RoleSetCacheService } from './role.set.service.cache';
+import { RoleSetCacheModule } from './role.set.service.cache.module';
 
 @Module({
   imports: [
@@ -61,6 +61,7 @@ import { RoleSetCacheService } from './role.set.service.cache';
     LifecycleModule,
     CommunityCommunicationModule,
     TypeOrmModule.forFeature([RoleSet]),
+    RoleSetCacheModule,
   ],
   providers: [
     RoleSetService,
@@ -74,7 +75,6 @@ import { RoleSetCacheService } from './role.set.service.cache';
     RoleSetServiceLifecycleInvitation,
     RoleSetAgentRolesDataLoader,
     RoleSetMembershipStatusDataLoader,
-    RoleSetCacheService,
   ],
   exports: [RoleSetService, RoleSetAuthorizationService, RoleSetLicenseService],
 })
