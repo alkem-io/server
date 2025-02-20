@@ -20,6 +20,7 @@ export enum UrlType {
   ADMIN = 'admin',
   DOCUMENTATION = 'documentation',
   UNKNOWN = 'unknown',
+  NOT_AUTHORIZED = 'not-authorized',
   FLOW = 'flow',
 }
 
