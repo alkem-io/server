@@ -658,15 +658,6 @@ export class RoleSetService {
   ): Promise<IUser> {
     const { user, agent } =
       await this.userLookupService.getUserAndAgent(userID);
-
-    await this.roleSetCacheService.deleteOpenApplicationFromCache(
-      userID,
-      roleSet.id
-    );
-    await this.roleSetCacheService.deleteOpenInvitationFromCache(
-      userID,
-      roleSet.id
-    );
     const { isMember: hasMemberRoleInParent, parentRoleSet } =
       await this.isMemberInParentRoleSet(agent, roleSet.id);
     if (!hasMemberRoleInParent) {
@@ -687,6 +678,16 @@ export class RoleSetService {
       agent,
       RoleSetContributorType.USER
     );
+
+    await this.roleSetCacheService.deleteOpenApplicationFromCache(
+      userID,
+      roleSet.id
+    );
+    await this.roleSetCacheService.deleteOpenInvitationFromCache(
+      userID,
+      roleSet.id
+    );
+
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
         if (roleName === RoleName.ADMIN && parentRoleSet) {
@@ -735,6 +736,7 @@ export class RoleSetService {
 
     await this.contributorAddedToRole(
       user,
+      agent.id,
       roleSet,
       roleName,
       agentInfo,
@@ -885,6 +887,7 @@ export class RoleSetService {
   }
   private async contributorAddedToRole(
     contributor: IContributor,
+    contributorAgentId: string,
     roleSet: IRoleSet,
     role: RoleName,
     agentInfo?: AgentInfo,
@@ -901,9 +904,15 @@ export class RoleSetService {
             await this.communityResolverService.getCommunicationForRoleSet(
               roleSet.id
             );
-          this.communityCommunicationService.addMemberToCommunication(
+          await this.communityCommunicationService.addMemberToCommunication(
             communication,
             contributor
+          );
+
+          await this.roleSetCacheService.setMembershipStatusCache(
+            contributorAgentId,
+            roleSet.id,
+            CommunityMembershipStatus.MEMBER
           );
 
           if (agentInfo) {
@@ -967,6 +976,7 @@ export class RoleSetService {
 
     await this.contributorAddedToRole(
       virtualContributor,
+      agent.id,
       roleSet,
       roleType,
       agentInfo,
