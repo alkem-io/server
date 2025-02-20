@@ -159,9 +159,19 @@ export class BootstrapService {
     authResetNeeded =
       (await this.ensureSubspaceKnowledgeTemplatesArePresent(
         templateDefaults,
+        TemplateDefaultType.PLATFORM_SUBSPACE,
+        templatesSet,
+        'subspace',
+        bootstrapSubspaceInnovationFlow,
+        bootstrapSubspaceCalloutGroups,
+        bootstrapSubspaceCallouts
+      )) || authResetNeeded;
+    authResetNeeded =
+      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+        templateDefaults,
         TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
         templatesSet,
-        'space',
+        'space-tutorials',
         bootstrapSpaceTutorialsInnovationFlow,
         bootstrapSpaceTutorialsCalloutGroups,
         bootstrapSpaceTutorialsCallouts
@@ -175,16 +185,6 @@ export class BootstrapService {
         bootstrapSubspaceKnowledgeInnovationFlow,
         bootstrapSubspaceKnowledgeCalloutGroups,
         bootstrapSubspaceKnowledgeCallouts
-      )) || authResetNeeded;
-    authResetNeeded =
-      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
-        templateDefaults,
-        TemplateDefaultType.PLATFORM_SUBSPACE,
-        templatesSet,
-        'challenge',
-        bootstrapSubspaceInnovationFlow,
-        bootstrapSubspaceCalloutGroups,
-        bootstrapSubspaceCallouts
       )) || authResetNeeded;
     if (authResetNeeded) {
       this.logger.verbose?.(
@@ -224,7 +224,7 @@ export class BootstrapService {
         templatesSet,
         {
           profileData: {
-            displayName: `${nameID} Template`,
+            displayName: `${nameID}-Template`,
           },
           type: TemplateType.COLLABORATION,
           collaborationData: {
