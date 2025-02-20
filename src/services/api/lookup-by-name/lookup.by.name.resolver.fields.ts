@@ -88,8 +88,8 @@ export class LookupByNameResolverFields {
     // this.authorizationService.grantAccessOrFail(
     //   agentInfo,
     //   space.authorization,
-    //   AuthorizationPrivilege.READ,
-    //   `lookup L0 Space by NameID: ${space.id}`
+    //   AuthorizationPrivilege.READ_ABOUT,
+    //   `lookup L0 Space by NameID: ${nameid}`
     // );
 
     return space;
