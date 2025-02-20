@@ -166,6 +166,7 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
     );
 
     // Drop the following tables: actor, actor_group, ecosystem_model
+    await queryRunner.query(`DROP TABLE \`context\``);
     await queryRunner.query(`DROP TABLE \`actor\``);
     await queryRunner.query(`DROP TABLE \`actor_group\``);
     await queryRunner.query(`DROP TABLE \`ecosystem_model\``);
