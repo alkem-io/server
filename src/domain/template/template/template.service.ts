@@ -405,9 +405,9 @@ export class TemplateService {
       targetCollaboration.calloutsSet?.tagsetTemplateSet?.tagsetTemplates.find(
         tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
       )?.allowedValues;
-    const validFlowStates = this.innovationFlowService
-      .getStates(targetCollaboration.innovationFlow)
-      ?.map(state => state.displayName);
+    const validFlowStates = targetCollaboration.innovationFlow.states?.map(
+      state => state.displayName
+    );
 
     this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
       validGroupNames ?? [],

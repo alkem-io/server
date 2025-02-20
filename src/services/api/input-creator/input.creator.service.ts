@@ -209,7 +209,7 @@ export class InputCreatorService {
         displayName: innovationFlow.profile.displayName,
         description: innovationFlow.profile.description,
       },
-      states: this.innovationFlowStatesService.getStates(innovationFlow.states),
+      states: innovationFlow.states,
     };
     return result;
   }
