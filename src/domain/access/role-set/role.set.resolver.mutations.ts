@@ -540,10 +540,10 @@ export class RoleSetResolverMutations {
     @Args('invitationData')
     invitationData: InviteForEntryRoleOnRoleSetInput
   ): Promise<IInvitation[]> {
-    await this.roleSetCacheService.deleteOpenInvitationFromCache(
-      agentInfo.userID,
-      invitationData.roleSetID
-    );
+    // await this.roleSetCacheService.deleteOpenInvitationFromCache(
+    //   agentInfo.userID,
+    //   invitationData.roleSetID
+    // );
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,
       {

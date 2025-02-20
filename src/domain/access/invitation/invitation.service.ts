@@ -79,9 +79,9 @@ export class InvitationService {
     );
     result.id = invitationID;
 
-    if (invitation.createdBy && invitation.roleSet) {
+    if (invitation.invitedContributorID && invitation.roleSet) {
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
-        invitation.createdBy,
+        invitation.invitedContributorID,
         invitation.roleSet.id
       );
     }
