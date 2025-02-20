@@ -1,6 +1,7 @@
 import apm from 'elastic-apm-node';
 
-const TRANSACTION_SAMPLE_RATE_PERCENTAGE = 100;
+const TRANSACTION_SAMPLE_RATE =
+  Number(process.env.APM_TRANSACTION_SAMPLE_RATE_PERCENTAGE ?? 100) / 100;
 const CERTIFICATE_PATH =
   process.env.ELASTIC_TLS_CA_CERT_PATH === 'none'
     ? undefined
@@ -25,7 +26,7 @@ export const apmAgent = apm.start({
    * when propagating the sampling rate in the tracestate header for distributed tracing.
    *
    */
-  transactionSampleRate: TRANSACTION_SAMPLE_RATE_PERCENTAGE / 100,
+  transactionSampleRate: TRANSACTION_SAMPLE_RATE,
   /**
    * Setting this option to false will disable the Span compression feature.
    * Span compression reduces the collection, processing, and storage overhead,

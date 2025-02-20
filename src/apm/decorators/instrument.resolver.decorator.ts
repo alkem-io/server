@@ -3,7 +3,7 @@ import { RESOLVER_NAME_METADATA } from '@nestjs/graphql';
 
 const isEnabled =
   process.env.ENABLE_APM === 'true' && process.env.APM_INSTRUMENT_MODULES
-    ? process.env.APM_INSTRUMENT_MODULES.split(',').includes('graphql-resolver')
+    ? process.env.APM_INSTRUMENT_MODULES.indexOf('resolver') > -1
     : true;
 
 /**
