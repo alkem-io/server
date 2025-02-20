@@ -25,6 +25,9 @@ import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.call
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { InstrumentResolver } from '@src/apm/decorators';
+
+@InstrumentResolver()
 @Resolver()
 export class CalloutsSetResolverMutations {
   constructor(

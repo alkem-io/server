@@ -6,6 +6,9 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISearchResults } from '@services/api/search/dto/search.result.dto';
 import { SearchService } from './search.service';
+import { InstrumentResolver } from '@src/apm/decorators';
+
+@InstrumentResolver()
 @Resolver()
 export class SearchResolverQueries {
   constructor(private searchService: SearchService) {}

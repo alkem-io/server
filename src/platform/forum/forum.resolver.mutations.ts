@@ -23,7 +23,9 @@ import { ValidationException } from '@common/exceptions/validation.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ForumResolverMutations {
   constructor(

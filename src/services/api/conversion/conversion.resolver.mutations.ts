@@ -28,7 +28,9 @@ import { ConversionVcSpaceToVcKnowledgeBaseInput } from './dto/conversion.dto.vc
 import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ConversionResolverMutations {
   private authorizationGlobalAdminPolicy: IAuthorizationPolicy;

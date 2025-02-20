@@ -3,7 +3,9 @@ import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
 import { Profiling } from '@common/decorators';
 import { LookupQueryResults } from './dto/lookup.query.results';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class LookupResolverQueries {
   @UseGuards(GraphqlGuard)

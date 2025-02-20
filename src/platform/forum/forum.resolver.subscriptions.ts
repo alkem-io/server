@@ -17,7 +17,9 @@ import { ForumService } from './forum.service';
 import { ForumDiscussionUpdated } from './dto/forum.dto.event.discussion.updated';
 import { UUID_LENGTH } from '@common/constants';
 import { SubscriptionUserNotAuthenticated } from '@common/exceptions/subscription.user.not.authenticated';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ForumResolverSubscriptions {
   constructor(

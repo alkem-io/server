@@ -70,7 +70,9 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ValidationException } from '@common/exceptions';
 import { RoleSetCacheService } from './role.set.service.cache';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class RoleSetResolverMutations {
   constructor(

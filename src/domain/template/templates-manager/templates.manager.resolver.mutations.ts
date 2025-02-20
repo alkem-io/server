@@ -15,7 +15,9 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { TemplateService } from '../template/template.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class TemplatesManagerResolverMutations {
   constructor(

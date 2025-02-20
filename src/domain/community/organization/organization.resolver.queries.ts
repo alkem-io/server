@@ -9,7 +9,9 @@ import { UseGuards } from '@nestjs/common';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class OrganizationResolverQueries {
   constructor(private organizationService: OrganizationService) {}

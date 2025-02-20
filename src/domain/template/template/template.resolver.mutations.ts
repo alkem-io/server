@@ -16,7 +16,9 @@ import { UpdateTemplateFromCollaborationInput } from './dto/template.dto.update.
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TemplateAuthorizationService } from './template.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class TemplateResolverMutations {
   constructor(

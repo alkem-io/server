@@ -10,7 +10,9 @@ import { GraphqlGuard } from '@core/authorization';
 import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class SpaceResolverQueries {
   constructor(

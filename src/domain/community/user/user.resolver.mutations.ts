@@ -20,7 +20,9 @@ import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.
 import { UpdateUserInput } from './dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateUserSettingsInput } from './dto/user.dto.update.settings';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(

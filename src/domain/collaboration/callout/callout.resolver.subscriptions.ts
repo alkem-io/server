@@ -17,7 +17,9 @@ import { CalloutPostCreatedArgs } from './dto/callout.args.post.created';
 import { CalloutPostCreated, CalloutPostCreatedPayload } from './dto';
 import { UnableToSubscribeException } from '@src/common/exceptions';
 import { CalloutType } from '@common/enums/callout.type';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CalloutResolverSubscriptions {
   constructor(
