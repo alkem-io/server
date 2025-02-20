@@ -87,18 +87,31 @@ export class UrlResolverService {
     // First check for reserved top level base routes
     const baseRoute = this.getBaseRoute(urlPathBase);
     if (baseRoute) {
-      return await this.resolveBaseRoute(
-        baseRoute,
-        pathElements,
-        url,
-        agentInfo
-      );
+      const result: UrlResolverQueryResults = {
+        type: UrlType.UNKNOWN,
+      };
+      try {
+        return await this.resolveBaseRoute(
+          result,
+          baseRoute,
+          pathElements,
+          url,
+          agentInfo
+        );
+      } catch (error: any) {
+        result.errorMessage = `Unable to resolve URL: ${url}, ${error.message}`;
+        return result;
+      }
     }
 
     // Assumption is that everything else is a Space!
-    await this.populateSpaceResult(result, agentInfo, urlPath);
-
-    return await this.populateSpaceInternalResult(result, agentInfo);
+    try {
+      await this.populateSpaceResult(result, agentInfo, urlPath);
+      return await this.populateSpaceInternalResult(result, agentInfo);
+    } catch (error: any) {
+      result.errorMessage = `Unable to resolve URL: ${url}, ${error.message}`;
+      return result;
+    }
   }
 
   private getBaseRoute(urlPathRoot: string): UrlPathBase | undefined {
@@ -108,14 +121,12 @@ export class UrlResolverService {
   }
 
   private async resolveBaseRoute(
+    result: UrlResolverQueryResults,
     baseRoute: UrlPathBase,
     pathElements: string[],
     url: string,
     agentInfo: AgentInfo
   ): Promise<UrlResolverQueryResults | never> {
-    const result: UrlResolverQueryResults = {
-      type: UrlType.UNKNOWN,
-    };
     const urlPath = this.getPath(url);
     switch (baseRoute) {
       case UrlPathBase.HOME: {
@@ -131,6 +142,7 @@ export class UrlResolverService {
         return result;
       }
       case UrlPathBase.USER: {
+        result.type = UrlType.USER;
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
@@ -141,10 +153,10 @@ export class UrlResolverService {
           pathElements[1]
         );
         result.userId = user.id;
-        result.type = UrlType.USER;
         return result;
       }
       case UrlPathBase.VIRTUAL_CONTRIBUTOR: {
+        result.type = UrlType.VIRTUAL_CONTRIBUTOR;
         return await this.populateVirtualContributorResult(
           result,
           urlPath,
@@ -152,6 +164,7 @@ export class UrlResolverService {
         );
       }
       case UrlPathBase.ORGANIZATION: {
+        result.type = UrlType.ORGANIZATION;
         if (pathElements.length < 2) {
           throw new ValidationException(
             `Invalid URL: ${url}`,
@@ -163,7 +176,6 @@ export class UrlResolverService {
             pathElements[1]
           );
         result.organizationId = organization.id;
-        result.type = UrlType.ORGANIZATION;
         return result;
       }
       case UrlPathBase.ADMIN:
@@ -302,6 +314,7 @@ export class UrlResolverService {
     result: UrlResolverQueryResults,
     urlPath: string
   ): Promise<UrlResolverQueryResults> {
+    result.type = UrlType.INNOVATION_HUB;
     const innovationHubMatch = this.innovationHubPathMatcher(urlPath);
     if (!innovationHubMatch || !innovationHubMatch.params) {
       return result;
@@ -327,7 +340,6 @@ export class UrlResolverService {
         innovationHubNameID
       );
     result.innovationHubId = innovationHub.id;
-    result.type = UrlType.INNOVATION_HUB;
 
     return result;
   }

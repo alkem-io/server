@@ -46,4 +46,9 @@ export class UrlResolverQueryResults {
     nullable: true,
   })
   innovationPack?: UrlResolverQueryResultInnovationPack;
+
+  @Field(() => String, {
+    nullable: false,
+  })
+  errorMessage?: string;
 }
