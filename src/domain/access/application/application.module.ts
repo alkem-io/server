@@ -12,6 +12,7 @@ import { ApplicationAuthorizationService } from './application.service.authoriza
 import { ApplicationResolverMutations } from './application.resolver.mutations';
 import { ApplicationLifecycleResolverFields } from './application.resolver.fields.lifecycle';
 import { ApplicationLifecycleService } from './application.service.lifecycle';
+import { RoleSetCacheModule } from '../role-set/role.set.service.cache.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ApplicationLifecycleService } from './application.service.lifecycle';
     LifecycleModule,
     UserModule,
     TypeOrmModule.forFeature([Application]),
+    RoleSetCacheModule,
   ],
   providers: [
     ApplicationService,

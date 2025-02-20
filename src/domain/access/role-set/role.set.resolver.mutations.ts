@@ -69,6 +69,7 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ValidationException } from '@common/exceptions';
+import { RoleSetCacheService } from './role.set.service.cache';
 
 @Resolver()
 export class RoleSetResolverMutations {
@@ -94,6 +95,7 @@ export class RoleSetResolverMutations {
     private platformInvitationService: PlatformInvitationService,
     private licenseService: LicenseService,
     private lifecycleService: LifecycleService,
+    private roleSetCacheService: RoleSetCacheService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -830,9 +832,14 @@ export class RoleSetResolverMutations {
 
     // Reload to trigger actions
     application = await this.applicationService.getApplicationOrFail(
-      eventData.applicationID
+      eventData.applicationID,
+      {
+        relations: {
+          roleSet: true,
+        },
+      }
     );
-    const applicationState = this.lifecycleService.getState(
+    let applicationState = this.lifecycleService.getState(
       application.lifecycle,
       this.roleSetServiceLifecycleApplication.getApplicationMachine()
     );
@@ -852,6 +859,25 @@ export class RoleSetResolverMutations {
       });
     }
 
+    if (agentInfo.userID && application.roleSet) {
+      applicationState = this.lifecycleService.getState(
+        application.lifecycle,
+        this.roleSetServiceLifecycleApplication.getApplicationMachine()
+      );
+      const isMember = applicationState === ApplicationLifecycleState.APPROVED;
+      if (agentInfo.userID && application.roleSet) {
+        await this.roleSetCacheService.deleteOpenApplicationFromCache(
+          agentInfo.userID,
+          application.roleSet?.id
+        );
+        await this.roleSetCacheService.setAgentIsMemberCache(
+          agentInfo.agentID,
+          application.roleSet?.id,
+          isMember
+        );
+      }
+    }
+
     return await this.applicationService.getApplicationOrFail(
       eventData.applicationID
     );
@@ -867,7 +893,12 @@ export class RoleSetResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IInvitation> {
     let invitation = await this.invitationService.getInvitationOrFail(
-      eventData.invitationID
+      eventData.invitationID,
+      {
+        relations: {
+          roleSet: true,
+        },
+      }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -894,10 +925,16 @@ export class RoleSetResolverMutations {
     invitation = await this.invitationService.getInvitationOrFail(
       eventData.invitationID
     );
-    const invitationState = await this.invitationService.getLifecycleState(
+    let invitationState = await this.invitationService.getLifecycleState(
       invitation.id
     );
     if (invitationState === InvitationLifecycleState.ACCEPTING) {
+      if (invitation.roleSet && agentInfo.userID) {
+        await this.roleSetCacheService.deleteOpenInvitationFromCache(
+          agentInfo.userID,
+          invitation.roleSet.id
+        );
+      }
       await this.roleSetService.acceptInvitationToRoleSet(
         eventData.invitationID,
         agentInfo
@@ -909,6 +946,41 @@ export class RoleSetResolverMutations {
         agentInfo,
         authorization: invitation.authorization,
       });
+    }
+
+    if (agentInfo.userID && invitation.roleSet) {
+      const isOpenInvitation =
+        await this.invitationService.isFinalizedInvitation(invitation.id);
+      invitationState = this.lifecycleService.getState(
+        invitation.lifecycle,
+        this.roleSetServiceLifecycleApplication.getApplicationMachine()
+      );
+      const isMember = invitationState === ApplicationLifecycleState.APPROVED;
+      if (agentInfo.userID && invitation.roleSet) {
+        if (!isOpenInvitation) {
+          await this.roleSetCacheService.deleteOpenInvitationFromCache(
+            agentInfo.userID,
+            invitation.roleSet.id
+          );
+        }
+        await this.roleSetCacheService.setAgentIsMemberCache(
+          agentInfo.agentID,
+          invitation.roleSet.id,
+          isMember
+        );
+      }
+    }
+
+    if (agentInfo.userID && invitation.roleSet) {
+      await this.roleSetCacheService.deleteOpenApplicationFromCache(
+        agentInfo.userID,
+        invitation.roleSet.id
+      );
+      await this.roleSetCacheService.setAgentIsMemberCache(
+        agentInfo.agentID,
+        invitation.roleSet.id,
+        true
+      );
     }
 
     return await this.invitationService.getInvitationOrFail(invitation.id);

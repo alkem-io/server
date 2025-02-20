@@ -14,6 +14,7 @@ import { InvitationLifecycleService } from './invitation.service.lifecycle';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { RoleSetCacheModule } from '../role-set/role.set.service.cache.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     UserLookupModule,
     AccountLookupModule,
     TypeOrmModule.forFeature([Invitation]),
+    RoleSetCacheModule,
   ],
   providers: [
     InvitationService,
