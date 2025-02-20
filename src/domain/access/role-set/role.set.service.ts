@@ -678,6 +678,16 @@ export class RoleSetService {
       agent,
       RoleSetContributorType.USER
     );
+
+    await this.roleSetCacheService.deleteOpenApplicationFromCache(
+      userID,
+      roleSet.id
+    );
+    await this.roleSetCacheService.deleteOpenInvitationFromCache(
+      userID,
+      roleSet.id
+    );
+
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
         if (roleName === RoleName.ADMIN && parentRoleSet) {
@@ -726,6 +736,7 @@ export class RoleSetService {
 
     await this.contributorAddedToRole(
       user,
+      agent.id,
       roleSet,
       roleName,
       agentInfo,
@@ -750,6 +761,7 @@ export class RoleSetService {
           },
         }
       );
+
       const contributorID = invitation.invitedContributorID;
       const roleSet = invitation.roleSet;
       if (!contributorID || !roleSet) {
@@ -875,6 +887,7 @@ export class RoleSetService {
   }
   private async contributorAddedToRole(
     contributor: IContributor,
+    contributorAgentId: string,
     roleSet: IRoleSet,
     role: RoleName,
     agentInfo?: AgentInfo,
@@ -891,9 +904,15 @@ export class RoleSetService {
             await this.communityResolverService.getCommunicationForRoleSet(
               roleSet.id
             );
-          this.communityCommunicationService.addMemberToCommunication(
+          await this.communityCommunicationService.addMemberToCommunication(
             communication,
             contributor
+          );
+
+          await this.roleSetCacheService.setMembershipStatusCache(
+            contributorAgentId,
+            roleSet.id,
+            CommunityMembershipStatus.MEMBER
           );
 
           if (agentInfo) {
@@ -957,6 +976,7 @@ export class RoleSetService {
 
     await this.contributorAddedToRole(
       virtualContributor,
+      agent.id,
       roleSet,
       roleType,
       agentInfo,
