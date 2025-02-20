@@ -13,6 +13,8 @@ export const apmAgent = apm.start({
   serviceVersion: process.env.npm_package_version,
   // serverUrl: process.env.APM_SERVER_URL,
   // apiKey: process.env.ELASTICSEARCH_API_KEY,
+  serverUrl: 'https://sandbox-apm.alkem.io',
+  apiKey: 'b01ON3Q1UUJwMU5lUmNTWXJyVUg6MnZpQ1FUZ0xUeFdRbWdQalBldzdhdw==',
   verifyServerCert: !!CERTIFICATE_PATH,
   serverCaCertFile: CERTIFICATE_PATH,
   environment: process.env.ENVIRONMENT ?? 'local',

@@ -1,18 +1,34 @@
 import { instrumentMethod } from './instrument.method';
 import { copyMetadata } from './copy.metadata';
 
+export type ClassDecoratorParams = {
+  /**
+   * Optionally disable the decorator; useful when you want to exclude some classes conditionally without removing the decorator
+   * @default true
+   * */
+  enabled?: boolean;
+  /** Tells the decorator to match methods on this metadata key; useful when you want to skip methods that are not actual resolvers */
+  matchMethodsOnMetadataKey?: string;
+  /** Tells the decorator to not instrument these methods; useful for excluding methods from the tracing that are called many times */
+  skipMethods?: string[];
+};
+
 export const createInstrumentedClassDecorator = (
   spanType: string,
-  options?: {
-    /** match methods on this metadata key; useful when you want to skip methods that are not actual resolvers */
-    matchMethodsOnMetadataKey?: string;
-    /** do not instrument these methods; useful for excluding methods from the tracing that are called many times */
-    skipMethods?: string[];
-  }
+  options?: ClassDecoratorParams
 ): ClassDecorator => {
   // eslint-disable-next-line @typescript-eslint/ban-types
   return (target: Function) => {
-    const { matchMethodsOnMetadataKey, skipMethods = [] } = options ?? {};
+    const {
+      matchMethodsOnMetadataKey,
+      skipMethods = [],
+      enabled = true,
+    } = options ?? {};
+
+    if (!enabled) {
+      return;
+    }
+
     const descriptors = Object.getOwnPropertyDescriptors(target.prototype);
     for (const [methodName, descriptor] of Object.entries(descriptors)) {
       // skip if in skippable methods list

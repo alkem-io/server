@@ -18,7 +18,7 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { UsersQueryArgs } from './dto/users.query.args';
 import { InstrumentResolver } from '@src/apm/decorators';
 
-@InstrumentResolver
+@InstrumentResolver()
 @Resolver(() => IUser)
 export class UserResolverQueries {
   constructor(
