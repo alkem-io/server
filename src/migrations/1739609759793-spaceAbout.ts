@@ -84,8 +84,8 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
       const origWho = context.who;
       const origDescription = profile.description;
 
-      const newWhy = `${origImpact} \n====== Impact === ${origVision}`;
-      const newDescription = `${origDescription}`;
+      const newDescription = `${origVision}`;
+      const newWhy = `${origDescription} \n\n ==== \n\n ${origImpact}`;
 
       const aboutID = randomUUID();
       const aboutAuthID = await this.createAuthorizationPolicy(
