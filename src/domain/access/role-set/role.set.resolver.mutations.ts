@@ -464,10 +464,6 @@ export class RoleSetResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('applicationData') applicationData: ApplyForEntryRoleOnRoleSetInput
   ): Promise<IApplication> {
-    await this.roleSetCacheService.deleteOpenApplicationFromCache(
-      agentInfo.userID,
-      applicationData.roleSetID
-    );
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       applicationData.roleSetID,
       {
@@ -540,10 +536,6 @@ export class RoleSetResolverMutations {
     @Args('invitationData')
     invitationData: InviteForEntryRoleOnRoleSetInput
   ): Promise<IInvitation[]> {
-    // await this.roleSetCacheService.deleteOpenInvitationFromCache(
-    //   agentInfo.userID,
-    //   invitationData.roleSetID
-    // );
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,
       {
@@ -968,12 +960,12 @@ export class RoleSetResolverMutations {
         if (!isOpenInvitation) {
           await this.roleSetCacheService.deleteOpenInvitationFromCache(
             agentInfo.userID,
-            invitation.roleSet?.id
+            invitation.roleSet.id
           );
         }
         await this.roleSetCacheService.setAgentIsMemberCache(
           agentInfo.agentID,
-          invitation.roleSet?.id,
+          invitation.roleSet.id,
           isMember
         );
       }
@@ -982,11 +974,11 @@ export class RoleSetResolverMutations {
     if (agentInfo.userID && invitation.roleSet) {
       await this.roleSetCacheService.deleteOpenApplicationFromCache(
         agentInfo.userID,
-        invitation.roleSet?.id
+        invitation.roleSet.id
       );
       await this.roleSetCacheService.setAgentIsMemberCache(
         agentInfo.agentID,
-        invitation.roleSet?.id,
+        invitation.roleSet.id,
         true
       );
     }
