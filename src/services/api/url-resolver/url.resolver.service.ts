@@ -74,6 +74,8 @@ export class UrlResolverService {
 
     const result: UrlResolverQueryResults = {
       type: UrlType.UNKNOWN,
+      isError: false,
+      errorMessage: '',
     };
 
     if (pathElements.length === 0) {
@@ -87,9 +89,6 @@ export class UrlResolverService {
     // First check for reserved top level base routes
     const baseRoute = this.getBaseRoute(urlPathBase);
     if (baseRoute) {
-      const result: UrlResolverQueryResults = {
-        type: UrlType.UNKNOWN,
-      };
       try {
         return await this.resolveBaseRoute(
           result,
@@ -99,6 +98,7 @@ export class UrlResolverService {
           agentInfo
         );
       } catch (error: any) {
+        result.isError = true;
         result.errorMessage = `Unable to resolve URL: ${url}, ${error.message}`;
         return result;
       }
@@ -109,6 +109,7 @@ export class UrlResolverService {
       await this.populateSpaceResult(result, agentInfo, urlPath);
       return await this.populateSpaceInternalResult(result, agentInfo);
     } catch (error: any) {
+      result.isError = true;
       result.errorMessage = `Unable to resolve URL: ${url}, ${error.message}`;
       return result;
     }

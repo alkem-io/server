@@ -47,8 +47,13 @@ export class UrlResolverQueryResults {
   })
   innovationPack?: UrlResolverQueryResultInnovationPack;
 
+  @Field(() => Boolean, {
+    nullable: false,
+  })
+  isError!: boolean;
+
   @Field(() => String, {
     nullable: false,
   })
-  errorMessage?: string;
+  errorMessage!: string;
 }
