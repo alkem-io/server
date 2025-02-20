@@ -63,7 +63,7 @@ export class ApplicationService {
   ): Promise<IApplication> {
     const applicationID = deleteData.ID;
     const application = await this.getApplicationOrFail(applicationID, {
-      relations: { roleSet: true },
+      relations: { roleSet: true, user: true },
     });
     if (application.questions) {
       for (const question of application.questions) {
