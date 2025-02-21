@@ -1607,6 +1607,10 @@ export class RoleSetService {
       roleSet.id
     );
     if (openInvitation) {
+      await this.roleSetCacheService.deleteOpenInvitationFromCache(
+        contributor.id,
+        roleSet.id
+      );
       throw new RoleSetMembershipException(
         `Invitation not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributorID} (${openInvitation.contributorType}) on RoleSet: ${roleSet.id}.`,
         LogContext.COMMUNITY
