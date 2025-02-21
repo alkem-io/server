@@ -277,6 +277,17 @@ services:
     ports:
       - 6379
 
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - 8081:8081
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      - redis
+
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
