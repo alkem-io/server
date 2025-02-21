@@ -76,7 +76,9 @@ export class SpaceAuthorizationService {
           roleSet: true,
         },
         collaboration: true,
-        about: true,
+        about: {
+          profile: true,
+        },
         storageAggregator: true,
         subspaces: true,
         templatesManager: true,
@@ -406,6 +408,7 @@ export class SpaceAuthorizationService {
       !space.community ||
       !space.community.roleSet ||
       !space.about ||
+      !space.about.profile ||
       !space.storageAggregator ||
       !space.about ||
       !space.license
