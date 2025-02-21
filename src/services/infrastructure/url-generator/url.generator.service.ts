@@ -32,6 +32,8 @@ import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { UrlPathBase } from '@common/enums/url.path.base';
 import { UrlGeneratorCacheService } from './url.generator.service.cache';
 import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -84,25 +86,23 @@ export class UrlGeneratorService {
       case ProfileType.OPPORTUNITY:
         return await this.getSpaceUrlPathByAboutProfileID(profile.id);
       case ProfileType.USER:
-        const userEntityInfo = await this.getNameableEntityInfoOrFail(
+        const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'user',
-          this.FIELD_PROFILE_ID,
           profile.id
         );
         return this.createUrlForUserNameID(userEntityInfo.entityNameID);
       case ProfileType.VIRTUAL_CONTRIBUTOR:
-        const vcEntityInfo = await this.getNameableEntityInfoOrFail(
+        const vcEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'virtual_contributor',
-          this.FIELD_PROFILE_ID,
           profile.id
         );
         return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vcEntityInfo.entityNameID}`;
       case ProfileType.ORGANIZATION:
-        const organizationEntityInfo = await this.getNameableEntityInfoOrFail(
-          'organization',
-          this.FIELD_PROFILE_ID,
-          profile.id
-        );
+        const organizationEntityInfo =
+          await this.getNameableEntityInfoForProfileOrFail(
+            'organization',
+            profile.id
+          );
         return this.createUrlForOrganizationNameID(
           organizationEntityInfo.entityNameID
         );
@@ -130,16 +130,13 @@ export class UrlGeneratorService {
         );
 
       case ProfileType.DISCUSSION:
-        return await this.getForumDiscussionUrlPathByField(
-          this.FIELD_PROFILE_ID,
-          profile.id
-        );
+        return await this.getForumDiscussionUrlPathByProfileID(profile.id);
       case ProfileType.INNOVATION_HUB:
-        const innovationHubEntityInfo = await this.getNameableEntityInfoOrFail(
-          'innovation_hub',
-          this.FIELD_PROFILE_ID,
-          profile.id
-        );
+        const innovationHubEntityInfo =
+          await this.getNameableEntityInfoForProfileOrFail(
+            'innovation_hub',
+            profile.id
+          );
         return `${this.endpoint_cluster}/innovation-hubs/${innovationHubEntityInfo.entityNameID}/settings`;
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
@@ -233,20 +230,15 @@ export class UrlGeneratorService {
     );
   }
 
-  public async getNameableEntityInfoOrFail(
+  public async getNameableEntityInfoForProfileOrFail(
     entityTableName: string,
-    fieldName: string,
-    fieldID: string
+    profileID: string
   ): Promise<{ entityNameID: string; entityID: string }> {
-    const result = await this.getNameableEntityInfo(
-      entityTableName,
-      fieldName,
-      fieldID
-    );
+    const result = await this.getNameableEntityInfo(entityTableName, profileID);
 
     if (!result) {
       throw new EntityNotFoundException(
-        `Unable to find nameable parent on entity type '${entityTableName}' for '${fieldName}': ${fieldID}`,
+        `Unable to find nameable parent on entity type '${entityTableName}' for 'profileId': ${profileID}`,
         LogContext.URL_GENERATOR
       );
     }
@@ -255,8 +247,7 @@ export class UrlGeneratorService {
 
   public async getNameableEntityInfo(
     entityTableName: string,
-    fieldName: string,
-    fieldID: string
+    profileID: string
   ): Promise<{ entityNameID: string; entityID: string } | null> {
     const [result]: {
       entityID: string;
@@ -264,7 +255,7 @@ export class UrlGeneratorService {
     }[] = await this.entityManager.connection.query(
       `
         SELECT \`${entityTableName}\`.\`id\` as \`entityID\`, \`${entityTableName}\`.\`nameID\` as entityNameID FROM \`${entityTableName}\`
-        WHERE \`${entityTableName}\`.\`${fieldName}\` = '${fieldID}'
+        WHERE \`${entityTableName}\`.\`profileId\` = '${profileID}'
       `
     );
 
@@ -806,9 +797,8 @@ export class UrlGeneratorService {
   }
 
   private async getInnovationPackUrlPath(profileID: string): Promise<string> {
-    const innovationPackInfo = await this.getNameableEntityInfoOrFail(
+    const innovationPackInfo = await this.getNameableEntityInfoForProfileOrFail(
       'innovation_pack',
-      this.FIELD_PROFILE_ID,
       profileID
     );
     return `${this.endpoint_cluster}/${UrlPathBase.INNOVATION_PACKS}/${innovationPackInfo.entityNameID}`;
@@ -817,22 +807,41 @@ export class UrlGeneratorService {
   public async getForumDiscussionUrlPath(
     forumDiscussionID: string
   ): Promise<string> {
-    return await this.getForumDiscussionUrlPathByField(
-      this.FIELD_ID,
-      forumDiscussionID
-    );
+    const discussion = await this.entityManager.findOne(Discussion, {
+      where: {
+        id: forumDiscussionID,
+      },
+    });
+    if (!discussion) {
+      throw new EntityNotFoundException(
+        `Unable to find discussion with ID: ${forumDiscussionID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return this.generateUrlForForumDiscussion(discussion);
   }
 
-  private async getForumDiscussionUrlPathByField(
-    fieldName: string,
-    fieldID: string
+  private async getForumDiscussionUrlPathByProfileID(
+    profileID: string
   ): Promise<string> {
-    const discussionEntityInfo = await this.getNameableEntityInfoOrFail(
-      'discussion',
-      fieldName,
-      fieldID
-    );
-    return `${this.endpoint_cluster}/forum/discussion/${discussionEntityInfo.entityNameID}`;
+    const discussion = await this.entityManager.findOne(Discussion, {
+      where: {
+        profile: {
+          id: profileID,
+        },
+      },
+    });
+    if (!discussion) {
+      throw new EntityNotFoundException(
+        `Unable to find discussion with profile ID: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return this.generateUrlForForumDiscussion(discussion);
+  }
+
+  private generateUrlForForumDiscussion(discussion: IDiscussion): string {
+    return `${this.endpoint_cluster}/forum/discussion/${discussion.nameID}`;
   }
 
   public async getCalendarEventUrlPath(
