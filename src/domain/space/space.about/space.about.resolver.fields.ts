@@ -5,11 +5,11 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ISpace } from '../space/space.interface';
-import { Space } from '../space/space.entity';
 import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/profile.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ISpaceAbout } from './space.about.interface';
+import { SpaceAbout } from './space.about.entity';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {
@@ -23,7 +23,7 @@ export class SpaceAboutResolverFields {
   })
   async profile(
     @Parent() space: ISpace,
-    @Loader(ProfileLoaderCreator, { parentClassRef: Space })
+    @Loader(ProfileLoaderCreator, { parentClassRef: SpaceAbout })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     const profile = await loader.load(space.id);
