@@ -2,7 +2,9 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInvitation } from './invitation.interface';
 import { ILifecycleFields } from '@domain/common/lifecycle/lifecycle.fields.interface';
 import { InvitationLifecycleService } from './invitation.service.lifecycle';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IInvitation)
 export class InvitationLifecycleResolverFields
   implements ILifecycleFields<IInvitation>

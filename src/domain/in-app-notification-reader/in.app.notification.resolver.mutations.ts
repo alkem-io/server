@@ -8,7 +8,9 @@ import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
 import { InAppNotificationReader } from './in.app.notification.reader';
 import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverMutations {
   constructor(

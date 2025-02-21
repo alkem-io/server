@@ -15,7 +15,9 @@ import { CurrentUser } from '@common/decorators';
 import { ActorService } from '../actor/actor.service';
 import { CreateActorInput } from '@domain/context/actor/actor.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ActorGroupResolverMutations {
   constructor(

@@ -8,7 +8,9 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingFrameworkService } from './licensing.framework.service';
 import { CreateLicensePlanOnLicensingFrameworkInput } from './dto/licensing.framework.dto.create.license.plan';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class LicensingFrameworkResolverMutations {
   constructor(

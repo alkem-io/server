@@ -6,7 +6,9 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UrlResolverService } from './url.resolver.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class UrlResolverResolverQueries {
   constructor(

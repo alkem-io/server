@@ -14,7 +14,9 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CommunityResolverMutations {
   constructor(

@@ -15,7 +15,9 @@ import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
 import { SubspaceCreatedArgs } from './dto/space.subspace.created.args';
 import { SubspaceCreated as SubspaceCreated } from './dto/space.dto.event.subspace.created';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class SpaceResolverSubscriptions {
   constructor(

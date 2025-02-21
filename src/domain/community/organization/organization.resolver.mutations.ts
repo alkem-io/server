@@ -15,7 +15,9 @@ import { CreateUserGroupInput } from '../user-group/dto';
 import { IOrganization } from './organization.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateOrganizationSettingsInput } from './dto/organization.dto.update.settings';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {
   constructor(

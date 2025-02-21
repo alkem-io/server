@@ -13,7 +13,9 @@ import { PlatformService } from './platform.service';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
 import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class PlatformResolverMutations {
   constructor(

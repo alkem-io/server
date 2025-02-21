@@ -13,8 +13,10 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
 import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
+import { InstrumentResolver } from '@src/apm/decorators';
 
 // Resolver for fields on RoleSet that are available without READ access
+@InstrumentResolver()
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFieldsPublic {
   constructor(

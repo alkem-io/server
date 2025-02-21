@@ -14,7 +14,9 @@ import { LogContext } from '@common/enums/logging.context';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActivityLogService } from '@services/api/activity-log/activity.log.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ActivityLogResolverSubscriptions {
   constructor(

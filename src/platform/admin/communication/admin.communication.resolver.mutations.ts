@@ -13,7 +13,9 @@ import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communica
 import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
 import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/global.policy.constants';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AdminCommunicationResolverMutations {
   private communicationGlobalAdminPolicy: IAuthorizationPolicy;

@@ -9,7 +9,9 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class DomainPlatformSettingsResolverMutations {
   constructor(

@@ -15,7 +15,9 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ChatGuidanceResolverMutations {
   constructor(

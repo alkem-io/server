@@ -34,7 +34,9 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class RoomResolverMutations {
   constructor(

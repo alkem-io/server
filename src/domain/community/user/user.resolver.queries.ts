@@ -16,7 +16,9 @@ import { IUser } from './user.interface';
 import { UserFilterInput } from '@core/filtering';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { UsersQueryArgs } from './dto/users.query.args';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IUser)
 export class UserResolverQueries {
   constructor(
@@ -36,7 +38,7 @@ export class UserResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: UsersQueryArgs
   ): Promise<IUser[]> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
