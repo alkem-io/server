@@ -54,6 +54,7 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AlkemioConfig } from '@src/types';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -725,8 +726,10 @@ export class NotificationPayloadBuilder {
     const url = await this.urlGeneratorService.generateUrlForProfile(
       space.about.profile
     );
-    const communityAdminURL =
-      await this.urlGeneratorService.createJourneyAdminCommunityURL(space);
+    const spaceAdminUrl = await this.urlGeneratorService.getSpaceUrlPathByID(
+      space.id,
+      UrlPathElementSpace.COMMUNITY
+    );
     const result: SpaceBaseEventPayload = {
       space: {
         id: space.id,
@@ -736,7 +739,7 @@ export class NotificationPayloadBuilder {
           displayName: space.about.profile.displayName,
           url: url,
         },
-        adminURL: communityAdminURL,
+        adminURL: spaceAdminUrl,
       },
       ...basePayload,
     };
