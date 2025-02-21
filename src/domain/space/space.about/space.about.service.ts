@@ -79,9 +79,6 @@ export class SpaceAboutService {
     if (spaceAboutUpdateData.why) {
       spaceAbout.why = spaceAboutUpdateData.why;
     }
-    if (spaceAboutUpdateData.when) {
-      spaceAbout.when = spaceAboutUpdateData.when;
-    }
     if (spaceAboutUpdateData.who) {
       spaceAbout.who = spaceAboutUpdateData.who;
     }

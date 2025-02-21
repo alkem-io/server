@@ -11,9 +11,6 @@ export class SpaceAbout extends AuthorizableEntity implements ISpaceAbout {
   @Column('text', { nullable: true })
   who?: string = '';
 
-  @Column('text', { nullable: true })
-  when?: string = '';
-
   @OneToOne(() => Profile, {
     eager: false,
     cascade: true,

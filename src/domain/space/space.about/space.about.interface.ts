@@ -19,10 +19,4 @@ export abstract class ISpaceAbout extends IAuthorizable {
     description: 'Who should get involved in this challenge',
   })
   who?: string;
-
-  @Field(() => Markdown, {
-    nullable: true,
-    description: 'When is this happening?',
-  })
-  when?: string;
 }
