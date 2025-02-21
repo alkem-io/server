@@ -75,7 +75,11 @@ export class SpaceAboutService {
     spaceAboutInput: ISpaceAbout,
     spaceAboutUpdateData: UpdateSpaceAboutInput
   ): Promise<ISpaceAbout> {
-    const spaceAbout = await this.getSpaceAboutOrFail(spaceAboutInput.id);
+    const spaceAbout = await this.getSpaceAboutOrFail(spaceAboutInput.id, {
+      relations: {
+        profile: true,
+      },
+    });
     if (spaceAboutUpdateData.why) {
       spaceAbout.why = spaceAboutUpdateData.why;
     }

@@ -62,9 +62,6 @@ export class SpaceResolverMutations {
       `update Space: ${space.id}`
     );
 
-    // ensure working with UUID
-    spaceData.ID = space.id;
-
     const updatedSpace = await this.spaceService.update(spaceData);
 
     this.contributionReporter.spaceContentEdited(

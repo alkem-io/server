@@ -1058,12 +1058,14 @@ export class SpaceService {
       },
     });
 
+    if (!space.about) {
+      throw new EntityNotInitializedException(
+        `Subspace not initialised: ${spaceData.ID}`,
+        LogContext.SPACES
+      );
+    }
+
     if (spaceData.about) {
-      if (!space.about)
-        throw new EntityNotInitializedException(
-          `Subspace not initialised: ${spaceData.ID}`,
-          LogContext.SPACES
-        );
       space.about = await this.spaceAboutService.updateSpaceAbout(
         space.about,
         spaceData.about
