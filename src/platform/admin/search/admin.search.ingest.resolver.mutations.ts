@@ -10,7 +10,9 @@ import { SearchIngestService } from '@services/api/search/ingest/search.ingest.s
 import { TaskService } from '@services/task';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AdminSearchIngestResolverMutations {
   constructor(

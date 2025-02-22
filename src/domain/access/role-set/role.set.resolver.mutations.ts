@@ -70,7 +70,9 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ValidationException } from '@common/exceptions';
 import { RoleSetCacheService } from './role.set.service.cache';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class RoleSetResolverMutations {
   constructor(
@@ -923,7 +925,12 @@ export class RoleSetResolverMutations {
 
     // Reload to trigger actions
     invitation = await this.invitationService.getInvitationOrFail(
-      eventData.invitationID
+      eventData.invitationID,
+      {
+        relations: {
+          roleSet: true,
+        },
+      }
     );
     let invitationState = await this.invitationService.getLifecycleState(
       invitation.id
@@ -949,38 +956,22 @@ export class RoleSetResolverMutations {
     }
 
     if (agentInfo.userID && invitation.roleSet) {
-      const isOpenInvitation =
-        await this.invitationService.isFinalizedInvitation(invitation.id);
       invitationState = this.lifecycleService.getState(
         invitation.lifecycle,
         this.roleSetServiceLifecycleApplication.getApplicationMachine()
       );
       const isMember = invitationState === ApplicationLifecycleState.APPROVED;
       if (agentInfo.userID && invitation.roleSet) {
-        if (!isOpenInvitation) {
-          await this.roleSetCacheService.deleteOpenInvitationFromCache(
-            agentInfo.userID,
-            invitation.roleSet.id
-          );
-        }
+        await this.roleSetCacheService.deleteOpenInvitationFromCache(
+          agentInfo.userID,
+          invitation.roleSet.id
+        );
         await this.roleSetCacheService.setAgentIsMemberCache(
           agentInfo.agentID,
           invitation.roleSet.id,
           isMember
         );
       }
-    }
-
-    if (agentInfo.userID && invitation.roleSet) {
-      await this.roleSetCacheService.deleteOpenApplicationFromCache(
-        agentInfo.userID,
-        invitation.roleSet.id
-      );
-      await this.roleSetCacheService.setAgentIsMemberCache(
-        agentInfo.agentID,
-        invitation.roleSet.id,
-        true
-      );
     }
 
     return await this.invitationService.getInvitationOrFail(invitation.id);

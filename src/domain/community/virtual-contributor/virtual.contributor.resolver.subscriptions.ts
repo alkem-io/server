@@ -11,7 +11,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { VirtualContributorUpdatedSubscriptionArgs } from './dto/virtual.contributor.updated.subscription.args';
 import { VirtualContributorUpdatedSubscriptionResult } from './dto/virtual.contributor.updated.subscription.result';
 import { VirtualContributorUpdatedSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class VirtualContributorResolverSubscriptions {
   constructor(

@@ -23,7 +23,9 @@ import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.se
 import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
 import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
 import { PlatformService } from '@platform/platform/platform.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class PlatformRoleResolverMutations {
   constructor(

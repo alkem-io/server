@@ -14,7 +14,9 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { TemplateService } from '../template/template.service';
 import { CreateTemplateFromCollaborationOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class TemplatesSetResolverMutations {
   constructor(

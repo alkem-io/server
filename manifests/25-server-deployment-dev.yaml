@@ -45,6 +45,16 @@ spec:
                 configMapKeyRef:
                   name: alkemio-elastic-config
                   key: SERVER_ELASTIC_API_KEY
+            - name: APM_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: APM_COLLABORATION_SERVICE_ACTIVE
+            - name: APM_TRANSACTION_PERCENTAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: APM_COLLABORATION_SERVICE_TRANSACTION_PERCENTAGE
             - name: LOGGING_LEVEL_CONSOLE
               valueFrom:
                 configMapKeyRef:

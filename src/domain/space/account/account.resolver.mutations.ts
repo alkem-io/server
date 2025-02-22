@@ -45,7 +45,9 @@ import { AccountLicenseService } from './account.service.license';
 import { SpaceLicenseService } from '../space/space.service.license';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AccountResolverMutations {
   constructor(

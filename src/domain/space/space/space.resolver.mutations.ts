@@ -22,7 +22,9 @@ import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceLicenseService } from './space.service.license';
 import { LicenseService } from '@domain/common/license/license.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class SpaceResolverMutations {
   constructor(

@@ -10,7 +10,9 @@ import { IDiscussion } from './discussion.interface';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class DiscussionResolverMutations {
   constructor(

@@ -12,7 +12,9 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { UserService } from '@domain/community/user/user.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserIdentityDeletionException } from '@common/exceptions';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AdminUsersMutations {
   constructor(

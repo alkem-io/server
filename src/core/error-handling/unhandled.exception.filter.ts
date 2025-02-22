@@ -23,7 +23,7 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
      e.g. secondParam = { code: '123' };
     */
     const secondParam = { stack: exception.stack, errorId: randomUUID() };
-    const thirdParam = undefined;
+    const thirdParam = 'UnhandledException';
     /* the logger will handle the passed exception by iteration over all it's fields
      * you can provide additional data in the stack and context
      */

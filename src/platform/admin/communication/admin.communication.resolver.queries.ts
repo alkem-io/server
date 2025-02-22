@@ -12,7 +12,9 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
 import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
 import { GLOBAL_POLICY_ADMIN_COMMUNICATION_READ } from '@common/constants/authorization/global.policy.constants';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AdminCommunicationResolverQueries {
   private authorizationQueriesPolicy: IAuthorizationPolicy;

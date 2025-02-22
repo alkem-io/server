@@ -10,7 +10,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { randomUUID } from 'crypto';
 import { LicensingWingbackSubscriptionService } from './licensing.wingback.subscription.service';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class LicensingWingbackSubscriptionServiceResolverMutations {
   constructor(

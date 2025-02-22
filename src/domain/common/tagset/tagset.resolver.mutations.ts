@@ -8,7 +8,9 @@ import { TagsetService } from './tagset.service';
 import { CurrentUser } from '@common/decorators';
 import { ITagset } from './tagset.interface';
 import { UpdateTagsetInput } from './dto/tagset.dto.update';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class TagsetResolverMutations {
   constructor(

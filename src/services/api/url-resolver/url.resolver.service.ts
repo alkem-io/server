@@ -26,6 +26,7 @@ import { InnovationPackService } from '@library/innovation-pack/innovation.pack.
 import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.callouts.set.result';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { UrlPathBase } from '@common/enums/url.path.base';
+import { UrlResolverException } from './url.resolver.exception';
 
 @Injectable()
 export class UrlResolverService {
@@ -74,8 +75,6 @@ export class UrlResolverService {
 
     const result: UrlResolverQueryResults = {
       type: UrlType.UNKNOWN,
-      isError: false,
-      errorMessage: '',
     };
 
     if (pathElements.length === 0) {
@@ -98,9 +97,14 @@ export class UrlResolverService {
           agentInfo
         );
       } catch (error: any) {
-        result.isError = true;
-        result.errorMessage = `Unable to resolve URL: ${url}, ${error.message}`;
-        return result;
+        throw new UrlResolverException(
+          `Unable to resolve URL: ${url}`,
+          LogContext.URL_RESOLVER,
+          {
+            message: error?.message,
+            originalException: error,
+          }
+        );
       }
     }
 
@@ -109,9 +113,14 @@ export class UrlResolverService {
       await this.populateSpaceResult(result, agentInfo, urlPath);
       return await this.populateSpaceInternalResult(result, agentInfo);
     } catch (error: any) {
-      result.isError = true;
-      result.errorMessage = `Unable to resolve URL: ${url}, ${error.message}`;
-      return result;
+      throw new UrlResolverException(
+        `Unable to resolve URL: ${url}`,
+        LogContext.URL_RESOLVER,
+        {
+          message: error?.message,
+          originalException: error,
+        }
+      );
     }
   }
 

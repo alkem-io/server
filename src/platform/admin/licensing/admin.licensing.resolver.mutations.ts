@@ -20,7 +20,9 @@ import { SpaceLicenseService } from '@domain/space/space/space.service.license';
 import { SpaceService } from '@domain/space/space/space.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { UUID } from '@domain/common/scalars';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AdminLicensingResolverMutations {
   constructor(

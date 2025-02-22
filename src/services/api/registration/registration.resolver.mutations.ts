@@ -23,7 +23,9 @@ import { OrganizationAuthorizationService } from '@domain/community/organization
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteOrganizationInput } from '@domain/community/organization/dto/organization.dto.delete';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class RegistrationResolverMutations {
   constructor(

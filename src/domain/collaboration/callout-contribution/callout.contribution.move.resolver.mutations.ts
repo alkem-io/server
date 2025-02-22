@@ -9,7 +9,9 @@ import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { CalloutContributionMoveService } from './callout.contribution.move.service';
 import { MoveCalloutContributionInput } from './dto/callout.contribution.dto.move';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CalloutContributionMoveResolverMutations {
   constructor(

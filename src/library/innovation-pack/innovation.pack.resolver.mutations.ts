@@ -10,7 +10,9 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationPack } from './innovation.pack.interface';
 import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
 import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class InnovationPackResolverMutations {
   constructor(
