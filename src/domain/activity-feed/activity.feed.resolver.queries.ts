@@ -12,7 +12,9 @@ import { ActivityFeed } from './activity.feed.interface';
 import { PaginationArgs } from '@core/pagination';
 import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
 import { ActivityFeedGroupedQueryArgs } from './activity.feed.grouped.query.args';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ActivityFeedResolverQueries {
   constructor(

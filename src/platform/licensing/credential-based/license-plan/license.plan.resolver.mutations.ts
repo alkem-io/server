@@ -11,7 +11,9 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { LogContext } from '@common/enums/logging.context';
 import { DeleteLicensePlanInput } from './dto/license.plan.dto.delete';
 import { UpdateLicensePlanInput } from './dto/license.plan.dto.update';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class LicensePlanResolverMutations {
   constructor(

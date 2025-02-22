@@ -11,7 +11,9 @@ import {
   DeleteAiPersonaServiceInput,
   UpdateAiPersonaServiceInput,
 } from './dto';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IAiPersonaService)
 export class AiPersonaServiceResolverMutations {
   constructor(

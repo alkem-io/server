@@ -13,7 +13,9 @@ import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.fi
 import { IStorageBucket } from './storage.bucket.interface';
 import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class StorageBucketResolverMutations {
   constructor(

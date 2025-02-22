@@ -18,7 +18,9 @@ import { LogContext } from '@common/enums';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { TransferCalloutInput } from './dto/callouts.set.dto.transfer.callout';
 import { CalloutTransferService } from './callout.transfer.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CalloutTransferResolverMutations {
   constructor(

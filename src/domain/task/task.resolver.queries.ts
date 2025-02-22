@@ -4,7 +4,9 @@ import { ITask } from './dto/';
 import { Profiling } from '@common/decorators';
 import { UUID } from '@domain/common/scalars';
 import { TaskStatus } from '@domain/task/dto/task.status.enum';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class TaskResolverQueries {
   constructor(private taskService: TaskService) {}

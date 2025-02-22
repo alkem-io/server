@@ -9,7 +9,9 @@ import { ICommunityGuidelines } from './community.guidelines.interface';
 import { CommunityGuidelinesService } from './community.guidelines.service';
 import { UpdateCommunityGuidelinesEntityInput } from './dto/community.guidelines.dto.update.entity';
 import { RemoveCommunityGuidelinesContentInput as RemoveCommunityGuidelinesContentInput } from './dto/community.guidelines.dto.remove.content';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CommunityGuidelinesResolverMutations {
   constructor(

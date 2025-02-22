@@ -10,7 +10,9 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AdminAuthorizationResolverQueries {
   constructor(

@@ -9,7 +9,9 @@ import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
 import { InnovationHubService } from './innovation.hub.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class InnovationHubResolverMutations {
   constructor(

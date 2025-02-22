@@ -7,7 +7,9 @@ import { ForbiddenException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization';
 import { InAppNotification } from './in.app.notification.interface';
 import { InAppNotificationReader } from './in.app.notification.reader';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverQueries {
   constructor(private inAppNotificationReader: InAppNotificationReader) {}

@@ -90,6 +90,7 @@ import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { SearchModule } from '@services/api/search/search.module';
+import { ApmApolloPlugin } from './apm/plugins';
 
 @Module({
   imports: [
@@ -197,6 +198,7 @@ import { SearchModule } from '@services/api/search/search.module';
             ],
           },
           fieldResolverEnhancers: ['guards', 'filters'],
+          plugins: [ApmApolloPlugin],
           sortSchema: true,
           persistedQueries: false,
           /***

@@ -17,8 +17,10 @@ import { UpdateVirtualContributorSettingsInput } from './dto/virtual.contributor
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
 @ObjectType('MigrateEmbeddings') // TODO: what is this about?
+@InstrumentResolver()
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverMutations {
   constructor(

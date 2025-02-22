@@ -14,6 +14,9 @@ import { ActorGroupAuthorizationService } from '@domain/context/actor-group/acto
 import { IEcosystemModel } from './ecosystem-model.interface';
 import { UpdateEcosystemModelInput } from './dto/ecosystem-model.dto.update';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
+
+@InstrumentResolver()
 @Resolver()
 export class EcosystemModelResolverMutations {
   constructor(

@@ -8,7 +8,9 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { DeleteInvitationInput } from './dto/invitation.dto.delete';
 import { InvitationService } from './invitation.service';
 import { IInvitation } from './invitation.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class InvitationResolverMutations {
   constructor(

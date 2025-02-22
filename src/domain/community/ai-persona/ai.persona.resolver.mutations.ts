@@ -8,7 +8,9 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAiPersona } from './ai.persona.interface';
 import { UpdateAiPersonaInput } from './dto/ai.persona.dto.update';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IAiPersona)
 export class AiPersonaResolverMutations {
   constructor(
