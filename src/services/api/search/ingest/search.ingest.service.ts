@@ -1,5 +1,5 @@
 import { setTimeout } from 'timers/promises';
-import { EntityManager, Not, FindManyOptions } from 'typeorm';
+import { EntityManager, FindManyOptions, Not } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -300,9 +300,6 @@ export class SearchIngestService {
     batchSize: number,
     task: Task
   ): Promise<IngestBatchResultType[]> {
-    let start = 0;
-    const results: IngestBatchResultType[] = [];
-
     const total = await countFn();
 
     if (total === 0) {
@@ -314,6 +311,18 @@ export class SearchIngestService {
         },
       ];
     }
+
+    this.logger.verbose?.(
+      `Found ${total} total results to ingest into ${index}`,
+      LogContext.SEARCH_INGEST
+    );
+    this.taskService.updateTaskResults(
+      task.id,
+      `Found ${total} total results to ingest into ${index}`
+    );
+
+    let start = 0;
+    const results: IngestBatchResultType[] = [];
 
     while (start <= total) {
       const fetched = await fetchFn(start, batchSize);
@@ -407,7 +416,7 @@ export class SearchIngestService {
   private fetchSpacesLevel0Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        visibility: Not(SpaceVisibility.ARCHIVED),
+        visibility: SpaceVisibility.ACTIVE,
         level: SpaceLevel.L0,
       },
     });
@@ -417,7 +426,7 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          visibility: Not(SpaceVisibility.ARCHIVED),
+          visibility: SpaceVisibility.ACTIVE,
           level: SpaceLevel.L0,
         },
         relations: {
@@ -449,7 +458,7 @@ export class SearchIngestService {
   private fetchSpacesLevel1Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        visibility: Not(SpaceVisibility.ARCHIVED),
+        visibility: SpaceVisibility.ACTIVE,
         level: SpaceLevel.L1,
       },
     });
@@ -459,7 +468,7 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          visibility: Not(SpaceVisibility.ARCHIVED),
+          visibility: SpaceVisibility.ACTIVE,
           level: SpaceLevel.L1,
         },
         relations: {
@@ -494,7 +503,7 @@ export class SearchIngestService {
   private fetchSpacesLevel2Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        visibility: Not(SpaceVisibility.ARCHIVED),
+        visibility: SpaceVisibility.ACTIVE,
         level: SpaceLevel.L2,
       },
     });
@@ -504,7 +513,7 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          visibility: Not(SpaceVisibility.ARCHIVED),
+          visibility: SpaceVisibility.ACTIVE,
           level: SpaceLevel.L2,
         },
         relations: {
@@ -606,7 +615,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        visibility: Not(SpaceVisibility.ARCHIVED),
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -615,7 +624,7 @@ export class SearchIngestService {
       .find<Space>(Space, {
         loadEagerRelations: false,
         where: {
-          visibility: Not(SpaceVisibility.ARCHIVED),
+          visibility: SpaceVisibility.ACTIVE,
         },
         relations: {
           parentSpace: {
@@ -683,7 +692,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        visibility: Not(SpaceVisibility.ARCHIVED),
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -692,7 +701,7 @@ export class SearchIngestService {
       .find<Space>(Space, {
         loadEagerRelations: false,
         where: {
-          visibility: Not(SpaceVisibility.ARCHIVED),
+          visibility: SpaceVisibility.ACTIVE,
         },
         relations: {
           collaboration: {
@@ -845,7 +854,7 @@ export class SearchIngestService {
     return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        visibility: Not(SpaceVisibility.ARCHIVED),
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -854,7 +863,7 @@ export class SearchIngestService {
       .find<Space>(Space, {
         loadEagerRelations: false,
         where: {
-          visibility: Not(SpaceVisibility.ARCHIVED),
+          visibility: SpaceVisibility.ACTIVE,
         },
         relations: {
           collaboration: {
