@@ -51,6 +51,7 @@ export class RegistrationResolverMutations {
   async createUserNewRegistration(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
+    console.log('REGISTER NEW USER');
     const user = await this.registrationService.registerNewUser(agentInfo);
     return await this.processCreatedUser(user, agentInfo);
   }
