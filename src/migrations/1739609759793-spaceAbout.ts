@@ -112,8 +112,8 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
       );
       // Update the profile description
       await queryRunner.query(
-        `UPDATE profile SET description = '${newDescription}' WHERE id = ?`,
-        [profile.id]
+        `UPDATE profile SET description = ? WHERE id = ?`,
+        [newDescription, profile.id]
       );
       await queryRunner.query(
         `UPDATE \`space\` SET aboutId = '${aboutID}' WHERE id = ?`,
