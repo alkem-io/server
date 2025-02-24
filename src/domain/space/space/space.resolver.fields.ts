@@ -62,13 +62,13 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'About this space.',
   })
-  async context(
+  async about(
     @Parent() space: Space,
     @Loader(SpaceAboutLoaderCreator, { parentClassRef: Space })
     loader: ILoader<ISpaceAbout>
   ): Promise<ISpaceAbout> {
-    const context = await loader.load(space.id);
-    return context;
+    const about = await loader.load(space.id);
+    return about;
   }
 
   @ResolveField('subscriptions', () => [ISpaceSubscription], {

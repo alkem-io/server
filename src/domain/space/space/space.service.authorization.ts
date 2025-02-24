@@ -410,7 +410,6 @@ export class SpaceAuthorizationService {
       !space.about ||
       !space.about.profile ||
       !space.storageAggregator ||
-      !space.about ||
       !space.license
     ) {
       throw new RelationshipNotFoundException(

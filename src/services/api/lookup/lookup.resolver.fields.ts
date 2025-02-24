@@ -530,19 +530,19 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified SpaceAbout',
   })
-  async context(
+  async about(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ISpaceAbout> {
-    const context = await this.spaceAboutService.getSpaceAboutOrFail(id);
+    const about = await this.spaceAboutService.getSpaceAboutOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      context.authorization,
+      about.authorization,
       AuthorizationPrivilege.READ,
-      `lookup SpaceAbout: ${context.id}`
+      `lookup SpaceAbout: ${about.id}`
     );
 
-    return context;
+    return about;
   }
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IWhiteboard, {
