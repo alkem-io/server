@@ -17,8 +17,7 @@ export class CreateSpaceInput {
   })
   nameID?: string;
 
-  @Field(() => CreateSpaceAboutInput, { nullable: true })
-  @IsOptional()
+  @Field(() => CreateSpaceAboutInput, { nullable: false })
   @ValidateNested()
   @Type(() => CreateSpaceAboutInput)
   about!: CreateSpaceAboutInput;
