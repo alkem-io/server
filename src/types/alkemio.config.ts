@@ -188,10 +188,6 @@ export type AlkemioConfig = {
     };
     whiteboards: {
       enabled: boolean;
-      contribution_window: number;
-      save_interval: number;
-      save_timeout: number;
-      collaborator_mode_timeout: number;
       max_collaborators_in_room: number;
     };
   };
