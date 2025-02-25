@@ -1,5 +1,4 @@
 import { EntityManager } from 'typeorm';
-import { isUUID } from 'class-validator';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -22,29 +21,23 @@ export class SearchService {
     searchData: SearchInput,
     agentInfo: AgentInfo
   ): Promise<ISearchResults> {
-    const excludeDemoSpaces = !agentInfo.email;
-    if (
-      searchData.searchInSpaceFilter &&
-      !isUUID(searchData.searchInSpaceFilter)
-    ) {
-      await this.entityManager
-        .findOneByOrFail(Space, {
-          nameID: searchData.searchInSpaceFilter,
-        })
-        .then(({ id }) => (searchData.searchInSpaceFilter = id))
-        .catch(() => {
-          throw new EntityNotFoundException(
-            'Space with the given identifier not found',
-            LogContext.SEARCH,
-            {
-              message: `Space with the given identifier not found: ${searchData.searchInSpaceFilter}`,
-            }
-          );
-        });
+    // check if the Space exists
+    try {
+      await this.entityManager.findOneByOrFail(Space, {
+        nameID: searchData.searchInSpaceFilter,
+      });
+    } catch (e) {
+      throw new EntityNotFoundException(
+        'Space with the given identifier not found',
+        LogContext.SEARCH,
+        { searchInSpaceFilter: searchData.searchInSpaceFilter }
+      );
     }
+    // search only in the public available data if the user is not authenticated
+    const onlyPublicResults = !agentInfo.email;
     const searchResults = await this.searchExtractService.search(
       searchData,
-      excludeDemoSpaces
+      onlyPublicResults
     );
     return this.searchResultService.resolveSearchResults(
       searchResults,
