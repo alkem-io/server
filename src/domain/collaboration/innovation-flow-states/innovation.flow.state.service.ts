@@ -5,6 +5,7 @@ import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
+import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 
 @Injectable()
 export class InnovationFlowStatesService {
@@ -12,22 +13,8 @@ export class InnovationFlowStatesService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public getStates(statesStr: string): IInnovationFlowState[] {
-    const states: IInnovationFlowState[] = this.deserializeStates(statesStr);
-    return states;
-  }
-
-  public getStateNames(statesStr: string): string[] {
-    const states = this.getStates(statesStr);
+  public getStateNames(states: IInnovationFlowState[]): string[] {
     return states.map(state => state.displayName);
-  }
-
-  public serializeStates(states: IInnovationFlowState[]): string {
-    return JSON.stringify(states);
-  }
-
-  private deserializeStates(statesStr: string): IInnovationFlowState[] {
-    return JSON.parse(statesStr);
   }
 
   public convertInputsToStates(
@@ -45,14 +32,31 @@ export class InnovationFlowStatesService {
     }
     return result;
   }
+
   public validateDefinition(
-    states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[]
+    states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[],
+    settings?: IInnovationFlowSettings
   ) {
     if (states.length === 0) {
       throw new ValidationException(
         `At least one state must be defined: ${states}`,
         LogContext.INNOVATION_FLOW
       );
+    }
+    if (settings) {
+      if (states.length > settings.maximumNumberOfStates) {
+        throw new ValidationException(
+          `Innovation Flow can have a maximum of ${settings.maximumNumberOfStates} states; provided: ${states}`,
+          LogContext.INNOVATION_FLOW
+        );
+      }
+
+      if (states.length < settings.minimumNumberOfStates) {
+        throw new ValidationException(
+          `Innovation Flow must have a minimum of ${settings.minimumNumberOfStates} states; provided: ${states}`,
+          LogContext.INNOVATION_FLOW
+        );
+      }
     }
     const stateNames = states.map(state => state.displayName);
     const uniqueStateNames = new Set(stateNames);
