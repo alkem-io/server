@@ -12,7 +12,7 @@ export class KnowledgeBaseCalloutsSet1740482794998
     );
     for (const knowledgeBase of knowledgeBases) {
       await queryRunner.query(
-        `UPDATE \`callouts_set\` SET \`type\` = 'knowledge-base' WHERE id = '${knowledgeBase.id}'`
+        `UPDATE \`callouts_set\` SET \`type\` = 'knowledge-base' WHERE id = '${knowledgeBase.calloutsSetId}'`
       );
     }
   }
