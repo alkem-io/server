@@ -1,5 +1,5 @@
 import { setTimeout } from 'timers/promises';
-import { EntityManager, FindManyOptions, Not } from 'typeorm';
+import { EntityManager, FindManyOptions } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -18,7 +18,7 @@ import { asyncMap } from '@common/utils/async.map';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { SpaceLevel } from '@common/enums/space.level';
 import { getIndexPattern } from './get.index.pattern';
-import { SearchEntityTypes } from '../search.entity.types';
+import { SearchResultTypes } from '../search.entity.types';
 import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
@@ -443,7 +443,7 @@ export class SearchIngestService {
         return spaces.map(space => ({
           ...space,
           account: undefined,
-          type: SearchEntityTypes.SPACE,
+          type: SearchResultTypes.SPACE,
           visibility: space?.visibility,
           spaceID: space.id, // spaceID is the same as the space's id
           profile: {
@@ -488,7 +488,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SUBSPACE,
+          type: SearchResultTypes.SUBSPACE,
           visibility: space?.visibility,
           spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -533,7 +533,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SUBSPACE,
+          type: SearchResultTypes.SUBSPACE,
           visibility: space?.visibility,
           spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -564,7 +564,7 @@ export class SearchIngestService {
       .then(organizations => {
         return organizations.map(organization => ({
           ...organization,
-          type: SearchEntityTypes.ORGANIZATION,
+          type: SearchResultTypes.ORGANIZATION,
           profile: {
             ...organization.profile,
             tags: processTagsets(organization.profile.tagsets),
@@ -601,7 +601,7 @@ export class SearchIngestService {
           email: undefined,
           phone: undefined,
           serviceProfile: undefined,
-          type: SearchEntityTypes.USER,
+          type: SearchResultTypes.USER,
           profile: {
             ...user.profile,
             tags: processTagsets(user.profile.tagsets),
@@ -669,7 +669,7 @@ export class SearchIngestService {
           space.collaboration?.calloutsSet?.callouts?.map(callout => ({
             ...callout,
             framing: undefined,
-            type: SearchEntityTypes.CALLOUT,
+            type: SearchResultTypes.CALLOUT,
             license: {
               visibility: space?.visibility ?? EMPTY_VALUE,
             },
@@ -785,7 +785,7 @@ export class SearchIngestService {
                 wbs.push({
                   ...callout.framing.whiteboard,
                   content,
-                  type: SearchEntityTypes.WHITEBOARD,
+                  type: SearchResultTypes.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
                   },
@@ -823,7 +823,7 @@ export class SearchIngestService {
                   content: extractTextFromWhiteboardContent(
                     contribution.whiteboard.content
                   ),
-                  type: SearchEntityTypes.WHITEBOARD,
+                  type: SearchResultTypes.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
                   },
@@ -925,7 +925,7 @@ export class SearchIngestService {
               }
               posts.push({
                 ...contribution.post,
-                type: SearchEntityTypes.POST,
+                type: SearchResultTypes.POST,
                 license: {
                   visibility: space?.visibility ?? EMPTY_VALUE,
                 },

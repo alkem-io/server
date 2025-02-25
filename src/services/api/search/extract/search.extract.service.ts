@@ -10,7 +10,7 @@ import { ISearchResult, SearchInput } from '../dto';
 import { validateSearchParameters, validateSearchTerms } from '../util';
 import { functionScoreFunctions } from './function.score.functions';
 import { buildSearchQuery } from './build.search.query';
-import { SearchEntityTypes } from '../search.entity.types';
+import { SearchResultTypes } from '../search.entity.types';
 import { AlkemioConfig } from '@src/types';
 import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
 import {
@@ -29,7 +29,7 @@ export enum IndexCategory {
 
 type Index = {
   name: string;
-  type: SearchEntityTypes;
+  type: SearchResultTypes;
   category: IndexCategory;
 };
 // todo: rename
@@ -39,43 +39,43 @@ const getIndexStore = (
   [IndexCategory.SPACES]: [
     {
       name: `${indexPattern}spaces`,
-      type: SearchEntityTypes.SPACE,
+      type: SearchResultTypes.SPACE,
       category: IndexCategory.SPACES,
     },
     {
       name: `${indexPattern}subspaces`,
-      type: SearchEntityTypes.SUBSPACE,
+      type: SearchResultTypes.SUBSPACE,
       category: IndexCategory.SPACES,
     },
   ],
   [IndexCategory.CONTRIBUTORS]: [
     {
       name: `${indexPattern}users`,
-      type: SearchEntityTypes.USER,
+      type: SearchResultTypes.USER,
       category: IndexCategory.CONTRIBUTORS,
     },
     {
       name: `${indexPattern}organizations`,
-      type: SearchEntityTypes.ORGANIZATION,
+      type: SearchResultTypes.ORGANIZATION,
       category: IndexCategory.CONTRIBUTORS,
     },
   ],
   [IndexCategory.COLLABORATION_TOOLS]: [
     {
       name: `${indexPattern}callouts`,
-      type: SearchEntityTypes.CALLOUT,
+      type: SearchResultTypes.CALLOUT,
       category: IndexCategory.COLLABORATION_TOOLS,
     },
   ],
   [IndexCategory.RESPONSES]: [
     {
       name: `${indexPattern}posts`,
-      type: SearchEntityTypes.POST,
+      type: SearchResultTypes.POST,
       category: IndexCategory.RESPONSES,
     },
     {
       name: `${indexPattern}whiteboards`,
-      type: SearchEntityTypes.WHITEBOARD,
+      type: SearchResultTypes.WHITEBOARD,
       category: IndexCategory.RESPONSES,
     },
   ],
@@ -86,25 +86,25 @@ const getPublicIndexStore = (
   [IndexCategory.SPACES]: [
     {
       name: `${indexPattern}spaces`,
-      type: SearchEntityTypes.SPACE,
+      type: SearchResultTypes.SPACE,
       category: IndexCategory.SPACES,
     },
     {
       name: `${indexPattern}subspaces`,
-      type: SearchEntityTypes.SUBSPACE,
+      type: SearchResultTypes.SUBSPACE,
       category: IndexCategory.SPACES,
     },
   ],
   [IndexCategory.RESPONSES]: [
     {
       name: `${indexPattern}posts`,
-      type: SearchEntityTypes.POST,
+      type: SearchResultTypes.POST,
       category: IndexCategory.RESPONSES,
     },
     // todo: check if whiteboards should be added to the public results
     {
       name: `${indexPattern}whiteboards`,
-      type: SearchEntityTypes.WHITEBOARD,
+      type: SearchResultTypes.WHITEBOARD,
       category: IndexCategory.RESPONSES,
     },
   ],
