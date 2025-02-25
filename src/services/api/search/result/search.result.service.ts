@@ -29,7 +29,7 @@ import {
   ISearchResultUser,
   ISearchResultPost,
 } from '../dto';
-import { SearchResultTypes } from '@services/api/search/search.entity.types';
+import { SearchResultTypes } from '../search.result.types';
 import { User } from '@domain/community/user/user.entity';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
