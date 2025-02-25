@@ -1,7 +1,7 @@
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { SearchEntityTypes } from '../search.entity.types';
 import { SearchInput } from '../dto';
+import { IndexCategory } from '@services/api/search/extract/search.extract.service';
 
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
@@ -20,16 +20,13 @@ export const validateSearchParameters = (searchData: SearchInput) => {
       LogContext.SEARCH
     );
   // Check only allowed entity types supplied
-  const entityTypes = searchData.typesFilter;
-  if (entityTypes) {
-    entityTypes.forEach(entityType => {
-      if (
-        !Object.values(SearchEntityTypes).includes(
-          entityType as SearchEntityTypes
-        )
-      ) {
+  const categoryFilter = searchData.categories;
+  if (categoryFilter) {
+    const availableCategories = Object.values(IndexCategory);
+    categoryFilter.forEach(category => {
+      if (!availableCategories.includes(category as IndexCategory)) {
         throw new ValidationException(
-          `Not allowed typeFilter encountered: ${entityType}`,
+          `Not allowed typeFilter encountered: ${category}`,
           LogContext.SEARCH
         );
       }

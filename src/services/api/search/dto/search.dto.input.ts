@@ -1,5 +1,7 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
+import { IndexCategory } from '../extract/search.extract.service';
+import { SearchEntityTypes } from '@services/api/search/search.entity.types';
 
 @InputType()
 export class SearchInput {
@@ -16,12 +18,19 @@ export class SearchInput {
   })
   tagsetNames?: string[];
 
+  @Field(() => [SearchEntityTypes], {
+    nullable: true,
+    description:
+      'Restrict the search to only the specified entity types. Values allowed: space, subspace, user, organization, callout, post, whiteboard. Default is all.',
+  })
+  typesFilter?: string[];
+
   @Field(() => [String], {
     nullable: true,
     description:
-      'Restrict the search to only the specified entity types. Values allowed: space, subspace, user, group, organization, callout. Default is all.',
+      'Restrict the search to only the specified categories. Allowed values: spaces, collaboration-tools, responses, contributors. Default is all.',
   })
-  typesFilter?: string[];
+  categories?: IndexCategory[];
 
   @Field(() => UUID, {
     nullable: true,
