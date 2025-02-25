@@ -4,7 +4,9 @@ import { GraphqlGuard } from '@core/authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AccountService } from './account.service';
 import { IAccount } from './account.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AccountResolverQueries {
   constructor(

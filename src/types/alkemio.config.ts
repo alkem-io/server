@@ -29,7 +29,6 @@ export type AlkemioConfig = {
     header: string;
   };
   search: {
-    use_new: boolean;
     max_results: number;
     index_pattern: string;
   };
@@ -184,6 +183,9 @@ export type AlkemioConfig = {
     enabled: boolean;
   };
   collaboration: {
+    membership: {
+      cache_ttl: number;
+    };
     whiteboards: {
       enabled: boolean;
       contribution_window: number;

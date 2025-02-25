@@ -16,6 +16,7 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SpaceService } from '@domain/space/space/space.service';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Resolver(() => LookupByNameQueryResults)
 export class LookupByNameResolverFields {
@@ -74,23 +75,23 @@ export class LookupByNameResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => String, {
+  @ResolveField(() => ISpace, {
     nullable: true,
-    description: 'Lookup the ID of the specified Space using a NameID',
+    description: 'Lookup a Space using a NameID',
   })
   async space(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('NAMEID', { type: () => NameID }) nameid: string
-  ): Promise<string> {
+  ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceByNameIdOrFail(nameid);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Space by NameID: ${space.id}`
+      AuthorizationPrivilege.READ_ABOUT,
+      `lookup L0 Space by NameID: ${nameid}`
     );
 
-    return space.id;
+    return space;
   }
 
   @UseGuards(GraphqlGuard)
@@ -113,6 +114,7 @@ export class LookupByNameResolverFields {
     return user.id;
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description: 'Lookup the ID of the specified Organization using a NameID',
@@ -127,18 +129,27 @@ export class LookupByNameResolverFields {
     return organization.id;
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description:
       'Lookup the ID of the specified Virtual Contributor using a NameID',
   })
   async virtualContributor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<string> {
     const virtualContributor =
       await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
         nameid
       );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.READ_ABOUT,
+      `lookup virtual contributor by NameID: ${virtualContributor.id}`
+    );
 
     return virtualContributor.id;
   }

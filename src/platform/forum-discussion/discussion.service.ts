@@ -11,7 +11,6 @@ import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { RoomService } from '../../domain/communication/room/room.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IRoom } from '../../domain/communication/room/room.interface';
 import { RoomType } from '@common/enums/room.type';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -91,20 +90,10 @@ export class DiscussionService {
     discussionID: string,
     options?: FindOneOptions<Discussion>
   ): Promise<IDiscussion> {
-    let discussion: IDiscussion | null = null;
-    if (discussionID.length === UUID_LENGTH) {
-      discussion = await this.discussionRepository.findOne({
-        where: { id: discussionID },
-        ...options,
-      });
-    }
-    if (!discussion) {
-      // look up based on nameID
-      discussion = await this.discussionRepository.findOne({
-        where: { nameID: discussionID },
-        ...options,
-      });
-    }
+    const discussion = await this.discussionRepository.findOne({
+      where: { id: discussionID },
+      ...options,
+    });
 
     if (!discussion)
       throw new EntityNotFoundException(

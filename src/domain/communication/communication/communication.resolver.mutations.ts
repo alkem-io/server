@@ -15,7 +15,9 @@ import { CommunicationSendMessageToOrganizationInput } from './dto/communication
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { NotificationInputCommunityLeadsMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.leads.message';
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CommunicationResolverMutations {
   constructor(

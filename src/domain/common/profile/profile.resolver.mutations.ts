@@ -18,7 +18,9 @@ import { UpdateProfileDirectInput } from './dto/profile.dto.update.direct';
 import { TagsetType } from '@common/enums/tagset.type';
 import { NotSupportedException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ProfileResolverMutations {
   constructor(

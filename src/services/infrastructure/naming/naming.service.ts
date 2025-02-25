@@ -19,10 +19,11 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
 import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { SpaceReservedName } from '@common/enums/space.reserved.name';
 import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
 import { Template } from '@domain/template/template/template.entity';
 import { IRoleSet } from '@domain/access/role-set';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { UrlPathBase } from '@common/enums/url.path.base';
 
 export class NamingService {
   constructor(
@@ -59,7 +60,7 @@ export class NamingService {
       },
     });
     const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
-    const reservedTopLevelSpaces = Object.values(SpaceReservedName) as string[];
+    const reservedTopLevelSpaces = Object.values(UrlPathBase) as string[];
 
     return nameIDs.concat(reservedTopLevelSpaces);
   }
@@ -124,6 +125,15 @@ export class NamingService {
       },
     });
     return events?.map(event => event.nameID) ?? [];
+  }
+
+  public async getReservedNameIDsInInnovationPacks(): Promise<string[]> {
+    const packs = await this.entityManager.find(InnovationPack, {
+      select: {
+        nameID: true,
+      },
+    });
+    return packs.map(pack => pack.nameID);
   }
 
   public async getReservedNameIDsInHubs(): Promise<string[]> {

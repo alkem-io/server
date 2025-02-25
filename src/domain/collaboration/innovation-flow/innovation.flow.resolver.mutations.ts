@@ -10,7 +10,9 @@ import { IInnovationFlow } from './innovation.flow.interface';
 import { UpdateInnovationFlowEntityInput } from './dto/innovation.flow.dto.update.entity';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class InnovationFlowResolverMutations {
   constructor(

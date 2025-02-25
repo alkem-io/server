@@ -21,6 +21,7 @@ import { EntityManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlkemioConfig } from '@src/types';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
 @ObjectType('MigrateEmbeddings')
 class IMigrateEmbeddingsResponse {
@@ -28,6 +29,7 @@ class IMigrateEmbeddingsResponse {
   success!: boolean;
 }
 
+@InstrumentResolver()
 @Resolver()
 export class AiServerResolverMutations {
   constructor(

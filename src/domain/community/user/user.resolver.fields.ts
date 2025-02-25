@@ -33,7 +33,9 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { Identity } from '@ory/kratos-client';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUserSettings } from '../user.settings/user.settings.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(

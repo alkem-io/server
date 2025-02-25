@@ -43,7 +43,9 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CalloutResolverMutations {
   constructor(

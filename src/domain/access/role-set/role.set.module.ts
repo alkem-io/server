@@ -32,6 +32,9 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
+import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
+import { RoleSetCacheModule } from './role.set.service.cache.module';
 
 @Module({
   imports: [
@@ -58,6 +61,7 @@ import { UserModule } from '@domain/community/user/user.module';
     LifecycleModule,
     CommunityCommunicationModule,
     TypeOrmModule.forFeature([RoleSet]),
+    RoleSetCacheModule,
   ],
   providers: [
     RoleSetService,
@@ -69,6 +73,8 @@ import { UserModule } from '@domain/community/user/user.module';
     RoleSetEventsService,
     RoleSetServiceLifecycleApplication,
     RoleSetServiceLifecycleInvitation,
+    RoleSetAgentRolesDataLoader,
+    RoleSetMembershipStatusDataLoader,
   ],
   exports: [RoleSetService, RoleSetAuthorizationService, RoleSetLicenseService],
 })

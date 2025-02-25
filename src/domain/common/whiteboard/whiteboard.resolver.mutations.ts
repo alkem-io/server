@@ -16,7 +16,9 @@ import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.fr
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverMutations {
   constructor(

@@ -9,7 +9,9 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IDocument } from './document.interface';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
 import { UpdateDocumentInput } from './dto/document.dto.update';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class DocumentResolverMutations {
   constructor(

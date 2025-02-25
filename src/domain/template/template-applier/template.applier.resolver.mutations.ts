@@ -15,7 +15,9 @@ import { LogContext } from '@common/enums';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class TemplateApplierResolverMutations {
   constructor(
