@@ -263,7 +263,7 @@ const getSpaceRoleResultMock = ({
           displayName: `Space ${id}`,
           tagline: '',
           description: '',
-          type: ProfileType.SPACE,
+          type: ProfileType.SPACE_ABOUT,
           ...getEntityMock<Profile>(),
         },
       },

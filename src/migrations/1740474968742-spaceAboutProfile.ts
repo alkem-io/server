@@ -1,0 +1,22 @@
+import { MigrationInterface, QueryRunner } from 'typeorm';
+
+export class SpaceAboutProfile1740474968742 implements MigrationInterface {
+  name = 'SpaceAboutProfile1740474968742';
+
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `DROP INDEX \`IDX_c59c1beb254808dd32007de661\` ON \`space\``
+    );
+    await queryRunner.query(
+      `UPDATE \`profile\` SET type = 'space-about' WHERE type = 'space'`
+    );
+    await queryRunner.query(
+      `UPDATE \`profile\` SET type = 'space-about' WHERE type = 'challenge'`
+    );
+    await queryRunner.query(
+      `UPDATE \`profile\` SET type = 'space-about' WHERE type = 'opportunity'`
+    );
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {}
+}

@@ -235,10 +235,8 @@ export class SpaceService {
       storageAggregator
     );
 
-    const profileType = this.spaceDefaultsService.getProfileType(space.level);
     space.about = await this.spaceAboutService.createSpaceAbout(
       spaceData.about,
-      profileType,
       storageAggregator
     );
 
