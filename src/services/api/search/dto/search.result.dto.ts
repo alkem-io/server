@@ -34,13 +34,13 @@ export abstract class ISearchResults {
     nullable: false,
     description: 'The search results for Spaces / Subspaces.',
   })
-  journeyResults!: ISearchResult[];
+  spaceResults!: ISearchResult[];
 
   @Field(() => Number, {
     nullable: false,
     description: 'The total number of results for Spaces / Subspaces.',
   })
-  journeyResultsCount!: number;
+  spaceResultsCount!: number;
 
   @Field(() => [ISearchResult], {
     nullable: false,
@@ -53,10 +53,4 @@ export abstract class ISearchResults {
     description: 'The total number of results for Callouts.',
   })
   calloutResultsCount!: number;
-
-  @Field(() => [ISearchResult], {
-    nullable: false,
-    description: 'The search results for Groups.',
-  })
-  groupResults!: ISearchResult[];
 }

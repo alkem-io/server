@@ -103,7 +103,7 @@ export class SearchResultService {
       'desc'
     );
     const contributionResults = orderBy(posts, 'score', 'desc');
-    const journeyResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
+    const spaceResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
     const calloutResults = orderBy(
       [...callouts, ...calloutsOfWhiteboards],
       'score',
@@ -115,9 +115,8 @@ export class SearchResultService {
       contributorResultsCount: -1,
       contributionResults,
       contributionResultsCount: -1,
-      journeyResults,
-      journeyResultsCount: -1,
-      groupResults: [],
+      spaceResults: spaceResults,
+      spaceResultsCount: -1,
       calloutResults,
       calloutResultsCount: -1,
     };
