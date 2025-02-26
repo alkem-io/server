@@ -196,7 +196,11 @@ export class InputCreatorService {
   public buildCreateInnovationFlowInputFromInnovationFlow(
     innovationFlow: IInnovationFlow
   ): CreateInnovationFlowInput {
-    if (!innovationFlow.states || !innovationFlow.profile) {
+    if (
+      !innovationFlow.states ||
+      !innovationFlow.settings ||
+      !innovationFlow.profile
+    ) {
       throw new EntityNotInitializedException(
         `Template ${innovationFlow.id} is missing relation`,
         LogContext.INPUT_CREATOR
@@ -204,11 +208,12 @@ export class InputCreatorService {
     }
     // Note: no profile currently present, so use the one from the template for now
     const result: CreateInnovationFlowInput = {
+      settings: innovationFlow.settings,
       profile: {
         displayName: innovationFlow.profile.displayName,
         description: innovationFlow.profile.description,
       },
-      states: this.innovationFlowStatesService.getStates(innovationFlow.states),
+      states: innovationFlow.states,
     };
     return result;
   }

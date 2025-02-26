@@ -122,12 +122,12 @@ export class CollaborationService {
 
     if (!statesTagsetTemplate || !groupsTagsetTemplate) {
       throw new RelationshipNotFoundException(
-        'Unable to create tagst template for flow states',
+        'Unable to create tagset template for flow states',
         LogContext.COLLABORATION
       );
     }
     // Note: need to create the innovation flow after creation of
-    // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
+    // tagsetTemplates on Collaboration so can pass it in to the InnovationFlow
     collaboration.innovationFlow =
       await this.innovationFlowService.createInnovationFlow(
         collaborationData.innovationFlowData,
