@@ -758,6 +758,10 @@ export class UrlGeneratorService {
         },
       },
     });
+    if (callout) {
+      const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
+      return `${calloutUrlPath}/${whiteboardNameID}`;
+    }
     if (!callout) {
       callout = await this.entityManager.findOne(Callout, {
         where: {

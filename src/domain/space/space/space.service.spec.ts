@@ -323,28 +323,28 @@ const getSubspacesMock = (
         },
         innovationFlow: {
           id: '',
-          states: JSON.stringify([
+          settings: {
+            maximumNumberOfStates: 8,
+            minimumNumberOfStates: 1,
+          },
+          states: [
             {
               displayName: 'prepare',
               description: 'The innovation is being prepared.',
-              sortOrder: 1,
             },
             {
               displayName: 'in progress',
               description: 'The innovation is in progress.',
-              sortOrder: 2,
             },
             {
               displayName: 'summary',
               description: 'The summary of the flow results.',
-              sortOrder: 3,
             },
             {
               displayName: 'done',
               description: 'The flow is completed.',
-              sortOrder: 4,
             },
-          ]),
+          ],
           profile: {
             id: '',
             displayName: `Challenge ${spaceId}.${i}`,
@@ -430,28 +430,28 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         },
         innovationFlow: {
           id: '',
-          states: JSON.stringify([
+          settings: {
+            maximumNumberOfStates: 8,
+            minimumNumberOfStates: 1,
+          },
+          states: [
             {
               displayName: 'prepare',
               description: 'The innovation is being prepared.',
-              sortOrder: 1,
             },
             {
               displayName: 'in progress',
               description: 'The innovation is in progress.',
-              sortOrder: 2,
             },
             {
               displayName: 'summary',
               description: 'The summary of the flow results.',
-              sortOrder: 3,
             },
             {
               displayName: 'done',
               description: 'The flow is completed.',
-              sortOrder: 4,
             },
-          ]),
+          ],
           profile: {
             id: '',
             displayName: `subsubspace-${subsubspaceId}.${i}`,

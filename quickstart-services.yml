@@ -58,7 +58,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v1.2.0
+    image: oryd/kratos:v1.3.1
     depends_on:
       - mysql
     environment:
@@ -74,7 +74,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v1.2.0
+    image: oryd/kratos:v1.3.1
     depends_on:
       - kratos-migrate
     ports:
@@ -204,7 +204,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.20.0
+    image: alkemio/notifications:v0.21.1
     platform: linux/x86_64
     depends_on:
       - rabbitmq
