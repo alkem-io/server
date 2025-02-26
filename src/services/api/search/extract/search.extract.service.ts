@@ -1,4 +1,4 @@
-import { groupBy, intersectionWith } from 'lodash';
+import { intersectionWith } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -14,14 +14,13 @@ import { AlkemioConfig } from '@src/types';
 import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
 import {
   ErrorResponseBase,
-  MsearchMultisearchBody,
-  MsearchMultisearchHeader,
   MsearchMultiSearchItem,
   MsearchResponseItem,
 } from '@elastic/elasticsearch/lib/api/types';
 import { SearchCategory } from '../search.category';
 import { SearchIndex } from './search.index';
 import { isElasticError } from '@services/external/elasticsearch/utils';
+import { buildMultiSearchRequestItems } from '@services/api/search/extract/build.multi.search.request.items';
 
 const getIndexStore = (
   indexPattern: string
@@ -149,7 +148,7 @@ export class SearchExtractService {
       types,
       categories,
     });
-
+    // execute search per category
     return this.executeMultiSearch(
       indicesToSearchOn,
       filteredTerms,
@@ -209,7 +208,7 @@ export class SearchExtractService {
     indicesToSearchOn: SearchIndex[],
     terms: string[],
     searchInSpaceFilter?: string
-  ) {
+  ): Promise<ISearchResult[]> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
@@ -220,73 +219,84 @@ export class SearchExtractService {
       spaceIdFilter: searchInSpaceFilter,
     });
 
-    const indexByCategory = groupBy(indicesToSearchOn, 'category') as Record<
-      SearchCategory,
-      SearchIndex[]
-    >;
+    const searchRequests = buildMultiSearchRequestItems(
+      indicesToSearchOn,
+      query,
+      0,
+      this.maxResults
+    );
 
     const result = await this.client.msearch<IBaseAlkemio>({
-      searches: Object.keys(indexByCategory).flatMap(category => {
-        const indices = indexByCategory[category as SearchCategory].map(
-          index => index.name
-        );
-
-        return [
-          { index: indices } as MsearchMultisearchHeader,
-          {
-            query,
-            // return only a small subset of fields to conserve data
-            fields: ['id', 'type'],
-            // do not include the source in the result
-            _source: false,
-            // offset, starting from 0
-            from: 0,
-            // max amount of results
-            size: this.maxResults,
-          } as MsearchMultisearchBody,
-        ];
-      }),
+      searches: searchRequests,
+      // other msearch config goes here
+      human: true,
     });
     this.logger.verbose?.(
-      `Searching in Elasticsearch took ${result.took}ms`,
+      `Elasticsearch took ${result.took}ms`,
       LogContext.SEARCH_EXTRACT
     );
-    return result.responses.flatMap(
+    return this.processMultiSearchResponses(result.responses);
+  }
+
+  private processMultiSearchResponses(
+    responses: MsearchResponseItem<IBaseAlkemio>[]
+  ): ISearchResult[] {
+    const results = responses.flatMap(
       (response: MsearchMultiSearchItem<IBaseAlkemio> | ErrorResponseBase) => {
         if (isElasticError(response)) {
-          // todo: define the error, log it, put it in the right category
-          throw new Error('Error response');
+          this.processMultiSearchError(response);
+          return undefined;
         }
-        return response.hits.hits.map<ISearchResult>(hit => {
-          const entityId = hit.fields?.id?.[0];
-          const type = hit.fields?.type?.[0];
 
-          if (!entityId) {
-            this.logger.error(
-              `Search result with no entity id: ${JSON.stringify(hit)}`,
-              undefined,
-              LogContext.SEARCH_EXTRACT
-            );
-          }
-
-          if (hit._ignored) {
-            const ignored = hit._ignored.join('; ');
-            this.logger.warn(
-              `Some fields were ignored while searching: ${ignored}`,
-              undefined,
-              LogContext.SEARCH_EXTRACT
-            );
-          }
-
-          return {
-            id: hit._id ?? 'N/A',
-            score: hit._score ?? -1,
-            type,
-            terms: [], // todo - https://github.com/alkem-io/server/issues/3702
-            result: { id: entityId ?? 'N/A' },
-          };
-        });
+        return this.processMultiSearchItem(response);
       }
+    );
+    // filter the undefined produced by processing errors
+    return results.filter((result): result is ISearchResult => !!result);
+  }
+
+  private processMultiSearchItem(
+    item: MsearchMultiSearchItem
+  ): ISearchResult[] {
+    return item.hits.hits.map<ISearchResult>(hit => {
+      const entityId = hit.fields?.id?.[0];
+      const type = hit.fields?.type?.[0];
+
+      if (!entityId) {
+        this.logger.error(
+          `Search result with no entity id: ${JSON.stringify(hit)}`,
+          undefined,
+          LogContext.SEARCH_EXTRACT
+        );
+      }
+
+      if (hit._ignored) {
+        const ignored = hit._ignored.join('; ');
+        this.logger.warn(
+          `Some fields were ignored while searching: ${ignored}`,
+          undefined,
+          LogContext.SEARCH_EXTRACT
+        );
+      }
+
+      return {
+        id: hit._id ?? 'N/A',
+        score: hit._score ?? -1,
+        type,
+        terms: [], // todo - https://github.com/alkem-io/server/issues/3702
+        result: { id: entityId ?? 'N/A' },
+      };
+    });
+  }
+
+  private processMultiSearchError(error: ErrorResponseBase): undefined {
+    this.logger.error(
+      {
+        message: 'Error response for multi search request',
+        ...error,
+      },
+      undefined,
+      LogContext.SEARCH_EXTRACT
     );
   }
 }
