@@ -85,19 +85,21 @@ export class UrlGeneratorService {
       case ProfileType.CHALLENGE:
       case ProfileType.OPPORTUNITY:
         return await this.getSpaceUrlPathByAboutProfileID(profile.id);
-      case ProfileType.USER:
+      case ProfileType.USER: {
         const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'user',
           profile.id
         );
         return this.createUrlForUserNameID(userEntityInfo.entityNameID);
-      case ProfileType.VIRTUAL_CONTRIBUTOR:
+      }
+      case ProfileType.VIRTUAL_CONTRIBUTOR: {
         const vcEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'virtual_contributor',
           profile.id
         );
         return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vcEntityInfo.entityNameID}`;
-      case ProfileType.ORGANIZATION:
+      }
+      case ProfileType.ORGANIZATION: {
         const organizationEntityInfo =
           await this.getNameableEntityInfoForProfileOrFail(
             'organization',
@@ -106,6 +108,7 @@ export class UrlGeneratorService {
         return this.createUrlForOrganizationNameID(
           organizationEntityInfo.entityNameID
         );
+      }
       case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutFramingUrlPathOrFail(profile.id);
       case ProfileType.COMMUNITY_GUIDELINES:
@@ -131,13 +134,14 @@ export class UrlGeneratorService {
 
       case ProfileType.DISCUSSION:
         return await this.getForumDiscussionUrlPathByProfileID(profile.id);
-      case ProfileType.INNOVATION_HUB:
+      case ProfileType.INNOVATION_HUB: {
         const innovationHubEntityInfo =
           await this.getNameableEntityInfoForProfileOrFail(
             'innovation_hub',
             profile.id
           );
         return `${this.endpoint_cluster}/innovation-hubs/${innovationHubEntityInfo.entityNameID}/settings`;
+      }
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
         return `${this.endpoint_cluster}`;
