@@ -15,7 +15,7 @@ import { SpaceAbout } from './space.about.entity';
 export class SpaceAboutResolverFields {
   constructor() {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
