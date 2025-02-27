@@ -17,10 +17,13 @@ import {
 } from 'typeorm';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
 
 @Injectable()
 export class SpaceLookupService {
   constructor(
+    private accountLookupService: AccountLookupService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(Space)
@@ -136,5 +139,30 @@ export class SpaceLookupService {
         LogContext.COLLABORATION
       );
     return collaboration;
+  }
+
+  public async getProvider(spaceInput: ISpace): Promise<IContributor> {
+    const space = await this.spaceRepository.findOne({
+      where: {
+        id: spaceInput.levelZeroSpaceID,
+      },
+      relations: {
+        account: true,
+      },
+    });
+    if (!space || !space.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Space with account to get Provider ${spaceInput.id} `,
+        LogContext.LIBRARY
+      );
+    }
+    const provider = await this.accountLookupService.getHost(space.account);
+    if (!provider) {
+      throw new RelationshipNotFoundException(
+        `Unable to load provider for Space ${space.id} `,
+        LogContext.LIBRARY
+      );
+    }
+    return provider;
   }
 }

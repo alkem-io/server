@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Space } from '@domain/space/space/space.entity';
-import { INVP } from '@domain/common/nvp';
 import { NameID } from '@domain/common/scalars';
 import { ICommunity } from '@domain/community/community';
 import { UseGuards } from '@nestjs/common';
@@ -28,7 +27,6 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { IAccount } from '../account/account.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { ILicense } from '@domain/common/license/license.interface';
@@ -188,14 +186,6 @@ export class SpaceResolverFields {
     return subspace;
   }
 
-  @ResolveField('metrics', () => [INVP], {
-    nullable: true,
-    description: 'Metrics about activity within this Space.',
-  })
-  async metrics(@Parent() space: ISpace) {
-    return await this.spaceService.getMetrics(space);
-  }
-
   @ResolveField('createdDate', () => Date, {
     nullable: true,
     description: 'The date for the creation of this Space.',
@@ -225,14 +215,5 @@ export class SpaceResolverFields {
     return await this.spaceService.getTemplatesManagerOrFail(
       space.levelZeroSpaceID
     );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('provider', () => IContributor, {
-    nullable: false,
-    description: 'The Space provider.',
-  })
-  async provider(@Parent() space: ISpace): Promise<IContributor> {
-    return await this.spaceService.getProvider(space);
   }
 }
