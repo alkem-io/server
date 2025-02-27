@@ -18,7 +18,7 @@ import { asyncMap } from '@common/utils/async.map';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { SpaceLevel } from '@common/enums/space.level';
 import { getIndexPattern } from './get.index.pattern';
-import { SearchResultTypes } from '../search.result.types';
+import { SearchResultType } from '../search.result.type';
 import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
@@ -443,7 +443,7 @@ export class SearchIngestService {
         return spaces.map(space => ({
           ...space,
           account: undefined,
-          type: SearchResultTypes.SPACE,
+          type: SearchResultType.SPACE,
           visibility: space?.visibility,
           spaceID: space.id, // spaceID is the same as the space's id
           profile: {
@@ -488,7 +488,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchResultTypes.SUBSPACE,
+          type: SearchResultType.SUBSPACE,
           visibility: space?.visibility,
           spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -533,7 +533,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchResultTypes.SUBSPACE,
+          type: SearchResultType.SUBSPACE,
           visibility: space?.visibility,
           spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -564,7 +564,7 @@ export class SearchIngestService {
       .then(organizations => {
         return organizations.map(organization => ({
           ...organization,
-          type: SearchResultTypes.ORGANIZATION,
+          type: SearchResultType.ORGANIZATION,
           profile: {
             ...organization.profile,
             tags: processTagsets(organization.profile.tagsets),
@@ -601,7 +601,7 @@ export class SearchIngestService {
           email: undefined,
           phone: undefined,
           serviceProfile: undefined,
-          type: SearchResultTypes.USER,
+          type: SearchResultType.USER,
           profile: {
             ...user.profile,
             tags: processTagsets(user.profile.tagsets),
@@ -669,7 +669,7 @@ export class SearchIngestService {
           space.collaboration?.calloutsSet?.callouts?.map(callout => ({
             ...callout,
             framing: undefined,
-            type: SearchResultTypes.CALLOUT,
+            type: SearchResultType.CALLOUT,
             license: {
               visibility: space?.visibility ?? EMPTY_VALUE,
             },
@@ -785,7 +785,7 @@ export class SearchIngestService {
                 wbs.push({
                   ...callout.framing.whiteboard,
                   content,
-                  type: SearchResultTypes.WHITEBOARD,
+                  type: SearchResultType.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
                   },
@@ -823,7 +823,7 @@ export class SearchIngestService {
                   content: extractTextFromWhiteboardContent(
                     contribution.whiteboard.content
                   ),
-                  type: SearchResultTypes.WHITEBOARD,
+                  type: SearchResultType.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
                   },
@@ -925,7 +925,7 @@ export class SearchIngestService {
               }
               posts.push({
                 ...contribution.post,
-                type: SearchResultTypes.POST,
+                type: SearchResultType.POST,
                 license: {
                   visibility: space?.visibility ?? EMPTY_VALUE,
                 },

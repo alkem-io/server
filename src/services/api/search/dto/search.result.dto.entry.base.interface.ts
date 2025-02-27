@@ -1,7 +1,8 @@
-import { SearchResultType } from '@common/enums/search.result.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
+import { SearchResultType } from '../search.result.type';
+
 export abstract class ISearchResultBase {
   @Field(() => UUID, {
     nullable: false,
@@ -24,9 +25,8 @@ export abstract class ISearchResultBase {
 
   @Field(() => SearchResultType, {
     nullable: false,
-    description: 'The event type for this Activity.',
   })
-  type!: string;
+  type!: SearchResultType;
 
   // The actual result
   result!: IBaseAlkemio;

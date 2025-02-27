@@ -1,6 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { SearchResultTypes } from '../search.result.types';
+import { SearchResultType } from '../search.result.type';
 import { SearchCategory } from '@services/api/search/search.category';
 
 @InputType()
@@ -18,12 +18,12 @@ export class SearchInput {
   })
   tagsetNames?: string[];
 
-  @Field(() => [SearchResultTypes], {
+  @Field(() => [SearchResultType], {
     nullable: true,
     description:
       'Restrict the search to only the specified entity types. Default is all.',
   })
-  types?: SearchResultTypes[];
+  types?: SearchResultType[];
 
   @Field(() => [SearchCategory], {
     nullable: true,

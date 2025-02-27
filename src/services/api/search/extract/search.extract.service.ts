@@ -9,7 +9,7 @@ import { LogContext } from '@common/enums';
 import { ISearchResult, SearchInput } from '../dto';
 import { validateSearchParameters, validateSearchTerms } from '../util';
 import { buildSearchQuery } from './build.search.query';
-import { SearchResultTypes } from '../search.result.types';
+import { SearchResultType } from '../search.result.type';
 import { AlkemioConfig } from '@src/types';
 import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
 import {
@@ -28,43 +28,43 @@ const getIndexStore = (
   [SearchCategory.SPACES]: [
     {
       name: `${indexPattern}spaces`,
-      type: SearchResultTypes.SPACE,
+      type: SearchResultType.SPACE,
       category: SearchCategory.SPACES,
     },
     {
       name: `${indexPattern}subspaces`,
-      type: SearchResultTypes.SUBSPACE,
+      type: SearchResultType.SUBSPACE,
       category: SearchCategory.SPACES,
     },
   ],
   [SearchCategory.CONTRIBUTORS]: [
     {
       name: `${indexPattern}users`,
-      type: SearchResultTypes.USER,
+      type: SearchResultType.USER,
       category: SearchCategory.CONTRIBUTORS,
     },
     {
       name: `${indexPattern}organizations`,
-      type: SearchResultTypes.ORGANIZATION,
+      type: SearchResultType.ORGANIZATION,
       category: SearchCategory.CONTRIBUTORS,
     },
   ],
   [SearchCategory.COLLABORATION_TOOLS]: [
     {
       name: `${indexPattern}callouts`,
-      type: SearchResultTypes.CALLOUT,
+      type: SearchResultType.CALLOUT,
       category: SearchCategory.COLLABORATION_TOOLS,
     },
   ],
   [SearchCategory.RESPONSES]: [
     {
       name: `${indexPattern}posts`,
-      type: SearchResultTypes.POST,
+      type: SearchResultType.POST,
       category: SearchCategory.RESPONSES,
     },
     {
       name: `${indexPattern}whiteboards`,
-      type: SearchResultTypes.WHITEBOARD,
+      type: SearchResultType.WHITEBOARD,
       category: SearchCategory.RESPONSES,
     },
   ],
@@ -75,25 +75,25 @@ const getPublicIndexStore = (
   [SearchCategory.SPACES]: [
     {
       name: `${indexPattern}spaces`,
-      type: SearchResultTypes.SPACE,
+      type: SearchResultType.SPACE,
       category: SearchCategory.SPACES,
     },
     {
       name: `${indexPattern}subspaces`,
-      type: SearchResultTypes.SUBSPACE,
+      type: SearchResultType.SUBSPACE,
       category: SearchCategory.SPACES,
     },
   ],
   [SearchCategory.RESPONSES]: [
     {
       name: `${indexPattern}posts`,
-      type: SearchResultTypes.POST,
+      type: SearchResultType.POST,
       category: SearchCategory.RESPONSES,
     },
     // todo: check if whiteboards should be added to the public results
     {
       name: `${indexPattern}whiteboards`,
-      type: SearchResultTypes.WHITEBOARD,
+      type: SearchResultType.WHITEBOARD,
       category: SearchCategory.RESPONSES,
     },
   ],
@@ -159,29 +159,30 @@ export class SearchExtractService {
   private getIndices(
     onlyPublicResults = false,
     filters?: {
-      types?: SearchResultTypes[];
+      types?: SearchResultType[];
       categories?: SearchCategory[];
     }
   ): SearchIndex[] {
     const { categories, types } = filters ?? {};
     const indexStore = getIndexStore(this.indexPattern);
 
-    const filteredIndicesByCategory = categories
-      ? categories.flatMap(category => indexStore[category])
-      : Object.values(indexStore).flat();
+    const filteredIndicesByCategory =
+      categories && categories.length > 0
+        ? categories.flatMap(category => indexStore[category])
+        : Object.values(indexStore).flat();
 
-    const filteredIndicesByCategoryAndType = types
-      ? filteredIndicesByCategory.filter(index =>
-          types.some(type => type === index.type)
-        )
-      : filteredIndicesByCategory;
+    const filteredIndicesByCategoryAndType =
+      types && types.length > 0
+        ? filteredIndicesByCategory.filter(index =>
+            types.some(type => type === index.type)
+          )
+        : filteredIndicesByCategory;
 
     if (onlyPublicResults) {
       const publicIndices = Object.values(
         getPublicIndexStore(this.indexPattern)
       ).flat();
-      // todo: test does it work with the comparator
-      // if we want only public results filter the public indices with the user defined filter
+      // if we want only public results - filter the public indices with the user defined filter
       return intersectionWith(
         filteredIndicesByCategoryAndType,
         publicIndices,
@@ -189,7 +190,7 @@ export class SearchExtractService {
       );
     }
     // these indices may include private data
-    return filteredIndicesByCategory;
+    return filteredIndicesByCategoryAndType;
   }
 
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-multi-search.html

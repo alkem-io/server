@@ -29,11 +29,11 @@ import {
   ISearchResultUser,
   ISearchResultPost,
 } from '../dto';
-import { SearchResultTypes } from '../search.result.types';
 import { User } from '@domain/community/user/user.entity';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { SearchResultType } from '../search.result.type';
 
 type PostParents = {
   post: Post;
@@ -68,7 +68,7 @@ export class SearchResultService {
     spaceId?: string
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
-      Partial<SearchResultTypes>,
+      Partial<SearchResultType>,
       ISearchResult[]
     >;
     // authorize entities with requester and enrich with data
@@ -475,7 +475,7 @@ export class SearchResultService {
           ...rawSearchResult,
           // todo remove when whiteboard is a separate search result
           // patch this so it displays the search result as a callout
-          type: SearchResultTypes.CALLOUT,
+          type: SearchResultType.CALLOUT,
           callout: parent.callout,
           space: parent.space,
         };
