@@ -193,8 +193,8 @@ export class SearchExtractService {
     return filteredIndicesByCategoryAndType;
   }
 
-  // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-multi-search.html
   /***
+   https://www.elastic.co/guide/en/elasticsearch/reference/current/search-multi-search.html
    The multi search API executes several searches from a single API request.
    The format of the request is similar to the bulk API format and makes use of the newline delimited JSON (NDJSON) format.
    The structure is as follows:
@@ -290,7 +290,7 @@ export class SearchExtractService {
     });
   }
 
-  private processMultiSearchError(error: ErrorResponseBase): undefined {
+  private processMultiSearchError(error: ErrorResponseBase): void {
     this.logger.error(
       {
         message: 'Error response for multi search request',
