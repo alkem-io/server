@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class SpaceAboutProfile1740474968742 implements MigrationInterface {
-  name = 'SpaceAboutProfile1740474968742';
+export class SpaceAboutProfile1740661529399 implements MigrationInterface {
+  name = 'SpaceAboutProfile1740661529399';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
