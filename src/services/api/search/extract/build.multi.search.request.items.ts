@@ -36,7 +36,7 @@ export const buildMultiSearchRequestItems = (
       {
         query: searchQuery,
         // return only a small subset of fields to conserve data
-        fields: ['id', 'type', 'category::asd'],
+        fields: ['id', 'type'],
         // do not include the source in the result
         _source: false,
         // offset, starting from 0
