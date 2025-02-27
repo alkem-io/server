@@ -46,19 +46,19 @@ const profileSelectOptions = {
 const journeyFindOptions: FindManyOptions<Space> = {
   loadEagerRelations: false,
   relations: {
-    context: true,
-    profile: profileRelationOptions,
+    about: {
+      profile: profileRelationOptions,
+    },
   },
   select: {
     id: true,
     level: true,
     visibility: true,
-    context: {
-      vision: true,
-      impact: true,
+    about: {
+      why: true,
       who: true,
+      profile: profileSelectOptions,
     },
-    profile: profileSelectOptions,
   },
 };
 
@@ -447,8 +447,8 @@ export class SearchIngestService {
           visibility: space?.visibility,
           spaceID: space.id, // spaceID is the same as the space's id
           profile: {
-            ...space.profile,
-            tags: processTagsets(space.profile.tagsets),
+            ...space.about.profile,
+            tags: processTagsets(space.about.profile.tagsets),
             tagsets: undefined,
           },
         }));
@@ -492,8 +492,8 @@ export class SearchIngestService {
           visibility: space?.visibility,
           spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
-            ...space.profile,
-            tags: processTagsets(space.profile.tagsets),
+            ...space.about.profile,
+            tags: processTagsets(space.about.profile.tagsets),
             tagsets: undefined,
           },
         }));
@@ -537,8 +537,8 @@ export class SearchIngestService {
           visibility: space?.visibility,
           spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
-            ...space.profile,
-            tags: processTagsets(space.profile.tagsets),
+            ...space.about.profile,
+            tags: processTagsets(space.about.profile.tagsets),
             tagsets: undefined,
           },
         }));

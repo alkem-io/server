@@ -63,4 +63,8 @@ export class CreateProfileInput {
   @ValidateNested({ each: true })
   @Type(() => CreateVisualOnProfileInput)
   visuals?: CreateVisualOnProfileInput[];
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
 }

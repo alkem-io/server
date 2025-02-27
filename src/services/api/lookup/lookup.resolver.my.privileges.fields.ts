@@ -3,7 +3,6 @@ import { ResolveField } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { ContextService } from '@domain/context/context/context.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -37,6 +36,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
 
 @Resolver(() => LookupMyPrivilegesQueryResults)
 export class LookupMyPrivilegesResolverFields {
@@ -47,7 +47,6 @@ export class LookupMyPrivilegesResolverFields {
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private collaborationService: CollaborationService,
-    private contextService: ContextService,
     private whiteboardService: WhiteboardService,
     private innovationPackService: InnovationPackService,
     private profileService: ProfileService,
@@ -64,6 +63,7 @@ export class LookupMyPrivilegesResolverFields {
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
+    private spaceAboutService: SpaceAboutService,
     private userLookupService: UserLookupService,
     private guidelinesService: CommunityGuidelinesService,
     private virtualContributorService: VirtualContributorService,
@@ -337,13 +337,13 @@ export class LookupMyPrivilegesResolverFields {
 
   @ResolveField(() => [AuthorizationPrivilege], {
     nullable: true,
-    description: 'Lookup myPrivileges on the specified Context',
+    description: 'Lookup myPrivileges on the specified SpaceAbout',
   })
-  async context(
+  async spaceAbout(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const context = await this.contextService.getContextOrFail(id, {
+    const context = await this.spaceAboutService.getSpaceAboutOrFail(id, {
       relations: { authorization: true },
     });
 

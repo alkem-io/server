@@ -314,7 +314,7 @@ export class ProfileService {
       if (reference.name === referenceInput.name) {
         throw new ValidationException(
           `Reference with the provided name already exists: ${referenceInput.name}`,
-          LogContext.CONTEXT
+          LogContext.SPACE_ABOUT
         );
       }
     }

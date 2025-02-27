@@ -13,7 +13,6 @@ import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
-import { ContextModule } from '@domain/context/context/context.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
@@ -32,6 +31,7 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
 import { LicenseModule } from '@domain/common/license/license.module';
 import { SpaceLicenseService } from './space.service.license';
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
+import { SpaceAboutModule } from '../space.about/space.about.module';
 
 @Module({
   imports: [
@@ -39,7 +39,7 @@ import { AccountLookupModule } from '../account.lookup/account.lookup.module';
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    ContextModule,
+    SpaceAboutModule,
     CommunityModule,
     ProfileModule,
     LicensingFrameworkModule,

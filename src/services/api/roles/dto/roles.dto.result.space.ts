@@ -27,7 +27,7 @@ export class RolesResultSpace extends RolesResultCommunity {
     super(
       space.nameID,
       space.id,
-      space.profile.displayName,
+      space.about.profile.displayName,
       space.type,
       space.level
     );
