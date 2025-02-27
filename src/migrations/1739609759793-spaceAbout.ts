@@ -79,10 +79,10 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
         `SELECT id, description FROM profile WHERE id = ?`,
         [space.profileId]
       );
-      const origImpact = context.impact;
-      const origVision = context.vision;
-      const origWho = context.who;
-      const origDescription = profile.description;
+      const origImpact = context.impact ?? '';
+      const origVision = context.vision ?? '';
+      const origWho = context.who ?? '';
+      const origDescription = profile.description ?? '';
 
       const newDescription = `${origVision}`;
       let newWhy = '';
@@ -102,13 +102,8 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
         'space-about'
       );
       await queryRunner.query(
-        `INSERT INTO space_about (id, version, why, who, authorizationId, profileId) VALUES
-                            ('${aboutID}',
-                            1,
-                            '${newWhy}',
-                            '${origWho}',
-                            '${aboutAuthID}',
-                            '${space.profileId}')`
+        `INSERT INTO space_about (id, version, why, who, authorizationId, profileId) VALUES (?, 1, ?, ?, ?, ?)`,
+        [aboutID, newWhy, origWho, aboutAuthID, space.profileId]
       );
       // Update the profile description
       await queryRunner.query(
