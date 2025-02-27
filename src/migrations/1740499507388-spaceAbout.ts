@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class SpaceAbout1739609759793 implements MigrationInterface {
-  name = 'SpaceAbout1739609759793';
+export class SpaceAbout1740499507388 implements MigrationInterface {
+  name = 'SpaceAbout1740499507388';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -88,7 +88,7 @@ export class SpaceAbout1739609759793 implements MigrationInterface {
       let newWhy = '';
       if (origDescription.length > 0) {
         if (origImpact.length > 0) {
-          newWhy = `${origDescription} \n\n ==== \n\n ${origImpact}`;
+          newWhy = `${origDescription}\n\n<br>\n\n***\n\n<br>\n\n${origImpact}`;
         } else {
           newWhy = `${origDescription}`;
         }

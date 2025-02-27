@@ -468,10 +468,10 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         id: '',
         profile: {
           id: `profile-challenge-${subsubspaceId}.${i}`,
-          displayName: `Challenge ${subsubspaceId}.${i}`,
+          displayName: `Opportunity ${subsubspaceId}.${i}`,
           tagline: '',
           description: '',
-          type: ProfileType.CHALLENGE,
+          type: ProfileType.OPPORTUNITY,
           ...getEntityMock<Profile>(),
         },
         ...getEntityMock<SpaceAbout>(),
