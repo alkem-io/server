@@ -38,4 +38,20 @@ export class SearchInput {
       'Restrict the search to only the specified Space. Default is all Spaces.',
   })
   searchInSpaceFilter?: string;
+
+  @Field(() => Number, {
+    nullable: true,
+    description:
+      'How many results to skip (offset). Useful for paginating results.',
+    defaultValue: 0,
+  })
+  skip!: number;
+
+  @Field(() => Number, {
+    nullable: true,
+    description:
+      'How many results per category to return after the offset. Useful for paginating results.',
+    defaultValue: 4,
+  })
+  size!: number;
 }

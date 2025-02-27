@@ -17,7 +17,7 @@ import {
 export const buildMultiSearchRequestItems = (
   indicesToSearchOn: SearchIndex[],
   searchQuery: QueryDslQueryContainer,
-  from: number,
+  skip: number,
   size: number
 ): MsearchRequestItem[] => {
   // grouping by category will highlight the search requests
@@ -39,8 +39,8 @@ export const buildMultiSearchRequestItems = (
         fields: ['id', 'type'],
         // do not include the source in the result
         _source: false,
-        // offset, starting from 0
-        from,
+        // offset
+        from: skip,
         // max amount of results
         size,
       } as MsearchMultisearchBody,

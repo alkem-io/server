@@ -8,19 +8,31 @@ import { LogContext } from '@common/enums';
 import { SearchExtractService } from './extract/search.extract.service';
 import { SearchResultService } from './result/search.result.service';
 import { ISearchResults, SearchInput } from './dto';
+import { validateSearchParameters } from '@services/api/search/util';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class SearchService {
+  private readonly maxSearchResults: number;
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
     private searchExtractService: SearchExtractService,
-    private searchResultService: SearchResultService
-  ) {}
+    private searchResultService: SearchResultService,
+    private configService: ConfigService<AlkemioConfig, true>
+  ) {
+    this.maxSearchResults = this.configService.get('search.max_results', {
+      infer: true,
+    });
+  }
 
   public async search(
     searchData: SearchInput,
     agentInfo: AgentInfo
   ): Promise<ISearchResults> {
+    validateSearchParameters(searchData, {
+      maxSearchResults: this.maxSearchResults,
+    });
     // check if the Space exists
     try {
       await this.entityManager.findOneByOrFail(Space, {
