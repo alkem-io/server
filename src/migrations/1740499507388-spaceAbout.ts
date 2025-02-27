@@ -88,7 +88,7 @@ export class SpaceAbout1740499507388 implements MigrationInterface {
       let newWhy = '';
       if (origDescription.length > 0) {
         if (origImpact.length > 0) {
-          newWhy = `${origDescription}\n\n<br>\n\n***\n\n<br>\n\n${origImpact}`;
+          newWhy = `${origDescription} \n\n ___ \n\n ${origImpact}`;
         } else {
           newWhy = `${origDescription}`;
         }
