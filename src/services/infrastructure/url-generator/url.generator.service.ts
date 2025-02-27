@@ -95,7 +95,7 @@ export class UrlGeneratorService {
           profile.id
         );
         return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vcEntityInfo.entityNameID}`;
-      case ProfileType.ORGANIZATION:
+      case ProfileType.ORGANIZATION: {
         const organizationEntityInfo =
           await this.getNameableEntityInfoForProfileOrFail(
             'organization',
@@ -104,6 +104,7 @@ export class UrlGeneratorService {
         return this.createUrlForOrganizationNameID(
           organizationEntityInfo.entityNameID
         );
+      }
       case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutFramingUrlPathOrFail(profile.id);
       case ProfileType.COMMUNITY_GUIDELINES:
@@ -129,13 +130,14 @@ export class UrlGeneratorService {
 
       case ProfileType.DISCUSSION:
         return await this.getForumDiscussionUrlPathByProfileID(profile.id);
-      case ProfileType.INNOVATION_HUB:
+      case ProfileType.INNOVATION_HUB: {
         const innovationHubEntityInfo =
           await this.getNameableEntityInfoForProfileOrFail(
             'innovation_hub',
             profile.id
           );
         return `${this.endpoint_cluster}/innovation-hubs/${innovationHubEntityInfo.entityNameID}/settings`;
+      }
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
         return `${this.endpoint_cluster}`;
@@ -756,6 +758,10 @@ export class UrlGeneratorService {
         },
       },
     });
+    if (callout) {
+      const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
+      return `${calloutUrlPath}/${whiteboardNameID}`;
+    }
     if (!callout) {
       callout = await this.entityManager.findOne(Callout, {
         where: {

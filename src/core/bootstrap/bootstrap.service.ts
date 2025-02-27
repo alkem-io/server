@@ -40,19 +40,17 @@ import { TemplateDefaultService } from '@domain/template/template-default/templa
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
-import { bootstrapSubspaceKnowledgeInnovationFlowStates } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.innovation.flow.states';
+import { bootstrapSubspaceKnowledgeInnovationFlow } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.innovation.flow';
 import { bootstrapSubspaceKnowledgeCallouts } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.callouts';
 import { bootstrapSubspaceKnowledgeCalloutGroups } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.callout.groups';
 import { ITemplateDefault } from '@domain/template/template-default/template.default.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
-import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
-import { bootstrapSubspaceInnovationFlowStates } from './platform-template-definitions/subspace/bootstrap.subspace.innovation.flow.states';
+import { bootstrapSubspaceInnovationFlow } from './platform-template-definitions/subspace/bootstrap.subspace.innovation.flow';
 import { bootstrapSubspaceCalloutGroups } from './platform-template-definitions/subspace/bootstrap.subspace.callout.groups';
 import { bootstrapSubspaceCallouts } from './platform-template-definitions/subspace/bootstrap.subspace.callouts';
-import { bootstrapSpaceInnovationFlowStates } from './platform-template-definitions/space/bootstrap.space.innovation.flow';
+import { bootstrapSpaceInnovationFlow } from './platform-template-definitions/space/bootstrap.space.innovation.flow';
 import { bootstrapSpaceCalloutGroups } from './platform-template-definitions/space/bootstrap.space.callout.groups';
 import { bootstrapSpaceCallouts } from './platform-template-definitions/space/bootstrap.space.callouts';
-import { bootstrapSpaceTutorialsInnovationFlowStates } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.innovation.flow.states';
 import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callout.groups';
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -65,6 +63,8 @@ import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.k
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
+import { bootstrapSpaceTutorialsInnovationFlow } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.innovation.flow';
 
 @Injectable()
 export class BootstrapService {
@@ -152,17 +152,27 @@ export class BootstrapService {
       TemplateDefaultType.PLATFORM_SPACE,
       templatesSet,
       'space',
-      bootstrapSpaceInnovationFlowStates,
+      bootstrapSpaceInnovationFlow,
       bootstrapSpaceCalloutGroups,
       bootstrapSpaceCallouts
     );
     authResetNeeded =
       (await this.ensureSubspaceKnowledgeTemplatesArePresent(
         templateDefaults,
+        TemplateDefaultType.PLATFORM_SUBSPACE,
+        templatesSet,
+        'subspace',
+        bootstrapSubspaceInnovationFlow,
+        bootstrapSubspaceCalloutGroups,
+        bootstrapSubspaceCallouts
+      )) || authResetNeeded;
+    authResetNeeded =
+      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+        templateDefaults,
         TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
         templatesSet,
-        'space',
-        bootstrapSpaceTutorialsInnovationFlowStates,
+        'space-tutorials',
+        bootstrapSpaceTutorialsInnovationFlow,
         bootstrapSpaceTutorialsCalloutGroups,
         bootstrapSpaceTutorialsCallouts
       )) || authResetNeeded;
@@ -172,19 +182,9 @@ export class BootstrapService {
         TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
         templatesSet,
         'knowledge',
-        bootstrapSubspaceKnowledgeInnovationFlowStates,
+        bootstrapSubspaceKnowledgeInnovationFlow,
         bootstrapSubspaceKnowledgeCalloutGroups,
         bootstrapSubspaceKnowledgeCallouts
-      )) || authResetNeeded;
-    authResetNeeded =
-      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
-        templateDefaults,
-        TemplateDefaultType.PLATFORM_SUBSPACE,
-        templatesSet,
-        'challenge',
-        bootstrapSubspaceInnovationFlowStates,
-        bootstrapSubspaceCalloutGroups,
-        bootstrapSubspaceCallouts
       )) || authResetNeeded;
     if (authResetNeeded) {
       this.logger.verbose?.(
@@ -202,7 +202,7 @@ export class BootstrapService {
     templateDefaultType: TemplateDefaultType,
     templatesSet: ITemplatesSet,
     nameID: string,
-    flowStates: IInnovationFlowState[],
+    innovationFlowData: CreateInnovationFlowInput,
     calloutGroups: any[],
     callouts: any[]
   ): Promise<boolean> {
@@ -224,16 +224,11 @@ export class BootstrapService {
         templatesSet,
         {
           profileData: {
-            displayName: `${nameID} Template`,
+            displayName: `${nameID}-Template`,
           },
           type: TemplateType.COLLABORATION,
           collaborationData: {
-            innovationFlowData: {
-              profile: {
-                displayName: `${nameID} Innovation Flow`,
-              },
-              states: flowStates,
-            },
+            innovationFlowData,
             calloutsSetData: {
               calloutGroups: calloutGroups,
               calloutsData: callouts,

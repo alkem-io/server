@@ -2,7 +2,7 @@ import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { FlowState } from './bootstrap.subspace.innovation.flow.states';
+import { FlowState } from './bootstrap.subspace.innovation.flow';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 
@@ -18,10 +18,10 @@ export const bootstrapSubspaceCallouts: CreateCalloutInput[] = [
     visibility: CalloutVisibility.PUBLISHED,
     framing: {
       profile: {
-        displayName: '👋 Welcome to your subpace!',
+        displayName: '👋 Welcome to your subspace!',
         description:
           // eslint-disable-next-line quotes
-          "Take an interactive tour below to discover how our subpaces are designed. We're excited to have you here! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/X6hQiRnkEmUSoOgRupvA?embed&show_copy_link=true'title='Welcome to your Subspace ' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n",
+          "Take an interactive tour below to discover how our subspaces are designed. We're excited to have you here! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/X6hQiRnkEmUSoOgRupvA?embed&show_copy_link=true'title='Welcome to your Subspace ' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n",
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
