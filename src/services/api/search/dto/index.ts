@@ -5,8 +5,5 @@ export * from './search.result.dto.entry.user';
 export * from './search.result.dto.entry.space';
 export * from './search.result.entry.interface';
 export * from './search.result.dto.entry.callout';
-export * from './search.result.dto.entry.challenge';
-export * from './search.result.dto.entry.user.group';
-export * from './search.result.dto.entry.opportunity';
 export * from './search.result.dto.entry.organization';
 export * from './search.result.dto.entry.base.interface';

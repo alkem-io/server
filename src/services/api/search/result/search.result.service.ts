@@ -29,11 +29,11 @@ import {
   ISearchResultUser,
   ISearchResultPost,
 } from '../dto';
-import { SearchEntityTypes } from '@services/api/search/search.entity.types';
 import { User } from '@domain/community/user/user.entity';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { SearchResultType } from '../search.result.type';
 
 type PostParents = {
   post: Post;
@@ -68,7 +68,7 @@ export class SearchResultService {
     spaceId?: string
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
-      Partial<SearchEntityTypes>,
+      Partial<SearchResultType>,
       ISearchResult[]
     >;
     // authorize entities with requester and enrich with data
@@ -103,7 +103,7 @@ export class SearchResultService {
       'desc'
     );
     const contributionResults = orderBy(posts, 'score', 'desc');
-    const journeyResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
+    const spaceResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
     const calloutResults = orderBy(
       [...callouts, ...calloutsOfWhiteboards],
       'score',
@@ -115,9 +115,8 @@ export class SearchResultService {
       contributorResultsCount: -1,
       contributionResults,
       contributionResultsCount: -1,
-      journeyResults,
-      journeyResultsCount: -1,
-      groupResults: [],
+      spaceResults: spaceResults,
+      spaceResultsCount: -1,
       calloutResults,
       calloutResultsCount: -1,
     };
@@ -476,7 +475,7 @@ export class SearchResultService {
           ...rawSearchResult,
           // todo remove when whiteboard is a separate search result
           // patch this so it displays the search result as a callout
-          type: SearchEntityTypes.CALLOUT,
+          type: SearchResultType.CALLOUT,
           callout: parent.callout,
           space: parent.space,
         };

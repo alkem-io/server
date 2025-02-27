@@ -2,13 +2,12 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
-import { SearchResultType } from '@common/enums/search.result.type';
 import { ISearchResultSpace } from './search.result.dto.entry.space';
 import { ISearchResultUser } from './search.result.dto.entry.user';
 import { ISearchResultOrganization } from './search.result.dto.entry.organization';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
+import { SearchResultType } from '../search.result.type';
 import { ISearchResultPost } from './search.result.dto.entry.post';
-import { ISearchResultUserGroup } from './search.result.dto.entry.user.group';
 import { ISearchResultCallout } from './search.result.dto.entry.callout';
 
 @InterfaceType('SearchResult', {
@@ -17,8 +16,6 @@ import { ISearchResultCallout } from './search.result.dto.entry.callout';
     switch (type) {
       case SearchResultType.SPACE:
       case SearchResultType.SUBSPACE:
-      case SearchResultType.CHALLENGE: // todo remove - legacy from v1
-      case SearchResultType.OPPORTUNITY: // todo remove - legacy from v1
         return ISearchResultSpace;
       case SearchResultType.USER:
         return ISearchResultUser;
@@ -26,8 +23,6 @@ import { ISearchResultCallout } from './search.result.dto.entry.callout';
         return ISearchResultOrganization;
       case SearchResultType.POST:
         return ISearchResultPost;
-      case SearchResultType.USERGROUP:
-        return ISearchResultUserGroup;
       case SearchResultType.CALLOUT:
         return ISearchResultCallout;
       case SearchResultType.WHITEBOARD:
@@ -63,7 +58,7 @@ export abstract class ISearchResult {
     nullable: false,
     description: 'The type of returned result for this search.',
   })
-  type!: string;
+  type!: SearchResultType;
 
   // The actual result
   result!: IBaseAlkemio;

@@ -1,43 +1,102 @@
-import { intersection } from 'lodash';
+import { intersectionWith } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { BaseException } from '@common/exceptions/base.exception';
+import { LogContext } from '@common/enums';
 import { ISearchResult, SearchInput } from '../dto';
-import { validateSearchTerms, validateSearchParameters } from '../util';
-import { functionScoreFunctions } from './function.score.functions';
+import { validateSearchParameters, validateSearchTerms } from '../util';
 import { buildSearchQuery } from './build.search.query';
-import { SearchEntityTypes } from '../search.entity.types';
+import { SearchResultType } from '../search.result.type';
 import { AlkemioConfig } from '@src/types';
 import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
+import {
+  ErrorResponseBase,
+  MsearchMultiSearchItem,
+  MsearchResponseItem,
+} from '@elastic/elasticsearch/lib/api/types';
+import { SearchCategory } from '../search.category';
+import { SearchIndex } from './search.index';
+import { isElasticError } from '@services/external/elasticsearch/utils';
+import { buildMultiSearchRequestItems } from '@services/api/search/extract/build.multi.search.request.items';
 
-type SearchEntityTypesPublic =
-  | SearchEntityTypes.SPACE
-  | SearchEntityTypes.SUBSPACE
-  | SearchEntityTypes.POST;
-
-const TYPE_TO_INDEX = (
+const getIndexStore = (
   indexPattern: string
-): Record<SearchEntityTypes, string> => ({
-  [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
-  [SearchEntityTypes.SUBSPACE]: `${indexPattern}subspaces`,
-  [SearchEntityTypes.POST]: `${indexPattern}posts`,
-  [SearchEntityTypes.USER]: `${indexPattern}users`,
-  [SearchEntityTypes.ORGANIZATION]: `${indexPattern}organizations`,
-  [SearchEntityTypes.CALLOUT]: `${indexPattern}callouts`,
-  [SearchEntityTypes.GROUP]: '',
-  [SearchEntityTypes.WHITEBOARD]: `${indexPattern}whiteboards`,
+): Record<SearchCategory, SearchIndex[]> => ({
+  [SearchCategory.SPACES]: [
+    {
+      name: `${indexPattern}spaces`,
+      type: SearchResultType.SPACE,
+      category: SearchCategory.SPACES,
+    },
+    {
+      name: `${indexPattern}subspaces`,
+      type: SearchResultType.SUBSPACE,
+      category: SearchCategory.SPACES,
+    },
+  ],
+  [SearchCategory.CONTRIBUTORS]: [
+    {
+      name: `${indexPattern}users`,
+      type: SearchResultType.USER,
+      category: SearchCategory.CONTRIBUTORS,
+    },
+    {
+      name: `${indexPattern}organizations`,
+      type: SearchResultType.ORGANIZATION,
+      category: SearchCategory.CONTRIBUTORS,
+    },
+  ],
+  [SearchCategory.COLLABORATION_TOOLS]: [
+    {
+      name: `${indexPattern}callouts`,
+      type: SearchResultType.CALLOUT,
+      category: SearchCategory.COLLABORATION_TOOLS,
+    },
+  ],
+  [SearchCategory.RESPONSES]: [
+    {
+      name: `${indexPattern}posts`,
+      type: SearchResultType.POST,
+      category: SearchCategory.RESPONSES,
+    },
+    {
+      name: `${indexPattern}whiteboards`,
+      type: SearchResultType.WHITEBOARD,
+      category: SearchCategory.RESPONSES,
+    },
+  ],
 });
-const TYPE_TO_PUBLIC_INDEX = (
+const getPublicIndexStore = (
   indexPattern: string
-): Record<SearchEntityTypesPublic, string> => ({
-  [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
-  [SearchEntityTypes.SUBSPACE]: `${indexPattern}subspaces`,
-  [SearchEntityTypes.POST]: `${indexPattern}posts`,
+): Partial<Record<SearchCategory, SearchIndex[]>> => ({
+  [SearchCategory.SPACES]: [
+    {
+      name: `${indexPattern}spaces`,
+      type: SearchResultType.SPACE,
+      category: SearchCategory.SPACES,
+    },
+    {
+      name: `${indexPattern}subspaces`,
+      type: SearchResultType.SUBSPACE,
+      category: SearchCategory.SPACES,
+    },
+  ],
+  [SearchCategory.RESPONSES]: [
+    {
+      name: `${indexPattern}posts`,
+      type: SearchResultType.POST,
+      category: SearchCategory.RESPONSES,
+    },
+    // todo: check if whiteboards should be added to the public results
+    {
+      name: `${indexPattern}whiteboards`,
+      type: SearchResultType.WHITEBOARD,
+      category: SearchCategory.RESPONSES,
+    },
+  ],
 });
 
 const DEFAULT_MAX_RESULTS = 25;
@@ -70,129 +129,175 @@ export class SearchExtractService {
 
   public async search(
     searchData: SearchInput,
-    excludeDemoSpaces: boolean
+    onlyPublicResults = false
   ): Promise<ISearchResult[] | never> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
 
     validateSearchParameters(searchData);
-    const filteredTerms = validateSearchTerms(searchData.terms);
 
-    const terms = filteredTerms.join(' ');
-    const indicesToSearchOn = this.getIndices(
-      searchData.typesFilter,
-      excludeDemoSpaces
-    );
-    // the main search query built using query DSL
-    const query = buildSearchQuery(terms, {
-      spaceIdFilter: searchData.searchInSpaceFilter,
-      excludeDemoSpaces,
+    const {
+      terms: unfilteredTerms,
+      types,
+      categories,
+      searchInSpaceFilter,
+    } = searchData;
+    const filteredTerms = validateSearchTerms(unfilteredTerms);
+    const indicesToSearchOn = this.getIndices(onlyPublicResults, {
+      types,
+      categories,
     });
-    // used with function_score to boost results based on visibility
-    const functions = functionScoreFunctions;
-
-    try {
-      return await this.client
-        .search<IBaseAlkemio>({
-          // indices to search on
-          index: indicesToSearchOn,
-          // there will be a query building in the future to construct different queries
-          // the current query is searching in everything, and boosting entities based on their visibility
-          query: {
-            /**
-             * The function_score allows you to modify the score of documents that are retrieved by a query.
-             * This can be useful if, for example, a score function is computationally expensive and
-             * it is sufficient to compute the score on a filtered set of documents.
-             **/
-            function_score: {
-              query,
-              functions,
-              /** how each of the assigned weights are combined */
-              score_mode: 'sum', // the filters are mutually exclusive, so only one filter will be applied at a time
-              /** how the combined weights are combined with the score */
-              boost_mode: 'multiply',
-            },
-          },
-          // return only the 'id' and 'type' fields of the document
-          fields: ['id', 'type'],
-          // do not include the source in the result
-          _source: false,
-          // offset, starting from 0
-          from: 0,
-          // max amount of results
-          size: this.maxResults,
-        })
-        .then(result =>
-          result.hits.hits.map<ISearchResult>(hit => {
-            const entityId = hit.fields?.id?.[0];
-            const type = hit.fields?.type?.[0];
-
-            if (!entityId) {
-              this.logger.error(
-                `Search result with no entity id: ${JSON.stringify(hit)}`,
-                undefined,
-                LogContext.SEARCH_EXTRACT
-              );
-            }
-
-            if (hit._ignored) {
-              const ignored = hit._ignored.join('; ');
-              this.logger.warn(
-                `Some fields were ignored while searching: ${ignored}`,
-                undefined,
-                LogContext.SEARCH_EXTRACT
-              );
-            }
-
-            return {
-              id: hit._id ?? 'N/A',
-              score: hit._score ?? -1,
-              type,
-              terms: [], // todo - https://github.com/alkem-io/server/issues/3702
-              result: { id: entityId ?? 'N/A' },
-            };
-          })
-        );
-    } catch (e: any) {
-      throw new BaseException(
-        'Failed to search',
-        LogContext.SEARCH_EXTRACT,
-        AlkemioErrorStatus.UNSPECIFIED,
-        {
-          message: e?.message,
-          searchData,
-        }
-      );
-    }
+    // execute search per category
+    return this.executeMultiSearch(
+      indicesToSearchOn,
+      filteredTerms,
+      searchInSpaceFilter
+    );
   }
 
   private getIndices(
-    entityTypesFilter: string[] = [],
-    onlyPublicResults: boolean
-  ): string[] {
-    const filteredIndices = entityTypesFilter.map(
-      type => TYPE_TO_INDEX(this.indexPattern)[type as SearchEntityTypes]
-    );
-    // todo: remove this when whiteboard is a separate search result
-    // include the whiteboards, if the callout is included
-    if (entityTypesFilter.includes(SearchEntityTypes.CALLOUT)) {
-      filteredIndices.push(
-        TYPE_TO_INDEX(this.indexPattern)[SearchEntityTypes.WHITEBOARD]
-      );
+    onlyPublicResults = false,
+    filters?: {
+      types?: SearchResultType[];
+      categories?: SearchCategory[];
     }
+  ): SearchIndex[] {
+    const { categories, types } = filters ?? {};
+    const indexStore = getIndexStore(this.indexPattern);
+
+    const filteredIndicesByCategory =
+      categories && categories.length > 0
+        ? categories.flatMap(category => indexStore[category])
+        : Object.values(indexStore).flat();
+
+    const filteredIndicesByCategoryAndType =
+      types && types.length > 0
+        ? filteredIndicesByCategory.filter(index =>
+            types.some(type => type === index.type)
+          )
+        : filteredIndicesByCategory;
 
     if (onlyPublicResults) {
       const publicIndices = Object.values(
-        TYPE_TO_PUBLIC_INDEX(this.indexPattern)
+        getPublicIndexStore(this.indexPattern)
+      ).flat();
+      // if we want only public results - filter the public indices with the user defined filter
+      return intersectionWith(
+        filteredIndicesByCategoryAndType,
+        publicIndices,
+        (a, b) => a.name === b.name
       );
-      return intersection(filteredIndices, publicIndices);
+    }
+    // these indices may include private data
+    return filteredIndicesByCategoryAndType;
+  }
+
+  /***
+   https://www.elastic.co/guide/en/elasticsearch/reference/current/search-multi-search.html
+   The multi search API executes several searches from a single API request.
+   The format of the request is similar to the bulk API format and makes use of the newline delimited JSON (NDJSON) format.
+   The structure is as follows:
+   ```
+   header\n
+   body\n
+   header\n
+   body\n
+   ```
+   */
+  private async executeMultiSearch(
+    indicesToSearchOn: SearchIndex[],
+    terms: string[],
+    searchInSpaceFilter?: string
+  ): Promise<ISearchResult[]> {
+    if (!this.client) {
+      throw new Error('Elasticsearch client not initialized');
     }
 
-    if (!entityTypesFilter.length) {
-      return [`${this.indexPattern}*`]; // return all
-    }
+    const term = terms.join(' ');
+    // the main search query built using query DSL
+    const query = buildSearchQuery(term, {
+      spaceIdFilter: searchInSpaceFilter,
+    });
 
-    return filteredIndices;
+    const searchRequests = buildMultiSearchRequestItems(
+      indicesToSearchOn,
+      query,
+      0,
+      this.maxResults
+    );
+
+    const result = await this.client.msearch<IBaseAlkemio>({
+      searches: searchRequests,
+      // other msearch config goes here
+      human: true,
+    });
+    this.logger.verbose?.(
+      `Elasticsearch took ${result.took}ms`,
+      LogContext.SEARCH_EXTRACT
+    );
+    return this.processMultiSearchResponses(result.responses);
+  }
+
+  private processMultiSearchResponses(
+    responses: MsearchResponseItem<IBaseAlkemio>[]
+  ): ISearchResult[] {
+    const results = responses.flatMap(
+      (response: MsearchMultiSearchItem<IBaseAlkemio> | ErrorResponseBase) => {
+        if (isElasticError(response)) {
+          this.processMultiSearchError(response);
+          return undefined;
+        }
+
+        return this.processMultiSearchItem(response);
+      }
+    );
+    // filter the undefined produced by processing errors
+    return results.filter((result): result is ISearchResult => !!result);
+  }
+
+  private processMultiSearchItem(
+    item: MsearchMultiSearchItem
+  ): ISearchResult[] {
+    return item.hits.hits.map<ISearchResult>(hit => {
+      const entityId = hit.fields?.id?.[0];
+      const type = hit.fields?.type?.[0];
+
+      if (!entityId) {
+        this.logger.error(
+          `Search result with no entity id: ${JSON.stringify(hit)}`,
+          undefined,
+          LogContext.SEARCH_EXTRACT
+        );
+      }
+
+      if (hit._ignored) {
+        const ignored = hit._ignored.join('; ');
+        this.logger.warn(
+          `Some fields were ignored while searching: ${ignored}`,
+          undefined,
+          LogContext.SEARCH_EXTRACT
+        );
+      }
+
+      return {
+        id: hit._id ?? 'N/A',
+        score: hit._score ?? -1,
+        type,
+        terms: [], // todo - https://github.com/alkem-io/server/issues/3702
+        result: { id: entityId ?? 'N/A' },
+      };
+    });
+  }
+
+  private processMultiSearchError(error: ErrorResponseBase): void {
+    this.logger.error(
+      {
+        message: 'Error response for multi search request',
+        ...error,
+      },
+      undefined,
+      LogContext.SEARCH_EXTRACT
+    );
   }
 }

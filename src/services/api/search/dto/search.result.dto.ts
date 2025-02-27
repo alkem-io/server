@@ -1,5 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResult } from './search.result.entry.interface';
+import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
+import { ISearchResultCallout } from '@services/api/search/dto/search.result.dto.entry.callout';
 
 @ObjectType()
 export abstract class ISearchResults {
@@ -30,33 +32,27 @@ export abstract class ISearchResults {
   })
   contributionResultsCount!: number;
 
-  @Field(() => [ISearchResult], {
+  @Field(() => [ISearchResultSpace], {
     nullable: false,
     description: 'The search results for Spaces / Subspaces.',
   })
-  journeyResults!: ISearchResult[];
+  spaceResults!: ISearchResultSpace[];
 
   @Field(() => Number, {
     nullable: false,
     description: 'The total number of results for Spaces / Subspaces.',
   })
-  journeyResultsCount!: number;
+  spaceResultsCount!: number;
 
-  @Field(() => [ISearchResult], {
+  @Field(() => [ISearchResultCallout], {
     nullable: false,
     description: 'The search results for Callouts.',
   })
-  calloutResults!: ISearchResult[];
+  calloutResults!: ISearchResultCallout[];
 
   @Field(() => Number, {
     nullable: false,
     description: 'The total number of results for Callouts.',
   })
   calloutResultsCount!: number;
-
-  @Field(() => [ISearchResult], {
-    nullable: false,
-    description: 'The search results for Groups.',
-  })
-  groupResults!: ISearchResult[];
 }
