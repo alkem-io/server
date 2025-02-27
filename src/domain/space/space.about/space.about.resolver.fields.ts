@@ -14,11 +14,14 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { SpaceAboutService } from './space.about.service';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { SpaceAboutMembershipService } from '../space.about.membership/space.about.membership.service';
+import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {
   constructor(
     private readonly spaceAboutService: SpaceAboutService,
+    private readonly spaceAboutMembershipService: SpaceAboutMembershipService,
     private spaceLookupService: SpaceLookupService
   ) {}
 
@@ -42,8 +45,8 @@ export class SpaceAboutResolverFields {
     nullable: true,
     description: 'Metrics about activity within this Space.',
   })
-  async metrics(@Parent() space: ISpace) {
-    return await this.spaceAboutService.getMetrics(space);
+  async metrics(@Parent() spaceAbout: ISpaceAbout) {
+    return await this.spaceAboutService.getMetrics(spaceAbout);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -51,7 +54,24 @@ export class SpaceAboutResolverFields {
     nullable: false,
     description: 'The Space provider (host).',
   })
-  async provider(@Parent() space: ISpace): Promise<IContributor> {
-    return await this.spaceLookupService.getProvider(space);
+  async provider(@Parent() spaceAbout: ISpaceAbout): Promise<IContributor> {
+    return await this.spaceLookupService.getProvider(spaceAbout);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('membership', () => SpaceAboutMembership, {
+    nullable: false,
+    description: 'The membership information for this Space.',
+  })
+  async membership(
+    @Parent() spaceAbout: ISpaceAbout
+  ): Promise<SpaceAboutMembership> {
+    const roleSet = await this.spaceAboutService.getCommunityRoleSet(
+      spaceAbout.id
+    );
+    const membership: SpaceAboutMembership = {
+      roleSet,
+    };
+    return membership;
   }
 }
