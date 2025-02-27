@@ -5,9 +5,6 @@ export class SpaceAboutProfile1740661529399 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `DROP INDEX \`IDX_c59c1beb254808dd32007de661\` ON \`space\``
-    );
-    await queryRunner.query(
       `UPDATE \`profile\` SET type = 'space-about' WHERE type = 'space'`
     );
     await queryRunner.query(
