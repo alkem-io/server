@@ -17,6 +17,7 @@ import { AlkemioConfig } from '@src/types';
 import { renderGraphiQL } from 'graphql-helix';
 import { Request, Response } from 'express';
 // this is used - it needs to start before the app
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { apmAgent } from './apm';
 
 const bootstrap = async () => {
@@ -114,7 +115,8 @@ const connectMicroservice = (
       queueOptions: { durable: true },
       socketOptions: {
         reconnectTimeInSeconds: 5,
-        heartbeatIntervalInSeconds: 30,
+        heartbeatIntervalInSeconds:
+          process.env.NODE_ENV === 'production' ? 30 : 240,
       },
       //be careful with this flag, if set to true, message acknowledgment will be automatic. Double acknowledgment throws an error and disconnects the queue.
       noAck: false,
