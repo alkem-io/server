@@ -45,6 +45,12 @@ export class CalloutsSetArgsCallouts {
   })
   groups?: string[];
 
+  @Field(() => [String], {
+    description: 'Return only Callouts in the specified flow states.',
+    nullable: true,
+  })
+  states?: string[];
+
   @Field(() => [TagsetArgs], {
     description: 'A filter .',
     nullable: true,

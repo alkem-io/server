@@ -6,6 +6,7 @@ export enum CalloutGroupName {
   CONTRIBUTE = 'CONTRIBUTE',
   KNOWLEDGE = 'KNOWLEDGE',
   SUBSPACES = 'SUBSPACES',
+  CUSTOM = 'CUSTOM',
 }
 
 registerEnumType(CalloutGroupName, {
