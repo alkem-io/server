@@ -83,18 +83,20 @@ export class UrlGeneratorService {
     switch (profile.type) {
       case ProfileType.SPACE_ABOUT:
         return await this.getSpaceUrlPathByAboutProfileID(profile.id);
-      case ProfileType.USER:
+      case ProfileType.USER: {
         const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'user',
           profile.id
         );
         return this.createUrlForUserNameID(userEntityInfo.entityNameID);
-      case ProfileType.VIRTUAL_CONTRIBUTOR:
+      }
+      case ProfileType.VIRTUAL_CONTRIBUTOR: {
         const vcEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'virtual_contributor',
           profile.id
         );
         return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vcEntityInfo.entityNameID}`;
+      }
       case ProfileType.ORGANIZATION: {
         const organizationEntityInfo =
           await this.getNameableEntityInfoForProfileOrFail(
