@@ -1,6 +1,8 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -8,9 +10,11 @@ import { LogContext } from '@common/enums';
 import { SearchExtractService } from './extract/search.extract.service';
 import { SearchResultService } from './result/search.result.service';
 import { ISearchResults, SearchInput } from './dto';
-import { validateSearchParameters } from '@services/api/search/util';
-import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
+import { validateSearchParameters } from './util';
+import { SearchFilterInput } from './dto/search.filter.input';
+import { SearchCategory } from './search.category';
+
+const DEFAULT_RESULT_SIZE = 4;
 
 @Injectable()
 export class SearchService {
@@ -30,6 +34,12 @@ export class SearchService {
     searchData: SearchInput,
     agentInfo: AgentInfo
   ): Promise<ISearchResults> {
+    // set default filters if not provided
+    // this will ensure straight forward way of processing of the search parameters without much branching
+    if (!searchData.filters || searchData.filters.length === 0) {
+      searchData.filters = buildDefaultSearchFilters();
+    }
+
     validateSearchParameters(searchData, {
       maxSearchResults: this.maxSearchResults,
     });
@@ -58,3 +68,10 @@ export class SearchService {
     );
   }
 }
+
+const buildDefaultSearchFilters = (): SearchFilterInput[] => {
+  return Object.values(SearchCategory).map(category => ({
+    category: category as SearchCategory,
+    size: DEFAULT_RESULT_SIZE,
+  }));
+};

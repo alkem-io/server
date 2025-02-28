@@ -6,6 +6,7 @@ import {
   QueryDslQueryContainer,
 } from '@elastic/elasticsearch/lib/api/types';
 import { parseSearchCursor } from '../util';
+import { SearchFilterInput } from '../dto/search.filter.input';
 import { SearchCategory } from '../search.category';
 import { SearchIndex } from './search.index';
 
@@ -18,22 +19,31 @@ import { SearchIndex } from './search.index';
 export const buildMultiSearchRequestItems = (
   indicesToSearchOn: SearchIndex[],
   searchQuery: QueryDslQueryContainer,
-  // skip: number,
-  size: number,
-  cursor?: string
+  options: {
+    filters?: SearchFilterInput[];
+    defaults: {
+      size: number;
+    };
+  }
 ): MsearchRequestItem[] => {
+  const { filters, defaults } = options;
   // grouping by category will highlight the search requests
   const indexByCategory = groupBy(indicesToSearchOn, 'category') as Record<
     SearchCategory,
     SearchIndex[]
   >;
-  // build the search after argument for paginating the search results
-  const search_after = calculateSearchAfter(cursor);
   // build a head and body for each category
   return Object.keys(indexByCategory).flatMap(category => {
     const indices = indexByCategory[category as SearchCategory].map(
       index => index.name
     );
+
+    const { cursor, size } =
+      filters?.find(filter => filter.category === category) ?? {};
+
+    // build the search after argument for paginating the search results
+    const search_after = calculateSearchAfter(cursor);
+    const resultCount = size ?? defaults.size;
 
     return [
       { index: indices } as MsearchMultisearchHeader,
@@ -44,9 +54,12 @@ export const buildMultiSearchRequestItems = (
         // do not include the source in the result
         _source: false,
         // max amount of results
-        size,
-        // pagination
+        size: resultCount,
+        // sort by these fields
         sort: { _score: 'desc', id: 'desc' },
+        // provide the values of the fields used for sorting from your last search results
+        // to form another page of results
+        // skip if it's a new search
         search_after,
       } as MsearchMultisearchBody,
     ];

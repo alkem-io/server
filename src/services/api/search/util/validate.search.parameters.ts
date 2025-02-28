@@ -1,7 +1,6 @@
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { SearchInput } from '../dto';
-import { tryParseSearchCursor } from './try.parse.search.cursor';
 
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
@@ -14,14 +13,7 @@ export const validateSearchParameters = (
 ) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { maxSearchResults } = validationOptions;
-  const {
-    cursor,
-    size: resultsPerCategory,
-    tagsetNames,
-    terms,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    categories,
-  } = searchData;
+  const { tagsetNames, terms, filters = [] } = searchData;
   if (terms.length > SEARCH_TERM_LIMIT) {
     throw new ValidationException(
       `Maximum number of search terms is ${SEARCH_TERM_LIMIT}; supplied: ${searchData.terms.length}`,
@@ -36,32 +28,22 @@ export const validateSearchParameters = (
     );
   }
   // validate pagination args
-  if (cursor) {
-    try {
-      tryParseSearchCursor(cursor);
-    } catch (e: any) {
+  let totalSizeFromFilters = 0;
+  for (const { size } of filters) {
+    if (size < 0) {
       throw new ValidationException(
-        `Invalid cursor provided: ${e?.message}`,
-        LogContext.SEARCH,
-        { originalException: e }
+        'Size cannot be a negative number',
+        LogContext.SEARCH
       );
     }
-  }
 
-  if (resultsPerCategory < 0) {
+    totalSizeFromFilters += size;
+  }
+  // calculate & validate the max result size
+  if (totalSizeFromFilters > maxSearchResults) {
     throw new ValidationException(
-      'Size cannot be a negative number',
+      `The requested ${totalSizeFromFilters} results cannot exceed the maximum allowed ${maxSearchResults} over all categories.`,
       LogContext.SEARCH
     );
   }
-  // todo:how to limit results
-  // const listedCategories =
-  //   categories?.length ?? Object.keys(SearchCategory).length;
-  // const totalResultCount = resultsPerCategory * listedCategories;
-  // if (totalResultCount > maxSearchResults) {
-  //   throw new ValidationException(
-  //     `The total result count cannot exceeds the maximum allowed ${maxSearchResults}. ${resultsPerCategory} results per category * ${listedCategories} categories.`,
-  //     LogContext.SEARCH
-  //   );
-  // }
 };

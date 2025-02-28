@@ -1,7 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { SearchResultType } from '../search.result.type';
-import { SearchCategory } from '@services/api/search/search.category';
+import { SearchFilterInput } from './search.filter.input';
 
 @InputType()
 export class SearchInput {
@@ -18,20 +17,6 @@ export class SearchInput {
   })
   tagsetNames?: string[];
 
-  @Field(() => [SearchResultType], {
-    nullable: true,
-    description:
-      'Restrict the search to only the specified entity types. Default is all.',
-  })
-  types?: SearchResultType[];
-
-  @Field(() => [SearchCategory], {
-    nullable: true,
-    description:
-      'Restrict the search to only the specified categories. Default is all.',
-  })
-  categories?: SearchCategory[];
-
   @Field(() => UUID, {
     nullable: true,
     description:
@@ -39,18 +24,9 @@ export class SearchInput {
   })
   searchInSpaceFilter?: string;
 
-  @Field(() => String, {
+  @Field(() => [SearchFilterInput], {
     nullable: true,
-    description:
-      'The cursor after which we want results (offset) - pass this from your previous search to request additional results. Useful for paginating results.',
+    description: 'Return results that satisfy these conditions.',
   })
-  cursor?: string;
-
-  @Field(() => Number, {
-    nullable: true,
-    description:
-      'How many results per category to return. Useful for paginating results.',
-    defaultValue: 4,
-  })
-  size!: number;
+  filters?: SearchFilterInput[];
 }

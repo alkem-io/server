@@ -21,6 +21,7 @@ import { SearchCategory } from '../search.category';
 import { SearchIndex } from './search.index';
 import { isElasticError } from '@services/external/elasticsearch/utils';
 import { buildMultiSearchRequestItems } from '@services/api/search/extract/build.multi.search.request.items';
+import { SearchFilterInput } from '@services/api/search/dto/search.filter.input';
 
 const getIndexStore = (
   indexPattern: string
@@ -133,17 +134,17 @@ export class SearchExtractService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    const { terms, types, categories, searchInSpaceFilter, cursor, size } =
-      searchData;
-    const indicesToSearchOn = this.getIndices(onlyPublicResults, {
-      types,
-      categories,
-    });
+    const { terms, searchInSpaceFilter, filters } = searchData;
+    const indicesToSearchOn = this.getIndices(onlyPublicResults, filters);
+
+    if (indicesToSearchOn.length === 0) {
+      return [];
+    }
+
     // execute search per category
     const result = await this.executeMultiSearch(indicesToSearchOn, terms, {
       searchInSpaceFilter,
-      cursor,
-      size,
+      filters,
     });
 
     return this.processMultiSearchResponses(result.responses);
@@ -151,12 +152,14 @@ export class SearchExtractService {
 
   private getIndices(
     onlyPublicResults = false,
-    filters?: {
-      types?: SearchResultType[];
-      categories?: SearchCategory[];
-    }
+    filters?: SearchFilterInput[]
   ): SearchIndex[] {
-    const { categories, types } = filters ?? {};
+    const categories = filters
+      ?.map(filter => filter.category)
+      .filter((category): category is SearchCategory => !!category);
+    const types = filters
+      ?.flatMap(filter => filter.types)
+      .filter((type): type is SearchResultType => !!type);
     const indexStore = getIndexStore(this.indexPattern);
 
     const filteredIndicesByCategory =
@@ -203,17 +206,22 @@ export class SearchExtractService {
     terms: string[],
     options?: {
       searchInSpaceFilter?: string;
-      cursor?: string;
-      size: number;
+      filters?: SearchFilterInput[];
     }
   ): Promise<MsearchResponse<IBaseAlkemio>> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
+
+    if (indicesToSearchOn.length === 0) {
+      throw new Error('No indices to search on');
+    }
+
     const {
       searchInSpaceFilter,
-      size = this.maxResults,
-      cursor,
+      filters,
+      // size = this.maxResults,
+      // cursor,
     } = options ?? {};
 
     const term = terms.join(' ');
@@ -222,17 +230,22 @@ export class SearchExtractService {
       spaceIdFilter: searchInSpaceFilter,
     });
 
+    const categoriesRequested = filters?.length ?? 0;
     const searchRequests = buildMultiSearchRequestItems(
       indicesToSearchOn,
       query,
-      size,
-      cursor
+      {
+        filters,
+        defaults: {
+          // split the max results between the categories to prevent overfetching
+          size: this.maxResults / categoriesRequested,
+        },
+      }
     );
 
     return this.client.msearch<IBaseAlkemio>({
       searches: searchRequests,
       // other msearch config goes here
-      human: true,
     });
   }
 
