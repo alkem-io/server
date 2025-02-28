@@ -14,6 +14,7 @@ import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
 import {
   ErrorResponseBase,
   MsearchMultiSearchItem,
+  MsearchResponse,
   MsearchResponseItem,
 } from '@elastic/elasticsearch/lib/api/types';
 import { SearchCategory } from '../search.category';
@@ -132,18 +133,20 @@ export class SearchExtractService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    const { terms, types, categories, searchInSpaceFilter, skip, size } =
+    const { terms, types, categories, searchInSpaceFilter, cursor, size } =
       searchData;
     const indicesToSearchOn = this.getIndices(onlyPublicResults, {
       types,
       categories,
     });
     // execute search per category
-    return this.executeMultiSearch(indicesToSearchOn, terms, {
+    const result = await this.executeMultiSearch(indicesToSearchOn, terms, {
       searchInSpaceFilter,
-      skip,
+      cursor,
       size,
     });
+
+    return this.processMultiSearchResponses(result.responses);
   }
 
   private getIndices(
@@ -200,17 +203,17 @@ export class SearchExtractService {
     terms: string[],
     options?: {
       searchInSpaceFilter?: string;
-      skip: number;
+      cursor?: string;
       size: number;
     }
-  ): Promise<ISearchResult[]> {
+  ): Promise<MsearchResponse<IBaseAlkemio>> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
     const {
       searchInSpaceFilter,
-      skip = 0,
       size = this.maxResults,
+      cursor,
     } = options ?? {};
 
     const term = terms.join(' ');
@@ -222,20 +225,15 @@ export class SearchExtractService {
     const searchRequests = buildMultiSearchRequestItems(
       indicesToSearchOn,
       query,
-      skip,
-      size
+      size,
+      cursor
     );
 
-    const result = await this.client.msearch<IBaseAlkemio>({
+    return this.client.msearch<IBaseAlkemio>({
       searches: searchRequests,
       // other msearch config goes here
       human: true,
     });
-    this.logger.verbose?.(
-      `Elasticsearch took ${result.took}ms`,
-      LogContext.SEARCH_EXTRACT
-    );
-    return this.processMultiSearchResponses(result.responses);
   }
 
   private processMultiSearchResponses(

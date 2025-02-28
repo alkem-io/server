@@ -34,6 +34,7 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SearchResultType } from '../search.result.type';
+import { calculateSearchCursor } from '@services/api/search/util';
 
 type PostParents = {
   post: Post;
@@ -102,22 +103,33 @@ export class SearchResultService {
       'score',
       'desc'
     );
+    const contributorCursor = calculateSearchCursor(contributorResults);
     const contributionResults = orderBy(posts, 'score', 'desc');
+    const contributionCursor = calculateSearchCursor(posts);
     const spaceResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
+    const spaceCursor = calculateSearchCursor(spaceResults);
     const calloutResults = orderBy(
       [...callouts, ...calloutsOfWhiteboards],
       'score',
       'desc'
     );
+    const calloutCursor = calculateSearchCursor(calloutResults);
 
     return {
       contributorResults,
+      contributorCursor,
       contributorResultsCount: -1,
+      //
       contributionResults,
+      contributionCursor,
       contributionResultsCount: -1,
+      //
       spaceResults: spaceResults,
+      spaceCursor,
       spaceResultsCount: -1,
+      //
       calloutResults,
+      calloutCursor,
       calloutResultsCount: -1,
     };
   }

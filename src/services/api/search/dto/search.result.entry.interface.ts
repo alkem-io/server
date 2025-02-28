@@ -38,6 +38,8 @@ import { ISearchResultCallout } from './search.result.dto.entry.callout';
 export abstract class ISearchResult {
   @Field(() => UUID, {
     nullable: false,
+    description:
+      'The identifier of the search result. Does not represent the entity in Alkemio.',
   })
   id!: string;
 

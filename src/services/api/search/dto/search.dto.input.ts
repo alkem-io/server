@@ -39,18 +39,17 @@ export class SearchInput {
   })
   searchInSpaceFilter?: string;
 
-  @Field(() => Number, {
+  @Field(() => String, {
     nullable: true,
     description:
-      'How many results to skip (offset). Useful for paginating results.',
-    defaultValue: 0,
+      'The cursor after which we want results (offset) - pass this from your previous search to request additional results. Useful for paginating results.',
   })
-  skip!: number;
+  cursor?: string;
 
   @Field(() => Number, {
     nullable: true,
     description:
-      'How many results per category to return after the offset. Useful for paginating results.',
+      'How many results per category to return. Useful for paginating results.',
     defaultValue: 4,
   })
   size!: number;

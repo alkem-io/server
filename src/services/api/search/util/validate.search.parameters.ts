@@ -1,6 +1,7 @@
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { SearchInput } from '../dto';
+import { tryParseSearchCursor } from './try.parse.search.cursor';
 
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
@@ -14,7 +15,7 @@ export const validateSearchParameters = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { maxSearchResults } = validationOptions;
   const {
-    skip,
+    cursor,
     size: resultsPerCategory,
     tagsetNames,
     terms,
@@ -35,12 +36,18 @@ export const validateSearchParameters = (
     );
   }
   // validate pagination args
-  if (skip < 0) {
-    throw new ValidationException(
-      'Skip cannot be a negative number',
-      LogContext.SEARCH
-    );
+  if (cursor) {
+    try {
+      tryParseSearchCursor(cursor);
+    } catch (e: any) {
+      throw new ValidationException(
+        `Invalid cursor provided: ${e?.message}`,
+        LogContext.SEARCH,
+        { originalException: e }
+      );
+    }
   }
+
   if (resultsPerCategory < 0) {
     throw new ValidationException(
       'Size cannot be a negative number',
