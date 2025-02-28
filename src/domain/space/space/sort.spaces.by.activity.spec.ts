@@ -57,7 +57,7 @@ const createTestSpace = (id: string): ISpace => {
         displayName: 'Space 1',
         description: '',
         tagline: '',
-        type: ProfileType.SPACE,
+        type: ProfileType.SPACE_ABOUT,
       },
     },
     account: {

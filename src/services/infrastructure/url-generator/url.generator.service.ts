@@ -81,9 +81,7 @@ export class UrlGeneratorService {
     profile: IProfile
   ): Promise<string> {
     switch (profile.type) {
-      case ProfileType.SPACE:
-      case ProfileType.CHALLENGE:
-      case ProfileType.OPPORTUNITY:
+      case ProfileType.SPACE_ABOUT:
         return await this.getSpaceUrlPathByAboutProfileID(profile.id);
       case ProfileType.USER: {
         const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
