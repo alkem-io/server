@@ -3,6 +3,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CalloutsGroupsToStates1740750569873 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    throw new Error('This migration is not reversible');
     /**
      * Get all the callouts from L0 Spaces
      * and make sure they are in a valid flow-state

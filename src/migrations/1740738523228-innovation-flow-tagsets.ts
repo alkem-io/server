@@ -1,101 +1,127 @@
-import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD \`currentState\` json NOT NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD \`flowStatesTagsetTemplateId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD UNIQUE INDEX \`IDX_858fd06a671b804765d91251e6\` (\`flowStatesTagsetTemplateId\`)`
+    );
+
     /**
      * Get all L0 spaces and their innovation flow states and the current state.
      * Current state is a stored in a tagset linked to the profile of the innovation flow.
      * That tagset is named 'flow-state'.
      * And by the time of writing this migration, there are some innovation-flows that don't have that tagset, so create it if missing
      */
-    const spaces: {
-      spaceId: string;
+    const collaborations: {
+      collaborationId: string;
       innovationFlowId: string;
       calloutsSetId: string;
+      isTemplate: boolean;
       tagsetTemplateSetId: string;
       innovationFlowProfileId: string;
       innovationFlowStates: Array<{ displayName: string; description: string }>; // json
-      tagsetId: string | undefined;
-      currentState: string | undefined;
-      tagsetTemplateId: string | undefined;
+      innovationFlowTagsetId: string | undefined;
+      flowCurrentState: string | undefined;
+      flowTagsetTemplateId: string | undefined;
     }[] = await queryRunner.query(
       `SELECT
-          space.id as spaceId,
+          collaboration.id as collaborationId,
           collaboration.innovationFlowId as innovationFlowId,
           collaboration.calloutsSetId as calloutsSetId,
-          callouts_set.tagsetTemplateSetId as tagsetTemplateSetId,
-          innovation_flow.profileId as innovationFlowProfileId,
-          innovation_flow.states as innovationFlowStates,
-          tagset.id as tagsetId,
-          tagset.tags as currentState,
-          tagset.tagsetTemplateId as tagsetTemplateId
-        FROM space
-          LEFT JOIN collaboration ON space.collaborationId = collaboration.id
-          LEFT JOIN callouts_set ON collaboration.calloutsSetId = callouts_set.id
-          LEFT JOIN innovation_flow ON innovation_flow.id = collaboration.innovationFlowId
-          LEFT JOIN profile on innovation_flow.profileId = profile.id
-          LEFT JOIN tagset on tagset.profileId = profile.id AND tagset.name = 'flow-state'
-          LEFT JOIN tagset_template on tagset_template.id = tagset.tagsetTemplateId
-        WHERE  space.level = '0';
-      `
+          collaboration.isTemplate as isTemplate,
+          calloutsSet.tagsetTemplateSetId as tagsetTemplateSetId,
+          innovationFlow.profileId as innovationFlowProfileId,
+          innovationFlow.states as innovationFlowStates,
+          flowTagset.id as innovationFlowTagsetId,
+          flowTagset.tags as currentState,
+          flowTagsetTemplate.id as flowTagsetTemplateId,
+        FROM collaboration
+          LEFT JOIN calloutsSet ON collaboration.calloutsSetId = callouts_set.id
+          LEFT JOIN innovationFlow ON innovation_flow.id = collaboration.innovationFlowId
+          LEFT JOIN profile on innovationFlow.profileId = profile.id
+          LEFT JOIN flowTagset on tagset.profileId = profile.id AND tagset.name = 'flow-state'
+          LEFT JOIN flowTagsetTemplate on tagset_template.tagsetTemplateSetId = calloutsSet.tagsetTemplateSetId AND tagset_template.name = 'flow-state'
+          `
     );
-    for (const space of spaces) {
-      if (!space.innovationFlowId) {
+    for (const collaboration of collaborations) {
+      if (
+        !collaboration.innovationFlowId ||
+        collaboration.innovationFlowStates.length === 0
+      ) {
         throw new Error(
-          `Space ${space.spaceId} does not have an innovation flow.`
+          `Space ${collaboration.collaborationId} does not have an innovation flow, or an empty flow states`
         );
       }
-      const validStates = space.innovationFlowStates
-        .map(state => state.displayName)
-        .join(',');
-      const firstState = space.innovationFlowStates[0].displayName;
 
-      if (space.tagsetId) {
+      let currentState = collaboration.innovationFlowStates[0];
+      let flowStatesTagsetTemplateId = collaboration.flowTagsetTemplateId;
+
+      if (collaboration.innovationFlowTagsetId) {
         // Make sure current state is a valid state
-        if (
-          space.innovationFlowStates.find(
-            state => state.displayName === space.currentState
-          )
-        ) {
+        const existingState = collaboration.innovationFlowStates.find(
+          state => state.displayName === collaboration.flowCurrentState
+        );
+        if (existingState) {
           console.log(
-            `✓ Space ${space.spaceId} has a valid current state: ${space.currentState}`
+            `✓ Collaboration ${collaboration.collaborationId} has a valid current state: ${collaboration.flowCurrentState}`
           );
+          currentState = existingState;
         } else {
           console.log(
-            `✗ Space ${space.spaceId} doesn't have a valid current state: '${space.currentState}' resetting it...`
-          );
-          await queryRunner.query(
-            `UPDATE tagset SET tags = '${firstState}' WHERE id = '${space.tagsetId}'`
-          );
-          console.log(`> Space ${space.spaceId} state set to: ${firstState}`);
-        }
-
-        if (!space.tagsetTemplateId) {
-          throw new Error(
-            `Tagset '${space.tagsetId}', doesn't have a tagsetTemplate. '${space.tagsetTemplateId}'`
+            `✗ Space ${collaboration.collaborationId} doesn't have a valid current state: '${collaboration.flowCurrentState}' defaulting to first state...`
           );
         }
-        await this.verifyTagsetTemplate(
-          queryRunner,
-          space.tagsetTemplateId,
-          validStates,
-          firstState
-        );
-      } else {
-        // Create a tagset when it's not present (bad data)
-        await this.createTagset(
-          queryRunner,
-          space.innovationFlowProfileId,
-          space.tagsetTemplateSetId,
-          validStates,
-          firstState
-        );
       }
+
+      const validStateNames = collaboration.innovationFlowStates
+        .map(state => state.displayName)
+        .join(',');
+
+      if (!flowStatesTagsetTemplateId) {
+        const [tagsetTemplate]: {
+          id: string;
+          description: string;
+        }[] = await queryRunner.query(
+          `SELECT id FROM tagset_template WHERE tagsetTemplateSet = ? AND name = ?`,
+          [collaboration.tagsetTemplateSetId, 'flow-state']
+        );
+        if (tagsetTemplate) {
+          flowStatesTagsetTemplateId = tagsetTemplate.id;
+        } else {
+          // TODO: error or create?
+        }
+      }
+      if (!flowStatesTagsetTemplateId) {
+        throw new Error(`Unable to determine flow states tagsetTemplate`);
+      }
+      await this.verifyTagsetTemplate(
+        queryRunner,
+        flowStatesTagsetTemplateId,
+        validStateNames,
+        currentState.displayName
+      );
+      // store the current state + flow states into the innovationFlow
+      await queryRunner.query(
+        `UPDATE innovation_flow SET currentState = '${JSON.stringify(currentState)}', flowStatesTagsetTemplateId = '${flowStatesTagsetTemplateId}' WHERE id = '${collaboration.innovationFlowId}'`
+      );
+      // And finally delete the tagset as no longer used
+      await queryRunner.query(
+        `DELETE FROM tagset WHERE id = '${collaboration.innovationFlowTagsetId}'`
+      );
+
+      // TODO: what to do with the group functionality which is then no longer used?
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    console.log('No down migration supported');
+  }
 
   private async verifyTagsetTemplate(
     queryRunner: QueryRunner,
@@ -138,90 +164,5 @@ export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
       );
     }
     console.log(`✓ Tagset template ${tagsetTemplateId} is valid.`);
-  }
-
-  private async createTagset(
-    queryRunner: QueryRunner,
-    profileId: string,
-    tagsetTemplateSetId: string,
-    allowedValues: string,
-    defaultSelectedValue: string
-  ): Promise<void> {
-    const tagsetId = randomUUID();
-    const tagsetTemplateId = await this.createTagsetTemplate(
-      queryRunner,
-      tagsetTemplateSetId,
-      'flow-state',
-      'select-one',
-      allowedValues,
-      defaultSelectedValue
-    );
-
-    const authorizationID = await this.createAuthorizationPolicy(
-      queryRunner,
-      'tagset'
-    );
-    await queryRunner.query(`INSERT INTO tagset (
-                                  id,
-                                  version,
-                                  name,
-                                  tags,
-                                  authorizationId,
-                                  profileId,
-                                  tagsetTemplateId,
-                                  type
-                            ) VALUES
-                          (
-                          '${tagsetId}',
-                          1,
-                          'flow-state',
-                          '${defaultSelectedValue}',
-                          '${authorizationID}',
-                          '${profileId}',
-                          '${tagsetTemplateId}',
-                          'select-one'
-                          )`);
-  }
-
-  private async createAuthorizationPolicy(
-    queryRunner: QueryRunner,
-    policyType: string
-  ): Promise<string> {
-    const authID = randomUUID();
-    await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, privilegeRules, type) VALUES
-                          ('${authID}',
-                          1, '[]', '[]', '[]', '${policyType}')`
-    );
-    return authID;
-  }
-
-  private async createTagsetTemplate(
-    queryRunner: QueryRunner,
-    tagsetTemplateSetId: string,
-    name: string,
-    type: string,
-    allowedValues: string,
-    defaultSelectedValue: string
-  ): Promise<string> {
-    const tagsetTemplateId = randomUUID();
-    await queryRunner.query(`INSERT INTO tagset_template (
-                                  id,
-                                  version,
-                                  tagsetTemplateSetId,
-                                  name,
-                                  type,
-                                  allowedValues,
-                                  defaultSelectedValue) VALUES
-                          (
-                          '${tagsetTemplateId}',
-                          1,
-                          '${tagsetTemplateSetId}',
-                          '${name}',
-                          '${type}',
-                          '${allowedValues}',
-                          '${defaultSelectedValue}'
-                          )`);
-    return tagsetTemplateId;
   }
 }
