@@ -41,6 +41,7 @@ import { UpdateContributionCalloutsSortOrderInput } from '../callout-contributio
 import { keyBy } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ClassificationService } from '@domain/common/classification/classification.service';
 
 @Injectable()
 export class CalloutService {
@@ -54,13 +55,14 @@ export class CalloutService {
     private contributionPolicyService: CalloutContributionPolicyService,
     private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private classificationService: ClassificationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
 
   public async createCallout(
     calloutData: CreateCalloutInput,
-    tagsetTemplates: ITagsetTemplate[],
+    classificationTagsetTemplates: ITagsetTemplate[],
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICallout> {
@@ -80,16 +82,13 @@ export class CalloutService {
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
       calloutData.framing,
-      tagsetTemplates,
       storageAggregator,
       userID
     );
-    if (calloutData.groupName) {
-      this.calloutFramingService.updateCalloutGroupTagsetValue(
-        callout.framing,
-        calloutData.groupName
-      );
-    }
+
+    callout.classification = this.classificationService.createClassification(
+      classificationTagsetTemplates
+    );
 
     callout.contributionDefaults =
       this.contributionDefaultsService.createCalloutContributionDefaults(
@@ -241,13 +240,6 @@ export class CalloutService {
 
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
-
-    if (calloutUpdateData.groupName) {
-      this.calloutFramingService.updateCalloutGroupTagsetValue(
-        callout.framing,
-        calloutUpdateData.groupName
-      );
-    }
 
     return await this.calloutRepository.save(callout);
   }

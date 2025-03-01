@@ -14,15 +14,14 @@ import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { VisualType } from '@common/enums/visual.type';
-import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ITagset } from '@domain/common/tagset';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 @Injectable()
 export class CalloutFramingService {
@@ -31,13 +30,13 @@ export class CalloutFramingService {
     private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
     private namingService: NamingService,
+    private tagsetService: TagsetService,
     @InjectRepository(CalloutFraming)
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
 
   public async createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput,
-    tagsetTemplates: ITagsetTemplate[],
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICalloutFraming> {
@@ -50,24 +49,18 @@ export class CalloutFramingService {
 
     const { profile, whiteboard, tags } = calloutFramingData;
 
-    // To consider also having the default tagset as a template tagset
     const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
       type: TagsetType.FREEFORM,
       tags: tags,
     };
 
-    const tagsetInputsFromTemplates =
-      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
-        tagsetTemplates
-      );
-    const tagsetInputs = [defaultTagset, ...tagsetInputsFromTemplates];
+    const tagsetInputs = [defaultTagset];
 
-    calloutFramingData.profile.tagsets =
-      this.profileService.updateProfileTagsetInputs(
-        calloutFraming.profile.tagsets,
-        tagsetInputs
-      );
+    calloutFramingData.profile.tagsets = this.tagsetService.updateTagsetInputs(
+      calloutFraming.profile.tagsets,
+      tagsetInputs
+    );
 
     calloutFraming.profile = await this.profileService.createProfile(
       profile,
@@ -208,27 +201,5 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.whiteboard;
-  }
-
-  updateCalloutGroupTagsetValue(
-    framing: ICalloutFraming,
-    groupName: string
-  ): ITagset {
-    const calloutGroupTagset = this.getCalloutGroupTagset(framing);
-    calloutGroupTagset.tags = [groupName];
-    return calloutGroupTagset;
-  }
-
-  getCalloutGroupTagset(framing: ICalloutFraming): ITagset {
-    const calloutGroupTagset = framing.profile.tagsets?.find(
-      tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
-    );
-    if (!calloutGroupTagset) {
-      throw new EntityNotFoundException(
-        `Callout Group tagset not found for profile: ${framing.profile.id}`,
-        LogContext.TAGSET
-      );
-    }
-    return calloutGroupTagset;
   }
 }

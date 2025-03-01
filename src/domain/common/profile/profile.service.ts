@@ -27,7 +27,6 @@ import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.select.tagset.value';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 import { CreateReferenceInput } from '../reference';
@@ -440,19 +439,6 @@ export class ProfileService {
     );
   }
 
-  async updateSelectTagsetValue(
-    updateData: UpdateProfileSelectTagsetValueInput
-  ): Promise<ITagset> {
-    const tagset = await this.getTagset(
-      updateData.profileID,
-      updateData.tagsetName
-    );
-    return await this.tagsetService.updateTagset({
-      ID: tagset.id,
-      tags: [updateData.selectedValue],
-    });
-  }
-
   public convertTagsetTemplatesToCreateTagsetInput(
     tagsetTemplates: ITagsetTemplate[]
   ): CreateTagsetInput[] {
@@ -467,29 +453,6 @@ export class ProfileService {
           : undefined,
       };
       result.push(input);
-    }
-    return result;
-  }
-
-  // Note: purovided data has priority when it comes to tags
-  public updateProfileTagsetInputs(
-    tagsetInputDtata: CreateTagsetInput[] | undefined,
-    additionalTagsetInputs: CreateTagsetInput[]
-  ): CreateTagsetInput[] {
-    const result: CreateTagsetInput[] = [...additionalTagsetInputs];
-
-    if (!tagsetInputDtata) return result;
-
-    for (const tagsetInput of tagsetInputDtata) {
-      const existingInput = result.find(t => t.name === tagsetInput.name);
-      if (existingInput) {
-        // Do not change type, name etc - only tags
-        if (tagsetInput.tags) {
-          existingInput.tags = tagsetInput.tags;
-        }
-      } else {
-        result.push(tagsetInput);
-      }
     }
     return result;
   }

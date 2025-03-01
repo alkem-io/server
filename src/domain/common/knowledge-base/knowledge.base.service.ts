@@ -20,12 +20,14 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { TagsetService } from '../tagset/tagset.service';
 
 @Injectable()
 export class KnowledgeBaseService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
+    private tagsetService: TagsetService,
     private calloutsSetService: CalloutsSetService,
     @InjectRepository(KnowledgeBase)
     private knowledgeBaseRepository: Repository<KnowledgeBase>
@@ -54,11 +56,10 @@ export class KnowledgeBaseService {
       tags: [],
     };
 
-    knowledgeBaseData.profile.tagsets =
-      this.profileService.updateProfileTagsetInputs(
-        knowledgeBase.profile.tagsets,
-        [defaultTagset]
-      );
+    knowledgeBaseData.profile.tagsets = this.tagsetService.updateTagsetInputs(
+      knowledgeBase.profile.tagsets,
+      [defaultTagset]
+    );
 
     knowledgeBase.profile = await this.profileService.createProfile(
       knowledgeBaseData.profile,

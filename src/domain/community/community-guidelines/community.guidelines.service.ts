@@ -16,11 +16,13 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 @Injectable()
 export class CommunityGuidelinesService {
   constructor(
     private profileService: ProfileService,
+    private tagsetService: TagsetService,
     @InjectRepository(CommunityGuidelines)
     private communityGuidelinesRepository: Repository<CommunityGuidelines>
   ) {}
@@ -40,7 +42,7 @@ export class CommunityGuidelinesService {
       tags: [],
     };
     communityGuidelinesData.profile.tagsets =
-      this.profileService.updateProfileTagsetInputs(
+      this.tagsetService.updateTagsetInputs(
         communityGuidelinesData.profile.tagsets,
         [defaultTagset]
       );

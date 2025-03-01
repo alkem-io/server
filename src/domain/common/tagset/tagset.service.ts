@@ -253,4 +253,45 @@ export class TagsetService {
   async save(tagset: ITagset): Promise<ITagset> {
     return await this.tagsetRepository.save(tagset);
   }
+
+  // Note: provided data has priority when it comes to tags
+  public updateTagsetInputs(
+    tagsetInputDtata: CreateTagsetInput[] | undefined,
+    additionalTagsetInputs: CreateTagsetInput[]
+  ): CreateTagsetInput[] {
+    const result: CreateTagsetInput[] = [...additionalTagsetInputs];
+
+    if (!tagsetInputDtata) return result;
+
+    for (const tagsetInput of tagsetInputDtata) {
+      const existingInput = result.find(t => t.name === tagsetInput.name);
+      if (existingInput) {
+        // Do not change type, name etc - only tags
+        if (tagsetInput.tags) {
+          existingInput.tags = tagsetInput.tags;
+        }
+      } else {
+        result.push(tagsetInput);
+      }
+    }
+    return result;
+  }
+
+  public convertTagsetTemplatesToCreateTagsetInput(
+    tagsetTemplates: ITagsetTemplate[]
+  ): CreateTagsetInput[] {
+    const result: CreateTagsetInput[] = [];
+    for (const tagsetTemplate of tagsetTemplates) {
+      const input: CreateTagsetInput = {
+        name: tagsetTemplate.name,
+        type: tagsetTemplate.type,
+        tagsetTemplate: tagsetTemplate,
+        tags: tagsetTemplate.defaultSelectedValue
+          ? [tagsetTemplate.defaultSelectedValue]
+          : undefined,
+      };
+      result.push(input);
+    }
+    return result;
+  }
 }
