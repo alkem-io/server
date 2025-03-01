@@ -9,7 +9,7 @@ import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationFlow } from './innovation.flow.entity';
 import { InnovationFlowService } from './innovation.flow.service';
-import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
+import { ITagsetTemplate } from '@domain/common/tagset-template';
 
 @Resolver(() => IInnovationFlow)
 export class InnovationFlowResolverFields {
@@ -29,13 +29,14 @@ export class InnovationFlowResolverFields {
     return loader.load(innovationFlow.id);
   }
 
-  @ResolveField('currentState', () => IInnovationFlowState, {
+  @ResolveField('tagsetTemplate', () => ITagsetTemplate, {
     nullable: false,
-    description: 'The currently selected state for this Flow.',
+    description:
+      'The tagsetTemplate used for entities that want to select from the states in this InnovationFlow.',
   })
-  async currentState(
+  async flowTagsetTemplate(
     @Parent() flow: IInnovationFlow
-  ): Promise<IInnovationFlowState> {
-    return this.innovationFlowService.getCurrentState(flow);
+  ): Promise<ITagsetTemplate> {
+    return this.innovationFlowService.getFlowTagsetTemplate(flow);
   }
 }

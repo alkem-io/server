@@ -4,6 +4,7 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
+import { ITagsetTemplate } from '@domain/common/tagset-template';
 
 @Entity()
 export class InnovationFlow
@@ -22,5 +23,16 @@ export class InnovationFlow
   states!: IInnovationFlowState[];
 
   @Column('json', { nullable: false })
+  currentState!: IInnovationFlowState;
+
+  @Column('json', { nullable: false })
   settings!: IInnovationFlowSettings;
+
+  @OneToOne(() => ITagsetTemplate, {
+    eager: false,
+    cascade: false, // the tagset template is managed by the tagsetTemplateSet on CalloutSet
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  flowStatesTagsetTemplate!: ITagsetTemplate;
 }

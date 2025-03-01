@@ -110,7 +110,7 @@ export class CollaborationService {
       ],
     });
 
-    const statesTagsetTemplate = this.calloutsSetService.getTagsetTemplate(
+    const flowStatesTagsetTemplate = this.calloutsSetService.getTagsetTemplate(
       collaboration.calloutsSet.tagsetTemplateSet,
       TagsetReservedName.FLOW_STATE
     );
@@ -120,7 +120,7 @@ export class CollaborationService {
       TagsetReservedName.CALLOUT_GROUP
     );
 
-    if (!statesTagsetTemplate || !groupsTagsetTemplate) {
+    if (!flowStatesTagsetTemplate || !groupsTagsetTemplate) {
       throw new RelationshipNotFoundException(
         'Unable to create tagset template for flow states',
         LogContext.COLLABORATION
@@ -131,8 +131,8 @@ export class CollaborationService {
     collaboration.innovationFlow =
       await this.innovationFlowService.createInnovationFlow(
         collaborationData.innovationFlowData,
-        [statesTagsetTemplate],
-        storageAggregator
+        storageAggregator,
+        flowStatesTagsetTemplate
       );
 
     if (collaborationData.calloutsSetData.calloutsData) {
@@ -147,7 +147,7 @@ export class CollaborationService {
 
     this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
       groupsTagsetTemplate.allowedValues,
-      statesTagsetTemplate.allowedValues,
+      flowStatesTagsetTemplate.allowedValues,
       collaboration.calloutsSet.callouts
     );
 
