@@ -17,6 +17,7 @@ import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
 import { LogContext } from '@common/enums/logging.context';
+import { UpdateClassificationInput } from './dto/classification.dto.update';
 
 @Injectable()
 export class ClassificationService {
@@ -140,6 +141,19 @@ export class ClassificationService {
   ): Promise<ITagset> {
     const tagsets = await this.getTagsets({ id: classificationID });
     return this.tagsetService.getTagsetByNameOrFail(tagsets, tagsetName);
+  }
+
+  public updateClassification(
+    classification: IClassification,
+    updateData: UpdateClassificationInput
+  ): IClassification {
+    if (updateData.tagsets) {
+      classification.tagsets = this.tagsetService.updateTagsets(
+        classification.tagsets,
+        updateData.tagsets
+      );
+    }
+    return classification;
   }
 
   async updateSelectTagsetValue(

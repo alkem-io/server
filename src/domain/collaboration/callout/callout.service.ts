@@ -206,6 +206,9 @@ export class CalloutService {
           profile: true,
           whiteboard: true,
         },
+        classification: {
+          tagsets: true,
+        },
       },
     });
 
@@ -220,6 +223,13 @@ export class CalloutService {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
         calloutUpdateData.framing
+      );
+    }
+
+    if (calloutUpdateData.classification) {
+      callout.classification = this.classificationService.updateClassification(
+        callout.classification,
+        calloutUpdateData.classification
       );
     }
 
