@@ -144,10 +144,12 @@ export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
       id: string;
     }[] = await queryRunner.query(
       `SELECT
-        callouts_set.id as id
+        callouts_set.id as id,
+        flowTagsetTemplate.id as flowTagsetTemplateId
       FROM space
         JOIN collaboration ON space.collaborationId = collaboration.id
         JOIN callouts_set ON collaboration.calloutsSetId = callouts_set.id
+        JOIN tagset_template AS flowTagsetTemplate on flowTagsetTemplate.tagsetTemplateSetId = callouts_set.tagsetTemplateId AND flowTagsetTemplate.name = '${this.TAGSET_FLOW}'
       WHERE space.level = '0'
       `
     );
