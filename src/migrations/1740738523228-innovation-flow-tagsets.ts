@@ -4,78 +4,84 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
   private TAGSET_GROUP = 'callout-group';
   private TAGSET_FLOW = 'flow-state';
+  private LEVEL_ZERO_FLOW_STATES = [
+    'Home',
+    'Community',
+    'Subspaces',
+    'Knowledge',
+  ];
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_flow\` ADD \`currentState\` json NOT NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_flow\` ADD \`flowStatesTagsetTemplateId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_flow\` ADD UNIQUE INDEX \`IDX_858fd06a671b804765d91251e6\` (\`flowStatesTagsetTemplateId\`)`
-    );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_flow\` ADD \`currentState\` json NOT NULL`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_flow\` ADD \`flowStatesTagsetTemplateId\` char(36) NULL`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_flow\` ADD UNIQUE INDEX \`IDX_858fd06a671b804765d91251e6\` (\`flowStatesTagsetTemplateId\`)`
+    // );
 
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_858fd06a671b804765d91251e6\` ON \`innovation_flow\` (\`flowStatesTagsetTemplateId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_flow\` ADD CONSTRAINT \`FK_858fd06a671b804765d91251e6c\` FOREIGN KEY (\`flowStatesTagsetTemplateId\`) REFERENCES \`tagset_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
+    // await queryRunner.query(
+    //   `CREATE UNIQUE INDEX \`REL_858fd06a671b804765d91251e6\` ON \`innovation_flow\` (\`flowStatesTagsetTemplateId\`)`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_flow\` ADD CONSTRAINT \`FK_858fd06a671b804765d91251e6c\` FOREIGN KEY (\`flowStatesTagsetTemplateId\`) REFERENCES \`tagset_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
 
-    await queryRunner.query(
-      `CREATE TABLE \`classification\` (\`id\` char(36) NOT NULL,
-                                        \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                                        \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-                                        \`version\` int NOT NULL,
-                                        \`authorizationId\` char(36) NULL,
-                                        UNIQUE INDEX \`REL_42422fc4b9dfe4424046f12d8f\` (\`authorizationId\`),
-                                        PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callouts_set\` DROP COLUMN \`groups\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`tagset\` ADD \`classificationId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD \`classificationId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD UNIQUE INDEX \`IDX_0674c137336c2417df036053b6\` (\`classificationId\`)`
-    );
+    // await queryRunner.query(
+    //   `CREATE TABLE \`classification\` (\`id\` char(36) NOT NULL,
+    //                                     \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    //                                     \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    //                                     \`version\` int NOT NULL,
+    //                                     \`authorizationId\` char(36) NULL,
+    //                                     UNIQUE INDEX \`REL_42422fc4b9dfe4424046f12d8f\` (\`authorizationId\`),
+    //                                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callouts_set\` DROP COLUMN \`groups\``
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`tagset\` ADD \`classificationId\` char(36) NULL`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout\` ADD \`classificationId\` char(36) NULL`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout\` ADD UNIQUE INDEX \`IDX_0674c137336c2417df036053b6\` (\`classificationId\`)`
+    // );
 
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_0674c137336c2417df036053b6\` ON \`callout\` (\`classificationId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`classification\` ADD CONSTRAINT \`FK_42422fc4b9dfe4424046f12d8fd\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`tagset\` ADD CONSTRAINT \`FK_391d124a58a845b85a047acc9d3\` FOREIGN KEY (\`classificationId\`) REFERENCES \`classification\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_0674c137336c2417df036053b65\` FOREIGN KEY (\`classificationId\`) REFERENCES \`classification\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
+    // await queryRunner.query(
+    //   `CREATE UNIQUE INDEX \`REL_0674c137336c2417df036053b6\` ON \`callout\` (\`classificationId\`)`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`classification\` ADD CONSTRAINT \`FK_42422fc4b9dfe4424046f12d8fd\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`tagset\` ADD CONSTRAINT \`FK_391d124a58a845b85a047acc9d3\` FOREIGN KEY (\`classificationId\`) REFERENCES \`classification\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_0674c137336c2417df036053b65\` FOREIGN KEY (\`classificationId\`) REFERENCES \`classification\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
 
-    // Add a Classification entity to all callouts. This will hold any tagsets for classification.
-    // NOTE: need to do this separately from CalloutsSet as have Callouts in Templates
-    const callouts: {
-      id: string;
-    }[] = await queryRunner.query(`SELECT id FROM \`callout\``);
-    for (const callout of callouts) {
-      const classificationID =
-        await this.createEmptyClassification(queryRunner);
-      // Update callout to have the classification
-      await queryRunner.query(
-        `UPDATE callout SET classificationId = '${classificationID}' WHERE id = '${callout.id}'`
-      );
-    }
+    // // Add a Classification entity to all callouts. This will hold any tagsets for classification.
+    // // NOTE: need to do this separately from CalloutsSet as have Callouts in Templates
+    // const callouts: {
+    //   id: string;
+    // }[] = await queryRunner.query(`SELECT id FROM \`callout\``);
+    // for (const callout of callouts) {
+    //   const classificationID =
+    //     await this.createEmptyClassification(queryRunner);
+    //   // Update callout to have the classification
+    //   await queryRunner.query(
+    //     `UPDATE callout SET classificationId = '${classificationID}' WHERE id = '${callout.id}'`
+    //   );
+    // }
 
-    // Migrate all innovation flows to have the current state and the flow states tagset
-    await this.updateInnovationFlows(queryRunner);
+    // // Migrate all innovation flows to have the current state and the flow states tagset
+    // await this.updateInnovationFlows(queryRunner);
 
-    await this.moveClassificationTagsets(queryRunner);
+    // await this.moveClassificationTagsets(queryRunner);
 
     // Now have the data in the new setup, convert the L0 callouts to use the new flow states
     await this.setFlowStateOnLevelZeroCallouts(queryRunner);
@@ -143,14 +149,17 @@ export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
     const spaceLevelZeroCalloutsSets: {
       id: string;
       flowTagsetTemplateId: string;
+      tagsetTemplateSetId: string;
     }[] = await queryRunner.query(
       `SELECT
         callouts_set.id as id,
-        flowTagsetTemplate.id as flowTagsetTemplateId
+        flowTagsetTemplate.id as flowTagsetTemplateId,
+        tagset_template_set.id as tagsetTemplateSetId
       FROM space
         JOIN collaboration ON space.collaborationId = collaboration.id
         JOIN callouts_set ON collaboration.calloutsSetId = callouts_set.id
-        JOIN tagset_template AS flowTagsetTemplate on flowTagsetTemplate.tagsetTemplateSetId = callouts_set.tagsetTemplateId AND flowTagsetTemplate.name = '${this.TAGSET_FLOW}'
+        JOIN tagset_template_set ON callouts_set.tagsetTemplateSetId = tagset_template_set.id
+        JOIN tagset_template AS flowTagsetTemplate on flowTagsetTemplate.tagsetTemplateSetId = tagset_template_set.id AND flowTagsetTemplate.name = '${this.TAGSET_FLOW}'
       WHERE space.level = '0'
       `
     );
@@ -161,113 +170,87 @@ export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
       `Found ${calloutsSetIds.length} callouts sets to update: ${JSON.stringify(calloutsSetIds)}`
     );
 
-    const callouts: {
-      id: string;
-      groupTags: string;
-      flowTagsetId: string;
-    }[] = await queryRunner.query(
-      `SELECT
-        callout.id as id,
-        groupTagset.tags as groupTags,
-        flowTagset.id as flowTagsetId
-      FROM callout
-        JOIN classification ON callout.classificationId = classification.id
-        JOIN tagset AS flowTagset on flowTagset.classificationId = classification.id AND flowTagset.name = '${this.TAGSET_FLOW}'
-        JOIN tagset AS groupTagset on groupTagset.classificationId = classification.id AND groupTagset.name = '${this.TAGSET_GROUP}'
-      WHERE callout.calloutsSetId IN ('${calloutsSetIds.join(',')}')
-      `
-    );
-
-    console.log(
-      `Found ${callouts.length} callouts  to update: ${JSON.stringify(callouts)}`
-    );
-
-    for (const callout of callouts) {
-      const flowStateName = this.getCalloutStateFromGroupTags(
-        callout.id,
-        callout.groupTags
+    for (const calloutsSet of spaceLevelZeroCalloutsSets) {
+      let flowTagsetTemplateId = calloutsSet.flowTagsetTemplateId;
+      if (!calloutsSet.flowTagsetTemplateId) {
+        flowTagsetTemplateId = await this.createTagsetTemplate(
+          queryRunner,
+          calloutsSet.tagsetTemplateSetId,
+          this.TAGSET_FLOW,
+          'select-one',
+          `${this.LEVEL_ZERO_FLOW_STATES.join(',')}`,
+          `${this.LEVEL_ZERO_FLOW_STATES[0]}`
+        );
+      }
+      const callouts: {
+        id: string;
+        groupTags: string;
+        flowTagsetId: string;
+      }[] = await queryRunner.query(
+        `SELECT
+          callout.id as id,
+          groupTagset.tags as groupTags,
+          flowTagset.id as flowTagsetId
+        FROM callout
+          JOIN classification ON callout.classificationId = classification.id
+          JOIN tagset AS flowTagset on flowTagset.classificationId = classification.id AND flowTagset.name = '${this.TAGSET_FLOW}'
+          JOIN tagset AS groupTagset on groupTagset.classificationId = classification.id AND groupTagset.name = '${this.TAGSET_GROUP}'
+        WHERE callout.calloutsSetId = '${calloutsSet.id}'
+        `
       );
 
-      await queryRunner.query(
-        `UPDATE tagset SET tags = '${flowStateName}' WHERE id = '${callout.flowTagsetId}'`
+      console.log(
+        `Found ${callouts.length} callouts  to update: ${JSON.stringify(callouts)}`
       );
-    }
-  }
 
-  private ensureValidStates(
-    states: Array<{ displayName: string; description: string }>
-  ): string[] {
-    const result = states.map(state => state.displayName);
-    if (result.length !== 4 || result.find(state => !state)) {
-      throw new Error('Flow has invalid states!');
-    }
-    return result;
-  }
+      for (const callout of callouts) {
+        let flowTagsetId = callout.flowTagsetId;
+        if (!flowTagsetId) {
+          flowTagsetId = await this.createFlowTagset(
+            queryRunner,
+            callout.flowTagsetId,
+            this.LEVEL_ZERO_FLOW_STATES[0],
+            flowTagsetTemplateId
+          );
+        }
+        const flowStateName = this.getCalloutStateFromGroupTags(
+          callout.id,
+          callout.groupTags
+        );
 
-  private async ensureTagsetTemplateSetHasFlowState(
-    queryRunner: QueryRunner,
-    tagsetTemplateSetId: string
-  ): Promise<string> {
-    const [flowStateTagsetTemplate]: {
-      id: string;
-    }[] = await queryRunner.query(
-      `SELECT id FROM tagset_template WHERE tagsetTemplateSet = ? AND name = ?`,
-      [tagsetTemplateSetId, this.TAGSET_FLOW]
-    );
-    if (flowStateTagsetTemplate) {
-      return flowStateTagsetTemplate.id;
+        await queryRunner.query(
+          `UPDATE tagset SET tags = '${flowStateName}' WHERE id = '${flowTagsetId}'`
+        );
+      }
     }
-
-    console.log(
-      `Unable to determine flow states tagsetTemplate for tagsetTemplateSet ${tagsetTemplateSetId}, creating it...`
-    );
-    return await this.createTagsetTemplate(
-      queryRunner,
-      tagsetTemplateSetId,
-      this.TAGSET_FLOW,
-      'select-one',
-      '',
-      ''
-    );
   }
 
   private getCalloutStateFromGroupTags(
     calloutId: string,
     calloutGroupTags: string
   ): string {
-    const validStates = ['Home', 'Community', 'Subspaces', 'Knowledge'];
     switch (calloutGroupTags) {
       case 'HOME':
-        return validStates[0];
+        return this.LEVEL_ZERO_FLOW_STATES[0];
       case 'COMMUNITY':
-        return validStates[1];
+        return this.LEVEL_ZERO_FLOW_STATES[1];
       case 'SUBSPACES':
-        return validStates[2];
+        return this.LEVEL_ZERO_FLOW_STATES[2];
       case 'KNOWLEDGE':
-        return validStates[3];
+        return this.LEVEL_ZERO_FLOW_STATES[3];
       default: {
         throw new Error(`Invalid callout group for callout ${calloutId}`);
       }
     }
   }
 
-  private async createTagset(
+  private async createFlowTagset(
     queryRunner: QueryRunner,
-    profileId: string,
-    tagsetTemplateSetId: string,
-    allowedValues: string,
+    classificationId: string,
     selectedValue: string,
-    defaultSelectedValue: string
-  ): Promise<void> {
+    tagsetTemplateId: string
+  ): Promise<string> {
     const tagsetId = randomUUID();
-    const tagsetTemplateId = await this.createTagsetTemplate(
-      queryRunner,
-      tagsetTemplateSetId,
-      'flow-state',
-      'select-one',
-      allowedValues,
-      defaultSelectedValue
-    );
 
     const authorizationID = await this.createAuthorizationPolicy(
       queryRunner,
@@ -279,7 +262,7 @@ export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
                                   name,
                                   tags,
                                   authorizationId,
-                                  profileId,
+                                  classificationId,
                                   tagsetTemplateId,
                                   type
                             ) VALUES
@@ -289,10 +272,11 @@ export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
                           'flow-state',
                           '${selectedValue}',
                           '${authorizationID}',
-                          '${profileId}',
+                          '${classificationId}',
                           '${tagsetTemplateId}',
                           'select-one'
                           )`);
+    return tagsetId;
   }
 
   private async createTagsetTemplate(
