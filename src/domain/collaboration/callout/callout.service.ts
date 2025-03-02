@@ -88,7 +88,8 @@ export class CalloutService {
     );
 
     callout.classification = this.classificationService.createClassification(
-      classificationTagsetTemplates
+      classificationTagsetTemplates,
+      calloutData.classification
     );
 
     callout.contributionDefaults =

@@ -47,7 +47,7 @@ export class CalloutFramingService {
       AuthorizationPolicyType.CALLOUT_FRAMING
     );
 
-    const { profile, whiteboard, tags } = calloutFramingData;
+    const { profile: profileData, whiteboard, tags } = calloutFramingData;
 
     const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
@@ -63,7 +63,7 @@ export class CalloutFramingService {
     );
 
     calloutFraming.profile = await this.profileService.createProfile(
-      profile,
+      profileData,
       ProfileType.CALLOUT_FRAMING,
       storageAggregator
     );

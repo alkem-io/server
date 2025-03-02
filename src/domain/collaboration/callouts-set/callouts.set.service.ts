@@ -443,10 +443,8 @@ export class CalloutsSetService {
     const calloutsSetLoaded = await this.getCalloutsSetOrFail(calloutsSet.id, {
       relations: {
         callouts: {
-          framing: {
-            profile: {
-              tagsets: true,
-            },
+          classification: {
+            tagsets: true,
           },
         },
       },

@@ -18,6 +18,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
 import { LogContext } from '@common/enums/logging.context';
 import { UpdateClassificationInput } from './dto/classification.dto.update';
+import { CreateClassificationInput } from './dto/classification.dto.create';
 
 @Injectable()
 export class ClassificationService {
@@ -30,7 +31,8 @@ export class ClassificationService {
   ) {}
 
   public createClassification(
-    tagsetTemplates: ITagsetTemplate[]
+    tagsetTemplates: ITagsetTemplate[],
+    classificationData?: CreateClassificationInput
   ): IClassification {
     const classification: IClassification = Classification.create();
     classification.authorization = new AuthorizationPolicy(
@@ -38,15 +40,20 @@ export class ClassificationService {
     );
     classification.tagsets = [];
 
-    const tagsetInputsFromTemplates =
+    let tagsetsData =
       this.tagsetService.convertTagsetTemplatesToCreateTagsetInput(
         tagsetTemplates
       );
-
-    const tagsetsFromInput = tagsetInputsFromTemplates.map(tagsetData =>
+    if (classificationData) {
+      // Ensure any supplied values in tags are used
+      tagsetsData = this.tagsetService.updatedTagsetInputUsingProvidedData(
+        tagsetsData,
+        classificationData.tagsets
+      );
+    }
+    classification.tagsets = tagsetsData.map(tagsetData =>
       this.tagsetService.createTagsetWithName([], tagsetData)
     );
-    classification.tagsets = tagsetsFromInput ?? [];
 
     return classification;
   }

@@ -256,14 +256,14 @@ export class TagsetService {
 
   // Note: provided data has priority when it comes to tags
   public updateTagsetInputs(
-    tagsetInputDtata: CreateTagsetInput[] | undefined,
+    tagsetInputData: CreateTagsetInput[] | undefined,
     additionalTagsetInputs: CreateTagsetInput[]
   ): CreateTagsetInput[] {
     const result: CreateTagsetInput[] = [...additionalTagsetInputs];
 
-    if (!tagsetInputDtata) return result;
+    if (!tagsetInputData) return result;
 
-    for (const tagsetInput of tagsetInputDtata) {
+    for (const tagsetInput of tagsetInputData) {
       const existingInput = result.find(t => t.name === tagsetInput.name);
       if (existingInput) {
         // Do not change type, name etc - only tags
@@ -272,6 +272,35 @@ export class TagsetService {
         }
       } else {
         result.push(tagsetInput);
+      }
+    }
+    return result;
+  }
+
+  // Note: provided data has priority when it comes to tags
+  public updatedTagsetInputUsingProvidedData(
+    baseTagsetInputData: CreateTagsetInput[],
+    additionalTagsetInputs?: CreateTagsetInput[]
+  ): CreateTagsetInput[] {
+    if (!additionalTagsetInputs) return baseTagsetInputData;
+    const result: CreateTagsetInput[] = [...baseTagsetInputData];
+
+    for (const additionalTagSetInput of additionalTagsetInputs) {
+      const existingInput = result.find(
+        t => t.name === additionalTagSetInput.name
+      );
+      if (existingInput) {
+        // Do not change type, name etc - only tags
+        if (additionalTagSetInput.tags) {
+          existingInput.tags = additionalTagSetInput.tags;
+        }
+      } else {
+        this.logger.warn(
+          `Unable to find tagset with the name: ${additionalTagSetInput.name} in provided tagsets: ${JSON.stringify(
+            result
+          )}`,
+          LogContext.TAGSET
+        );
       }
     }
     return result;

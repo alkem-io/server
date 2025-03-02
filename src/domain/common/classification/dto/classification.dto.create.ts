@@ -6,9 +6,9 @@ import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 @InputType()
 @ObjectType('CreateClassificationData')
 export class CreateClassificationInput {
-  @Field(() => [CreateTagsetInput], { nullable: true })
+  @Field(() => [CreateTagsetInput], { nullable: false })
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CreateTagsetInput)
-  tagsets?: CreateTagsetInput[];
+  tagsets!: CreateTagsetInput[];
 }
