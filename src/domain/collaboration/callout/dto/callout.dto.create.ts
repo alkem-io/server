@@ -17,10 +17,10 @@ export class CreateCalloutInput {
   @Type(() => CreateCalloutFramingInput)
   framing!: CreateCalloutFramingInput;
 
-  @Field(() => CreateClassificationInput, { nullable: false })
+  @Field(() => CreateClassificationInput, { nullable: true })
   @ValidateNested({ each: true })
   @Type(() => CreateClassificationInput)
-  classification!: CreateClassificationInput;
+  classification?: CreateClassificationInput;
 
   @Field(() => CreateCalloutContributionDefaultsInput, { nullable: true })
   @ValidateNested({ each: true })

@@ -469,19 +469,30 @@ export class CalloutsSetService {
         return false;
       }
 
+      // Only process classificationTagsets with values specified
+      const filteredArgClassificationTagsets =
+        args.classificationTagsets?.filter(
+          tagset => tagset.tags && tagset.tags.length
+        );
+
+      if (
+        !filteredArgClassificationTagsets ||
+        !filteredArgClassificationTagsets.length
+      ) {
+        return true;
+      }
+
       // Filter by tagsets
-      const tagsetCheck =
-        args.framingTagsets && args.framingTagsets.length
-          ? callout.framing.profile?.tagsets?.some(calloutTagset =>
-              args.framingTagsets?.some(
-                argTagset =>
-                  argTagset.name === calloutTagset.name &&
-                  argTagset.tags.some(argTag =>
-                    calloutTagset.tags.includes(argTag)
-                  )
-              )
-            )
-          : true;
+      const tagsetCheck = callout.classification.tagsets?.some(calloutTagset =>
+        filteredArgClassificationTagsets.some(
+          argTagset =>
+            argTagset.name === calloutTagset.name &&
+            (!argTagset.tags ||
+              argTagset.tags.some(argTag =>
+                calloutTagset.tags.includes(argTag)
+              ))
+        )
+      );
 
       return tagsetCheck;
     });
@@ -567,7 +578,7 @@ export class CalloutsSetService {
   public moveCalloutsToDefaultFlowState(
     validFlowStateNames: string[],
     callouts: {
-      classification: {
+      classification?: {
         tagsets?: {
           name: string;
           type?: TagsetType;
@@ -579,6 +590,9 @@ export class CalloutsSetService {
     const defaultFlowStateName: string | undefined = validFlowStateNames?.[0];
 
     for (const callout of callouts) {
+      if (!callout.classification) {
+        callout.classification = {};
+      }
       if (!callout.classification.tagsets) {
         callout.classification.tagsets = [];
       }

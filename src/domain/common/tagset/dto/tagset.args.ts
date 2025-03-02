@@ -1,8 +1,9 @@
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class TagsetArgs {
-  @Field(() => String, {
+  @Field(() => TagsetReservedName || String, {
     name: 'name',
     description:
       'Return only Callouts that match one of the tagsets and any of the tags in them.',
@@ -11,7 +12,8 @@ export class TagsetArgs {
 
   @Field(() => [String], {
     name: 'tags',
+    nullable: true,
     description: 'A list of tags to include.',
   })
-  tags!: string[];
+  tags?: string[];
 }

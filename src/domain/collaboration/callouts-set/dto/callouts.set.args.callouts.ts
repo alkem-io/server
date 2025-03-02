@@ -44,10 +44,4 @@ export class CalloutsSetArgsCallouts {
     nullable: true,
   })
   classificationTagsets?: TagsetArgs[];
-
-  @Field(() => [TagsetArgs], {
-    description: 'A filter .',
-    nullable: true,
-  })
-  framingTagsets?: TagsetArgs[];
 }
