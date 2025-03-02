@@ -8,12 +8,10 @@ import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationFlow } from './innovation.flow.entity';
-import { InnovationFlowService } from './innovation.flow.service';
-import { ITagsetTemplate } from '@domain/common/tagset-template';
 
 @Resolver(() => IInnovationFlow)
 export class InnovationFlowResolverFields {
-  constructor(private innovationFlowService: InnovationFlowService) {}
+  constructor() {}
 
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
@@ -27,16 +25,5 @@ export class InnovationFlowResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(innovationFlow.id);
-  }
-
-  @ResolveField('tagsetTemplate', () => ITagsetTemplate, {
-    nullable: false,
-    description:
-      'The tagsetTemplate used for entities that want to select from the states in this InnovationFlow.',
-  })
-  async flowTagsetTemplate(
-    @Parent() flow: IInnovationFlow
-  ): Promise<ITagsetTemplate> {
-    return this.innovationFlowService.getFlowTagsetTemplate(flow);
   }
 }
