@@ -142,6 +142,7 @@ export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
   private async setFlowStateOnLevelZeroCallouts(queryRunner: QueryRunner) {
     const spaceLevelZeroCalloutsSets: {
       id: string;
+      flowTagsetTemplateId: string;
     }[] = await queryRunner.query(
       `SELECT
         callouts_set.id as id,
