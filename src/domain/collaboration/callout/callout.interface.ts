@@ -39,10 +39,6 @@ export abstract class ICallout extends IAuthorizable {
   })
   framing!: ICalloutFraming;
 
-  @Field(() => IClassification, {
-    nullable: false,
-    description: 'The Classification associated with this Callout.',
-  })
   classification!: IClassification;
 
   contributionPolicy!: ICalloutContributionPolicy;

@@ -59,6 +59,9 @@ export class InputCreatorService {
       relations: {
         contributionDefaults: true,
         contributionPolicy: true,
+        classification: {
+          tagsets: true,
+        },
         framing: {
           profile: {
             tagsets: true,
@@ -82,7 +85,7 @@ export class InputCreatorService {
       !callout.classification
     ) {
       throw new EntityNotInitializedException(
-        `Missing callout relation on callout: ${calloutID}`,
+        `Missing relation on callout: ${calloutID}`,
         LogContext.INPUT_CREATOR,
         {
           cause: 'Relation for Callout not loaded',

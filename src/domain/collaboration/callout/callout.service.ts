@@ -42,6 +42,7 @@ import { keyBy } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
+import { IClassification } from '@domain/common/classification/classification.interface';
 
 @Injectable()
 export class CalloutService {
@@ -484,6 +485,22 @@ export class CalloutService {
       );
     }
     return storageBucket;
+  }
+
+  public async getClassification(calloutID: string): Promise<IClassification> {
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: {
+        classification: true,
+      },
+    });
+    const classification = callout?.classification;
+    if (!classification) {
+      throw new RelationshipNotFoundException(
+        `Unable to find Classification to use for Callout: ${calloutID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return classification;
   }
 
   public async updateContributionCalloutsSortOrder(
