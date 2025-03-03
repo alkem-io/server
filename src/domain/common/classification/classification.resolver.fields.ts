@@ -46,7 +46,7 @@ export class ClassificationResolverFields {
     const namedTagset = tagsets.find(t => t.name === tagsetName);
     if (!namedTagset) {
       throw new EntityNotFoundException(
-        `Unable to locate ${tagsetName} tagset for Classification: ${classification.id}`,
+        `Unable to locate '${tagsetName}' tagset for Classification: ${classification.id}`,
         LogContext.PROFILE
       );
     }
