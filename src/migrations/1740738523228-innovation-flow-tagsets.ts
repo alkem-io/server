@@ -12,76 +12,76 @@ export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
   ];
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`innovation_flow\` ADD \`currentState\` json NOT NULL`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`innovation_flow\` ADD \`flowStatesTagsetTemplateId\` char(36) NULL`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`innovation_flow\` ADD UNIQUE INDEX \`IDX_858fd06a671b804765d91251e6\` (\`flowStatesTagsetTemplateId\`)`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD \`currentState\` json NOT NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD \`flowStatesTagsetTemplateId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD UNIQUE INDEX \`IDX_858fd06a671b804765d91251e6\` (\`flowStatesTagsetTemplateId\`)`
+    );
 
-    // await queryRunner.query(
-    //   `CREATE UNIQUE INDEX \`REL_858fd06a671b804765d91251e6\` ON \`innovation_flow\` (\`flowStatesTagsetTemplateId\`)`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`innovation_flow\` ADD CONSTRAINT \`FK_858fd06a671b804765d91251e6c\` FOREIGN KEY (\`flowStatesTagsetTemplateId\`) REFERENCES \`tagset_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_858fd06a671b804765d91251e6\` ON \`innovation_flow\` (\`flowStatesTagsetTemplateId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD CONSTRAINT \`FK_858fd06a671b804765d91251e6c\` FOREIGN KEY (\`flowStatesTagsetTemplateId\`) REFERENCES \`tagset_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
-    // await queryRunner.query(
-    //   `CREATE TABLE \`classification\` (\`id\` char(36) NOT NULL,
-    //                                     \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    //                                     \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    //                                     \`version\` int NOT NULL,
-    //                                     \`authorizationId\` char(36) NULL,
-    //                                     UNIQUE INDEX \`REL_42422fc4b9dfe4424046f12d8f\` (\`authorizationId\`),
-    //                                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callouts_set\` DROP COLUMN \`groups\``
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`tagset\` ADD \`classificationId\` char(36) NULL`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` ADD \`classificationId\` char(36) NULL`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` ADD UNIQUE INDEX \`IDX_0674c137336c2417df036053b6\` (\`classificationId\`)`
-    // );
+    await queryRunner.query(
+      `CREATE TABLE \`classification\` (\`id\` char(36) NOT NULL,
+                                        \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                                        \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+                                        \`version\` int NOT NULL,
+                                        \`authorizationId\` char(36) NULL,
+                                        UNIQUE INDEX \`REL_42422fc4b9dfe4424046f12d8f\` (\`authorizationId\`),
+                                        PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callouts_set\` DROP COLUMN \`groups\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`tagset\` ADD \`classificationId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD \`classificationId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD UNIQUE INDEX \`IDX_0674c137336c2417df036053b6\` (\`classificationId\`)`
+    );
 
-    // await queryRunner.query(
-    //   `CREATE UNIQUE INDEX \`REL_0674c137336c2417df036053b6\` ON \`callout\` (\`classificationId\`)`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`classification\` ADD CONSTRAINT \`FK_42422fc4b9dfe4424046f12d8fd\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`tagset\` ADD CONSTRAINT \`FK_391d124a58a845b85a047acc9d3\` FOREIGN KEY (\`classificationId\`) REFERENCES \`classification\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_0674c137336c2417df036053b65\` FOREIGN KEY (\`classificationId\`) REFERENCES \`classification\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_0674c137336c2417df036053b6\` ON \`callout\` (\`classificationId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`classification\` ADD CONSTRAINT \`FK_42422fc4b9dfe4424046f12d8fd\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`tagset\` ADD CONSTRAINT \`FK_391d124a58a845b85a047acc9d3\` FOREIGN KEY (\`classificationId\`) REFERENCES \`classification\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_0674c137336c2417df036053b65\` FOREIGN KEY (\`classificationId\`) REFERENCES \`classification\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
-    // // Add a Classification entity to all callouts. This will hold any tagsets for classification.
-    // // NOTE: need to do this separately from CalloutsSet as have Callouts in Templates
-    // const callouts: {
-    //   id: string;
-    // }[] = await queryRunner.query(`SELECT id FROM \`callout\``);
-    // for (const callout of callouts) {
-    //   const classificationID =
-    //     await this.createEmptyClassification(queryRunner);
-    //   // Update callout to have the classification
-    //   await queryRunner.query(
-    //     `UPDATE callout SET classificationId = '${classificationID}' WHERE id = '${callout.id}'`
-    //   );
-    // }
+    // Add a Classification entity to all callouts. This will hold any tagsets for classification.
+    // NOTE: need to do this separately from CalloutsSet as have Callouts in Templates
+    const callouts: {
+      id: string;
+    }[] = await queryRunner.query(`SELECT id FROM \`callout\``);
+    for (const callout of callouts) {
+      const classificationID =
+        await this.createEmptyClassification(queryRunner);
+      // Update callout to have the classification
+      await queryRunner.query(
+        `UPDATE callout SET classificationId = '${classificationID}' WHERE id = '${callout.id}'`
+      );
+    }
 
-    // // Migrate all innovation flows to have the current state and the flow states tagset
-    // await this.updateInnovationFlows(queryRunner);
+    // Migrate all innovation flows to have the current state and the flow states tagset
+    await this.updateInnovationFlows(queryRunner);
 
-    // await this.moveClassificationTagsets(queryRunner);
+    await this.moveClassificationTagsets(queryRunner);
 
     // Now have the data in the new setup, convert the L0 callouts to use the new flow states
     await this.setFlowStateOnLevelZeroCallouts(queryRunner);
