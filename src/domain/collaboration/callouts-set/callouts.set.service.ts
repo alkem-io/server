@@ -487,7 +487,9 @@ export class CalloutsSetService {
             argTagset.name === calloutTagset.name &&
             (!argTagset.tags ||
               argTagset.tags.some(argTag =>
-                calloutTagset.tags.includes(argTag)
+                calloutTagset.tags.some(
+                  tag => tag.toLowerCase() === argTag.toLowerCase()
+                )
               ))
         )
       );

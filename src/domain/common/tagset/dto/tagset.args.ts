@@ -3,7 +3,7 @@ import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class TagsetArgs {
-  @Field(() => TagsetReservedName || String, {
+  @Field(() => TagsetReservedName, {
     name: 'name',
     description:
       'Return only Callouts that match one of the tagsets and any of the tags in them.',
