@@ -511,9 +511,11 @@ export class BootstrapService {
       const spaceInput: CreateSpaceOnAccountInput = {
         accountID: account.id,
         nameID: DEFAULT_SPACE_NAMEID,
-        profileData: {
-          displayName: DEFAULT_SPACE_DISPLAYNAME,
-          tagline: 'An empty space to be populated',
+        about: {
+          profileData: {
+            displayName: DEFAULT_SPACE_DISPLAYNAME,
+            tagline: 'An empty space to be populated',
+          },
         },
         level: SpaceLevel.L0,
         type: SpaceType.SPACE,

@@ -12,6 +12,7 @@ import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 
 @Injectable()
 export class CalloutContributionMoveService {
@@ -21,7 +22,8 @@ export class CalloutContributionMoveService {
     @InjectRepository(CalloutContribution)
     private calloutContributionRepository: Repository<CalloutContribution>,
     private calloutContributionService: CalloutContributionService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    private urlGeneratorCacheService: UrlGeneratorCacheService
   ) {}
 
   public async moveContributionToCallout(
@@ -96,12 +98,12 @@ export class CalloutContributionMoveService {
     contribution.callout = targetCallout;
 
     if (contribution?.post?.profile.id) {
-      await this.urlGeneratorService.revokeUrlCache(
+      await this.urlGeneratorCacheService.revokeUrlCache(
         contribution?.post?.profile.id
       );
     }
     if (contribution?.whiteboard?.profile.id) {
-      await this.urlGeneratorService.revokeUrlCache(
+      await this.urlGeneratorCacheService.revokeUrlCache(
         contribution?.whiteboard?.profile.id
       );
     }

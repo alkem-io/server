@@ -171,7 +171,7 @@ export class ActivityLogService {
       );
 
     return {
-      displayName: space.profile.displayName,
+      displayName: space.about.profile.displayName,
       nameID: space.nameID,
     };
   }
