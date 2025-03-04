@@ -4,7 +4,6 @@ import { Space } from '@domain/space/space/space.entity';
 import { INVP } from '@domain/common/nvp';
 import { NameID } from '@domain/common/scalars';
 import { ICommunity } from '@domain/community/community';
-import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
@@ -16,14 +15,12 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { IAgent } from '@domain/agent/agent';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { IProfile } from '@domain/common/profile';
 import { Loader } from '@core/dataloader/decorators';
 import {
-  JourneyCollaborationLoaderCreator,
-  JourneyCommunityLoaderCreator,
-  JourneyContextLoaderCreator,
+  SpaceCollaborationLoaderCreator,
+  SpaceCommunityLoaderCreator,
+  SpaceAboutLoaderCreator,
   AgentLoaderCreator,
-  ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -36,6 +33,7 @@ import { ISpaceSubscription } from './space.license.subscription.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
+import { ISpaceAbout } from '../space.about';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -50,7 +48,7 @@ export class SpaceResolverFields {
   })
   async community(
     @Parent() space: Space,
-    @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Space })
+    @Loader(SpaceCommunityLoaderCreator, { parentClassRef: Space })
     loader: ILoader<ICommunity>
   ): Promise<ICommunity> {
     const community = await loader.load(space.id);
@@ -60,17 +58,17 @@ export class SpaceResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
-  @ResolveField('context', () => IContext, {
+  @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
-    description: 'The context for the space.',
+    description: 'About this space.',
   })
-  async context(
+  async about(
     @Parent() space: Space,
-    @Loader(JourneyContextLoaderCreator, { parentClassRef: Space })
-    loader: ILoader<IContext>
-  ): Promise<IContext> {
-    const context = await loader.load(space.id);
-    return context;
+    @Loader(SpaceAboutLoaderCreator, { parentClassRef: Space })
+    loader: ILoader<ISpaceAbout>
+  ): Promise<ISpaceAbout> {
+    const about = await loader.load(space.id);
+    return about;
   }
 
   @ResolveField('subscriptions', () => [ISpaceSubscription], {
@@ -97,7 +95,7 @@ export class SpaceResolverFields {
   })
   async collaboration(
     @Parent() space: Space,
-    @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Space })
+    @Loader(SpaceCollaborationLoaderCreator, { parentClassRef: Space })
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
     return loader.load(space.id);
@@ -152,21 +150,6 @@ export class SpaceResolverFields {
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ): Promise<ISpace[]> {
     return await this.spaceService.getSubspaces(space, args);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('profile', () => IProfile, {
-    nullable: false,
-    description: 'The Profile for the Space.',
-  })
-  async profile(
-    @Parent() space: Space,
-    @Loader(ProfileLoaderCreator, { parentClassRef: Space })
-    loader: ILoader<IProfile>
-  ): Promise<IProfile> {
-    const profile = await loader.load(space.id);
-    return profile;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

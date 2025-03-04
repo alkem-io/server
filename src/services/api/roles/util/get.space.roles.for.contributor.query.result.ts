@@ -48,7 +48,7 @@ export const getSpaceRolesForContributorQueryResult = (
           const subspaceResult = new RolesResultCommunity(
             subspace.nameID,
             subspace.id,
-            subspace.profile.displayName,
+            subspace.about.profile.displayName,
             subspace.type,
             subspace.level
           );

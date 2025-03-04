@@ -25,6 +25,7 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { SpaceAbout } from '../space.about';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -349,20 +350,24 @@ const getSubspacesMock = (
             displayName: `Challenge ${spaceId}.${i}`,
             tagline: '',
             description: '',
-            type: ProfileType.SPACE,
+            type: ProfileType.SPACE_ABOUT,
             ...getEntityMock<Profile>(),
           },
           ...getEntityMock<InnovationFlow>(),
         },
         ...getEntityMock<Collaboration>(),
       },
-      profile: {
-        id: `profile-challenge-${spaceId}.${i}`,
-        displayName: `Challenge ${spaceId}.${i}`,
-        tagline: '',
-        description: '',
-        type: ProfileType.CHALLENGE,
-        ...getEntityMock<Profile>(),
+      about: {
+        id: '',
+        profile: {
+          id: `profile-challenge-${spaceId}.${i}`,
+          displayName: `Challenge ${spaceId}.${i}`,
+          tagline: '',
+          description: '',
+          type: ProfileType.SPACE_ABOUT,
+          ...getEntityMock<Profile>(),
+        },
+        ...getEntityMock<SpaceAbout>(),
       },
       subspaces: getSubsubspacesMock(
         `${spaceId}.${i}`,
@@ -452,20 +457,24 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
             displayName: `subsubspace-${subsubspaceId}.${i}`,
             tagline: '',
             description: '',
-            type: ProfileType.OPPORTUNITY,
+            type: ProfileType.INNOVATION_FLOW,
             ...getEntityMock<Profile>(),
           },
           ...getEntityMock<InnovationFlow>(),
         },
         ...getEntityMock<Collaboration>(),
       },
-      profile: {
-        id: `profile-challenge-${subsubspaceId}.${i}`,
-        displayName: `Challenge ${subsubspaceId}.${i}`,
-        tagline: '',
-        description: '',
-        type: ProfileType.CHALLENGE,
-        ...getEntityMock<Profile>(),
+      about: {
+        id: '',
+        profile: {
+          id: `profile-challenge-${subsubspaceId}.${i}`,
+          displayName: `Challenge ${subsubspaceId}.${i}`,
+          tagline: '',
+          description: '',
+          type: ProfileType.SPACE_ABOUT,
+          ...getEntityMock<Profile>(),
+        },
+        ...getEntityMock<SpaceAbout>(),
       },
       ...getEntityMock<Space>(),
     });
@@ -492,13 +501,17 @@ const getSpaceMock = ({
     nameID: `space-${id}`,
     settings: settings,
     levelZeroSpaceID: '',
-    profile: {
-      id: `profile-${id}`,
-      displayName: `Space ${id}`,
-      tagline: '',
-      description: '',
-      type: ProfileType.SPACE,
-      ...getEntityMock<Profile>(),
+    about: {
+      id: '',
+      profile: {
+        id: `profile-${id}`,
+        displayName: `Space ${id}`,
+        tagline: '',
+        description: '',
+        type: ProfileType.SPACE_ABOUT,
+        ...getEntityMock<Profile>(),
+      },
+      ...getEntityMock<SpaceAbout>(),
     },
     type: SpaceType.SPACE,
     level: 0,

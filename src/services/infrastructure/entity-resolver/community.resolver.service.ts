@@ -379,8 +379,9 @@ export class CommunityResolverService {
         },
       },
       relations: {
-        profile: true,
-        context: true,
+        about: {
+          profile: true,
+        },
       },
     });
     if (!space) {
@@ -402,7 +403,9 @@ export class CommunityResolverService {
         },
       },
       relations: {
-        profile: true,
+        about: {
+          profile: true,
+        },
       },
     });
     if (!space) {
@@ -426,7 +429,9 @@ export class CommunityResolverService {
       },
       relations: {
         ...options?.relations,
-        profile: true,
+        about: {
+          profile: true,
+        },
       },
     });
     if (!space) {
@@ -442,7 +447,7 @@ export class CommunityResolverService {
     roleSetID: string
   ): Promise<string> {
     const space = await this.getSpaceForRoleSetOrFail(roleSetID);
-    return space.profile.displayName;
+    return space.about.profile.displayName;
   }
 
   public async getCommunityFromCollaborationCalloutRoomOrFail(

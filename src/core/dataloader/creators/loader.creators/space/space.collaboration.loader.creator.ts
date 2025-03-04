@@ -1,18 +1,18 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { ICollaboration } from '@domain/collaboration/collaboration';
+import { createTypedRelationDataLoader } from '../../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { Agent, IAgent } from '@src/domain/agent';
-import { createTypedRelationDataLoader } from '../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
 @Injectable()
-export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
+export class SpaceCollaborationLoaderCreator
+  implements DataLoaderCreator<ICollaboration>
+{
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(
-    options?: DataLoaderCreatorOptions<IAgent, { id: string; agent?: Agent }>
-  ) {
+  create(options?: DataLoaderCreatorOptions<ICollaboration>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`
@@ -22,9 +22,7 @@ export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
     return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
-      {
-        agent: true,
-      },
+      { collaboration: true },
       this.constructor.name,
       options
     );
