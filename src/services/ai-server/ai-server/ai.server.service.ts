@@ -44,6 +44,7 @@ import { RoomControllerService } from '@services/room-integration/room.controlle
 import { IMessage } from '@domain/communication/message/message.interface';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
 
 @Injectable()
 export class AiServerService {
@@ -167,6 +168,24 @@ export class AiServerService {
       `AI Persona service ${persona.id} found for BOK refresh`,
       LogContext.AI_SERVER
     );
+    if (persona.engine === AiPersonaEngine.GUIDANCE) {
+      // ['',
+      [
+        'https://alkem.io/documentation',
+        'https://www.alkemio.org',
+        'https://welcome.alkem.io',
+      ].map(url => {
+        this.eventBus.publish(
+          new IngestWebsite(
+            url,
+            AiPersonaBodyOfKnowledgeType.WEBSITE,
+            IngestionPurpose.KNOWLEDGE,
+            persona.id
+          )
+        );
+      });
+      return;
+    }
     this.eventBus.publish(
       new IngestBodyOfKnowledge(
         persona.bodyOfKnowledgeID,
