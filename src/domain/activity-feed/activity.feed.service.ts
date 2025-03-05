@@ -132,7 +132,6 @@ export class ActivityFeedService {
    * @param spaceIdsFilter
    * @param spaceIds
    * @returns string[] Filtered array of Space ids
-   * @throws {EntityNotFoundException} If Space(s) do not exist
    */
   private async filterSpacesOrFail(
     spaceIds: string[],
@@ -147,12 +146,16 @@ export class ActivityFeedService {
     const successOrNonExistingSpaces =
       await this.spaceLookupService.spacesExist(filteredSpaceIds);
     if (Array.isArray(successOrNonExistingSpaces)) {
-      throw new EntityNotFoundException(
-        `Spaces with the following identifiers not found: '${successOrNonExistingSpaces.join(
-          ','
-        )}'`,
+      this.logger.warn(
+        {
+          message:
+            'Some Spaces were not found when filtering for the activity feed',
+          spaceIds: successOrNonExistingSpaces,
+        },
         LogContext.ACTIVITY
       );
+      // return only the valid Spaces
+      return intersection(filteredSpaceIds, successOrNonExistingSpaces);
     }
 
     return filteredSpaceIds;
