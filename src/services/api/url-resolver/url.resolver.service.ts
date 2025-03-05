@@ -732,7 +732,7 @@ export class UrlResolverService {
 
     // Check for post contribution
     if (postNameID) {
-      const contribution = await this.entityManager.findOneOrFail(
+      const contribution = await this.entityManager.findOne(
         CalloutContribution,
         {
           where: {
@@ -749,6 +749,10 @@ export class UrlResolverService {
           },
         }
       );
+      if (!contribution) {
+        // Do not throw an error but return what is available
+        return result;
+      }
       this.authorizationService.grantAccessOrFail(
         agentInfo,
         contribution.authorization,
@@ -763,7 +767,7 @@ export class UrlResolverService {
 
     // Check for whiteboard contribution
     if (whiteboardNameID) {
-      const contribution = await this.entityManager.findOneOrFail(
+      const contribution = await this.entityManager.findOne(
         CalloutContribution,
         {
           where: {
@@ -780,6 +784,11 @@ export class UrlResolverService {
           },
         }
       );
+      if (!contribution) {
+        // Do not throw an error but return what is available
+        return result;
+      }
+
       this.authorizationService.grantAccessOrFail(
         agentInfo,
         contribution.authorization,

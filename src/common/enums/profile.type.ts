@@ -1,9 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum ProfileType {
-  SPACE = 'space',
-  CHALLENGE = 'challenge',
-  OPPORTUNITY = 'opportunity',
+  SPACE_ABOUT = 'space-about',
   INNOVATION_FLOW = 'innovation-flow',
   CALLOUT_FRAMING = 'callout-framing',
   KNOWLEDGE_BASE = 'knowledge-base',

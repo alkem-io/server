@@ -36,7 +36,6 @@ export class SpaceAboutService {
 
   public async createSpaceAbout(
     spaceAboutData: CreateSpaceAboutInput,
-    profileType: ProfileType,
     storageAggregator: IStorageAggregator
   ): Promise<ISpaceAbout> {
     const spaceAbout: ISpaceAbout = SpaceAbout.create({
@@ -45,7 +44,7 @@ export class SpaceAboutService {
     });
     spaceAbout.profile = await this.profileService.createProfile(
       spaceAboutData.profileData,
-      profileType,
+      ProfileType.SPACE_ABOUT,
       storageAggregator
     );
     await this.profileService.addTagsetOnProfile(spaceAbout.profile, {
