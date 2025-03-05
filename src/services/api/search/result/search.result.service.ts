@@ -97,40 +97,16 @@ export class SearchResultService {
         agentInfo
       ),
     ]);
-    // todo: count - https://github.com/alkem-io/server/issues/3700
-    const contributorResults = orderBy(
-      [...users, ...organizations],
-      'score',
-      'desc'
-    );
-    const contributorCursor = calculateSearchCursor(contributorResults);
-    const contributionResults = orderBy(posts, 'score', 'desc');
-    const contributionCursor = calculateSearchCursor(posts);
-    const spaceResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
-    const spaceCursor = calculateSearchCursor(spaceResults);
-    const calloutResults = orderBy(
-      [...callouts, ...calloutsOfWhiteboards],
-      'score',
-      'desc'
-    );
-    const calloutCursor = calculateSearchCursor(calloutResults);
+    const contributorResults = buildResults(users, organizations);
+    const contributionResults = buildResults(posts);
+    const spaceResults = buildResults(spaces, subspaces);
+    const calloutResults = buildResults(callouts, calloutsOfWhiteboards);
 
     return {
       contributorResults,
-      contributorCursor,
-      contributorResultsCount: -1,
-      //
       contributionResults,
-      contributionCursor,
-      contributionResultsCount: -1,
-      //
-      spaceResults: spaceResults,
-      spaceCursor,
-      spaceResultsCount: -1,
-      //
+      spaceResults,
       calloutResults,
-      calloutCursor,
-      calloutResultsCount: -1,
     };
   }
 
@@ -846,3 +822,13 @@ export class SearchResultService {
     return orgsInSpace;
   }
 }
+
+const buildResults = (...results: ISearchResult[][] | ISearchResult[]) => {
+  const flatResults = results.flat(1);
+  const resultsRanked = orderBy(flatResults, 'score', 'desc');
+  const cursor = calculateSearchCursor(resultsRanked);
+  // todo: count - https://github.com/alkem-io/server/issues/3700
+  const total = -1;
+
+  return { results: resultsRanked, cursor, total };
+};
