@@ -7,7 +7,6 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { LogContext } from '@common/enums';
 import { ISearchResult, SearchInput } from '../dto';
-import { validateSearchParameters, validateSearchTerms } from '../util';
 import { buildSearchQuery } from './build.search.query';
 import { SearchResultType } from '../search.result.type';
 import { AlkemioConfig } from '@src/types';
@@ -15,12 +14,14 @@ import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
 import {
   ErrorResponseBase,
   MsearchMultiSearchItem,
+  MsearchResponse,
   MsearchResponseItem,
 } from '@elastic/elasticsearch/lib/api/types';
 import { SearchCategory } from '../search.category';
 import { SearchIndex } from './search.index';
 import { isElasticError } from '@services/external/elasticsearch/utils';
 import { buildMultiSearchRequestItems } from '@services/api/search/extract/build.multi.search.request.items';
+import { SearchFilterInput } from '@services/api/search/dto/search.filter.input';
 
 const getIndexStore = (
   indexPattern: string
@@ -99,8 +100,6 @@ const getPublicIndexStore = (
   ],
 });
 
-const DEFAULT_MAX_RESULTS = 25;
-
 @Injectable()
 export class SearchExtractService {
   private readonly indexPattern: string;
@@ -113,9 +112,9 @@ export class SearchExtractService {
     private configService: ConfigService<AlkemioConfig, true>
   ) {
     this.indexPattern = getIndexPattern(this.configService);
-    this.maxResults =
-      this.configService.get('search.max_results', { infer: true }) ??
-      DEFAULT_MAX_RESULTS;
+    this.maxResults = this.configService.get('search.max_results', {
+      infer: true,
+    });
 
     if (!client) {
       this.logger.error(
@@ -135,35 +134,32 @@ export class SearchExtractService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    validateSearchParameters(searchData);
+    const { terms, searchInSpaceFilter, filters } = searchData;
+    const indicesToSearchOn = this.getIndices(onlyPublicResults, filters);
 
-    const {
-      terms: unfilteredTerms,
-      types,
-      categories,
-      searchInSpaceFilter,
-    } = searchData;
-    const filteredTerms = validateSearchTerms(unfilteredTerms);
-    const indicesToSearchOn = this.getIndices(onlyPublicResults, {
-      types,
-      categories,
-    });
+    if (indicesToSearchOn.length === 0) {
+      return [];
+    }
+
     // execute search per category
-    return this.executeMultiSearch(
-      indicesToSearchOn,
-      filteredTerms,
-      searchInSpaceFilter
-    );
+    const result = await this.executeMultiSearch(indicesToSearchOn, terms, {
+      searchInSpaceFilter,
+      filters,
+    });
+
+    return this.processMultiSearchResponses(result.responses);
   }
 
   private getIndices(
     onlyPublicResults = false,
-    filters?: {
-      types?: SearchResultType[];
-      categories?: SearchCategory[];
-    }
+    filters?: SearchFilterInput[]
   ): SearchIndex[] {
-    const { categories, types } = filters ?? {};
+    const categories = filters
+      ?.map(filter => filter.category)
+      .filter((category): category is SearchCategory => !!category);
+    const types = filters
+      ?.flatMap(filter => filter.types)
+      .filter((type): type is SearchResultType => !!type);
     const indexStore = getIndexStore(this.indexPattern);
 
     const filteredIndicesByCategory =
@@ -208,11 +204,25 @@ export class SearchExtractService {
   private async executeMultiSearch(
     indicesToSearchOn: SearchIndex[],
     terms: string[],
-    searchInSpaceFilter?: string
-  ): Promise<ISearchResult[]> {
+    options?: {
+      searchInSpaceFilter?: string;
+      filters?: SearchFilterInput[];
+    }
+  ): Promise<MsearchResponse<IBaseAlkemio>> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
+
+    if (indicesToSearchOn.length === 0) {
+      throw new Error('No indices to search on');
+    }
+
+    const {
+      searchInSpaceFilter,
+      filters,
+      // size = this.maxResults,
+      // cursor,
+    } = options ?? {};
 
     const term = terms.join(' ');
     // the main search query built using query DSL
@@ -220,23 +230,23 @@ export class SearchExtractService {
       spaceIdFilter: searchInSpaceFilter,
     });
 
+    const categoriesRequested = filters?.length ?? 0;
     const searchRequests = buildMultiSearchRequestItems(
       indicesToSearchOn,
       query,
-      0,
-      this.maxResults
+      {
+        filters,
+        defaults: {
+          // split the max results between the categories to prevent overfetching
+          size: this.maxResults / categoriesRequested,
+        },
+      }
     );
 
-    const result = await this.client.msearch<IBaseAlkemio>({
+    return this.client.msearch<IBaseAlkemio>({
       searches: searchRequests,
       // other msearch config goes here
-      human: true,
     });
-    this.logger.verbose?.(
-      `Elasticsearch took ${result.took}ms`,
-      LogContext.SEARCH_EXTRACT
-    );
-    return this.processMultiSearchResponses(result.responses);
   }
 
   private processMultiSearchResponses(

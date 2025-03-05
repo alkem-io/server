@@ -7,6 +7,7 @@ import { MessageID } from './scalar.messageid';
 import { LifecycleDefinitionScalar } from './scalar.lifecycle.definition';
 import { Emoji } from './scalar.emoji';
 import { WhiteboardContent } from './scalar.whiteboard.content';
+import { SearchCursor } from './scalar.search.cursor';
 
 @Module({
   imports: [],
@@ -19,6 +20,7 @@ import { WhiteboardContent } from './scalar.whiteboard.content';
     MessageID,
     LifecycleDefinitionScalar,
     WhiteboardContent,
+    SearchCursor,
   ],
   exports: [],
 })

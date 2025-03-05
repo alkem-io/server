@@ -34,6 +34,7 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SearchResultType } from '../search.result.type';
+import { calculateSearchCursor } from '@services/api/search/util';
 
 type PostParents = {
   post: Post;
@@ -96,29 +97,16 @@ export class SearchResultService {
         agentInfo
       ),
     ]);
-    // todo: count - https://github.com/alkem-io/server/issues/3700
-    const contributorResults = orderBy(
-      [...users, ...organizations],
-      'score',
-      'desc'
-    );
-    const contributionResults = orderBy(posts, 'score', 'desc');
-    const spaceResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
-    const calloutResults = orderBy(
-      [...callouts, ...calloutsOfWhiteboards],
-      'score',
-      'desc'
-    );
+    const contributorResults = buildResults(users, organizations);
+    const contributionResults = buildResults(posts);
+    const spaceResults = buildResults(spaces, subspaces);
+    const calloutResults = buildResults(callouts, calloutsOfWhiteboards);
 
     return {
       contributorResults,
-      contributorResultsCount: -1,
       contributionResults,
-      contributionResultsCount: -1,
-      spaceResults: spaceResults,
-      spaceResultsCount: -1,
+      spaceResults,
       calloutResults,
-      calloutResultsCount: -1,
     };
   }
 
@@ -834,3 +822,13 @@ export class SearchResultService {
     return orgsInSpace;
   }
 }
+
+const buildResults = (...results: ISearchResult[][] | ISearchResult[]) => {
+  const flatResults = results.flat(1);
+  const resultsRanked = orderBy(flatResults, 'score', 'desc');
+  const cursor = calculateSearchCursor(resultsRanked);
+  // todo: count - https://github.com/alkem-io/server/issues/3700
+  const total = -1;
+
+  return { results: resultsRanked, cursor, total };
+};
