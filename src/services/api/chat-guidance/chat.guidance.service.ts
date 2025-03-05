@@ -107,15 +107,6 @@ export class ChatGuidanceService {
     return true;
   }
 
-  public async ingest() {
-    const guidanceVc =
-      await this.platformService.getGuidanceVirtualContributorOrFail();
-    this.aiServerAdapter.refreshBodyOfKnowledge(
-      guidanceVc.aiPersona.aiPersonaServiceID
-    );
-    return true;
-  }
-
   public isGuidanceEngineEnabled(): boolean {
     return this.configService.get('platform.guidance_engine.enabled', {
       infer: true,
