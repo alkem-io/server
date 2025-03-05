@@ -132,7 +132,6 @@ export class ActivityFeedService {
    * @param spaceIdsFilter
    * @param spaceIds
    * @returns string[] Filtered array of Space ids
-   * @throws {EntityNotFoundException} If Space(s) do not exist
    */
   private async filterSpacesOrFail(
     spaceIds: string[],
