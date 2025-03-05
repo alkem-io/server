@@ -24,13 +24,12 @@ export class IngestWebsiteResultHandler
     // hence we can conclude that if we are here the result is a success
     const personaId = event.original.personaServiceId;
     this.logger.verbose?.(
-      `IngestSpaceResultHandler invoked. Event data: PersonaServiceId: ${personaId}; Result: success`,
+      `IngestWebsiteResultHandler invoked. Event data: PersonaServiceId: ${personaId}; Result: success`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
     if (!personaId) {
       this.logger.verbose?.('Returning?', LogContext.AI_SERVER_EVENT_BUS);
-
       return;
     }
 
@@ -39,15 +38,13 @@ export class IngestWebsiteResultHandler
       LogContext.AI_SERVER_EVENT_BUS
     );
 
-    if (personaId) {
-      let now = new Date();
-      if (event.timestamp) {
-        now = new Date(event.timestamp);
-      }
-      this.aiServerService.updatePersonaBoKLastUpdated(
-        event.original.personaServiceId,
-        now
-      );
+    let now = new Date();
+    if (event.timestamp) {
+      now = new Date(event.timestamp);
     }
+    this.aiServerService.updatePersonaBoKLastUpdated(
+      event.original.personaServiceId,
+      now
+    );
   }
 }
