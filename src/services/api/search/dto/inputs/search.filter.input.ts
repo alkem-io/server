@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { SearchResultType } from '../search.result.type';
 import { SearchCursor } from '@domain/common/scalars';
-import { SearchCategory } from '../search.category';
+import { SearchResultType } from '../../search.result.type';
+import { SearchCategory } from '../../search.category';
 
 @InputType()
 export class SearchFilterInput {

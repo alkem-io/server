@@ -6,7 +6,8 @@ import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { LogContext } from '@common/enums';
-import { ISearchResult, SearchInput } from '../dto';
+import { ISearchResult } from '../dto/results';
+import { SearchInput } from '../dto/inputs';
 import { buildSearchQuery } from './build.search.query';
 import { SearchResultType } from '../search.result.type';
 import { AlkemioConfig } from '@src/types';
@@ -17,11 +18,11 @@ import {
   MsearchResponse,
   MsearchResponseItem,
 } from '@elastic/elasticsearch/lib/api/types';
-import { SearchCategory } from '../search.category';
-import { SearchIndex } from './search.index';
 import { isElasticError } from '@services/external/elasticsearch/utils';
-import { buildMultiSearchRequestItems } from '@services/api/search/extract/build.multi.search.request.items';
-import { SearchFilterInput } from '@services/api/search/dto/search.filter.input';
+import { SearchCategory } from '../search.category';
+import { SearchFilterInput } from '../dto/inputs';
+import { SearchIndex } from './search.index';
+import { buildMultiSearchRequestItems } from './build.multi.search.request.items';
 
 const getIndexStore = (
   indexPattern: string
