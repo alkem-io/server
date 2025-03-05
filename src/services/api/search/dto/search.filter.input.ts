@@ -10,7 +10,7 @@ export class SearchFilterInput {
     description: 'Include this category in the search results.',
   })
   category!: SearchCategory;
-  //todo: scalar type instead of String
+
   @Field(() => SearchCursor, {
     nullable: true,
     description:

@@ -44,16 +44,18 @@ export class SearchService {
       maxSearchResults: this.maxSearchResults,
     });
     // check if the Space exists
-    try {
-      await this.entityManager.findOneByOrFail(Space, {
-        nameID: searchData.searchInSpaceFilter,
-      });
-    } catch (e) {
-      throw new EntityNotFoundException(
-        'Space with the given identifier not found',
-        LogContext.SEARCH,
-        { searchInSpaceFilter: searchData.searchInSpaceFilter }
-      );
+    if (searchData.searchInSpaceFilter) {
+      try {
+        await this.entityManager.findOneByOrFail(Space, {
+          nameID: searchData.searchInSpaceFilter,
+        });
+      } catch (e) {
+        throw new EntityNotFoundException(
+          'Space with the given identifier not found',
+          LogContext.SEARCH,
+          { searchInSpaceFilter: searchData.searchInSpaceFilter }
+        );
+      }
     }
     // search only in the public available data if the user is not authenticated
     const onlyPublicResults = !agentInfo.email;
