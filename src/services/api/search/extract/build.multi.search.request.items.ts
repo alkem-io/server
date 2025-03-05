@@ -6,7 +6,7 @@ import {
   QueryDslQueryContainer,
 } from '@elastic/elasticsearch/lib/api/types';
 import { parseSearchCursor } from '../util';
-import { SearchFilterInput } from '../dto/search.filter.input';
+import { SearchFilterInput } from '../dto/inputs';
 import { SearchCategory } from '../search.category';
 import { SearchIndex } from './search.index';
 

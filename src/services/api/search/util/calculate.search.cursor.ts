@@ -1,4 +1,4 @@
-import { ISearchResult } from '../dto';
+import { ISearchResult } from '../dto/results';
 
 /**
  * Calculates the search cursor to be used for paginating search results.

@@ -9,9 +9,9 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { SearchExtractService } from './extract/search.extract.service';
 import { SearchResultService } from './result/search.result.service';
-import { ISearchResults, SearchInput } from './dto';
+import { SearchInput, SearchFilterInput } from './dto/inputs';
+import { ISearchResults } from './dto/results';
 import { validateSearchParameters } from './util';
-import { SearchFilterInput } from './dto/search.filter.input';
 import { SearchCategory } from './search.category';
 
 const DEFAULT_RESULT_SIZE = 4;

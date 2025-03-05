@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISearchResult } from './search.result.entry.interface';
+import { ISearchResult } from './search.result.interface';
 
 @ObjectType()
 export abstract class ISearchCategoryResult {

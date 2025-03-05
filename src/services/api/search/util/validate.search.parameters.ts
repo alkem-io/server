@@ -1,6 +1,6 @@
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { SearchInput } from '../dto';
+import { SearchInput } from '../dto/inputs';
 
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
