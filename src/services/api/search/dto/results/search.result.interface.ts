@@ -1,14 +1,15 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
-import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
-import { ISearchResultSpace } from './search.result.dto.entry.space';
-import { ISearchResultUser } from './search.result.dto.entry.user';
-import { ISearchResultOrganization } from './search.result.dto.entry.organization';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { SearchResultType } from '../search.result.type';
-import { ISearchResultPost } from './search.result.dto.entry.post';
-import { ISearchResultCallout } from './search.result.dto.entry.callout';
+import { BaseException } from '@common/exceptions/base.exception';
+import { AlkemioErrorStatus } from '@common/enums';
+import { SearchResultType } from '../../search.result.type';
+import { ISearchResultSpace } from './search.result.space';
+import { ISearchResultUser } from './search.result.user';
+import { ISearchResultOrganization } from './search.result.organization';
+import { ISearchResultPost } from './search.result.post';
+import { ISearchResultCallout } from './search.result.callout';
 
 @InterfaceType('SearchResult', {
   resolveType(searchResult) {
@@ -29,9 +30,11 @@ import { ISearchResultCallout } from './search.result.dto.entry.callout';
         return ISearchResultCallout;
     }
 
-    throw new RelationshipNotFoundException(
-      `Unable to determine search result type for ${searchResult.id}: ${type}`,
-      LogContext.SEARCH
+    throw new BaseException(
+      'Unable to determine search result for type',
+      LogContext.SEARCH,
+      AlkemioErrorStatus.NOT_SUPPORTED,
+      { id: searchResult.id, type: searchResult.type }
     );
   },
 })
@@ -61,7 +64,7 @@ export abstract class ISearchResult {
     description: 'The type of returned result for this search.',
   })
   type!: SearchResultType;
-
-  // The actual result
+  // used to store the result object
+  // to not be exposed by the API
   result!: IBaseAlkemio;
 }

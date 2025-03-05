@@ -8,7 +8,7 @@ import {
   ISearchResult,
   ISearchResultCallout,
   ISearchResultSpace,
-} from '../dto';
+} from '../dto/results';
 import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
@@ -28,7 +28,7 @@ import {
   ISearchResultOrganization,
   ISearchResultUser,
   ISearchResultPost,
-} from '../dto';
+} from '../dto/results';
 import { User } from '@domain/community/user/user.entity';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
