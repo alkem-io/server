@@ -1,7 +1,6 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
@@ -18,7 +17,6 @@ export class InnovationFlowResolverFields {
     nullable: false,
     description: 'The Profile for this InnovationFlow.',
   })
-  @Profiling.api
   async profile(
     @Parent() innovationFlow: IInnovationFlow,
     @Loader(ProfileLoaderCreator, { parentClassRef: InnovationFlow })
