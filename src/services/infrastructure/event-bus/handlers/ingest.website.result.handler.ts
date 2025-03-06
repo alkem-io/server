@@ -18,7 +18,7 @@ export class IngestWebsiteResultHandler
   async handle(event: IngestWebsiteResult) {
     // this handler should be similar to the ingest body of knowledge one
     // in order to do that I need to add a spearate type in the base Python VC library and wire it here
-    // not ime for that right now but will track it and do it rather soon
+    // no ime for that right now but will track it and do it rather soon
     //
     // for now if an exception occurs in the ingest website service NO response will be recieved by the server
     // hence we can conclude that if we are here the result is a success
