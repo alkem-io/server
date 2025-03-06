@@ -30,7 +30,6 @@ import { User } from './user.entity';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { Identity } from '@ory/kratos-client';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUserSettings } from '../user.settings/user.settings.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -263,12 +262,17 @@ export class UserResolverFields {
     const result: UserAuthenticationResult = {
       method: AuthenticationType.UNKNOWN,
       createdAt: undefined,
+      authenticatedAt: undefined,
     };
     if (isCurrentUser || platformAccessGranted) {
       const identity = await this.kratosService.getIdentityByEmail(user.email);
       if (identity) {
-        result.method = await this.getAuthenticationTypeFromIdentity(identity);
-        result.createdAt = await this.getCreatedAtByEmail(identity);
+        result.method =
+          await this.kratosService.getAuthenticationTypeFromIdentity(identity);
+        result.createdAt =
+          await this.kratosService.getCreatedAtByEmail(identity);
+        result.authenticatedAt =
+          await this.kratosService.getAuthenticatedAt(identity);
       }
     }
 
@@ -298,32 +302,6 @@ export class UserResolverFields {
       `guidance Room: ${guidanceRoom.id}`
     );
     return guidanceRoom;
-  }
-
-  /**
-   * Retrieves the authentication type associated with a given email.
-   *
-   * @param email - The email address to look up the authentication type for.
-   * @returns A promise that resolves to the authentication type.
-   */
-  private async getAuthenticationTypeFromIdentity(
-    identity: Identity
-  ): Promise<AuthenticationType> {
-    if (!identity) return AuthenticationType.UNKNOWN;
-    return this.kratosService.mapAuthenticationType(identity);
-  }
-
-  /**
-   * Retrieves the date at which the account associated with a given email was created.
-   *
-   * @param email - The email address to look up the authentication type for.
-   * @returns A promise that resolves to the authentication type.
-   */
-  private async getCreatedAtByEmail(
-    identity: Identity
-  ): Promise<Date | undefined> {
-    if (!identity || !identity.created_at) return undefined;
-    return new Date(identity.created_at);
   }
 
   private async isAccessGranted(

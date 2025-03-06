@@ -253,7 +253,6 @@ export class KratosService {
    *   console.log('Identity found:', identity);
    * } else {
    *   console.log('Identity not found.');
-   * }
    * ```
    */
   public async getIdentityByEmail(
@@ -425,6 +424,69 @@ export class KratosService {
     }
 
     throw new Error('Authorization header or cookie not provided');
+  }
+
+  /**
+   * Retrieves the date at which the account associated with a given email was last authenticated.
+   *
+   * @param identity - The identity to look up the authentication date for.
+   * @returns A promise that resolves to the date of the last authentication.
+   */
+  public async getAuthenticatedAt(
+    identity: Identity
+  ): Promise<Date | undefined> {
+    try {
+      const { data: sessions } =
+        await this.kratosIdentityClient.listIdentitySessions({
+          id: identity.id,
+          active: true,
+        });
+
+      if (!sessions) return undefined;
+
+      const latestDate = sessions.reduce<Date | undefined>(
+        (latest, session) => {
+          if (session.authenticated_at) {
+            const current = new Date(session.authenticated_at);
+            if (!latest || current.getTime() > latest.getTime()) {
+              return current;
+            }
+          }
+          return latest;
+        },
+        undefined
+      );
+
+      return latestDate;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  /**
+   * Retrieves the date at which the account associated with a given email was created.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  public async getCreatedAtByEmail(
+    identity: Identity
+  ): Promise<Date | undefined> {
+    if (!identity || !identity.created_at) return undefined;
+    return new Date(identity.created_at);
+  }
+
+  /**
+   * Retrieves the authentication type associated with a given email.
+   *
+   * @param email - The email address to look up the authentication type for.
+   * @returns A promise that resolves to the authentication type.
+   */
+  public async getAuthenticationTypeFromIdentity(
+    identity: Identity
+  ): Promise<AuthenticationType> {
+    if (!identity) return AuthenticationType.UNKNOWN;
+    return this.mapAuthenticationType(identity);
   }
 
   /**
