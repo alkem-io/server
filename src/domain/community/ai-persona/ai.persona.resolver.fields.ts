@@ -50,7 +50,7 @@ export class AiPersonaResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('engine', () => AiPersonaEngine, {
-    nullable: true,
+    nullable: false,
     description: 'The engine powering the AiPersona.',
   })
   async engine(@Parent() aiPersona: AiPersona): Promise<AiPersonaEngine> {
