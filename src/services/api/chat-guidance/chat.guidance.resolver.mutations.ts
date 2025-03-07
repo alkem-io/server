@@ -119,25 +119,6 @@ export class ChatGuidanceResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
-    description: 'Resets the interaction with the chat engine.',
-  })
-  @Profiling.api
-  async ingest(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Access interactive guidance: ${agentInfo.email}`
-    );
-
-    if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
-      return false;
-    }
-    return this.chatGuidanceService.ingest();
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
     description: 'User vote if a specific answer is relevant.',
   })
   @Profiling.api

@@ -256,13 +256,16 @@ const getSpaceRoleResultMock = ({
       rowId: parseInt(id),
       nameID: `space-${id}`,
       levelZeroSpaceID: '',
-      profile: {
-        id: `profile-${id}`,
-        displayName: `Space ${id}`,
-        tagline: '',
-        description: '',
-        type: ProfileType.SPACE,
-        ...getEntityMock<Profile>(),
+      about: {
+        id,
+        profile: {
+          id: `profile-${id}`,
+          displayName: `Space ${id}`,
+          tagline: '',
+          description: '',
+          type: ProfileType.SPACE_ABOUT,
+          ...getEntityMock<Profile>(),
+        },
       },
       type: SpaceType.SPACE,
       level: SpaceLevel.L0,

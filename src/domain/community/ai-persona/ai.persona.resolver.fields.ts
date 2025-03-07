@@ -11,6 +11,7 @@ import { IAiPersona } from './ai.persona.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Resolver(() => IAiPersona)
 export class AiPersonaResolverFields {
@@ -43,6 +44,17 @@ export class AiPersonaResolverFields {
     @Parent() aiPersona: AiPersona
   ): Promise<AiPersonaBodyOfKnowledgeType> {
     return await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeType(
+      aiPersona.aiPersonaServiceID
+    );
+  }
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('engine', () => AiPersonaEngine, {
+    nullable: false,
+    description: 'The engine powering the AiPersona.',
+  })
+  async engine(@Parent() aiPersona: AiPersona): Promise<AiPersonaEngine> {
+    return await this.aiServerAdapter.getPersonaServiceEngine(
       aiPersona.aiPersonaServiceID
     );
   }

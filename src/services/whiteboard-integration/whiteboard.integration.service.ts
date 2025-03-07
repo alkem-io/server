@@ -17,7 +17,6 @@ import {
   WhoInputData,
 } from './inputs';
 import { ContributionReporterService } from '../external/elasticsearch/contribution-reporter';
-import { minCollaboratorsInRoom } from '../external/excalidraw-backend/types/defaults';
 import { InfoOutputData } from './outputs/info.output.data';
 import { AlkemioConfig } from '@src/types';
 import {
@@ -103,7 +102,7 @@ export class WhiteboardIntegrationService {
       whiteboardId
     ))
       ? this.maxCollaboratorsInRoom
-      : minCollaboratorsInRoom;
+      : 1;
 
     return { read, update, maxCollaborators };
   }

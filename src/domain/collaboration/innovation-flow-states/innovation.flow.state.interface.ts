@@ -11,7 +11,7 @@ export abstract class IInnovationFlowState {
 
   @Field(() => Markdown, {
     nullable: false,
-    description: 'The explation text to clarify the state.',
+    description: 'The explanation text to clarify the state.',
   })
   description!: string;
 }

@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/ban-types */
-
-import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { UpdateSpaceInput } from '@domain/space/space/dto/space.dto.update';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
@@ -18,7 +16,6 @@ import {
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
-import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import {
   CreateTagsetOnProfileInput,
@@ -30,7 +27,6 @@ import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.se
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
 import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
-import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
@@ -94,6 +90,8 @@ import { UpdateVirtualContributorSettingsEntityInput } from '@domain/community/v
 import { UpdateVirtualContributorSettingsInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.update.settings';
 import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/virtual-contributor-settings/dto/virtual.contributor.settings.privacy.dto.update';
 import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
+import { CreateSpaceAboutInput } from '@domain/space/space.about';
+import { UpdateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -121,8 +119,7 @@ export class BaseHandler extends AbstractHandler {
       CreateCalloutFramingInput,
       CreateCalloutContributionPolicyInput,
       CreateCalloutContributionDefaultsInput,
-      CreateActorGroupInput,
-      CreateActorInput,
+      CreateSpaceAboutInput,
       CreateContributionOnCalloutInput,
       CreateCollaborationInput,
       CreateCollaborationOnSpaceInput,
@@ -137,7 +134,7 @@ export class BaseHandler extends AbstractHandler {
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
       DeleteDocumentInput,
-      UpdateActorInput,
+      UpdateSpaceAboutInput,
       UpdatePostInput,
       UpdateDocumentInput,
       UpdateCalloutFramingInput,
@@ -157,7 +154,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateProfileInput,
       UpdateWhiteboardEntityInput,
       UpdateDiscussionInput,
-      UpdateEcosystemModelInput,
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
       UpdateOrganizationSettingsInput,

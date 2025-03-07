@@ -29,14 +29,6 @@ export class InnovationFlowResolverFields {
     return loader.load(innovationFlow.id);
   }
 
-  @ResolveField('states', () => [IInnovationFlowState], {
-    nullable: false,
-    description: 'The set of States in use in this Flow.',
-  })
-  states(@Parent() flow: IInnovationFlow): IInnovationFlowState[] {
-    return this.innovationFlowService.getStates(flow);
-  }
-
   @ResolveField('currentState', () => IInnovationFlowState, {
     nullable: false,
     description: 'The currently selected state for this Flow.',

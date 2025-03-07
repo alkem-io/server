@@ -9,6 +9,7 @@ import {
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { LogContext } from '@common/enums';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Injectable()
 export class AiServerAdapter {
@@ -42,6 +43,14 @@ export class AiServerAdapter {
     const aiPersonaService =
       await this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
     return aiPersonaService.bodyOfKnowledgeType;
+  }
+
+  async getPersonaServiceEngine(
+    personaServiceId: string
+  ): Promise<AiPersonaEngine> {
+    const aiPersonaService =
+      await this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
+    return aiPersonaService.engine;
   }
 
   async getPersonaServiceBodyOfKnowledgeID(

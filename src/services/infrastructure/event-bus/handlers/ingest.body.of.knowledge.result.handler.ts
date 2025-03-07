@@ -1,10 +1,10 @@
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
+import { IngestBodyOfKnowledgeResult } from '../messages/ingest.body.of.knowledge.result.event';
 import {
   ErrorCode,
   IngestionResult,
   IngestionPurpose,
-  IngestBodyOfKnowledgeResult,
-} from '../messages/ingest.body.of.knowledge.result.event';
+} from '../messages/types';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, LoggerService } from '@nestjs/common';

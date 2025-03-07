@@ -46,7 +46,9 @@ export class InnovationFlowService {
     storageAggregator: IStorageAggregator,
     isTemplate: boolean = false
   ): Promise<IInnovationFlow> {
-    const innovationFlow: IInnovationFlow = new InnovationFlow();
+    const innovationFlow: IInnovationFlow = InnovationFlow.create({
+      settings: innovationFlowData.settings,
+    });
     innovationFlow.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.INNOVATION_FLOW
     );
@@ -93,12 +95,10 @@ export class InnovationFlowService {
       [VisualType.CARD]
     );
 
-    const convertedStates =
+    innovationFlow.states =
       this.innovationFlowStatesService.convertInputsToStates(
         innovationFlowData.states
       );
-    innovationFlow.states =
-      this.innovationFlowStatesService.serializeStates(convertedStates);
 
     return innovationFlow;
   }
@@ -120,7 +120,8 @@ export class InnovationFlowService {
 
     if (innovationFlowData.states) {
       this.innovationFlowStatesService.validateDefinition(
-        innovationFlowData.states
+        innovationFlowData.states,
+        innovationFlow.settings
       );
       const newStateNames = innovationFlowData.states.map(
         state => state.displayName
@@ -137,14 +138,11 @@ export class InnovationFlowService {
         };
         await this.profileService.updateSelectTagsetDefinition(updateData);
       }
-
-      const convertedStates =
+      // serialize the states
+      innovationFlow.states =
         this.innovationFlowStatesService.convertInputsToStates(
           innovationFlowData.states
         );
-      // serialize the states
-      innovationFlow.states =
-        this.innovationFlowStatesService.serializeStates(convertedStates);
     }
 
     if (innovationFlowData.profileData) {
@@ -159,7 +157,7 @@ export class InnovationFlowService {
 
   public async updateInnovationFlowStates(
     innovationFlowID: string,
-    statesStr: string
+    newStates: IInnovationFlowState[]
   ) {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
@@ -167,8 +165,6 @@ export class InnovationFlowService {
         relations: { profile: true },
       }
     );
-    const newStates = this.innovationFlowStatesService.getStates(statesStr);
-
     const newStateNames = newStates.map(state => state.displayName);
 
     const defaultSelectedState = newStateNames[0]; // default to first in the list
@@ -181,8 +177,7 @@ export class InnovationFlowService {
     await this.profileService.updateSelectTagsetDefinition(updateData);
 
     // serialize the states
-    innovationFlow.states =
-      this.innovationFlowStatesService.serializeStates(newStates);
+    innovationFlow.states = newStates;
 
     return await this.save(innovationFlow);
   }
@@ -238,11 +233,9 @@ export class InnovationFlowService {
         relations: { profile: true },
       }
     );
-    const states = this.innovationFlowStatesService.getStates(
-      innovationFlow.states
-    );
+
     // First update the states definition
-    const stateToUpdate = states.find(
+    const stateToUpdate = innovationFlow.states.find(
       s => s.displayName === updateData.stateDisplayName
     );
     if (!stateToUpdate) {
@@ -256,7 +249,7 @@ export class InnovationFlowService {
       );
     }
     const newStates: IInnovationFlowState[] = [];
-    for (const state of states) {
+    for (const state of innovationFlow.states) {
       if (state.displayName === updateData.stateDisplayName) {
         state.displayName = updateData.stateUpdatedData.displayName;
         state.description = updateData.stateUpdatedData.description || '';
@@ -264,10 +257,12 @@ export class InnovationFlowService {
       newStates.push(state);
     }
     // Check that the new states setup is valid
-    this.innovationFlowStatesService.validateDefinition(newStates);
+    this.innovationFlowStatesService.validateDefinition(
+      newStates,
+      innovationFlow.settings
+    );
 
-    innovationFlow.states =
-      this.innovationFlowStatesService.serializeStates(newStates);
+    innovationFlow.states = newStates;
 
     // Save with new states before updating selected values
     await this.innovationFlowRepository.save(innovationFlow);
@@ -361,14 +356,6 @@ export class InnovationFlowService {
     return innovationFlow.profile;
   }
 
-  public getStates(
-    innovationFlowInput: IInnovationFlow
-  ): IInnovationFlowState[] {
-    return this.innovationFlowStatesService.getStates(
-      innovationFlowInput.states
-    );
-  }
-
   public async getCurrentState(
     innovationFlowInput: IInnovationFlow
   ): Promise<IInnovationFlowState> {
@@ -390,8 +377,7 @@ export class InnovationFlowService {
       );
     }
     const selectedStateDisplayName = tags[0];
-    const states = this.getStates(innovationFlow);
-    const currentState = states.find(
+    const currentState = innovationFlow.states.find(
       s => s.displayName === selectedStateDisplayName
     );
     if (!currentState) {

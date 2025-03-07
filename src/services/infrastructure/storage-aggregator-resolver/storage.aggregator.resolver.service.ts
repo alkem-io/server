@@ -101,7 +101,9 @@ export class StorageAggregatorResolverService {
         },
       },
       relations: {
-        profile: true,
+        about: {
+          profile: true,
+        },
       },
     });
     if (!space) {

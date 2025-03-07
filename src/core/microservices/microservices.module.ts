@@ -11,15 +11,11 @@ import {
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   AUTH_RESET_SERVICE,
-  EXCALIDRAW_PUBSUB_PROVIDER,
   SUBSCRIPTION_SUBSPACE_CREATED,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
-import {
-  RABBITMQ_EXCHANGE_EXCALIDRAW_EVENTS,
-  RABBITMQ_EXCHANGE_NAME_DIRECT,
-} from '@src/common/constants';
+import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
 
 import { clientProxyFactory } from './client.proxy.factory';
@@ -62,13 +58,6 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     )
 );
 
-const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
-  EXCALIDRAW_PUBSUB_PROVIDER,
-  MessagingQueue.EXCALIDRAW_EVENTS,
-  RABBITMQ_EXCHANGE_EXCALIDRAW_EVENTS,
-  trackingUUID
-);
-
 @Global()
 @Module({
   imports: [ConfigModule],
@@ -95,7 +84,6 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
       useFactory: clientProxyFactory(MessagingQueue.AUTH_RESET),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
-    excalidrawPubSubFactoryProvider,
   ],
   exports: [
     ...subscriptionConfig.map(x => x.provide),
@@ -103,7 +91,6 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
     WALLET_MANAGEMENT_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     AUTH_RESET_SERVICE,
-    EXCALIDRAW_PUBSUB_PROVIDER,
   ],
 })
 export class MicroservicesModule {}

@@ -1,10 +1,8 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { INameable } from '@domain/common/entity/nameable-entity';
 import { SpaceType } from '@common/enums/space.type';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { ICommunity } from '@domain/community/community';
-import { IContext } from '@domain/context/context/context.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '../account/account.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -12,10 +10,22 @@ import { ITemplatesManager } from '@domain/template/templates-manager';
 import { ILicense } from '@domain/common/license/license.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { ISpaceAbout } from '../space.about/space.about.interface';
 
 @ObjectType('Space')
-export class ISpace extends INameable {
+export class ISpace extends IAuthorizable {
   rowId!: number;
+
+  @Field(() => NameID, {
+    nullable: false,
+    description:
+      'A name identifier of the entity, unique within a given scope.',
+  })
+  nameID!: string;
+
+  about!: ISpaceAbout;
 
   subspaces?: ISpace[];
   parentSpace?: ISpace;
@@ -44,7 +54,6 @@ export class ISpace extends INameable {
 
   collaboration?: ICollaboration;
 
-  context?: IContext;
   community?: ICommunity;
 
   settings!: ISpaceSettings;
