@@ -1,5 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
+import { SearchFilterInput } from './search.filter.input';
 
 @InputType()
 export class SearchInput {
@@ -16,17 +17,16 @@ export class SearchInput {
   })
   tagsetNames?: string[];
 
-  @Field(() => [String], {
-    nullable: true,
-    description:
-      'Restrict the search to only the specified entity types. Values allowed: space, subspace, user, group, organization, callout. Default is all.',
-  })
-  typesFilter?: string[];
-
   @Field(() => UUID, {
     nullable: true,
     description:
       'Restrict the search to only the specified Space. Default is all Spaces.',
   })
   searchInSpaceFilter?: string;
+
+  @Field(() => [SearchFilterInput], {
+    nullable: true,
+    description: 'Return results that satisfy these conditions.',
+  })
+  filters?: SearchFilterInput[];
 }

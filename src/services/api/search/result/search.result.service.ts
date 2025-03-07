@@ -8,7 +8,7 @@ import {
   ISearchResult,
   ISearchResultCallout,
   ISearchResultSpace,
-} from '../dto';
+} from '../dto/results';
 import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
@@ -28,12 +28,13 @@ import {
   ISearchResultOrganization,
   ISearchResultUser,
   ISearchResultPost,
-} from '../dto';
-import { SearchEntityTypes } from '@services/api/search/search.entity.types';
+} from '../dto/results';
 import { User } from '@domain/community/user/user.entity';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { SearchResultType } from '../search.result.type';
+import { calculateSearchCursor } from '@services/api/search/util';
 
 type PostParents = {
   post: Post;
@@ -68,7 +69,7 @@ export class SearchResultService {
     spaceId?: string
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
-      Partial<SearchEntityTypes>,
+      Partial<SearchResultType>,
       ISearchResult[]
     >;
     // authorize entities with requester and enrich with data
@@ -96,30 +97,16 @@ export class SearchResultService {
         agentInfo
       ),
     ]);
-    // todo: count - https://github.com/alkem-io/server/issues/3700
-    const contributorResults = orderBy(
-      [...users, ...organizations],
-      'score',
-      'desc'
-    );
-    const contributionResults = orderBy(posts, 'score', 'desc');
-    const journeyResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
-    const calloutResults = orderBy(
-      [...callouts, ...calloutsOfWhiteboards],
-      'score',
-      'desc'
-    );
+    const contributorResults = buildResults(users, organizations);
+    const contributionResults = buildResults(posts);
+    const spaceResults = buildResults(spaces, subspaces);
+    const calloutResults = buildResults(callouts, calloutsOfWhiteboards);
 
     return {
       contributorResults,
-      contributorResultsCount: -1,
       contributionResults,
-      contributionResultsCount: -1,
-      journeyResults,
-      journeyResultsCount: -1,
-      groupResults: [],
+      spaceResults,
       calloutResults,
-      calloutResultsCount: -1,
     };
   }
 
@@ -476,7 +463,7 @@ export class SearchResultService {
           ...rawSearchResult,
           // todo remove when whiteboard is a separate search result
           // patch this so it displays the search result as a callout
-          type: SearchEntityTypes.CALLOUT,
+          type: SearchResultType.CALLOUT,
           callout: parent.callout,
           space: parent.space,
         };
@@ -835,3 +822,13 @@ export class SearchResultService {
     return orgsInSpace;
   }
 }
+
+const buildResults = (...results: ISearchResult[][] | ISearchResult[]) => {
+  const flatResults = results.flat(1);
+  const resultsRanked = orderBy(flatResults, 'score', 'desc');
+  const cursor = calculateSearchCursor(resultsRanked);
+  // todo: count - https://github.com/alkem-io/server/issues/3700
+  const total = -1;
+
+  return { results: resultsRanked, cursor, total };
+};
