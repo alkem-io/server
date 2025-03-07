@@ -61,6 +61,7 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RoleSetCacheService } from './role.set.service.cache';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 @Injectable()
 export class RoleSetService {
@@ -75,6 +76,7 @@ export class RoleSetService {
     private contributorService: ContributorService,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
+    private spaceLookupService: SpaceLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private communityResolverService: CommunityResolverService,
     private roleSetEventsService: RoleSetEventsService,
@@ -1039,7 +1041,8 @@ export class RoleSetService {
     roleSet: IRoleSet,
     roleType: RoleName,
     userID: string,
-    validatePolicyLimits = true
+    validatePolicyLimits = true,
+    fullyRevokeMembership: boolean = false
   ): Promise<IUser> {
     const { user, agent } =
       await this.userLookupService.getUserAndAgent(userID);
@@ -1049,7 +1052,8 @@ export class RoleSetService {
       roleType,
       agent,
       RoleSetContributorType.USER,
-      validatePolicyLimits
+      validatePolicyLimits,
+      fullyRevokeMembership
     );
 
     switch (roleSet.type) {
@@ -1362,7 +1366,8 @@ export class RoleSetService {
     roleType: RoleName,
     agent: IAgent,
     contributorType: RoleSetContributorType,
-    validatePolicyLimits: boolean
+    validatePolicyLimits: boolean,
+    fullyRevokeMembership: boolean = false
   ): Promise<IAgent> {
     if (validatePolicyLimits) {
       await this.validateContributorPolicyLimits(
@@ -1375,11 +1380,45 @@ export class RoleSetService {
 
     const roleCredential = await this.getCredentialForRole(roleSet, roleType);
 
-    return await this.agentService.revokeCredential({
+    let updatedAgent: IAgent = await this.agentService.revokeCredential({
       agentID: agent.id,
       type: roleCredential.type,
       resourceID: roleCredential.resourceID,
     });
+
+    if (
+      fullyRevokeMembership &&
+      roleCredential.type === AuthorizationCredential.SPACE_MEMBER
+    ) {
+      const subspaceIDs = await this.getAllSubspaceIds(
+        roleCredential.resourceID
+      );
+      for (const subspaceID of subspaceIDs) {
+        updatedAgent = await this.agentService.revokeCredential({
+          agentID: agent.id,
+          type: roleCredential.type,
+          resourceID: subspaceID,
+        });
+      }
+    }
+
+    return updatedAgent;
+  }
+
+  private async getAllSubspaceIds(spaceId: string): Promise<string[]> {
+    const spaceHierarchy =
+      await this.spaceLookupService.getFullSpaceHierarchy(spaceId);
+    const subspaces = spaceHierarchy?.subspaces || [];
+    return this.flattenSubspaces(subspaces);
+  }
+
+  private flattenSubspaces(
+    subspaces: { id: string; subspaces?: any[] }[]
+  ): string[] {
+    return subspaces.flatMap(subspace => [
+      subspace.id,
+      ...(subspace.subspaces ? this.flattenSubspaces(subspace.subspaces) : []),
+    ]);
   }
 
   public async isMember(agent: IAgent, roleSet: IRoleSet): Promise<boolean> {
