@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { Module } from '@nestjs/common';
 import {
   RABBITMQ_EXCHANGE_NAME_DIRECT,
@@ -8,6 +7,7 @@ import { subscriptionFactoryProvider } from '@core/microservices/subscription.fa
 import { SubscriptionPublishService } from './subscription.publish.service';
 import { SubscriptionReadService } from './subscription.read.service';
 import { MessagingQueue } from '@common/enums/messaging.queue';
+import { APP_ID_PROVIDER } from '@common/app.id.provider';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -16,14 +16,12 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
 ];
 
-const trackingUUID = randomUUID();
 const subscriptionFactoryProviders = subscriptionConfig.map(
   ({ provide, queueName }) =>
     subscriptionFactoryProvider(
       provide,
       queueName,
-      RABBITMQ_EXCHANGE_NAME_DIRECT,
-      trackingUUID
+      RABBITMQ_EXCHANGE_NAME_DIRECT
     )
 );
 // having the read and write service under one module is done in order
@@ -37,6 +35,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     ...subscriptionFactoryProviders,
     SubscriptionPublishService,
     SubscriptionReadService,
+    APP_ID_PROVIDER,
   ],
   exports: [SubscriptionPublishService, SubscriptionReadService],
 })

@@ -10,6 +10,8 @@ export const SUBSCRIPTION_SUBSPACE_CREATED =
   'alkemio-subscriptions-subspace-created';
 export const SUBSCRIPTION_ACTIVITY_CREATED =
   'alkemio-subscriptions-activity-created';
+export const SUBSCRIPTION_NOTIFICATION_RECEIVED =
+  'alkemio-subscriptions-notification-received';
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
