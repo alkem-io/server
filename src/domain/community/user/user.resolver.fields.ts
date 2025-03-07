@@ -269,8 +269,7 @@ export class UserResolverFields {
       if (identity) {
         result.method =
           await this.kratosService.getAuthenticationTypeFromIdentity(identity);
-        result.createdAt =
-          await this.kratosService.getCreatedAtByEmail(identity);
+        result.createdAt = await this.kratosService.getCreatedAt(identity);
         result.authenticatedAt =
           await this.kratosService.getAuthenticatedAt(identity);
       }

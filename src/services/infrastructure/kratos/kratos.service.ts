@@ -466,12 +466,10 @@ export class KratosService {
   /**
    * Retrieves the date at which the account associated with a given email was created.
    *
-   * @param email - The email address to look up the authentication type for.
-   * @returns A promise that resolves to the authentication type.
+   * @param identity - The identity to look up the creation date for.
+   * @returns A promise that resolves to the creation date.
    */
-  public async getCreatedAtByEmail(
-    identity: Identity
-  ): Promise<Date | undefined> {
+  public async getCreatedAt(identity: Identity): Promise<Date | undefined> {
     if (!identity || !identity.created_at) return undefined;
     return new Date(identity.created_at);
   }
