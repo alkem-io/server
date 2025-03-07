@@ -357,6 +357,8 @@ microservices:
       exchange: ${RABBITMQ_EVENT_BUS_EXCHANGE}:event-bus
       ingest_body_of_knowledge_queue: ${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_QUEUE}:virtual-contributor-ingest-body-of-knowledge
       ingest_body_of_knowledge_result_queue: ${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_RESULT_QUEUE}:virtual-contributor-ingest-body-of-knowledge-result
+      ingest_website_queue: ${RABBITMQ_INGEST_WEBSITE_QUEUE}:virtual-contributor-ingest-website
+      ingest_website_result_queue: ${RABBITMQ_INGEST_WEBSITE_RESULT_QUEUE}:virtual-contributor-ingest-website-result
       invoke_engine_result: ${RABBITMQ_RESULT_QUEUE}:virtual-contributor-invoke-engine-result
       invoke_engine_expert: ${RABBITMQ_INVOKE_ENGINE_EXPERT}:virtual-contributor-engine-expert
       invoke_engine_guidance: ${RABBITMQ_INVOKE_ENGINE_GUIDANCE}:virtual-contributor-engine-guidance
@@ -483,6 +485,7 @@ platform:
   vector_db:
     host: ${VECTOR_DB_HOST}:localhost
     port: ${VECTOR_DB_PORT}:8765
+    credentials: ${VECTOR_DB_CREDENTIALS}:root\:toor
 
   virtual_contributors:
     history_length: ${VC_HISTORY_LENGTH}:10

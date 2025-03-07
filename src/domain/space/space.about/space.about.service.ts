@@ -86,12 +86,10 @@ export class SpaceAboutService {
         profile: true,
       },
     });
-    if (spaceAboutUpdateData.why) {
-      spaceAbout.why = spaceAboutUpdateData.why;
-    }
-    if (spaceAboutUpdateData.who) {
-      spaceAbout.who = spaceAboutUpdateData.who;
-    }
+
+    // preserve the why and who if not provided but update with empty string
+    spaceAbout.why = spaceAboutUpdateData.why ?? spaceAbout.why;
+    spaceAbout.who = spaceAboutUpdateData.who ?? spaceAbout.who;
 
     if (spaceAboutUpdateData.profile) {
       spaceAbout.profile = await this.profileService.updateProfile(
