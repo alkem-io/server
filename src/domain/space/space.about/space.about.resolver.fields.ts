@@ -16,6 +16,7 @@ import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { SpaceAboutMembershipService } from '../space.about.membership/space.about.membership.service';
 import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {
@@ -56,6 +57,18 @@ export class SpaceAboutResolverFields {
   })
   async provider(@Parent() spaceAbout: ISpaceAbout): Promise<IContributor> {
     return await this.spaceLookupService.getProvider(spaceAbout);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('isContentPublic', () => Boolean, {
+    nullable: false,
+    description: 'Is the content of this Space visible to non-Members?.',
+  })
+  async isContentPublic(@Parent() spaceAbout: ISpaceAbout): Promise<boolean> {
+    const space = await this.spaceLookupService.getSpaceForSpaceAboutOrFail(
+      spaceAbout.id
+    );
+    return space.settings.privacy.mode === SpacePrivacyMode.PUBLIC;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

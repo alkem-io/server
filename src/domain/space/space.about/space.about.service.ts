@@ -140,7 +140,7 @@ export class SpaceAboutService {
 
   public async getCommunityRoleSet(spaceAboutId: string): Promise<IRoleSet> {
     const subspaceWithCommunityRoleSet =
-      await this.spaceLookupService.getSpaceForSpaceAboutOrFile(spaceAboutId, {
+      await this.spaceLookupService.getSpaceForSpaceAboutOrFail(spaceAboutId, {
         relations: {
           community: {
             roleSet: true,

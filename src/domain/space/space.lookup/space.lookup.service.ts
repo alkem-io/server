@@ -45,7 +45,7 @@ export class SpaceLookupService {
     return space;
   }
 
-  public async getSpaceForSpaceAboutOrFile(
+  public async getSpaceForSpaceAboutOrFail(
     spaceAboutID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | never> {
