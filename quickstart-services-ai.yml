@@ -407,7 +407,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor-engine-expert:v0.11.0
+    image: alkemio/virtual-contributor-engine-expert:v0.11.1
     platform: linux/x86_64
     restart: always
     volumes:
@@ -502,7 +502,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_ingest_space
     hostname: virtual-contributor-ingest-space
-    image: alkemio/virtual-contributor-ingest-space:v0.12.0
+    image: alkemio/virtual-contributor-ingest-space:v0.13.0
     platform: linux/x86_64
     restart: always
     volumes:
