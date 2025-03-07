@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class InnovationFlowTagsets1740738523228 implements MigrationInterface {
+export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
   private TAGSET_GROUP = 'callout-group';
   private TAGSET_FLOW = 'flow-state';
   private LEVEL_ZERO_FLOW_STATES = [
