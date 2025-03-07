@@ -483,7 +483,10 @@ export class KratosService {
   public async getAuthenticationTypeFromIdentity(
     identity: Identity
   ): Promise<AuthenticationType> {
-    if (!identity) return AuthenticationType.UNKNOWN;
+    if (!identity) {
+      return AuthenticationType.UNKNOWN;
+    }
+
     return this.mapAuthenticationType(identity);
   }
 
