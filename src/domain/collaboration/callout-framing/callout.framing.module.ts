@@ -9,12 +9,14 @@ import { CalloutFramingResolverFields } from './callout.framing.resolver.fields'
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
+    TagsetModule,
     WhiteboardModule,
     NamingModule,
     TypeOrmModule.forFeature([CalloutFraming]),

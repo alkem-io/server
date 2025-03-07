@@ -6,6 +6,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetTemplate } from '../tagset-template/tagset.template.entity';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ENUM_LENGTH } from '@common/constants';
+import { Classification } from '../classification/classification.entity';
 
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
@@ -31,6 +32,13 @@ export class Tagset extends AuthorizableEntity implements ITagset {
     onDelete: 'CASCADE',
   })
   profile?: Profile;
+
+  @ManyToOne(() => Classification, classification => classification.tagsets, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  classification?: Classification;
 
   @ManyToOne(() => TagsetTemplate, tagsetTemplate => tagsetTemplate.tagsets, {
     eager: false,

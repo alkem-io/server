@@ -14,8 +14,6 @@ import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICallout } from '@domain/collaboration/callout';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceType } from '@common/enums/space.type';
 import { AccountService } from '@domain/space/account/account.service';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -364,10 +362,6 @@ export class ConversionService {
     const challengeCollaboration = subspace.collaboration;
     subspace.collaboration = opportunityCollaboration;
     subsubspace.collaboration = challengeCollaboration;
-    // Update display locations for callouts to use space locations
-    this.updateChallengeCalloutGroups(
-      subspace.collaboration.calloutsSet?.callouts
-    );
 
     // Swap the storage aggregators
     // Note: need to use the opportunity storage aggregator as that is what all the profiles
@@ -429,65 +423,6 @@ export class ConversionService {
           `Unable to locate all child entities on callout: ${callout.id}`,
           LogContext.CONVERSION
         );
-      }
-
-      const locationTagset = callout.framing.profile.tagsets.find(
-        t => t.name === TagsetReservedName.CALLOUT_GROUP
-      );
-      if (!locationTagset || locationTagset.tags.length !== 1) {
-        throw new EntityNotInitializedException(
-          `Unable to locate all display location tagset on callout: ${callout.id}`,
-          LogContext.CONVERSION
-        );
-      }
-      const location = locationTagset.tags[0];
-      switch (location) {
-        case CalloutGroupName.SUBSPACES:
-          locationTagset.tags = [CalloutGroupName.SUBSPACES];
-          break;
-        case CalloutGroupName.CONTRIBUTE:
-          locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
-          break;
-      }
-    }
-  }
-
-  private updateChallengeCalloutGroups(callouts: ICallout[] | undefined): void {
-    if (!callouts) {
-      throw new EntityNotInitializedException(
-        'Callouts not defined',
-        LogContext.CONVERSION
-      );
-    }
-    for (const callout of callouts) {
-      if (
-        !callout.framing ||
-        !callout.framing.profile ||
-        !callout.framing.profile.tagsets
-      ) {
-        throw new EntityNotInitializedException(
-          `Unable to locate all child entities on challenge callout: ${callout.id}`,
-          LogContext.CONVERSION
-        );
-      }
-
-      const locationTagset = callout.framing.profile.tagsets.find(
-        t => t.name === TagsetReservedName.CALLOUT_GROUP
-      );
-      if (!locationTagset || locationTagset.tags.length !== 1) {
-        throw new EntityNotInitializedException(
-          `Unable to locate all display location tagset on callout: ${callout.id}`,
-          LogContext.CONVERSION
-        );
-      }
-      const location = locationTagset.tags[0];
-      switch (location) {
-        case CalloutGroupName.CONTRIBUTE:
-          locationTagset.tags = [CalloutGroupName.CONTRIBUTE];
-          break;
-        case CalloutGroupName.CONTRIBUTE:
-          locationTagset.tags = [CalloutGroupName.CONTRIBUTE];
-          break;
       }
     }
   }

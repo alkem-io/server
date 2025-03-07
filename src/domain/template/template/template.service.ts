@@ -31,7 +31,6 @@ import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TemplateDefault } from '../template-default/template.default.entity';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { UpdateTemplateFromCollaborationInput } from './dto/template.dto.update.from.collaboration';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
@@ -127,19 +126,7 @@ export class TemplateService {
         if (!collaborationData.calloutsSetData.calloutsData) {
           collaborationData.calloutsSetData.calloutsData = [];
         }
-        if (
-          !collaborationData.calloutsSetData.calloutGroups ||
-          !collaborationData.calloutsSetData.defaultCalloutGroupName
-        ) {
-          collaborationData.calloutsSetData.defaultCalloutGroupName =
-            CalloutGroupName.HOME;
-          collaborationData.calloutsSetData.calloutGroups = [
-            {
-              displayName: CalloutGroupName.HOME,
-              description: 'Home Callout Group',
-            },
-          ];
-        }
+
         if (!collaborationData.innovationFlowData) {
           collaborationData.innovationFlowData = {
             states: [
@@ -401,16 +388,11 @@ export class TemplateService {
       );
     }
 
-    const validGroupNames =
-      targetCollaboration.calloutsSet?.tagsetTemplateSet?.tagsetTemplates.find(
-        tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
-      )?.allowedValues;
     const validFlowStates = targetCollaboration.innovationFlow.states?.map(
       state => state.displayName
     );
 
-    this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
-      validGroupNames ?? [],
+    this.calloutsSetService.moveCalloutsToDefaultFlowState(
       validFlowStates ?? [],
       targetCollaboration.calloutsSet?.callouts
     );

@@ -3,6 +3,7 @@ export * from './profile/profile.location.loader.creator';
 export * from './profile/profile.storage.bucket.loader.creator';
 export * from './profile/profile.references.loader.creator';
 export * from './profile/profile.tagsets.loader.creator';
+export * from './classification.tagsets.loader.creator';
 
 export * from './callout-framing/callout.framing.whiteboard.loader';
 

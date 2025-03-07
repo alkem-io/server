@@ -25,11 +25,8 @@ import { ILocation, LocationService } from '@domain/common/location';
 import { VisualType } from '@common/enums/visual.type';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
-import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
-import { UpdateProfileSelectTagsetDefinitionInput } from './dto/profile.dto.update.select.tagset.definition';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.select.tagset.value';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateVisualOnProfileInput } from './dto/profile.dto.create.visual';
 import { CreateReferenceInput } from '../reference';
@@ -42,7 +39,6 @@ export class ProfileService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageBucketService: StorageBucketService,
     private tagsetService: TagsetService,
-    private tagsetTemplateService: TagsetTemplateService,
     private referenceService: ReferenceService,
     private visualService: VisualService,
     private locationService: LocationService,
@@ -443,44 +439,6 @@ export class ProfileService {
     );
   }
 
-  async updateSelectTagsetDefinition(
-    updateData: UpdateProfileSelectTagsetDefinitionInput
-  ): Promise<ITagset> {
-    const tagset = await this.getTagset(
-      updateData.profileID,
-      updateData.tagsetName
-    );
-
-    const tagsetTemplate = await this.tagsetService.getTagsetTemplateOrFail(
-      tagset.id,
-      true
-    );
-    await this.tagsetTemplateService.updateTagsetTemplateDefinition(
-      tagsetTemplate,
-      {
-        allowedValues: updateData.allowedValues,
-        defaultSelectedValue: updateData.defaultSelectedValue,
-        newSelectedValue: updateData.newSelectedValue,
-        oldSelectedValue: updateData.oldSelectedValue,
-      }
-    );
-
-    return tagset;
-  }
-
-  async updateSelectTagsetValue(
-    updateData: UpdateProfileSelectTagsetValueInput
-  ): Promise<ITagset> {
-    const tagset = await this.getTagset(
-      updateData.profileID,
-      updateData.tagsetName
-    );
-    return await this.tagsetService.updateTagset({
-      ID: tagset.id,
-      tags: [updateData.selectedValue],
-    });
-  }
-
   public convertTagsetTemplatesToCreateTagsetInput(
     tagsetTemplates: ITagsetTemplate[]
   ): CreateTagsetInput[] {
@@ -495,29 +453,6 @@ export class ProfileService {
           : undefined,
       };
       result.push(input);
-    }
-    return result;
-  }
-
-  // Note: purovided data has priority when it comes to tags
-  public updateProfileTagsetInputs(
-    tagsetInputDtata: CreateTagsetInput[] | undefined,
-    additionalTagsetInputs: CreateTagsetInput[]
-  ): CreateTagsetInput[] {
-    const result: CreateTagsetInput[] = [...additionalTagsetInputs];
-
-    if (!tagsetInputDtata) return result;
-
-    for (const tagsetInput of tagsetInputDtata) {
-      const existingInput = result.find(t => t.name === tagsetInput.name);
-      if (existingInput) {
-        // Do not change type, name etc - only tags
-        if (tagsetInput.tags) {
-          existingInput.tags = tagsetInput.tags;
-        }
-      } else {
-        result.push(tagsetInput);
-      }
     }
     return result;
   }
