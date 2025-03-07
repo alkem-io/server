@@ -44,6 +44,7 @@ import { RoomControllerService } from '@services/room-integration/room.controlle
 import { IMessage } from '@domain/communication/message/message.interface';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
 
 @Injectable()
 export class AiServerService {
@@ -110,7 +111,7 @@ export class AiServerService {
       LogContext.AI_SERVER
     );
 
-    await this.ensureSpaceBoNIsIngested(aiPersonaService);
+    await this.ensureBoNIsIngested(aiPersonaService);
     return true;
   }
 
@@ -160,13 +161,28 @@ export class AiServerService {
     }
   }
 
-  public async ensureSpaceBoNIsIngested(
-    persona: IAiPersonaService
-  ): Promise<void> {
+  public async ensureBoNIsIngested(persona: IAiPersonaService): Promise<void> {
     this.logger.verbose?.(
       `AI Persona service ${persona.id} found for BOK refresh`,
       LogContext.AI_SERVER
     );
+    if (persona.engine === AiPersonaEngine.GUIDANCE) {
+      [
+        'https://alkem.io/documentation',
+        'https://www.alkemio.org',
+        'https://welcome.alkem.io',
+      ].map(url => {
+        this.eventBus.publish(
+          new IngestWebsite(
+            url,
+            AiPersonaBodyOfKnowledgeType.WEBSITE,
+            IngestionPurpose.KNOWLEDGE,
+            persona.id
+          )
+        );
+      });
+      return;
+    }
     this.eventBus.publish(
       new IngestBodyOfKnowledge(
         persona.bodyOfKnowledgeID,
@@ -280,10 +296,16 @@ export class AiServerService {
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
-    const { host, port } = this.config.get('platform.vector_db', {
+    const { host, port, credentials } = this.config.get('platform.vector_db', {
       infer: true,
     });
-    const chroma = new ChromaClient({ path: `http://${host}:${port}` });
+    const chroma = new ChromaClient({
+      path: `http://${host}:${port}`,
+      auth: {
+        provider: 'basic',
+        credentials,
+      },
+    });
 
     const name = this.getContextCollectionID(contextID);
     try {
