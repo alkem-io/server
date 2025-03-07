@@ -1,4 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { SearchCursor } from '@domain/common/scalars';
 import { ISearchResult } from './search.result.interface';
 
 @ObjectType()
@@ -10,7 +11,7 @@ export abstract class ISearchCategoryResult {
   })
   results!: ISearchResult[];
 
-  @Field(() => String, {
+  @Field(() => SearchCursor, {
     nullable: true,
     description:
       'Provide this with your next search query to fetch the next set of results.',
@@ -19,8 +20,7 @@ export abstract class ISearchCategoryResult {
 
   @Field(() => Number, {
     nullable: false,
-    description:
-      'The total number of search results for contributors (Users, Organizations).',
+    description: 'The total number of search results. Not implemented yet.',
   })
   total!: number;
 }
