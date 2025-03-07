@@ -144,6 +144,8 @@ export type AlkemioConfig = {
         exchange: string;
         ingest_body_of_knowledge_queue: string;
         ingest_body_of_knowledge_result_queue: string;
+        ingest_website_queue: string;
+        ingest_website_result_queue: string;
         invoke_engine_result: string;
         invoke_engine_expert: string;
         invoke_engine_guidance: string;
@@ -224,6 +226,7 @@ export type AlkemioConfig = {
     vector_db: {
       host: string;
       port: number;
+      credentials: string;
     };
     virtual_contributors: {
       history_length: number;
