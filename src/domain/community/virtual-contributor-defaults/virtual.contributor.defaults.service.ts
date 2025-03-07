@@ -7,8 +7,6 @@ import { PlatformService } from '@platform/platform/platform.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto/knowledge.base.dto.create';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
-import { ICalloutGroup } from '@domain/collaboration/callouts-set/dto/callout.group.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
@@ -63,13 +61,6 @@ export class VirtualContributorDefaultsService {
       result.profile.displayName = 'Knowledge Base';
     }
 
-    const defaultCalloutGroups: ICalloutGroup[] = [
-      {
-        displayName: CalloutGroupName.KNOWLEDGE,
-        description: 'Knowledge callouts for this VC',
-      },
-    ];
-
     if (!result.calloutsSetData.calloutsData) {
       result.calloutsSetData.calloutsData = [];
     }
@@ -101,10 +92,6 @@ export class VirtualContributorDefaultsService {
         result.calloutsSetData.calloutsData = [];
       }
     }
-
-    // Fix the groups for now
-    result.calloutsSetData.calloutGroups = defaultCalloutGroups;
-    result.calloutsSetData.defaultCalloutGroupName = CalloutGroupName.KNOWLEDGE;
 
     return result;
   }

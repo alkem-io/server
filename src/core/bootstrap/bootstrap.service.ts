@@ -42,16 +42,12 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
 import { bootstrapSubspaceKnowledgeInnovationFlow } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.innovation.flow';
 import { bootstrapSubspaceKnowledgeCallouts } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.callouts';
-import { bootstrapSubspaceKnowledgeCalloutGroups } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.callout.groups';
 import { ITemplateDefault } from '@domain/template/template-default/template.default.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { bootstrapSubspaceInnovationFlow } from './platform-template-definitions/subspace/bootstrap.subspace.innovation.flow';
-import { bootstrapSubspaceCalloutGroups } from './platform-template-definitions/subspace/bootstrap.subspace.callout.groups';
 import { bootstrapSubspaceCallouts } from './platform-template-definitions/subspace/bootstrap.subspace.callouts';
 import { bootstrapSpaceInnovationFlow } from './platform-template-definitions/space/bootstrap.space.innovation.flow';
-import { bootstrapSpaceCalloutGroups } from './platform-template-definitions/space/bootstrap.space.callout.groups';
 import { bootstrapSpaceCallouts } from './platform-template-definitions/space/bootstrap.space.callouts';
-import { bootstrapSpaceTutorialsCalloutGroups } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callout.groups';
 import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
 import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
@@ -153,7 +149,6 @@ export class BootstrapService {
       templatesSet,
       'space',
       bootstrapSpaceInnovationFlow,
-      bootstrapSpaceCalloutGroups,
       bootstrapSpaceCallouts
     );
     authResetNeeded =
@@ -163,7 +158,6 @@ export class BootstrapService {
         templatesSet,
         'subspace',
         bootstrapSubspaceInnovationFlow,
-        bootstrapSubspaceCalloutGroups,
         bootstrapSubspaceCallouts
       )) || authResetNeeded;
     authResetNeeded =
@@ -173,7 +167,6 @@ export class BootstrapService {
         templatesSet,
         'space-tutorials',
         bootstrapSpaceTutorialsInnovationFlow,
-        bootstrapSpaceTutorialsCalloutGroups,
         bootstrapSpaceTutorialsCallouts
       )) || authResetNeeded;
     authResetNeeded =
@@ -183,7 +176,6 @@ export class BootstrapService {
         templatesSet,
         'knowledge',
         bootstrapSubspaceKnowledgeInnovationFlow,
-        bootstrapSubspaceKnowledgeCalloutGroups,
         bootstrapSubspaceKnowledgeCallouts
       )) || authResetNeeded;
     if (authResetNeeded) {
@@ -203,7 +195,6 @@ export class BootstrapService {
     templatesSet: ITemplatesSet,
     nameID: string,
     innovationFlowData: CreateInnovationFlowInput,
-    calloutGroups: any[],
     callouts: any[]
   ): Promise<boolean> {
     const knowledgeTemplateDefault = templateDefaults.find(
@@ -230,9 +221,7 @@ export class BootstrapService {
           collaborationData: {
             innovationFlowData,
             calloutsSetData: {
-              calloutGroups: calloutGroups,
               calloutsData: callouts,
-              defaultCalloutGroupName: calloutGroups[0].displayName,
             },
           },
         }

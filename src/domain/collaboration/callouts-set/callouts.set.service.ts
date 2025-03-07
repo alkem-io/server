@@ -38,7 +38,6 @@ import { Callout } from '../callout/callout.entity';
 import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
 import { CalloutType } from '@common/enums/callout.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
@@ -61,11 +60,7 @@ export class CalloutsSetService {
     calloutsSetData: CreateCalloutsSetInput,
     type: CalloutsSetType
   ): ICalloutsSet {
-    if (
-      !calloutsSetData.calloutGroups ||
-      !calloutsSetData.calloutsData ||
-      !calloutsSetData.defaultCalloutGroupName
-    ) {
+    if (!calloutsSetData.calloutsData) {
       throw new RelationshipNotFoundException(
         'Unable to create CalloutsSet: missing required data',
         LogContext.COLLABORATION
@@ -78,19 +73,8 @@ export class CalloutsSetService {
     calloutsSet.type = type;
     calloutsSet.callouts = [];
 
-    calloutsSet.groups = calloutsSetData.calloutGroups;
-
     calloutsSet.tagsetTemplateSet =
       this.tagsetTemplateSetService.createTagsetTemplateSet();
-
-    const groupTagsetTemplateInput = this.createCalloutGroupTagsetTemplateInput(
-      calloutsSet,
-      calloutsSetData.defaultCalloutGroupName
-    );
-    calloutsSet.tagsetTemplateSet = this.addTagsetTemplate(
-      calloutsSet,
-      groupTagsetTemplateInput
-    );
 
     return calloutsSet;
   }
@@ -192,10 +176,6 @@ export class CalloutsSetService {
     return calloutsSet.callouts;
   }
 
-  public getCalloutGroupNames(calloutsSet: ICalloutsSet): string[] {
-    return calloutsSet.groups.map(group => group.displayName);
-  }
-
   public async addCallouts(
     calloutsSet: ICalloutsSet,
     calloutsData: CreateCalloutInput[],
@@ -279,19 +259,6 @@ export class CalloutsSetService {
     }
 
     return loadedCollaboration.callouts;
-  }
-
-  private createCalloutGroupTagsetTemplateInput(
-    calloutsSet: ICalloutsSet,
-    defaultGroup: CalloutGroupName
-  ): CreateTagsetTemplateInput {
-    const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.CALLOUT_GROUP,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: this.getCalloutGroupNames(calloutsSet),
-      defaultSelectedValue: defaultGroup,
-    };
-    return tagsetTemplateData;
   }
 
   public async createCalloutOnCalloutsSet(
@@ -476,10 +443,8 @@ export class CalloutsSetService {
     const calloutsSetLoaded = await this.getCalloutsSetOrFail(calloutsSet.id, {
       relations: {
         callouts: {
-          framing: {
-            profile: {
-              tagsets: true,
-            },
+          classification: {
+            tagsets: true,
           },
         },
       },
@@ -492,25 +457,6 @@ export class CalloutsSetService {
       );
     }
 
-    // Single pass filter operation
-    const groupNames: string[] = [];
-    if (args.groups && args.groups.length) {
-      for (const group of args.groups) {
-        // Validate that the groups are valid
-        const groupAllowed = calloutsSet.groups.find(
-          g => g.displayName === group
-        );
-        if (!groupAllowed) {
-          throw new ValidationException(
-            `Specified group not found: ${group}; allowed groups: ${calloutsSet.groups
-              .map(g => g.displayName)
-              .join(', ')}`,
-            LogContext.COLLABORATION
-          );
-        }
-        groupNames.push(group);
-      }
-    }
     const availableCallouts = allCallouts.filter(callout => {
       // Check for READ privilege
       const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
@@ -521,30 +467,32 @@ export class CalloutsSetService {
         return false;
       }
 
-      // Filter by Callout groups
-      if (groupNames.length > 0) {
-        const hasMatchingTagset = callout.framing.profile.tagsets?.some(
-          tagset =>
-            tagset.name === TagsetReservedName.CALLOUT_GROUP &&
-            tagset.tags.length > 0 &&
-            groupNames?.includes(tagset.tags[0])
+      // Only process classificationTagsets with values specified
+      const filteredArgClassificationTagsets =
+        args.classificationTagsets?.filter(
+          tagset => tagset.tags && tagset.tags.length
         );
-        if (!hasMatchingTagset) return false;
+
+      if (
+        !filteredArgClassificationTagsets ||
+        !filteredArgClassificationTagsets.length
+      ) {
+        return true;
       }
 
       // Filter by tagsets
-      const tagsetCheck =
-        args.tagsets && args.tagsets.length
-          ? callout.framing.profile?.tagsets?.some(calloutTagset =>
-              args.tagsets?.some(
-                argTagset =>
-                  argTagset.name === calloutTagset.name &&
-                  argTagset.tags.some(argTag =>
-                    calloutTagset.tags.includes(argTag)
-                  )
-              )
-            )
-          : true;
+      const tagsetCheck = callout.classification.tagsets?.some(calloutTagset =>
+        filteredArgClassificationTagsets.some(
+          argTagset =>
+            argTagset.name === calloutTagset.name &&
+            (!argTagset.tags ||
+              argTagset.tags.some(argTag =>
+                calloutTagset.tags.some(
+                  tag => tag.toLowerCase() === argTag.toLowerCase()
+                )
+              ))
+        )
+      );
 
       return tagsetCheck;
     });
@@ -627,50 +575,32 @@ export class CalloutsSetService {
    * Move callouts that are not in valid groups or flowStates to the default group & first flowState
    * @param callouts
    */
-  public moveCalloutsToDefaultGroupAndState(
-    validGroupNames: string[],
+  public moveCalloutsToDefaultFlowState(
     validFlowStateNames: string[],
     callouts: {
-      framing: {
-        profile: {
-          tagsets?: {
-            name: string;
-            type?: TagsetType;
-            tags?: string[];
-          }[];
-        };
+      classification?: {
+        tagsets?: {
+          name: string;
+          type?: TagsetType;
+          tags?: string[];
+        }[];
       };
     }[]
   ): void {
-    const defaultGroupName: string | undefined = validGroupNames?.[0];
     const defaultFlowStateName: string | undefined = validFlowStateNames?.[0];
 
     for (const callout of callouts) {
-      if (!callout.framing.profile.tagsets) {
-        callout.framing.profile.tagsets = [];
+      if (!callout.classification) {
+        callout.classification = {};
       }
-      let calloutGroupTagset = callout.framing.profile.tagsets?.find(
-        tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
-      );
-      let flowStateTagset = callout.framing.profile.tagsets?.find(
+      if (!callout.classification.tagsets) {
+        callout.classification.tagsets = [];
+      }
+
+      let flowStateTagset = callout.classification.tagsets?.find(
         tagset => tagset.name === TagsetReservedName.FLOW_STATE
       );
 
-      if (defaultGroupName) {
-        if (!calloutGroupTagset) {
-          calloutGroupTagset = {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [defaultGroupName],
-          };
-          callout.framing.profile.tagsets.push(calloutGroupTagset);
-        } else {
-          const calloutGroup = calloutGroupTagset.tags?.[0];
-          if (!calloutGroup || !validGroupNames.includes(calloutGroup)) {
-            calloutGroupTagset.tags = [defaultGroupName];
-          }
-        }
-      }
       if (defaultFlowStateName) {
         if (!flowStateTagset) {
           flowStateTagset = {
@@ -678,7 +608,7 @@ export class CalloutsSetService {
             type: TagsetType.SELECT_ONE,
             tags: [defaultFlowStateName],
           };
-          callout.framing.profile.tagsets.push(flowStateTagset);
+          callout.classification.tagsets.push(flowStateTagset);
         } else {
           const flowState = flowStateTagset.tags?.[0];
           if (!flowState || !validFlowStateNames.includes(flowState)) {

@@ -7,6 +7,7 @@ export enum LogContext {
   SPACE_ABOUT = 'space-about',
   PROFILE = 'profile',
   COMMUNITY = 'community',
+  CLASSIFICATION = 'classification',
   DATA_LOADER = 'data-loader',
   COMMUNICATION = 'communication',
   PLATFORM_FORUM = 'platform-forum',
