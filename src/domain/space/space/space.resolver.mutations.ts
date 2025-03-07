@@ -52,7 +52,9 @@ export class SpaceResolverMutations {
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceData.ID, {
       relations: {
-        profile: true,
+        about: {
+          profile: true,
+        },
       },
     });
     await this.authorizationService.grantAccessOrFail(
@@ -62,15 +64,12 @@ export class SpaceResolverMutations {
       `update Space: ${space.id}`
     );
 
-    // ensure working with UUID
-    spaceData.ID = space.id;
-
     const updatedSpace = await this.spaceService.update(spaceData);
 
     this.contributionReporter.spaceContentEdited(
       {
         id: updatedSpace.id,
-        name: updatedSpace.profile.displayName,
+        name: updatedSpace.about.profile.displayName,
         space: updatedSpace.id,
       },
       {
@@ -80,12 +79,12 @@ export class SpaceResolverMutations {
     );
 
     if (
-      spaceData?.profileData?.displayName &&
-      spaceData?.profileData?.displayName !== space.profile.displayName
+      spaceData?.about?.profile?.displayName &&
+      spaceData?.about?.profile?.displayName !== space.about.profile.displayName
     ) {
       this.namingReporter.createOrUpdateName(
         space.id,
-        spaceData?.profileData?.displayName
+        spaceData?.about?.profile?.displayName
       );
     }
 
@@ -200,7 +199,7 @@ export class SpaceResolverMutations {
       agentInfo
     );
     // Save here so can reuse it later without another load
-    const displayName = subspace.profile.displayName;
+    const displayName = subspace.about.profile.displayName;
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(
         subspace.id,

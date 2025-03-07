@@ -38,8 +38,6 @@ export class ActivityAdapter {
     private communityRepository: Repository<Community>,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>,
-    @InjectRepository(Collaboration)
-    private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -58,7 +56,9 @@ export class ActivityAdapter {
         id: eventData.subspace.id,
       },
       relations: {
-        profile: true,
+        about: {
+          profile: true,
+        },
         parentSpace: {
           collaboration: true,
         },
@@ -66,7 +66,7 @@ export class ActivityAdapter {
     });
     if (
       !subspace ||
-      !subspace.profile ||
+      !subspace.about.profile ||
       !subspace.parentSpace ||
       !subspace.parentSpace.collaboration
     ) {
@@ -83,7 +83,7 @@ export class ActivityAdapter {
     this.logEventTriggered(eventData, eventType);
 
     const collaborationID = subspace.parentSpace.collaboration.id;
-    const description = subspace.profile.displayName;
+    const description = subspace.about.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
@@ -111,7 +111,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdForSpace(
       eventData.subspaceID
     );
-    const description = subsubspace.profile.displayName;
+    const description = subsubspace.about.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,

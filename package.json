@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.101.4",
+  "version": "0.102.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -75,7 +75,6 @@
     "@nestjs/platform-express": "^10.3.10",
     "@nestjs/typeorm": "10.0.2",
     "@ory/kratos-client": "^1.2.0",
-    "@socket.io/redis-adapter": "^8.3.0",
     "ajv": "^8.17.1",
     "cache-manager-redis-store": "^2.0.0",
     "chromadb": "^1.8.1",
@@ -108,7 +107,6 @@
     "path-to-regexp": "^8.2.0",
     "replace-special-characters": "^1.2.7",
     "rxjs": "^7.8.1",
-    "socket.io": "^4.7.5",
     "typeorm": "0.3.13",
     "winston": "^3.13.1",
     "xstate": "^5.18.2",

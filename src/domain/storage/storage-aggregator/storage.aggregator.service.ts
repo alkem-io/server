@@ -17,9 +17,7 @@ import {
   EntityNotInitializedException,
   NotSupportedException,
 } from '@common/exceptions';
-import { SpaceLevel } from '@common/enums/space.level';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { ISpace } from '@domain/space/space/space.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 @Injectable()
 export class StorageAggregatorService {
@@ -231,9 +229,11 @@ export class StorageAggregatorService {
             storageAggregator
           );
         result.id = space.id;
-        result.displayName = space.profile.displayName;
+        result.displayName = space.about.profile.displayName;
         result.level = space.level;
-        result.url = await this.getStorageAggregatorUrlForSpace(space);
+        result.url = await this.urlGeneratorService.getSpaceUrlPathByID(
+          space.id
+        );
         break;
       case StorageAggregatorType.PLATFORM:
         result.displayName = 'platform';
@@ -258,7 +258,7 @@ export class StorageAggregatorService {
           );
         result.id = user.id;
         result.displayName = user.profile.displayName;
-        result.url = this.urlGeneratorService.createUrlFoUserNameID(
+        result.url = this.urlGeneratorService.createUrlForUserNameID(
           user.nameID
         );
         break;
@@ -280,25 +280,5 @@ export class StorageAggregatorService {
         );
     }
     return result;
-  }
-
-  private async getStorageAggregatorUrlForSpace(
-    space: ISpace
-  ): Promise<string> {
-    let url = '';
-    switch (space.level) {
-      case SpaceLevel.L2:
-        url = await this.urlGeneratorService.generateUrlForSubsubspace(
-          space.id
-        );
-        break;
-      case SpaceLevel.L1:
-        url = await this.urlGeneratorService.generateUrlForSubspace(space.id);
-        break;
-      case SpaceLevel.L0:
-        url = this.urlGeneratorService.generateUrlForSpace(space.nameID);
-        break;
-    }
-    return url;
   }
 }
