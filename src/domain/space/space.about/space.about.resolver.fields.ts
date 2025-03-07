@@ -14,7 +14,6 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { SpaceAboutService } from './space.about.service';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { SpaceAboutMembershipService } from '../space.about.membership/space.about.membership.service';
 import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 
@@ -22,7 +21,6 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 export class SpaceAboutResolverFields {
   constructor(
     private readonly spaceAboutService: SpaceAboutService,
-    private readonly spaceAboutMembershipService: SpaceAboutMembershipService,
     private spaceLookupService: SpaceLookupService
   ) {}
 

@@ -38,7 +38,7 @@ export class SpaceResolverFields {
   constructor(private spaceService: SpaceService) {}
 
   // Check authorization inside the field resolver directly on the Community
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: false,
@@ -54,7 +54,7 @@ export class SpaceResolverFields {
     return community;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
@@ -85,7 +85,7 @@ export class SpaceResolverFields {
     return this.spaceService.activeSubscription(space);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
@@ -99,7 +99,7 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,
@@ -196,6 +196,7 @@ export class SpaceResolverFields {
     return new Date(createdDate);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
     description: 'The settings for this Space.',

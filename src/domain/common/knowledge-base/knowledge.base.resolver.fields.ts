@@ -11,13 +11,12 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { KnowledgeBaseService } from './knowledge.base.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver(() => IKnowledgeBase)
 export class KnowledgeBaseResolverFields {
-  constructor(private knowledgeBaseService: KnowledgeBaseService) {}
+  constructor() {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)

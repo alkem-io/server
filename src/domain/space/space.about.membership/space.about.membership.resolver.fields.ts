@@ -13,6 +13,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IUser } from '@domain/community/user/user.interface';
 import { RoleName } from '@common/enums/role.name';
 import { IOrganization } from '@domain/community/organization';
+import { UUID } from '@domain/common/scalars';
 
 @Resolver(() => SpaceAboutMembership)
 export class SpaceAboutMembershipResolverFields {
@@ -39,6 +40,15 @@ export class SpaceAboutMembershipResolverFields {
       agentInfo,
       this.authorizationPolicyService.validateAuthorization(authorization)
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('roleSetID', () => UUID, {
+    nullable: true,
+    description: 'The identier of the RoleSet within the Space.',
+  })
+  roleSetID(@Parent() membership: SpaceAboutMembership): string {
+    return membership.roleSet.id;
   }
 
   @UseGuards(GraphqlGuard)
