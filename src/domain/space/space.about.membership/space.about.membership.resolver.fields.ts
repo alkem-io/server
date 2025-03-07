@@ -10,6 +10,9 @@ import { IForm } from '@domain/common/form/form.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IUser } from '@domain/community/user/user.interface';
+import { RoleName } from '@common/enums/role.name';
+import { IOrganization } from '@domain/community/organization';
 
 @Resolver(() => SpaceAboutMembership)
 export class SpaceAboutMembershipResolverFields {
@@ -62,5 +65,32 @@ export class SpaceAboutMembershipResolverFields {
     const roleSet = membership.roleSet;
     // Uses the DataLoader to batch load membership statuses
     return this.membershipStatusLoader.loader.load({ agentInfo, roleSet });
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('leadUsers', () => [IUser], {
+    nullable: false,
+    description: 'The Lead Users that are associated with this Space.',
+  })
+  public async leadUsers(
+    @Parent() membership: SpaceAboutMembership
+  ): Promise<IUser[]> {
+    const roleSet = membership.roleSet;
+    return await this.roleSetService.getUsersWithRole(roleSet, RoleName.LEAD);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('leadOrganizations', () => [IOrganization], {
+    nullable: false,
+    description: 'The Lead Organizations that are associated with this Space.',
+  })
+  public async leadOrganizations(
+    @Parent() membership: SpaceAboutMembership
+  ): Promise<IOrganization[]> {
+    const roleSet = membership.roleSet;
+    return await this.roleSetService.getOrganizationsWithRole(
+      roleSet,
+      RoleName.LEAD
+    );
   }
 }
