@@ -54,7 +54,7 @@ export class SpaceResolverFields {
     return community;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @UseGuards(GraphqlGuard)
   @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
