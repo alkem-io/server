@@ -20,8 +20,8 @@ import { ISpaceAbout } from './space.about.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { ICommunity } from '@domain/community/community/community.interface';
 
 @Injectable()
 export class SpaceAboutService {
@@ -127,7 +127,8 @@ export class SpaceAboutService {
   async getMetrics(spaceAbout: ISpaceAbout): Promise<INVP[]> {
     const metrics: INVP[] = [];
 
-    const roleSet = await this.getCommunityRoleSet(spaceAbout.id);
+    const community = await this.getCommunityWithRoleSet(spaceAbout.id);
+    const roleSet = community.roleSet;
 
     // Members
     const membersCount = await this.roleSetService.getMembersCount(roleSet);
@@ -138,7 +139,9 @@ export class SpaceAboutService {
     return metrics;
   }
 
-  public async getCommunityRoleSet(spaceAboutId: string): Promise<IRoleSet> {
+  public async getCommunityWithRoleSet(
+    spaceAboutId: string
+  ): Promise<ICommunity> {
     const subspaceWithCommunityRoleSet =
       await this.spaceLookupService.getSpaceForSpaceAboutOrFail(spaceAboutId, {
         relations: {
@@ -155,6 +158,6 @@ export class SpaceAboutService {
       );
     }
 
-    return community.roleSet;
+    return community;
   }
 }

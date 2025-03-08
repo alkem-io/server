@@ -77,11 +77,12 @@ export class SpaceAboutResolverFields {
   async membership(
     @Parent() spaceAbout: ISpaceAbout
   ): Promise<SpaceAboutMembership> {
-    const roleSet = await this.spaceAboutService.getCommunityRoleSet(
+    const community = await this.spaceAboutService.getCommunityWithRoleSet(
       spaceAbout.id
     );
     const membership: SpaceAboutMembership = {
-      roleSet,
+      community,
+      roleSet: community.roleSet,
     };
     return membership;
   }
