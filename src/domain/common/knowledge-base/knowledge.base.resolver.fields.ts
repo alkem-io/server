@@ -18,7 +18,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 export class KnowledgeBaseResolverFields {
   constructor() {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,

@@ -228,26 +228,12 @@ export class SpaceAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private createCredentialRule(
-    credentialCriteriasWithAccess: ICredentialDefinition[],
-    privilege: AuthorizationPrivilege,
-    description: string
-  ): IAuthorizationPolicyRuleCredential {
-    const readAboutCredentialRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [privilege],
-        credentialCriteriasWithAccess,
-        description
-      );
-    readAboutCredentialRule.cascade = false;
-    return readAboutCredentialRule;
-  }
-
   private async getCredentialsWithVisibilityOfSpace(
     space: ISpace
   ): Promise<ICredentialDefinition[]> {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
-    const globalAnonymousRegistered = this.getGlobalAnonymousRegistered();
+    const globalAnonymousRegistered =
+      this.authorizationPolicyService.getCredentialDefinitionsAnonymousRegistered();
 
     switch (space.level) {
       case SpaceLevel.L0:
@@ -280,16 +266,6 @@ export class SpaceAuthorizationService {
     });
 
     return credentialCriteriasWithAccess;
-  }
-
-  /**
-   * Returns GLOBAL_ANONYMOUS and GLOBAL_REGISTERED credential definitions.
-   */
-  private getGlobalAnonymousRegistered(): ICredentialDefinition[] {
-    return [
-      { type: AuthorizationCredential.GLOBAL_ANONYMOUS, resourceID: '' },
-      { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
-    ];
   }
 
   /**
@@ -475,11 +451,12 @@ export class SpaceAuthorizationService {
       // Also for PUBLIC spaces cascade the read on About to avoid having privilege rules everywhere
       case SpacePrivacyMode.PUBLIC:
       case SpacePrivacyMode.PRIVATE:
-        const credentialRuleReadOnAbout = this.createCredentialRule(
-          credentialCriteriasWithAccess,
-          AuthorizationPrivilege.READ_ABOUT,
-          'Read access to About for criterias with access'
-        );
+        const credentialRuleReadOnAbout =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.READ],
+            credentialCriteriasWithAccess,
+            'Read access to About'
+          );
         credentialRuleReadOnAbout.cascade = true;
         spaceAboutExtraCredentialRules.push(credentialRuleReadOnAbout);
         break;
@@ -506,9 +483,9 @@ export class SpaceAuthorizationService {
 
     switch (spaceSettings.privacy.mode) {
       case SpacePrivacyMode.PUBLIC: {
-        const rule = this.createCredentialRule(
+        const rule = this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.READ],
           credentialCriteriasWithAccess,
-          AuthorizationPrivilege.READ,
           'Public spaces content is visible to all'
         );
         rule.cascade = true;
@@ -516,9 +493,9 @@ export class SpaceAuthorizationService {
         break;
       }
       case SpacePrivacyMode.PRIVATE:
-        const rule = this.createCredentialRule(
+        const rule = this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.READ_ABOUT],
           credentialCriteriasWithAccess,
-          AuthorizationPrivilege.READ_ABOUT,
           'Private spaces content is only visible to members'
         );
         rule.cascade = false;

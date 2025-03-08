@@ -778,7 +778,7 @@ export class LookupResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       knowledgeBase.authorization,
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.READ_ABOUT,
       `lookup KnowledgeBase: ${knowledgeBase.id}`
     );
     return knowledgeBase;
