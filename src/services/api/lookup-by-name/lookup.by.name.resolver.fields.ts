@@ -147,7 +147,7 @@ export class LookupByNameResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtualContributor.authorization,
-      AuthorizationPrivilege.READ_ABOUT,
+      AuthorizationPrivilege.READ,
       `lookup virtual contributor by NameID: ${virtualContributor.id}`
     );
 

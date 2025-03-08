@@ -17,12 +17,19 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ISpaceAbout } from './space.about.interface';
+import { INVP } from '@domain/common/nvp/nvp.interface';
+import { NVP } from '@domain/common/nvp/nvp.entity';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { ICommunity } from '@domain/community/community/community.interface';
 
 @Injectable()
 export class SpaceAboutService {
   constructor(
+    private spaceLookupService: SpaceLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
+    private roleSetService: RoleSetService,
     @InjectRepository(SpaceAbout)
     private spaceAboutRepository: Repository<SpaceAbout>
   ) {}
@@ -115,5 +122,42 @@ export class SpaceAboutService {
       await this.authorizationPolicyService.delete(spaceAbout.authorization);
 
     return await this.spaceAboutRepository.remove(spaceAbout as SpaceAbout);
+  }
+
+  async getMetrics(spaceAbout: ISpaceAbout): Promise<INVP[]> {
+    const metrics: INVP[] = [];
+
+    const community = await this.getCommunityWithRoleSet(spaceAbout.id);
+    const roleSet = community.roleSet;
+
+    // Members
+    const membersCount = await this.roleSetService.getMembersCount(roleSet);
+    const membersTopic = new NVP('members', membersCount.toString());
+    membersTopic.id = `members-${spaceAbout.id}`;
+    metrics.push(membersTopic);
+
+    return metrics;
+  }
+
+  public async getCommunityWithRoleSet(
+    spaceAboutId: string
+  ): Promise<ICommunity> {
+    const subspaceWithCommunityRoleSet =
+      await this.spaceLookupService.getSpaceForSpaceAboutOrFail(spaceAboutId, {
+        relations: {
+          community: {
+            roleSet: true,
+          },
+        },
+      });
+    const community = subspaceWithCommunityRoleSet.community;
+    if (!community || !community.roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load community with RoleSet for space ${spaceAboutId} `,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return community;
   }
 }
