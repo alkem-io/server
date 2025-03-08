@@ -59,7 +59,7 @@ export class KnowledgeBaseAuthorizationService {
           credentialCriteriasWithAccessToVC,
           'KnowledgeBase contents visible'
         );
-        rule.cascade = true;
+        rule.cascade = true; // Everything is visible
         knowledgeBase.authorization.credentialRules.push(rule);
       } else {
         const rule = this.authorizationPolicyService.createCredentialRule(
@@ -67,7 +67,7 @@ export class KnowledgeBaseAuthorizationService {
           credentialCriteriasWithAccessToVC,
           'KnowledgeBase contents not visible'
         );
-        rule.cascade = false; // need to separately give access to Profile (About)
+        rule.cascade = false; // need to separately give access to what is publicly readable for those with access to the KB i.e. Profile (About)
         knowledgeBase.authorization.credentialRules.push(rule);
       }
     }

@@ -115,7 +115,7 @@ export class VirtualContributorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('provider', () => IContributor, {
     nullable: false,
     description: 'The Virtual Contributor provider.',
@@ -126,7 +126,7 @@ export class VirtualContributorResolverFields {
     return await this.virtualContributorService.getProvider(virtualContributor);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('status', () => VirtualContributorStatus, {
     nullable: false,
     description: 'The status of the virtual contributor',
