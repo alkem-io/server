@@ -101,7 +101,7 @@ export class VirtualContributorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @ResolveField('knowledgeBase', () => IKnowledgeBase, {
     nullable: true,
     description: 'The KnowledgeBase being used by this virtual contributor',
