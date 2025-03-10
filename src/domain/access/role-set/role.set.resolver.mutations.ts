@@ -320,15 +320,11 @@ export class RoleSetResolverMutations {
       `remove role from User: ${roleSet.id} on roleSet of type ${roleSet.type}`
     );
 
-    const removeAllMemberships =
-      roleData.role === RoleName.MEMBER && roleSet.type === RoleSetType.SPACE;
-
     await this.roleSetService.removeUserFromRole(
       roleSet,
       roleData.role,
       roleData.contributorID,
-      true,
-      removeAllMemberships
+      true
     );
 
     switch (roleSet.type) {

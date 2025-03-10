@@ -1041,8 +1041,7 @@ export class RoleSetService {
     roleSet: IRoleSet,
     roleType: RoleName,
     userID: string,
-    validatePolicyLimits = true,
-    fullyRevokeMembership: boolean = false
+    validatePolicyLimits = true
   ): Promise<IUser> {
     const { user, agent } =
       await this.userLookupService.getUserAndAgent(userID);
@@ -1052,8 +1051,7 @@ export class RoleSetService {
       roleType,
       agent,
       RoleSetContributorType.USER,
-      validatePolicyLimits,
-      fullyRevokeMembership
+      validatePolicyLimits
     );
 
     switch (roleSet.type) {
@@ -1366,8 +1364,7 @@ export class RoleSetService {
     roleType: RoleName,
     agent: IAgent,
     contributorType: RoleSetContributorType,
-    validatePolicyLimits: boolean,
-    fullyRevokeMembership: boolean = false
+    validatePolicyLimits: boolean
   ): Promise<IAgent> {
     if (validatePolicyLimits) {
       await this.validateContributorPolicyLimits(
@@ -1386,20 +1383,46 @@ export class RoleSetService {
       resourceID: roleCredential.resourceID,
     });
 
-    if (
-      fullyRevokeMembership &&
-      roleCredential.type === AuthorizationCredential.SPACE_MEMBER
-    ) {
-      const subspaceIDs = await this.getAllSubspaceIds(
+    if (roleCredential.type === AuthorizationCredential.SPACE_MEMBER) {
+      updatedAgent = await this.revokeSubspaceCredentials(
+        agent,
         roleCredential.resourceID
       );
-      for (const subspaceID of subspaceIDs) {
-        updatedAgent = await this.agentService.revokeCredential({
-          agentID: agent.id,
-          type: roleCredential.type,
-          resourceID: subspaceID,
-        });
-      }
+    }
+
+    return updatedAgent;
+  }
+
+  private async revokeSubspaceCredentials(
+    agent: IAgent,
+    spaceId: string
+  ): Promise<IAgent> {
+    const subspaceIDs = await this.getAllSubspaceIds(spaceId);
+    const credentialsToRevoke = subspaceIDs.flatMap(subspaceID => [
+      {
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: subspaceID,
+      },
+      {
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: subspaceID,
+      },
+      {
+        type: AuthorizationCredential.SPACE_LEAD,
+        resourceID: subspaceID,
+      },
+      {
+        type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
+        resourceID: subspaceID,
+      },
+    ]);
+
+    let updatedAgent = agent;
+    for (const credential of credentialsToRevoke) {
+      updatedAgent = await this.agentService.revokeCredential({
+        agentID: agent.id,
+        ...credential,
+      });
     }
 
     return updatedAgent;
