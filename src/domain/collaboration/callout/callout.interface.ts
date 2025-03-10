@@ -11,6 +11,7 @@ import { ICalloutContributionPolicy } from '../callout-contribution-policy/callo
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
+import { IClassification } from '@domain/common/classification/classification.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends IAuthorizable {
@@ -37,6 +38,8 @@ export abstract class ICallout extends IAuthorizable {
     description: 'The Callout Framing associated with this Callout.',
   })
   framing!: ICalloutFraming;
+
+  classification!: IClassification;
 
   contributionPolicy!: ICalloutContributionPolicy;
   contributionDefaults?: ICalloutContributionDefaults;

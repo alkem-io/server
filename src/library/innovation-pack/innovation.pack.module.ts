@@ -14,11 +14,11 @@ import { InnovationPackDefaultsModule } from './innovation.pack.defaults/innovat
 
 @Module({
   imports: [
-    TemplatesSetModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     InnovationPackDefaultsModule,
     ProfileModule,
+    TemplatesSetModule,
     AccountLookupModule,
     TypeOrmModule.forFeature([InnovationPack]),
   ],

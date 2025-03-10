@@ -21,6 +21,7 @@ import {
   UUID_LENGTH,
 } from '@common/constants';
 import { CalloutsSet } from '../callouts-set/callouts.set.entity';
+import { Classification } from '@domain/common/classification/classification.entity';
 
 @Entity()
 export class Callout extends AuthorizableEntity implements ICallout {
@@ -46,6 +47,14 @@ export class Callout extends AuthorizableEntity implements ICallout {
   })
   @JoinColumn()
   framing!: CalloutFraming;
+
+  @OneToOne(() => Classification, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  classification!: Classification;
 
   @OneToOne(() => CalloutContributionPolicy, {
     eager: true,
