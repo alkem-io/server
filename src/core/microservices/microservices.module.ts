@@ -1,7 +1,6 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { randomUUID } from 'crypto';
 import {
   NOTIFICATIONS_SERVICE,
   MATRIX_ADAPTER_SERVICE,
@@ -19,6 +18,7 @@ import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
 
 import { clientProxyFactory } from './client.proxy.factory';
+import { APP_ID_PROVIDER } from '@common/app.id.provider';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -47,14 +47,12 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
 ];
 
-const trackingUUID = randomUUID();
 const subscriptionFactoryProviders = subscriptionConfig.map(
   ({ provide, queueName }) =>
     subscriptionFactoryProvider(
       provide,
       queueName,
-      RABBITMQ_EXCHANGE_NAME_DIRECT,
-      trackingUUID
+      RABBITMQ_EXCHANGE_NAME_DIRECT
     )
 );
 
@@ -84,6 +82,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       useFactory: clientProxyFactory(MessagingQueue.AUTH_RESET),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
+    APP_ID_PROVIDER,
   ],
   exports: [
     ...subscriptionConfig.map(x => x.provide),

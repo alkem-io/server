@@ -6,4 +6,5 @@ export enum SubscriptionType {
   ACTIVITY_CREATED = 'activityCreated',
   ROOM_EVENTS = 'roomEvents',
   VIRTUAL_CONTRIBUTOR_UPDATED = 'virtualContributorUpdated',
+  IN_APP_NOTIFICATION_RECEIVED = 'in-app-notification-received',
 }

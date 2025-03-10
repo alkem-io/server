@@ -20,6 +20,7 @@ export enum MessagingQueue {
   SUBSCRIPTION_SUBSPACE_CREATED = 'alkemio-subscriptions-subspace-created',
   SUBSCRIPTION_ACTIVITY_CREATED = 'alkemio-subscriptions-activity-created',
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
+  SUBSCRIPTION_NOTIFICATION_RECEIVED = 'alkemio-subscriptions-notification-received',
   //
   WHITEBOARDS = 'alkemio-whiteboards',
   FILES = 'alkemio-files',
