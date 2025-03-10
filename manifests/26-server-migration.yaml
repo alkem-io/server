@@ -1,8 +1,8 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: alkemio-server-migration
-  generateName: alkemio-server-migration-
+  name: server-migration
+  generateName: server-migration-
 spec:
   schedule: "@yearly"
   successfulJobsHistoryLimit: 1

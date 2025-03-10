@@ -23,6 +23,7 @@ import { IQuestion } from '@domain/common/question/question.interface';
 import { IContributor } from '../../community/contributor/contributor.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ApplicationLifecycleService } from './application.service.lifecycle';
+import { RoleSetCacheService } from '../role-set/role.set.service.cache';
 
 @Injectable()
 export class ApplicationService {
@@ -34,6 +35,7 @@ export class ApplicationService {
     private lifecycleService: LifecycleService,
     private applicationLifecycleService: ApplicationLifecycleService,
     private nvpService: NVPService,
+    private roleSetCacheService: RoleSetCacheService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -60,7 +62,9 @@ export class ApplicationService {
     deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
     const applicationID = deleteData.ID;
-    const application = await this.getApplicationOrFail(applicationID);
+    const application = await this.getApplicationOrFail(applicationID, {
+      relations: { roleSet: true, user: true },
+    });
     if (application.questions) {
       for (const question of application.questions) {
         await this.nvpService.removeNVP(question.id);
@@ -75,6 +79,14 @@ export class ApplicationService {
       application as Application
     );
     result.id = applicationID;
+
+    if (application.user?.id && application.roleSet?.id) {
+      await this.roleSetCacheService.deleteOpenApplicationFromCache(
+        application.user?.id,
+        application.roleSet?.id
+      );
+    }
+
     return result;
   }
 

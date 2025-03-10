@@ -15,25 +15,17 @@ import { AiPersonaServiceInvocationInput } from './dto/ai.persona.service.invoca
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { EventBus } from '@nestjs/cqrs';
 import { InteractionMessage } from './dto/interaction.message';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import {
-  IngestBodyOfKnowledge,
-  IngestionPurpose,
-} from '@services/infrastructure/event-bus/messages/ingest.body.of.knowledge.command';
 import { IExternalConfig } from './dto/external.config';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 
 @Injectable()
 export class AiPersonaServiceService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
-    private eventBus: EventBus,
     @InjectRepository(AiPersonaService)
     private aiPersonaServiceRepository: Repository<AiPersonaService>,
     private readonly crypto: EncryptionService,
@@ -103,6 +95,16 @@ export class AiPersonaServiceService {
       ...this.decryptExternalConfig(aiPersonaService.externalConfig || {}),
       ...(aiPersonaServiceData.externalConfig || {}),
     });
+
+    if (aiPersonaServiceData.bodyOfKnowledgeID) {
+      aiPersonaService.bodyOfKnowledgeID =
+        aiPersonaServiceData.bodyOfKnowledgeID;
+    }
+
+    if (aiPersonaServiceData.bodyOfKnowledgeType) {
+      aiPersonaService.bodyOfKnowledgeType =
+        aiPersonaServiceData.bodyOfKnowledgeType;
+    }
 
     return await this.aiPersonaServiceRepository.save(aiPersonaService);
   }
@@ -192,14 +194,6 @@ export class AiPersonaServiceService {
     };
 
     return this.aiPersonaEngineAdapter.invoke(input);
-  }
-
-  public async ingest(aiPersonaService: IAiPersonaService): Promise<boolean> {
-    // Todo: ???
-    return this.aiPersonaEngineAdapter.sendIngest({
-      engine: AiPersonaEngine.EXPERT,
-      userID: aiPersonaService.id, // TODO: clearly wrong, just getting code to compile
-    });
   }
 
   private encryptExternalConfig(

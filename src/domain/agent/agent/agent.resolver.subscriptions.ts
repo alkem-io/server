@@ -9,7 +9,9 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL } from '@common/constants/providers';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AgentResolverSubscriptions {
   constructor(

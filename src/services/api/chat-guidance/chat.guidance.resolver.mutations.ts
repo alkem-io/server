@@ -1,6 +1,5 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -16,12 +15,12 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ChatGuidanceResolverMutations {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private chatGuidanceService: ChatGuidanceService,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -120,29 +119,10 @@ export class ChatGuidanceResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
-    description: 'Resets the interaction with the chat engine.',
-  })
-  @Profiling.api
-  async ingest(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Access interactive guidance: ${agentInfo.email}`
-    );
-    if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
-      return false;
-    }
-    return this.chatGuidanceService.ingest();
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
     description: 'User vote if a specific answer is relevant.',
   })
   @Profiling.api
   public updateAnswerRelevance(
-    @CurrentUser() agentInfo: AgentInfo,
     @Args('input') { id, relevant }: ChatGuidanceAnswerRelevanceInput
   ): Promise<boolean> {
     return this.guidanceReporterService.updateAnswerRelevance(id, relevant);

@@ -9,7 +9,9 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ICalendarEvent } from './event.interface';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CalendarEventResolverMutations {
   constructor(

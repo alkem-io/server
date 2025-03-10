@@ -24,7 +24,9 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
 import { RoleChangeType } from '@alkemio/notifications-lib';
 import { AiPersonaService } from '@domain/community/ai-persona/ai.persona.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AdminAuthorizationResolverMutations {
   private authorizationGlobalAdminPolicy: IAuthorizationPolicy;

@@ -5,7 +5,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialMetadataOutput } from '@domain/agent/verified-credential/dto/verified.credential.dto.metadata';
-import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
@@ -16,7 +16,9 @@ import { IUser } from './user.interface';
 import { UserFilterInput } from '@core/filtering';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { UsersQueryArgs } from './dto/users.query.args';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IUser)
 export class UserResolverQueries {
   constructor(
@@ -36,7 +38,7 @@ export class UserResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: UsersQueryArgs
   ): Promise<IUser[]> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
@@ -80,7 +82,7 @@ export class UserResolverQueries {
   @Profiling.api
   async user(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID_NAMEID_EMAIL }) id: string
+    @Args('ID', { type: () => UUID }) id: string
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

@@ -26,7 +26,6 @@ import {
   ITagsetTemplate,
 } from '@domain/common/tagset-template';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -306,7 +305,7 @@ export class CalloutsSetService {
     if (!calloutsSet.callouts || !calloutsSet.tagsetTemplateSet) {
       throw new EntityNotInitializedException(
         `Collaboration (${collaborationID}) not initialised`,
-        LogContext.CONTEXT
+        LogContext.SPACE_ABOUT
       );
     }
     if (!calloutData.sortOrder) {
@@ -323,7 +322,7 @@ export class CalloutsSetService {
       if (reservedNameIDs.includes(calloutData.nameID)) {
         throw new ValidationException(
           `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.SPACES
+          LogContext.COLLABORATION
         );
       }
       // Just use the provided nameID
@@ -350,6 +349,20 @@ export class CalloutsSetService {
     callout.calloutsSet = calloutsSet;
 
     return callout;
+  }
+
+  public async validateNameIDNotInUseOrFail(
+    calloutsSetID: string,
+    nameID: string
+  ): Promise<void> {
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCalloutsSet(calloutsSetID);
+    if (reservedNameIDs.includes(nameID)) {
+      throw new ValidationException(
+        `Provided NameID (${nameID}) is already present in calloutSet (${calloutsSetID}): ${reservedNameIDs}`,
+        LogContext.COLLABORATION
+      );
+    }
   }
 
   async createCallout(
@@ -454,6 +467,7 @@ export class CalloutsSetService {
 
     return calloutsInOrder;
   }
+
   public async getCalloutsFromCollaboration(
     calloutsSet: ICalloutsSet,
     args: CalloutsSetArgsCallouts,
@@ -540,11 +554,7 @@ export class CalloutsSetService {
     if (args.IDs) {
       const results: ICallout[] = [];
       for (const calloutID of args.IDs) {
-        let callout;
-        if (calloutID.length === UUID_LENGTH)
-          callout = allCallouts.find(callout => callout.id === calloutID);
-        else
-          callout = allCallouts.find(callout => callout.nameID === calloutID);
+        const callout = allCallouts.find(callout => callout.id === calloutID);
 
         if (!callout)
           throw new EntityNotFoundException(

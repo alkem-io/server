@@ -77,8 +77,6 @@ innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
 
 search:
-  # use the new search implementation; alternatively it will use the original mysql search implementation
-  use_new: ${SEARCH_USE_NEW}:true
   # max results per search
   max_results: ${SEARCH_MAX_RESULTS}:40
   # the index pattern used when ingesting data in Elasticsearch, e.g. alkemio-data-[organization];
@@ -359,6 +357,8 @@ microservices:
       exchange: ${RABBITMQ_EVENT_BUS_EXCHANGE}:event-bus
       ingest_body_of_knowledge_queue: ${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_QUEUE}:virtual-contributor-ingest-body-of-knowledge
       ingest_body_of_knowledge_result_queue: ${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_RESULT_QUEUE}:virtual-contributor-ingest-body-of-knowledge-result
+      ingest_website_queue: ${RABBITMQ_INGEST_WEBSITE_QUEUE}:virtual-contributor-ingest-website
+      ingest_website_result_queue: ${RABBITMQ_INGEST_WEBSITE_RESULT_QUEUE}:virtual-contributor-ingest-website-result
       invoke_engine_result: ${RABBITMQ_RESULT_QUEUE}:virtual-contributor-invoke-engine-result
       invoke_engine_expert: ${RABBITMQ_INVOKE_ENGINE_EXPERT}:virtual-contributor-engine-expert
       invoke_engine_libra_flow: ${RABBITMQ_INVOKE_ENGINE_LIBRA_FLOW}:virtual-contributor-engine-libra-flow
@@ -398,18 +398,10 @@ notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
 
 collaboration:
+  membership:
+    cache_ttl: ${MEMBERSHIP_TTL}:14400
   whiteboards:
     enabled: ${WHITEBOARDS_ENABLED}:true
-    # the window in which contributions are accepted to be counted towards a single contribution event;
-    # time is in SECONDS
-    contribution_window: ${CONTRIBUTION_RT_WINDOW}:600
-    # SECONDS between saves
-    save_interval: ${WHITEBOARD_AUTOSAVE_INTERVAL}:15
-    # SECONDS to wait after the request is saved, before it fails
-    save_timeout: ${WHITEBOARD_AUTOSAVE_TIMEOUT}:10
-    # SECONDS to wait after the request is saved, before it fails
-    collaborator_mode_timeout: ${WHITEBOARD_COLLABORATOR_MODE_TIMEOUT}:1800
-    # number of simultaneous collaborators
     max_collaborators_in_room: ${WHITEBOARD_MAX_COLLABORATORS_IN_ROOM}:20
 
 ## Configuration of the legal / usability aspects of the platform
@@ -494,6 +486,7 @@ platform:
   vector_db:
     host: ${VECTOR_DB_HOST}:localhost
     port: ${VECTOR_DB_PORT}:8765
+    credentials: ${VECTOR_DB_CREDENTIALS}:root\:toor
 
   virtual_contributors:
     history_length: ${VC_HISTORY_LENGTH}:10

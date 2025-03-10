@@ -11,8 +11,9 @@ import {
   DeleteAiPersonaServiceInput,
   UpdateAiPersonaServiceInput,
 } from './dto';
-import { AiPersonaServiceIngestInput } from './dto/ai.persona.service.dto.ingest';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IAiPersonaService)
 export class AiPersonaServiceResolverMutations {
   constructor(
@@ -34,7 +35,7 @@ export class AiPersonaServiceResolverMutations {
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         aiPersonaServiceData.ID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiPersonaService.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -58,7 +59,7 @@ export class AiPersonaServiceResolverMutations {
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         deleteData.ID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiPersonaService.authorization,
       AuthorizationPrivilege.DELETE,
@@ -67,29 +68,5 @@ export class AiPersonaServiceResolverMutations {
     return await this.aiPersonaServiceService.deleteAiPersonaService(
       deleteData
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Trigger an ingesting of data on the remove AI Persona Service.',
-  })
-  async aiServerPersonaServiceIngest(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ingestData')
-    aiPersonaIngestData: AiPersonaServiceIngestInput
-  ): Promise<boolean> {
-    const aiPersonaService =
-      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        aiPersonaIngestData.aiPersonaServiceID
-      );
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      aiPersonaService.authorization,
-      AuthorizationPrivilege.UPDATE, // TODO: Separate privilege
-      `ingesting on ai persona service: ${aiPersonaService.id}`
-    );
-    return this.aiPersonaServiceService.ingest(aiPersonaService);
   }
 }

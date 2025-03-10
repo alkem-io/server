@@ -3,7 +3,7 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { FlowState } from './bootstrap.space.tutorials.innovation.flow.states';
+import { FlowState } from './bootstrap.space.tutorials.innovation.flow';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 

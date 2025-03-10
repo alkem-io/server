@@ -15,7 +15,9 @@ import {
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { RoomEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { RoomService } from './room.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class RoomEventResolverSubscription {
   constructor(

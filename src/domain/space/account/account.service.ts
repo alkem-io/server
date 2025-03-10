@@ -36,12 +36,14 @@ import { AccountHostService } from '../account.host/account.host.service';
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicenseService } from '@domain/common/license/license.service';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService()
 @Injectable()
 export class AccountService {
   constructor(
     private accountHostService: AccountHostService,
-    private authoriztionPolicyService: AuthorizationPolicyService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
     private agentService: AgentService,
     private storageAggregatorService: StorageAggregatorService,
@@ -78,7 +80,7 @@ export class AccountService {
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
     if (!spaceData.nameID) {
       spaceData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
-        spaceData.profileData.displayName,
+        spaceData.about.profileData.displayName,
         reservedNameIDs
       );
     } else {
@@ -192,6 +194,13 @@ export class AccountService {
     return result;
   }
 
+  public updateExternalSubscriptionId(
+    accountID: string,
+    externalSubscriptionID: string
+  ) {
+    return this.accountRepository.update(accountID, { externalSubscriptionID });
+  }
+
   async getAccountOrFail(
     accountID: string,
     options?: FindOneOptions<Account>
@@ -213,6 +222,50 @@ export class AccountService {
       where: { id: accountID },
       ...options,
     });
+  }
+
+  public async getAccountAndDetails(accountID: string) {
+    const [account] = await this.accountRepository.query(
+      `
+        SELECT
+          account.id as accountId, account.externalSubscriptionID as externalSubscriptionID,
+          organization.id as orgId, organization.contactEmail as orgContactEmail, organization.legalEntityName as orgLegalName, organization.nameID as orgNameID,
+          profile.displayName as orgDisplayName,
+          user.id as userId, user.email as userEmail, CONCAT(user.firstName, ' ', user.lastName) as userName
+        FROM account
+        LEFT JOIN user on account.id = user.accountID
+        LEFT JOIN organization on account.id = organization.accountID
+        left join profile on organization.profileId = profile.id
+        WHERE account.id = ?
+    `,
+      [accountID]
+    );
+
+    if (!account) {
+      return undefined;
+    }
+
+    return {
+      accountID,
+      externalSubscriptionID: account.externalSubscriptionID,
+      user: account.userId
+        ? {
+            id: account.userId,
+            email: account.userEmail,
+            name: account.userName,
+          }
+        : undefined,
+      organization: account.orgId
+        ? {
+            id: account.orgId,
+            email: account.orgContactEmail,
+            legalName: account.orgLegalName,
+            orgLegalName: account.orgLegalName,
+            displayName: account.orgDisplayName,
+            nameID: account.orgNameID,
+          }
+        : undefined,
+    };
   }
 
   async getAccounts(options?: FindManyOptions<Account>): Promise<IAccount[]> {
@@ -278,7 +331,7 @@ export class AccountService {
         hub,
         account.authorization
       );
-    await this.authoriztionPolicyService.saveAll(authorizations);
+    await this.authorizationPolicyService.saveAll(authorizations);
     return hub;
   }
 
@@ -307,7 +360,7 @@ export class AccountService {
         ip,
         account.authorization
       );
-    await this.authoriztionPolicyService.saveAll(authorizations);
+    await this.authorizationPolicyService.saveAll(authorizations);
     return ip;
   }
 

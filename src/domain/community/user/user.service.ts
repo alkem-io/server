@@ -71,7 +71,9 @@ import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { VisualType } from '@common/enums/visual.type';
+import { InstrumentService } from '@src/apm/decorators';
 
+@InstrumentService()
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -501,7 +503,7 @@ export class UserService {
         LogContext.COMMUNITY
       );
     }
-    const user = await this.getUserByEmailIdUUID(userID, options);
+    const user = await this.userLookupService.getUserByUUID(userID, options);
 
     if (!user) {
       throw new EntityNotFoundException(
@@ -511,16 +513,6 @@ export class UserService {
     }
 
     return user;
-  }
-
-  private async getUserByEmailIdUUID(
-    userID: string,
-    options: FindOneOptions<User> | undefined
-  ): Promise<IUser | null> {
-    return this.userRepository.findOne({
-      where: [{ id: userID }, { nameID: userID }, { email: userID }],
-      ...options,
-    });
   }
 
   async getUserByEmail(

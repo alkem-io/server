@@ -16,7 +16,9 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class LinkResolverMutations {
   constructor(

@@ -13,7 +13,9 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { LifecycleEventInput } from '@domain/common/lifecycle/dto/lifecycle.dto.event';
 import { OrganizationVerificationLifecycleService } from './organization.verification.service.lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IOrganizationVerification)
 export class OrganizationVerificationResolverMutations {
   constructor(

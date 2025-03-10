@@ -30,6 +30,17 @@ export class MeService {
     private readonly logger: LoggerService
   ) {}
 
+  public async getCommunityInvitationsCountForUser(
+    userId: string,
+    states?: string[]
+  ): Promise<number> {
+    const invitations = await this.rolesService.getCommunityInvitationsForUser(
+      userId,
+      states
+    );
+    return invitations.length;
+  }
+
   public async getCommunityInvitationsForUser(
     userId: string,
     states?: string[]
@@ -50,7 +61,7 @@ export class MeService {
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           invitation.roleSet.id
         );
-      if (!space.profile || !space.context) {
+      if (!space.about) {
         throw new EntityNotFoundException(
           `Missing entities on Space loaded for Invitation ${invitation.id}`,
           LogContext.COMMUNITY
@@ -62,8 +73,7 @@ export class MeService {
         spacePendingMembershipInfo: {
           id: space.id,
           level: space.level,
-          profile: space.profile,
-          context: space.context,
+          about: space.about,
           communityGuidelines: space.community?.guidelines,
         },
       });
@@ -89,7 +99,7 @@ export class MeService {
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           application.roleSet.id
         );
-      if (!space.profile || !space.context) {
+      if (!space.about) {
         throw new EntityNotFoundException(
           `Missing entities on Space loaded for Application ${application.id}`,
           LogContext.COMMUNITY
@@ -101,8 +111,7 @@ export class MeService {
         spacePendingMembershipInfo: {
           id: space.id,
           level: space.level,
-          profile: space.profile,
-          context: space.context,
+          about: space.about,
           communityGuidelines: space.community?.guidelines,
         },
       });
@@ -172,15 +181,19 @@ export class MeService {
   }
 
   public async getSpaceMembershipsHierarchical(
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    limit?: number
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
       await this.getSpaceMembershipsForAgentInfo(agentInfo);
 
-    const levelZeroSpaces = this.filterSpacesByLevel(
+    const levelZeroSpacesRaw = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
       SpaceLevel.L0
     );
+    if (limit) {
+      levelZeroSpacesRaw.splice(limit);
+    }
     const levelOneSpaces = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
       SpaceLevel.L1
@@ -190,7 +203,7 @@ export class MeService {
       SpaceLevel.L2
     );
 
-    const levelZeroMemberships = levelZeroSpaces.map(levelZeroSpace => {
+    const levelZeroMemberships = levelZeroSpacesRaw.map(levelZeroSpace => {
       const levelZeroMembership: CommunityMembershipResult = {
         id: levelZeroSpace.id,
         space: levelZeroSpace,

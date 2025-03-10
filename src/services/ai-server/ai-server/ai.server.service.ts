@@ -12,12 +12,10 @@ import {
   IAiPersonaService,
 } from '@services/ai-server/ai-persona-service';
 import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
-import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.engine.adapter';
-import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
-import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
 import {
   CreateAiPersonaServiceInput,
   isInputValidForAction,
+  UpdateAiPersonaServiceInput,
 } from '../ai-persona-service/dto';
 import { AiPersonaServiceInvocationInput } from '../ai-persona-service/dto/ai.persona.service.invocation.dto.input';
 import {
@@ -46,6 +44,7 @@ import { RoomControllerService } from '@services/room-integration/room.controlle
 import { IMessage } from '@domain/communication/message/message.interface';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
 
 @Injectable()
 export class AiServerService {
@@ -74,7 +73,6 @@ export class AiServerService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
-    private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     private roomLookupService: RoomLookupService,
     private subscriptionPublishService: SubscriptionPublishService,
     private config: ConfigService<AlkemioConfig, true>,
@@ -113,7 +111,7 @@ export class AiServerService {
       LogContext.AI_SERVER
     );
 
-    await this.ensureSpaceBoNIsIngested(aiPersonaService);
+    await this.ensureBoNIsIngested(aiPersonaService);
     return true;
   }
 
@@ -163,13 +161,28 @@ export class AiServerService {
     }
   }
 
-  public async ensureSpaceBoNIsIngested(
-    persona: IAiPersonaService
-  ): Promise<void> {
+  public async ensureBoNIsIngested(persona: IAiPersonaService): Promise<void> {
     this.logger.verbose?.(
       `AI Persona service ${persona.id} found for BOK refresh`,
       LogContext.AI_SERVER
     );
+    if (persona.engine === AiPersonaEngine.GUIDANCE) {
+      [
+        'https://alkem.io/documentation',
+        'https://www.alkemio.org',
+        'https://welcome.alkem.io',
+      ].map(url => {
+        this.eventBus.publish(
+          new IngestWebsite(
+            url,
+            AiPersonaBodyOfKnowledgeType.WEBSITE,
+            IngestionPurpose.KNOWLEDGE,
+            persona.id
+          )
+        );
+      });
+      return;
+    }
     this.eventBus.publish(
       new IngestBodyOfKnowledge(
         persona.bodyOfKnowledgeID,
@@ -283,10 +296,16 @@ export class AiServerService {
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
-    const { host, port } = this.config.get('platform.vector_db', {
+    const { host, port, credentials } = this.config.get('platform.vector_db', {
       infer: true,
     });
-    const chroma = new ChromaClient({ path: `http://${host}:${port}` });
+    const chroma = new ChromaClient({
+      path: `http://${host}:${port}`,
+      auth: {
+        provider: 'basic',
+        credentials,
+      },
+    });
 
     const name = this.getContextCollectionID(contextID);
     try {
@@ -300,6 +319,15 @@ export class AiServerService {
       );
       return false;
     }
+  }
+
+  async updateAiPersonaService(updateData: UpdateAiPersonaServiceInput) {
+    const aiPersonaService =
+      await this.aiPersonaServiceService.updateAiPersonaService(updateData);
+
+    // TBD: trigger a re-ingest?
+
+    return aiPersonaService;
   }
 
   async createAiPersonaService(
@@ -406,22 +434,6 @@ export class AiServerService {
     }
 
     return authorization;
-  }
-
-  public async ingestAiPersonaService(
-    ingestData: AiServerIngestAiPersonaServiceInput
-  ): Promise<boolean> {
-    const aiPersonaService =
-      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        ingestData.aiPersonaServiceID
-      );
-    const ingestAdapterInput: AiPersonaEngineAdapterInputBase = {
-      engine: aiPersonaService.engine,
-      userID: '',
-    };
-    const result =
-      await this.aiPersonaEngineAdapter.sendIngest(ingestAdapterInput);
-    return result;
   }
 
   public async handleInvokeEngineResult(event: InvokeEngineResult) {

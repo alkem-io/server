@@ -1,5 +1,3 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ConfigService } from '@nestjs/config';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
@@ -13,12 +11,12 @@ import { UserService } from '@domain/community/user/user.service';
 import { IMessageGuidanceQuestionResult } from '@domain/communication/message.guidance.question.result/message.guidance.question.result.interface';
 import { PlatformService } from '@platform/platform/platform.service';
 import { InvocationOperation } from '@common/enums/ai.persona.invocation.operation';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class ChatGuidanceService {
   constructor(
     private configService: ConfigService<AlkemioConfig, true>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private aiServerAdapter: AiServerAdapter,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
@@ -106,21 +104,6 @@ export class ChatGuidanceService {
     if (guidanceRoom) {
       await this.roomService.deleteRoom(guidanceRoom);
     }
-    return true;
-  }
-
-  public async ingest() {
-    const guidanceVc =
-      await this.platformService.getGuidanceVirtualContributorOrFail();
-    this.aiServerAdapter.invoke({
-      operation: InvocationOperation.INGEST,
-      message: 'ingest',
-      aiPersonaServiceID: guidanceVc.aiPersona.aiPersonaServiceID,
-      displayName: '',
-      resultHandler: {
-        action: InvocationResultAction.NONE,
-      },
-    });
     return true;
   }
 

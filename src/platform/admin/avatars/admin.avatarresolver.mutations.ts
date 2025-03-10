@@ -14,7 +14,9 @@ import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucke
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class AdminSearchContributorsMutations {
   constructor(

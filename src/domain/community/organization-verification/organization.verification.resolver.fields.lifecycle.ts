@@ -3,7 +3,9 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { ILifecycleFields } from '@domain/common/lifecycle/lifecycle.fields.interface';
 import { OrganizationVerificationLifecycleService } from './organization.verification.service.lifecycle';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver(() => IOrganizationVerification)
 export class OrganizationVerificationLifecycleResolverFields
   implements ILifecycleFields<IOrganizationVerification>

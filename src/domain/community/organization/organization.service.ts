@@ -18,7 +18,6 @@ import {
   UpdateOrganizationInput,
 } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
-import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -361,8 +360,6 @@ export class OrganizationService {
       );
     }
 
-    await this.roleSetService.removeAllRoleAssignments(organization.roleSet);
-
     await this.profileService.deleteProfile(organization.profile.id);
 
     if (organization.storageAggregator) {
@@ -402,19 +399,11 @@ export class OrganizationService {
     organizationID: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    let organization: IOrganization | null;
-    if (organizationID.length === UUID_LENGTH) {
-      organization = await this.organizationRepository.findOne({
-        ...options,
-        where: { ...options?.where, id: organizationID },
-      });
-    } else {
-      // look up based on nameID
-      organization = await this.organizationRepository.findOne({
-        ...options,
-        where: { ...options?.where, nameID: organizationID },
-      });
-    }
+    const organization = await this.organizationRepository.findOne({
+      ...options,
+      where: { ...options?.where, id: organizationID },
+    });
+
     return organization;
   }
 

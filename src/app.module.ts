@@ -25,7 +25,6 @@ import { AdminCommunicationModule } from '@platform/admin/communication/admin.co
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
-import { SearchModule } from '@services/api/search/v1/search.module';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
@@ -88,6 +87,10 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
+import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
+import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
+import { SearchModule } from '@services/api/search/search.module';
+import { ApmApolloPlugin } from './apm/plugins';
 
 @Module({
   imports: [
@@ -195,6 +198,7 @@ import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
             ],
           },
           fieldResolverEnhancers: ['guards', 'filters'],
+          plugins: [ApmApolloPlugin],
           sortSchema: true,
           persistedQueries: false,
           /***
@@ -252,6 +256,7 @@ import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
         };
       },
     }),
+    UrlResolverModule,
     LoaderCreatorModule,
     ScalarsModule,
     AuthenticationModule,
@@ -259,7 +264,6 @@ import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
     SpaceModule,
     MetadataModule,
     BootstrapModule,
-    SearchModule,
     ActivityLogModule,
     RolesModule,
     KonfigModule,
@@ -302,6 +306,8 @@ import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
     InAppNotificationReaderModule,
     InAppNotificationReceiverModule,
     WingbackWebhookModule,
+    CalloutTransferModule,
+    SearchModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

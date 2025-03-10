@@ -16,6 +16,9 @@ import { INestApplication } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
 import { renderGraphiQL } from 'graphql-helix';
 import { Request, Response } from 'express';
+// this is used - it needs to start before the app
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { apmAgent } from './apm';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {

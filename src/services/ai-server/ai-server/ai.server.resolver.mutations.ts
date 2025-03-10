@@ -21,6 +21,7 @@ import { EntityManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlkemioConfig } from '@src/types';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
 @ObjectType('MigrateEmbeddings')
 class IMigrateEmbeddingsResponse {
@@ -28,6 +29,7 @@ class IMigrateEmbeddingsResponse {
   success!: boolean;
 }
 
+@InstrumentResolver()
 @Resolver()
 export class AiServerResolverMutations {
   constructor(
@@ -62,10 +64,16 @@ export class AiServerResolverMutations {
       'User not authenticated to migrate embeddings'
     );
 
-    const vectorDb = this.config.get('platform.vector_db', { infer: true });
+    const { host, port, credentials } = this.config.get('platform.vector_db', {
+      infer: true,
+    });
 
     const chroma = new ChromaClient({
-      path: `http://${vectorDb.host}:${vectorDb.port}`,
+      path: `http://${host}:${port}`,
+      auth: {
+        provider: 'basic',
+        credentials,
+      },
     });
 
     // get all collections

@@ -25,7 +25,9 @@ import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.call
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CalloutsSetResolverMutations {
   constructor(
@@ -42,38 +44,6 @@ export class CalloutsSetResolverMutations {
     private temporaryStorageService: TemporaryStorageService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ICallout, {
-    description: 'Creates a new Callout on the specified CalloutsSet.',
-  })
-  async createCallout(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('calloutData')
-    calloutData: CreateCalloutOnCalloutsSetInput
-  ): Promise<ICallout> {
-    const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(
-      calloutData.calloutsSetID
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      calloutsSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `callouts set create callout: ${calloutsSet.id}`
-    );
-    const callout = await this.calloutsSetService.createCallout(
-      calloutsSet,
-      calloutData
-    );
-    const authorizations =
-      await this.calloutAuthorizationService.applyAuthorizationPolicy(
-        callout.id,
-        calloutsSet.authorization
-      );
-
-    await this.authorizationPolicyService.saveAll(authorizations);
-    return this.calloutService.getCalloutOrFail(callout.id);
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {

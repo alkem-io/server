@@ -2,6 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { AccountService } from './account.service';
 import {
+  EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
@@ -15,6 +16,7 @@ import { SpaceLicenseService } from '../space/space.service.license';
 import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
 import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
+import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 
 @Injectable()
 export class AccountLicenseService {
@@ -71,6 +73,47 @@ export class AccountLicenseService {
     }
 
     return updatedLicenses;
+  }
+
+  public async createWingbackAccount(accountID: string) {
+    const accountDetails =
+      await this.accountService.getAccountAndDetails(accountID);
+
+    if (!accountDetails) {
+      throw new EntityNotFoundException(
+        'Account not found',
+        LogContext.ACCOUNT,
+        { accountID }
+      );
+    }
+
+    if (accountDetails.externalSubscriptionID) {
+      throw new BaseExceptionInternal(
+        'Account already has an external subscription',
+        LogContext.LICENSE
+      );
+    }
+
+    const { user, organization } = accountDetails;
+    const name =
+      user?.name ?? (organization?.legalName || organization?.displayName);
+    const mainEmail =
+      user?.email ??
+      (organization?.email ||
+        `dummy-${organization?.nameID}@${organization?.nameID}.com`);
+
+    const { id: wingbackCustomerID } =
+      await this.licensingWingbackSubscriptionService.createCustomer({
+        name,
+        emails: { main: mainEmail },
+      });
+    // associate the Alkemio account with the Wingback customer
+    await this.accountService.updateExternalSubscriptionId(
+      accountID,
+      wingbackCustomerID
+    );
+
+    return wingbackCustomerID;
   }
 
   private async extendLicensePolicy(

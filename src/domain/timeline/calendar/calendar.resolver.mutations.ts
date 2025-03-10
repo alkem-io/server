@@ -11,7 +11,9 @@ import { CalendarEventAuthorizationService } from '../event/event.service.author
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
 import { CalendarEventService } from '../event/event.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class CalendarResolverMutations {
   constructor(

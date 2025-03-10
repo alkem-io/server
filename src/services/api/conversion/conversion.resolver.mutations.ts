@@ -16,9 +16,21 @@ import { SpaceAuthorizationService } from '@domain/space/space/space.service.aut
 import { ConvertSubsubspaceToSubspaceInput } from './dto/convert.dto.subsubspace.to.subspace.input';
 import { SpaceService } from '@domain/space/space/space.service';
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { ConversionVcSpaceToVcKnowledgeBaseInput } from './dto/conversion.dto.vc.space.to.vc.kb';
+import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { InstrumentResolver } from '@src/apm/decorators';
 
+@InstrumentResolver()
 @Resolver()
 export class ConversionResolverMutations {
   private authorizationGlobalAdminPolicy: IAuthorizationPolicy;
@@ -29,6 +41,10 @@ export class ConversionResolverMutations {
     private conversionService: ConversionService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private spaceService: SpaceService,
+    private virtualContributorService: VirtualContributorService,
+    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
+    private calloutTransferService: CalloutTransferService,
+    private aiServerAdapter: AiServerAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
@@ -121,5 +137,141 @@ export class ConversionResolverMutations {
       );
     }
     return subspace.parentSpace.authorization;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtualContributor, {
+    description:
+      'Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.',
+  })
+  async convertVirtualContributorToUseKnowledgeBase(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('conversionData')
+    conversionData: ConversionVcSpaceToVcKnowledgeBaseInput
+  ): Promise<IVirtualContributor> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `convert VC of type Space to VC of type KnowledgeBase: ${agentInfo.email}`
+    );
+    const virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        conversionData.virtualContributorID,
+        {
+          relations: {
+            account: true,
+            knowledgeBase: {
+              calloutsSet: true,
+            },
+            aiPersona: true,
+          },
+        }
+      );
+    if (
+      !virtualContributor.knowledgeBase ||
+      !virtualContributor.knowledgeBase.calloutsSet ||
+      !virtualContributor.account ||
+      !virtualContributor.aiPersona
+    ) {
+      throw new RelationshipNotFoundException(
+        `Missing entities on Virtual Contributor when converting to KnowledgeBase: ${virtualContributor.id}`,
+        LogContext.CONVERSION
+      );
+    }
+
+    const aiPersona =
+      await this.virtualContributorService.getAiPersonaOrFail(
+        virtualContributor
+      );
+
+    const vcType =
+      await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeType(
+        aiPersona.aiPersonaServiceID
+      );
+
+    if (vcType !== AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE) {
+      throw new ValidationException(
+        `Virtual Contributor is not of type Space: ${virtualContributor.id}`,
+        LogContext.CONVERSION
+      );
+    }
+    const spaceID =
+      await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeID(
+        aiPersona.aiPersonaServiceID
+      );
+    if (!spaceID) {
+      throw new ValidationException(
+        `Virtual Contributor does not have a body of knowledge: ${virtualContributor.id}`,
+        LogContext.CONVERSION
+      );
+    }
+
+    const space = await this.spaceService.getSpaceOrFail(spaceID, {
+      relations: {
+        collaboration: {
+          calloutsSet: {
+            callouts: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !space.collaboration ||
+      !space.collaboration.calloutsSet ||
+      !space.collaboration.calloutsSet.callouts
+    ) {
+      throw new RelationshipNotFoundException(
+        `Missing entities on space when converting VC to KnowledgeBase: ${virtualContributor.id}`,
+        LogContext.CONVERSION
+      );
+    }
+
+    const spaceAccount =
+      await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
+
+    if (virtualContributor.account.id !== spaceAccount.id) {
+      throw new ValidationException(
+        `Virtual Contributor and Space do not belong to the same account: ${virtualContributor.id}`,
+        LogContext.CONVERSION
+      );
+    }
+
+    const sourceCalloutsSet = space.collaboration?.calloutsSet;
+    if (!sourceCalloutsSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load CalloutsSet on Space:  ${virtualContributor.id} `,
+        LogContext.CONVERSION
+      );
+    }
+    const targetCalloutsSet = virtualContributor.knowledgeBase.calloutsSet;
+
+    // Transfer is authorized, now try to execute it
+    for (const callout of space.collaboration.calloutsSet.callouts) {
+      await this.calloutTransferService.transferCallout(
+        callout,
+        targetCalloutsSet,
+        agentInfo
+      );
+    }
+
+    // Update the information on the AI Persona Service
+    await this.aiServerAdapter.updateAiPersonaService({
+      ID: virtualContributor.aiPersona.aiPersonaServiceID,
+      bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE,
+      bodyOfKnowledgeID: virtualContributor.knowledgeBase.id,
+    });
+
+    // Reset the authorization policy for the callout
+    const authorizations =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtualContributor
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return this.virtualContributorService.getVirtualContributorOrFail(
+      virtualContributor.id
+    );
   }
 }

@@ -1,4 +1,4 @@
-import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 
 export enum FlowState {
   HOME = 'Home',
@@ -7,22 +7,33 @@ export enum FlowState {
   KNOWLEDGE = 'Knowledge',
 }
 
-export const bootstrapSpaceInnovationFlowStates: IInnovationFlowState[] = [
-  {
-    displayName: FlowState.HOME,
-    description:
-      '🔍 A journey of discovery! Gather insights through research and observation.',
+export const bootstrapSpaceInnovationFlow: CreateInnovationFlowInput = {
+  profile: {
+    displayName: 'Space Innovation Flow',
   },
-  {
-    displayName: FlowState.COMMUNITY,
-    description: '🔍 The next phase....',
+  settings: {
+    maximumNumberOfStates: 5,
+    minimumNumberOfStates: 4,
   },
-  {
-    displayName: FlowState.SUBSPACES,
-    description: '🔍 And another phase!',
-  },
-  {
-    displayName: FlowState.KNOWLEDGE,
-    description: '🔍 And another phase!',
-  },
-];
+  states: [
+    {
+      displayName: FlowState.HOME,
+      description:
+        '🔍 A journey of discovery! Gather insights through research and observation.',
+    },
+    {
+      displayName: FlowState.COMMUNITY,
+      description: '🔍 The contributors to this Space!',
+    },
+    {
+      displayName: FlowState.SUBSPACES,
+      description:
+        '🔍 Here you can explore the hosted Subspaces. Filter by key words to show just the topics you care about.',
+    },
+    {
+      displayName: FlowState.KNOWLEDGE,
+      description:
+        '🔍 In the Knowledge Base you will find relevant documents, insights and other materials about the topic. The leads of the Space can provide the content, but also community members can contribute.',
+    },
+  ],
+};

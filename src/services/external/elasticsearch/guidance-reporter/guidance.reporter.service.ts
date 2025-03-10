@@ -10,7 +10,7 @@ import { isElasticError, isElasticResponseError } from '../utils';
 import { GuidanceUsage } from './guidance.usage';
 import { GuidanceUsageDocument } from './guidance.usage.document';
 import { UserService } from '@domain/community/user/user.service';
-import { GuidanceEngineQueryResponse } from '@services/adapters/chat-guidance-adapter/dto/guidance.engine.dto.question.response';
+// import { GuidanceEngineQueryResponse } from '@services/adapters/chat-guidance-adapter/dto/guidance.engine.dto.question.response';
 import { AlkemioConfig } from '@src/types';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
@@ -45,41 +45,38 @@ export class GuidanceReporterService {
     this.indexName = elasticsearch?.indices?.guidance_usage;
   }
 
-  public async logAnswer(
-    question: string,
-    guidanceEngineResponse: GuidanceEngineQueryResponse,
-    userId: string
-  ): Promise<string> {
+  public async logAnswer() // question: string,
+  // guidanceEngineResponse: GuidanceEngineQueryResponse,
+  // userId: string
+  : Promise<string> {
     const answerId = randomUUID();
-    this.reportToElastic(question, guidanceEngineResponse, answerId, userId);
+    // this.reportToElastic(question, guidanceEngineResponse, answerId, userId);
 
     return answerId;
   }
 
-  private async reportToElastic(
-    question: string,
-    guidanceEngineResponse: GuidanceEngineQueryResponse,
-    answerId: string,
-    userId: string
-  ): Promise<void> {
-    const { email } = await this.userService.getUserOrFail(userId);
-
-    this.reportUsage({
-      usage: {
-        answerId,
-        answer: guidanceEngineResponse.answer,
-        completionTokens: guidanceEngineResponse.completion_tokens,
-        promptTokens: guidanceEngineResponse.prompt_tokens,
-        question,
-        sources: guidanceEngineResponse.sources,
-        totalCost: guidanceEngineResponse.total_cost,
-        totalTokens: guidanceEngineResponse.total_tokens,
-      },
-      author: {
-        id: userId,
-        email,
-      },
-    });
+  private async reportToElastic() // question: string,
+  // guidanceEngineResponse: GuidanceEngineQueryResponse,
+  // answerId: string,
+  // userId: string
+  : Promise<void> {
+    // const { email } = await this.userService.getUserOrFail(userId);
+    // this.reportUsage({
+    //   usage: {
+    //     answerId,
+    //     answer: guidanceEngineResponse.answer,
+    //     completionTokens: guidanceEngineResponse.completion_tokens,
+    //     promptTokens: guidanceEngineResponse.prompt_tokens,
+    //     question,
+    //     sources: guidanceEngineResponse.sources,
+    //     totalCost: guidanceEngineResponse.total_cost,
+    //     totalTokens: guidanceEngineResponse.total_tokens,
+    //   },
+    //   author: {
+    //     id: userId,
+    //     email,
+    //   },
+    // });
   }
 
   private async reportUsage(data: GuidanceUsage) {
