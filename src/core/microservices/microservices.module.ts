@@ -12,7 +12,6 @@ import {
   AUTH_RESET_SERVICE,
   SUBSCRIPTION_SUBSPACE_CREATED,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-  SUBSCRIPTION_NOTIFICATION_RECEIVED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
@@ -45,10 +44,6 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
     queueName: MessagingQueue.SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-  },
-  {
-    provide: SUBSCRIPTION_NOTIFICATION_RECEIVED,
-    queueName: MessagingQueue.SUBSCRIPTION_NOTIFICATION_RECEIVED,
   },
 ];
 

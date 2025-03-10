@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import {
   RABBITMQ_EXCHANGE_NAME_DIRECT,
   SUBSCRIPTION_ACTIVITY_CREATED,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
 } from '@src/common/constants';
 import { subscriptionFactoryProvider } from '@core/microservices/subscription.factory.provider';
 import { SubscriptionPublishService } from './subscription.publish.service';
@@ -13,6 +14,10 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_ACTIVITY_CREATED,
     queueName: MessagingQueue.SUBSCRIPTION_ACTIVITY_CREATED,
+  },
+  {
+    provide: SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+    queueName: MessagingQueue.SUBSCRIPTION_NOTIFICATION_RECEIVED,
   },
 ];
 
