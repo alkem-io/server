@@ -3,37 +3,55 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser, TypedSubscription } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { InAppNotificationReceivedSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
-import { InAppNotificationReceivedSubscriptionResult } from '@domain/in-app-notification-reader/dto/subscription';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
+import { UseGuards } from '@nestjs/common';
+import { GraphqlGuard } from '@core/authorization';
+import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
+import { ForbiddenException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverSubscription {
   constructor(private subscriptionService: SubscriptionReadService) {}
 
+  @UseGuards(GraphqlGuard)
   @TypedSubscription<InAppNotificationReceivedSubscriptionPayload, never>(
-    () => InAppNotificationReceivedSubscriptionResult,
+    () => InAppNotification,
     {
-      description: 'New in-app notification received',
+      description:
+        'New in-app notification received for the currently authenticated user.',
+      async filter(
+        this: InAppNotificationResolverSubscription,
+        payload,
+        _variables,
+        context
+      ) {
+        const agentInfo = context.req.user;
+        return agentInfo?.userID === payload.notification.receiverID;
+      },
       async resolve(
         this: InAppNotificationResolverSubscription,
         payload,
         _args,
-        context
+        _context
       ) {
-        return payload;
-      },
-      async filter(
-        this: InAppNotificationResolverSubscription,
-        payload,
-        variables,
-        context
-      ) {
-        return true;
+        return {
+          ...payload.notification,
+          triggeredAt: new Date(payload.notification.triggeredAt),
+        };
       },
     }
   )
   public async inAppNotificationReceived(@CurrentUser() agentInfo: AgentInfo) {
+    if (!agentInfo.userID) {
+      throw new ForbiddenException(
+        'User could not be resolved',
+        LogContext.IN_APP_NOTIFICATION,
+        { agentInfo }
+      );
+    }
+
     return this.subscriptionService.subscribeToInAppNotificationReceived();
   }
 }
