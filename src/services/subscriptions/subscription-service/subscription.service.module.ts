@@ -17,7 +17,7 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
   {
     provide: SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
-    queueName: MessagingQueue.SUBSCRIPTION_NOTIFICATION_RECEIVED,
+    queueName: MessagingQueue.SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   },
 ];
 
