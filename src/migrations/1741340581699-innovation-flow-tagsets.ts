@@ -384,7 +384,7 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
           id: string;
           description: string;
         }[] = await queryRunner.query(
-          `SELECT id FROM tagset_template WHERE tagsetTemplateSet = ? AND name = ?`,
+          `SELECT id FROM tagset_template WHERE tagsetTemplateSetId = ? AND name = ?`,
           [collaboration.tagsetTemplateSetId, 'flow-state']
         );
         if (tagsetTemplate) {
@@ -404,7 +404,8 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
       );
       // store the current state + flow states into the innovationFlow
       await queryRunner.query(
-        `UPDATE innovation_flow SET currentState = '${JSON.stringify(currentState)}', flowStatesTagsetTemplateId = '${flowStatesTagsetTemplateId}' WHERE id = '${collaboration.innovationFlowId}'`
+        `UPDATE innovation_flow SET currentState = ?, flowStatesTagsetTemplateId = '${flowStatesTagsetTemplateId}' WHERE id = '${collaboration.innovationFlowId}'`,
+        [JSON.stringify(currentState)]
       );
       // And finally delete the tagset as no longer used
       await queryRunner.query(
