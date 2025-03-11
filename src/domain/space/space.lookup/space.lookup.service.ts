@@ -85,6 +85,18 @@ export class SpaceLookupService {
     return space;
   }
 
+  public async getFullSpaceHierarchy(spaceID: string): Promise<ISpace | null> {
+    const space: ISpace | null = await this.entityManager.findOne(Space, {
+      where: { id: spaceID },
+      relations: {
+        subspaces: {
+          subspaces: true,
+        },
+      },
+    });
+    return space;
+  }
+
   public async getAgent(spaceID: string): Promise<IAgent> {
     const space = await this.getSpaceOrFail(spaceID, {
       relations: {
