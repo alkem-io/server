@@ -62,6 +62,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class RoleSetService {
@@ -1435,9 +1436,7 @@ export class RoleSetService {
     return this.flattenSubspaces(subspaces);
   }
 
-  private flattenSubspaces(
-    subspaces: { id: string; subspaces?: any[] }[]
-  ): string[] {
+  private flattenSubspaces(subspaces: ISpace[]): string[] {
     return subspaces.flatMap(subspace => [
       subspace.id,
       ...(subspace.subspaces ? this.flattenSubspaces(subspace.subspaces) : []),
