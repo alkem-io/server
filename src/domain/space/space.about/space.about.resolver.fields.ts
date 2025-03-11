@@ -12,6 +12,8 @@ import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.membership';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { AuthorizationAgentPrivilege } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {
