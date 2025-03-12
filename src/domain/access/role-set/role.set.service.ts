@@ -896,6 +896,11 @@ export class RoleSetService {
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ) {
+    await this.roleSetCacheService.appendAgentRoleCache(
+      contributorAgentId,
+      roleSet.id,
+      role
+    );
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
         this.logger.verbose?.(
