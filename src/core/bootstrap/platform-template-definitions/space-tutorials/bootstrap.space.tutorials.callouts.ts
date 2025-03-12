@@ -114,7 +114,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.FLOW_STATE,
-          tags: [FlowState.HOME],
+          tags: [FlowState.COMMUNITY],
         },
       ],
     },
@@ -138,7 +138,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.FLOW_STATE,
-          tags: [FlowState.HOME],
+          tags: [FlowState.SUBSPACES],
         },
       ],
     },
@@ -162,7 +162,7 @@ export const bootstrapSpaceTutorialsCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.FLOW_STATE,
-          tags: [FlowState.HOME],
+          tags: [FlowState.KNOWLEDGE],
         },
       ],
     },
