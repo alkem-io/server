@@ -5,7 +5,7 @@ import { SubscriptionResolveContext } from './subscription.resolve.context';
 export function TypedSubscription<
   TPayload = unknown,
   TVariables = unknown,
-  TContext = SubscriptionResolveContext
+  TContext = SubscriptionResolveContext,
 >(
   typeFunc: ReturnTypeFunc,
   options?: TypedSubscriptionOptions<TPayload, TVariables, TContext>
