@@ -12,6 +12,7 @@ import { InAppNotificationEntity } from '../in-app-notification/in.app.notificat
 import { InAppNotificationState } from '../in-app-notification/in.app.notification.state';
 import { PlatformService } from '@platform/platform/platform.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 
 @Injectable()
 export class InAppNotificationReceiver {
@@ -20,13 +21,18 @@ export class InAppNotificationReceiver {
     private readonly logger: LoggerService,
     private platformService: PlatformService,
     private roleSetService: RoleSetService,
+    private subscriptionPublishService: SubscriptionPublishService,
     @InjectRepository(InAppNotificationEntity)
     private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
   ) {}
 
-  public async decompressAndStore(
+  public async decompressStoreNotify(
     compressedPayload: CompressedInAppNotificationPayload<InAppNotificationPayload>[]
   ) {
+    this.logger.verbose?.(
+      `Received ${compressedPayload.length} compressed in-app notifications`,
+      LogContext.IN_APP_NOTIFICATION
+    );
     // decompress
     const notifications = compressedPayload.flatMap(x =>
       decompressInAppNotifications(x)
@@ -36,6 +42,46 @@ export class InAppNotificationReceiver {
       LogContext.IN_APP_NOTIFICATION
     );
     // filter out notifications that are not for beta users
+    const notificationsForBetaUsers =
+      await this.filterOutNotificationsForBetaUsers(notifications);
+    // store
+    this.logger.verbose?.(
+      `Storing ${notificationsForBetaUsers.length} in-app notifications for beta users only`,
+      LogContext.IN_APP_NOTIFICATION
+    );
+    const savedNotifications = await this.store(notificationsForBetaUsers);
+    // notify
+    this.logger.verbose?.(
+      'Notifying beta users about the received in-app notifications',
+      LogContext.IN_APP_NOTIFICATION
+    );
+    savedNotifications.forEach(x =>
+      this.subscriptionPublishService.publishInAppNotificationReceived(x)
+    );
+  }
+
+  private async store(
+    notifications: InAppNotificationPayload[]
+  ): Promise<InAppNotificationEntity[]> {
+    const entities = notifications.map(notification =>
+      InAppNotificationEntity.create({
+        triggeredAt: notification.triggeredAt,
+        type: notification.type,
+        state: InAppNotificationState.UNREAD,
+        category: notification.category,
+        receiverID: notification.receiverID,
+        triggeredByID: notification.triggeredByID,
+        payload: notification,
+      })
+    );
+    return this.inAppNotificationRepo.save(entities, {
+      chunk: 100,
+    });
+  }
+
+  private async filterOutNotificationsForBetaUsers(
+    notifications: InAppNotificationPayload[]
+  ): Promise<InAppNotificationPayload[]> {
     const receiverSet = new Set(
       notifications.map(({ receiverID }) => receiverID)
     );
@@ -52,34 +98,9 @@ export class InAppNotificationReceiver {
         betaTesterReceivers.push(userID);
       }
     }
-    const notificationsForBetaUsers: InAppNotificationPayload[] =
-      notifications.filter(x => betaTesterReceivers.includes(x.receiverID));
-    // store
-    this.logger.verbose?.(
-      `Storing ${notificationsForBetaUsers.length} in-app notifications for beta users only`,
-      LogContext.IN_APP_NOTIFICATION
+    return notifications.filter(x =>
+      betaTesterReceivers.includes(x.receiverID)
     );
-    return this.store(notificationsForBetaUsers);
-  }
-
-  private async store(
-    notifications: InAppNotificationPayload[]
-  ): Promise<void> {
-    const entities = notifications.map(notification =>
-      InAppNotificationEntity.create({
-        triggeredAt: notification.triggeredAt,
-        type: notification.type,
-        state: InAppNotificationState.UNREAD,
-        category: notification.category,
-        receiverID: notification.receiverID,
-        triggeredByID: notification.triggeredByID,
-        payload: notification,
-      })
-    );
-    await this.inAppNotificationRepo.save(entities, {
-      chunk: 100,
-    });
-    return;
   }
 }
 
