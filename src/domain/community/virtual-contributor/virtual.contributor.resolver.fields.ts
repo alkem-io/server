@@ -28,7 +28,7 @@ import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.int
 export class VirtualContributorResolverFields {
   constructor(private virtualContributorService: VirtualContributorService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('account', () => IAccount, {
     nullable: true,
     description: 'The Account of the Virtual Contributor.',
@@ -48,7 +48,7 @@ export class VirtualContributorResolverFields {
     return account;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
@@ -58,7 +58,7 @@ export class VirtualContributorResolverFields {
     return parent.authorization;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this Virtual.',
@@ -74,7 +74,7 @@ export class VirtualContributorResolverFields {
     return profile;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
@@ -87,7 +87,7 @@ export class VirtualContributorResolverFields {
     return loader.load(virtualContributor.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('aiPersona', () => IAiPersona, {
     nullable: true,
     description: 'The AI persona being used by this virtual contributor',
@@ -115,7 +115,7 @@ export class VirtualContributorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('provider', () => IContributor, {
     nullable: false,
     description: 'The Virtual Contributor provider.',
@@ -126,7 +126,7 @@ export class VirtualContributorResolverFields {
     return await this.virtualContributorService.getProvider(virtualContributor);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('status', () => VirtualContributorStatus, {
     nullable: false,
     description: 'The status of the virtual contributor',

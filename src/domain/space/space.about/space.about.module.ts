@@ -7,12 +7,18 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { SpaceAboutService } from './space.about.service';
 import { SpaceAboutResolverFields } from './space.about.resolver.fields';
 import { SpaceAbout } from './space.about.entity';
+import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { SpaceAboutMembershipModule } from '../space.about.membership/space.about.membership.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     ProfileModule,
+    SpaceLookupModule,
+    SpaceAboutMembershipModule,
+    RoleSetModule,
     TypeOrmModule.forFeature([SpaceAbout]),
   ],
   providers: [
