@@ -385,12 +385,19 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
           description: string;
         }[] = await queryRunner.query(
           `SELECT id FROM tagset_template WHERE tagsetTemplateSetId = ? AND name = ?`,
-          [collaboration.tagsetTemplateSetId, 'flow-state']
+          [collaboration.tagsetTemplateSetId, this.TAGSET_FLOW]
         );
         if (tagsetTemplate) {
           flowStatesTagsetTemplateId = tagsetTemplate.id;
         } else {
-          throw new Error(`Unable to determine flow states tagsetTemplate`);
+          flowStatesTagsetTemplateId = await this.createTagsetTemplate(
+            queryRunner,
+            collaboration.tagsetTemplateSetId,
+            this.TAGSET_FLOW,
+            'select-one',
+            `${this.LEVEL_ZERO_FLOW_STATES.join(',')}`,
+            `${this.LEVEL_ZERO_FLOW_STATES[0]}`
+          );
         }
       }
       if (!flowStatesTagsetTemplateId) {
