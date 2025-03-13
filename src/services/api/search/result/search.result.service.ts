@@ -861,6 +861,8 @@ const buildResults = (
     ['score', 'result.id'],
     ['desc', 'desc']
   );
+  // limit the results to the top N
+  // more results are expected as an attempt to ensure the requested size after authorization
   const rankedAndLimited = resultsRanked.slice(0, filter?.size);
 
   const cursor = calculateSearchCursor(rankedAndLimited);

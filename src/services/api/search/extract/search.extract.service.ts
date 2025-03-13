@@ -114,6 +114,8 @@ const allowedTypesPerCategory: Record<SearchCategory, SearchResultType[]> = {
   ],
 };
 
+const SIZE_MULTIPLIER = 2;
+
 @Injectable()
 export class SearchExtractService {
   private readonly indexPattern: string;
@@ -159,6 +161,7 @@ export class SearchExtractService {
     const result = await this.executeMultiSearch(indicesToSearchOn, terms, {
       searchInSpaceFilter,
       filters,
+      sizeMultiplier: SIZE_MULTIPLIER,
     });
 
     return this.processMultiSearchResponses(result.responses);
@@ -229,6 +232,7 @@ export class SearchExtractService {
     options?: {
       searchInSpaceFilter?: string;
       filters?: SearchFilterInput[];
+      sizeMultiplier: number;
     }
   ): Promise<MsearchResponse<IBaseAlkemio>> {
     if (!this.client) {
@@ -239,7 +243,7 @@ export class SearchExtractService {
       throw new Error('No indices to search on');
     }
 
-    const { searchInSpaceFilter, filters } = options ?? {};
+    const { searchInSpaceFilter, filters, sizeMultiplier } = options ?? {};
 
     const term = terms.join(' ');
     // the main search query built using query DSL
@@ -253,7 +257,7 @@ export class SearchExtractService {
       query,
       {
         filters,
-        multiplier: 2, // todo: pass it in another way; this is very cryptic and not very visible
+        sizeMultiplier,
         defaults: {
           // split the max results between the categories to prevent overfetching
           size: this.maxResults / categoriesRequested,

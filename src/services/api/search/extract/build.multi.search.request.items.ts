@@ -21,14 +21,14 @@ export const buildMultiSearchRequestItems = (
   searchQuery: QueryDslQueryContainer,
   options: {
     filters?: SearchFilterInput[];
-    /** multiplies the requested results to try to avoid returning fewer results after authorization */
-    multiplier?: number;
+    /** Multiplier for the size argument as an attempt to ensure the requested size after authorization */
+    sizeMultiplier?: number;
     defaults: {
       size: number;
     };
   }
 ): MsearchRequestItem[] => {
-  const { filters, defaults, multiplier = 2 } = options;
+  const { filters, defaults, sizeMultiplier = 2 } = options;
   // grouping by category will highlight the search requests
   const indexByCategory = groupBy(indicesToSearchOn, 'category') as Record<
     SearchCategory,
@@ -45,7 +45,7 @@ export const buildMultiSearchRequestItems = (
 
     // build the search after argument for paginating the search results
     const search_after = calculateSearchAfter(cursor);
-    const resultCount = Math.round((size ?? defaults.size) * multiplier);
+    const resultCount = Math.round((size ?? defaults.size) * sizeMultiplier);
 
     return [
       { index: indices } as MsearchMultisearchHeader,
