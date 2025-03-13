@@ -66,6 +66,7 @@ export class SearchService {
     return this.searchResultService.resolveSearchResults(
       searchResults,
       agentInfo,
+      searchData.filters,
       searchData.searchInSpaceFilter
     );
   }

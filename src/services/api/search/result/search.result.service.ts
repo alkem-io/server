@@ -35,6 +35,8 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SearchResultType } from '../search.result.type';
 import { calculateSearchCursor } from '@services/api/search/util';
+import { SearchFilterInput } from '@services/api/search/dto/inputs';
+import { SearchCategory } from '@services/api/search/search.category';
 
 type PostParents = {
   post: Post;
@@ -61,11 +63,13 @@ export class SearchResultService {
    * Resolves search results by authorizing and enriching them with data.
    * @param rawSearchResults The raw search results from the search engine.
    * @param agentInfo The agent info of the user making the search request.
+   * @param filters Used to filter the end results.
    * @param spaceId The space ID to filter the search results by.
    */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
     agentInfo: AgentInfo,
+    filters: SearchFilterInput[],
     spaceId?: string
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
@@ -97,10 +101,28 @@ export class SearchResultService {
         agentInfo
       ),
     ]);
-    const contributorResults = buildResults(users, organizations);
-    const contributionResults = buildResults(posts);
-    const spaceResults = buildResults(spaces, subspaces);
-    const calloutResults = buildResults(callouts, calloutsOfWhiteboards);
+    const filtersByCategory = groupBy(filters, 'category') as Record<
+      SearchCategory,
+      SearchFilterInput[]
+    >;
+    const contributorResults = buildResults(
+      filtersByCategory.contributors?.[0],
+      organizations
+    );
+    const contributionResults = buildResults(
+      filtersByCategory.responses?.[0],
+      posts
+    );
+    const spaceResults = buildResults(
+      filtersByCategory.spaces?.[0],
+      spaces,
+      subspaces
+    );
+    const calloutResults = buildResults(
+      filtersByCategory['collaboration-tools']?.[0],
+      callouts,
+      calloutsOfWhiteboards
+    );
 
     return {
       contributorResults,
@@ -823,12 +845,23 @@ export class SearchResultService {
   }
 }
 
-const buildResults = (...results: ISearchResult[][] | ISearchResult[]) => {
+const buildResults = (
+  filter?: SearchFilterInput,
+  ...results: ISearchResult[][] | ISearchResult[]
+) => {
+  // todo: total - https://github.com/alkem-io/server/issues/3700
+  const total = -1;
+
+  if (results.length === 0) {
+    return { results: [], cursor: undefined, total };
+  }
   const flatResults = results.flat(1);
   const resultsRanked = orderBy(flatResults, 'score', 'desc');
   const cursor = calculateSearchCursor(resultsRanked);
   // todo: count - https://github.com/alkem-io/server/issues/3700
   const total = -1;
 
-  return { results: resultsRanked, cursor, total };
+  const cursor = calculateSearchCursor(rankedAndLimited);
+
+  return { results: rankedAndLimited, cursor, total };
 };

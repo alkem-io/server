@@ -239,12 +239,7 @@ export class SearchExtractService {
       throw new Error('No indices to search on');
     }
 
-    const {
-      searchInSpaceFilter,
-      filters,
-      // size = this.maxResults,
-      // cursor,
-    } = options ?? {};
+    const { searchInSpaceFilter, filters } = options ?? {};
 
     const term = terms.join(' ');
     // the main search query built using query DSL
@@ -258,6 +253,7 @@ export class SearchExtractService {
       query,
       {
         filters,
+        multiplier: 2, // todo: pass it in another way; this is very cryptic and not very visible
         defaults: {
           // split the max results between the categories to prevent overfetching
           size: this.maxResults / categoriesRequested,
