@@ -856,10 +856,12 @@ const buildResults = (
     return { results: [], cursor: undefined, total };
   }
   const flatResults = results.flat(1);
-  const resultsRanked = orderBy(flatResults, 'score', 'desc');
-  const cursor = calculateSearchCursor(resultsRanked);
-  // todo: count - https://github.com/alkem-io/server/issues/3700
-  const total = -1;
+  const resultsRanked = orderBy(
+    flatResults,
+    ['score', 'result.id'],
+    ['desc', 'desc']
+  );
+  const rankedAndLimited = resultsRanked.slice(0, filter?.size);
 
   const cursor = calculateSearchCursor(rankedAndLimited);
 
