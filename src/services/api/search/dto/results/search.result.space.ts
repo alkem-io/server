@@ -1,15 +1,12 @@
 import { ISpace } from '@domain/space/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISearchResultBase } from './search.result.dto.entry.base.interface';
-import { ISearchResult } from './search.result.entry.interface';
+import { ISearchResult } from './search.result.interface';
+import { SearchResultBase } from './search.result.base';
 
 @ObjectType('SearchResultSpace', {
-  implements: () => [ISearchResult],
+  implements: () => ISearchResult,
 })
-export abstract class ISearchResultSpace
-  extends ISearchResultBase
-  implements ISearchResult
-{
+export abstract class ISearchResultSpace extends SearchResultBase() {
   @Field(() => ISpace, {
     nullable: false,
     description: 'The Space that was found.',
