@@ -107,6 +107,7 @@ export class SearchResultService {
     >;
     const contributorResults = buildResults(
       filtersByCategory.contributors?.[0],
+      users,
       organizations
     );
     const contributionResults = buildResults(
