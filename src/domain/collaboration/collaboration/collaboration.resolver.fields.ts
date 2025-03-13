@@ -1,6 +1,4 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
@@ -32,12 +30,10 @@ export class CollaborationResolverFields {
     return await this.collaborationService.getInnovationFlow(collaboration.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('timeline', () => ITimeline, {
     nullable: false,
     description: 'The timeline with events in use by this Space',
   })
-  @UseGuards(GraphqlGuard)
   async timeline(
     @Parent() collaboration: ICollaboration,
     @Loader(CollaborationTimelineLoaderCreator) loader: ILoader<ITimeline>
