@@ -101,6 +101,19 @@ const getPublicIndexStore = (
   ],
 });
 
+const allowedTypesPerCategory: Record<SearchCategory, SearchResultType[]> = {
+  [SearchCategory.SPACES]: [SearchResultType.SPACE, SearchResultType.SUBSPACE],
+  [SearchCategory.CONTRIBUTORS]: [
+    SearchResultType.USER,
+    SearchResultType.ORGANIZATION,
+  ],
+  [SearchCategory.COLLABORATION_TOOLS]: [SearchResultType.CALLOUT],
+  [SearchCategory.RESPONSES]: [
+    SearchResultType.POST,
+    SearchResultType.WHITEBOARD,
+  ],
+};
+
 @Injectable()
 export class SearchExtractService {
   private readonly indexPattern: string;
@@ -158,9 +171,17 @@ export class SearchExtractService {
     const categories = filters
       ?.map(filter => filter.category)
       .filter((category): category is SearchCategory => !!category);
+
     const types = filters
-      ?.flatMap(filter => filter.types)
+      ?.flatMap(filter => {
+        if (!filter.types || filter.types.length === 0) {
+          return allowedTypesPerCategory[filter.category];
+        }
+
+        return filter.types;
+      })
       .filter((type): type is SearchResultType => !!type);
+
     const indexStore = getIndexStore(this.indexPattern);
 
     const filteredIndicesByCategory =
