@@ -399,11 +399,14 @@ export class CalloutsSetService {
       ...keyBy(allCallouts, 'id'),
     };
 
-    const minimumSortOrder = Math.min(
+    const sortOrders = [
       ...sortOrderData.calloutIDs
         .map(calloutId => calloutsByID[calloutId]?.sortOrder)
-        .filter(sortOrder => sortOrder)
-    );
+        .filter(sortOrder => sortOrder !== undefined),
+    ];
+
+    const minimumSortOrder =
+      sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
     const modifiedCallouts: ICallout[] = [];
 
     // Get the callouts specified
