@@ -1390,7 +1390,7 @@ export class RoleSetService {
     });
 
     if (roleCredential.type === AuthorizationCredential.SPACE_MEMBER) {
-      updatedAgent = await this.revokeSubspaceCredentials(
+      updatedAgent = await this.revokeSpaceTreeCredentials(
         agent,
         roleCredential.resourceID
       );
@@ -1399,27 +1399,28 @@ export class RoleSetService {
     return updatedAgent;
   }
 
-  private async revokeSubspaceCredentials(
+  private async revokeSpaceTreeCredentials(
     agent: IAgent,
     spaceId: string
   ): Promise<IAgent> {
     const subspaceIDs = await this.getAllSubspaceIds(spaceId);
-    const credentialsToRevoke = subspaceIDs.flatMap(subspaceID => [
+    const fullSpaceHierarchyIds = [spaceId, ...subspaceIDs];
+    const credentialsToRevoke = fullSpaceHierarchyIds.flatMap(spaceID => [
       {
         type: AuthorizationCredential.SPACE_MEMBER,
-        resourceID: subspaceID,
+        resourceID: spaceID,
       },
       {
         type: AuthorizationCredential.SPACE_ADMIN,
-        resourceID: subspaceID,
+        resourceID: spaceID,
       },
       {
         type: AuthorizationCredential.SPACE_LEAD,
-        resourceID: subspaceID,
+        resourceID: spaceID,
       },
       {
         type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
-        resourceID: subspaceID,
+        resourceID: spaceID,
       },
     ]);
 
