@@ -31,6 +31,6 @@ export class InAppNotificationReceiverController {
       `Received ${data.length} compressed in-app notifications of types: ${data.map(d => d.type).join(', ')}`
     );
     ack(context);
-    this.inAppNotificationReceiver.decompressAndStore(data);
+    this.inAppNotificationReceiver.decompressStoreNotify(data);
   }
 }

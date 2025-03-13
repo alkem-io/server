@@ -61,6 +61,8 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RoleSetCacheService } from './role.set.service.cache';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class RoleSetService {
@@ -75,6 +77,7 @@ export class RoleSetService {
     private contributorService: ContributorService,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
+    private spaceLookupService: SpaceLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private communityResolverService: CommunityResolverService,
     private roleSetEventsService: RoleSetEventsService,
@@ -893,6 +896,11 @@ export class RoleSetService {
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ) {
+    await this.roleSetCacheService.appendAgentRoleCache(
+      contributorAgentId,
+      roleSet.id,
+      role
+    );
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
         this.logger.verbose?.(
@@ -1375,11 +1383,69 @@ export class RoleSetService {
 
     const roleCredential = await this.getCredentialForRole(roleSet, roleType);
 
-    return await this.agentService.revokeCredential({
+    let updatedAgent: IAgent = await this.agentService.revokeCredential({
       agentID: agent.id,
       type: roleCredential.type,
       resourceID: roleCredential.resourceID,
     });
+
+    if (roleCredential.type === AuthorizationCredential.SPACE_MEMBER) {
+      updatedAgent = await this.revokeSubspaceCredentials(
+        agent,
+        roleCredential.resourceID
+      );
+    }
+
+    return updatedAgent;
+  }
+
+  private async revokeSubspaceCredentials(
+    agent: IAgent,
+    spaceId: string
+  ): Promise<IAgent> {
+    const subspaceIDs = await this.getAllSubspaceIds(spaceId);
+    const credentialsToRevoke = subspaceIDs.flatMap(subspaceID => [
+      {
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: subspaceID,
+      },
+      {
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: subspaceID,
+      },
+      {
+        type: AuthorizationCredential.SPACE_LEAD,
+        resourceID: subspaceID,
+      },
+      {
+        type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
+        resourceID: subspaceID,
+      },
+    ]);
+
+    let updatedAgent = agent;
+    for (const credential of credentialsToRevoke) {
+      updatedAgent = await this.agentService.revokeCredential({
+        agentID: agent.id,
+        ...credential,
+      });
+    }
+
+    return updatedAgent;
+  }
+
+  private async getAllSubspaceIds(spaceId: string): Promise<string[]> {
+    const spaceHierarchy =
+      await this.spaceLookupService.getFullSpaceHierarchy(spaceId);
+    const subspaces = spaceHierarchy?.subspaces || [];
+    return this.flattenSubspaces(subspaces);
+  }
+
+  private flattenSubspaces(subspaces: ISpace[]): string[] {
+    return subspaces.flatMap(subspace => [
+      subspace.id,
+      ...(subspace.subspaces ? this.flattenSubspaces(subspace.subspaces) : []),
+    ]);
   }
 
   public async isMember(agent: IAgent, roleSet: IRoleSet): Promise<boolean> {

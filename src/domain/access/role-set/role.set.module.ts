@@ -35,6 +35,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { RoleSetCacheModule } from './role.set.service.cache.module';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { RoleSetCacheModule } from './role.set.service.cache.module';
     UserLookupModule,
     UserModule,
     OrganizationLookupModule,
+    SpaceLookupModule,
     VirtualContributorLookupModule,
     ContributorModule,
     RoleModule,

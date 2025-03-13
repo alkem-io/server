@@ -304,4 +304,31 @@ export class RoleSetCacheService {
       isMember
     );
   }
+
+  /**
+   * Add a single role to the agent's existing cached roles.
+   * @param agentId - Agent identifier.
+   * @param roleSetId - Role set identifier.
+   * @param role - Role name to add.
+   * @returns The updated cached roles array or undefined if no existing roles.
+   */
+  public async appendAgentRoleCache(
+    agentId: string,
+    roleSetId: string,
+    role: RoleName
+  ): Promise<RoleName[] | undefined> {
+    const existingRoles = await this.getAgentRolesFromCache(agentId, roleSetId);
+    if (!existingRoles) {
+      return undefined;
+    }
+
+    // Only add the role if it's not already present
+    if (!existingRoles.includes(role)) {
+      const updatedRoles = [...existingRoles, role];
+      await this.setAgentRolesCache(agentId, roleSetId, updatedRoles);
+      return updatedRoles;
+    }
+
+    return existingRoles;
+  }
 }
