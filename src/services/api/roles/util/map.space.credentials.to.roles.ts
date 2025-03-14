@@ -1,5 +1,5 @@
 import { EntityManager } from 'typeorm';
-import { ICredential } from '@src/domain';
+import { ICredential } from '@src/domain/agent/credential';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from './group.credentials.by.entity';
 import { getSpaceRolesForContributorEntityData } from './get.space.roles.for.contributor.entity.data';

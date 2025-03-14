@@ -75,6 +75,17 @@ import amqplib from 'amqplib';
               routingKey: 'IngestBodyOfKnowledgeResult',
             },
             {
+              name: eventBusConfig.ingest_website_queue,
+              //TODO dynamically map queue names to events for the routing
+              exchange: eventBusConfig.exchange,
+              routingKey: 'IngestWebsite',
+            },
+            {
+              name: eventBusConfig.ingest_website_result_queue,
+              exchange: eventBusConfig.exchange,
+              routingKey: 'IngestWebsiteResult',
+            },
+            {
               name: eventBusConfig.invoke_engine_expert,
               exchange: eventBusConfig.exchange,
               routingKey: 'expert',

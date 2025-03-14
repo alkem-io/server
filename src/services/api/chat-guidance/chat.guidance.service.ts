@@ -107,21 +107,6 @@ export class ChatGuidanceService {
     return true;
   }
 
-  public async ingest() {
-    const guidanceVc =
-      await this.platformService.getGuidanceVirtualContributorOrFail();
-    this.aiServerAdapter.invoke({
-      operation: InvocationOperation.INGEST,
-      message: 'ingest',
-      aiPersonaServiceID: guidanceVc.aiPersona.aiPersonaServiceID,
-      displayName: '',
-      resultHandler: {
-        action: InvocationResultAction.NONE,
-      },
-    });
-    return true;
-  }
-
   public isGuidanceEngineEnabled(): boolean {
     return this.configService.get('platform.guidance_engine.enabled', {
       infer: true,

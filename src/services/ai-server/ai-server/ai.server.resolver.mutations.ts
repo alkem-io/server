@@ -64,10 +64,16 @@ export class AiServerResolverMutations {
       'User not authenticated to migrate embeddings'
     );
 
-    const vectorDb = this.config.get('platform.vector_db', { infer: true });
+    const { host, port, credentials } = this.config.get('platform.vector_db', {
+      infer: true,
+    });
 
     const chroma = new ChromaClient({
-      path: `http://${vectorDb.host}:${vectorDb.port}`,
+      path: `http://${host}:${port}`,
+      auth: {
+        provider: 'basic',
+        credentials,
+      },
     });
 
     // get all collections

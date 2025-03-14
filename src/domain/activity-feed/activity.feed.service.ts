@@ -6,7 +6,6 @@ import { ActivityService } from '@platform/activity/activity.service';
 import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
-import { EntityNotFoundException } from '@common/exceptions';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -155,7 +154,9 @@ export class ActivityFeedService {
         LogContext.ACTIVITY
       );
       // return only the valid Spaces
-      return intersection(filteredSpaceIds, successOrNonExistingSpaces);
+      return filteredSpaceIds.filter(
+        id => !successOrNonExistingSpaces.includes(id)
+      );
     }
 
     return filteredSpaceIds;

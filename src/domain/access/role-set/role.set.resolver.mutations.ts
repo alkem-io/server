@@ -323,7 +323,8 @@ export class RoleSetResolverMutations {
     await this.roleSetService.removeUserFromRole(
       roleSet,
       roleData.role,
-      roleData.contributorID
+      roleData.contributorID,
+      true
     );
 
     switch (roleSet.type) {

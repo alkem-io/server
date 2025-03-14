@@ -273,7 +273,9 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
         },
       },
       relations: {
-        profile: true,
+        about: {
+          profile: true,
+        },
       },
     });
     if (!space) {
@@ -284,7 +286,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     }
 
     const spaceUrl = await this.urlGeneratorService.generateUrlForProfile(
-      space.profile
+      space.about.profile
     );
     const activityUpdateSent: IActivityLogEntryUpdateSent = {
       ...this.activityLogEntryBase,

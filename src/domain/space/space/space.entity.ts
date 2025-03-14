@@ -8,30 +8,28 @@ import {
   OneToOne,
 } from 'typeorm';
 import { ISpace } from '@domain/space/space/space.interface';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import {
+  ENUM_LENGTH,
+  NAMEID_MAX_LENGTH_SCHEMA,
+  UUID_LENGTH,
+} from '@common/constants';
 import { SpaceType } from '@common/enums/space.type';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Account } from '../account/account.entity';
-import { Context } from '@domain/context/context/context.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { Profile } from '@domain/common/profile';
 import { TemplatesManager } from '@domain/template/templates-manager';
 import { License } from '@domain/common/license/license.entity';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { SpaceAbout } from '../space.about';
 @Entity()
-export class Space extends NameableEntity implements ISpace {
-  @OneToOne(() => Profile, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  profile!: Profile;
+export class Space extends AuthorizableEntity implements ISpace {
+  @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
+  nameID!: string;
 
   @OneToMany(() => Space, space => space.parentSpace, {
     eager: false,
@@ -66,13 +64,13 @@ export class Space extends NameableEntity implements ISpace {
   @JoinColumn()
   collaboration?: Collaboration;
 
-  @OneToOne(() => Context, {
+  @OneToOne(() => SpaceAbout, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  context?: Context;
+  about!: SpaceAbout;
 
   @OneToOne(() => Community, {
     eager: false,

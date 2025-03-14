@@ -6,12 +6,11 @@ import { spaceCommunityRoles } from './definitions/space.community.roles';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { subspceCommunityApplicationForm } from './definitions/subspace.community.role.application.form';
 import { spaceCommunityApplicationForm } from './definitions/space.community.role.application.form';
-import { ProfileType } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { SpaceType } from '@common/enums/space.type';
 import { spaceDefaultsSettingsRootSpace } from './definitions/root-space/space.defaults.settings.root.space';
-import { spaceDefaultsSettingsOpportunity } from './definitions/oppportunity/space.defaults.settings.opportunity';
+import { spaceDefaultsSettingsOpportunity } from './definitions/opportunity/space.defaults.settings.opportunity';
 import { spaceDefaultsSettingsChallenge } from './definitions/challenge/space.defaults.settings.challenge';
 import { spaceDefaultsSettingsKnowledge } from './definitions/knowledge/space.defaults.settings.knowledge';
 import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
@@ -203,17 +202,6 @@ export class SpaceDefaultsService {
           `Invalid space level: ${spaceLevel}`,
           LogContext.ROLES
         );
-    }
-  }
-
-  public getProfileType(spaceLevel: SpaceLevel): ProfileType {
-    switch (spaceLevel) {
-      case SpaceLevel.L1:
-        return ProfileType.CHALLENGE;
-      case SpaceLevel.L2:
-        return ProfileType.OPPORTUNITY;
-      case SpaceLevel.L0:
-        return ProfileType.SPACE;
     }
   }
 

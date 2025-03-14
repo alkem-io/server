@@ -10,7 +10,6 @@ import { PostModule } from '@domain/collaboration/post/post.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { ContextModule } from '@domain/context/context/context.module';
 import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
@@ -37,6 +36,7 @@ import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.s
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
+import { SpaceAboutModule } from '@domain/space/space.about/space.about.module';
 
 @Module({
   imports: [
@@ -46,7 +46,7 @@ import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.bas
     CommunityModule,
     CollaborationModule,
     CalloutsSetModule,
-    ContextModule,
+    SpaceAboutModule,
     TemplateModule,
     TemplatesSetModule,
     TemplatesManagerModule,

@@ -305,7 +305,7 @@ export class CalloutsSetService {
     if (!calloutsSet.callouts || !calloutsSet.tagsetTemplateSet) {
       throw new EntityNotInitializedException(
         `Collaboration (${collaborationID}) not initialised`,
-        LogContext.CONTEXT
+        LogContext.SPACE_ABOUT
       );
     }
     if (!calloutData.sortOrder) {

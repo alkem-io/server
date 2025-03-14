@@ -15,4 +15,10 @@ export class UserAuthenticationResult {
     nullable: true,
   })
   createdAt?: Date;
+
+  @Field(() => Date, {
+    description: 'When the Kratos Account for the user last logged in',
+    nullable: true,
+  })
+  authenticatedAt?: Date;
 }
