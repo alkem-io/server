@@ -4,6 +4,7 @@ import { AiServerService } from '@services/ai-server/ai-server/ai.server.service
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
+import { IngestionResult } from '../messages/types';
 
 @EventsHandler(IngestWebsiteResult)
 export class IngestWebsiteResultHandler
@@ -16,13 +17,17 @@ export class IngestWebsiteResultHandler
   ) {}
 
   async handle(event: IngestWebsiteResult) {
-    // this handler should be similar to the ingest body of knowledge one
-    // in order to do that I need to add a spearate type in the base Python VC library and wire it here
-    // no ime for that right now but will track it and do it rather soon
-    //
-    // for now if an exception occurs in the ingest website service NO response will be recieved by the server
-    // hence we can conclude that if we are here the result is a success
-    const personaId = event.original.personaServiceId;
+    const original = event.original;
+    const response = event.response;
+
+    const personaId = original.personaServiceId;
+    if (response.result === IngestionResult.FAILURE) {
+      this.logger.verbose?.(
+        `IngestWebsiteResultHandler invoked. Event data: PersonaServiceId: ${personaId}; Result: failure`,
+        LogContext.AI_SERVER_EVENT_BUS
+      );
+      return;
+    }
     this.logger.verbose?.(
       `IngestWebsiteResultHandler invoked. Event data: PersonaServiceId: ${personaId}; Result: success`,
       LogContext.AI_SERVER_EVENT_BUS
@@ -32,18 +37,17 @@ export class IngestWebsiteResultHandler
       this.logger.verbose?.('Returning?', LogContext.AI_SERVER_EVENT_BUS);
       return;
     }
-
     this.logger.verbose?.(
       `Invoking updatePersonaBoKLastUpdated for PeresonaService: ${personaId}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
     let now = new Date();
-    if (event.timestamp) {
-      now = new Date(event.timestamp);
+    if (response.timestamp) {
+      now = new Date(response.timestamp);
     }
     this.aiServerService.updatePersonaBoKLastUpdated(
-      event.original.personaServiceId,
+      original.personaServiceId,
       now
     );
   }
