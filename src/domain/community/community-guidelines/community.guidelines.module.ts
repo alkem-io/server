@@ -7,12 +7,14 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { CommunityGuidelinesResolverMutations } from './community.guidelines.resolver.mutations';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
+    TagsetModule,
     TypeOrmModule.forFeature([CommunityGuidelines]),
   ],
   providers: [

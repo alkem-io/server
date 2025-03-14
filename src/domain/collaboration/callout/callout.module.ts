@@ -14,7 +14,6 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { RoomModule } from '@domain/communication/room/room.module';
-import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
@@ -23,6 +22,7 @@ import { CalloutContributionModule } from '../callout-contribution/callout.contr
 import { PostModule } from '../post/post.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { ClassificationModule } from '@domain/common/classification/classification.module';
 
 @Module({
   imports: [
@@ -36,13 +36,13 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     EntityResolverModule,
     UserLookupModule,
     NamingModule,
-    ReferenceModule,
     CalloutFramingModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,
     CalloutContributionPolicyModule,
     StorageAggregatorResolverModule,
     PostModule,
+    ClassificationModule,
     TemporaryStorageModule,
     TypeOrmModule.forFeature([Callout]),
   ],

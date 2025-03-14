@@ -136,16 +136,7 @@ export class SpaceDefaultsService {
       collaborationData.calloutsSetData.calloutsData = [];
     }
 
-    if (
-      !collaborationData.calloutsSetData.calloutGroups &&
-      collaborationTemplateInput
-    ) {
-      collaborationData.calloutsSetData.calloutGroups =
-        collaborationTemplateInput?.calloutsSetData.calloutGroups;
-    }
-
     // Add in tutorials if needed
-
     if (collaborationData.addTutorialCallouts) {
       const tutorialsTemplate =
         await this.templatesManagerService.getTemplateFromTemplateDefault(
@@ -166,23 +157,14 @@ export class SpaceDefaultsService {
         }
       }
     }
-    if (collaborationTemplateInput) {
-      collaborationData.calloutsSetData.defaultCalloutGroupName =
-        collaborationTemplateInput.calloutsSetData.defaultCalloutGroupName;
-    }
 
-    // Move callouts that are not in valid groups or flowStates to the default group & first flowState
-    const validGroupNames =
-      collaborationData.calloutsSetData.calloutGroups?.map(
-        group => group.displayName
-      );
+    // Move callouts that are not in valid flowStates to the default first flowState
     const validFlowStateNames =
       collaborationData.innovationFlowData?.states?.map(
         state => state.displayName
       );
 
-    this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
-      validGroupNames ?? [],
+    this.calloutsSetService.moveCalloutsToDefaultFlowState(
       validFlowStateNames ?? [],
       collaborationData.calloutsSetData.calloutsData ?? []
     );

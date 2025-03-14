@@ -289,6 +289,16 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
+  /**
+   * Returns GLOBAL_ANONYMOUS and GLOBAL_REGISTERED credential definitions.
+   */
+  public getCredentialDefinitionsAnonymousRegistered(): ICredentialDefinition[] {
+    return [
+      { type: AuthorizationCredential.GLOBAL_ANONYMOUS, resourceID: '' },
+      { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
+    ];
+  }
+
   public appendCredentialRuleAnonymousRegisteredAccess(
     authorization: IAuthorizationPolicy | undefined,
     privilege: AuthorizationPrivilege,
