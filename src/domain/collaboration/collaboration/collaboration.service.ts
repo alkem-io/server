@@ -227,7 +227,7 @@ export class CollaborationService {
         return [...spacesInAccount].map(x => {
           if (!x.collaboration) {
             throw new EntityNotInitializedException(
-              `Collaboration not found on ${x.type} '${x.id}'`,
+              `Collaboration not found in space level ${x.level} '${x.id}'`,
               LogContext.COLLABORATION
             );
           }
@@ -237,7 +237,7 @@ export class CollaborationService {
         const subsubspaces = space.subspaces;
         if (!subsubspaces) {
           throw new EntityNotInitializedException(
-            `Subsubspaces not found on subspace ${space.type}`,
+            `Subsubspaces not found on subspace with level ${space.level}`,
             LogContext.COLLABORATION
           );
         }
