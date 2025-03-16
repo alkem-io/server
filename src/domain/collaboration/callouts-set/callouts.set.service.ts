@@ -581,6 +581,7 @@ export class CalloutsSetService {
   public moveCalloutsToDefaultFlowState(
     validFlowStateNames: string[],
     callouts: {
+      id: string;
       classification?: {
         tagsets?: {
           name: string;
@@ -593,11 +594,11 @@ export class CalloutsSetService {
     const defaultFlowStateName: string | undefined = validFlowStateNames?.[0];
 
     for (const callout of callouts) {
-      if (!callout.classification) {
-        callout.classification = {};
-      }
-      if (!callout.classification.tagsets) {
-        callout.classification.tagsets = [];
+      if (!callout.classification || !callout.classification.tagsets) {
+        throw new RelationshipNotFoundException(
+          `Callout '${callout.id}' provided without a classification`,
+          LogContext.COLLABORATION
+        );
       }
 
       let flowStateTagset = callout.classification.tagsets?.find(

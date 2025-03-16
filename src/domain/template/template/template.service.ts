@@ -340,11 +340,11 @@ export class TemplateService {
         LogContext.TEMPLATES
       );
     }
-    const newStatesStr = sourceCollaboration.innovationFlow.states;
+    const newStates = sourceCollaboration.innovationFlow.states;
     targetCollaboration.innovationFlow =
       await this.innovationFlowService.updateInnovationFlowStates(
         targetCollaboration.innovationFlow.id,
-        newStatesStr
+        newStates
       );
 
     const storageAggregator =
@@ -364,14 +364,12 @@ export class TemplateService {
         userID
       );
       targetCollaboration.calloutsSet.callouts?.push(...newCallouts);
-      this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
-
-      // Need to save before applying authorization policy to get the callout ids
-      return await this.collaborationService.save(targetCollaboration);
-    } else {
-      this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
-      return await this.collaborationService.save(targetCollaboration);
     }
+
+    this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
+
+    // Need to save before applying authorization policy to get the callout ids
+    return await this.collaborationService.save(targetCollaboration);
   }
 
   private ensureCalloutsInValidGroupsAndStates(

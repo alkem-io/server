@@ -162,14 +162,11 @@ export class TagsetService {
     return tagsetTemplate.allowedValues;
   }
 
-  async getTagsetTemplateOrFail(
-    tagsetID: string,
-    loadTagsets = false
-  ): Promise<ITagsetTemplate> {
+  async getTagsetTemplateOrFail(tagsetID: string): Promise<ITagsetTemplate> {
     const tagset = await this.getTagsetOrFail(tagsetID, {
-      relations: loadTagsets
-        ? { tagsetTemplate: { tagsets: true } }
-        : { tagsetTemplate: true },
+      relations: {
+        tagsetTemplate: true,
+      },
     });
 
     const tagsetTemplate = tagset.tagsetTemplate;
