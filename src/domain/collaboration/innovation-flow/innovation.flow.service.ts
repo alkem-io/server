@@ -15,7 +15,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
@@ -253,19 +252,6 @@ export class InnovationFlowService {
 
     // Save with new states before updating selected values
     await this.innovationFlowRepository.save(innovationFlow);
-
-    // Now update the selected state
-
-    const statesTagset = await this.profileService.getTagset(
-      innovationFlow.profile.id,
-      TagsetReservedName.FLOW_STATE.valueOf()
-    );
-    if (statesTagset.tags.length !== 1) {
-      throw new ValidationException(
-        `Unable to find selected value on flow tagset: ${statesTagset.tags}`,
-        LogContext.INNOVATION_FLOW
-      );
-    }
 
     // Update the allowed values on the tagset, and any tagsets with the old value
     await this.updateFlowStatesTagsetTemplate(innovationFlow, newStates);
