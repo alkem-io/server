@@ -581,7 +581,7 @@ export class CalloutsSetService {
   public moveCalloutsToDefaultFlowState(
     validFlowStateNames: string[],
     callouts: {
-      id: string;
+      id?: string;
       classification?: {
         tagsets?: {
           name: string;
