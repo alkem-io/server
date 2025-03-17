@@ -101,7 +101,9 @@ export class InnovationFlowService {
       {
         relations: {
           profile: true,
-          flowStatesTagsetTemplate: true,
+          flowStatesTagsetTemplate: {
+            tagsets: true,
+          },
         },
       }
     );
@@ -141,7 +143,9 @@ export class InnovationFlowService {
 
   private async updateFlowStatesTagsetTemplate(
     innovationFlow: IInnovationFlow,
-    newStates: IInnovationFlowState[]
+    newStates: IInnovationFlowState[],
+    oldSelectedValue?: string,
+    newSelectedValue?: string
   ) {
     if (!innovationFlow.flowStatesTagsetTemplate) {
       throw new ValidationException(
@@ -154,6 +158,8 @@ export class InnovationFlowService {
     const updatedTagsetTemplateData: UpdateTagsetTemplateDefinitionInput = {
       allowedValues: newStateNames,
       defaultSelectedValue: defaultSelectedState,
+      oldSelectedValue,
+      newSelectedValue,
     };
     await this.tagsetTemplateService.updateTagsetTemplateDefinition(
       innovationFlow.flowStatesTagsetTemplate,
@@ -170,7 +176,9 @@ export class InnovationFlowService {
       {
         relations: {
           profile: true,
-          flowStatesTagsetTemplate: true,
+          flowStatesTagsetTemplate: {
+            tagsets: true,
+          },
         },
       }
     );
@@ -215,7 +223,9 @@ export class InnovationFlowService {
       {
         relations: {
           profile: true,
-          flowStatesTagsetTemplate: true,
+          flowStatesTagsetTemplate: {
+            tagsets: true,
+          },
         },
       }
     );
@@ -254,7 +264,12 @@ export class InnovationFlowService {
     await this.innovationFlowRepository.save(innovationFlow);
 
     // Update the allowed values on the tagset, and any tagsets with the old value
-    await this.updateFlowStatesTagsetTemplate(innovationFlow, newStates);
+    await this.updateFlowStatesTagsetTemplate(
+      innovationFlow,
+      newStates,
+      updateData.stateDisplayName,
+      updateData.stateUpdatedData.displayName
+    );
 
     return await this.getInnovationFlowOrFail(updateData.innovationFlowID);
   }
