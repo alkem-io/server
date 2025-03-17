@@ -58,7 +58,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v1.2.0
+    image: oryd/kratos:v1.3.1
     depends_on:
       - mysql
     environment:
@@ -74,7 +74,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v1.2.0
+    image: oryd/kratos:v1.3.1
     depends_on:
       - kratos-migrate
     ports:
@@ -308,7 +308,7 @@ services:
       - 4003
 
   chromadb:
-    image: chromadb/chroma:0.5.0
+    image: chromadb/chroma:0.6.2
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_chromadb
@@ -319,11 +319,14 @@ services:
       - alkemio_dev_net
     ports:
       - 8765:8000
+    environment:
+      - CHROMA_SERVER_AUTHN_CREDENTIALS
+      - CHROMA_SERVER_AUTHN_PROVIDER
 
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
     hostname: virtual-contributor-engine-guidance
-    image: alkemio/virtual-contributor-engine-guidance:v0.8.2
+    image: alkemio/virtual-contributor-engine-guidance:v0.9.0
     platform: linux/x86_64
     restart: always
     volumes:
@@ -362,6 +365,9 @@ services:
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
       - LANGCHAIN_PROJECT=virtual-contributor-engine-guidance
+      - VECTOR_DB_PORT
+      - VECTOR_DB_HOST
+      - VECTOR_DB_CREDENTIALS
 
   virtual-contributor-engine-community-manager:
     container_name: alkemio_dev_virtual_contributor_engine_community_manager
@@ -401,7 +407,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor-engine-expert:v0.10.0
+    image: alkemio/virtual-contributor-engine-expert:v0.11.1
     platform: linux/x86_64
     restart: always
     volumes:
@@ -439,6 +445,53 @@ services:
       - LANGCHAIN_PROJECT=virtual-contributor-engine-expert
       - VECTOR_DB_PORT
       - VECTOR_DB_HOST
+      - VECTOR_DB_CREDENTIALS
+
+  virtual_contributor_ingest_website:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_virtual_contributor_ingest_website
+    hostname: virtual-contributor-ingest-website
+    image: alkemio/virtual-contributor-ingest-website:v0.1.0
+    platform: linux/x86_64
+    restart: always
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_PORT
+      - RABBITMQ_QUEUE=virtual-contributor-ingest-website
+      - RABBITMQ_EVENT_BUS_EXCHANGE
+      - RABBITMQ_RESULT_QUEUE
+      - RABBITMQ_RESULT_ROUTING_KEY
+      - AZURE_MISTRAL_ENDPOINT
+      - AZURE_MISTRAL_API_KEY
+      - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
+      - AUTH_ADMIN_EMAIL
+      - AUTH_ADMIN_PASSWORD
+      - OPENAI_API_VERSION
+      - AI_MODEL_TEMPERATURE
+      - LOG_LEVEL=DEBUG
+      - AZURE_OPENAI_ENDPOINT=https://alkemio-gpt.openai.azure.com
+      - AZURE_OPENAI_API_KEY
+      - LLM_DEPLOYMENT_NAME=deploy-gpt-35-turbo
+      - EMBEDDINGS_DEPLOYMENT_NAME=embedding
+      - LANGCHAIN_TRACING_V2
+      - LANGCHAIN_ENDPOINT
+      - LANGCHAIN_API_KEY
+      - LANGCHAIN_PROJECT=virtual-contributor-ingest-website
+      - VECTOR_DB_PORT
+      - VECTOR_DB_HOST
+      - VECTOR_DB_CREDENTIALS
+
 
   virtual_contributor_ingest_space:
     # the space-ingest service needs to download files from the server running on the host
@@ -447,9 +500,9 @@ services:
     network_mode: host
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    container_name: alkemio_dev_virtual-contributor-ingest-space
+    container_name: alkemio_dev_virtual_contributor_ingest_space
     hostname: virtual-contributor-ingest-space
-    image: alkemio/virtual-contributor-ingest-space:v0.11.1
+    image: alkemio/virtual-contributor-ingest-space:v0.13.0
     platform: linux/x86_64
     restart: always
     volumes:
@@ -483,6 +536,7 @@ services:
       - LANGCHAIN_PROJECT=virtual-contributor-ingest-space
       - VECTOR_DB_HOST=localhost
       - VECTOR_DB_PORT=8765
+      - VECTOR_DB_CREDENTIALS
       - AUTH_ADMIN_EMAIL
       - AUTH_ADMIN_PASSWORD
       - API_ENDPOINT_PRIVATE_GRAPHQL=http://localhost:3000/api/private/non-interactive/graphql

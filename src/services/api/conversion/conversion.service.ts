@@ -50,8 +50,7 @@ export class ConversionService {
           community: {
             roleSet: true,
           },
-          context: true,
-          profile: true,
+          about: true,
           collaboration: {
             calloutsSet: {
               callouts: {
@@ -70,8 +69,7 @@ export class ConversionService {
     if (
       !subspace.community ||
       !subspace.community.roleSet ||
-      !subspace.context ||
-      !subspace.profile ||
+      !subspace.about ||
       !subspace.collaboration ||
       !subspace.collaboration.calloutsSet?.callouts ||
       !subspace.storageAggregator
@@ -102,8 +100,10 @@ export class ConversionService {
     const createSpaceInput: CreateSpaceOnAccountInput = {
       accountID: account.id,
       nameID: subspace.nameID,
-      profileData: {
-        displayName: subspace.profile.displayName,
+      about: {
+        profileData: {
+          displayName: subspace.about.profile.displayName,
+        },
       },
       level: SpaceLevel.L0,
       type: SpaceType.SPACE,
@@ -117,16 +117,14 @@ export class ConversionService {
     space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
         community: true,
-        context: true,
-        profile: true,
+        about: true,
         collaboration: true,
         storageAggregator: true,
       },
     });
     if (
       !space.community ||
-      !space.context ||
-      !space.profile ||
+      !space.about ||
       !space.collaboration ||
       !space.storageAggregator
     ) {
@@ -169,10 +167,10 @@ export class ConversionService {
     await this.swapCommunication(space.community, space.community);
 
     // Swap the contexts
-    const challengeContext = space.context;
-    const spaceContext = space.context;
-    space.context = challengeContext;
-    space.context = spaceContext;
+    const subspaceAbout = subspace.about;
+    const spaceAbout = space.about;
+    space.about = subspaceAbout;
+    subspace.about = spaceAbout;
 
     // Swap the collaborations
     const challengeCollaboration = space.collaboration;
@@ -181,12 +179,6 @@ export class ConversionService {
     space.collaboration = spaceCollaboration;
     // Update display locations for callouts to use space locations
     this.updateSpaceCalloutsGroups(space.collaboration.calloutsSet?.callouts);
-
-    // Swap the profiles
-    const challengeProfile = space.profile;
-    const spaceProfile = space.profile;
-    space.profile = challengeProfile;
-    space.profile = spaceProfile;
 
     // Swap the storage aggregators
     const challengeStorage = space.storageAggregator;
@@ -233,8 +225,7 @@ export class ConversionService {
           },
         },
         community: true,
-        context: true,
-        profile: true,
+        about: true,
         storageAggregator: true,
         collaboration: {
           calloutsSet: {
@@ -254,8 +245,7 @@ export class ConversionService {
       !subsubspace.parentSpace.storageAggregator ||
       !subsubspace.parentSpace.storageAggregator.parentStorageAggregator ||
       !subsubspace.community ||
-      !subsubspace.context ||
-      !subsubspace.profile ||
+      !subsubspace.about ||
       !subsubspace.collaboration ||
       !subsubspace.storageAggregator ||
       !subsubspace.collaboration.calloutsSet?.callouts
@@ -284,8 +274,10 @@ export class ConversionService {
       collaborationData: {
         calloutsSetData: {},
       },
-      profileData: {
-        displayName: subsubspace.profile.displayName,
+      about: {
+        profileData: {
+          displayName: subsubspace.about.profile.displayName,
+        },
       },
       storageAggregatorParent: levelZeroSpaceStorageAggregator,
       level: SpaceLevel.L1,
@@ -299,16 +291,14 @@ export class ConversionService {
     const subspace = await this.spaceService.getSpaceOrFail(emptyChallenge.id, {
       relations: {
         community: true,
-        context: true,
-        profile: true,
+        about: true,
         collaboration: true,
         storageAggregator: true,
       },
     });
     if (
       !subspace.community ||
-      !subspace.context ||
-      !subspace.profile ||
+      !subspace.about ||
       !subspace.collaboration ||
       !subspace.storageAggregator
     ) {
@@ -364,10 +354,10 @@ export class ConversionService {
     );
 
     // Swap the contexts
-    const opportunityContext = subsubspace.context;
-    const challengeContext = subspace.context;
-    subspace.context = opportunityContext;
-    subsubspace.context = challengeContext;
+    const subsubspaceAbout = subsubspace.about;
+    const subspaceAbout = subspace.about;
+    subspace.about = subsubspaceAbout;
+    subsubspace.about = subspaceAbout;
 
     // Swap the collaborations
     const opportunityCollaboration = subsubspace.collaboration;
@@ -379,15 +369,9 @@ export class ConversionService {
       subspace.collaboration.calloutsSet?.callouts
     );
 
-    // Swap the profiles
-    const opportunityProfile = subsubspace.profile;
-    const challengeProfile = subspace.profile;
-    subspace.profile = opportunityProfile;
-    subsubspace.profile = challengeProfile;
-
     // Swap the storage aggregators
     // Note: need to use the opportunity storage aggregator as that is what all the profiles
-    // in use within that hierarcy will be using
+    // in use within that hierarchy will be using
     const opportunityStorage = subsubspace.storageAggregator;
     const challengeStorage = subspace.storageAggregator;
     subspace.storageAggregator = opportunityStorage;

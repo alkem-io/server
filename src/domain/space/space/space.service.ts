@@ -10,7 +10,6 @@ import { IAgent } from '@domain/agent/agent';
 import { CreateSpaceInput, DeleteSpaceInput } from '@domain/space/space';
 import { INVP, NVP } from '@domain/common/nvp';
 import { ICommunity } from '@domain/community/community';
-import { IContext } from '@domain/context/context';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, In, Not, Repository } from 'typeorm';
@@ -25,7 +24,6 @@ import { SpacesQueryArgs } from './dto/space.args.query.spaces';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { IPaginatedType } from '@core/pagination/paginated.type';
@@ -34,15 +32,12 @@ import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { SpaceType } from '@common/enums/space.type';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { VisualType } from '@common/enums/visual.type';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CreateCommunityInput } from '@domain/community/community/dto/community.dto.create';
-import { ContextService } from '@domain/context/context/context.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
@@ -83,6 +78,8 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { ISpaceAbout } from '../space.about/space.about.interface';
+import { SpaceAboutService } from '../space.about/space.about.service';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -100,7 +97,7 @@ export class SpaceService {
     private accountLookupService: AccountLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spacesFilterService: SpaceFilterService,
-    private contextService: ContextService,
+    private spaceAboutService: SpaceAboutService,
     private agentService: AgentService,
     private communityService: CommunityService,
     private roleSetService: RoleSetService,
@@ -217,7 +214,7 @@ export class SpaceService {
       this.spaceDefaultsService.getRoleSetCommunityApplicationForm(space.level);
 
     const communityData: CreateCommunityInput = {
-      name: spaceData.profileData.displayName,
+      name: spaceData.about.profileData.displayName,
       roleSetData: {
         roles: roleSetRolesData,
         applicationForm: applicationFormData,
@@ -238,24 +235,9 @@ export class SpaceService {
       storageAggregator
     );
 
-    space.context = this.contextService.createContext(spaceData.context);
-
-    const profileType = this.spaceDefaultsService.getProfileType(space.level);
-    space.profile = await this.profileService.createProfile(
-      spaceData.profileData,
-      profileType,
-      space.storageAggregator
-    );
-    await this.profileService.addTagsetOnProfile(space.profile, {
-      name: TagsetReservedName.DEFAULT,
-      tags: spaceData.tags,
-    });
-
-    // add the visuals
-    await this.profileService.addVisualsOnProfile(
-      space.profile,
-      spaceData.profileData.visuals,
-      [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
+    space.about = await this.spaceAboutService.createSpaceAbout(
+      spaceData.about,
+      storageAggregator
     );
 
     space.levelZeroSpaceID = '';
@@ -336,9 +318,8 @@ export class SpaceService {
         subspaces: true,
         collaboration: true,
         community: true,
-        context: true,
+        about: true,
         agent: true,
-        profile: true,
         storageAggregator: true,
         templatesManager: true,
         license: true,
@@ -349,9 +330,8 @@ export class SpaceService {
       !space.subspaces ||
       !space.collaboration ||
       !space.community ||
-      !space.context ||
+      !space.about ||
       !space.agent ||
-      !space.profile ||
       !space.storageAggregator ||
       !space.authorization ||
       !space.license
@@ -370,12 +350,11 @@ export class SpaceService {
       );
     }
 
-    await this.contextService.removeContext(space.context.id);
+    await this.spaceAboutService.removeSpaceAbout(space.about.id);
     await this.collaborationService.deleteCollaborationOrFail(
       space.collaboration.id
     );
     await this.communityService.removeCommunityOrFail(space.community.id);
-    await this.profileService.deleteProfile(space.profile.id);
     await this.agentService.deleteAgent(space.agent.id);
     await this.licenseService.removeLicenseOrFail(space.license.id);
     await this.authorizationPolicyService.delete(space.authorization);
@@ -828,7 +807,9 @@ export class SpaceService {
         spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
           relations: {
             subspaces: {
-              profile: true,
+              about: {
+                profile: true,
+              },
             },
           },
         });
@@ -840,7 +821,9 @@ export class SpaceService {
       spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
         relations: {
           subspaces: {
-            profile: true,
+            about: {
+              profile: true,
+            },
           },
         },
       });
@@ -861,7 +844,8 @@ export class SpaceService {
 
     // Sort the subspaces base on their display name
     const sortedSubspaces = limitAndShuffled.sort((a, b) =>
-      a.profile.displayName.toLowerCase() > b.profile.displayName.toLowerCase()
+      a.about.profile.displayName.toLowerCase() >
+      b.about.profile.displayName.toLowerCase()
         ? 1
         : -1
     );
@@ -925,7 +909,7 @@ export class SpaceService {
     if (!subspaceData.nameID) {
       subspaceData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          subspaceData.profileData.displayName,
+          subspaceData.about.profileData.displayName,
           reservedNameIDs
         );
     } else {
@@ -948,7 +932,9 @@ export class SpaceService {
 
     subspace = await this.getSpaceOrFail(subspace.id, {
       relations: {
-        profile: true,
+        about: {
+          profile: true,
+        },
         community: {
           roleSet: true,
         },
@@ -1064,26 +1050,23 @@ export class SpaceService {
   public async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(spaceData.ID, {
       relations: {
-        context: true,
-        profile: true,
+        about: {
+          profile: true,
+        },
       },
     });
 
-    if (spaceData.context) {
-      if (!space.context)
-        throw new EntityNotInitializedException(
-          `Subspace not initialised: ${spaceData.ID}`,
-          LogContext.SPACES
-        );
-      space.context = await this.contextService.updateContext(
-        space.context,
-        spaceData.context
+    if (!space.about) {
+      throw new EntityNotInitializedException(
+        `Subspace not initialised: ${spaceData.ID}`,
+        LogContext.SPACES
       );
     }
-    if (spaceData.profileData) {
-      space.profile = await this.profileService.updateProfile(
-        space.profile,
-        spaceData.profileData
+
+    if (spaceData.about) {
+      space.about = await this.spaceAboutService.updateSpaceAbout(
+        space.about,
+        spaceData.about
       );
     }
 
@@ -1300,21 +1283,6 @@ export class SpaceService {
     return provider;
   }
 
-  public async getContext(spaceID: string): Promise<IContext> {
-    const subspaceWithContext = await this.getSpaceOrFail(spaceID, {
-      relations: {
-        context: true,
-      },
-    });
-    const context = subspaceWithContext.context;
-    if (!context)
-      throw new RelationshipNotFoundException(
-        `Unable to load context for space ${spaceID} `,
-        LogContext.CONTEXT
-      );
-    return context;
-  }
-
   public async getStorageAggregatorOrFail(
     spaceID: string
   ): Promise<IStorageAggregator> {
@@ -1332,17 +1300,17 @@ export class SpaceService {
     return storageAggregator;
   }
 
-  public async getProfile(subspaceId: string): Promise<IProfile> {
-    const subspaceWithProfile = await this.getSpaceOrFail(subspaceId, {
-      relations: { profile: true },
+  public async getSpaceAbout(spaceID: string): Promise<ISpaceAbout> {
+    const space = await this.getSpaceOrFail(spaceID, {
+      relations: { about: true },
     });
-    const profile = subspaceWithProfile.profile;
-    if (!profile)
+    const about = space.about;
+    if (!about)
       throw new RelationshipNotFoundException(
-        `Unable to load profile for subspace ${subspaceId} `,
-        LogContext.PROFILE
+        `Unable to load about for Space ${spaceID} `,
+        LogContext.SPACES
       );
-    return profile;
+    return about;
   }
 
   public async getCalloutsSetOrFail(

@@ -150,6 +150,10 @@ export class TemplateService {
             profile: {
               displayName: 'Default Innovation Flow State',
             },
+            settings: {
+              maximumNumberOfStates: 8,
+              minimumNumberOfStates: 1,
+            },
           };
         }
         // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
@@ -401,9 +405,9 @@ export class TemplateService {
       targetCollaboration.calloutsSet?.tagsetTemplateSet?.tagsetTemplates.find(
         tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
       )?.allowedValues;
-    const validFlowStates = this.innovationFlowService
-      .getStates(targetCollaboration.innovationFlow)
-      ?.map(state => state.displayName);
+    const validFlowStates = targetCollaboration.innovationFlow.states?.map(
+      state => state.displayName
+    );
 
     this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
       validGroupNames ?? [],

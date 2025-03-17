@@ -61,7 +61,7 @@ export class MeService {
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           invitation.roleSet.id
         );
-      if (!space.profile || !space.context) {
+      if (!space.about) {
         throw new EntityNotFoundException(
           `Missing entities on Space loaded for Invitation ${invitation.id}`,
           LogContext.COMMUNITY
@@ -73,8 +73,7 @@ export class MeService {
         spacePendingMembershipInfo: {
           id: space.id,
           level: space.level,
-          profile: space.profile,
-          context: space.context,
+          about: space.about,
           communityGuidelines: space.community?.guidelines,
         },
       });
@@ -100,7 +99,7 @@ export class MeService {
         await this.communityResolverService.getSpaceForRoleSetOrFail(
           application.roleSet.id
         );
-      if (!space.profile || !space.context) {
+      if (!space.about) {
         throw new EntityNotFoundException(
           `Missing entities on Space loaded for Application ${application.id}`,
           LogContext.COMMUNITY
@@ -112,8 +111,7 @@ export class MeService {
         spacePendingMembershipInfo: {
           id: space.id,
           level: space.level,
-          profile: space.profile,
-          context: space.context,
+          about: space.about,
           communityGuidelines: space.community?.guidelines,
         },
       });
