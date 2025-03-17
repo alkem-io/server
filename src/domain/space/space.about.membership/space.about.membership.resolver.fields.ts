@@ -44,7 +44,7 @@ export class SpaceAboutMembershipResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('roleSetID', () => UUID, {
-    nullable: true,
+    nullable: false,
     description: 'The identifier of the RoleSet within the Space.',
   })
   roleSetID(@Parent() membership: SpaceAboutMembership): string {
@@ -53,7 +53,7 @@ export class SpaceAboutMembershipResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('communityID', () => UUID, {
-    nullable: true,
+    nullable: false,
     description: 'The identifier of the Community within the Space.',
   })
   communityID(@Parent() membership: SpaceAboutMembership): string {
