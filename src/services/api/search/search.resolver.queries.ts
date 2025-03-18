@@ -1,12 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { SearchInput } from '@services/api/search/dto/search.dto.input';
+import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ISearchResults } from '@services/api/search/dto/search.result.dto';
-import { SearchService } from './search.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { SearchService } from './search.service';
+import { SearchInput } from './dto/inputs';
+import { ISearchResults } from './dto/results';
 
 @InstrumentResolver()
 @Resolver()
@@ -18,7 +18,6 @@ export class SearchResolverQueries {
     nullable: false,
     description: 'Search the platform for terms supplied',
   })
-  @Profiling.api
   async search(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('searchData') searchData: SearchInput

@@ -8,7 +8,7 @@ import {
   ISearchResult,
   ISearchResultCallout,
   ISearchResultSpace,
-} from '../dto';
+} from '../dto/results';
 import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
@@ -28,12 +28,15 @@ import {
   ISearchResultOrganization,
   ISearchResultUser,
   ISearchResultPost,
-} from '../dto';
-import { SearchEntityTypes } from '@services/api/search/search.entity.types';
+} from '../dto/results';
 import { User } from '@domain/community/user/user.entity';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { SearchResultType } from '../search.result.type';
+import { calculateSearchCursor } from '@services/api/search/util';
+import { SearchFilterInput } from '@services/api/search/dto/inputs';
+import { SearchCategory } from '@services/api/search/search.category';
 
 type PostParents = {
   post: Post;
@@ -60,15 +63,17 @@ export class SearchResultService {
    * Resolves search results by authorizing and enriching them with data.
    * @param rawSearchResults The raw search results from the search engine.
    * @param agentInfo The agent info of the user making the search request.
+   * @param filters Used to filter the end results.
    * @param spaceId The space ID to filter the search results by.
    */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
     agentInfo: AgentInfo,
+    filters: SearchFilterInput[],
     spaceId?: string
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
-      Partial<SearchEntityTypes>,
+      Partial<SearchResultType>,
       ISearchResult[]
     >;
     // authorize entities with requester and enrich with data
@@ -96,30 +101,35 @@ export class SearchResultService {
         agentInfo
       ),
     ]);
-    // todo: count - https://github.com/alkem-io/server/issues/3700
-    const contributorResults = orderBy(
-      [...users, ...organizations],
-      'score',
-      'desc'
+    const filtersByCategory = groupBy(filters, 'category') as Record<
+      SearchCategory,
+      SearchFilterInput[]
+    >;
+    const contributorResults = buildResults(
+      filtersByCategory.contributors?.[0],
+      users,
+      organizations
     );
-    const contributionResults = orderBy(posts, 'score', 'desc');
-    const journeyResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
-    const calloutResults = orderBy(
-      [...callouts, ...calloutsOfWhiteboards],
-      'score',
-      'desc'
+    const contributionResults = buildResults(
+      filtersByCategory.responses?.[0],
+      posts
+    );
+    const spaceResults = buildResults(
+      filtersByCategory.spaces?.[0],
+      spaces,
+      subspaces
+    );
+    const calloutResults = buildResults(
+      filtersByCategory['collaboration-tools']?.[0],
+      callouts,
+      calloutsOfWhiteboards
     );
 
     return {
       contributorResults,
-      contributorResultsCount: -1,
       contributionResults,
-      contributionResultsCount: -1,
-      journeyResults,
-      journeyResultsCount: -1,
-      groupResults: [],
+      spaceResults,
       calloutResults,
-      calloutResultsCount: -1,
     };
   }
 
@@ -476,7 +486,7 @@ export class SearchResultService {
           ...rawSearchResult,
           // todo remove when whiteboard is a separate search result
           // patch this so it displays the search result as a callout
-          type: SearchEntityTypes.CALLOUT,
+          type: SearchResultType.CALLOUT,
           callout: parent.callout,
           space: parent.space,
         };
@@ -835,3 +845,28 @@ export class SearchResultService {
     return orgsInSpace;
   }
 }
+
+const buildResults = (
+  filter?: SearchFilterInput,
+  ...results: ISearchResult[][] | ISearchResult[]
+) => {
+  // todo: total - https://github.com/alkem-io/server/issues/3700
+  const total = -1;
+
+  if (results.length === 0) {
+    return { results: [], cursor: undefined, total };
+  }
+  const flatResults = results.flat(1);
+  const resultsRanked = orderBy(
+    flatResults,
+    ['score', 'result.id'],
+    ['desc', 'desc']
+  );
+  // limit the results to the top N
+  // more results are expected as an attempt to ensure the requested size after authorization
+  const rankedAndLimited = resultsRanked.slice(0, filter?.size);
+
+  const cursor = calculateSearchCursor(rankedAndLimited);
+
+  return { results: rankedAndLimited, cursor, total };
+};
