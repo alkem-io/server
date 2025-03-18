@@ -2,6 +2,9 @@ import { LoggerService } from '@nestjs/common';
 import { performance } from 'perf_hooks';
 import { LogContext } from '@common/enums';
 
+/**
+ * @deprecated We have migrated to APM. Use InstrumentResolver or InstrumentService instead.
+ */
 export class Profiling {
   static logger: LoggerService;
   static profilingEnabled = false;

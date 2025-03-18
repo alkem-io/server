@@ -1,14 +1,12 @@
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
 
 export const buildSearchQuery = (
   terms: string,
   options?: {
     spaceIdFilter?: string;
-    excludeDemoSpaces?: boolean;
   }
 ): QueryDslQueryContainer => {
-  const { spaceIdFilter, excludeDemoSpaces } = options ?? {};
+  const { spaceIdFilter } = options ?? {};
   return {
     bool: {
       must: [
@@ -22,20 +20,16 @@ export const buildSearchQuery = (
           },
         },
       ],
-      // Filter the results by the spaceID and visibility
-      filter: buildFilter({
-        spaceIdFilter,
-        excludeDemoSpaces,
-      }),
+      // apply some filters on the results
+      filter: buildFilter({ spaceIdFilter }),
     },
   };
 };
 
 const buildFilter = (opts?: {
   spaceIdFilter?: string;
-  excludeDemoSpaces?: boolean;
 }): QueryDslQueryContainer | undefined => {
-  const { spaceIdFilter, excludeDemoSpaces } = opts ?? {};
+  const { spaceIdFilter } = opts ?? {};
 
   const filters: QueryDslQueryContainer[] = [];
 
@@ -63,14 +57,6 @@ const buildFilter = (opts?: {
             },
           },
         ],
-      },
-    });
-  }
-
-  if (excludeDemoSpaces) {
-    filters.push({
-      term: {
-        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }

@@ -63,6 +63,7 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
       return new GraphQLError(exception.message, {
         extensions: {
           ...exception,
+          stack: exception.stack,
           message: undefined, // do not repeat the message
         },
       });

@@ -38,6 +38,7 @@ function buildYamlNodeValue(nodeValue: any, envConfig: any) {
 
     if (updatedNodeValue.toLowerCase() === 'true') return true;
     if (updatedNodeValue.toLowerCase() === 'false') return false;
+    if (!isNaN(updatedNodeValue)) return Number(updatedNodeValue);
   }
 
   return updatedNodeValue;
