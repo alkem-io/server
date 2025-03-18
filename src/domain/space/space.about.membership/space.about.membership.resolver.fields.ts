@@ -14,14 +14,11 @@ import { IUser } from '@domain/community/user/user.interface';
 import { RoleName } from '@common/enums/role.name';
 import { IOrganization } from '@domain/community/organization';
 import { UUID } from '@domain/common/scalars';
-import { CommunityService } from '@domain/community/community/community.service';
-import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 
 @Resolver(() => SpaceAboutMembership)
 export class SpaceAboutMembershipResolverFields {
   constructor(
     private roleSetService: RoleSetService,
-    private communityService: CommunityService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(RoleSetMembershipStatusDataLoader)
     private readonly membershipStatusLoader: RoleSetMembershipStatusDataLoader
@@ -73,18 +70,6 @@ export class SpaceAboutMembershipResolverFields {
   ): Promise<IForm> {
     const roleSet = membership.roleSet;
     return await this.roleSetService.getApplicationForm(roleSet);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('communityGuidelines', () => ICommunityGuidelines, {
-    nullable: false,
-    description: 'The Form used for Applications to this Space.',
-  })
-  async communityGuidelines(
-    @Parent() membership: SpaceAboutMembership
-  ): Promise<ICommunityGuidelines> {
-    const community = membership.community;
-    return await this.communityService.getCommunityGuidelines(community);
   }
 
   @UseGuards(GraphqlGuard)

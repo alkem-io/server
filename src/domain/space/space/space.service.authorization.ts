@@ -463,7 +463,7 @@ export class SpaceAuthorizationService {
     }
     const aboutAuthorizations =
       await this.spaceAboutAuthorizationService.applyAuthorizationPolicy(
-        space.about,
+        space.about.id,
         space.authorization,
         spaceAboutExtraCredentialRules
       );

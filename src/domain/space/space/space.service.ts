@@ -214,19 +214,10 @@ export class SpaceService {
         entryRoleName: RoleName.MEMBER,
         type: RoleSetType.SPACE,
       },
-      guidelines: {
-        // TODO: get this from defaults service, currently create with empty
-        profile: {
-          displayName: '',
-          description: '',
-        },
-      },
     };
 
-    space.community = await this.communityService.createCommunity(
-      communityData,
-      storageAggregator
-    );
+    space.community =
+      await this.communityService.createCommunity(communityData);
 
     space.about = await this.spaceAboutService.createSpaceAbout(
       spaceData.about,
