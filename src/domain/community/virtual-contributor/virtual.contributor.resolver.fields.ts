@@ -23,10 +23,14 @@ import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
-  constructor(private virtualContributorService: VirtualContributorService) {}
+  constructor(
+    private virtualContributorService: VirtualContributorService,
+    private authorizationService: AuthorizationService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('account', () => IAccount, {
@@ -101,18 +105,27 @@ export class VirtualContributorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
   @ResolveField('knowledgeBase', () => IKnowledgeBase, {
     nullable: true,
     description: 'The KnowledgeBase being used by this virtual contributor',
   })
   @UseGuards(GraphqlGuard)
   async knowledgeBase(
-    @Parent() virtualContributor: VirtualContributor
+    @Parent() virtualContributor: VirtualContributor,
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<IKnowledgeBase> {
-    return this.virtualContributorService.getKnowledgeBaseOrFail(
-      virtualContributor
+    const knowledgeBase =
+      await this.virtualContributorService.getKnowledgeBaseOrFail(
+        virtualContributor
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      knowledgeBase.authorization,
+      AuthorizationPrivilege.READ_ABOUT,
+      'KnowledgeBase ReadAbout'
     );
+    return knowledgeBase;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
