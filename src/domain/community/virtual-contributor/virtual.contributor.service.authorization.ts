@@ -12,6 +12,7 @@ import {
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
   CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS,
+  POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
@@ -91,6 +92,13 @@ export class VirtualContributorAuthorizationService {
       rule.cascade = true;
       virtual.authorization.credentialRules.push(rule);
     }
+    virtual.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        virtual.authorization,
+        AuthorizationPrivilege.READ,
+        [AuthorizationPrivilege.READ_ABOUT],
+        POLICY_RULE_READ_ABOUT
+      );
 
     updatedAuthorizations.push(virtual.authorization);
 
