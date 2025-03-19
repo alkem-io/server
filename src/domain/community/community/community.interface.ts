@@ -3,7 +3,6 @@ import { ObjectType } from '@nestjs/graphql';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ICommunication } from '@domain/communication/communication';
-import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IRoleSet } from '@domain/access/role-set';
 
 @ObjectType('Community', {
@@ -13,8 +12,6 @@ export abstract class ICommunity extends IAuthorizable {
   groups?: IUserGroup[];
 
   roleSet!: IRoleSet;
-
-  guidelines?: ICommunityGuidelines;
 
   communication?: ICommunication;
 

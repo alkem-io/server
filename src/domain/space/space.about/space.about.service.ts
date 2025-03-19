@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
@@ -22,12 +23,16 @@ import { NVP } from '@domain/common/nvp/nvp.entity';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { ICommunity } from '@domain/community/community/community.interface';
+import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
 
 @Injectable()
 export class SpaceAboutService {
   constructor(
     private spaceLookupService: SpaceLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private communityGuidelinesService: CommunityGuidelinesService,
     private profileService: ProfileService,
     private roleSetService: RoleSetService,
     @InjectRepository(SpaceAbout)
@@ -51,6 +56,20 @@ export class SpaceAboutService {
       name: TagsetReservedName.DEFAULT,
       tags: spaceAboutData.profileData.tags,
     });
+
+    const guidelinesInput: CreateCommunityGuidelinesInput = {
+      // TODO: get this from defaults service, currently create with empty
+      profile: {
+        displayName: '',
+        description: '',
+      },
+    };
+
+    spaceAbout.guidelines =
+      await this.communityGuidelinesService.createCommunityGuidelines(
+        guidelinesInput,
+        storageAggregator
+      );
 
     // add the visuals
     await this.profileService.addVisualsOnProfile(
@@ -106,10 +125,11 @@ export class SpaceAboutService {
     const spaceAbout = await this.getSpaceAboutOrFail(spaceAboutID, {
       relations: {
         profile: true,
+        guidelines: true,
       },
     });
 
-    if (!spaceAbout.profile) {
+    if (!spaceAbout.profile || !spaceAbout.guidelines) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for SpaceAbout: ${spaceAboutID}`,
         LogContext.SPACE_ABOUT
@@ -118,10 +138,30 @@ export class SpaceAboutService {
 
     await this.profileService.deleteProfile(spaceAbout.profile.id);
 
+    await this.communityGuidelinesService.deleteCommunityGuidelines(
+      spaceAbout.guidelines.id
+    );
+
     if (spaceAbout.authorization)
       await this.authorizationPolicyService.delete(spaceAbout.authorization);
 
     return await this.spaceAboutRepository.remove(spaceAbout as SpaceAbout);
+  }
+
+  public async getCommunityGuidelines(
+    about: ISpaceAbout
+  ): Promise<ICommunityGuidelines> {
+    const communityWithGuidelines = await this.getSpaceAboutOrFail(about.id, {
+      relations: { guidelines: true },
+    });
+
+    if (!communityWithGuidelines.guidelines) {
+      throw new EntityNotInitializedException(
+        `Unable to locate guidelines for community: ${about.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return communityWithGuidelines.guidelines;
   }
 
   async getMetrics(spaceAbout: ISpaceAbout): Promise<INVP[]> {

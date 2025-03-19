@@ -22,7 +22,6 @@ import {
   POLICY_RULE_COMMUNITY_ADD_VC,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
@@ -42,8 +41,7 @@ export class CommunityAuthorizationService {
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
-    private roleSetService: RoleSetService,
-    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
+    private roleSetService: RoleSetService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -62,9 +60,6 @@ export class CommunityAuthorizationService {
           },
           roleSet: true,
           groups: true,
-          guidelines: {
-            profile: true,
-          },
         },
       }
     );
@@ -127,15 +122,6 @@ export class CommunityAuthorizationService {
         this.createAdditionalRoleSetPrivilegeRules()
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
-
-    if (community.guidelines) {
-      const guidelineAuthorizations =
-        await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
-          community.guidelines,
-          community.authorization
-        );
-      updatedAuthorizations.push(...guidelineAuthorizations);
-    }
 
     return updatedAuthorizations;
   }

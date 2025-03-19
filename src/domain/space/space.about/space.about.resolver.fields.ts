@@ -14,6 +14,9 @@ import { SpaceAboutMembership } from '../space.about.membership/dto/space.about.
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { GraphqlGuard } from '@core/authorization';
+import { UseGuards } from '@nestjs/common';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {
@@ -81,5 +84,16 @@ export class SpaceAboutResolverFields {
       roleSet: community.roleSet,
     };
     return membership;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('guidelines', () => ICommunityGuidelines, {
+    nullable: false,
+    description: 'The guidelines for members of this Community.',
+  })
+  async guidelines(
+    @Parent() spaceAbout: ISpaceAbout
+  ): Promise<ICommunityGuidelines> {
+    return await this.spaceAboutService.getCommunityGuidelines(spaceAbout);
   }
 }
