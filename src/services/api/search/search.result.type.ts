@@ -1,13 +1,10 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum SearchResultType {
-  SPACE = 'space',
-  SUBSPACE = 'subspace',
-  CHALLENGE = 'challenge', // todo remove
-  OPPORTUNITY = 'opportunity', // todo remove
   USER = 'user',
   ORGANIZATION = 'organization',
-  USERGROUP = 'usergroup',
+  SPACE = 'space',
+  SUBSPACE = 'subspace',
   POST = 'post',
   CALLOUT = 'callout',
   WHITEBOARD = 'whiteboard',
@@ -15,4 +12,5 @@ export enum SearchResultType {
 
 registerEnumType(SearchResultType, {
   name: 'SearchResultType',
+  description: 'The different types of available search results.',
 });

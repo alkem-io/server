@@ -2,6 +2,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@src/common/constants';
@@ -19,6 +20,8 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
+import { TypedPubSubEngine } from '@services/subscriptions/subscription-service/typed.pub.sub.engine';
+import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
 
 @Injectable()
 export class SubscriptionPublishService {
@@ -29,6 +32,8 @@ export class SubscriptionPublishService {
     private roomEventsSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
     private virtualContributorUpdatedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
+    private inAppNotificationReceivedSubscription: TypedPubSubEngine<InAppNotification>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -96,6 +101,16 @@ export class SubscriptionPublishService {
     this.logger.verbose?.(
       `VirtualContributorUpdated published. VC id: ${virtualContributor.id}`,
       LogContext.SUBSCRIPTION_PUBLISH
+    );
+  }
+
+  public publishInAppNotificationReceived(notification: InAppNotification) {
+    return this.inAppNotificationReceivedSubscription.publish(
+      SubscriptionType.IN_APP_NOTIFICATION_RECEIVED,
+      {
+        eventID: `in-app-notification-received-${randomInt()}`,
+        notification,
+      }
     );
   }
 }

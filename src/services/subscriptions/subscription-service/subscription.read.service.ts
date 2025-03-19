@@ -1,21 +1,24 @@
-import { PubSubEngine } from 'graphql-subscriptions';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { TypedPubSubEngine } from './typed.pub.sub.engine';
 
 @Injectable()
 export class SubscriptionReadService {
   constructor(
     @Inject(SUBSCRIPTION_ACTIVITY_CREATED)
-    private activityCreatedSubscription: PubSubEngine,
+    private activityCreatedSubscription: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
-    private roomEventsSubscription: PubSubEngine,
+    private roomEventsSubscription: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
-    private subscriptionVirtualContributorUpdated: PubSubEngine
+    private subscriptionVirtualContributorUpdated: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
+    private subscriptionInAppNotificationReceived: TypedPubSubEngine
   ) {}
 
   public subscribeToActivities() {
@@ -33,6 +36,12 @@ export class SubscriptionReadService {
   public subscribeToVirtualContributorUpdated() {
     return this.subscriptionVirtualContributorUpdated.asyncIterator(
       SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED
+    );
+  }
+
+  public subscribeToInAppNotificationReceived() {
+    return this.subscriptionInAppNotificationReceived.asyncIterator(
+      SubscriptionType.IN_APP_NOTIFICATION_RECEIVED
     );
   }
 }
