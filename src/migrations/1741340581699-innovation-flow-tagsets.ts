@@ -87,12 +87,13 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
     await this.setFlowStateOnLevelZeroCallouts(queryRunner);
 
     // Finally, delete all tagset templates and tagsets for the groups
-    await queryRunner.query(
-      `DELETE FROM tagset WHERE name = '${this.TAGSET_GROUP}'`
-    );
-    await queryRunner.query(
-      `DELETE FROM tagset_template WHERE name = '${this.TAGSET_GROUP}'`
-    );
+    // TODO: Do not delete anything for now, we may want to do this is it makes sense but remaining rows may be a sign of some callouts that were not properly migrated
+    // await queryRunner.query(
+    //   `DELETE FROM tagset WHERE name = '${this.TAGSET_GROUP}'`
+    // );
+    // await queryRunner.query(
+    //   `DELETE FROM tagset_template WHERE name = '${this.TAGSET_GROUP}'`
+    // );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -114,12 +115,14 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
         calloutClassificationId: string;
         flowTagsetId: string;
         groupTagsetId: string;
+        groupTagsetTemplateId: string;
       }[] = await queryRunner.query(
         `SELECT
             callout.id AS id,
             callout.classificationId AS calloutClassificationId,
             flowTagset.id AS flowTagsetId,
-            groupTagset.id AS groupTagsetId
+            groupTagset.id AS groupTagsetId,
+            groupTagset.tagsetTemplateId AS groupTagsetTemplateId
           FROM callout
             LEFT JOIN callout_framing ON callout.framingId = callout_framing.id
             LEFT JOIN profile ON callout_framing.profileId = profile.id
@@ -138,7 +141,10 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
         }
         if (callout.groupTagsetId) {
           await queryRunner.query(
-            `UPDATE tagset SET classificationId = '${callout.calloutClassificationId}',profileId=null WHERE id = '${callout.groupTagsetId}'`
+            `UPDATE tagset SET classificationId = '${callout.calloutClassificationId}', profileId=null, name='${this.TAGSET_FLOW}' WHERE id = '${callout.groupTagsetId}'`
+          );
+          await queryRunner.query(
+            `UPDATE tagset_template SET name='${this.TAGSET_FLOW}' WHERE id = '${callout.groupTagsetTemplateId}'`
           );
         }
       }
