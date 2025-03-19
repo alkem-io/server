@@ -47,7 +47,7 @@ export class SearchService {
     if (searchData.searchInSpaceFilter) {
       try {
         await this.entityManager.findOneByOrFail(Space, {
-          nameID: searchData.searchInSpaceFilter,
+          id: searchData.searchInSpaceFilter,
         });
       } catch (e) {
         throw new EntityNotFoundException(
