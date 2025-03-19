@@ -26,6 +26,8 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SpaceAbout } from '../space.about';
+import { TagsetTemplate } from '@domain/common/tagset-template';
+import { TagsetType } from '@common/enums/tagset.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -301,24 +303,6 @@ const getSubspacesMock = (
           id: '',
           callouts: [],
           type: CalloutsSetType.COLLABORATION,
-          groups: [
-            {
-              displayName: 'HOME',
-              description: 'The Home page.',
-            },
-            {
-              displayName: 'COMMUNITY',
-              description: 'The Community page.',
-            },
-            {
-              displayName: 'SUBSPACES',
-              description: 'The Subspaces page.',
-            },
-            {
-              displayName: 'KNOWLEDGE',
-              description: 'The knowledge page.',
-            },
-          ],
           ...getEntityMock<CalloutsSet>(),
         },
         innovationFlow: {
@@ -326,6 +310,13 @@ const getSubspacesMock = (
           settings: {
             maximumNumberOfStates: 8,
             minimumNumberOfStates: 1,
+          },
+          flowStatesTagsetTemplate: {
+            id: '',
+            allowedValues: [],
+            name: '',
+            type: TagsetType.SELECT_ONE,
+            ...getEntityMock<TagsetTemplate>(),
           },
           states: [
             {
@@ -345,6 +336,10 @@ const getSubspacesMock = (
               description: 'The flow is completed.',
             },
           ],
+          currentState: {
+            displayName: 'prepare',
+            description: 'The innovation is being prepared.',
+          },
           profile: {
             id: '',
             displayName: `Challenge ${spaceId}.${i}`,
@@ -408,24 +403,6 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
           id: '',
           callouts: [],
           type: CalloutsSetType.COLLABORATION,
-          groups: [
-            {
-              displayName: 'HOME',
-              description: 'The Home page.',
-            },
-            {
-              displayName: 'COMMUNITY',
-              description: 'The Community page.',
-            },
-            {
-              displayName: 'SUBSPACES',
-              description: 'The Subspaces page.',
-            },
-            {
-              displayName: 'KNOWLEDGE',
-              description: 'The knowledge page.',
-            },
-          ],
           ...getEntityMock<CalloutsSet>(),
         },
         innovationFlow: {
@@ -433,6 +410,17 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
           settings: {
             maximumNumberOfStates: 8,
             minimumNumberOfStates: 1,
+          },
+          flowStatesTagsetTemplate: {
+            id: '',
+            name: '',
+            type: TagsetType.SELECT_ONE,
+            allowedValues: [],
+            ...getEntityMock<TagsetTemplate>(),
+          },
+          currentState: {
+            displayName: 'prepare',
+            description: 'The innovation is being prepared.',
           },
           states: [
             {

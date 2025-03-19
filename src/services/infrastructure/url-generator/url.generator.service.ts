@@ -22,7 +22,6 @@ import { AlkemioConfig } from '@src/types';
 import { Template } from '@domain/template/template/template.entity';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { Community } from '@domain/community/community';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
@@ -34,6 +33,7 @@ import { UrlGeneratorCacheService } from './url.generator.service.cache';
 import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { SpaceAbout } from '@domain/space/space.about';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -406,7 +406,7 @@ export class UrlGeneratorService {
       );
     }
 
-    const community = await this.entityManager.findOne(Community, {
+    const community = await this.entityManager.findOne(SpaceAbout, {
       where: {
         guidelines: {
           id: communityGuidelines.id,

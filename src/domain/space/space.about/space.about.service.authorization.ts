@@ -1,38 +1,53 @@
 import { Injectable } from '@nestjs/common';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ISpaceAbout } from './space.about.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { CommunityGuidelinesAuthorizationService } from '@domain/community/community-guidelines/community.guidelines.service.authorization';
+import { SpaceAboutService } from './space.about.service';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 @Injectable()
 export class SpaceAboutAuthorizationService {
   constructor(
     private profileAuthorizationService: ProfileAuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private spaceAboutService: SpaceAboutService,
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    spaceAbout: ISpaceAbout,
+    spaceAboutID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
     credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
   ): Promise<IAuthorizationPolicy[]> {
+    const spaceAbout = await this.spaceAboutService.getSpaceAboutOrFail(
+      spaceAboutID,
+      {
+        relations: {
+          profile: true,
+          guidelines: {
+            profile: true,
+          },
+        },
+      }
+    );
+    if (
+      !spaceAbout.guidelines ||
+      !spaceAbout.guidelines.profile ||
+      !spaceAbout.profile
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for SpaceAbout authorization: ${spaceAboutID} `,
+        LogContext.SPACE_ABOUT
+      );
+    }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     spaceAbout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         spaceAbout.authorization,
         parentAuthorization
-      );
-
-    // If can READ_ABOUT on SpaceAbout, then also allow general READ
-    spaceAbout.authorization =
-      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
-        spaceAbout.authorization,
-        AuthorizationPrivilege.READ_ABOUT,
-        [AuthorizationPrivilege.READ],
-        POLICY_RULE_READ_ABOUT
       );
     spaceAbout.authorization.credentialRules.push(...credentialRulesFromParent);
     updatedAuthorizations.push(spaceAbout.authorization);
@@ -44,6 +59,13 @@ export class SpaceAboutAuthorizationService {
         spaceAbout.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
+
+    const guidelineAuthorizations =
+      await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
+        spaceAbout.guidelines,
+        spaceAbout.authorization
+      );
+    updatedAuthorizations.push(...guidelineAuthorizations);
 
     return updatedAuthorizations;
   }
