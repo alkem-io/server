@@ -85,15 +85,6 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
 
     // Now have the data in the new setup, convert the L0 callouts to use the new flow states
     await this.setFlowStateOnLevelZeroCallouts(queryRunner);
-
-    // Finally, delete all tagset templates and tagsets for the groups
-    // TODO: Do not delete anything for now, we may want to do this is it makes sense but remaining rows may be a sign of some callouts that were not properly migrated
-    // await queryRunner.query(
-    //   `DELETE FROM tagset WHERE name = '${this.TAGSET_GROUP}'`
-    // );
-    // await queryRunner.query(
-    //   `DELETE FROM tagset_template WHERE name = '${this.TAGSET_GROUP}'`
-    // );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
