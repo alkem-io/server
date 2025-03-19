@@ -184,11 +184,13 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
       }
       const callouts: {
         id: string;
+        classificationId: string;
         groupTags: string;
         flowTagsetId: string;
       }[] = await queryRunner.query(
         `SELECT
           callout.id as id,
+          callouts.classificationId as classificationId
           groupTagset.tags as groupTags,
           flowTagset.id as flowTagsetId
         FROM callout
@@ -208,7 +210,7 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
         if (!flowTagsetId) {
           flowTagsetId = await this.createFlowTagset(
             queryRunner,
-            callout.flowTagsetId,
+            callout.classificationId,
             this.LEVEL_ZERO_FLOW_STATES[0],
             flowTagsetTemplateId
           );
