@@ -190,7 +190,7 @@ export class InnovationFlowTagsets1741340581699 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT
           callout.id as id,
-          callouts.classificationId as classificationId,
+          callout.classificationId as classificationId,
           groupTagset.tags as groupTags,
           flowTagset.id as flowTagsetId
         FROM callout
