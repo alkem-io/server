@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 
 @ObjectType('SpaceAbout')
 export abstract class ISpaceAbout extends IAuthorizable {
@@ -19,4 +20,6 @@ export abstract class ISpaceAbout extends IAuthorizable {
     description: 'Who should get involved in this challenge',
   })
   who?: string;
+
+  guidelines?: ICommunityGuidelines;
 }

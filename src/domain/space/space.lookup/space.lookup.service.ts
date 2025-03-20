@@ -17,10 +17,14 @@ import {
 } from 'typeorm';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { ISpaceAbout } from '../space.about';
 
 @Injectable()
 export class SpaceLookupService {
   constructor(
+    private accountLookupService: AccountLookupService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(Space)
@@ -41,13 +45,42 @@ export class SpaceLookupService {
     return space;
   }
 
-  async getSpace(
+  public async getSpaceForSpaceAboutOrFail(
+    spaceAboutID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace | never> {
+    const space = await this.getSpaceForSpaceAbout(spaceAboutID, options);
+    if (!space)
+      throw new EntityNotFoundException(
+        `Unable to find Space with about with ID: ${spaceAboutID}`,
+        LogContext.ACCOUNT
+      );
+    return space;
+  }
+
+  private async getSpace(
     spaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
     const space: ISpace | null = await this.entityManager.findOne(Space, {
       ...options,
       where: { ...options?.where, id: spaceID },
+    });
+    return space;
+  }
+
+  private async getSpaceForSpaceAbout(
+    spaceAboutID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace | null> {
+    const space: ISpace | null = await this.entityManager.findOne(Space, {
+      ...options,
+      where: {
+        ...options?.where,
+        about: {
+          id: spaceAboutID,
+        },
+      },
     });
     return space;
   }
@@ -148,5 +181,37 @@ export class SpaceLookupService {
         LogContext.COLLABORATION
       );
     return collaboration;
+  }
+
+  public async getProvider(spaceAbout: ISpaceAbout): Promise<IContributor> {
+    const space = await this.spaceRepository.findOneOrFail({
+      where: {
+        about: {
+          id: spaceAbout.id,
+        },
+      },
+    });
+    const l0Space = await this.spaceRepository.findOneOrFail({
+      where: {
+        id: space.levelZeroSpaceID,
+      },
+      relations: {
+        account: true,
+      },
+    });
+    if (!l0Space || !l0Space.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Space with account to get Provider ${spaceAbout.id} `,
+        LogContext.LIBRARY
+      );
+    }
+    const provider = await this.accountLookupService.getHost(l0Space.account);
+    if (!provider) {
+      throw new RelationshipNotFoundException(
+        `Unable to load provider for Space ${space.id} `,
+        LogContext.SPACE_ABOUT
+      );
+    }
+    return provider;
   }
 }

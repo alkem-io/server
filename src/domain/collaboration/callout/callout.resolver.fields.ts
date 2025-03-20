@@ -17,6 +17,7 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
+import { IClassification } from '@domain/common/classification/classification.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -75,6 +76,19 @@ export class CalloutResolverFields {
   })
   async comments(@Parent() callout: Callout): Promise<IRoom | undefined> {
     return await this.calloutService.getComments(callout.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('classification', () => IClassification, {
+    nullable: true,
+    description: 'The comments for this Callout.',
+  })
+  async classification(
+    @Parent() callout: Callout
+  ): Promise<IClassification | undefined> {
+    // TODO: must be a loader, will be used a lot
+    return await this.calloutService.getClassification(callout.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

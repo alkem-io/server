@@ -96,9 +96,10 @@ export class LookupMyPrivilegesResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const space = await this.spaceService.getSpaceOrFail(id, {
+    const space = await this.spaceService.getSpace(id, {
       relations: { authorization: true },
     });
+    if (!space) return [];
 
     return this.getMyPrivilegesOnAuthorizable(agentInfo, space);
   }

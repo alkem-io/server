@@ -3,6 +3,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { IProfile } from '../profile';
+import { IClassification } from '../classification/classification.interface';
 
 @ObjectType('Tagset')
 export abstract class ITagset extends IAuthorizable {
@@ -17,4 +18,5 @@ export abstract class ITagset extends IAuthorizable {
 
   tagsetTemplate?: ITagsetTemplate;
   profile?: IProfile;
+  classification?: IClassification;
 }

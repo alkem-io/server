@@ -28,9 +28,9 @@ export class CalloutsSetAuthorizationService {
   async applyAuthorizationPolicy(
     calloutsSetInput: ICalloutsSet,
     parentAuthorization: IAuthorizationPolicy | undefined,
+    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = [],
     roleSet?: IRoleSet,
-    spaceSettings?: ISpaceSettings,
-    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(
       calloutsSetInput.id,

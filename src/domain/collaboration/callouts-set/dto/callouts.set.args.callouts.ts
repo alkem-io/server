@@ -1,6 +1,6 @@
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
-import { TagsetArgs } from '@common/args/tagset.args';
+import { TagsetArgs } from '@domain/common/tagset/dto/tagset.args';
 import { CalloutType } from '@common/enums/callout.type';
 
 @ArgsType()
@@ -39,15 +39,9 @@ export class CalloutsSetArgsCallouts {
   })
   sortByActivity?: boolean;
 
-  @Field(() => [String], {
-    description: 'Return only Callouts with from the specified groups.',
-    nullable: true,
-  })
-  groups?: string[];
-
   @Field(() => [TagsetArgs], {
-    description: 'A filter .',
+    description: 'Return only Callouts matching the specified filter.',
     nullable: true,
   })
-  tagsets?: TagsetArgs[];
+  classificationTagsets?: TagsetArgs[];
 }
