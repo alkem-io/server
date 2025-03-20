@@ -414,9 +414,6 @@ export class UrlGeneratorService {
         },
       },
       relations: {
-        about: {
-          guidelines: true,
-        },
         community: true,
       },
     });
