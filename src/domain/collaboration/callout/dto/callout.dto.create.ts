@@ -7,6 +7,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
 import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
+import { CreateClassificationInput } from '@domain/common/classification/dto/classification.dto.create';
 
 @InputType()
 @ObjectType('CreateCalloutData')
@@ -15,6 +16,11 @@ export class CreateCalloutInput {
   @ValidateNested({ each: true })
   @Type(() => CreateCalloutFramingInput)
   framing!: CreateCalloutFramingInput;
+
+  @Field(() => CreateClassificationInput, { nullable: true })
+  @ValidateNested({ each: true })
+  @Type(() => CreateClassificationInput)
+  classification?: CreateClassificationInput;
 
   @Field(() => CreateCalloutContributionDefaultsInput, { nullable: true })
   @ValidateNested({ each: true })
@@ -36,12 +42,6 @@ export class CreateCalloutInput {
     description: 'Callout type.',
   })
   type!: CalloutType;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'Set Callout Group for this Callout.',
-  })
-  groupName?: string;
 
   @Field(() => Number, {
     nullable: true,

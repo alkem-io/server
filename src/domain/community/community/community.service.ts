@@ -18,10 +18,7 @@ import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { CommunityGuidelinesService } from '../community-guidelines/community.guidelines.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCommunityInput } from './dto/community.dto.create';
-import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
@@ -33,7 +30,6 @@ export class CommunityService {
     private userGroupService: UserGroupService,
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
-    private communityGuidelinesService: CommunityGuidelinesService,
     private roleSetService: RoleSetService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Community)
@@ -42,8 +38,7 @@ export class CommunityService {
   ) {}
 
   async createCommunity(
-    communityData: CreateCommunityInput,
-    storageAggregator: IStorageAggregator
+    communityData: CreateCommunityInput
   ): Promise<ICommunity> {
     const community: ICommunity = new Community();
     community.authorization = new AuthorizationPolicy(
@@ -52,12 +47,6 @@ export class CommunityService {
     community.roleSet = await this.roleSetService.createRoleSet(
       communityData.roleSetData
     );
-
-    community.guidelines =
-      await this.communityGuidelinesService.createCommunityGuidelines(
-        communityData.guidelines,
-        storageAggregator
-      );
 
     community.groups = [];
     community.communication =
@@ -160,15 +149,13 @@ export class CommunityService {
         roleSet: true,
         groups: true,
         communication: true,
-        guidelines: true,
       },
     });
     if (
       !community.communication ||
       !community.communication.updates ||
       !community.roleSet ||
-      !community.groups ||
-      !community.guidelines
+      !community.groups
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for community for deletion: ${community.id} `,
@@ -190,10 +177,6 @@ export class CommunityService {
 
     await this.communicationService.removeCommunication(
       community.communication.id
-    );
-
-    await this.communityGuidelinesService.deleteCommunityGuidelines(
-      community.guidelines.id
     );
 
     await this.communityRepository.remove(community as Community);
@@ -222,25 +205,6 @@ export class CommunityService {
       );
     }
     return communityWithRoleSet.roleSet;
-  }
-
-  public async getCommunityGuidelines(
-    community: ICommunity
-  ): Promise<ICommunityGuidelines> {
-    const communityWithGuidelines = await this.getCommunityOrFail(
-      community.id,
-      {
-        relations: { guidelines: true },
-      }
-    );
-
-    if (!communityWithGuidelines.guidelines) {
-      throw new EntityNotInitializedException(
-        `Unable to locate guidelines for community: ${community.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return communityWithGuidelines.guidelines;
   }
 
   async getCommunication(

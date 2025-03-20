@@ -5,10 +5,10 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { SpaceType } from '@common/enums/space.type';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IRoleSet } from './role.set.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class RoleSetEventsService {
@@ -60,8 +60,8 @@ export class RoleSetEventsService {
     await this.notificationAdapter.communityNewMember(notificationInput);
 
     // Record the contribution events
-    switch (space.type) {
-      case SpaceType.SPACE:
+    switch (space.level) {
+      case SpaceLevel.L0:
         this.contributionReporter.spaceJoined(
           {
             id: community.parentID,

@@ -110,17 +110,12 @@ export class CollaborationService {
       ],
     });
 
-    const statesTagsetTemplate = this.calloutsSetService.getTagsetTemplate(
+    const flowStatesTagsetTemplate = this.calloutsSetService.getTagsetTemplate(
       collaboration.calloutsSet.tagsetTemplateSet,
       TagsetReservedName.FLOW_STATE
     );
 
-    const groupsTagsetTemplate = this.calloutsSetService.getTagsetTemplate(
-      collaboration.calloutsSet.tagsetTemplateSet,
-      TagsetReservedName.CALLOUT_GROUP
-    );
-
-    if (!statesTagsetTemplate || !groupsTagsetTemplate) {
+    if (!flowStatesTagsetTemplate) {
       throw new RelationshipNotFoundException(
         'Unable to create tagset template for flow states',
         LogContext.COLLABORATION
@@ -131,8 +126,8 @@ export class CollaborationService {
     collaboration.innovationFlow =
       await this.innovationFlowService.createInnovationFlow(
         collaborationData.innovationFlowData,
-        [statesTagsetTemplate],
-        storageAggregator
+        storageAggregator,
+        flowStatesTagsetTemplate
       );
 
     if (collaborationData.calloutsSetData.calloutsData) {
@@ -145,9 +140,8 @@ export class CollaborationService {
         );
     }
 
-    this.calloutsSetService.moveCalloutsToDefaultGroupAndState(
-      groupsTagsetTemplate.allowedValues,
-      statesTagsetTemplate.allowedValues,
+    this.calloutsSetService.moveCalloutsToDefaultFlowState(
+      flowStatesTagsetTemplate.allowedValues,
       collaboration.calloutsSet.callouts
     );
 
@@ -233,7 +227,7 @@ export class CollaborationService {
         return [...spacesInAccount].map(x => {
           if (!x.collaboration) {
             throw new EntityNotInitializedException(
-              `Collaboration not found on ${x.type} '${x.id}'`,
+              `Collaboration not found in space level ${x.level} '${x.id}'`,
               LogContext.COLLABORATION
             );
           }
@@ -243,7 +237,7 @@ export class CollaborationService {
         const subsubspaces = space.subspaces;
         if (!subsubspaces) {
           throw new EntityNotInitializedException(
-            `Subsubspaces not found on subspace ${space.type}`,
+            `Subsubspaces not found on subspace with level ${space.level}`,
             LogContext.COLLABORATION
           );
         }

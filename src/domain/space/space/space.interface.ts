@@ -38,10 +38,7 @@ export class ISpace extends IAuthorizable {
   })
   level!: SpaceLevel;
 
-  @Field(() => SpaceType, {
-    nullable: false,
-    description: 'The Type of the Space e.g. space/challenge/opportunity.',
-  })
+  // TODO: this is likely obsolete
   type!: SpaceType;
 
   @Field(() => SpaceVisibility, {

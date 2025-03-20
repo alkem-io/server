@@ -8,12 +8,14 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { KnowledgeBaseResolverFields } from './knowledge.base.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
+import { TagsetModule } from '../tagset/tagset.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
+    TagsetModule,
     CalloutsSetModule,
     TypeOrmModule.forFeature([KnowledgeBase]),
   ],
