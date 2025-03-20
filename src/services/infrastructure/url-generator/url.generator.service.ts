@@ -33,7 +33,6 @@ import { UrlGeneratorCacheService } from './url.generator.service.cache';
 import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { SpaceAbout } from '@domain/space/space.about';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -406,15 +405,27 @@ export class UrlGeneratorService {
       );
     }
 
-    const community = await this.entityManager.findOne(SpaceAbout, {
+    const space = await this.entityManager.findOne(Space, {
       where: {
-        guidelines: {
-          id: communityGuidelines.id,
+        about: {
+          guidelines: {
+            id: communityGuidelines.id,
+          },
         },
       },
+      relations: {
+        community: true,
+      },
     });
-    if (community) {
-      return await this.getSpaceUrlPathByCommunityID(community.id);
+
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for guidelines for profile: ${communityGuidelines.id}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    if (space.community) {
+      return await this.getSpaceUrlPathByCommunityID(space.community.id);
     }
 
     const template = await this.entityManager.findOne(Template, {
