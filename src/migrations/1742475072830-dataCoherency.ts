@@ -1,5 +1,18 @@
 import { isEqual } from 'lodash';
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  type Identifiable,
+  type InnovationFlow,
+  type TagsetTemplate,
+  type Collaboration,
+  type KnowledgeBase,
+  type CalloutsSet,
+  type ClassificationTagset,
+  type Callout,
+  hasDuplicates,
+  equalClassificationTagsets,
+  createSequence,
+} from './utils/dataCoherency-utils';
 
 /**
  * Loops over all the callouts_set and checks the following:
@@ -12,83 +25,21 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  */
 
 // Set to true to run in read-only mode
-const READ_ONLY = true;
 
-type Identifiable = { id: string };
+/* // Pending:
+- check if there are classifications without callout
+- check if there are callouts without calloutSet (integrity?)
+- CalloutsSets: of collaborations, of knowledge-bases check if there are calloutsSets without parents
+*/
 
-type InnovationFlow = Identifiable & {
-  states: {
-    displayName: string;
-    description: string;
-  }[];
-  settings: {
-    minimumNumberOfStates: number;
-    maximumNumberOfStates: number;
-  };
-  currentState: { displayName: string; description: string };
-  flowStatesTagsetTemplateId: string;
-  tagsetTemplate: TagsetTemplate;
-};
-
-type TagsetTemplate = Identifiable & {
-  name: string;
-  type: string;
-  allowedValues: string;
-  defaultSelectedValue: string;
-  tagsetTemplateSetId: string;
-};
-
-type Collaboration = Identifiable & {
-  calloutsSetId: string;
-  isTemplate: boolean;
-  innovationFlowId: string;
-  innovationFlow: InnovationFlow;
-};
-
-type KnowledgeBase = Identifiable & {
-  calloutsSetId: string;
-  profileId: string;
-};
-
-type CalloutsSet = Identifiable & {
-  type: string;
-  tagsetTemplateSetId: string;
-};
-
-type Callout = Identifiable & {
-  nameID: string;
-  sortOrder: number;
-  isTemplate: boolean;
-  classificationId: string;
-};
-
-type ClassificationTagset = Identifiable & {
-  name: string;
-  tags: string;
-  profileId: string;
-  tagsetTemplateId: string;
-  type: string;
-  classificationId: string;
-};
+const READ_ONLY = false;
+const ROLLBACK_IF_UNKNOWN_PROBLEMS = true;
 
 type ProblemsArrays = {
   solvedProblems: string[];
   ignoredProblems: string[];
   problems: string[];
 };
-
-abstract class Utils {
-  public static hasDuplicates(array: any[]): boolean {
-    const uniqueElements = new Set();
-    for (const element of array) {
-      if (uniqueElements.has(element)) {
-        return true;
-      }
-      uniqueElements.add(element);
-    }
-    return false;
-  }
-}
 
 abstract class ProblemSolver {
   protected readQueryRunner: QueryRunner;
@@ -160,9 +111,7 @@ class InnovationFlowProblems extends ProblemSolver {
     if (!innovationFlow.currentState) {
       await this.solveInnovationFlowWithoutCurrentState(innovationFlow);
     }
-    if (
-      Utils.hasDuplicates(innovationFlow.states.map(state => state.displayName))
-    ) {
+    if (hasDuplicates(innovationFlow.states.map(state => state.displayName))) {
       throw new Error(
         `InnovationFlow with id ${innovationFlowId} has duplicate state names ${innovationFlow.states.map(state => state.displayName)}`
       );
@@ -276,10 +225,81 @@ class TagsetTemplateProblems extends ProblemSolver {
     return tagsetTemplate;
   };
 
+  public getTagsetTemplateOfTagSet = async (
+    tagset: ClassificationTagset,
+    callout: Callout,
+    calloutsSet: CalloutsSet,
+    collaboration: Collaboration
+  ): Promise<TagsetTemplate> => {
+    const [tagsetTemplate]: TagsetTemplate[] = await this.readQueryRunner
+      .query(`
+    SELECT id, name, type, allowedValues, defaultSelectedValue, tagsetTemplateSetId FROM tagset_template WHERE id = '${tagset.tagsetTemplateId}'
+  `);
+    if (!tagsetTemplate) {
+      throw new Error(
+        `TagsetTemplate with id ${tagset.tagsetTemplateId} not found`
+      );
+    }
+    if (tagsetTemplate.name !== 'flow-state') {
+      throw new Error(
+        `TagsetTemplate with id ${tagset.tagsetTemplateId} has name ${tagsetTemplate.name}`
+      );
+    }
+    if (tagsetTemplate.type !== 'select-one') {
+      throw new Error(
+        `TagsetTemplate with id ${tagset.tagsetTemplateId} has type ${tagsetTemplate.type}`
+      );
+    }
+    const validFlowStates = collaboration.innovationFlow.states.map(
+      state => state.displayName
+    );
+    if (
+      !isEqual(
+        tagsetTemplate.allowedValues.split(',').sort(),
+        validFlowStates.sort()
+      )
+    ) {
+      if (validFlowStates.join(',') !== tagsetTemplate.allowedValues) {
+        await this.solveTagsetTemplateWithInvalidAllowedValues(
+          tagsetTemplate,
+          collaboration.innovationFlow
+        );
+      } else {
+        this.logIgnoredProblem(
+          `InnovationFlow has states with commas in them: ${collaboration.innovationFlow.id}`
+        );
+      }
+    }
+    if (
+      !tagsetTemplate.allowedValues
+        .split(',')
+        .includes(tagsetTemplate.defaultSelectedValue)
+    ) {
+      this.solveTagsetTemplateWithInvalidDefaultSelectedValue(
+        tagsetTemplate,
+        validFlowStates[0]
+      );
+    }
+    if (!tagsetTemplate.tagsetTemplateSetId) {
+      throw new Error(
+        `TagsetTemplate with id ${tagsetTemplate.id} has no tagsetTemplateSetId`
+      );
+    }
+    if (
+      tagsetTemplate.tagsetTemplateSetId !== calloutsSet.tagsetTemplateSetId
+    ) {
+      throw new Error(
+        `TagsetTemplate with id ${tagsetTemplate.id} has tagsetTemplateSetId different than the calloutsSet`
+      );
+    }
+    return tagsetTemplate;
+  };
+
   private solveTagsetTemplateWithInvalidAllowedValues = async (
     tagsetTemplate: TagsetTemplate,
     innovationFlow: InnovationFlow
   ) => {
+    const oldInvalid = tagsetTemplate.allowedValues;
     tagsetTemplate.allowedValues = innovationFlow.states
       .map(state => state.displayName)
       .join(',');
@@ -288,8 +308,350 @@ class TagsetTemplateProblems extends ProblemSolver {
       [tagsetTemplate.allowedValues]
     );
     this.logSolvedProblem(
-      `TagsetTemplate with id ${tagsetTemplate.id} had invalid allowedValues`
+      `TagsetTemplate with id ${tagsetTemplate.id} had invalid allowedValues: ${oldInvalid} => ${tagsetTemplate.allowedValues}`
     );
+  };
+  private solveTagsetTemplateWithInvalidDefaultSelectedValue = async (
+    tagsetTemplate: TagsetTemplate,
+    newDefaultValue: string
+  ) => {
+    const oldInvalid = tagsetTemplate.defaultSelectedValue;
+    tagsetTemplate.defaultSelectedValue = newDefaultValue;
+    this.writeQueryRunner.query(
+      `UPDATE tagset_template SET defaultSelectedValue = ? WHERE id = '${tagsetTemplate.id}'`,
+      [tagsetTemplate.defaultSelectedValue]
+    );
+    this.logSolvedProblem(
+      `TagsetTemplate with id ${tagsetTemplate.id} had invalid defaultSelectedValue: ${oldInvalid} => ${newDefaultValue} of ${tagsetTemplate.allowedValues}`
+    );
+  };
+}
+
+type ChooseClassificationResult =
+  | {
+      indexGoodOne: number;
+      delete: number[];
+    }
+  | undefined;
+
+class ClassificationTagsetProblems extends ProblemSolver {
+  public checkClassificationTagset = async (
+    classificationTagset: ClassificationTagset,
+    callout: Callout,
+    calloutsSet: CalloutsSet,
+    collaboration: Collaboration
+  ) => {
+    if (classificationTagset.name !== 'flow-state') {
+      this.logProblem(
+        `ClassificationTagset ${classificationTagset.id} has a name different than 'flow-state'`
+      );
+    }
+    if (classificationTagset.type !== 'select-one') {
+      this.logProblem(
+        `ClassificationTagset ${classificationTagset.id} has a type different than 'select-one'`
+      );
+    }
+    if (classificationTagset.profileId) {
+      this.logProblem(
+        `ClassificationTagset ${classificationTagset.id} has a profileId`
+      );
+    }
+
+    const validStates = collaboration.innovationFlow.states.map(
+      state => state.displayName
+    );
+    const defaultState = collaboration.innovationFlow.currentState.displayName;
+    const validStatesLower = validStates.map(state => state.toLowerCase());
+    if (!validStates.includes(classificationTagset.tags)) {
+      // The state is not perfectly valid
+      const index = validStatesLower.indexOf(
+        classificationTagset.tags.toLowerCase()
+      );
+      if (index !== -1) {
+        this.setState(classificationTagset, validStates[index]);
+        this.logSolvedProblem(
+          `Callout ${callout.id} had a classification tagset with a state that was not perfectly valid: ${classificationTagset.tags}. Changed to ${validStates[index]}`
+        );
+        classificationTagset.tags = validStates[index];
+      } else {
+        this.setState(classificationTagset, defaultState);
+        this.logSolvedProblem(
+          `Callout ${callout.id} had a classification tagset with a state that was WRONG: ${classificationTagset.tags}. Changed to ${defaultState}`
+        );
+        classificationTagset.tags = defaultState;
+      }
+    }
+
+    await new TagsetTemplateProblems(
+      this.readQueryRunner,
+      this.problemsArrays
+    ).getTagsetTemplateOfTagSet(
+      classificationTagset,
+      callout,
+      calloutsSet,
+      collaboration
+    );
+  };
+
+  private chooseClassificationTagset2 = (
+    validStates: string[],
+    tagsets: [ClassificationTagset, ClassificationTagset]
+  ): ChooseClassificationResult => {
+    if (
+      validStates.includes(tagsets[0].tags) &&
+      !validStates.includes(tagsets[1].tags)
+    ) {
+      return { indexGoodOne: 0, delete: [1] };
+    } else if (
+      validStates.includes(tagsets[1].tags) &&
+      !validStates.includes(tagsets[0].tags)
+    ) {
+      return { indexGoodOne: 1, delete: [0] };
+    } else {
+      return undefined;
+    }
+  };
+
+  private chooseClassificationTagset3 = (
+    validStates: string[],
+    tagsets: [ClassificationTagset, ClassificationTagset, ClassificationTagset]
+  ): ChooseClassificationResult => {
+    if (validStates.includes(tagsets[0].tags)) {
+      return { indexGoodOne: 0, delete: [1, 2] };
+    } else if (validStates.includes(tagsets[1].tags)) {
+      return { indexGoodOne: 1, delete: [0, 2] };
+    } else if (validStates.includes(tagsets[2].tags)) {
+      return { indexGoodOne: 2, delete: [0, 1] };
+    } else {
+      return undefined;
+    }
+  };
+
+  public handleMultipleClassificationTagsets = async (
+    classificationTagsets: ClassificationTagset[],
+    callout: Callout,
+    collaboration: Collaboration
+  ): Promise<ClassificationTagset> => {
+    const validStates = collaboration.innovationFlow.states.map(
+      state => state.displayName
+    );
+    const validStatesLower = validStates.map(state => state.toLowerCase());
+    const classificationTagsetsLower = classificationTagsets.map(tagset => ({
+      ...tagset,
+      tags: tagset.tags.toLowerCase(),
+    }));
+    let result: ChooseClassificationResult | undefined;
+
+    switch (classificationTagsets.length) {
+      case 0:
+      case 1:
+        throw new Error(
+          'This function should only be called with 2 classification tagsets or more'
+        );
+      case 2: {
+        if (
+          equalClassificationTagsets(
+            classificationTagsets[0],
+            classificationTagsets[1]
+          )
+        ) {
+          this.logSolvedProblem(
+            `Callout ${callout.id} had 2 classification tagsets with the same data. Second will be deleted`
+          );
+          result = { indexGoodOne: 0, delete: [1] };
+          break;
+        }
+        result = this.chooseClassificationTagset2(
+          validStates,
+          classificationTagsets as [ClassificationTagset, ClassificationTagset]
+        );
+        if (!result) {
+          result = this.chooseClassificationTagset2(
+            validStatesLower,
+            classificationTagsetsLower as [
+              ClassificationTagset,
+              ClassificationTagset,
+            ]
+          );
+        }
+        break;
+      }
+      case 3: {
+        result = this.chooseClassificationTagset3(
+          validStates,
+          classificationTagsets as [
+            ClassificationTagset,
+            ClassificationTagset,
+            ClassificationTagset,
+          ]
+        );
+        if (!result) {
+          result = this.chooseClassificationTagset3(
+            validStatesLower,
+            classificationTagsetsLower as [
+              ClassificationTagset,
+              ClassificationTagset,
+              ClassificationTagset,
+            ]
+          );
+        }
+        break;
+      }
+      default:
+        throw new Error(
+          'This function should only be called with 2 or 3 classification tagsets'
+        );
+    }
+    if (!result) {
+      this.logSolvedProblem(
+        `Callout ${callout.id} had ${classificationTagsets.length} classification tagsets. But none of them were valid, deleted all except ${classificationTagsets[0].id}`
+      );
+      result = {
+        indexGoodOne: 0,
+        delete: createSequence(classificationTagsets.length - 1),
+      };
+    }
+
+    const deletedTagsets = [];
+    for (const indexDelete of result.delete) {
+      deletedTagsets.push(classificationTagsets[indexDelete].id);
+      await this.deleteTagset(classificationTagsets[indexDelete]);
+    }
+    this
+      .logSolvedProblem(`Callout ${callout.id} had ${classificationTagsets.length} classification tagsets.
+      But the [${result.indexGoodOne}]:${classificationTagsets[result.indexGoodOne].id} was the selected to stay.
+      Rest deleted [${result.delete.join(',')}]:${deletedTagsets.join(', ')}`);
+
+    return classificationTagsets[result.indexGoodOne];
+  };
+
+  public deleteTagset = async (tagset: Identifiable) => {
+    const tagsetData: { id: string; authorizationId: string }[] =
+      await this.readQueryRunner.query(
+        `SELECT id, authorizationId FROM tagset WHERE id = '${tagset.id}'`
+      );
+
+    if (!tagsetData || tagsetData.length === 0) {
+      this.logProblem(`Couldn't find tagset ${tagset.id}`); //!! this should be critical
+      return;
+    }
+    const { authorizationId } = tagsetData[0];
+    await this.writeQueryRunner.query(
+      `DELETE FROM authorization_policy WHERE id = '${authorizationId}'`
+    );
+    await this.writeQueryRunner.query(
+      `DELETE FROM tagset WHERE id = '${tagset.id}'`
+    );
+  };
+  public setState = async (tagset: Identifiable, state: string) => {
+    await this.writeQueryRunner.query(
+      `UPDATE tagset SET tags = ? WHERE id = '${tagset.id}'`,
+      [state]
+    );
+  };
+}
+
+class CalloutProblems extends ProblemSolver {
+  public getCalloutOfCollaboration = async (
+    calloutId: string,
+    calloutsSet: CalloutsSet,
+    collaboration: Collaboration
+  ): Promise<Callout> => {
+    const [callout]: Callout[] = await this.readQueryRunner.query(`
+      SELECT
+        callout.id,
+        callout.nameID,
+        callout.framingId,
+        callout.sortOrder,
+        callout.isTemplate,
+        callout.classificationId
+      FROM callout WHERE id = '${calloutId}'
+    `);
+    if (!callout) {
+      throw new Error(`Callout with id ${calloutId} not found`);
+    }
+    const [classification] = await this.readQueryRunner.query(`
+      SELECT id FROM classification WHERE id = '${callout.classificationId}'
+    `);
+    if (!classification) {
+      throw new Error(`Callout ${callout.id} has no classification`);
+    }
+
+    const classificationTagsets: ClassificationTagset[] = await this
+      .readQueryRunner.query(`
+      SELECT id, name, tags, profileId, tagsetTemplateId, type, classificationId FROM tagset WHERE classificationId = '${callout.classificationId}'
+    `);
+    let theClassificationTagset: ClassificationTagset;
+    if (!callout.classificationId || classificationTagsets.length === 0) {
+      throw new Error(
+        `Callout ${callout.id} has no classificationId or classification tagset`
+      );
+    } else if (classificationTagsets.length > 1) {
+      theClassificationTagset = await new ClassificationTagsetProblems(
+        this.readQueryRunner,
+        this.problemsArrays
+      ).handleMultipleClassificationTagsets(
+        classificationTagsets,
+        callout,
+        collaboration
+      );
+    } else {
+      theClassificationTagset = classificationTagsets[0];
+    }
+    await new ClassificationTagsetProblems(
+      this.readQueryRunner,
+      this.problemsArrays
+    ).checkClassificationTagset(
+      theClassificationTagset,
+      callout,
+      calloutsSet,
+      collaboration
+    );
+
+    return callout;
+  };
+
+  public getCalloutOfKnowledge = async (
+    calloutId: string,
+    calloutsSet: CalloutsSet,
+    knowledge: KnowledgeBase
+  ): Promise<Callout> => {
+    const [callout]: Callout[] = await this.readQueryRunner.query(`
+      SELECT
+        callout.id,
+        callout.nameID,
+        callout.framingId,
+        callout.sortOrder,
+        callout.isTemplate,
+        callout.classificationId
+      FROM callout WHERE id = '${calloutId}'
+    `);
+    if (!callout) {
+      throw new Error(`Callout with id ${calloutId} in KB not found`);
+    }
+    const [classification] = await this.readQueryRunner.query(`
+      SELECT id FROM classification WHERE id = '${callout.classificationId}'
+    `);
+    if (!classification) {
+      throw new Error(`Callout ${callout.id} in KB has no classification`);
+    }
+
+    const classificationTagsets: ClassificationTagset[] = await this
+      .readQueryRunner.query(`
+      SELECT id, name, tags, profileId, tagsetTemplateId, type, classificationId FROM tagset WHERE classificationId = '${callout.classificationId}'
+    `);
+    // Knowledge bases shouldn't have any classification tagset:
+    for (const tagset of classificationTagsets) {
+      await new ClassificationTagsetProblems(
+        this.readQueryRunner,
+        this.problemsArrays
+      ).deleteTagset(tagset);
+      this.logSolvedProblem(
+        `Callout ${callout.id} in KB had a classification tagset, deleted ${tagset.id}`
+      );
+    }
+
+    return callout;
   };
 }
 
@@ -355,66 +717,8 @@ class KnowledgeBaseProblems extends ProblemSolver {
   };
 }
 
-class ClassificationTagsetProblems extends ProblemSolver {
-  public checkClassificationTagset = async (
-    classificationTagset: ClassificationTagset
-  ) => {
-    if (classificationTagset.name !== 'flow-state') {
-      this.logProblem(
-        `ClassificationTagset ${classificationTagset.id} has a name different than 'flow-state'`
-      );
-    }
-    if (classificationTagset.type !== 'select-one') {
-      this.logProblem(
-        `ClassificationTagset ${classificationTagset.id} has a type different than 'select-one'`
-      );
-    }
-    if (classificationTagset.profileId) {
-      this.logProblem(
-        `ClassificationTagset ${classificationTagset.id} has a profileId`
-      );
-    }
-  };
-}
-
-class CalloutProblems extends ProblemSolver {
-  public getCalloutOfCollaboration = async (
-    calloutId: string,
-    calloutsSet: CalloutsSet,
-    collaboration: Collaboration
-  ): Promise<Callout> => {
-    const callout: Callout = await this.readQueryRunner.query(`
-      SELECT
-        callout.id AS id,
-        callout.nameID AS nameID,
-        callout.sortOrder AS sortOrder,
-        callout.isTemplate AS isTemplate,
-        classification.id AS classificationId
-      FROM callout
-        LEFT JOIN classification ON classification.id = callout.classificationId
-        WHERE calloutsSetId = '${calloutId}'
-    `);
-
-    const classificationTagsets: ClassificationTagset[] = await this
-      .readQueryRunner.query(`
-      SELECT id, name, tags, profileId, tagsetTemplateId, type, classificationId FROM tagset WHERE classificationId = '${callout.classificationId}'
-    `);
-    if (!callout.classificationId || classificationTagsets.length === 0) {
-      throw new Error(
-        `Callout ${callout.id} has no classificationId or tagset`
-      );
-    } else if (classificationTagsets.length > 1) {
-      throw new Error(
-        `Callout ${callout.id} has multiple classification tagsets`
-      );
-    } else {
-      // Just one classification tagset, let's see if it's correct:
-    }
-  };
-}
-
 class CalloutsSetProblems extends ProblemSolver {
-  public getCalloutsSets = async (): Promise<CalloutsSet[]> => {
+  public getAllCalloutsSets = async (): Promise<CalloutsSet[]> => {
     const calloutsSets: CalloutsSet[] = await this.readQueryRunner.query(`
       SELECT id, type, tagsetTemplateSetId FROM callouts_set
     `);
@@ -428,11 +732,26 @@ class CalloutsSetProblems extends ProblemSolver {
     const calloutsIds: Identifiable[] = await this.readQueryRunner.query(`
       SELECT id FROM callout WHERE calloutsSetId = '${calloutsSet.id}'
     `);
-    for (const callout of calloutsIds) {
-      await new CalloutProblems(
+    for (const { id: calloutId } of calloutsIds) {
+      const callout = await new CalloutProblems(
         this.readQueryRunner,
         this.problemsArrays
-      ).getCallout(callout.id, calloutsSet, collaboration);
+      ).getCalloutOfCollaboration(calloutId, calloutsSet, collaboration);
+    }
+  };
+
+  public processKnowledgeBaseCallouts = async (
+    calloutsSet: CalloutsSet,
+    knowledge: KnowledgeBase
+  ) => {
+    const calloutsIds: Identifiable[] = await this.readQueryRunner.query(`
+      SELECT id FROM callout WHERE calloutsSetId = '${calloutsSet.id}'
+    `);
+    for (const { id: calloutId } of calloutsIds) {
+      const callout = await new CalloutProblems(
+        this.readQueryRunner,
+        this.problemsArrays
+      ).getCalloutOfKnowledge(calloutId, calloutsSet, knowledge);
     }
   };
 }
@@ -444,14 +763,14 @@ export class DataCoherency1742475072830 implements MigrationInterface {
     problems: [],
   };
 
-  protected logProblem(problem: string) {
-    this.problemsArrays.problems.push(problem);
-  }
-  protected logSolvedProblem(problem: string) {
-    this.problemsArrays.solvedProblems.push(problem);
-  }
-  protected logIgnoredProblem(problem: string) {
-    this.problemsArrays.ignoredProblems.push(problem);
+  private printProblems(problems: string[], header?: string) {
+    if (header) {
+      console.log(header);
+      console.log('='.repeat(header.length));
+    }
+    for (const problem of problems) {
+      console.log(problem);
+    }
   }
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -459,32 +778,47 @@ export class DataCoherency1742475072830 implements MigrationInterface {
       queryRunner,
       this.problemsArrays
     );
-    const calloutsSets: CalloutsSet[] = await problemsSolver.getCalloutsSets();
+    const calloutsSets: CalloutsSet[] =
+      await problemsSolver.getAllCalloutsSets();
     for (const calloutsSet of calloutsSets) {
       if (calloutsSet.type === 'collaboration') {
         const collaboration = await new CollaborationProblems(
           queryRunner,
           this.problemsArrays
         ).getCollaborationForCalloutsSet(calloutsSet);
-        problemsSolver.processCollaborationCallouts(calloutsSet, collaboration);
+        await problemsSolver.processCollaborationCallouts(
+          calloutsSet,
+          collaboration
+        );
       } else if (calloutsSet.type === 'knowledge-base') {
         const knowledgeBase = await new KnowledgeBaseProblems(
           queryRunner,
           this.problemsArrays
         ).getKnowledgeBaseForCalloutSet(calloutsSet);
-        //!! problemsSolver.processKnowledgeBaseCallouts(calloutsSet, collaboration);
+        await problemsSolver.processKnowledgeBaseCallouts(
+          calloutsSet,
+          knowledgeBase
+        );
+      } else {
+        throw new Error(
+          `CalloutsSet with id ${calloutsSet.id} has unknown type ${calloutsSet.type}`
+        );
       }
     }
 
-    console.log('ignored', this.problemsArrays.ignoredProblems);
-    console.log('solved', this.problemsArrays.solvedProblems);
-    this.logProblem('This migration is not complete');
+    this.printProblems(this.problemsArrays.ignoredProblems, 'IGNORED');
+    this.printProblems(this.problemsArrays.solvedProblems, 'SOLVED');
+    this.printProblems(this.problemsArrays.problems, 'REMAINING PROBLEMS');
 
+    //this.problemsArrays.problems.push('This migration is not complete');
     if (this.problemsArrays.problems.length > 0) {
-      this.problemsArrays.problems.forEach(console.log);
-      throw new Error('Data coherency issues found');
+      console.log('REMAINING PROBLEMS', this.problemsArrays.problems);
+      if (ROLLBACK_IF_UNKNOWN_PROBLEMS) {
+        // throws an exception to rollback all the changes
+        throw new Error('Unknown data coherency issues found, rolling back');
+      }
     } else {
-      console.log('No data coherency issues found');
+      console.log('Finished');
     }
   }
 
