@@ -137,8 +137,6 @@ export class SpaceResolverFields {
     return await this.spaceService.getStorageAggregatorOrFail(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('subspaces', () => [ISpace], {
     nullable: false,
     description: 'The subspaces for the space.',
