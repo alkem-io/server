@@ -515,12 +515,14 @@ class ClassificationTagsetProblems extends ProblemSolver {
 
     const deletedTagsets = [];
     for (const indexDelete of result.delete) {
-      deletedTagsets.push(classificationTagsets[indexDelete].id);
+      deletedTagsets.push(
+        `${classificationTagsets[indexDelete].id}:${classificationTagsets[indexDelete].tags}`
+      );
       await this.deleteTagset(classificationTagsets[indexDelete]);
     }
     this
-      .logSolvedProblem(`Callout ${callout.id} had ${classificationTagsets.length} classification tagsets.
-      But the [${result.indexGoodOne}]:${classificationTagsets[result.indexGoodOne].id} was the selected to stay.
+      .logSolvedProblem(`Callout ${callout.id} had ${classificationTagsets.length} classification tagsets. valid states: [${validStates.join(', ')}]
+      But the [${result.indexGoodOne}]:${classificationTagsets[result.indexGoodOne].id} was the selected to stay: ${classificationTagsets[result.indexGoodOne].tags}
       Rest deleted [${result.delete.join(',')}]:${deletedTagsets.join(', ')}`);
 
     return classificationTagsets[result.indexGoodOne];
