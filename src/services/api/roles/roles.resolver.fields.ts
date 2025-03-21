@@ -41,10 +41,7 @@ export class RolesResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() roles: ContributorRoles
   ): Promise<RolesResultSpace[]> {
-    return await this.rolesService.getSpaceRolesForContributor(
-      roles,
-      agentInfo
-    );
+    return this.rolesService.getSpaceRolesForContributor(roles, agentInfo);
   }
 
   @UseGuards(GraphqlGuard)

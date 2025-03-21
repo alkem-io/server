@@ -31,13 +31,13 @@ export class RolesResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('rolesData') rolesData: RolesUserInput
   ): Promise<ContributorRoles> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `roles user query: ${agentInfo.email}`
     );
-    return await this.rolesServices.getRolesForUser(rolesData);
+    return this.rolesServices.getRolesForUser(rolesData);
   }
 
   @UseGuards(GraphqlGuard)
