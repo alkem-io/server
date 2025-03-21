@@ -535,8 +535,7 @@ class ClassificationTagsetProblems extends ProblemSolver {
       );
 
     if (!tagsetData || tagsetData.length === 0) {
-      this.logProblem(`Couldn't find tagset ${tagset.id}`); //!! this should be critical
-      return;
+      throw new Error(`Couldn't find tagset ${tagset.id}`);
     }
     const { authorizationId } = tagsetData[0];
     await this.writeQueryRunner.query(
@@ -715,7 +714,11 @@ class KnowledgeBaseProblems extends ProblemSolver {
         `KnowledgeBase with calloutsSetId ${calloutsSet.id} not found`
       );
     }
-    // Check anything in the profile //!!
+    if (!knowledgeBases[0].profileId) {
+      throw new Error(
+        `KnowledgeBase with id ${knowledgeBases[0].id} has no profileId`
+      );
+    }
     return knowledgeBases[0];
   };
 }
