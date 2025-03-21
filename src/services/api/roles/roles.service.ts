@@ -105,7 +105,7 @@ export class RolesService {
       roles.filter
     );
 
-    return await mapSpaceCredentialsToRoles(
+    return mapSpaceCredentialsToRoles(
       this.entityManager,
       roles.credentials,
       allowedVisibilities,
