@@ -15,25 +15,23 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { UpdateProfileSelectTagsetDefinitionInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.definition';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
-import { UpdateProfileSelectTagsetValueInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.value';
 import { InnovationFlowStatesService } from '../innovation-flow-states/innovation.flow.state.service';
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
+import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
 
 @Injectable()
 export class InnovationFlowService {
   constructor(
     private profileService: ProfileService,
-    private tagsetService: TagsetService,
+    private tagsetTemplateService: TagsetTemplateService,
     private innovationFlowStatesService: InnovationFlowStatesService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
@@ -42,8 +40,8 @@ export class InnovationFlowService {
 
   async createInnovationFlow(
     innovationFlowData: CreateInnovationFlowInput,
-    tagsetTemplates: ITagsetTemplate[],
     storageAggregator: IStorageAggregator,
+    flowTagsetTemplate?: ITagsetTemplate,
     isTemplate: boolean = false
   ): Promise<IInnovationFlow> {
     const innovationFlow: IInnovationFlow = InnovationFlow.create({
@@ -55,32 +53,18 @@ export class InnovationFlowService {
     if (innovationFlowData.states.length === 0) {
       throw new ValidationException(
         `Require at least one state to create an InnovationFlow: ${innovationFlowData}`,
-        LogContext.SPACES
+        LogContext.INNOVATION_FLOW
       );
     }
+
     if (!isTemplate) {
-      const tagsetInputs =
-        this.profileService.convertTagsetTemplatesToCreateTagsetInput(
-          tagsetTemplates
+      if (!flowTagsetTemplate) {
+        throw new ValidationException(
+          `Require flowTagsetTemplate on non-template InnovationFlow: ${innovationFlowData}`,
+          LogContext.INNOVATION_FLOW
         );
-
-      innovationFlowData.profile.tagsets =
-        this.profileService.updateProfileTagsetInputs(
-          innovationFlowData.profile.tagsets,
-          tagsetInputs
-        );
-
-      // Update the flow state tagset to have the default value
-      const newStateNames = innovationFlowData.states.map(
-        state => state.displayName
-      );
-      const defaultSelectedState = newStateNames[0]; // default to first in the list
-      const flowTagsetInput = innovationFlowData.profile.tagsets.find(
-        t => t.name === TagsetReservedName.FLOW_STATE.valueOf()
-      );
-      if (flowTagsetInput) {
-        flowTagsetInput.tags = [defaultSelectedState];
       }
+      innovationFlow.flowStatesTagsetTemplate = flowTagsetTemplate;
     }
 
     innovationFlow.profile = await this.profileService.createProfile(
@@ -99,6 +83,7 @@ export class InnovationFlowService {
       this.innovationFlowStatesService.convertInputsToStates(
         innovationFlowData.states
       );
+    innovationFlow.currentState = innovationFlow.states[0];
 
     return innovationFlow;
   }
@@ -114,7 +99,12 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
       {
-        relations: { profile: true },
+        relations: {
+          profile: true,
+          flowStatesTagsetTemplate: {
+            tagsets: true,
+          },
+        },
       }
     );
 
@@ -123,21 +113,17 @@ export class InnovationFlowService {
         innovationFlowData.states,
         innovationFlow.settings
       );
-      const newStateNames = innovationFlowData.states.map(
-        state => state.displayName
-      );
 
       // InnovationFlow templates don't have a tagset
       if (!isTemplate) {
-        const defaultSelectedState = newStateNames[0]; // default to first in the list
-        const updateData: UpdateProfileSelectTagsetDefinitionInput = {
-          profileID: innovationFlow.profile.id,
-          allowedValues: newStateNames,
-          defaultSelectedValue: defaultSelectedState,
-          tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
-        };
-        await this.profileService.updateSelectTagsetDefinition(updateData);
+        await this.updateFlowStatesTagsetTemplate(
+          innovationFlow,
+          this.innovationFlowStatesService.convertInputsToStates(
+            innovationFlowData.states
+          )
+        );
       }
+
       // serialize the states
       innovationFlow.states =
         this.innovationFlowStatesService.convertInputsToStates(
@@ -155,6 +141,32 @@ export class InnovationFlowService {
     return await this.innovationFlowRepository.save(innovationFlow);
   }
 
+  private async updateFlowStatesTagsetTemplate(
+    innovationFlow: IInnovationFlow,
+    newStates: IInnovationFlowState[],
+    oldSelectedValue?: string,
+    newSelectedValue?: string
+  ) {
+    if (!innovationFlow.flowStatesTagsetTemplate) {
+      throw new ValidationException(
+        `Unable to find flowStatesTagsetTemplate on InnovationFlow: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    const newStateNames = newStates.map(state => state.displayName);
+    const defaultSelectedState = newStateNames[0]; // default to first in the list
+    const updatedTagsetTemplateData: UpdateTagsetTemplateDefinitionInput = {
+      allowedValues: newStateNames,
+      defaultSelectedValue: defaultSelectedState,
+      oldSelectedValue,
+      newSelectedValue,
+    };
+    await this.tagsetTemplateService.updateTagsetTemplateDefinition(
+      innovationFlow.flowStatesTagsetTemplate,
+      updatedTagsetTemplateData
+    );
+  }
+
   public async updateInnovationFlowStates(
     innovationFlowID: string,
     newStates: IInnovationFlowState[]
@@ -162,22 +174,18 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: { profile: true },
+        relations: {
+          profile: true,
+          flowStatesTagsetTemplate: {
+            tagsets: true,
+          },
+        },
       }
     );
-    const newStateNames = newStates.map(state => state.displayName);
-
-    const defaultSelectedState = newStateNames[0]; // default to first in the list
-    const updateData: UpdateProfileSelectTagsetDefinitionInput = {
-      profileID: innovationFlow.profile.id,
-      allowedValues: newStateNames,
-      defaultSelectedValue: defaultSelectedState,
-      tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
-    };
-    await this.profileService.updateSelectTagsetDefinition(updateData);
 
     // serialize the states
     innovationFlow.states = newStates;
+    await this.updateFlowStatesTagsetTemplate(innovationFlow, newStates);
 
     return await this.save(innovationFlow);
   }
@@ -188,40 +196,23 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowSelectedStateData.innovationFlowID,
       {
-        relations: { profile: true },
+        relations: { profile: true, flowStatesTagsetTemplate: true },
       }
     );
-
-    const statesTagset = await this.profileService.getTagset(
-      innovationFlow.profile.id,
-      TagsetReservedName.FLOW_STATE.valueOf()
+    const newSelectedState = innovationFlow.states.find(
+      s => s.displayName === innovationFlowSelectedStateData.selectedState
     );
-    const statesTagsetTemplate =
-      await this.tagsetService.getTagsetTemplateOrFail(statesTagset.id);
-
-    const newStateName = innovationFlowSelectedStateData.selectedState;
-    const newStateAllowed =
-      statesTagsetTemplate.allowedValues.includes(newStateName);
-
-    if (!newStateAllowed) {
+    if (!newSelectedState) {
       throw new ValidationException(
-        `New state '${newStateName}' not in allowed states: ${statesTagset.tags}`,
+        `Unable to find selected state '${innovationFlowSelectedStateData.selectedState}' in existing set of state names: ${this.innovationFlowStatesService.getStateNames(
+          innovationFlow.states
+        )}`,
         LogContext.INNOVATION_FLOW
       );
     }
+    innovationFlow.currentState = newSelectedState;
 
-    const updateData: UpdateProfileSelectTagsetValueInput = {
-      profileID: innovationFlow.profile.id,
-      selectedValue: newStateName,
-      tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
-    };
-    await this.profileService.updateSelectTagsetValue(updateData);
-    return await this.getInnovationFlowOrFail(
-      innovationFlowSelectedStateData.innovationFlowID,
-      {
-        relations: { profile: true },
-      }
-    );
+    return await this.save(innovationFlow);
   }
 
   async updateSingleState(
@@ -230,7 +221,12 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       updateData.innovationFlowID,
       {
-        relations: { profile: true },
+        relations: {
+          profile: true,
+          flowStatesTagsetTemplate: {
+            tagsets: true,
+          },
+        },
       }
     );
 
@@ -267,33 +263,12 @@ export class InnovationFlowService {
     // Save with new states before updating selected values
     await this.innovationFlowRepository.save(innovationFlow);
 
-    // Now update the selected state
-
-    const statesTagset = await this.profileService.getTagset(
-      innovationFlow.profile.id,
-      TagsetReservedName.FLOW_STATE.valueOf()
-    );
-    if (statesTagset.tags.length !== 1) {
-      throw new ValidationException(
-        `Unable to find selected value on flow tagset: ${statesTagset.tags}`,
-        LogContext.INNOVATION_FLOW
-      );
-    }
-
     // Update the allowed values on the tagset, and any tagsets with the old value
-    const newStateNames = newStates.map(state => state.displayName);
-    const defaultSelectedState = newStateNames[0]; // default to first in the list
-    const updateTagsetDefinitionData: UpdateProfileSelectTagsetDefinitionInput =
-      {
-        profileID: innovationFlow.profile.id,
-        allowedValues: newStateNames,
-        defaultSelectedValue: defaultSelectedState,
-        tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
-        oldSelectedValue: updateData.stateDisplayName,
-        newSelectedValue: updateData.stateUpdatedData.displayName,
-      };
-    await this.profileService.updateSelectTagsetDefinition(
-      updateTagsetDefinitionData
+    await this.updateFlowStatesTagsetTemplate(
+      innovationFlow,
+      newStates,
+      updateData.stateDisplayName,
+      updateData.stateUpdatedData.displayName
     );
 
     return await this.getInnovationFlowOrFail(updateData.innovationFlowID);
@@ -332,7 +307,7 @@ export class InnovationFlowService {
     if (!innovationFlow)
       throw new EntityNotFoundException(
         `Unable to find InnovationFlow with ID: ${innovationFlowID}`,
-        LogContext.SPACES
+        LogContext.INNOVATION_FLOW
       );
     return innovationFlow;
   }
@@ -350,43 +325,29 @@ export class InnovationFlowService {
     if (!innovationFlow.profile)
       throw new EntityNotFoundException(
         `InnovationFlow profile not initialised: ${innovationFlow.id}`,
-        LogContext.COLLABORATION
+        LogContext.INNOVATION_FLOW
       );
 
     return innovationFlow.profile;
   }
 
-  public async getCurrentState(
-    innovationFlowInput: IInnovationFlow
-  ): Promise<IInnovationFlowState> {
+  public async getFlowTagsetTemplate(
+    innovationFlowInput: IInnovationFlow,
+    relations?: FindOptionsRelations<IInnovationFlow>
+  ): Promise<ITagsetTemplate> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowInput.id,
       {
-        relations: { profile: true },
+        relations: { flowStatesTagsetTemplate: true, ...relations },
       }
     );
-    const statesTagset = await this.profileService.getTagset(
-      innovationFlow.profile.id,
-      TagsetReservedName.FLOW_STATE.valueOf()
-    );
-    const tags = statesTagset.tags;
-    if (tags.length !== 1) {
+    if (!innovationFlow.flowStatesTagsetTemplate)
       throw new EntityNotFoundException(
-        `InnovationFlow without FLOW STATE tagset with tag found: ${innovationFlow.id}`,
-        LogContext.COLLABORATION
+        `InnovationFlow profile not initialised: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
       );
-    }
-    const selectedStateDisplayName = tags[0];
-    const currentState = innovationFlow.states.find(
-      s => s.displayName === selectedStateDisplayName
-    );
-    if (!currentState) {
-      throw new EntityNotFoundException(
-        `InnovationFlow FLOW STATE tagset could not find InnovationFlowState to match selected value: ${innovationFlow.id}, ${selectedStateDisplayName}`,
-        LogContext.COLLABORATION
-      );
-    }
-    return currentState;
+
+    return innovationFlow.flowStatesTagsetTemplate;
   }
 
   public validateInnovationFlowDefinition(

@@ -29,11 +29,15 @@ export class InvitationResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('createdBy', () => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The User who triggered the invitation.',
   })
   @Profiling.api
-  async createdBy(@Parent() invitation: IInvitation): Promise<IUser> {
-    return await this.invitationService.getCreatedBy(invitation);
+  async createdBy(@Parent() invitation: IInvitation): Promise<IUser | null> {
+    try {
+      return await this.invitationService.getCreatedByOrFail(invitation);
+    } catch (error) {
+      return null;
+    }
   }
 }

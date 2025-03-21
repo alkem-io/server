@@ -132,7 +132,7 @@ export class InvitationService {
     return contributor;
   }
 
-  async getCreatedBy(invitation: IInvitation): Promise<IUser> {
+  async getCreatedByOrFail(invitation: IInvitation): Promise<IUser | never> {
     const user = await this.userLookupService.getUserOrFail(
       invitation.createdBy
     );

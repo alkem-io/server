@@ -74,7 +74,7 @@ export class MeService {
           id: space.id,
           level: space.level,
           about: space.about,
-          communityGuidelines: space.community?.guidelines,
+          communityGuidelines: space.about?.guidelines,
         },
       });
     }
@@ -112,7 +112,7 @@ export class MeService {
           id: space.id,
           level: space.level,
           about: space.about,
-          communityGuidelines: space.community?.guidelines,
+          communityGuidelines: space.about?.guidelines,
         },
       });
     }

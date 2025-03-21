@@ -2,6 +2,7 @@ import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { ISpaceAbout } from './space.about.interface';
+import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 
 @Entity()
 export class SpaceAbout extends AuthorizableEntity implements ISpaceAbout {
@@ -18,4 +19,12 @@ export class SpaceAbout extends AuthorizableEntity implements ISpaceAbout {
   })
   @JoinColumn()
   profile!: Profile;
+
+  @OneToOne(() => CommunityGuidelines, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  guidelines?: CommunityGuidelines;
 }

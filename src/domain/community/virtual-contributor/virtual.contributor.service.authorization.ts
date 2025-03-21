@@ -67,38 +67,45 @@ export class VirtualContributorAuthorizationService {
       resourceID: virtual.account.id,
     };
 
+    // Key: what are the credentials that should be able to read about this VC
+    const credentialCriteriasWithAccessToVC =
+      await this.getCredentialsWithVisibilityOfVirtualContributor(
+        virtual.searchVisibility
+      );
+
     virtual.authorization = this.resetToBaseVirtualContributorAuthorization(
       virtual.authorization,
       accountAdminCredential
     );
-
-    // Allow everyone to Read About the VirtualContributor that are not hidden;
-    if (virtual.searchVisibility !== SearchVisibility.HIDDEN) {
-      virtual.authorization =
-        this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
-          virtual.authorization,
-          AuthorizationPrivilege.READ_ABOUT,
-          true
-        );
-    }
-
-    updatedAuthorizations.push(virtual.authorization);
-
-    // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    let clonedVirtualAuthorizationAnonymousAccess =
+    // Create a clone of the base policy, for usage with KnowledgeBase
+    const clonedBaseVirtualContributorAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         virtual.authorization
       );
-    // To ensure that profile on an virtual is always publicly visible, even for non-authenticated users
-    clonedVirtualAuthorizationAnonymousAccess =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
-        clonedVirtualAuthorizationAnonymousAccess,
-        AuthorizationPrivilege.READ
+
+    if (credentialCriteriasWithAccessToVC.length > 0) {
+      const rule = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.READ],
+        credentialCriteriasWithAccessToVC,
+        CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
       );
+      rule.cascade = true;
+      virtual.authorization.credentialRules.push(rule);
+    }
+    virtual.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
+        virtual.authorization,
+        AuthorizationPrivilege.READ,
+        [AuthorizationPrivilege.READ_ABOUT],
+        POLICY_RULE_READ_ABOUT
+      );
+
+    updatedAuthorizations.push(virtual.authorization);
+
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         virtual.profile.id,
-        clonedVirtualAuthorizationAnonymousAccess
+        virtual.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
@@ -112,35 +119,35 @@ export class VirtualContributorAuthorizationService {
     const aiPersonaAuthorization =
       this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
         virtual.aiPersona,
-        clonedVirtualAuthorizationAnonymousAccess
+        virtual.authorization
       );
     updatedAuthorizations.push(aiPersonaAuthorization);
 
-    // Decide whether the knowledge base inherits from the virtual without public access, or
-    // from the cloned authorization with public access added
-    let knowledgeBaseParentAuthorization = virtual.authorization;
-    if (virtual.settings.privacy.knowledgeBaseContentVisible) {
-      knowledgeBaseParentAuthorization =
-        clonedVirtualAuthorizationAnonymousAccess;
-    }
-
+    // The KnowledgeBase needs to start from a reset VC auth, and then use the criterias with access to go further
     const knowledgeBaseAuthorizations =
       await this.knowledgeBaseAuthorizations.applyAuthorizationPolicy(
         virtual.knowledgeBase,
-        knowledgeBaseParentAuthorization,
+        clonedBaseVirtualContributorAuthorization,
+        credentialCriteriasWithAccessToVC,
         virtual.settings.privacy.knowledgeBaseContentVisible
       );
     updatedAuthorizations.push(...knowledgeBaseAuthorizations);
 
-    virtual.authorization =
-      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
-        virtual.authorization,
-        AuthorizationPrivilege.READ,
-        [AuthorizationPrivilege.READ_ABOUT],
-        POLICY_RULE_READ_ABOUT
-      );
     updatedAuthorizations.push(virtual.authorization);
     return updatedAuthorizations;
+  }
+
+  private async getCredentialsWithVisibilityOfVirtualContributor(
+    searchVisibility: SearchVisibility
+  ): Promise<ICredentialDefinition[]> {
+    const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
+    if (searchVisibility !== SearchVisibility.HIDDEN) {
+      const globalAnonymousRegistered =
+        this.authorizationPolicyService.getCredentialDefinitionsAnonymousRegistered();
+      credentialCriteriasWithAccess.push(...globalAnonymousRegistered);
+    }
+
+    return credentialCriteriasWithAccess;
   }
 
   private createCredentialRuleAnonymousRegisteredUserRead(): IAuthorizationPolicyRuleCredential {

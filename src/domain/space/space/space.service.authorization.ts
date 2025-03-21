@@ -171,7 +171,7 @@ export class SpaceAuthorizationService {
 
         break;
       case SpaceVisibility.ARCHIVED:
-        // ensure it has visibility privilege set to priva
+        // ensure it has visibility privilege set to private
         spaceMembershipAllowed = false;
         break;
     }
@@ -228,37 +228,12 @@ export class SpaceAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private createCredentialRuleReadAboutSpace(
-    credentialCriteriasWithAccess: ICredentialDefinition[]
-  ): IAuthorizationPolicyRuleCredential {
-    const readAboutCredentialRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.READ_ABOUT],
-        credentialCriteriasWithAccess,
-        'Space Read About'
-      );
-    readAboutCredentialRule.cascade = false;
-    return readAboutCredentialRule;
-  }
-
-  private createCredentialRuleReadSpace(
-    credentialCriteriasWithAccess: ICredentialDefinition[]
-  ): IAuthorizationPolicyRuleCredential {
-    const readAboutCredentialRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.READ],
-        credentialCriteriasWithAccess,
-        'Space Read'
-      );
-    readAboutCredentialRule.cascade = true;
-    return readAboutCredentialRule;
-  }
-
   private async getCredentialsWithVisibilityOfSpace(
     space: ISpace
   ): Promise<ICredentialDefinition[]> {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
-    const globalAnonymousRegistered = this.getGlobalAnonymousRegistered();
+    const globalAnonymousRegistered =
+      this.authorizationPolicyService.getCredentialDefinitionsAnonymousRegistered();
 
     switch (space.level) {
       case SpaceLevel.L0:
@@ -291,16 +266,6 @@ export class SpaceAuthorizationService {
     });
 
     return credentialCriteriasWithAccess;
-  }
-
-  /**
-   * Returns GLOBAL_ANONYMOUS and GLOBAL_REGISTERED credential definitions.
-   */
-  private getGlobalAnonymousRegistered(): ICredentialDefinition[] {
-    return [
-      { type: AuthorizationCredential.GLOBAL_ANONYMOUS, resourceID: '' },
-      { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
-    ];
   }
 
   /**
@@ -463,60 +428,46 @@ export class SpaceAuthorizationService {
       updatedAuthorizations.push(...templatesManagerAuthorizations);
     }
 
-    // And the children that may be read about
-    const spaceExtraCredentialRulesNonCascaded: IAuthorizationPolicyRuleCredential[] =
-      [];
-    const spaceExtraCredentialRulesCascaded: IAuthorizationPolicyRuleCredential[] =
-      [];
-    switch (spaceSettings.privacy.mode) {
-      case SpacePrivacyMode.PUBLIC:
-      // Also for PUBLIC spaces cascade the read about to avoid having privilege rules everywhere
-      case SpacePrivacyMode.PRIVATE:
-        const credentialRuleReadAboutSpaceCascaded =
-          this.createCredentialRuleReadAboutSpace(
-            credentialCriteriasWithAccess
-          );
-        credentialRuleReadAboutSpaceCascaded.cascade = true;
-        spaceExtraCredentialRulesCascaded.push(
-          credentialRuleReadAboutSpaceCascaded
-        );
-
-        const credentialRuleReadAboutSpaceNonCascaded =
-          this.createCredentialRuleReadAboutSpace(
-            credentialCriteriasWithAccess
-          );
-        credentialRuleReadAboutSpaceNonCascaded.cascade = false;
-        spaceExtraCredentialRulesNonCascaded.push(
-          credentialRuleReadAboutSpaceNonCascaded
-        );
-        break;
-    }
-
     const collaborationAuthorizations =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         space.collaboration,
         space.authorization,
         space.community.roleSet,
-        spaceSettings,
-        spaceExtraCredentialRulesNonCascaded
+        spaceSettings
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
-
-    const aboutAuthorizations =
-      await this.spaceAboutAuthorizationService.applyAuthorizationPolicy(
-        space.about,
-        space.authorization,
-        spaceExtraCredentialRulesCascaded
-      );
-    updatedAuthorizations.push(...aboutAuthorizations);
 
     const licenseAuthorizations =
       this.licenseAuthorizationService.applyAuthorizationPolicy(
         space.license,
-        space.authorization,
-        spaceExtraCredentialRulesCascaded
+        space.authorization
       );
     updatedAuthorizations.push(...licenseAuthorizations);
+
+    // And the children that may be read about
+    const spaceAboutExtraCredentialRules: IAuthorizationPolicyRuleCredential[] =
+      [];
+    switch (spaceSettings.privacy.mode) {
+      // Also for PUBLIC spaces cascade the read on About to avoid having privilege rules everywhere
+      case SpacePrivacyMode.PUBLIC:
+      case SpacePrivacyMode.PRIVATE:
+        const credentialRuleReadOnAbout =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.READ],
+            credentialCriteriasWithAccess,
+            'Read access to About'
+          );
+        credentialRuleReadOnAbout.cascade = true;
+        spaceAboutExtraCredentialRules.push(credentialRuleReadOnAbout);
+        break;
+    }
+    const aboutAuthorizations =
+      await this.spaceAboutAuthorizationService.applyAuthorizationPolicy(
+        space.about.id,
+        space.authorization,
+        spaceAboutExtraCredentialRules
+      );
+    updatedAuthorizations.push(...aboutAuthorizations);
 
     return updatedAuthorizations;
   }
@@ -531,15 +482,24 @@ export class SpaceAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     switch (spaceSettings.privacy.mode) {
-      case SpacePrivacyMode.PUBLIC:
-        newRules.push(
-          this.createCredentialRuleReadSpace(credentialCriteriasWithAccess)
+      case SpacePrivacyMode.PUBLIC: {
+        const rule = this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.READ],
+          credentialCriteriasWithAccess,
+          'Public spaces content is visible to all'
         );
+        rule.cascade = true;
+        newRules.push(rule);
         break;
+      }
       case SpacePrivacyMode.PRIVATE:
-        newRules.push(
-          this.createCredentialRuleReadAboutSpace(credentialCriteriasWithAccess)
+        const rule = this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.READ_ABOUT],
+          credentialCriteriasWithAccess,
+          'Private spaces content is only visible to members'
         );
+        rule.cascade = false;
+        newRules.push(rule);
         break;
     }
 

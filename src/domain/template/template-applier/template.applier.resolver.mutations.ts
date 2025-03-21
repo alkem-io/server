@@ -12,10 +12,10 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
 
 @InstrumentResolver()
 @Resolver()
@@ -23,7 +23,7 @@ export class TemplateApplierResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
-    private calloutAuthorizationService: CalloutAuthorizationService,
+    private calloutsSetAuthorizationService: CalloutsSetAuthorizationService,
     private templateApplierService: TemplateApplierService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -47,17 +47,13 @@ export class TemplateApplierResolverMutations {
             calloutsSet: {
               tagsetTemplateSet: true,
               callouts: {
-                framing: {
-                  profile: {
-                    tagsets: true,
-                  },
+                classification: {
+                  tagsets: true,
                 },
               },
             },
             innovationFlow: {
-              profile: {
-                tagsets: true,
-              },
+              flowStatesTagsetTemplate: true,
             },
           },
         }
@@ -95,15 +91,12 @@ export class TemplateApplierResolverMutations {
         LogContext.TEMPLATES
       );
     }
-    const updatedAuthorizations: IAuthorizationPolicy[] = [];
-    for (const callout of targetCollaboration.calloutsSet?.callouts) {
-      const calloutAuthorizations =
-        await this.calloutAuthorizationService.applyAuthorizationPolicy(
-          callout.id,
-          targetCollaboration.authorization
-        );
-      updatedAuthorizations.push(...calloutAuthorizations);
-    }
+    const updatedAuthorizations: IAuthorizationPolicy[] =
+      await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(
+        targetCollaboration.calloutsSet,
+        targetCollaboration.authorization
+      );
+
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
     return this.collaborationService.getCollaborationOrFail(
       targetCollaboration.id

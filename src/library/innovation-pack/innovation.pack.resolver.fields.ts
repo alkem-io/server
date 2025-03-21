@@ -2,7 +2,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { IInnovationPack } from './innovation.pack.interface';
 import { InnovationPackService } from './innovation.pack.service';
@@ -22,7 +22,6 @@ export class InnovationPackResolverFields {
     nullable: false,
     description: 'The Profile for this InnovationPack.',
   })
-  @Profiling.api
   async profile(
     @Parent() pack: IInnovationPack,
     @Loader(ProfileLoaderCreator, { parentClassRef: InnovationPack })
@@ -49,7 +48,6 @@ export class InnovationPackResolverFields {
     nullable: false,
     description: 'The InnovationPack provider.',
   })
-  @Profiling.api
   async provider(
     @Parent() innovationPack: IInnovationPack
   ): Promise<IContributor> {

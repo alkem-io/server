@@ -122,6 +122,7 @@ export class CollaborationAuthorizationService {
       await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(
         collaboration.calloutsSet,
         collaboration.authorization,
+        [],
         roleSet,
         spaceSettings
       );

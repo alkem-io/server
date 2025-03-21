@@ -8,7 +8,6 @@ import { IUserGroup } from '@domain/community/user-group';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IRoleSet } from '@domain/access/role-set';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -59,16 +58,5 @@ export class CommunityResolverFields {
   })
   async roleSet(@Parent() community: Community): Promise<IRoleSet> {
     return this.communityService.getRoleSet(community);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('guidelines', () => ICommunityGuidelines, {
-    nullable: false,
-    description: 'The guidelines for members of this Community.',
-  })
-  async guidelines(
-    @Parent() community: ICommunity
-  ): Promise<ICommunityGuidelines> {
-    return await this.communityService.getCommunityGuidelines(community);
   }
 }

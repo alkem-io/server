@@ -94,7 +94,7 @@ export class ProfileResolverFields {
       const defaultTagset = tagsets.find(
         t =>
           t.type === TagsetType.FREEFORM &&
-          t.name === TagsetReservedName.DEFAULT
+          t.name.toLowerCase() === TagsetReservedName.DEFAULT
       );
       if (!defaultTagset) {
         throw new EntityNotFoundException(
@@ -105,7 +105,7 @@ export class ProfileResolverFields {
       return defaultTagset;
     }
 
-    const namedTagset = tagsets.find(t => t.name === tagsetName);
+    const namedTagset = tagsets.find(t => t.name.toLowerCase() === tagsetName);
     if (!namedTagset) {
       throw new EntityNotFoundException(
         `Unable to locate ${tagsetName} tagset for profile: ${profile.id}`,
