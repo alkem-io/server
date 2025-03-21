@@ -106,6 +106,7 @@ class InnovationFlowProblems extends ProblemSolver {
     ) {
       this
         .logIgnoredProblem(`InnovationFlow with id ${innovationFlowId} has an invalid number of states: ${innovationFlow.states.length}
+          (${innovationFlow.states.map(state => state.displayName)})
         (min: ${innovationFlow.settings.minimumNumberOfStates}, max: ${innovationFlow.settings.maximumNumberOfStates})`);
     }
     if (!innovationFlow.currentState) {
