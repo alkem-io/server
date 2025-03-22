@@ -122,8 +122,10 @@ export class ConversionService {
         calloutsSetData: {},
       },
     };
-    let spaceL0 =
-      await this.accountService.createSpaceOnAccount(createSpaceInput);
+    let spaceL0 = await this.accountService.createSpaceOnAccount(
+      createSpaceInput,
+      agentInfo
+    );
 
     spaceL0 = await this.spaceService.getSpaceOrFail(spaceL0.id, {
       relations: {
@@ -151,7 +153,7 @@ export class ConversionService {
 
     // also remove the current user from the members of the newly created Space L0,
     // otherwise will end up re-assigning
-    await this.removeCurrentUserFromNewSpaceRoles(roleSetL0, agentInfo.userID);
+    await this.removeCurrentUserFromRolesInRoleSet(roleSetL0, agentInfo);
 
     // Remove the contributors from old roles
     await this.removeContributors(
@@ -172,7 +174,7 @@ export class ConversionService {
     const collaborationL1 = spaceL0.collaboration;
     const collaborationL0 = spaceL0.collaboration;
     spaceL0.collaboration = collaborationL1;
-    spaceL0.collaboration = collaborationL0;
+    spaceL1.collaboration = collaborationL0;
 
     // TODO: what about the callouts + classification?
     // Save + re-use the innovationFlow? Or tidy up after?
@@ -182,7 +184,7 @@ export class ConversionService {
     const spaceL1StorageAggregator = spaceL1.storageAggregator;
     const spaceL0StorageAggregator = spaceL0.storageAggregator;
     spaceL0.storageAggregator = spaceL1StorageAggregator;
-    spaceL0.storageAggregator = spaceL0StorageAggregator;
+    spaceL1.storageAggregator = spaceL0StorageAggregator;
     // and update the parent storage aggregators
     spaceL0.storageAggregator.parentStorageAggregator =
       accountStorageAggregator;
@@ -326,9 +328,9 @@ export class ConversionService {
 
     // also remove the current user from the members of the newly created Space L1,
     // otherwise will end up re-assigning
-    await this.removeCurrentUserFromNewSpaceRoles(
+    await this.removeCurrentUserFromRolesInRoleSet(
       spaceL1.community.roleSet,
-      agentInfo.userID
+      agentInfo
     );
 
     // Swap the communication
@@ -370,20 +372,21 @@ export class ConversionService {
     return await this.spaceService.addSubspaceToSpace(spaceL0, spaceL1);
   }
 
-  private async removeCurrentUserFromNewSpaceRoles(
+  private async removeCurrentUserFromRolesInRoleSet(
     roleSet: IRoleSet,
-    userID: string
+    agentInfo: AgentInfo
   ): Promise<void> {
-    await this.roleSetService.removeUserFromRole(
-      roleSet,
-      RoleName.MEMBER,
-      userID
+    const userRoles = await this.roleSetService.getRolesForAgentInfo(
+      agentInfo,
+      roleSet
     );
-    await this.roleSetService.removeUserFromRole(
-      roleSet,
-      RoleName.LEAD,
-      userID
-    );
+    for (const role of userRoles) {
+      await this.roleSetService.removeUserFromRole(
+        roleSet,
+        role,
+        agentInfo.userID
+      );
+    }
   }
 
   private async getSpaceCommunityRoles(

@@ -1174,21 +1174,26 @@ export class RoleSetService {
 
     const userPolicy = roleDefinition.userPolicy;
 
-    if (action === RoleSetUpdateType.ASSIGN) {
-      if (userMembersCount === userPolicy.maximum) {
-        throw new RoleSetPolicyRoleLimitsException(
-          `Max limit of users reached for role '${roleType}': ${userPolicy.maximum}, cannot assign new user.`,
-          LogContext.COMMUNITY
-        );
+    switch (action) {
+      case RoleSetUpdateType.ASSIGN: {
+        if (userMembersCount === 0) {
+          break;
+        }
+        if (userMembersCount === userPolicy.maximum) {
+          throw new RoleSetPolicyRoleLimitsException(
+            `Max limit of users reached for role '${roleType}': ${userPolicy.maximum}, cannot assign new user.`,
+            LogContext.COMMUNITY
+          );
+        }
+        break;
       }
-    }
-
-    if (action === RoleSetUpdateType.REMOVE) {
-      if (userMembersCount === userPolicy.minimum) {
-        throw new RoleSetPolicyRoleLimitsException(
-          `Min limit of users reached for role '${roleType}': ${userPolicy.minimum}, cannot remove user from role on RoleSet: ${roleSet.id}, type: ${roleSet.type}`,
-          LogContext.COMMUNITY
-        );
+      case RoleSetUpdateType.REMOVE: {
+        if (userMembersCount === userPolicy.minimum) {
+          throw new RoleSetPolicyRoleLimitsException(
+            `Min limit of users reached for role '${roleType}': ${userPolicy.minimum}, cannot remove user from role on RoleSet: ${roleSet.id}, type: ${roleSet.type}`,
+            LogContext.COMMUNITY
+          );
+        }
       }
     }
   }
