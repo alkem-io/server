@@ -38,7 +38,7 @@ export class ConversionService {
     conversionData: ConvertSpaceL1ToSpaceL0Input,
     agentInfo: AgentInfo
   ): Promise<ISpace | never> {
-    const spaceL1 = await this.spaceService.getSpaceOrFail(
+    let spaceL1 = await this.spaceService.getSpaceOrFail(
       conversionData.spaceL1ID,
       {
         relations: {
@@ -56,6 +56,7 @@ export class ConversionService {
             },
           },
           storageAggregator: true,
+          subspaces: true,
         },
       }
     );
@@ -65,13 +66,15 @@ export class ConversionService {
       !spaceL1.about ||
       !spaceL1.collaboration ||
       !spaceL1.collaboration.calloutsSet?.callouts ||
-      !spaceL1.storageAggregator
+      !spaceL1.storageAggregator ||
+      !spaceL1.subspaces
     ) {
       throw new EntityNotInitializedException(
         `Unable to locate all entities on on space L1: ${spaceL1.id}`,
         LogContext.CONVERSION
       );
     }
+    const subspacesL1 = spaceL1.subspaces;
 
     const spaceL0Orig = await this.spaceService.getSpaceOrFail(
       spaceL1.levelZeroSpaceID,
@@ -143,12 +146,11 @@ export class ConversionService {
         LogContext.CONVERSION
       );
     }
+    const roleSetL0 = spaceL0.community.roleSet;
+
     // also remove the current user from the members of the newly created Space L0,
     // otherwise will end up re-assigning
-    await this.removeCurrentUserFromNewSpaceRoles(
-      spaceL0.community.roleSet,
-      agentInfo.userID
-    );
+    await this.removeCurrentUserFromNewSpaceRoles(roleSetL0, agentInfo.userID);
 
     // Remove the contributors from old roles
     await this.removeContributors(
@@ -186,23 +188,19 @@ export class ConversionService {
     spaceL1.storageAggregator.parentStorageAggregator = undefined;
 
     // Save both + then delete the challenge (save is needed to ensure right context is deleted etc)
-    await this.spaceService.save(spaceL0);
-    const spaceL1Updated = await this.spaceService.save(spaceL1);
+    spaceL0 = await this.spaceService.save(spaceL0);
+    spaceL1 = await this.spaceService.save(spaceL1);
 
     // Assign contributors to roles in new space
-    await this.assignContributors(
-      spaceL0.community.roleSet,
-      spaceL1CommunityRoles
-    );
+    await this.assignContributors(roleSetL0, spaceL1CommunityRoles);
 
     // Now migrate all the child L2 spaces...
-    const spacesL2 = await this.spaceService.getSubspaces(spaceL1Updated);
-    for (const spaceL2 of spacesL2) {
+    for (const spaceL2 of subspacesL1) {
       await this.convertSpaceL2ToSpaceL1OrFail(spaceL2.id, agentInfo);
     }
     // Finally delete the L1 space
     await this.spaceService.deleteSpaceOrFail({
-      ID: spaceL1Updated.id,
+      ID: spaceL1.id,
     });
     return spaceL0;
   }
@@ -317,7 +315,9 @@ export class ConversionService {
       );
     }
 
+    const roleSetL1 = spaceL1.community.roleSet;
     const roleSetL2 = spaceL2.community.roleSet;
+
     const spaceCommunityRoles = await this.getSpaceCommunityRoles(roleSetL2);
 
     // Remove the contributors from old roles
@@ -332,7 +332,6 @@ export class ConversionService {
 
     // Swap the communication
     await this.swapCommunication(spaceL1.community, spaceL2.community);
-    const communityL1 = await this.spaceService.getCommunity(spaceL1.id);
 
     // Swap the contexts
     const spaceAboutL2 = spaceL2.about;
@@ -364,7 +363,7 @@ export class ConversionService {
     await this.spaceService.deleteSpaceOrFail({ ID: spaceL2Updated.id });
 
     // Assign users to roles in new challenge
-    await this.assignContributors(communityL1.roleSet, spaceCommunityRoles);
+    await this.assignContributors(roleSetL1, spaceCommunityRoles);
 
     // Add the new L1 space to the L0 space
     return await this.spaceService.addSubspaceToSpace(spaceL0, spaceL1);
