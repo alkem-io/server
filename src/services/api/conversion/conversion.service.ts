@@ -13,7 +13,6 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { ICallout } from '@domain/collaboration/callout';
 import { SpaceType } from '@common/enums/space.type';
 import { AccountService } from '@domain/space/account/account.service';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -25,6 +24,7 @@ import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { UpdateSpacePlatformSettingsInput } from '@domain/space/space/dto/space.dto.update.platform.settings';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 export class ConversionService {
   constructor(
@@ -155,28 +155,11 @@ export class ConversionService {
       );
     }
     const spaceL0RoleSet = spaceL0.community.roleSet;
-
-    const userMembers = await this.roleSetService.getUsersWithRole(
-      spaceL0RoleSet,
-      RoleName.MEMBER
-    );
-    const userLeads = await this.roleSetService.getUsersWithRole(
-      spaceL0RoleSet,
-      RoleName.LEAD
-    );
-    const orgMembers = await this.roleSetService.getOrganizationsWithRole(
-      spaceL0RoleSet,
-      RoleName.MEMBER
-    );
+    const spaceCommunityRoles =
+      await this.getSpaceCommunityRoles(spaceL0RoleSet);
 
     // Remove the contributors from old roles
-    await this.removeContributors(
-      spaceL0RoleSet,
-      userMembers,
-      userLeads,
-      orgMembers,
-      spaceL1CommunityLeadOrgs
-    );
+    await this.removeContributors(spaceL0RoleSet, spaceCommunityRoles);
 
     await this.roleSetService.removeUserFromRole(
       spaceL0RoleSet,
@@ -198,9 +181,9 @@ export class ConversionService {
     const collaborationL0 = spaceL0.collaboration;
     spaceL0.collaboration = collaborationL1;
     spaceL0.collaboration = collaborationL0;
-    // Update display locations for callouts to use space locations
-    // TODO:
-    this.updateSpaceCalloutsGroups(spaceL0.collaboration.calloutsSet?.callouts);
+
+    // TODO: what about the callouts + classification?
+    // Save + re-use the innovationFlow? Or tidy up after? Map the callouts by order in flow?
 
     // Swap the storage aggregators
     const spaceL1StorageAggregator = spaceL1.storageAggregator;
@@ -217,12 +200,7 @@ export class ConversionService {
     const spaceL1Updated = await this.spaceService.save(spaceL1);
 
     // Assign users to roles in new space
-    await this.assignContributors(
-      spaceL0RoleSet,
-      userMembers,
-      userLeads,
-      orgMembers
-    );
+    await this.assignContributors(spaceL0RoleSet, spaceCommunityRoles);
 
     // Now migrate all the child L2 spaces...
     const spacesL2 = await this.spaceService.getSubspaces(spaceL1Updated);
@@ -360,31 +338,10 @@ export class ConversionService {
     }
 
     const roleSetL2 = spaceL2.community.roleSet;
-    const userMembers = await this.roleSetService.getUsersWithRole(
-      roleSetL2,
-      RoleName.MEMBER
-    );
-    const userLeads = await this.roleSetService.getUsersWithRole(
-      roleSetL2,
-      RoleName.LEAD
-    );
-    const orgMembers = await this.roleSetService.getOrganizationsWithRole(
-      roleSetL2,
-      RoleName.MEMBER
-    );
-    const orgLeads = await this.roleSetService.getOrganizationsWithRole(
-      roleSetL2,
-      RoleName.LEAD
-    );
+    const spaceCommunityRoles = await this.getSpaceCommunityRoles(roleSetL2);
 
     // Remove the contributors from old roles
-    await this.removeContributors(
-      roleSetL2,
-      userMembers,
-      userLeads,
-      orgMembers,
-      orgLeads
-    );
+    await this.removeContributors(roleSetL2, spaceCommunityRoles);
 
     // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
     const roleSetL1 = spaceL1.community.roleSet;
@@ -437,37 +394,43 @@ export class ConversionService {
     await this.spaceService.deleteSpaceOrFail({ ID: spaceL2Updated.id });
 
     // Assign users to roles in new challenge
-    await this.assignContributors(
-      communityL1.roleSet,
-      userMembers,
-      userLeads,
-      orgMembers,
-      orgLeads
-    );
+    await this.assignContributors(communityL1.roleSet, spaceCommunityRoles);
 
     // Add the new L1 space to the L0 space
     return await this.spaceService.addSubspaceToSpace(spaceL0, spaceL1);
   }
 
-  private updateSpaceCalloutsGroups(callouts: ICallout[] | undefined): void {
-    if (!callouts) {
-      throw new EntityNotInitializedException(
-        'Callouts not defined',
-        LogContext.CONVERSION
-      );
-    }
-    for (const callout of callouts) {
-      if (
-        !callout.framing ||
-        !callout.framing.profile ||
-        !callout.framing.profile.tagsets
-      ) {
-        throw new EntityNotInitializedException(
-          `Unable to locate all child entities on callout: ${callout.id}`,
-          LogContext.CONVERSION
-        );
-      }
-    }
+  private async getSpaceCommunityRoles(
+    roleSet: IRoleSet
+  ): Promise<SpaceCommunityRoles> {
+    const userMembers = await this.roleSetService.getUsersWithRole(
+      roleSet,
+      RoleName.MEMBER
+    );
+    const userLeads = await this.roleSetService.getUsersWithRole(
+      roleSet,
+      RoleName.LEAD
+    );
+    const orgMembers = await this.roleSetService.getOrganizationsWithRole(
+      roleSet,
+      RoleName.MEMBER
+    );
+    const orgLeads = await this.roleSetService.getOrganizationsWithRole(
+      roleSet,
+      RoleName.LEAD
+    );
+
+    const vcMembers = await this.roleSetService.getVirtualContributorsWithRole(
+      roleSet,
+      RoleName.MEMBER
+    );
+    return {
+      userMembers,
+      userLeads,
+      orgMembers,
+      orgLeads,
+      vcMembers,
+    };
   }
 
   private async swapCommunication(
@@ -498,77 +461,92 @@ export class ConversionService {
 
   private async removeContributors(
     roleSet: IRoleSet,
-    userMembers: IUser[],
-    userLeads: IUser[],
-    orgMembers: IOrganization[],
-    orgLeads: IOrganization[]
+    spaceCommunityRoles: SpaceCommunityRoles
   ) {
-    for (const userMember of userMembers) {
+    for (const userMember of spaceCommunityRoles.userMembers) {
       await this.roleSetService.removeUserFromRole(
         roleSet,
         RoleName.MEMBER,
         userMember.id
       );
     }
-    for (const userLead of userLeads) {
+    for (const userLead of spaceCommunityRoles.userLeads) {
       await this.roleSetService.removeUserFromRole(
         roleSet,
         RoleName.LEAD,
         userLead.id
       );
     }
-    for (const orgMember of orgMembers) {
+    for (const orgMember of spaceCommunityRoles.orgMembers) {
       await this.roleSetService.removeOrganizationFromRole(
         roleSet,
         RoleName.MEMBER,
         orgMember.id
       );
     }
-    for (const orgLead of orgLeads) {
+    for (const orgLead of spaceCommunityRoles.orgLeads) {
       await this.roleSetService.removeOrganizationFromRole(
         roleSet,
         RoleName.LEAD,
         orgLead.id
       );
     }
+    for (const vcMember of spaceCommunityRoles.vcMembers) {
+      await this.roleSetService.removeVirtualFromRole(
+        roleSet,
+        RoleName.MEMBER,
+        vcMember.id
+      );
+    }
   }
 
   private async assignContributors(
     roleSet: IRoleSet,
-    userMembers: IUser[],
-    userLeads: IUser[],
-    orgMembers: IOrganization[],
-    orgLeads?: IOrganization[]
+    spaceCommunityRoles: SpaceCommunityRoles
   ) {
-    for (const userMember of userMembers) {
+    for (const userMember of spaceCommunityRoles.userMembers) {
       await this.roleSetService.assignUserToRole(
         roleSet,
         RoleName.MEMBER,
         userMember.id
       );
     }
-    for (const userLead of userLeads) {
+    for (const userLead of spaceCommunityRoles.userLeads) {
       await this.roleSetService.assignUserToRole(
         roleSet,
         RoleName.LEAD,
         userLead.id
       );
     }
-    for (const orgMember of orgMembers) {
+    for (const orgMember of spaceCommunityRoles.orgMembers) {
       await this.roleSetService.assignOrganizationToRole(
         roleSet,
         RoleName.MEMBER,
         orgMember.id
       );
     }
-    if (orgLeads) {
-      for (const orgLead of orgLeads) {
-        await this.roleSetService.assignOrganizationToRole(
-          roleSet,
-          RoleName.LEAD,
-          orgLead.id
-        );
-      }
+    for (const orgLead of spaceCommunityRoles.orgLeads) {
+      await this.roleSetService.assignOrganizationToRole(
+        roleSet,
+        RoleName.LEAD,
+        orgLead.id
+      );
+    }
+    for (const vcMember of spaceCommunityRoles.vcMembers) {
+      await this.roleSetService.assignVirtualToRole(
+        roleSet,
+        RoleName.MEMBER,
+        vcMember.id
+      );
     }
   }
 }
+
+// Create a new type for usage in this service that has fields for user members + leads, org members + leads etc
+export type SpaceCommunityRoles = {
+  userMembers: IUser[];
+  userLeads: IUser[];
+  orgMembers: IOrganization[];
+  orgLeads: IOrganization[];
+  vcMembers: IVirtualContributor[];
+};
