@@ -4,10 +4,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
 import { ISpace } from '@domain/space/space/space.interface';
-import {
-  EntityNotInitializedException,
-  ValidationException,
-} from '@common/exceptions';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { RoleName } from '@common/enums/role.name';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -52,10 +49,8 @@ export class ConversionService {
           collaboration: {
             calloutsSet: {
               callouts: {
-                framing: {
-                  profile: {
-                    tagsets: true,
-                  },
+                classification: {
+                  tagsets: true,
                 },
               },
             },
@@ -98,18 +93,9 @@ export class ConversionService {
     const accountID = spaceL0Orig.account.id;
     const accountStorageAggregator = spaceL0Orig.account.storageAggregator;
 
-    // check the community is in a fit state
-    const spaceL1CommunityLeadOrgs =
-      await this.roleSetService.getOrganizationsWithRole(
-        spaceL1.community.roleSet,
-        RoleName.LEAD
-      );
-    if (spaceL1CommunityLeadOrgs.length !== 1) {
-      throw new ValidationException(
-        `A Subspace must have exactly one Lead organization to be converted to a Space: ${spaceL1.id} has ${spaceL1CommunityLeadOrgs.length}`,
-        LogContext.CONVERSION
-      );
-    }
+    const spaceL1CommunityRoles = await this.getSpaceCommunityRoles(
+      spaceL1.community.roleSet
+    );
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
@@ -137,7 +123,9 @@ export class ConversionService {
 
     spaceL0 = await this.spaceService.getSpaceOrFail(spaceL0.id, {
       relations: {
-        community: true,
+        community: {
+          roleSet: true,
+        },
         about: true,
         collaboration: true,
         storageAggregator: true,
@@ -145,6 +133,7 @@ export class ConversionService {
     });
     if (
       !spaceL0.community ||
+      !spaceL0.community.roleSet ||
       !spaceL0.about ||
       !spaceL0.collaboration ||
       !spaceL0.storageAggregator
@@ -154,23 +143,23 @@ export class ConversionService {
         LogContext.CONVERSION
       );
     }
-    const spaceL0RoleSet = spaceL0.community.roleSet;
-    const spaceCommunityRoles =
-      await this.getSpaceCommunityRoles(spaceL0RoleSet);
+    // also remove the current user from the members of the newly created Space L0,
+    // otherwise will end up re-assigning
+    await this.removeCurrentUserFromNewSpaceRoles(
+      spaceL0.community.roleSet,
+      agentInfo.userID
+    );
 
     // Remove the contributors from old roles
-    await this.removeContributors(spaceL0RoleSet, spaceCommunityRoles);
-
-    await this.roleSetService.removeUserFromRole(
-      spaceL0RoleSet,
-      RoleName.MEMBER,
-      agentInfo.userID
+    await this.removeContributors(
+      spaceL1.community.roleSet,
+      spaceL1CommunityRoles
     );
 
     // Swap the communications
     await this.swapCommunication(spaceL0.community, spaceL0.community);
 
-    // Swap the contexts
+    // Swap the SpaceAbouts
     const spaceAboutL1 = spaceL1.about;
     const spaceAboutL0 = spaceL0.about;
     spaceL0.about = spaceAboutL1;
@@ -183,7 +172,8 @@ export class ConversionService {
     spaceL0.collaboration = collaborationL0;
 
     // TODO: what about the callouts + classification?
-    // Save + re-use the innovationFlow? Or tidy up after? Map the callouts by order in flow?
+    // Save + re-use the innovationFlow? Or tidy up after?
+    // Map the callouts by order in flow?
 
     // Swap the storage aggregators
     const spaceL1StorageAggregator = spaceL1.storageAggregator;
@@ -199,8 +189,11 @@ export class ConversionService {
     await this.spaceService.save(spaceL0);
     const spaceL1Updated = await this.spaceService.save(spaceL1);
 
-    // Assign users to roles in new space
-    await this.assignContributors(spaceL0RoleSet, spaceCommunityRoles);
+    // Assign contributors to roles in new space
+    await this.assignContributors(
+      spaceL0.community.roleSet,
+      spaceL1CommunityRoles
+    );
 
     // Now migrate all the child L2 spaces...
     const spacesL2 = await this.spaceService.getSubspaces(spaceL1Updated);
@@ -220,39 +213,23 @@ export class ConversionService {
   ): Promise<ISpace | never> {
     const spaceL2 = await this.spaceService.getSpaceOrFail(subsubspaceID, {
       relations: {
-        parentSpace: {
-          storageAggregator: {
-            parentStorageAggregator: true,
-          },
+        community: {
+          roleSet: true,
         },
-        community: true,
         about: true,
         storageAggregator: true,
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              framing: {
-                profile: {
-                  tagsets: true,
-                },
-              },
-            },
-          },
-        },
+        collaboration: true,
       },
     });
     if (
-      !spaceL2.parentSpace ||
-      !spaceL2.parentSpace.storageAggregator ||
-      !spaceL2.parentSpace.storageAggregator.parentStorageAggregator ||
       !spaceL2.community ||
+      !spaceL2.community.roleSet ||
       !spaceL2.about ||
       !spaceL2.collaboration ||
-      !spaceL2.storageAggregator ||
-      !spaceL2.collaboration.calloutsSet?.callouts
+      !spaceL2.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on Opportunity: ${spaceL2.id}`,
+        `Unable to locate all entities on on Space L2: ${spaceL2.id}`,
         LogContext.CONVERSION
       );
     }
@@ -319,7 +296,9 @@ export class ConversionService {
 
     const spaceL1 = await this.spaceService.getSpaceOrFail(spaceL1New.id, {
       relations: {
-        community: true,
+        community: {
+          roleSet: true,
+        },
         about: true,
         collaboration: true,
         storageAggregator: true,
@@ -327,6 +306,7 @@ export class ConversionService {
     });
     if (
       !spaceL1.community ||
+      !spaceL1.community.roleSet ||
       !spaceL1.about ||
       !spaceL1.collaboration ||
       !spaceL1.storageAggregator
@@ -343,16 +323,10 @@ export class ConversionService {
     // Remove the contributors from old roles
     await this.removeContributors(roleSetL2, spaceCommunityRoles);
 
-    // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
-    const roleSetL1 = spaceL1.community.roleSet;
-    await this.roleSetService.removeUserFromRole(
-      roleSetL1,
-      RoleName.MEMBER,
-      agentInfo.userID
-    );
-    await this.roleSetService.removeUserFromRole(
-      roleSetL1,
-      RoleName.LEAD,
+    // also remove the current user from the members of the newly created Space L1,
+    // otherwise will end up re-assigning
+    await this.removeCurrentUserFromNewSpaceRoles(
+      spaceL1.community.roleSet,
       agentInfo.userID
     );
 
@@ -379,14 +353,10 @@ export class ConversionService {
     const storageAggregatorL1 = spaceL1.storageAggregator;
     spaceL1.storageAggregator = storageAggregatorL2;
     spaceL2.storageAggregator = storageAggregatorL1;
-    // and set the parent storage aggregator on the new challenge
-    if (spaceL1.storageAggregator) {
-      spaceL1.storageAggregator.parentStorageAggregator =
-        spaceL0StorageAggregator;
-    }
-    if (spaceL2.storageAggregator) {
-      spaceL2.storageAggregator.parentStorageAggregator = undefined;
-    }
+    // and set the parent storage aggregators
+    spaceL1.storageAggregator.parentStorageAggregator =
+      spaceL0StorageAggregator;
+    spaceL2.storageAggregator.parentStorageAggregator = undefined;
 
     // Save both + then re-assign the roles
     await this.spaceService.save(spaceL1);
@@ -398,6 +368,22 @@ export class ConversionService {
 
     // Add the new L1 space to the L0 space
     return await this.spaceService.addSubspaceToSpace(spaceL0, spaceL1);
+  }
+
+  private async removeCurrentUserFromNewSpaceRoles(
+    roleSet: IRoleSet,
+    userID: string
+  ): Promise<void> {
+    await this.roleSetService.removeUserFromRole(
+      roleSet,
+      RoleName.MEMBER,
+      userID
+    );
+    await this.roleSetService.removeUserFromRole(
+      roleSet,
+      RoleName.LEAD,
+      userID
+    );
   }
 
   private async getSpaceCommunityRoles(
