@@ -80,14 +80,15 @@ export class ConversionService {
       spaceL1.levelZeroSpaceID,
       {
         relations: {
-          account: true,
-          storageAggregator: true,
+          account: {
+            storageAggregator: true,
+          },
         },
       }
     );
     if (!spaceL0Orig.account || !spaceL0Orig.account.storageAggregator) {
       throw new EntityNotInitializedException(
-        `Unable to locate account on on space L0: ${spaceL0Orig.id}`,
+        `Unable to locate account or storage aggregator on on space L0: ${spaceL0Orig.id}`,
         LogContext.CONVERSION
       );
     }
@@ -112,7 +113,7 @@ export class ConversionService {
       nameID: spaceL0NewNameID,
       about: {
         profileData: {
-          displayName: spaceL1.about.profile.displayName,
+          displayName: spaceL1.nameID, // anything will do
         },
       },
       level: SpaceLevel.L0,
@@ -280,7 +281,7 @@ export class ConversionService {
       },
       about: {
         profileData: {
-          displayName: spaceL2.about.profile.displayName,
+          displayName: spaceL2.nameID, // anything will do
         },
       },
       storageAggregatorParent: spaceL0StorageAggregator,
