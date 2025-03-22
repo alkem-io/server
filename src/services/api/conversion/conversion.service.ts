@@ -209,7 +209,7 @@ export class ConversionService {
     subsubspaceID: string,
     agentInfo: AgentInfo
   ): Promise<ISpace | never> {
-    const spaceL2 = await this.spaceService.getSpaceOrFail(subsubspaceID, {
+    let spaceL2 = await this.spaceService.getSpaceOrFail(subsubspaceID, {
       relations: {
         community: {
           roleSet: true,
@@ -287,12 +287,12 @@ export class ConversionService {
       level: SpaceLevel.L1,
       type: SpaceType.CHALLENGE,
     };
-    const spaceL1New = await this.spaceService.createSubspace(
+    let spaceL1 = await this.spaceService.createSubspace(
       createL1SpaceData,
       agentInfo
     );
 
-    const spaceL1 = await this.spaceService.getSpaceOrFail(spaceL1New.id, {
+    spaceL1 = await this.spaceService.getSpaceOrFail(spaceL1.id, {
       relations: {
         community: {
           roleSet: true,
@@ -358,9 +358,9 @@ export class ConversionService {
     spaceL2.storageAggregator.parentStorageAggregator = undefined;
 
     // Save both + then re-assign the roles
-    await this.spaceService.save(spaceL1);
-    const spaceL2Updated = await this.spaceService.save(spaceL2);
-    await this.spaceService.deleteSpaceOrFail({ ID: spaceL2Updated.id });
+    spaceL1 = await this.spaceService.save(spaceL1);
+    spaceL2 = await this.spaceService.save(spaceL2);
+    await this.spaceService.deleteSpaceOrFail({ ID: spaceL2.id });
 
     // Assign users to roles in new challenge
     await this.assignContributors(roleSetL1, spaceCommunityRoles);
