@@ -2,7 +2,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
-import { ConvertSubspaceToSpaceInput } from './dto/convert.dto.subspace.to.space.input';
+import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
 import { ISpace } from '@domain/space/space/space.interface';
 import {
   EntityNotInitializedException,
@@ -37,12 +37,12 @@ export class ConversionService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async convertSpaceFromL1ToL0OrFail(
-    conversionData: ConvertSubspaceToSpaceInput,
+  async convertSpaceL1ToSpaceL0OrFail(
+    conversionData: ConvertSpaceL1ToSpaceL0Input,
     agentInfo: AgentInfo
   ): Promise<ISpace | never> {
     const spaceL1 = await this.spaceService.getSpaceOrFail(
-      conversionData.subspaceID,
+      conversionData.spaceL1ID,
       {
         relations: {
           community: {
@@ -205,7 +205,7 @@ export class ConversionService {
     // Now migrate all the child L2 spaces...
     const spacesL2 = await this.spaceService.getSubspaces(spaceL1Updated);
     for (const spaceL2 of spacesL2) {
-      await this.convertSpaceFromL2ToL1OrFail(spaceL2.id, agentInfo);
+      await this.convertSpaceL2ToSpaceL1OrFail(spaceL2.id, agentInfo);
     }
     // Finally delete the L1 space
     await this.spaceService.deleteSpaceOrFail({
@@ -214,7 +214,7 @@ export class ConversionService {
     return spaceL0;
   }
 
-  async convertSpaceFromL2ToL1OrFail(
+  async convertSpaceL2ToSpaceL1OrFail(
     subsubspaceID: string,
     agentInfo: AgentInfo
   ): Promise<ISpace | never> {
@@ -543,7 +543,7 @@ export class ConversionService {
 }
 
 // Create a new type for usage in this service that has fields for user members + leads, org members + leads etc
-export type SpaceCommunityRoles = {
+type SpaceCommunityRoles = {
   userMembers: IUser[];
   userLeads: IUser[];
   orgMembers: IOrganization[];
