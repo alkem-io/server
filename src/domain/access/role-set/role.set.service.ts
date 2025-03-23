@@ -1820,7 +1820,7 @@ export class RoleSetService {
 
   public async setParentRoleSetAndCredentials(
     childRoleSet: IRoleSet,
-    parentRoleSet: IRoleSet | undefined // if undefined, then no parent
+    parentRoleSet: IRoleSet
   ): Promise<IRoleSet> {
     childRoleSet.parentRoleSet = parentRoleSet;
 
@@ -1829,22 +1829,32 @@ export class RoleSetService {
     for (const roleDefinition of roleDefinitions) {
       const parentCredentials: ICredentialDefinition[] = [];
 
-      if (parentRoleSet) {
-        const parentRoleDefinition = await this.getRoleDefinition(
-          parentRoleSet,
-          roleDefinition.name
-        );
-        const parentDirectCredential = parentRoleDefinition.credential;
-        const parentParentCredentials = roleDefinition.parentCredentials;
+      const parentRoleDefinition = await this.getRoleDefinition(
+        parentRoleSet,
+        roleDefinition.name
+      );
+      const parentDirectCredential = parentRoleDefinition.credential;
+      const parentParentCredentials = roleDefinition.parentCredentials;
 
-        parentCredentials.push(parentDirectCredential);
-        parentParentCredentials.forEach(c => parentCredentials?.push(c));
-      }
+      parentCredentials.push(parentDirectCredential);
+      parentParentCredentials.forEach(c => parentCredentials?.push(c));
 
       roleDefinition.parentCredentials = parentCredentials;
     }
 
     return childRoleSet;
+  }
+
+  public async removeParentRoleSet(roleSet: IRoleSet): Promise<IRoleSet> {
+    roleSet.parentRoleSet = undefined;
+
+    const roleDefinitions = await this.getRoleDefinitions(roleSet);
+
+    for (const roleDefinition of roleDefinitions) {
+      roleDefinition.parentCredentials = [];
+    }
+
+    return roleSet;
   }
 
   public async getDirectParentCredentialForRole(

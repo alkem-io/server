@@ -109,10 +109,7 @@ export class ConversionService {
     spaceL1.storageAggregator.parentStorageAggregator =
       storageAggregatorAccount;
     spaceL1.community.roleSet =
-      await this.roleSetService.setParentRoleSetAndCredentials(
-        roleSetL1,
-        undefined
-      );
+      await this.roleSetService.removeParentRoleSet(roleSetL1);
 
     // Some fields on a Space L0 do not exist on Space L1 so we need to create them
     spaceL1.license = this.spaceService.createLicenseForSpaceL0();
