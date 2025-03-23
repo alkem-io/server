@@ -108,8 +108,6 @@ export class ConversionService {
     spaceL1.account = account;
     spaceL1.storageAggregator.parentStorageAggregator =
       storageAggregatorAccount;
-    spaceL1.community.roleSet =
-      await this.roleSetService.removeParentRoleSet(roleSetL1);
 
     // Some fields on a Space L0 do not exist on Space L1 so we need to create them
     spaceL1.license = this.spaceService.createLicenseForSpaceL0();
@@ -125,6 +123,9 @@ export class ConversionService {
       );
 
     spaceL1 = await this.spaceService.save(spaceL1);
+    // Need to do the roleset update after
+    await this.roleSetService.removeParentRoleSet(roleSetL1.id);
+
     // And remove the space from the old space L0; note that setting to undefined is not enough, need to go through the parent space
     spaceL0Orig.subspaces = spaceL0Orig.subspaces.filter(
       subspace => subspace.id !== spaceL1.id

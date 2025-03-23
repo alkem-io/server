@@ -1845,7 +1845,17 @@ export class RoleSetService {
     return childRoleSet;
   }
 
-  public async removeParentRoleSet(roleSet: IRoleSet): Promise<IRoleSet> {
+  /** Not the most efficient implementation, but is only called when converting a RoleSet to one without parents, an
+   * exceptional flow.
+   */
+  public async removeParentRoleSet(roleSetID: string): Promise<IRoleSet> {
+    const roleSet = await this.getRoleSetOrFail(roleSetID, {
+      relations: {
+        roles: true,
+        parentRoleSet: true,
+      },
+    });
+
     roleSet.parentRoleSet = undefined;
 
     const roleDefinitions = await this.getRoleDefinitions(roleSet);
@@ -1853,8 +1863,15 @@ export class RoleSetService {
     for (const roleDefinition of roleDefinitions) {
       roleDefinition.parentCredentials = [];
     }
+    roleSet.roles = roleDefinitions;
 
-    return roleSet;
+    await this.save(roleSet);
+    // TypeORM does not support removing relations as far as I can tell, so do it manually
+    await this.roleSetRepository.query(
+      `UPDATE role_set SET parentRoleSetId = NULL WHERE id = '${roleSetID}'`
+    );
+
+    return await this.getRoleSetOrFail(roleSetID);
   }
 
   public async getDirectParentCredentialForRole(
