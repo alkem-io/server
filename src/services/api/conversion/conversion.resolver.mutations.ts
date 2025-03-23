@@ -72,8 +72,7 @@ export class ConversionResolverMutations {
       `convert challenge to space: ${agentInfo.email}`
     );
     let space = await this.conversionService.convertSpaceL1ToSpaceL0OrFail(
-      convertL1SpaceToL0Data,
-      agentInfo
+      convertL1SpaceToL0Data
     );
     space = await this.spaceService.save(space);
     const updatedAuthorizations =
@@ -95,12 +94,11 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `convert space L2 to Space L1: ${agentInfo.email}`
     );
     let spaceL1 = await this.conversionService.convertSpaceL2ToSpaceL1OrFail(
-      convertSpaceL2ToSpaceL1Data.spaceL2ID,
-      agentInfo
+      convertSpaceL2ToSpaceL1Data.spaceL2ID
     );
     spaceL1 = await this.spaceService.save(spaceL1);
 
