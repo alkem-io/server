@@ -196,6 +196,19 @@ export class AiPersonaServiceService {
     return this.aiPersonaEngineAdapter.invoke(input);
   }
 
+  public getAssistantID(exernalConfig: IExternalConfig): string {
+    const decoded = this.decryptExternalConfig(exernalConfig);
+    return decoded.assistantId || '';
+  }
+
+  public getApiKeyID(exernalConfig: IExternalConfig): string {
+    const { apiKey } = this.decryptExternalConfig(exernalConfig);
+    if (!apiKey) {
+      return '';
+    }
+    return `${apiKey.slice(0, 7)}...${apiKey.slice(-4)}` || '';
+  }
+
   private encryptExternalConfig(
     config: IExternalConfig | undefined
   ): IExternalConfig {

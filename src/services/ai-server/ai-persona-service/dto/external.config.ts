@@ -1,4 +1,9 @@
-import { Field, InputType, registerEnumType } from '@nestjs/graphql';
+import {
+  Field,
+  InputType,
+  ObjectType,
+  registerEnumType,
+} from '@nestjs/graphql';
 
 enum OpenAIModel {
   O3_MINI = 'o3-mini',
@@ -32,7 +37,8 @@ registerEnumType(OpenAIModel, {
   name: 'OpenAIModel',
 });
 
-@InputType('ExternalConfig')
+@ObjectType('ExternalConfig')
+@InputType('ExternalConfigInput')
 export class IExternalConfig {
   @Field(() => String, {
     nullable: true,

@@ -6,22 +6,20 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IAiPersonaService } from './ai.persona.service.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IExternalConfig } from './dto';
 
-@Resolver(() => IAiPersonaService)
-export class AiPersonaServiceResolverFields {
+@Resolver(() => IExternalConfig)
+export class AiPersonaServiceExternalConfigResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private aiPersonaServiceService: AiPersonaServiceService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('authorization', () => IAuthorizationPolicy, {
+  @ResolveField('apiKey', () => String, {
     nullable: true,
-    description: 'The Authorization for this Virtual.',
+    description: 'The signature of the API key',
   })
   @Profiling.api
   async authorization(
@@ -38,8 +36,9 @@ export class AiPersonaServiceResolverFields {
       AuthorizationPrivilege.READ,
       `ai persona authorization access: ${aiPersonaService.id}`
     );
-
-    return aiPersonaService.authorization;
+    return this.aiPersonaServiceService.getApiKeyID(
+      aiPersonaService.externalConfig!
+    );
   }
 
   @UseGuards(GraphqlGuard)

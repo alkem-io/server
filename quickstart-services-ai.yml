@@ -326,7 +326,7 @@ services:
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
     hostname: virtual-contributor-engine-guidance
-    image: alkemio/virtual-contributor-engine-guidance:v0.9.0
+    image: alkemio/virtual-contributor-engine-guidance:v0.9.1
     platform: linux/x86_64
     restart: always
     volumes:
@@ -452,7 +452,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_ingest_website
     hostname: virtual-contributor-ingest-website
-    image: alkemio/virtual-contributor-ingest-website:v0.1.0
+    image: alkemio/virtual-contributor-ingest-website:v0.1.1
     platform: linux/x86_64
     restart: always
     volumes:
@@ -645,7 +645,7 @@ services:
   virtual_contributor_engine_generic:
     container_name: alkemio_dev_virtual_contributor_engine_generic
     hostname: virtual-contributor-engine-generic
-    image: alkemio/virtual-contributor-engine-generic:v0.4.1
+    image: alkemio/virtual-contributor-engine-generic:v0.5.0
     platform: linux/x86_64
     restart: always
     volumes:
@@ -671,11 +671,13 @@ services:
       - LANGCHAIN_API_KEY
       - LANGCHAIN_PROJECT=virtual-contributor-engine-generic
       - HISTORY_LENGTH=20
+      - VECTOR_DB_CREDENTIALS
+      - VECTOR_DB_HOST=localhost
 
   virtual_contributor_engine_openai_assistant:
     container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
     hostname: virtual-contributor-engine-openai-assistant
-    image: alkemio/virtual-contributor-engine-openai-assistant:v0.2.1
+    image: alkemio/virtual-contributor-engine-openai-assistant:v0.3.0
     platform: linux/x86_64
     restart: always
     volumes:
@@ -696,3 +698,5 @@ services:
       - RABBITMQ_RESULT_ROUTING_KEY
       - LOCAL_PATH=./
       - LOG_LEVEL=DEBUG
+      - VECTOR_DB_CREDENTIALS
+      - VECTOR_DB_HOST=localhost

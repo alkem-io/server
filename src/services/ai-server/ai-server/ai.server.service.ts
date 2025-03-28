@@ -42,7 +42,6 @@ import {
 } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
 
@@ -73,7 +72,6 @@ export class AiServerService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
-    private roomLookupService: RoomLookupService,
     private subscriptionPublishService: SubscriptionPublishService,
     private config: ConfigService<AlkemioConfig, true>,
     private roomControllerService: RoomControllerService,
@@ -226,6 +224,7 @@ export class AiServerService {
       AiPersonaEngine.EXPERT,
       AiPersonaEngine.GUIDANCE,
       AiPersonaEngine.GENERIC_OPENAI,
+      AiPersonaEngine.LIBRA_FLOW,
     ]);
 
     // history should be loaded trough the GQL API of the collaboration server
@@ -259,14 +258,16 @@ export class AiServerService {
     limit: number = 10
   ): Promise<InteractionMessage[]> {
     let roomMessages: IMessage[] = [];
-    const room = await this.roomLookupService.getRoomOrFail(roomDetails.roomID);
+    // const room = await this.roomControllerService.getRoomOrFail(roomDetails.roomID);
     if (roomDetails.threadID) {
-      roomMessages = await this.roomLookupService.getMessagesInThread(
-        room,
+      roomMessages = await this.roomControllerService.getMessagesInThread(
+        roomDetails.roomID,
         roomDetails.threadID
       );
     } else {
-      roomMessages = await this.roomLookupService.getMessages(room);
+      roomMessages = await this.roomControllerService.getMessages(
+        roomDetails.roomID
+      );
     }
 
     const messages: InteractionMessage[] = [];
@@ -284,11 +285,20 @@ export class AiServerService {
         content: message.message,
         role,
       });
-      if (messages.length === limit) {
+      if (messages.length === limit - 1) {
         break;
       }
     }
 
+    const callout = await this.roomControllerService.getRoomCalloutOrFail(
+      roomDetails.roomID
+    );
+    messages.unshift({
+      content: callout.framing.profile.description || '',
+      role: MessageSenderRole.HUMAN,
+    });
+
+    console.log(messages);
     return messages;
   }
   private getContextCollectionID(contextID: string): string {
