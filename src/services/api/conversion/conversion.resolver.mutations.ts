@@ -29,6 +29,7 @@ import { CalloutTransferService } from '@domain/collaboration/callout-transfer/c
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
 
 @InstrumentResolver()
 @Resolver()
@@ -58,12 +59,12 @@ export class ConversionResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
-    description: 'Creates a new Space by converting an existing L1 Space.',
+    description: 'Move an L1 Space up in the hierarchy, to be a L0 Space.',
   })
   async convertSpaceL1ToSpaceL0(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('convertData')
-    convertL1SpaceToL0Data: ConvertSpaceL1ToSpaceL0Input
+    conversionData: ConvertSpaceL1ToSpaceL0Input
   ): Promise<ISpace> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -71,9 +72,10 @@ export class ConversionResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `convert challenge to space: ${agentInfo.email}`
     );
-    let space = await this.conversionService.convertSpaceL1ToSpaceL0OrFail(
-      convertL1SpaceToL0Data
-    );
+    let space =
+      await this.conversionService.convertSpaceL1ToSpaceL0OrFail(
+        conversionData
+      );
     space = await this.spaceService.save(space);
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
@@ -84,12 +86,12 @@ export class ConversionResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
-    description: 'Creates a new Space L1 by converting an existing Space L2.',
+    description: 'Move an L2 Space up in the hierarchy, to be a L1 Space.',
   })
   async convertSpaceL2ToSpaceL1(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('convertData')
-    convertSpaceL2ToSpaceL1Data: ConvertSpaceL2ToSpaceL1Input
+    conversionData: ConvertSpaceL2ToSpaceL1Input
   ): Promise<ISpace> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -97,9 +99,10 @@ export class ConversionResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `convert space L2 to Space L1: ${agentInfo.email}`
     );
-    let spaceL1 = await this.conversionService.convertSpaceL2ToSpaceL1OrFail(
-      convertSpaceL2ToSpaceL1Data.spaceL2ID
-    );
+    let spaceL1 =
+      await this.conversionService.convertSpaceL2ToSpaceL1OrFail(
+        conversionData
+      );
     spaceL1 = await this.spaceService.save(spaceL1);
 
     const parentAuthorization = await this.getParentSpaceAuthorization(
@@ -112,6 +115,40 @@ export class ConversionResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
     return await this.spaceService.getSpaceOrFail(spaceL1.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description:
+      'Move an L1 Space down in the hierarchy within the same L0 Space, to be a L2 Space.',
+  })
+  async convertSpaceL1ToSpaceL2(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('convertData')
+    conversionData: ConvertSpaceL1ToSpaceL2Input
+  ): Promise<ISpace> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `convert space L2 to Space L1: ${agentInfo.email}`
+    );
+    let spaceL2 =
+      await this.conversionService.convertSpaceL1ToSpaceL2OrFail(
+        conversionData
+      );
+    spaceL2 = await this.spaceService.save(spaceL2);
+
+    const parentAuthorization = await this.getParentSpaceAuthorization(
+      spaceL2.id
+    );
+    const spaceL1Authorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        spaceL2.id,
+        parentAuthorization
+      );
+    await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
+    return await this.spaceService.getSpaceOrFail(spaceL2.id);
   }
 
   @UseGuards(GraphqlGuard)

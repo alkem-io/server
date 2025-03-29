@@ -6,6 +6,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -18,6 +19,13 @@ import { TemplatesManagerService } from '@domain/template/templates-manager/temp
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateService } from '@domain/template/template/template.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { RoleName } from '@common/enums/role.name';
+import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
+import { ConvertSpaceL2ToSpaceL1Input } from './dto/convert.dto.space.l2.to.space.l1.input';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 export class ConversionService {
   constructor(
@@ -92,6 +100,20 @@ export class ConversionService {
     const account = spaceL0Orig.account;
     const storageAggregatorAccount = spaceL0Orig.account.storageAggregator;
 
+    // Remove the admins, so that also implicit subspace admin role is removed
+    const userAdmins = await this.roleSetService.getUsersWithRole(
+      roleSetL1,
+      RoleName.ADMIN
+    );
+    for (const userAdmin of userAdmins) {
+      await this.roleSetService.removeUserFromRole(
+        roleSetL1,
+        RoleName.ADMIN,
+        userAdmin.id,
+        false
+      );
+    }
+
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
     const spaceL0NewNameID =
@@ -125,6 +147,14 @@ export class ConversionService {
     spaceL1 = await this.spaceService.save(spaceL1);
     // Need to do the roleset update after
     await this.roleSetService.removeParentRoleSet(roleSetL1.id);
+    // and add back in the admins
+    for (const userAdmin of userAdmins) {
+      await this.roleSetService.assignUserToRole(
+        roleSetL1,
+        RoleName.ADMIN,
+        userAdmin.id
+      );
+    }
 
     // And remove the space from the old space L0; note that setting to undefined is not enough, need to go through the parent space
     spaceL0Orig.subspaces = spaceL0Orig.subspaces.filter(
@@ -134,7 +164,9 @@ export class ConversionService {
 
     // Now migrate all the child L2 spaces...
     for (const spaceL2 of subspacesL1) {
-      await this.convertSpaceL2ToSpaceL1OrFail(spaceL2.id);
+      await this.convertSpaceL2ToSpaceL1OrFail({
+        spaceL2ID: spaceL2.id,
+      });
     }
 
     return spaceL1;
@@ -170,22 +202,25 @@ export class ConversionService {
   }
 
   async convertSpaceL2ToSpaceL1OrFail(
-    subsubspaceID: string
+    conversionData: ConvertSpaceL2ToSpaceL1Input
   ): Promise<ISpace | never> {
-    const spaceL2 = await this.spaceService.getSpaceOrFail(subsubspaceID, {
-      relations: {
-        community: {
-          roleSet: true,
-        },
-        storageAggregator: true,
-        parentSpace: {
+    let spaceL2 = await this.spaceService.getSpaceOrFail(
+      conversionData.spaceL2ID,
+      {
+        relations: {
+          community: {
+            roleSet: true,
+          },
           storageAggregator: true,
           parentSpace: {
             storageAggregator: true,
+            parentSpace: {
+              storageAggregator: true,
+            },
           },
         },
-      },
-    });
+      }
+    );
     if (
       !spaceL2.community ||
       !spaceL2.storageAggregator ||
@@ -224,6 +259,20 @@ export class ConversionService {
     const storageAggregatorL0 = spaceL0.storageAggregator;
     const roleSetL0 = spaceL0.community.roleSet;
 
+    // Remove the admins, so that also implicit subspace admin role is removed
+    const userAdmins = await this.roleSetService.getUsersWithRole(
+      roleSetL2,
+      RoleName.ADMIN
+    );
+    for (const userAdmin of userAdmins) {
+      await this.roleSetService.removeUserFromRole(
+        roleSetL2,
+        RoleName.ADMIN,
+        userAdmin.id,
+        false
+      );
+    }
+
     spaceL2.level = SpaceLevel.L1;
     spaceL2.type = SpaceType.CHALLENGE;
     spaceL2.parentSpace = spaceL0;
@@ -234,96 +283,193 @@ export class ConversionService {
         roleSetL0
       );
 
-    return await this.spaceService.save(spaceL2);
+    spaceL2 = await this.spaceService.save(spaceL2);
+    // and add back in the admins
+    for (const userAdmin of userAdmins) {
+      await this.roleSetService.assignUserToRole(
+        roleSetL2,
+        RoleName.ADMIN,
+        userAdmin.id
+      );
+    }
+    return spaceL2;
   }
 
-  // NOTE: leave the code below as it will be needed when we move Spaces **DOWN** levels, when we will need to remove contributors
+  async convertSpaceL1ToSpaceL2OrFail(
+    conversionData: ConvertSpaceL1ToSpaceL2Input
+  ): Promise<ISpace | never> {
+    let spaceL1 = await this.spaceService.getSpaceOrFail(
+      conversionData.spaceL1ID,
+      {
+        relations: {
+          community: {
+            roleSet: true,
+          },
+          storageAggregator: true,
+        },
+      }
+    );
+    if (
+      !spaceL1.community ||
+      !spaceL1.community.roleSet ||
+      !spaceL1.storageAggregator
+    ) {
+      throw new EntityNotInitializedException(
+        `Unable to locate all entities on on Space L1: ${spaceL1.id}`,
+        LogContext.CONVERSION
+      );
+    }
+    const roleSetL1 = spaceL1.community.roleSet;
 
-  // private async getSpaceCommunityRoles(
-  //   roleSet: IRoleSet
-  // ): Promise<SpaceCommunityRoles> {
-  //   const userMembers = await this.roleSetService.getUsersWithRole(
-  //     roleSet,
-  //     RoleName.MEMBER
-  //   );
-  //   const userLeads = await this.roleSetService.getUsersWithRole(
-  //     roleSet,
-  //     RoleName.LEAD
-  //   );
-  //   const orgMembers = await this.roleSetService.getOrganizationsWithRole(
-  //     roleSet,
-  //     RoleName.MEMBER
-  //   );
-  //   const orgLeads = await this.roleSetService.getOrganizationsWithRole(
-  //     roleSet,
-  //     RoleName.LEAD
-  //   );
+    const parentSpaceL1 = await this.spaceService.getSpaceOrFail(
+      conversionData.parentSpaceL1ID,
+      {
+        relations: {
+          storageAggregator: true,
+          community: {
+            roleSet: true,
+          },
+        },
+      }
+    );
+    if (
+      !parentSpaceL1.storageAggregator ||
+      !parentSpaceL1.community ||
+      !parentSpaceL1.community.roleSet
+    ) {
+      throw new EntityNotInitializedException(
+        `Conversion L1 to L2: Unable to locate all entities on on parent Space L1: ${parentSpaceL1.id}`,
+        LogContext.CONVERSION
+      );
+    }
 
-  //   const vcMembers = await this.roleSetService.getVirtualContributorsWithRole(
-  //     roleSet,
-  //     RoleName.MEMBER
-  //   );
-  //   return {
-  //     userMembers,
-  //     userLeads,
-  //     orgMembers,
-  //     orgLeads,
-  //     vcMembers,
-  //   };
-  // }
+    if (spaceL1.levelZeroSpaceID !== parentSpaceL1.levelZeroSpaceID) {
+      throw new ValidationException(
+        'Only can convert a L1 Space to be L2 within the same L0 Space',
+        LogContext.CONVERSION
+      );
+    }
+    const storageAggregatorParentL1 = parentSpaceL1.storageAggregator;
+    const roleSetParentL1 = parentSpaceL1.community.roleSet;
 
-  // private async removeContributors(
-  //   roleSet: IRoleSet,
-  //   spaceCommunityRoles: SpaceCommunityRoles
-  // ) {
-  //   const validatePolicyLimits = false;
-  //   for (const userMember of spaceCommunityRoles.userMembers) {
-  //     await this.roleSetService.removeUserFromRole(
-  //       roleSet,
-  //       RoleName.MEMBER,
-  //       userMember.id,
-  //       validatePolicyLimits
-  //     );
-  //   }
-  //   for (const userLead of spaceCommunityRoles.userLeads) {
-  //     await this.roleSetService.removeUserFromRole(
-  //       roleSet,
-  //       RoleName.LEAD,
-  //       userLead.id,
-  //       validatePolicyLimits
-  //     );
-  //   }
-  //   for (const orgMember of spaceCommunityRoles.orgMembers) {
-  //     await this.roleSetService.removeOrganizationFromRole(
-  //       roleSet,
-  //       RoleName.MEMBER,
-  //       orgMember.id,
-  //       validatePolicyLimits
-  //     );
-  //   }
-  //   for (const orgLead of spaceCommunityRoles.orgLeads) {
-  //     await this.roleSetService.removeOrganizationFromRole(
-  //       roleSet,
-  //       RoleName.LEAD,
-  //       orgLead.id,
-  //       validatePolicyLimits
-  //     );
-  //   }
-  //   for (const vcMember of spaceCommunityRoles.vcMembers) {
-  //     await this.roleSetService.removeVirtualFromRole(
-  //       roleSet,
-  //       RoleName.MEMBER,
-  //       vcMember.id,
-  //       validatePolicyLimits
-  //     );
-  //   }
+    const spaceCommunityRoles = await this.getSpaceCommunityRoles(roleSetL1);
+    await this.removeContributors(roleSetL1, spaceCommunityRoles);
+
+    spaceL1.level = SpaceLevel.L2;
+    spaceL1.type = SpaceType.OPPORTUNITY;
+    spaceL1.parentSpace = parentSpaceL1;
+    spaceL1.storageAggregator.parentStorageAggregator =
+      storageAggregatorParentL1;
+    spaceL1.community.roleSet =
+      await this.roleSetService.setParentRoleSetAndCredentials(
+        roleSetL1,
+        roleSetParentL1
+      );
+
+    spaceL1 = await this.spaceService.save(spaceL1);
+    // and add back in the admins
+    for (const userAdmin of spaceCommunityRoles.userAdmins) {
+      await this.roleSetService.assignUserToRole(
+        roleSetL1,
+        RoleName.ADMIN,
+        userAdmin.id
+      );
+    }
+    return spaceL1;
+  }
+
+  private async getSpaceCommunityRoles(
+    roleSet: IRoleSet
+  ): Promise<SpaceCommunityRoles> {
+    const userMembers = await this.roleSetService.getUsersWithRole(
+      roleSet,
+      RoleName.MEMBER
+    );
+    const userLeads = await this.roleSetService.getUsersWithRole(
+      roleSet,
+      RoleName.LEAD
+    );
+    const userAdmins = await this.roleSetService.getUsersWithRole(
+      roleSet,
+      RoleName.ADMIN
+    );
+    const orgMembers = await this.roleSetService.getOrganizationsWithRole(
+      roleSet,
+      RoleName.MEMBER
+    );
+    const orgLeads = await this.roleSetService.getOrganizationsWithRole(
+      roleSet,
+      RoleName.LEAD
+    );
+
+    const vcMembers = await this.roleSetService.getVirtualContributorsWithRole(
+      roleSet,
+      RoleName.MEMBER
+    );
+    return {
+      userMembers,
+      userLeads,
+      userAdmins,
+      orgMembers,
+      orgLeads,
+      vcMembers,
+    };
+  }
+
+  private async removeContributors(
+    roleSet: IRoleSet,
+    spaceCommunityRoles: SpaceCommunityRoles
+  ) {
+    const validatePolicyLimits = false;
+    for (const userMember of spaceCommunityRoles.userMembers) {
+      await this.roleSetService.removeUserFromRole(
+        roleSet,
+        RoleName.MEMBER,
+        userMember.id,
+        validatePolicyLimits
+      );
+    }
+    for (const userLead of spaceCommunityRoles.userLeads) {
+      await this.roleSetService.removeUserFromRole(
+        roleSet,
+        RoleName.LEAD,
+        userLead.id,
+        validatePolicyLimits
+      );
+    }
+    for (const orgMember of spaceCommunityRoles.orgMembers) {
+      await this.roleSetService.removeOrganizationFromRole(
+        roleSet,
+        RoleName.MEMBER,
+        orgMember.id,
+        validatePolicyLimits
+      );
+    }
+    for (const orgLead of spaceCommunityRoles.orgLeads) {
+      await this.roleSetService.removeOrganizationFromRole(
+        roleSet,
+        RoleName.LEAD,
+        orgLead.id,
+        validatePolicyLimits
+      );
+    }
+    for (const vcMember of spaceCommunityRoles.vcMembers) {
+      await this.roleSetService.removeVirtualFromRole(
+        roleSet,
+        RoleName.MEMBER,
+        vcMember.id,
+        validatePolicyLimits
+      );
+    }
+  }
 }
 
-// // Create a new type for usage in this service that has fields for user members + leads, org members + leads etc
-// type SpaceCommunityRoles = {
-//   userMembers: IUser[];
-//   userLeads: IUser[];
-//   orgMembers: IOrganization[];
-//   orgLeads: IOrganization[];
-//   vcMembers: IVirtualContributor[];
-// };
+// Create a new type for usage in this service that has fields for user members + leads, org members + leads etc
+type SpaceCommunityRoles = {
+  userMembers: IUser[];
+  userLeads: IUser[];
+  userAdmins: IUser[];
+  orgMembers: IOrganization[];
+  orgLeads: IOrganization[];
+  vcMembers: IVirtualContributor[];
+};

@@ -5,8 +5,7 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 export class ConvertSpaceL2ToSpaceL1Input {
   @Field(() => UUID, {
     nullable: false,
-    description:
-      'The Space L2 to be promoted. Note: the original Space will no longer exist after the conversion. ',
+    description: 'The Space L2 to be promoted. ',
   })
   spaceL2ID!: string;
 }
