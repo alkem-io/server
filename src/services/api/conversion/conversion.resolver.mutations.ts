@@ -120,7 +120,10 @@ export class ConversionResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description:
-      'Move an L1 Space down in the hierarchy within the same L0 Space, to be a L2 Space.',
+      'Move an L1 Space down in the hierarchy within the same L0 Space, to be a L2 Space. \
+      Restrictions: the Space L1 must remain within the same L0 Space. \
+      Roles: all user, organization and virtual contributor role assignments are removed, with \
+      the exception of Admin role assignments for Users.',
   })
   async convertSpaceL1ToSpaceL2(
     @CurrentUser() agentInfo: AgentInfo,
