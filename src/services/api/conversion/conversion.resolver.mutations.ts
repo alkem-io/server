@@ -134,7 +134,7 @@ export class ConversionResolverMutations {
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert space L2 to Space L1: ${agentInfo.email}`
+      `convert space L1 to Space L2: ${agentInfo.email}`
     );
     let spaceL2 =
       await this.conversionService.convertSpaceL1ToSpaceL2OrFail(
