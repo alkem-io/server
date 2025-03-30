@@ -1,6 +1,6 @@
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -11,9 +11,9 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ConvertSubspaceToSpaceInput } from './dto/convert.dto.subspace.to.space.input';
+import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
 import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
-import { ConvertSubsubspaceToSubspaceInput } from './dto/convert.dto.subsubspace.to.subspace.input';
+import { ConvertSpaceL2ToSpaceL1Input } from './dto/convert.dto.space.l2.to.space.l1.input';
 import { SpaceService } from '@domain/space/space/space.service';
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
 import {
@@ -29,6 +29,7 @@ import { CalloutTransferService } from '@domain/collaboration/callout-transfer/c
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
 
 @InstrumentResolver()
 @Resolver()
@@ -58,13 +59,12 @@ export class ConversionResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
-    description: 'Creates a new Space by converting an existing Challenge.',
+    description: 'Move an L1 Space up in the hierarchy, to be a L0 Space.',
   })
-  @Profiling.api
-  async convertChallengeToSpace(
+  async convertSpaceL1ToSpaceL0(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('convertData')
-    convertChallengeToSpaceData: ConvertSubspaceToSpaceInput
+    conversionData: ConvertSpaceL1ToSpaceL0Input
   ): Promise<ISpace> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -72,10 +72,10 @@ export class ConversionResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `convert challenge to space: ${agentInfo.email}`
     );
-    let space = await this.conversionService.convertChallengeToSpaceOrFail(
-      convertChallengeToSpaceData,
-      agentInfo
-    );
+    let space =
+      await this.conversionService.convertSpaceL1ToSpaceL0OrFail(
+        conversionData
+      );
     space = await this.spaceService.save(space);
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
@@ -86,57 +86,72 @@ export class ConversionResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
-    description:
-      'Creates a new Challenge by converting an existing Opportunity.',
+    description: 'Move an L2 Space up in the hierarchy, to be a L1 Space.',
   })
-  @Profiling.api
-  async convertOpportunityToChallenge(
+  async convertSpaceL2ToSpaceL1(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('convertData')
-    convertOpportunityToChallengeData: ConvertSubsubspaceToSubspaceInput
+    conversionData: ConvertSpaceL2ToSpaceL1Input
   ): Promise<ISpace> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.CREATE,
-      `convert opportunity to challenge: ${agentInfo.email}`
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `convert space L2 to Space L1: ${agentInfo.email}`
     );
-    let subspace =
-      await this.conversionService.convertOpportunityToChallengeOrFail(
-        convertOpportunityToChallengeData.subsubspaceID,
-        agentInfo
+    let spaceL1 =
+      await this.conversionService.convertSpaceL2ToSpaceL1OrFail(
+        conversionData
       );
-    subspace = await this.spaceService.save(subspace);
+    spaceL1 = await this.spaceService.save(spaceL1);
 
     const parentAuthorization = await this.getParentSpaceAuthorization(
-      subspace.id
+      spaceL1.id
     );
-    const subspaceAuthorizations =
+    const spaceL1Authorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        subspace.id,
+        spaceL1.id,
         parentAuthorization
       );
-    await this.authorizationPolicyService.saveAll(subspaceAuthorizations);
-    return await this.spaceService.getSpaceOrFail(subspace.id);
+    await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
+    return await this.spaceService.getSpaceOrFail(spaceL1.id);
   }
 
-  private async getParentSpaceAuthorization(
-    subspaceID: string
-  ): Promise<IAuthorizationPolicy | never> {
-    const subspace = await this.spaceService.getSpaceOrFail(subspaceID, {
-      relations: {
-        parentSpace: {
-          authorization: true,
-        },
-      },
-    });
-    if (!subspace.parentSpace || !subspace.parentSpace.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load parent space authorization for subspace: ${subspaceID}`,
-        LogContext.CONVERSION
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description:
+      'Move an L1 Space down in the hierarchy within the same L0 Space, to be a L2 Space. \
+      Restrictions: the Space L1 must remain within the same L0 Space. \
+      Roles: all user, organization and virtual contributor role assignments are removed, with \
+      the exception of Admin role assignments for Users.',
+  })
+  async convertSpaceL1ToSpaceL2(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('convertData')
+    conversionData: ConvertSpaceL1ToSpaceL2Input
+  ): Promise<ISpace> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `convert space L1 to Space L2: ${agentInfo.email}`
+    );
+    let spaceL2 =
+      await this.conversionService.convertSpaceL1ToSpaceL2OrFail(
+        conversionData
       );
-    }
-    return subspace.parentSpace.authorization;
+    spaceL2 = await this.spaceService.save(spaceL2);
+
+    const parentAuthorization = await this.getParentSpaceAuthorization(
+      spaceL2.id
+    );
+    const spaceL1Authorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        spaceL2.id,
+        parentAuthorization
+      );
+    await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
+    return await this.spaceService.getSpaceOrFail(spaceL2.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -273,5 +288,24 @@ export class ConversionResolverMutations {
     return this.virtualContributorService.getVirtualContributorOrFail(
       virtualContributor.id
     );
+  }
+
+  private async getParentSpaceAuthorization(
+    subspaceID: string
+  ): Promise<IAuthorizationPolicy | never> {
+    const subspace = await this.spaceService.getSpaceOrFail(subspaceID, {
+      relations: {
+        parentSpace: {
+          authorization: true,
+        },
+      },
+    });
+    if (!subspace.parentSpace || !subspace.parentSpace.authorization) {
+      throw new RelationshipNotFoundException(
+        `Unable to load parent space authorization for subspace: ${subspaceID}`,
+        LogContext.CONVERSION
+      );
+    }
+    return subspace.parentSpace.authorization;
   }
 }
