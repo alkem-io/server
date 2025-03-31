@@ -8,7 +8,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 @InstrumentResolver()
 @Resolver()
 export class MeResolverQueries {
-  @UseGuards(GraphqlGuard)
+  // @UseGuards(GraphqlGuard)
   @Query(() => MeQueryResults, {
     nullable: false,
     description: 'Information about the current authenticated user',

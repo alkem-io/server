@@ -39,7 +39,7 @@ import { RegistrationModule } from '@services/api/registration/registration.modu
 import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
-import { SessionExtendMiddleware } from '@src/core/middleware';
+import { SessionExtendMiddleware, TestMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
@@ -47,7 +47,10 @@ import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
-import { InnovationHubInterceptor } from '@common/interceptors';
+import {
+  InnovationHubInterceptor,
+  UserAttacherInterceptor,
+} from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
@@ -320,6 +323,10 @@ import { ApmApolloPlugin } from './apm/plugins';
       useClass: InnovationHubInterceptor,
     },
     {
+      provide: APP_INTERCEPTOR,
+      useClass: UserAttacherInterceptor,
+    },
+    {
       // This should be the first filter in the list:
       // See Catch everything at: https://docs.nestjs.com/exception-filters
       provide: APP_FILTER,
@@ -343,7 +350,7 @@ import { ApmApolloPlugin } from './apm/plugins';
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
+      .apply(RequestLoggerMiddleware, SessionExtendMiddleware, TestMiddleware)
       .forRoutes('/');
   }
 }

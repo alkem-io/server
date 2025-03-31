@@ -40,6 +40,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   }
 
   async validate(payload: KratosPayload): Promise<AgentInfo | null> {
+    console.log('OryStrategy.validate');
     this.logger.debug?.('Ory Strategy: Kratos payload', LogContext.AUTH);
     this.logger.debug?.(payload, LogContext.AUTH);
 
