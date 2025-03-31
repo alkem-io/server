@@ -75,6 +75,7 @@ import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.in
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
+import { ILicense } from '@domain/common/license/license.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -158,47 +159,7 @@ export class SpaceService {
       );
     space.storageAggregator = storageAggregator;
 
-    space.license = this.licenseService.createLicense({
-      type: LicenseType.SPACE,
-      entitlements: [
-        {
-          type: LicenseEntitlementType.SPACE_FREE,
-          dataType: LicenseEntitlementDataType.FLAG,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.SPACE_PLUS,
-          dataType: LicenseEntitlementDataType.FLAG,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.SPACE_PREMIUM,
-          dataType: LicenseEntitlementDataType.FLAG,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
-          dataType: LicenseEntitlementDataType.FLAG,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
-          dataType: LicenseEntitlementDataType.FLAG,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
-          dataType: LicenseEntitlementDataType.FLAG,
-          limit: 0,
-          enabled: true,
-        },
-      ],
-    });
+    space.license = this.createLicenseForSpaceL0();
 
     const roleSetRolesData = this.spaceDefaultsService.getRoleSetCommunityRoles(
       space.level
@@ -254,7 +215,7 @@ export class SpaceService {
     });
 
     if (space.level === SpaceLevel.L0) {
-      space.templatesManager = await this.createTemplatesManager();
+      space.templatesManager = await this.createTemplatesManagerForSpaceL0();
     }
 
     // Community:
@@ -274,7 +235,51 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  private async createTemplatesManager(): Promise<ITemplatesManager> {
+  public createLicenseForSpaceL0(): ILicense {
+    return this.licenseService.createLicense({
+      type: LicenseType.SPACE,
+      entitlements: [
+        {
+          type: LicenseEntitlementType.SPACE_FREE,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_PLUS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_PREMIUM,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: true,
+        },
+      ],
+    });
+  }
+
+  public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
     const templateDefaultData: CreateTemplateDefaultInput = {
       type: TemplateDefaultType.SPACE_SUBSPACE,
       allowedTemplateType: TemplateType.COLLABORATION,
