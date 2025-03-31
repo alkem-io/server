@@ -1174,21 +1174,26 @@ export class RoleSetService {
 
     const userPolicy = roleDefinition.userPolicy;
 
-    if (action === RoleSetUpdateType.ASSIGN) {
-      if (userMembersCount === userPolicy.maximum) {
-        throw new RoleSetPolicyRoleLimitsException(
-          `Max limit of users reached for role '${roleType}': ${userPolicy.maximum}, cannot assign new user.`,
-          LogContext.COMMUNITY
-        );
+    switch (action) {
+      case RoleSetUpdateType.ASSIGN: {
+        if (userMembersCount === 0) {
+          break;
+        }
+        if (userMembersCount === userPolicy.maximum) {
+          throw new RoleSetPolicyRoleLimitsException(
+            `Max limit of users reached for role '${roleType}': ${userPolicy.maximum}, cannot assign new user.`,
+            LogContext.COMMUNITY
+          );
+        }
+        break;
       }
-    }
-
-    if (action === RoleSetUpdateType.REMOVE) {
-      if (userMembersCount === userPolicy.minimum) {
-        throw new RoleSetPolicyRoleLimitsException(
-          `Min limit of users reached for role '${roleType}': ${userPolicy.minimum}, cannot remove user from role on RoleSet: ${roleSet.id}, type: ${roleSet.type}`,
-          LogContext.COMMUNITY
-        );
+      case RoleSetUpdateType.REMOVE: {
+        if (userMembersCount === userPolicy.minimum) {
+          throw new RoleSetPolicyRoleLimitsException(
+            `Min limit of users reached for role '${roleType}': ${userPolicy.minimum}, cannot remove user from role on RoleSet: ${roleSet.id}, type: ${roleSet.type}`,
+            LogContext.COMMUNITY
+          );
+        }
       }
     }
   }
@@ -1363,6 +1368,16 @@ export class RoleSetService {
       type: AuthorizationCredential.ACCOUNT_ADMIN,
       resourceID: organization.accountID,
     };
+  }
+
+  public async removeCurrentUserFromRolesInRoleSet(
+    roleSet: IRoleSet,
+    agentInfo: AgentInfo
+  ): Promise<void> {
+    const userRoles = await this.getRolesForAgentInfo(agentInfo, roleSet);
+    for (const role of userRoles) {
+      await this.removeUserFromRole(roleSet, role, agentInfo.userID);
+    }
   }
 
   private async removeContributorFromRole(
@@ -1812,11 +1827,12 @@ export class RoleSetService {
     const roleDefinitions = await this.getRoleDefinitions(childRoleSet);
 
     for (const roleDefinition of roleDefinitions) {
+      const parentCredentials: ICredentialDefinition[] = [];
+
       const parentRoleDefinition = await this.getRoleDefinition(
         parentRoleSet,
         roleDefinition.name
       );
-      const parentCredentials: ICredentialDefinition[] = [];
       const parentDirectCredential = parentRoleDefinition.credential;
       const parentParentCredentials = roleDefinition.parentCredentials;
 
@@ -1827,6 +1843,35 @@ export class RoleSetService {
     }
 
     return childRoleSet;
+  }
+
+  /** Not the most efficient implementation, but is only called when converting a RoleSet to one without parents, an
+   * exceptional flow.
+   */
+  public async removeParentRoleSet(roleSetID: string): Promise<IRoleSet> {
+    const roleSet = await this.getRoleSetOrFail(roleSetID, {
+      relations: {
+        roles: true,
+        parentRoleSet: true,
+      },
+    });
+
+    roleSet.parentRoleSet = undefined;
+
+    const roleDefinitions = await this.getRoleDefinitions(roleSet);
+
+    for (const roleDefinition of roleDefinitions) {
+      roleDefinition.parentCredentials = [];
+    }
+    roleSet.roles = roleDefinitions;
+
+    await this.save(roleSet);
+    // TypeORM does not support removing relations as far as I can tell, so do it manually
+    await this.roleSetRepository.query(
+      `UPDATE role_set SET parentRoleSetId = NULL WHERE id = '${roleSetID}'`
+    );
+
+    return await this.getRoleSetOrFail(roleSetID);
   }
 
   public async getDirectParentCredentialForRole(
