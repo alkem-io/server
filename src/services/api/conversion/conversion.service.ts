@@ -26,6 +26,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 export class ConversionService {
   constructor(
@@ -36,6 +37,7 @@ export class ConversionService {
     private templateService: TemplateService,
     private templatesManagerService: TemplatesManagerService,
     private innovationFlowService: InnovationFlowService,
+    private accountHostService: AccountHostService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -46,6 +48,7 @@ export class ConversionService {
       conversionData.spaceL1ID,
       {
         relations: {
+          agent: true,
           community: {
             roleSet: true,
           },
@@ -64,7 +67,8 @@ export class ConversionService {
       !spaceL1.collaboration ||
       !spaceL1.collaboration.innovationFlow ||
       !spaceL1.storageAggregator ||
-      !spaceL1.subspaces
+      !spaceL1.subspaces ||
+      !spaceL1.agent
     ) {
       throw new EntityNotInitializedException(
         `Unable to locate all entities on on space L1: ${spaceL1.id}`,
@@ -73,6 +77,7 @@ export class ConversionService {
     }
     const subspacesL1 = spaceL1.subspaces;
     const roleSetL1 = spaceL1.community.roleSet;
+    const agentL1 = spaceL1.agent;
 
     const spaceL0Orig = await this.spaceService.getSpaceOrFail(
       spaceL1.levelZeroSpaceID,
@@ -145,6 +150,13 @@ export class ConversionService {
       );
 
     spaceL1 = await this.spaceService.save(spaceL1);
+
+    // Ensure that the license plans for new spaces are applied
+    spaceL1.agent = await this.accountHostService.assignLicensePlansToSpace(
+      agentL1,
+      spaceL1.id,
+      account.type
+    );
     // Need to do the roleset update after
     await this.roleSetService.removeParentRoleSet(roleSetL1.id);
     // and add back in the admins
