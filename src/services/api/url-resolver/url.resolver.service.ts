@@ -151,6 +151,10 @@ export class UrlResolverService {
         result.type = UrlType.DOCUMENTATION;
         return result;
       }
+      case UrlPathBase.PROFILE: {
+        result.type = UrlType.USER;
+        return result;
+      }
       case UrlPathBase.USER: {
         result.type = UrlType.USER;
         if (pathElements.length < 2) {
