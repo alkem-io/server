@@ -243,9 +243,15 @@ export class AiServerService {
         )
       );
 
+      //NOTE this should not be needed but untill we start using the callout contents in the
+      //expert engine better skip it
+      const includeCallout =
+        personaService.engine === AiPersonaEngine.LIBRA_FLOW;
+
       history = await this.getLastNInteractionMessages(
         invocationInput.resultHandler.roomDetails,
-        historyLimit
+        historyLimit,
+        includeCallout
       );
     }
 
@@ -255,7 +261,8 @@ export class AiServerService {
   async getLastNInteractionMessages(
     roomDetails: RoomDetails,
     // interactionID: string | undefined,
-    limit: number = 10
+    limit: number = 10,
+    includeCallout = false
   ): Promise<InteractionMessage[]> {
     let roomMessages: IMessage[] = [];
     // const room = await this.roomControllerService.getRoomOrFail(roomDetails.roomID);
@@ -289,16 +296,16 @@ export class AiServerService {
         break;
       }
     }
+    if (includeCallout) {
+      const callout = await this.roomControllerService.getRoomCalloutOrFail(
+        roomDetails.roomID
+      );
+      messages.unshift({
+        content: callout.framing.profile.description || '',
+        role: MessageSenderRole.HUMAN,
+      });
+    }
 
-    const callout = await this.roomControllerService.getRoomCalloutOrFail(
-      roomDetails.roomID
-    );
-    messages.unshift({
-      content: callout.framing.profile.description || '',
-      role: MessageSenderRole.HUMAN,
-    });
-
-    console.log(messages);
     return messages;
   }
   private getContextCollectionID(contextID: string): string {
