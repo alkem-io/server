@@ -1,0 +1,56 @@
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IClassification } from './classification.interface';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import { ClassificationTagsetsLoaderCreator } from '@core/dataloader/creators/loader.creators/classification.tagsets.loader.creator';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
+
+@Resolver(() => IClassification)
+export class ClassificationResolverFields {
+  constructor() {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('tagsets', () => [ITagset], {
+    nullable: true,
+    description: 'The classification tagsets.',
+  })
+  async tagsets(
+    @Parent() classification: IClassification,
+    @Loader(ClassificationTagsetsLoaderCreator) loader: ILoader<ITagset[]>
+  ): Promise<ITagset[]> {
+    return loader.load(classification.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('tagset', () => ITagset, {
+    nullable: true,
+    description: 'The default or named tagset.',
+  })
+  async tagset(
+    @Parent() classification: IClassification,
+    @Args('tagsetName', {
+      type: () => TagsetReservedName,
+      nullable: false,
+    })
+    tagsetName: TagsetReservedName,
+    @Loader(ClassificationTagsetsLoaderCreator)
+    loader: ILoader<ITagset[]>
+  ): Promise<ITagset> {
+    const tagsets = await loader.load(classification.id);
+
+    const namedTagset = tagsets.find(t => t.name === tagsetName);
+    if (!namedTagset) {
+      throw new EntityNotFoundException(
+        `Unable to locate '${tagsetName}' tagset for Classification: ${classification.id}`,
+        LogContext.PROFILE
+      );
+    }
+
+    return namedTagset;
+  }
+}

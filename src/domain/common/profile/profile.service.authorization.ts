@@ -6,8 +6,6 @@ import { VisualAuthorizationService } from '../visual/visual.service.authorizati
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { POLICY_RULE_READ_ABOUT } from '@common/constants/authorization/policy.rule.constants';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
@@ -94,14 +92,6 @@ export class ProfileAuthorizationService {
       this.authorizationPolicyService.inheritParentAuthorization(
         profile.authorization,
         parentAuthorization
-      );
-    // If can READ_ABOUT on Profile, then also allow general READ
-    profile.authorization =
-      this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
-        profile.authorization,
-        AuthorizationPrivilege.READ_ABOUT,
-        [AuthorizationPrivilege.READ],
-        POLICY_RULE_READ_ABOUT
       );
     profile.authorization.credentialRules.push(...credentialRulesFromParent);
 

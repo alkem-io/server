@@ -8,11 +8,10 @@ import {
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
 import { CreateSpaceInput, DeleteSpaceInput } from '@domain/space/space';
-import { INVP, NVP } from '@domain/common/nvp';
 import { ICommunity } from '@domain/community/community';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, In, Not, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
@@ -35,7 +34,6 @@ import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platfor
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { ProfileService } from '@domain/common/profile/profile.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CreateCommunityInput } from '@domain/community/community/dto/community.dto.create';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
@@ -47,8 +45,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
@@ -76,10 +72,10 @@ import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
-import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
+import { ILicense } from '@domain/common/license/license.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -94,7 +90,6 @@ type SpaceSortingData = {
 @Injectable()
 export class SpaceService {
   constructor(
-    private accountLookupService: AccountLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spacesFilterService: SpaceFilterService,
     private spaceAboutService: SpaceAboutService,
@@ -102,7 +97,6 @@ export class SpaceService {
     private communityService: CommunityService,
     private roleSetService: RoleSetService,
     private namingService: NamingService,
-    private profileService: ProfileService,
     private spaceSettingsService: SpaceSettingsService,
     private spaceDefaultsService: SpaceDefaultsService,
     private storageAggregatorService: StorageAggregatorService,
@@ -165,7 +159,84 @@ export class SpaceService {
       );
     space.storageAggregator = storageAggregator;
 
-    space.license = this.licenseService.createLicense({
+    space.license = this.createLicenseForSpaceL0();
+
+    const roleSetRolesData = this.spaceDefaultsService.getRoleSetCommunityRoles(
+      space.level
+    );
+    const applicationFormData =
+      this.spaceDefaultsService.getRoleSetCommunityApplicationForm(space.level);
+
+    const communityData: CreateCommunityInput = {
+      name: spaceData.about.profileData.displayName,
+      roleSetData: {
+        roles: roleSetRolesData,
+        applicationForm: applicationFormData,
+        entryRoleName: RoleName.MEMBER,
+        type: RoleSetType.SPACE,
+      },
+    };
+
+    space.community =
+      await this.communityService.createCommunity(communityData);
+
+    space.about = await this.spaceAboutService.createSpaceAbout(
+      spaceData.about,
+      storageAggregator
+    );
+
+    space.levelZeroSpaceID = '';
+    // save the collaboration and all it's template sets
+    await this.save(space);
+
+    if (spaceData.level === SpaceLevel.L0) {
+      space.levelZeroSpaceID = space.id;
+    }
+
+    //// Collaboration
+    let collaborationData: CreateCollaborationInput =
+      spaceData.collaborationData;
+    collaborationData.isTemplate = false;
+    // Pick up the default template that is applicable
+    collaborationData =
+      await this.spaceDefaultsService.createCollaborationInput(
+        collaborationData,
+        space.type,
+        spaceData.templatesManagerParent
+      );
+    space.collaboration = await this.collaborationService.createCollaboration(
+      collaborationData,
+      space.storageAggregator,
+      agentInfo
+    );
+
+    space.agent = await this.agentService.createAgent({
+      type: AgentType.SPACE,
+    });
+
+    if (space.level === SpaceLevel.L0) {
+      space.templatesManager = await this.createTemplatesManagerForSpaceL0();
+    }
+
+    // Community:
+    // set immediate community parent + resourceID
+    if (!space.community || !space.community.roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Community with RoleSet: ${space.id}`,
+        LogContext.SPACES
+      );
+    }
+    space.community.parentID = space.id;
+    space.community.roleSet = await this.roleSetService.updateRoleResourceID(
+      space.community.roleSet,
+      space.id
+    );
+
+    return await this.save(space);
+  }
+
+  public createLicenseForSpaceL0(): ILicense {
+    return this.licenseService.createLicense({
       type: LicenseType.SPACE,
       entitlements: [
         {
@@ -206,91 +277,9 @@ export class SpaceService {
         },
       ],
     });
-
-    const roleSetRolesData = this.spaceDefaultsService.getRoleSetCommunityRoles(
-      space.level
-    );
-    const applicationFormData =
-      this.spaceDefaultsService.getRoleSetCommunityApplicationForm(space.level);
-
-    const communityData: CreateCommunityInput = {
-      name: spaceData.about.profileData.displayName,
-      roleSetData: {
-        roles: roleSetRolesData,
-        applicationForm: applicationFormData,
-        entryRoleName: RoleName.MEMBER,
-        type: RoleSetType.SPACE,
-      },
-      guidelines: {
-        // TODO: get this from defaults service, currently create with empty
-        profile: {
-          displayName: '',
-          description: '',
-        },
-      },
-    };
-
-    space.community = await this.communityService.createCommunity(
-      communityData,
-      storageAggregator
-    );
-
-    space.about = await this.spaceAboutService.createSpaceAbout(
-      spaceData.about,
-      storageAggregator
-    );
-
-    space.levelZeroSpaceID = '';
-    // save the collaboration and all it's template sets
-    await this.save(space);
-
-    if (spaceData.level === SpaceLevel.L0) {
-      space.levelZeroSpaceID = space.id;
-    }
-
-    //// Collaboration
-    let collaborationData: CreateCollaborationInput =
-      spaceData.collaborationData;
-    collaborationData.isTemplate = false;
-    // Pick up the default template that is applicable
-    collaborationData =
-      await this.spaceDefaultsService.createCollaborationInput(
-        collaborationData,
-        space.type,
-        spaceData.templatesManagerParent
-      );
-    space.collaboration = await this.collaborationService.createCollaboration(
-      collaborationData,
-      space.storageAggregator,
-      agentInfo
-    );
-
-    space.agent = await this.agentService.createAgent({
-      type: AgentType.SPACE,
-    });
-
-    if (space.level === SpaceLevel.L0) {
-      space.templatesManager = await this.createTemplatesManager();
-    }
-
-    // Community:
-    // set immediate community parent + resourceID
-    if (!space.community || !space.community.roleSet) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Community with RoleSet: ${space.id}`,
-        LogContext.SPACES
-      );
-    }
-    space.community.parentID = space.id;
-    space.community.roleSet = await this.roleSetService.updateRoleResourceID(
-      space.community.roleSet,
-      space.id
-    );
-
-    return await this.save(space);
   }
 
-  private async createTemplatesManager(): Promise<ITemplatesManager> {
+  public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
     const templateDefaultData: CreateTemplateDefaultInput = {
       type: TemplateDefaultType.SPACE_SUBSPACE,
       allowedTemplateType: TemplateType.COLLABORATION,
@@ -997,33 +986,6 @@ export class SpaceService {
     );
   }
 
-  public async assignContributorToRole(
-    space: ISpace,
-    contributor: IContributor,
-    role: RoleName,
-    type: RoleSetContributorType
-  ) {
-    if (!space.community || !space.community.roleSet) {
-      throw new EntityNotInitializedException(
-        `Community not initialised on Space for assigning contributor to role: ${space.id}`,
-        LogContext.SPACES
-      );
-    }
-    if (!contributor.agent) {
-      throw new EntityNotInitializedException(
-        `Agent not specified on contributor: ${contributor.id}`,
-        LogContext.SPACES
-      );
-    }
-
-    await this.roleSetService.assignContributorAgentToRole(
-      space.community.roleSet,
-      role,
-      contributor.agent,
-      type
-    );
-  }
-
   public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
     await this.roleSetService.assignUserToRole(
       roleSet,
@@ -1180,25 +1142,6 @@ export class SpaceService {
     return community;
   }
 
-  public async getCommunityRoleSet(spaceId: string): Promise<IRoleSet> {
-    const subspaceWithCommunityRoleSet = await this.getSpaceOrFail(spaceId, {
-      relations: {
-        community: {
-          roleSet: true,
-        },
-      },
-    });
-    const community = subspaceWithCommunityRoleSet.community;
-    if (!community || !community.roleSet) {
-      throw new RelationshipNotFoundException(
-        `Unable to load community with RoleSet for space ${spaceId} `,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return community.roleSet;
-  }
-
   async getTemplatesManagerOrFail(
     rootSpaceID: string
   ): Promise<ITemplatesManager> {
@@ -1256,31 +1199,6 @@ export class SpaceService {
         item => item.plan?.type === LicensingCredentialBasedPlanType.SPACE_PLAN
       )
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0]?.subscription;
-  }
-
-  public async getProvider(spaceInput: ISpace): Promise<IContributor> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        id: spaceInput.levelZeroSpaceID,
-      },
-      relations: {
-        account: true,
-      },
-    });
-    if (!space || !space.account) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Space with account to get Provider ${spaceInput.id} `,
-        LogContext.LIBRARY
-      );
-    }
-    const provider = await this.accountLookupService.getHost(space.account);
-    if (!provider) {
-      throw new RelationshipNotFoundException(
-        `Unable to load provider for Space ${space.id} `,
-        LogContext.LIBRARY
-      );
-    }
-    return provider;
   }
 
   public async getStorageAggregatorOrFail(
@@ -1343,69 +1261,5 @@ export class SpaceService {
         LogContext.AGENT
       );
     return agent;
-  }
-
-  public async getPostsCount(space: ISpace): Promise<number> {
-    const calloutsSet = await this.getCalloutsSetOrFail(space.id);
-
-    return await this.collaborationService.getPostsCount(calloutsSet);
-  }
-
-  public async getWhiteboardsCount(space: ISpace): Promise<number> {
-    const calloutsSet = await this.getCalloutsSetOrFail(space.id);
-    return await this.collaborationService.getWhiteboardsCount(calloutsSet);
-  }
-
-  async getSubspacesInSpaceCount(parentSpaceId: string): Promise<number> {
-    const subspaces = await this.spaceRepository.findBy({
-      parentSpace: {
-        id: parentSpaceId,
-      },
-      level: Not(0), // At least one parent in the tree
-    });
-
-    let children = 0;
-    for await (const subspace of subspaces.map(
-      async subspace => await this.getSubspacesInSpaceCount(subspace.id)
-    )) {
-      children += subspace;
-    }
-
-    return subspaces.length + children;
-  }
-
-  async getMetrics(space: ISpace): Promise<INVP[]> {
-    const metrics: INVP[] = [];
-
-    // Subspaces
-    const subspacesCount = await this.getSubspacesInSpaceCount(space.id);
-    const subspacesTopic = new NVP('subspaces', subspacesCount.toString());
-    subspacesTopic.id = `subspaces-${space.id}`;
-    metrics.push(subspacesTopic);
-
-    const roleSet = await this.getCommunityRoleSet(space.id);
-
-    // Members
-    const membersCount = await this.roleSetService.getMembersCount(roleSet);
-    const membersTopic = new NVP('members', membersCount.toString());
-    membersTopic.id = `members-${space.id}`;
-    metrics.push(membersTopic);
-
-    // Posts
-    const postsCount = await this.getPostsCount(space);
-    const postsTopic = new NVP('posts', postsCount.toString());
-    postsTopic.id = `posts-${space.id}`;
-    metrics.push(postsTopic);
-
-    // Whiteboards
-    const whiteboardsCount = await this.getWhiteboardsCount(space);
-    const whiteboardsTopic = new NVP(
-      'whiteboards',
-      whiteboardsCount.toString()
-    );
-    whiteboardsTopic.id = `whiteboards-${space.id}`;
-    metrics.push(whiteboardsTopic);
-
-    return metrics;
   }
 }

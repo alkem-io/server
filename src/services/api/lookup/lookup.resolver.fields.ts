@@ -119,14 +119,17 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified Space',
   })
-  async space(@Args('ID', { type: () => UUID }) id: string): Promise<ISpace> {
+  async space(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
-    // this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   space.authorization,
-    //   AuthorizationPrivilege.READ_ABOUT,
-    //   `lookup Space: ${space.id}`
-    // );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ_ABOUT,
+      `lookup Space: ${space.id}`
+    );
 
     return space;
   }
@@ -224,7 +227,7 @@ export class LookupResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtualContributor.authorization,
-      AuthorizationPrivilege.READ_ABOUT,
+      AuthorizationPrivilege.READ,
       `lookup VirtualContributor: ${virtualContributor.id}`
     );
     return virtualContributor;
@@ -775,7 +778,7 @@ export class LookupResolverFields {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       knowledgeBase.authorization,
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.READ_ABOUT,
       `lookup KnowledgeBase: ${knowledgeBase.id}`
     );
     return knowledgeBase;

@@ -17,6 +17,7 @@ export enum AuthorizationPolicyType {
   PREFERENCE = 'preference',
   PREFERENCE_SET = 'preference-set',
   PROFILE = 'profile',
+  CLASSIFICATION = 'classification',
   REFERENCE = 'reference',
   TAGSET = 'tagset',
   VISUAL = 'visual',

@@ -8,7 +8,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { InnovationHubResolverFields } from './innovation.hub.resolver.fields';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
@@ -21,7 +20,6 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
     AuthorizationPolicyModule,
     AuthorizationModule,
     NamingModule,
-    StorageAggregatorResolverModule,
     TypeOrmModule.forFeature([InnovationHub]),
   ],
   providers: [
