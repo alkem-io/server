@@ -14,7 +14,6 @@ export class AccountResolverQueries {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [IAccount], {
     nullable: false,
     description:

@@ -29,7 +29,6 @@ export class SpaceResolverSubscriptions {
     private authorizationService: AuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @TypedSubscription<SubspaceCreatedPayload, SubspaceCreatedArgs>(
     () => SubspaceCreated,
     {

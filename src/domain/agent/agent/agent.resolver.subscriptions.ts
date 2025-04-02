@@ -21,7 +21,6 @@ export class AgentResolverSubscriptions {
     private subscriptionVerifiedCredentials: PubSubEngine
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Subscription(() => ProfileCredentialVerified, {
     description: 'Received on verified credentials change',
     async resolve(

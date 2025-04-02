@@ -32,7 +32,6 @@ export class ReferenceResolverMutations {
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description: 'Updates the specified Reference.',
   })
@@ -55,7 +54,6 @@ export class ReferenceResolverMutations {
     return updatedReference;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description: 'Deletes the specified Reference.',
   })
@@ -75,7 +73,6 @@ export class ReferenceResolverMutations {
     return await this.referenceService.deleteReference(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description:
       'Create a new Document on the Storage and return the value as part of the returned Reference.',

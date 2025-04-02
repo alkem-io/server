@@ -24,7 +24,6 @@ export class CalendarResolverMutations {
     private calendarEventAuthorizationService: CalendarEventAuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalendarEvent, {
     description: 'Create a new CalendarEvent on the Calendar.',
   })

@@ -23,7 +23,6 @@ export class UserGroupResolverMutations {
     private groupService: UserGroupService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Deletes the specified User Group.',
   })
@@ -41,7 +40,6 @@ export class UserGroupResolverMutations {
     return await this.groupService.removeUserGroup(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Updates the specified User Group.',
   })
@@ -60,7 +58,6 @@ export class UserGroupResolverMutations {
     return await this.groupService.updateUserGroup(userGroupData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Assigns a User as a member of the specified User Group.',
   })
@@ -81,7 +78,6 @@ export class UserGroupResolverMutations {
     return await this.groupService.assignUser(membershipData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Removes the specified User from specified user group',
   })

@@ -41,7 +41,6 @@ export class SpaceResolverMutations {
     private licenseService: LicenseService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
   })
@@ -91,7 +90,6 @@ export class SpaceResolverMutations {
     return updatedSpace;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Deletes the specified Space.',
   })
@@ -110,7 +108,6 @@ export class SpaceResolverMutations {
     return await this.spaceService.deleteSpaceOrFail(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Updates one of the Setting on a Space',
   })
@@ -146,7 +143,6 @@ export class SpaceResolverMutations {
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description:
       'Update the platform settings, such as nameID, of the specified Space.',
@@ -175,7 +171,6 @@ export class SpaceResolverMutations {
     return await this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Creates a new Subspace within the specified Space.',
   })

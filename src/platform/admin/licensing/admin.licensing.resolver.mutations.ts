@@ -36,7 +36,6 @@ export class AdminLicensingResolverMutations {
     private adminLicensingService: AdminLicensingService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
     description: 'Creates an account in Wingback',
   })
@@ -57,7 +56,6 @@ export class AdminLicensingResolverMutations {
     return this.accountLicenseService.createWingbackAccount(accountID);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
     description: 'Assign the specified LicensePlan to an Account.',
   })
@@ -96,7 +94,6 @@ export class AdminLicensingResolverMutations {
     return this.accountService.getAccountOrFail(account.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Assign the specified LicensePlan to a Space.',
   })
@@ -135,7 +132,6 @@ export class AdminLicensingResolverMutations {
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
     description: 'Revokes the specified LicensePlan on an Account.',
   })
@@ -175,7 +171,6 @@ export class AdminLicensingResolverMutations {
     return this.accountService.getAccountOrFail(account.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Revokes the specified LicensePlan on a Space.',
   })
@@ -213,7 +208,6 @@ export class AdminLicensingResolverMutations {
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Reset all license plans on Accounts',
   })

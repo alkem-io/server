@@ -28,7 +28,6 @@ export class OrganizationResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Creates a new User Group for the specified Organization.',
   })
@@ -56,7 +55,6 @@ export class OrganizationResolverMutations {
     return group;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Updates one of the Setting on an Organization',
   })
@@ -91,7 +89,6 @@ export class OrganizationResolverMutations {
     return this.organizationService.getOrganizationOrFail(organization.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Updates the specified Organization.',
   })
@@ -113,7 +110,6 @@ export class OrganizationResolverMutations {
     return await this.organizationService.updateOrganization(organizationData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description:
       'Reset the Authorization Policy on the specified Organization.',

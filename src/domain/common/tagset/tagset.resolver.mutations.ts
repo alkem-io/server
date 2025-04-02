@@ -18,7 +18,6 @@ export class TagsetResolverMutations {
     private tagsetService: TagsetService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITagset, {
     description: 'Updates the specified Tagset.',
   })

@@ -56,7 +56,6 @@ export class AuthorizationPolicyResolverFields {
     return this.authorizationPolicyService.getPrivilegeRules(authorization);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('myPrivileges', () => [AuthorizationPrivilege], {
     nullable: true,
     description:

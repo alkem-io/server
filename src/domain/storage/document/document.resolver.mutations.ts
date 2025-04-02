@@ -19,7 +19,6 @@ export class DocumentResolverMutations {
     private documentService: DocumentService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IDocument, {
     description: 'Deletes the specified Document.',
   })
@@ -40,7 +39,6 @@ export class DocumentResolverMutations {
     return await this.documentService.deleteDocument(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IDocument, {
     description: 'Updates the specified Document.',
   })

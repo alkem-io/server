@@ -48,7 +48,6 @@ export class CalendarEventResolverFields {
     }
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this Post.',

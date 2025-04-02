@@ -19,7 +19,6 @@ export class CalendarEventResolverMutations {
     private calendarEventService: CalendarEventService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalendarEvent, {
     description: 'Deletes the specified CalendarEvent.',
   })
@@ -38,7 +37,6 @@ export class CalendarEventResolverMutations {
     return this.calendarEventService.deleteCalendarEvent(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalendarEvent, {
     description: 'Updates the specified CalendarEvent.',
   })

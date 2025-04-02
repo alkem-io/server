@@ -30,7 +30,6 @@ export class WhiteboardResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IWhiteboard, {
     description: 'Updates the specified Whiteboard.',
   })
@@ -101,7 +100,6 @@ export class WhiteboardResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IWhiteboard, {
     description: 'Deletes the specified Whiteboard.',
   })

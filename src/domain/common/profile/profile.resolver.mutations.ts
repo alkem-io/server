@@ -31,7 +31,6 @@ export class ProfileResolverMutations {
     private profileService: ProfileService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITagset, {
     description: 'Creates a new Tagset on the specified Profile',
   })
@@ -72,7 +71,6 @@ export class ProfileResolverMutations {
     return await this.tagsetService.save(tagset);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description: 'Creates a new Reference on the specified Profile.',
   })
@@ -102,7 +100,6 @@ export class ProfileResolverMutations {
     return await this.referenceService.saveReference(reference);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IProfile, {
     description: 'Updates the specified Profile.',
   })

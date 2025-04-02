@@ -72,7 +72,6 @@ export class AccountResolverMutations {
     private licenseService: LicenseService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Creates a new Level Zero Space within the specified Account.',
   })
@@ -142,7 +141,6 @@ export class AccountResolverMutations {
     return space;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
     description: 'Create an Innovation Hub on the specified account',
   })
@@ -185,7 +183,6 @@ export class AccountResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVirtualContributor, {
     description: 'Creates a new VirtualContributor on an Account.',
   })
@@ -239,7 +236,6 @@ export class AccountResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationPack, {
     description: 'Creates a new InnovationPack on an Account.',
   })
@@ -287,7 +283,6 @@ export class AccountResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
     description: 'Reset the Authorization Policy on the specified Account.',
   })
@@ -315,7 +310,6 @@ export class AccountResolverMutations {
     return await this.accountService.getAccountOrFail(account.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
     description:
       'Reset the License with Entitlements on the specified Account.',
@@ -341,7 +335,6 @@ export class AccountResolverMutations {
     return await this.accountService.getAccountOrFail(account.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
     description: 'Transfer the specified InnovationHub to another Account.',
   })
@@ -392,7 +385,6 @@ export class AccountResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Transfer the specified Space to another Account.',
   })
@@ -430,7 +422,6 @@ export class AccountResolverMutations {
     return await this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationPack, {
     description: 'Transfer the specified Innovation Pack to another Account.',
   })
@@ -480,7 +471,6 @@ export class AccountResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationPack, {
     description:
       'Transfer the specified Virtual Contributor to another Account.',

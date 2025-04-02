@@ -54,7 +54,6 @@ export class WhiteboardResolverFields {
     return loader.load(createdBy);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this Whiteboard.',

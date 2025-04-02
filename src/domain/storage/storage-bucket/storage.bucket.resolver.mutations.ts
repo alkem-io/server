@@ -25,7 +25,7 @@ export class StorageBucketResolverMutations {
     private documentAuthorizationService: DocumentAuthorizationService,
     private documentService: DocumentService
   ) {}
-  @UseGuards(GraphqlGuard)
+
   @Mutation(() => String, {
     description:
       'Create a new Document on the Storage and return the public Url.',
@@ -71,7 +71,6 @@ export class StorageBucketResolverMutations {
     return this.documentService.getPubliclyAccessibleURL(document);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IStorageBucket, {
     description: 'Deletes a Storage Bucket',
   })

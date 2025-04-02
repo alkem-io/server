@@ -29,7 +29,6 @@ export class TemplatesSetResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {
     description: 'Creates a new Template on the specified TemplatesSet.',
   })
@@ -61,7 +60,6 @@ export class TemplatesSetResolverMutations {
     return this.templateService.getTemplateOrFail(template.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {
     description:
       'Creates a new Template on the specified TemplatesSet using the provided Collaboration as content.',

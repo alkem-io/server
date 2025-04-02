@@ -35,7 +35,6 @@ export class ProfileResolverFields {
     private urlGeneratorService: UrlGeneratorService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('visual', () => IVisual, {
     nullable: true,
     description: 'A particular type of visual for this Profile.',
@@ -48,7 +47,6 @@ export class ProfileResolverFields {
     return this.profileService.getVisual(profile, type);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('visuals', () => [IVisual], {
     nullable: false,
     description: 'A list of visuals for this Profile.',
@@ -61,7 +59,6 @@ export class ProfileResolverFields {
     return loader.load(profile.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('references', () => [IReference], {
     nullable: true,
     description: 'A list of URLs to relevant information.',
@@ -73,8 +70,6 @@ export class ProfileResolverFields {
     return loader.load(profile.id);
   }
 
-  // TODO: to make the switch for entities with a single tagset easier
-  @UseGuards(GraphqlGuard)
   @ResolveField('tagset', () => ITagset, {
     nullable: true,
     description: 'The default or named tagset.',
@@ -116,7 +111,6 @@ export class ProfileResolverFields {
     return namedTagset;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('tagsets', () => [ITagset], {
     nullable: true,
     description: 'A list of named tagsets, each of which has a list of tags.',
@@ -128,7 +122,6 @@ export class ProfileResolverFields {
     return loader.load(profile.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('location', () => ILocation, {
     nullable: true,
     description: 'The location for this Profile.',
@@ -140,7 +133,6 @@ export class ProfileResolverFields {
     return loader.load(profile.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('storageBucket', () => IStorageBucket, {
     nullable: false,
     description: 'The storage bucket for this Profile.',
@@ -152,7 +144,6 @@ export class ProfileResolverFields {
     return loader.load(profile.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: false,
     description: 'The URL at which this profile can be viewed.',

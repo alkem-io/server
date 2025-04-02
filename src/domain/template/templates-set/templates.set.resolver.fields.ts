@@ -10,7 +10,6 @@ import { TemplateType } from '@common/enums/template.type';
 export class TemplatesSetResolverFields {
   constructor(private templatesSetService: TemplatesSetService) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('templates', () => [ITemplate], {
     nullable: false,
     description: 'The Templates in this TemplatesSet.',
@@ -19,7 +18,6 @@ export class TemplatesSetResolverFields {
     return this.templatesSetService.getTemplates(templatesSet);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('templatesCount', () => Float, {
     nullable: false,
     description: 'The total number of Templates in this TemplatesSet.',
@@ -28,7 +26,6 @@ export class TemplatesSetResolverFields {
     return this.templatesSetService.getTemplatesCount(templatesSet.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('calloutTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The CalloutTemplates in this TemplatesSet.',
@@ -42,7 +39,6 @@ export class TemplatesSetResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('calloutTemplatesCount', () => Float, {
     nullable: false,
     description: 'The total number of CalloutTemplates in this TemplatesSet.',
@@ -56,7 +52,6 @@ export class TemplatesSetResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('collaborationTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The CollaborationTemplates in this TemplatesSet.',
@@ -70,7 +65,6 @@ export class TemplatesSetResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('collaborationTemplatesCount', () => Float, {
     nullable: false,
     description:
@@ -85,7 +79,6 @@ export class TemplatesSetResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('communityGuidelinesTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The CommunityGuidelines in this TemplatesSet.',
@@ -98,7 +91,7 @@ export class TemplatesSetResolverFields {
       TemplateType.COMMUNITY_GUIDELINES
     );
   }
-  @UseGuards(GraphqlGuard)
+
   @ResolveField('communityGuidelinesTemplatesCount', () => Float, {
     nullable: false,
     description:
@@ -113,7 +106,6 @@ export class TemplatesSetResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('postTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The Post Templates in this TemplatesSet.',
@@ -126,7 +118,7 @@ export class TemplatesSetResolverFields {
       TemplateType.POST
     );
   }
-  @UseGuards(GraphqlGuard)
+
   @ResolveField('postTemplatesCount', () => Float, {
     nullable: false,
     description: 'The total number of Post Templates in this TemplatesSet.',
@@ -138,7 +130,6 @@ export class TemplatesSetResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('whiteboardTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The WhiteboardTemplates in this TemplatesSet.',
@@ -151,7 +142,7 @@ export class TemplatesSetResolverFields {
       TemplateType.WHITEBOARD
     );
   }
-  @UseGuards(GraphqlGuard)
+
   @ResolveField('whiteboardTemplatesCount', () => Float, {
     nullable: false,
     description:

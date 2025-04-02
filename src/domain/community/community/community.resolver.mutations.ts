@@ -27,7 +27,6 @@ export class CommunityResolverMutations {
     private agentService: AgentService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Creates a new User Group in the specified Community.',
   })
@@ -55,7 +54,6 @@ export class CommunityResolverMutations {
     return group;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => AgentBeginVerifiedCredentialOfferOutput, {
     description: 'Generate community member credential offer',
   })

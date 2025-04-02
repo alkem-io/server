@@ -15,7 +15,6 @@ import { InstrumentResolver } from '@src/apm/decorators';
 export class AgentResolverMutations {
   constructor(private agentService: AgentService) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => AgentBeginVerifiedCredentialRequestOutput, {
     nullable: false,
     description: 'Generate verified credential share request',
@@ -31,7 +30,6 @@ export class AgentResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => AgentBeginVerifiedCredentialOfferOutput, {
     description: 'Generate Alkemio user credential offer',
   })

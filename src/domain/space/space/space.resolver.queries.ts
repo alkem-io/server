@@ -20,7 +20,6 @@ export class SpaceResolverQueries {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [ISpace], {
     nullable: false,
     description:
@@ -37,7 +36,6 @@ export class SpaceResolverQueries {
     return this.spaceService.getSpacesForInnovationHub(innovationHub);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => PaginatedSpaces, {
     nullable: false,
     description: 'The Spaces on this platform',
@@ -49,7 +47,6 @@ export class SpaceResolverQueries {
     return this.spaceService.getPaginatedSpaces(pagination, filter);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [ISpace], {
     nullable: false,
     description: 'Active Spaces only, order by most active in the past X days.',

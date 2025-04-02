@@ -28,7 +28,6 @@ export class UserResolverQueries {
     private agentService: AgentService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [IUser], {
     nullable: false,
     description: 'The users who have profiles on this platform',
@@ -47,7 +46,6 @@ export class UserResolverQueries {
     return await this.userService.getUsersForQuery(args);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => PaginatedUsers, {
     nullable: false,
     description: 'The users who have profiles on this platform',
@@ -74,7 +72,6 @@ export class UserResolverQueries {
     return this.userService.getPaginatedUsers(pagination, withTags, filter);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => IUser, {
     nullable: false,
     description: 'A particular user, identified by the ID or by email',
@@ -93,7 +90,6 @@ export class UserResolverQueries {
     return await this.userService.getUserOrFail(id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [CredentialMetadataOutput], {
     nullable: false,
     description: 'Get supported credential metadata',
