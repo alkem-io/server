@@ -70,7 +70,7 @@ export class GraphqlGuard extends AuthGuard([
 
    *handleRequest* is used to extend the error handling or how the request is handled
  */
-  handleRequest<AgentInfo>(
+  handleRequest(
     err: any,
     agentInfo: any,
     info: any,
