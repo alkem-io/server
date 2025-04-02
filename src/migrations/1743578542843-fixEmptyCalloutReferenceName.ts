@@ -7,34 +7,29 @@ export class FixEmptyCalloutReferenceName1743578542843
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // First, find all references that match the criteria
-    const referencesToUpdate = await queryRunner.query(
-      `SELECT cf.id, r.createdDate
+    const referencesToUpdate: { id: string }[] = await queryRunner.query(
+      `SELECT r.id as id
          FROM reference AS r
          JOIN profile AS p ON r.profileId = p.id
          JOIN callout_framing AS cf ON cf.profileId = p.id
          WHERE r.name = ''`
     );
 
-    if (referencesToUpdate.length > 0) {
+    if (referencesToUpdate && referencesToUpdate.length > 0) {
+      const referenceIDsToUpdate = referencesToUpdate.map(ref => ref.id);
       // Update the references with the default name
       await queryRunner.query(
         `UPDATE reference
              SET name = ?
-             WHERE name = ''`,
-        [this.DEFAULT_NAME]
+             WHERE name = '' AND id IN (?)`,
+        [this.DEFAULT_NAME, referenceIDsToUpdate]
       );
     }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Revert the changes if needed
-    // You might want to reset the names back to their original state
-    // This is just an example of how you might revert the changes
-    await queryRunner.query(
-      `UPDATE reference
-         SET name = ''
-         WHERE name = ?`,
-      [this.DEFAULT_NAME]
+    console.log(
+      'Rollback not implemented for FixEmptyCalloutReferenceName1743578542843 migration - migration will not be reversible!'
     );
   }
 }
