@@ -47,10 +47,7 @@ import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
-import {
-  InnovationHubInterceptor,
-  UserAttacherInterceptor,
-} from '@common/interceptors';
+import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
@@ -321,10 +318,6 @@ import { ApmApolloPlugin } from './apm/plugins';
     {
       provide: APP_INTERCEPTOR,
       useClass: InnovationHubInterceptor,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: UserAttacherInterceptor,
     },
     {
       // This should be the first filter in the list:
