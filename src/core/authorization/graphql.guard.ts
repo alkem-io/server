@@ -49,7 +49,6 @@ export class GraphqlGuard extends AuthGuard([
 
   // Need to override base method for graphql requests
   getRequest(context: ExecutionContext) {
-    console.log('GraphqlGuard.getRequest');
     if (context.getType<ContextType | 'graphql'>() === 'graphql') {
       const ctx = GqlExecutionContext.create(context).getContext();
 
@@ -78,7 +77,6 @@ export class GraphqlGuard extends AuthGuard([
     _context: any,
     _status?: any
   ) {
-    console.log('GraphqlGuard.handleRequest');
     if (err) {
       throw new AuthenticationException(
         err?.message ?? String(err),
