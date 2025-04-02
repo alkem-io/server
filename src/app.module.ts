@@ -39,7 +39,7 @@ import { RegistrationModule } from '@services/api/registration/registration.modu
 import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
-import { SessionExtendMiddleware, TestMiddleware } from '@src/core/middleware';
+import { SessionExtendMiddleware, AuthMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
@@ -350,7 +350,7 @@ import { ApmApolloPlugin } from './apm/plugins';
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(RequestLoggerMiddleware, SessionExtendMiddleware, TestMiddleware)
+      .apply(RequestLoggerMiddleware, SessionExtendMiddleware, AuthMiddleware)
       .forRoutes('/');
   }
 }

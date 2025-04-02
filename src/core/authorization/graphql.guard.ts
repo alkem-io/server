@@ -22,11 +22,15 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
+import {
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+} from '@core/authentication';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
-  'oathkeeper-jwt',
-  'oathkeeper-api-token',
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
 ]) {
   instanceId: string;
 
@@ -67,90 +71,90 @@ export class GraphqlGuard extends AuthGuard([
 
    *handleRequest* is used to extend the error handling or how the request is handled
  */
-  // handleRequest<AgentInfo>(
-  //   err: any,
-  //   agentInfo: any,
-  //   info: any,
-  //   _context: any,
-  //   _status?: any
-  // ) {
-  //   console.log('GraphqlGuard.handleRequest');
-  //   if (err) {
-  //     throw new AuthenticationException(
-  //       err?.message ?? String(err),
-  //       LogContext.AUTH
-  //     );
-  //   }
-  //
-  //   const gqlContext = GqlExecutionContext.create(_context);
-  //   const graphqlInfo = gqlContext.getInfo();
-  //   const fieldName = graphqlInfo.fieldName;
-  //
-  //   // Ensure there is always an AgentInfo
-  //   let resultAgentInfo = agentInfo;
-  //
-  //   if (agentInfo) {
-  //     this.authorizationService.logAgentInfo(agentInfo);
-  //   } else {
-  //     this.logger.warn?.(
-  //       `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
-  //       LogContext.AUTH
-  //     );
-  //     resultAgentInfo = this.createAnonymousAgentInfo();
-  //   }
-  //
-  //   // Apply any rules
-  //   const privilege = this.reflector.get<AuthorizationPrivilege>(
-  //     'privilege',
-  //     _context.getHandler()
-  //   );
-  //   if (privilege) {
-  //     const fieldParent = gqlContext.getRoot();
-  //     if (fieldParent.authorizationId && !fieldParent.authorization) {
-  //       this.logger.error(
-  //         {
-  //           message: 'No authorization policy present in Guard',
-  //           fieldName,
-  //           fieldParent,
-  //           authorizationId: fieldParent.authorizationId,
-  //         },
-  //         undefined,
-  //         LogContext.CODE_ERRORS
-  //       );
-  //       this.entityManager
-  //         .findOne(AuthorizationPolicy, {
-  //           where: { id: fieldParent.authorizationId },
-  //         })
-  //         .then((authorization: any) => {
-  //           fieldParent.authorization = authorization;
-  //         })
-  //         .catch((error: any) => {
-  //           this.logger.error(
-  //             `Error loading authorization with id ${fieldParent.authorizationId}: ${error}`,
-  //             undefined,
-  //             LogContext.AUTH_GUARD
-  //           );
-  //         })
-  //         .finally(() => {
-  //           this.executeAuthorizationRule(
-  //             privilege,
-  //             fieldParent,
-  //             fieldName,
-  //             resultAgentInfo
-  //           );
-  //         });
-  //     } else {
-  //       this.executeAuthorizationRule(
-  //         privilege,
-  //         fieldParent,
-  //         fieldName,
-  //         resultAgentInfo
-  //       );
-  //     }
-  //   }
-  //
-  //   return resultAgentInfo;
-  // }
+  handleRequest<AgentInfo>(
+    err: any,
+    agentInfo: any,
+    info: any,
+    _context: any,
+    _status?: any
+  ) {
+    console.log('GraphqlGuard.handleRequest');
+    if (err) {
+      throw new AuthenticationException(
+        err?.message ?? String(err),
+        LogContext.AUTH
+      );
+    }
+
+    const gqlContext = GqlExecutionContext.create(_context);
+    const graphqlInfo = gqlContext.getInfo();
+    const fieldName = graphqlInfo.fieldName;
+
+    // Ensure there is always an AgentInfo
+    let resultAgentInfo = agentInfo;
+
+    if (agentInfo) {
+      this.authorizationService.logAgentInfo(agentInfo);
+    } else {
+      this.logger.warn?.(
+        `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
+        LogContext.AUTH
+      );
+      resultAgentInfo = this.createAnonymousAgentInfo();
+    }
+
+    // Apply any rules
+    const privilege = this.reflector.get<AuthorizationPrivilege>(
+      'privilege',
+      _context.getHandler()
+    );
+    if (privilege) {
+      const fieldParent = gqlContext.getRoot();
+      if (fieldParent.authorizationId && !fieldParent.authorization) {
+        this.logger.error(
+          {
+            message: 'No authorization policy present in Guard',
+            fieldName,
+            fieldParent,
+            authorizationId: fieldParent.authorizationId,
+          },
+          undefined,
+          LogContext.CODE_ERRORS
+        );
+        this.entityManager
+          .findOne(AuthorizationPolicy, {
+            where: { id: fieldParent.authorizationId },
+          })
+          .then((authorization: any) => {
+            fieldParent.authorization = authorization;
+          })
+          .catch((error: any) => {
+            this.logger.error(
+              `Error loading authorization with id ${fieldParent.authorizationId}: ${error}`,
+              undefined,
+              LogContext.AUTH_GUARD
+            );
+          })
+          .finally(() => {
+            this.executeAuthorizationRule(
+              privilege,
+              fieldParent,
+              fieldName,
+              resultAgentInfo
+            );
+          });
+      } else {
+        this.executeAuthorizationRule(
+          privilege,
+          fieldParent,
+          fieldName,
+          resultAgentInfo
+        );
+      }
+    }
+
+    return resultAgentInfo;
+  }
 
   private executeAuthorizationRule(
     privilege: AuthorizationPrivilege,
