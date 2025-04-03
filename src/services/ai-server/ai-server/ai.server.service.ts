@@ -292,7 +292,8 @@ export class AiServerService {
         content: message.message,
         role,
       });
-      if (messages.length === limit - 1) {
+
+      if (messages.length === limit) {
         break;
       }
     }
@@ -300,6 +301,8 @@ export class AiServerService {
       const callout = await this.roomControllerService.getRoomCalloutOrFail(
         roomDetails.roomID
       );
+      // remove oldest message in order to keep the historyu length at limit
+      messages.pop();
       messages.unshift({
         content: callout.framing.profile.description || '',
         role: MessageSenderRole.HUMAN,
