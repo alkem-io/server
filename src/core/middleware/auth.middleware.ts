@@ -11,9 +11,7 @@ import {
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-  constructor() {}
-
-  async use(req: Request, res: Response, next: NextFunction) {
+  use(req: Request, res: Response, next: NextFunction) {
     /**
      * 1. the 'authenticate' method invokes the named strategies with the given options
      * 2. invokes the callback after the validate() method of the strategy is called
