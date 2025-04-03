@@ -39,7 +39,7 @@ import { RegistrationModule } from '@services/api/registration/registration.modu
 import { RolesModule } from '@services/api/roles/roles.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
-import { SessionExtendMiddleware, AuthMiddleware } from '@src/core/middleware';
+import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
@@ -91,6 +91,7 @@ import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.modul
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { SearchModule } from '@services/api/search/search.module';
 import { ApmApolloPlugin } from './apm/plugins';
+import { AuthInterceptor } from '@core/interceptors';
 
 @Module({
   imports: [
@@ -226,6 +227,7 @@ import { ApmApolloPlugin } from './apm/plugins';
               /***
                * subscriptions-transport-ws required passing the request object
                * through the onConnect method
+               * required for passport.js to execute the strategy against the incoming headers
                */
               onConnect: (
                 connectionParams: Record<string, any>,
@@ -313,6 +315,10 @@ import { ApmApolloPlugin } from './apm/plugins';
   providers: [
     {
       provide: APP_INTERCEPTOR,
+      useClass: AuthInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
       useClass: DataLoaderInterceptor,
     },
     {
@@ -343,7 +349,7 @@ import { ApmApolloPlugin } from './apm/plugins';
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(RequestLoggerMiddleware, SessionExtendMiddleware, AuthMiddleware)
+      .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
       .forRoutes('/');
   }
 }
