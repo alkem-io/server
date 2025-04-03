@@ -1,4 +1,4 @@
-import { LogContext } from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
@@ -12,6 +12,7 @@ import { AlkemioConfig } from '@src/types';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
 import { AUTH_STRATEGY_OATHKEEPER_JWT } from './strategy.names';
+import { SessionExpiredException } from '@common/exceptions/session.expired.exception';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(
@@ -51,9 +52,21 @@ export class OryStrategy extends PassportStrategy(
       return this.authService.createAgentInfo();
     }
 
+    if (hasExpired(Number(payload.session.expires_at))) {
+      throw new SessionExpiredException(
+        'Session has expired!',
+        LogContext.AUTH,
+        AlkemioErrorStatus.SESSION_EXPIRED
+      );
+    }
+
     const session = verifyIdentityIfOidcAuth(payload.session);
     const oryIdentity = session.identity as OryDefaultIdentitySchema;
 
     return this.authService.createAgentInfo(oryIdentity, session);
   }
 }
+
+const hasExpired = (exp: number): boolean => {
+  return Date.now() >= exp * 1000;
+};
