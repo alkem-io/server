@@ -39,7 +39,7 @@ export class OryStrategy extends PassportStrategy(
         { infer: true }
       ),
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
+      ignoreExpiration: true,
     });
   }
 
