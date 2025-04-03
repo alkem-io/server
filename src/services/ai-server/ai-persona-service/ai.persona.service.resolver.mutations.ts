@@ -21,7 +21,6 @@ export class AiPersonaServiceResolverMutations {
     private authorizationService: AuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAiPersonaService, {
     description: 'Updates the specified AI Persona.',
   })
@@ -47,7 +46,6 @@ export class AiPersonaServiceResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAiPersonaService, {
     description: 'Deletes the specified AiPersonaService.',
   })

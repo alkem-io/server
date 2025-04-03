@@ -26,7 +26,6 @@ export class ActivityLogResolverQueries {
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [IActivityLogEntry], {
     nullable: false,
     description: 'Retrieve the ActivityLog for the specified Collaboration',

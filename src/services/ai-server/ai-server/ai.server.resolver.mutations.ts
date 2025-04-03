@@ -47,7 +47,6 @@ export class AiServerResolverMutations {
     private logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IMigrateEmbeddingsResponse, {
     description: 'Deletes collections nameID-...',
   })
@@ -119,7 +118,6 @@ export class AiServerResolverMutations {
     return { success: true };
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAiServer, {
     description: 'Reset the Authorization Policy on the specified AiServer.',
   })
@@ -139,7 +137,6 @@ export class AiServerResolverMutations {
     return await this.aiServerService.getAiServerOrFail();
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAiPersonaService, {
     description: 'Creates a new AiPersonaService on the aiServer.',
   })

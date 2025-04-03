@@ -22,11 +22,11 @@ export class AiServerResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('defaultAiPersonaService', () => IAiPersonaService, {
     nullable: false,
     description: 'The default AiPersonaService in use on the aiServer.',
   })
-  @UseGuards(GraphqlGuard)
   async defaultAiPersonaService(): Promise<IAiPersonaService> {
     return await this.aiServerService.getDefaultAiPersonaServiceOrFail();
   }

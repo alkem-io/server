@@ -36,7 +36,6 @@ export class AdminCommunicationResolverQueries {
     nullable: false,
     description: 'All Users that are members of a given room',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async adminCommunicationMembership(
     @Args('communicationData', { nullable: false })
@@ -59,7 +58,6 @@ export class AdminCommunicationResolverQueries {
     description:
       'Usage of the messaging platform that are not tied to the domain model.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async adminCommunicationOrphanedUsage(
     @CurrentUser() agentInfo: AgentInfo

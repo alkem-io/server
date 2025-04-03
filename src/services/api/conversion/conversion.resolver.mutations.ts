@@ -57,7 +57,6 @@ export class ConversionResolverMutations {
       );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Move an L1 Space up in the hierarchy, to be a L0 Space.',
   })
@@ -84,7 +83,6 @@ export class ConversionResolverMutations {
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Move an L2 Space up in the hierarchy, to be a L1 Space.',
   })
@@ -117,7 +115,6 @@ export class ConversionResolverMutations {
     return await this.spaceService.getSpaceOrFail(spaceL1.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description:
       'Move an L1 Space down in the hierarchy within the same L0 Space, to be a L2 Space. \
@@ -154,7 +151,6 @@ export class ConversionResolverMutations {
     return await this.spaceService.getSpaceOrFail(spaceL2.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVirtualContributor, {
     description:
       'Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.',

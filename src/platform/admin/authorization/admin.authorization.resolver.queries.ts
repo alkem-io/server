@@ -26,7 +26,6 @@ export class AdminAuthorizationResolverQueries {
     description:
       'All Users that hold credentials matching the supplied criteria.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async usersWithAuthorizationCredential(
     @Args('credentialsCriteriaData', { nullable: false })
@@ -49,7 +48,6 @@ export class AdminAuthorizationResolverQueries {
     description:
       'Privileges assigned to a User (based on held credentials) given an Authorization defnition.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async userAuthorizationPrivileges(
     @Args('userAuthorizationPrivilegesData', { nullable: false })

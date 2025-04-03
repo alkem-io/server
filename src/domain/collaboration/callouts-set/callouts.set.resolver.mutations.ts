@@ -45,7 +45,6 @@ export class CalloutsSetResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Create a new Callout on the CalloutsSet.',
   })
@@ -140,7 +139,6 @@ export class CalloutsSetResolverMutations {
     return await this.calloutService.getCalloutOrFail(callout.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => [ICallout], {
     description:
       'Update the sortOrder field of the supplied Callouts to increase as per the order that they are provided in.',

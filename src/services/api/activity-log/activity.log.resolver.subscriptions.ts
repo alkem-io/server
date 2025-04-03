@@ -28,7 +28,6 @@ export class ActivityLogResolverSubscriptions {
     private readonly activityLogService: ActivityLogService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @TypedSubscription<
     ActivityCreatedSubscriptionPayload,
     { input: ActivityCreatedSubscriptionInput }

@@ -23,7 +23,6 @@ export class AdminWhiteboardResolverMutations {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => AdminWhiteboardFilesResult, {
     description:
       'Uploads the files from the Whiteboard content into the StorageBucket of that Whiteboard.',

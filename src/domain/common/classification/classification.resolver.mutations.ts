@@ -18,7 +18,6 @@ export class ClassificationResolverMutations {
     private classificationService: ClassificationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITagset, {
     description: 'Updates the specified Tagset.',
   })

@@ -64,7 +64,6 @@ export class CalloutResolverMutations {
     private postCreatedSubscription: PubSubEngine
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Delete a Callout.',
   })
@@ -83,7 +82,6 @@ export class CalloutResolverMutations {
     return await this.calloutService.deleteCallout(deleteData.ID);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Update a Callout.',
   })
@@ -102,7 +100,6 @@ export class CalloutResolverMutations {
     return await this.calloutService.updateCallout(callout, calloutData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Update the visibility of the specified Callout.',
   })
@@ -155,7 +152,6 @@ export class CalloutResolverMutations {
     return savedCallout;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description:
       'Update the information describing the publishing of the specified Callout.',
@@ -181,7 +177,6 @@ export class CalloutResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutContribution, {
     description: 'Create a new Contribution on the Callout.',
   })
@@ -422,7 +417,6 @@ export class CalloutResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => [ICalloutContribution], {
     description:
       'Update the sortOrder field of the Contributions of s Callout.',

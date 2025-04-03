@@ -18,7 +18,6 @@ export class AiPersonaServiceResolverFields {
     private aiPersonaServiceService: AiPersonaServiceService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Virtual.',

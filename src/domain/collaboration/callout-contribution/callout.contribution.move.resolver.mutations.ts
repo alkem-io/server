@@ -20,7 +20,6 @@ export class CalloutContributionMoveResolverMutations {
     private calloutContributionMoveService: CalloutContributionMoveService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutContribution, {
     description: 'Moves the specified Contribution to another Callout.',
   })

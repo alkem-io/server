@@ -30,7 +30,6 @@ export class ChatGuidanceResolverMutations {
     private guidanceReporterService: GuidanceReporterService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IRoom, {
     nullable: true,
     description: 'Create a guidance chat room.',
@@ -71,7 +70,6 @@ export class ChatGuidanceResolverMutations {
     return roomCreated;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IMessageGuidanceQuestionResult, {
     nullable: false,
     description: 'Ask the chat engine for guidance.',
@@ -97,7 +95,6 @@ export class ChatGuidanceResolverMutations {
     return this.chatGuidanceService.askQuestion(chatData, agentInfo);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Resets the interaction with the chat engine.',
   })
@@ -117,7 +114,6 @@ export class ChatGuidanceResolverMutations {
     return this.chatGuidanceService.resetUserHistory(agentInfo);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'User vote if a specific answer is relevant.',
   })

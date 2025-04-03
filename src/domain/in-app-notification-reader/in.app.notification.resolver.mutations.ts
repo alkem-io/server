@@ -17,7 +17,6 @@ export class InAppNotificationResolverMutations {
     private readonly inAppNotificationReader: InAppNotificationReader
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => InAppNotificationState, {
     description: 'Update notification state and return the notification.',
   })

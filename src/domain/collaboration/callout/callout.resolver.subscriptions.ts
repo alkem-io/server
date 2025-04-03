@@ -31,7 +31,6 @@ export class CalloutResolverSubscriptions {
     private authorizationService: AuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @TypedSubscription<CalloutPostCreatedPayload, CalloutPostCreatedArgs>(
     () => CalloutPostCreated,
     {

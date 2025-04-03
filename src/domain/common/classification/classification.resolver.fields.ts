@@ -14,7 +14,6 @@ import { LogContext } from '@common/enums/logging.context';
 export class ClassificationResolverFields {
   constructor() {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('tagsets', () => [ITagset], {
     nullable: true,
     description: 'The classification tagsets.',
@@ -26,7 +25,6 @@ export class ClassificationResolverFields {
     return loader.load(classification.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('tagset', () => ITagset, {
     nullable: true,
     description: 'The default or named tagset.',

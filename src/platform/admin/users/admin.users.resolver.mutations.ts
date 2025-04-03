@@ -25,7 +25,6 @@ export class AdminUsersMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description:
       'Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.',

@@ -18,7 +18,6 @@ export class ApplicationResolverMutations {
     private applicationService: ApplicationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Removes the specified User Application.',
   })

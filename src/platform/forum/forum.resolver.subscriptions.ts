@@ -32,7 +32,6 @@ export class ForumResolverSubscriptions {
     private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Subscription(() => IDiscussion, {
     description: 'Receive updates on Discussions',
     async resolve(

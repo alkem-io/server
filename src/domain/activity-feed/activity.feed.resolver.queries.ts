@@ -23,7 +23,6 @@ export class ActivityFeedResolverQueries {
     private feedService: ActivityFeedService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => ActivityFeed, {
     nullable: false,
     description: 'Activity events related to the current user.',
@@ -46,7 +45,6 @@ export class ActivityFeedResolverQueries {
     return this.feedService.getActivityFeed(agentInfo, { ...args, pagination });
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [IActivityLogEntry], {
     nullable: false,
     description:

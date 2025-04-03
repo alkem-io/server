@@ -42,7 +42,6 @@ export class ForumResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IDiscussion, {
     description: 'Creates a new Discussion as part of this Forum.',
   })

@@ -21,7 +21,6 @@ import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
 export class CollaborationResolverFields {
   constructor(private collaborationService: CollaborationService) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('innovationFlow', () => IInnovationFlow, {
     nullable: false,
     description: 'The InnovationFlow for the Collaboration.',

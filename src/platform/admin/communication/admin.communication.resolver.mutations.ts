@@ -33,7 +33,6 @@ export class AdminCommunicationResolverMutations {
       );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description:
       'Ensure all community members are registered for communications.',
@@ -55,7 +54,6 @@ export class AdminCommunicationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Remove an orphaned room from messaging platform.',
   })
@@ -76,7 +74,6 @@ export class AdminCommunicationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Allow updating the state flags of a particular rule.',
   })

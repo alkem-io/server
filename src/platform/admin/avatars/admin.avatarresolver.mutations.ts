@@ -29,7 +29,6 @@ export class AdminSearchContributorsMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IProfile, {
     description:
       'Update the Avatar on the Profile with the spedified profileID to be stored as a Document.',

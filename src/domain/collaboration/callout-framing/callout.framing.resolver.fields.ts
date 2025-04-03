@@ -15,7 +15,6 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 export class CalloutFramingResolverFields {
   constructor(private calloutFramingService: CalloutFramingService) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for framing the associated Callout.',
@@ -29,7 +28,6 @@ export class CalloutFramingResolverFields {
     return loader.load(calloutFraming.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('whiteboard', () => IWhiteboard, {
     nullable: true,
     description: 'The Whiteboard for framing the associated Callout.',

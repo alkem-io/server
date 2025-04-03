@@ -1,6 +1,4 @@
 import { Float, Resolver } from '@nestjs/graphql';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -32,7 +30,6 @@ export class MeResolverFields {
     return `me-${agentInfo.userID}`;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IUser, {
     nullable: true,
     description:
@@ -54,7 +51,6 @@ export class MeResolverFields {
     return this.userService.getUserOrFail(agentInfo.userID);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('communityInvitationsCount', () => Number, {
     description:
       'The number of invitations the current authenticated user can act on.',
@@ -81,7 +77,6 @@ export class MeResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('communityInvitations', () => [CommunityInvitationResult], {
     description: 'The invitations the current authenticated user can act on.',
   })
@@ -107,7 +102,6 @@ export class MeResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('communityApplications', () => [CommunityApplicationResult], {
     description:
       'The community applications current authenticated user can act on.',
@@ -134,7 +128,6 @@ export class MeResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => [CommunityMembershipResult], {
     description: 'The hierarchy of the Spaces the current user is a member.',
   })
@@ -152,7 +145,6 @@ export class MeResolverFields {
     return this.meService.getSpaceMembershipsHierarchical(agentInfo, limit);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => [CommunityMembershipResult], {
     description: 'The Spaces the current user is a member of as a flat list.',
   })
@@ -162,7 +154,6 @@ export class MeResolverFields {
     return this.meService.getSpaceMembershipsFlat(agentInfo);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => [MySpaceResults], {
     description: 'The Spaces I am contributing to',
   })

@@ -20,7 +20,6 @@ export class DomainPlatformSettingsResolverMutations {
     private readonly authorizationService: AuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Updates the specified Organization platform settings.',
   })

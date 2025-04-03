@@ -30,7 +30,6 @@ export class StorageAccessController {
     private readonly authorizationService: AuthorizationService
   ) {}
 
-  @UseGuards(RestGuard)
   @Get('document/:id')
   async document(
     @CurrentUser() agentInfo: AgentInfo,

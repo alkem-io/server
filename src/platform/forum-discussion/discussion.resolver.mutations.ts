@@ -20,7 +20,6 @@ export class DiscussionResolverMutations {
     private discussionService: DiscussionService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IDiscussion, {
     description: 'Deletes the specified Discussion.',
   })
@@ -40,7 +39,6 @@ export class DiscussionResolverMutations {
     return await this.discussionService.deleteDiscussion(deleteData.ID);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IDiscussion, {
     description: 'Updates the specified Discussion.',
   })

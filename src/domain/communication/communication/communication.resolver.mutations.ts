@@ -27,7 +27,6 @@ export class CommunicationResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Send message to a User.',
   })
@@ -53,7 +52,7 @@ export class CommunicationResolverMutations {
 
     return true;
   }
-  @UseGuards(GraphqlGuard)
+
   @Mutation(() => Boolean, {
     description: 'Send message to an Organization.',
   })
@@ -79,7 +78,6 @@ export class CommunicationResolverMutations {
     return true;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Send message to Community Leads.',
   })

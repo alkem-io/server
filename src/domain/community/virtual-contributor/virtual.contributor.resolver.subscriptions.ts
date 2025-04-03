@@ -24,7 +24,6 @@ export class VirtualContributorResolverSubscriptions {
     private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @TypedSubscription<
     VirtualContributorUpdatedSubscriptionPayload,
     VirtualContributorUpdatedSubscriptionArgs

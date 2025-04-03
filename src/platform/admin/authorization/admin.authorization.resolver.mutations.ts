@@ -50,7 +50,6 @@ export class AdminAuthorizationResolverMutations {
       );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Grants an authorization credential to a User.',
   })
@@ -82,7 +81,6 @@ export class AdminAuthorizationResolverMutations {
     return user;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Removes an authorization credential from a User.',
   })
@@ -111,7 +109,6 @@ export class AdminAuthorizationResolverMutations {
     return user;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Grants an authorization credential to an Organization.',
   })
@@ -132,7 +129,6 @@ export class AdminAuthorizationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Removes an authorization credential from an Organization.',
   })
@@ -153,7 +149,6 @@ export class AdminAuthorizationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
     description: 'Reset the Authorization Policy on all entities',
   })
@@ -173,7 +168,6 @@ export class AdminAuthorizationResolverMutations {
     return this.authResetService.publishResetAll();
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAuthorizationPolicy, {
     description:
       'Reset the specified Authorization Policy to global admin privileges',
@@ -200,7 +194,6 @@ export class AdminAuthorizationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Refresh the Bodies of Knowledge on All VCs',
   })
