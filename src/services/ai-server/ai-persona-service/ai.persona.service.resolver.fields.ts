@@ -1,10 +1,8 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { AiPersonaService } from './ai.persona.service.entity';
 import { AiPersonaServiceService } from './ai.persona.service.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { GraphqlGuard } from '@core/authorization';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';

@@ -1,8 +1,6 @@
 import { Profiling } from '@common/decorators';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';

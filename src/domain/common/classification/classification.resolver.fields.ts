@@ -1,6 +1,4 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IClassification } from './classification.interface';
 import { ILoader } from '@core/dataloader/loader.interface';

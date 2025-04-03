@@ -1,4 +1,3 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { ICredential } from './credential.interface';

@@ -1,12 +1,10 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialMetadataOutput } from '@domain/agent/verified-credential/dto/verified.credential.dto.metadata';
 import { UUID } from '@domain/common/scalars';
-import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';

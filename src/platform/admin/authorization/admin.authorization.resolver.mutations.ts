@@ -1,10 +1,8 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-
 import { IUser } from '@domain/community/user/user.interface';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';

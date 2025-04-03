@@ -1,7 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';

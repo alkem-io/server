@@ -1,7 +1,6 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from './user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';

@@ -1,7 +1,5 @@
 import { Profiling, CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { DomainPlatformSettingsService } from './domain.platform.settings.service';
 import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';

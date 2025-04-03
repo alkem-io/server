@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';

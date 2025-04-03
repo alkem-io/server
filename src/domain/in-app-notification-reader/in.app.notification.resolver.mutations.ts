@@ -1,7 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
-import { GraphqlGuard } from '@core/authorization';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';

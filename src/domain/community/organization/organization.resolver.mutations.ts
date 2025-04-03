@@ -1,10 +1,8 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { OrganizationService } from './organization.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { UpdateOrganizationInput } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';

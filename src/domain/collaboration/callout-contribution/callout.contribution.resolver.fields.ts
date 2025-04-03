@@ -1,6 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
+import { Inject } from '@nestjs/common/decorators';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { Profiling } from '@common/decorators';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';

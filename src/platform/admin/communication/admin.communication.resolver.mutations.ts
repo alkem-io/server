@@ -2,8 +2,6 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
