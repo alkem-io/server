@@ -33,11 +33,11 @@ export class VirtualContributorResolverFields {
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: true,
     description: 'The Account of the Virtual Contributor.',
   })
-  @UseGuards(GraphqlGuard)
   async account(
     @Parent() virtualContributor: VirtualContributor,
     @Loader(AccountLoaderCreator, { parentClassRef: VirtualContributor })
@@ -63,11 +63,11 @@ export class VirtualContributorResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this Virtual.',
   })
-  @UseGuards(GraphqlGuard)
   async profile(
     @Parent() virtualContributor: VirtualContributor,
     @CurrentUser() agentInfo: AgentInfo,
@@ -92,11 +92,11 @@ export class VirtualContributorResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('aiPersona', () => IAiPersona, {
     nullable: true,
     description: 'The AI persona being used by this virtual contributor',
   })
-  @UseGuards(GraphqlGuard)
   async aiPersona(
     @Parent() virtualContributor: VirtualContributor
   ): Promise<IAiPersona> {
@@ -109,7 +109,6 @@ export class VirtualContributorResolverFields {
     nullable: true,
     description: 'The KnowledgeBase being used by this virtual contributor',
   })
-  @UseGuards(GraphqlGuard)
   async knowledgeBase(
     @Parent() virtualContributor: VirtualContributor,
     @CurrentUser() agentInfo: AgentInfo

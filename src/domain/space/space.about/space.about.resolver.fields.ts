@@ -15,8 +15,6 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {
@@ -86,7 +84,6 @@ export class SpaceAboutResolverFields {
     return membership;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('guidelines', () => ICommunityGuidelines, {
     nullable: false,
     description: 'The guidelines for members of this Community.',
