@@ -15,6 +15,8 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { UseGuards } from '@nestjs/common';
+import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => ISpaceAbout)
 export class SpaceAboutResolverFields {
@@ -37,6 +39,7 @@ export class SpaceAboutResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('metrics', () => [INVP], {
     nullable: true,
     description: 'Metrics about activity within this Space.',
@@ -46,6 +49,7 @@ export class SpaceAboutResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('provider', () => IContributor, {
     nullable: false,
     description: 'The Space provider (host).',
@@ -55,6 +59,7 @@ export class SpaceAboutResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('isContentPublic', () => Boolean, {
     nullable: false,
     description: 'Is the content of this Space visible to non-Members?.',
@@ -67,6 +72,7 @@ export class SpaceAboutResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('membership', () => SpaceAboutMembership, {
     nullable: false,
     description: 'The membership information for this Space.',

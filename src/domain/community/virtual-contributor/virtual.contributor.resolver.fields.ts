@@ -79,6 +79,7 @@ export class VirtualContributorResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
@@ -128,6 +129,7 @@ export class VirtualContributorResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('provider', () => IContributor, {
     nullable: false,
     description: 'The Virtual Contributor provider.',
@@ -139,6 +141,7 @@ export class VirtualContributorResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('status', () => VirtualContributorStatus, {
     nullable: false,
     description: 'The status of the virtual contributor',

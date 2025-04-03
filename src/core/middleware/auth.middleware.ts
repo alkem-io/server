@@ -1,12 +1,5 @@
-import {
-  Inject,
-  Injectable,
-  LoggerService,
-  NestMiddleware,
-} from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { NextFunction, Request, Response } from 'express';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthenticationService } from '@core/authentication/authentication.service';
 import passport from 'passport';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthenticationException } from '@common/exceptions';
