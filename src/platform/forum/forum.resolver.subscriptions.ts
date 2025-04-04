@@ -1,8 +1,7 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -32,7 +31,6 @@ export class ForumResolverSubscriptions {
     private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Subscription(() => IDiscussion, {
     description: 'Receive updates on Discussions',
     async resolve(

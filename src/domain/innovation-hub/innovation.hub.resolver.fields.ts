@@ -13,6 +13,8 @@ import { AccountLoaderCreator } from '@core/dataloader/creators/loader.creators/
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { UseGuards } from '@nestjs/common';
+import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => IInnovationHub)
 export class InnovationHubResolverFields {
@@ -58,6 +60,7 @@ export class InnovationHubResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: false,
     description: 'The Innovation Hub account.',
@@ -72,6 +75,7 @@ export class InnovationHubResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('provider', () => IContributor, {
     nullable: false,
     description: 'The InnovationHub provider.',

@@ -12,11 +12,12 @@ import { AlkemioConfig } from '@src/types';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { Session } from '@ory/kratos-client';
+import { AUTH_STRATEGY_OATHKEEPER_API_TOKEN } from './strategy.names';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
   Strategy,
-  'oathkeeper-api-token'
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN
 ) {
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,

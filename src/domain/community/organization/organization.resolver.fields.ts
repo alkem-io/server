@@ -41,8 +41,6 @@ export class OrganizationResolverFields {
     private groupService: UserGroupService
   ) {}
 
-  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
     description: 'Groups defined on this organization.',
@@ -67,8 +65,6 @@ export class OrganizationResolverFields {
     return this.organizationService.getUserGroups(organization);
   }
 
-  // Note: do not check for READ so that it is accessible to check for authorization
-  @UseGuards(GraphqlGuard)
   @ResolveField('roleSet', () => IRoleSet, {
     nullable: false,
     description: 'The RoleSet for this Organization.',
@@ -77,7 +73,6 @@ export class OrganizationResolverFields {
     return this.organizationService.getRoleSet(organization);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: true,
     description: 'Group defined on this organization.',
@@ -121,12 +116,10 @@ export class OrganizationResolverFields {
     nullable: false,
     description: 'The settings for this Organization.',
   })
-  @UseGuards(GraphqlGuard)
   settings(@Parent() organization: IOrganization): IOrganizationSettings {
     return organization.settings;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: true,
     description: 'The account hosted by this Organization.',
@@ -162,7 +155,6 @@ export class OrganizationResolverFields {
     nullable: false,
     description: 'The profile for this Organization.',
   })
-  @UseGuards(GraphqlGuard)
   async profile(
     @Parent() organization: Organization,
     @CurrentUser() agentInfo: AgentInfo,
@@ -203,12 +195,12 @@ export class OrganizationResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description:
       'The StorageAggregator for managing storage buckets in use by this Organization',
   })
-  @UseGuards(GraphqlGuard)
   async storageAggregator(
     @Parent() organization: Organization,
     @Loader(OrganizationStorageAggregatorLoaderCreator)

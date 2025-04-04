@@ -21,11 +21,11 @@ export class LibraryResolverFields {
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('innovationPacks', () => [IInnovationPack], {
     nullable: false,
     description: 'The Innovation Packs in the platform Innovation Library.',
   })
-  @UseGuards(GraphqlGuard)
   async innovationPacks(
     @Args('queryData', { type: () => InnovationPacksInput, nullable: true })
     queryData?: InnovationPacksInput
@@ -41,12 +41,12 @@ export class LibraryResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('templates', () => [ITemplateResult], {
     nullable: false,
     description:
       'The Templates in the Innovation Library, together with information about the InnovationPack.',
   })
-  @UseGuards(GraphqlGuard)
   async templates(
     @Args('filter', {
       nullable: true,
@@ -60,7 +60,6 @@ export class LibraryResolverFields {
   }
 
   // TODO: these may want later to be on a Store entity
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => [IVirtualContributor], {
     nullable: false,
     description: 'The VirtualContributors listed on this platform',
@@ -69,7 +68,6 @@ export class LibraryResolverFields {
     return await this.libraryService.getListedVirtualContributors();
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => [IInnovationHub], {
     nullable: false,
     description: 'The InnovationHub listed on this platform',

@@ -1,6 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
+import { Inject } from '@nestjs/common/decorators';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { Profiling } from '@common/decorators';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -23,7 +22,6 @@ export class CalloutContributionResolverFields {
     private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('whiteboard', () => IWhiteboard, {
     nullable: true,
     description: 'The Whiteboard that was contributed.',
@@ -37,7 +35,6 @@ export class CalloutContributionResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('link', () => ILink, {
     nullable: true,
     description: 'The Link that was contributed.',
@@ -49,7 +46,6 @@ export class CalloutContributionResolverFields {
     return await this.calloutContributionService.getLink(calloutContribution);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('post', () => IPost, {
     nullable: true,
     description: 'The Post that was contributed.',

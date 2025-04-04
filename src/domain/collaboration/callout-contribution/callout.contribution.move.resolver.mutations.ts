@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -20,7 +18,6 @@ export class CalloutContributionMoveResolverMutations {
     private calloutContributionMoveService: CalloutContributionMoveService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutContribution, {
     description: 'Moves the specified Contribution to another Callout.',
   })

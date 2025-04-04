@@ -33,11 +33,11 @@ export class KnowledgeBaseResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('calloutsSet', () => ICalloutsSet, {
     nullable: false,
     description: 'The calloutsSet with Callouts in use by this KnowledgeBase',
   })
-  @UseGuards(GraphqlGuard)
   async calloutsSet(
     @Parent() knowledgeBase: IKnowledgeBase,
     @Loader(KnowledgeBaseCalloutsSetLoaderCreator) loader: ILoader<ICalloutsSet>
