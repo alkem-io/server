@@ -13,11 +13,13 @@ import { PlatformModule } from '@platform/platform/platform.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { TemplateModule } from '@domain/template/template/template.module';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     SpaceModule,
+    AccountHostModule,
     RoleSetModule,
     AuthorizationModule,
     AuthorizationPolicyModule,

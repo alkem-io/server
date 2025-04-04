@@ -54,13 +54,13 @@ selfservice:
       ui_url: http://localhost:3000/settings
       privileged_session_max_age: 15m
       after:
-        default_browser_return_url: http://localhost:3000/profile
+        default_browser_return_url: http://localhost:3000
 
     recovery:
       enabled: true
       ui_url: http://localhost:3000/recovery
       after:
-        default_browser_return_url: http://localhost:3000/profile
+        default_browser_return_url: http://localhost:3000
 
     verification:
       enabled: true

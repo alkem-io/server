@@ -4,12 +4,13 @@ import {
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
 } from '@src/common/constants';
-import { IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, MaxLength, MinLength } from 'class-validator';
 
 @InputType()
 @ObjectType('CreateReferenceData')
 export class CreateReferenceInput {
   @Field({ nullable: false })
+  @MinLength(3)
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
