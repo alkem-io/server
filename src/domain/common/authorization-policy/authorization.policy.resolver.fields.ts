@@ -5,8 +5,6 @@ import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/
 import { AuthorizationPolicyService } from './authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 
@@ -56,7 +54,6 @@ export class AuthorizationPolicyResolverFields {
     return this.authorizationPolicyService.getPrivilegeRules(authorization);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('myPrivileges', () => [AuthorizationPrivilege], {
     nullable: true,
     description:

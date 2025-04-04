@@ -9,11 +9,12 @@ import { OryApiStrategy } from './ory.api.strategy';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { AUTH_STRATEGY_OATHKEEPER_JWT } from './strategy.names';
 @Module({
   imports: [
     PassportModule.register({
       session: false,
-      defaultStrategy: 'oathkeeper-jwt',
+      defaultStrategy: AUTH_STRATEGY_OATHKEEPER_JWT,
     }),
     AuthenticationAgentInfoModule,
     KratosModule,

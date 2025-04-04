@@ -1,7 +1,6 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -23,7 +22,6 @@ export class AdminSearchIngestResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
     description:
       'Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.',

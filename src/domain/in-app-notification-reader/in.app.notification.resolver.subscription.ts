@@ -4,8 +4,6 @@ import { CurrentUser, TypedSubscription } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { InAppNotificationReceivedSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
 import { ForbiddenException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -15,7 +13,6 @@ import { LogContext } from '@common/enums';
 export class InAppNotificationResolverSubscription {
   constructor(private subscriptionService: SubscriptionReadService) {}
 
-  @UseGuards(GraphqlGuard)
   @TypedSubscription<InAppNotificationReceivedSubscriptionPayload, never>(
     () => InAppNotification,
     {

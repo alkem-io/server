@@ -1,4 +1,4 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
 import { SpaceService } from './space.service';
@@ -6,7 +6,6 @@ import { ISpace } from './space.interface';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
 import { ExploreSpacesInput } from './dto/explore.spaces.dto.input';
 import { InnovationHub } from '@domain/innovation-hub/types';
-import { GraphqlGuard } from '@core/authorization';
 import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -20,7 +19,6 @@ export class SpaceResolverQueries {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [ISpace], {
     nullable: false,
     description:
@@ -37,7 +35,6 @@ export class SpaceResolverQueries {
     return this.spaceService.getSpacesForInnovationHub(innovationHub);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => PaginatedSpaces, {
     nullable: false,
     description: 'The Spaces on this platform',
@@ -49,7 +46,6 @@ export class SpaceResolverQueries {
     return this.spaceService.getPaginatedSpaces(pagination, filter);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [ISpace], {
     nullable: false,
     description: 'Active Spaces only, order by most active in the past X days.',

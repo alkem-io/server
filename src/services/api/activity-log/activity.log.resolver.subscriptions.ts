@@ -1,5 +1,5 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -8,7 +8,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { ActivityCreatedSubscriptionPayload } from './dto/subscriptions/activity.log.dto.activity.created.subscription.payload';
 import { ActivityCreatedSubscriptionInput } from './dto/subscriptions/activity.log.activity.created.subscription.input';
 import { ActivityCreatedSubscriptionResult } from './dto/subscriptions/activity.created.dto';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
 import { LogContext } from '@common/enums/logging.context';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -28,7 +27,6 @@ export class ActivityLogResolverSubscriptions {
     private readonly activityLogService: ActivityLogService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @TypedSubscription<
     ActivityCreatedSubscriptionPayload,
     { input: ActivityCreatedSubscriptionInput }

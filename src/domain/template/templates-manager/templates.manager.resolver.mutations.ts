@@ -1,4 +1,4 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -6,7 +6,6 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UpdateTemplateDefaultTemplateInput } from '../template-default/dto/template.default.dto.update';
 import { ITemplateDefault } from '../template-default/template.default.interface';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TemplateDefaultService } from '../template-default/template.default.service';
 import {
@@ -27,7 +26,6 @@ export class TemplatesManagerResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplateDefault, {
     description: 'Updates the specified Template Defaults.',
   })

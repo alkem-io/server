@@ -1,9 +1,8 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { ForumService } from './forum.service';
 import { CurrentUser } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
@@ -42,7 +41,6 @@ export class ForumResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IDiscussion, {
     description: 'Creates a new Discussion as part of this Forum.',
   })

@@ -8,8 +8,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
@@ -21,7 +19,6 @@ export class VirtualContributorResolverQueries {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [IVirtualContributor], {
     nullable: false,
     description:
@@ -46,7 +43,6 @@ export class VirtualContributorResolverQueries {
     return await this.virtualContributorService.getVirtualContributors(args);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => IVirtualContributor, {
     nullable: false,
     description: 'A particular VirtualContributor',
