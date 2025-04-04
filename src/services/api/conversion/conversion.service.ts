@@ -26,6 +26,8 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 export class ConversionService {
   constructor(
@@ -36,6 +38,7 @@ export class ConversionService {
     private templateService: TemplateService,
     private templatesManagerService: TemplatesManagerService,
     private innovationFlowService: InnovationFlowService,
+    private accountHostService: AccountHostService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -46,6 +49,7 @@ export class ConversionService {
       conversionData.spaceL1ID,
       {
         relations: {
+          agent: true,
           community: {
             roleSet: true,
           },
@@ -64,7 +68,8 @@ export class ConversionService {
       !spaceL1.collaboration ||
       !spaceL1.collaboration.innovationFlow ||
       !spaceL1.storageAggregator ||
-      !spaceL1.subspaces
+      !spaceL1.subspaces ||
+      !spaceL1.agent
     ) {
       throw new EntityNotInitializedException(
         `Unable to locate all entities on on space L1: ${spaceL1.id}`,
@@ -73,6 +78,8 @@ export class ConversionService {
     }
     const subspacesL1 = spaceL1.subspaces;
     const roleSetL1 = spaceL1.community.roleSet;
+    const agentL1 = spaceL1.agent;
+    const storageAggregatorL1 = spaceL1.storageAggregator;
 
     const spaceL0Orig = await this.spaceService.getSpaceOrFail(
       spaceL1.levelZeroSpaceID,
@@ -145,6 +152,13 @@ export class ConversionService {
       );
 
     spaceL1 = await this.spaceService.save(spaceL1);
+
+    // Ensure that the license plans for new spaces are applied
+    spaceL1.agent = await this.accountHostService.assignLicensePlansToSpace(
+      agentL1,
+      spaceL1.id,
+      account.type
+    );
     // Need to do the roleset update after
     await this.roleSetService.removeParentRoleSet(roleSetL1.id);
     // and add back in the admins
@@ -162,14 +176,58 @@ export class ConversionService {
     );
     await this.spaceService.save(spaceL0Orig);
 
-    // Now migrate all the child L2 spaces...
+    // Now migrate all the child L2 spaces...note: this needs to go through a different path than the isolated conversion L2 to L1
     for (const spaceL2 of subspacesL1) {
-      await this.convertSpaceL2ToSpaceL1OrFail({
-        spaceL2ID: spaceL2.id,
-      });
+      await this.updateChildSpaceL2ToL1(
+        spaceL2.id,
+        spaceL1,
+        storageAggregatorL1,
+        roleSetL1
+      );
     }
 
     return spaceL1;
+  }
+
+  private async updateChildSpaceL2ToL1(
+    spaceL2ID: string,
+    spaceL0: ISpace,
+    storageAggregatorL0: IStorageAggregator,
+    roleSetL0: IRoleSet
+  ): Promise<ISpace> {
+    const spaceL2 = await this.spaceService.getSpaceOrFail(spaceL2ID, {
+      relations: {
+        storageAggregator: true,
+        parentSpace: true,
+        community: {
+          roleSet: true,
+        },
+      },
+    });
+    if (
+      !spaceL2.storageAggregator ||
+      !spaceL2.parentSpace ||
+      !spaceL2.community ||
+      !spaceL2.community.roleSet
+    ) {
+      throw new EntityNotInitializedException(
+        `Unable to locate all entities on on Space L2: ${spaceL2.id}`,
+        LogContext.CONVERSION
+      );
+    }
+    const roleSetL2 = spaceL2.community.roleSet;
+
+    spaceL2.level = SpaceLevel.L1;
+    spaceL2.type = SpaceType.CHALLENGE;
+    spaceL2.parentSpace = spaceL0;
+    spaceL2.levelZeroSpaceID = spaceL0.id;
+    spaceL2.storageAggregator.parentStorageAggregator = storageAggregatorL0;
+    spaceL2.community.roleSet =
+      await this.roleSetService.setParentRoleSetAndCredentials(
+        roleSetL2,
+        roleSetL0
+      );
+    return await this.spaceService.save(spaceL2);
   }
 
   private async getInnovationFlowForSpaceL0(): Promise<IInnovationFlowState[]> {
@@ -211,23 +269,10 @@ export class ConversionService {
           community: {
             roleSet: true,
           },
-          storageAggregator: true,
-          parentSpace: {
-            storageAggregator: true,
-            parentSpace: {
-              storageAggregator: true,
-            },
-          },
         },
       }
     );
-    if (
-      !spaceL2.community ||
-      !spaceL2.storageAggregator ||
-      !spaceL2.parentSpace ||
-      !spaceL2.parentSpace.storageAggregator ||
-      !spaceL2.parentSpace.parentSpace
-    ) {
+    if (!spaceL2.community) {
       throw new EntityNotInitializedException(
         `Unable to locate all entities on on Space L2: ${spaceL2.id}`,
         LogContext.CONVERSION
@@ -273,17 +318,12 @@ export class ConversionService {
       );
     }
 
-    spaceL2.level = SpaceLevel.L1;
-    spaceL2.type = SpaceType.CHALLENGE;
-    spaceL2.parentSpace = spaceL0;
-    spaceL2.storageAggregator.parentStorageAggregator = storageAggregatorL0;
-    spaceL2.community.roleSet =
-      await this.roleSetService.setParentRoleSetAndCredentials(
-        roleSetL2,
-        roleSetL0
-      );
-
-    spaceL2 = await this.spaceService.save(spaceL2);
+    spaceL2 = await this.updateChildSpaceL2ToL1(
+      spaceL2.id,
+      spaceL0,
+      storageAggregatorL0,
+      roleSetL0
+    );
     // and add back in the admins
     for (const userAdmin of userAdmins) {
       await this.roleSetService.assignUserToRole(
@@ -292,7 +332,7 @@ export class ConversionService {
         userAdmin.id
       );
     }
-    return spaceL2;
+    return await this.spaceService.getSpaceOrFail(spaceL2.id);
   }
 
   async convertSpaceL1ToSpaceL2OrFail(
