@@ -16,7 +16,6 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { RoomIntegrationModule } from '@services/room-integration/room.integration.module';
-import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 
 @Module({
   imports: [
@@ -30,7 +29,6 @@ import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.
     CommunicationAdapterModule,
     SubscriptionServiceModule,
     RoomIntegrationModule,
-    RoomLookupModule,
   ],
   providers: [
     AiServerResolverQueries,

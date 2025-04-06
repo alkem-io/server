@@ -1,7 +1,6 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WhiteboardService } from './whiteboard.service';
 import { IWhiteboard } from './whiteboard.interface';
@@ -30,7 +29,6 @@ export class WhiteboardResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IWhiteboard, {
     description: 'Updates the specified Whiteboard.',
   })
@@ -101,7 +99,6 @@ export class WhiteboardResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IWhiteboard, {
     description: 'Deletes the specified Whiteboard.',
   })

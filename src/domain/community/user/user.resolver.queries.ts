@@ -1,12 +1,10 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialMetadataOutput } from '@domain/agent/verified-credential/dto/verified.credential.dto.metadata';
 import { UUID } from '@domain/common/scalars';
-import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -28,7 +26,6 @@ export class UserResolverQueries {
     private agentService: AgentService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [IUser], {
     nullable: false,
     description: 'The users who have profiles on this platform',
@@ -47,7 +44,6 @@ export class UserResolverQueries {
     return await this.userService.getUsersForQuery(args);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => PaginatedUsers, {
     nullable: false,
     description: 'The users who have profiles on this platform',
@@ -74,7 +70,6 @@ export class UserResolverQueries {
     return this.userService.getPaginatedUsers(pagination, withTags, filter);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => IUser, {
     nullable: false,
     description: 'A particular user, identified by the ID or by email',
@@ -93,7 +88,6 @@ export class UserResolverQueries {
     return await this.userService.getUserOrFail(id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [CredentialMetadataOutput], {
     nullable: false,
     description: 'Get supported credential metadata',

@@ -1,8 +1,7 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -32,7 +31,6 @@ export class VirtualContributorResolverMutations {
     private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVirtualContributor, {
     description: 'Updates the specified VirtualContributor.',
   })
@@ -58,7 +56,6 @@ export class VirtualContributorResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVirtualContributor, {
     description: 'Updates one of the Setting on an Organization',
   })
@@ -114,7 +111,6 @@ export class VirtualContributorResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVirtualContributor, {
     description: 'Deletes the specified VirtualContributor.',
   })
@@ -137,7 +133,6 @@ export class VirtualContributorResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description:
       'Triggers a request to the backing AI Service to refresh the knowledge that is available to it.',

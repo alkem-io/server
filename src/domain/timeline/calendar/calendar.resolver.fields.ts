@@ -21,11 +21,11 @@ export class CalendarResolverFields {
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('event', () => ICalendarEvent, {
     nullable: true,
     description: 'A single CalendarEvent',
   })
-  @UseGuards(GraphqlGuard)
   async event(
     @Parent() calendar: ICalendar,
     @CurrentUser() agentInfo: AgentInfo,

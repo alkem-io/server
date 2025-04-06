@@ -1,6 +1,5 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
-import { GraphqlGuard } from '@core/authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AccountService } from './account.service';
 import { IAccount } from './account.interface';
@@ -14,7 +13,6 @@ export class AccountResolverQueries {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [IAccount], {
     nullable: false,
     description:

@@ -109,6 +109,12 @@ import amqplib from 'amqplib';
               routingKey: 'openai-assistant',
               durable: true,
             },
+            {
+              name: eventBusConfig.invoke_engine_libra_flow,
+              exchange: eventBusConfig.exchange,
+              routingKey: 'libra-flow',
+              durable: true,
+            },
           ],
         };
       },
