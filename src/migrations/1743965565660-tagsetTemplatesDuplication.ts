@@ -16,54 +16,67 @@ export class TagsetTemplatesDuplication1743965565660
     for (const collaboration of collaborations) {
       const { id, calloutsSetId } = collaboration;
       // Get the calloutsSet
-      const calloutsSet: {
+      const [calloutsSet]: {
         id: string;
         tagsetTemplateSetId: string;
-      } = await queryRunner.query(
+      }[] = await queryRunner.query(
         `SELECT id, tagsetTemplateSetId FROM \`callouts_set\` WHERE id = ?`,
         [calloutsSetId]
       );
       if (!calloutsSet) {
-        console.log(`Collaboration ${id} has no callouts set`);
+        console.warn(`Collaboration ${id} has no callouts set`);
+        continue;
+      }
+      if (!calloutsSet.tagsetTemplateSetId) {
+        console.warn(`CalloutsSet ${id} has no tagset template set`);
         continue;
       }
       const { tagsetTemplateSetId } = calloutsSet;
-      // Get the tagsetTemplatesSet
-      const tagsetTemplatesSet: {
+
+      const tagsetTemplates: {
         id: string;
-        tagsetTemplatesCount: number;
-      } = await queryRunner.query(
-        `SELECT id, COUNT(*) as tagsetTemplatesCount FROM \`tagset_template_set\` WHERE id = ?`,
+        allowedValues: string;
+      }[] = await queryRunner.query(
+        `SELECT id, allowedValues FROM \`tagset_template\` WHERE tagsetTemplateSetId = ?`,
         [tagsetTemplateSetId]
       );
-      if (!tagsetTemplatesSet) {
-        console.log(`CalloutSet ${id} has no tagset templates set`);
-        continue;
-      }
-      if (tagsetTemplatesSet.tagsetTemplatesCount > 1) {
-        const tagsetTemplates: {
-          id: string;
-          allowedValues: string;
-        }[] = await queryRunner.query(
-          `SELECT id, allowedValues FROM \`tagset_template\` WHERE tagsetTemplateSetId = ?`,
-          [tagsetTemplatesSet.id]
+      if (tagsetTemplates.length > 1) {
+        console.warn(
+          `Identified tagsetTemplatesSet ${tagsetTemplateSetId} has ${tagsetTemplates.length} tagset templates`
         );
+
         // get the innovation flow tagsetTemplate and delete the other one
-        const innovationFlow: {
+        const [innovationFlow]: {
           id: string;
           flowStatesTagsetTemplateId: string;
-        } = await queryRunner.query(
+        }[] = await queryRunner.query(
           `SELECT id, flowStatesTagsetTemplateId FROM \`innovation_flow\` WHERE id = ?`,
           [collaboration.innovationFlowId]
         );
         if (!innovationFlow) {
-          console.log(`Collaboration ${id} has no innovation flow`);
+          console.warn(`Collaboration ${id} has no innovation flow`);
           continue;
         }
         const innovationFlowTagsetTemplateId =
           innovationFlow.flowStatesTagsetTemplateId;
         for (const tagsetTemplate of tagsetTemplates) {
           if (tagsetTemplate.id !== innovationFlowTagsetTemplateId) {
+            // Check if any tagsets use this template
+            const tagsets: {
+              id: string;
+              tagsetTemplateId: string;
+            }[] = await queryRunner.query(
+              `SELECT id, tagsetTemplateId FROM \`tagset\` WHERE tagsetTemplateId = ?`,
+              [tagsetTemplate.id]
+            );
+            if (tagsets.length > 0) {
+              // Expectation is that there are not any tagsets using the duplicate templates, which
+              // are highly likely to be from the old group usage
+              console.warn(
+                `TagsetTemplate ${tagsetTemplate.id} is used by ${tagsets.length} tagsets`
+              );
+              continue;
+            }
             // delete the tagsetTemplate
             await queryRunner.query(
               `DELETE FROM \`tagset_template\` WHERE id = ?`,
