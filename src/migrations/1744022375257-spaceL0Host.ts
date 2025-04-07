@@ -6,7 +6,10 @@ export class SpaceL0Host1744022375257 implements MigrationInterface {
     const organizations: {
       id: string;
       accountID: string;
-    }[] = await queryRunner.query(`SELECT id, accountID FROM \`organization\``);
+      agentId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, accountID, agentId FROM \`organization\``
+    );
     for (const organization of organizations) {
       const orgSpaces: {
         id: string;
@@ -21,13 +24,13 @@ export class SpaceL0Host1744022375257 implements MigrationInterface {
           queryRunner,
           'space-member',
           space.id,
-          space.agentId
+          organization.agentId
         );
         await this.createCredential(
           queryRunner,
           'space-lead',
           space.id,
-          space.agentId
+          organization.agentId
         );
       }
     }
