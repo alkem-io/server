@@ -5,7 +5,8 @@ export class PaginatedVCs1743831360133 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` ADD \`rowId\` int NOT NULL AUTO_INCREMENT`
+      `ALTER TABLE \`virtual_contributor\` ADD \`rowId\` int NOT NULL AUTO_INCREMENT,
+      ADD UNIQUE INDEX `IDX_a643bc875218dd4abbf86bbf7f` (`rowId`) FIRST`
     );
     await queryRunner.query(
       `ALTER TABLE \`virtual_contributor\` ADD UNIQUE INDEX \`IDX_a643bc875218dd4abbf86bbf7f\` (\`rowId\`)`
