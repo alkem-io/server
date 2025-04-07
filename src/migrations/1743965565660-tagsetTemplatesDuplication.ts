@@ -82,19 +82,34 @@ export class TagsetTemplatesDuplication1743965565660
             `SELECT id, tagsetTemplateId FROM \`tagset\` WHERE classificationId = ?`,
             [callout.classificationId]
           );
-
-          for (const tagset of tagsets) {
-            if (tagset.tagsetTemplateId !== flowStateTagsetTemplateId) {
-              // delete the tagset + authorization
-              await queryRunner.query(
-                `DELETE FROM \`authorization_policy\` WHERE id = ?`,
-                [tagset.authorizationId]
-              );
-              // delete the tagset
-              await queryRunner.query(`DELETE FROM \`tagset\` WHERE id = ?`, [
-                tagset.id,
-              ]);
+          if (tagsets.length === 1) {
+            const tagset = tagsets[0];
+            // Update the callouts to use the correct tagset template
+            await queryRunner.query(
+              `UPDATE \`tagset\` SET tagsetTemplateId = ? WHERE id = ?`,
+              [flowStateTagsetTemplateId, tagset.id]
+            );
+          } else if (tagsets.length > 1) {
+            let flowStateClassificationTagsetId = '';
+            for (const tagset of tagsets) {
+              if (tagset.tagsetTemplateId !== flowStateTagsetTemplateId) {
+                // delete the tagset + authorization
+                await queryRunner.query(
+                  `DELETE FROM \`authorization_policy\` WHERE id = ?`,
+                  [tagset.authorizationId]
+                );
+                // delete the tagset
+                await queryRunner.query(`DELETE FROM \`tagset\` WHERE id = ?`, [
+                  tagset.id,
+                ]);
+              } else {
+                flowStateClassificationTagsetId = tagset.id;
+              }
             }
+          } else {
+            console.warn(
+              `No classification tagset found for callout ${callout.id} in collaboration ${id}`
+            );
           }
         }
 
