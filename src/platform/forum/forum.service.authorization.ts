@@ -52,7 +52,7 @@ export class ForumAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_DISCUSSION],
         [AuthorizationCredential.GLOBAL_REGISTERED],
-        'platformReadContributeRegistered'
+        'forumCreateDiscussion'
       );
     createRule.cascade = false;
     forum.authorization.credentialRules.push(createRule);
@@ -64,7 +64,7 @@ export class ForumAuthorizationService {
           AuthorizationCredential.GLOBAL_ANONYMOUS,
           AuthorizationCredential.GLOBAL_REGISTERED,
         ],
-        'platformReadContributeRegistered'
+        'forumRead'
       );
     createRule.cascade = true;
     forum.authorization.credentialRules.push(readRule);
