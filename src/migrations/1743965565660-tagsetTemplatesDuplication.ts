@@ -35,9 +35,8 @@ export class TagsetTemplatesDuplication1743965565660
 
       const tagsetTemplates: {
         id: string;
-        allowedValues: string;
       }[] = await queryRunner.query(
-        `SELECT id, allowedValues FROM \`tagset_template\` WHERE tagsetTemplateSetId = ?`,
+        `SELECT id FROM \`tagset_template\` WHERE tagsetTemplateSetId = ?`,
         [tagsetTemplateSetId]
       );
       if (tagsetTemplates.length > 1) {
@@ -57,10 +56,51 @@ export class TagsetTemplatesDuplication1743965565660
           console.warn(`Collaboration ${id} has no innovation flow`);
           continue;
         }
-        const innovationFlowTagsetTemplateId =
+        const flowStateTagsetTemplateId =
           innovationFlow.flowStatesTagsetTemplateId;
+        if (!flowStateTagsetTemplateId) {
+          console.warn(
+            `Unable to find flow state tagset template for innovation flow ${innovationFlow.id}`
+          );
+          continue;
+        }
+
+        // First delete any classification tagset that are not the flow state tagset
+        const callouts: {
+          id: string;
+          classificationId: string;
+        }[] = await queryRunner.query(
+          `SELECT id, classificationId FROM \`callout\` WHERE calloutsSetId = ?`,
+          [calloutsSetId]
+        );
+        for (const callout of callouts) {
+          const tagsets: {
+            id: string;
+            tagsetTemplateId: string;
+            authorizationId: string;
+          }[] = await queryRunner.query(
+            `SELECT id, tagsetTemplateId FROM \`tagset\` WHERE classificationId = ?`,
+            [callout.classificationId]
+          );
+
+          for (const tagset of tagsets) {
+            if (tagset.tagsetTemplateId !== flowStateTagsetTemplateId) {
+              // delete the tagset + authorization
+              await queryRunner.query(
+                `DELETE FROM \`authorization_policy\` WHERE id = ?`,
+                [tagset.authorizationId]
+              );
+              // delete the tagset
+              await queryRunner.query(`DELETE FROM \`tagset\` WHERE id = ?`, [
+                tagset.id,
+              ]);
+            }
+          }
+        }
+
+        // Now delete the tagset templates that are not the flow state tagset
         for (const tagsetTemplate of tagsetTemplates) {
-          if (tagsetTemplate.id !== innovationFlowTagsetTemplateId) {
+          if (tagsetTemplate.id !== flowStateTagsetTemplateId) {
             // Check if any tagsets use this template
             const tagsets: {
               id: string;
@@ -73,7 +113,7 @@ export class TagsetTemplatesDuplication1743965565660
               // Expectation is that there are not any tagsets using the duplicate templates, which
               // are highly likely to be from the old group usage
               console.warn(
-                `TagsetTemplate ${tagsetTemplate.id} is used by ${tagsets.length} tagsets`
+                `TagsetTemplate ${tagsetTemplate.id} is used by ${tagsets.length} tagsets; skipping deletion`
               );
               continue;
             }
