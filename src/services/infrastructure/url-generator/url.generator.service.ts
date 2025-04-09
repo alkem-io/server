@@ -418,16 +418,11 @@ export class UrlGeneratorService {
       },
     });
 
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find space for guidelines for profile: ${communityGuidelines.id}`,
-        LogContext.URL_GENERATOR
-      );
-    }
-    if (space.community) {
+    if (space && space.community) {
       return await this.getSpaceUrlPathByCommunityID(space.community.id);
     }
 
+    // Not directly in use, look in the templates
     const template = await this.entityManager.findOne(Template, {
       where: {
         communityGuidelines: {
