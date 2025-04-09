@@ -330,7 +330,7 @@ export class ClassificationTagsetDuplication1743965565670
     queryRunner: QueryRunner,
     tagsetTemplateId: string
   ) {
-    // Delete all tagsets of linked to this template:
+    // Delete all tagsets linked to this template:
     const tagsets: {
       id: string;
       authorizationId: string;
@@ -342,7 +342,7 @@ export class ClassificationTagsetDuplication1743965565670
       await this.deleteTagset(queryRunner, tagset.id, tagset.authorizationId);
     }
 
-    // delete the tagset
+    // delete the tagset template
     await queryRunner.query(`DELETE FROM \`tagset_template\` WHERE id = ?`, [
       tagsetTemplateId,
     ]);
@@ -365,6 +365,21 @@ export class ClassificationTagsetDuplication1743965565670
     for (const tagset of tagsets) {
       await this.deleteTagset(queryRunner, tagset.id, tagset.authorizationId);
     }
+
+    // Get and delete the classification's authorization
+    const [classification]: { authorizationId: string }[] =
+      await queryRunner.query(
+        `SELECT authorizationId FROM \`classification\` WHERE id = ?`,
+        [classificationId]
+      );
+
+    if (classification?.authorizationId) {
+      await queryRunner.query(
+        `DELETE FROM \`authorization_policy\` WHERE id = ?`,
+        [classification.authorizationId]
+      );
+    }
+
     // delete the classification
     await queryRunner.query(`DELETE FROM \`classification\` WHERE id = ?`, [
       classificationId,
