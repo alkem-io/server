@@ -17,9 +17,9 @@ export class ClassificationResolverMutations {
   ) {}
 
   @Mutation(() => ITagset, {
-    description: 'Updates the specified Tagset.',
+    description: 'Updates a Tagset on a Classification.',
   })
-  async updateProfile(
+  async updateClassificationTagset(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateClassificationSelectTagsetValueInput
   ): Promise<ITagset> {
