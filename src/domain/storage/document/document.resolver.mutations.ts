@@ -1,8 +1,6 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { DocumentService } from './document.service';
 import { CurrentUser } from '@common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -19,7 +17,6 @@ export class DocumentResolverMutations {
     private documentService: DocumentService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IDocument, {
     description: 'Deletes the specified Document.',
   })
@@ -40,7 +37,6 @@ export class DocumentResolverMutations {
     return await this.documentService.deleteDocument(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IDocument, {
     description: 'Updates the specified Document.',
   })

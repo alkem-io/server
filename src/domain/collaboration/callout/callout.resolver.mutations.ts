@@ -1,8 +1,7 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { GraphqlGuard } from '@core/authorization';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
+import { Inject } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CalloutService } from './callout.service';
@@ -64,7 +63,6 @@ export class CalloutResolverMutations {
     private postCreatedSubscription: PubSubEngine
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Delete a Callout.',
   })
@@ -83,7 +81,6 @@ export class CalloutResolverMutations {
     return await this.calloutService.deleteCallout(deleteData.ID);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Update a Callout.',
   })
@@ -102,7 +99,6 @@ export class CalloutResolverMutations {
     return await this.calloutService.updateCallout(callout, calloutData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Update the visibility of the specified Callout.',
   })
@@ -155,7 +151,6 @@ export class CalloutResolverMutations {
     return savedCallout;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description:
       'Update the information describing the publishing of the specified Callout.',
@@ -181,7 +176,6 @@ export class CalloutResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutContribution, {
     description: 'Create a new Contribution on the Callout.',
   })
@@ -422,7 +416,6 @@ export class CalloutResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => [ICalloutContribution], {
     description:
       'Update the sortOrder field of the Contributions of s Callout.',

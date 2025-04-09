@@ -1,10 +1,8 @@
 import { IReference } from '@domain/common/reference';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { ProfileService } from './profile.service';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -31,7 +29,6 @@ export class ProfileResolverMutations {
     private profileService: ProfileService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITagset, {
     description: 'Creates a new Tagset on the specified Profile',
   })
@@ -72,7 +69,6 @@ export class ProfileResolverMutations {
     return await this.tagsetService.save(tagset);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description: 'Creates a new Reference on the specified Profile.',
   })
@@ -102,7 +98,6 @@ export class ProfileResolverMutations {
     return await this.referenceService.saveReference(reference);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IProfile, {
     description: 'Updates the specified Profile.',
   })

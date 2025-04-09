@@ -1,7 +1,6 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoomService } from './room.service';
@@ -53,8 +52,6 @@ export class RoomResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // todo should be removed to serve per entity e.g. send post comment
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IMessage, {
     description:
       'Sends an comment message. Returns the id of the new Update message.',
@@ -263,7 +260,6 @@ export class RoomResolverMutations {
     }
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IMessage, {
     description: 'Sends a reply to a message from the specified Room.',
   })
@@ -493,7 +489,6 @@ export class RoomResolverMutations {
     return reply;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IMessageReaction, {
     description: 'Add a reaction to a message from the specified Room.',
   })
@@ -531,7 +526,6 @@ export class RoomResolverMutations {
     return true;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => MessageID, {
     description: 'Removes a message.',
   })
@@ -584,7 +578,6 @@ export class RoomResolverMutations {
     return messageID;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Remove a reaction on a message from the specified Room.',
   })

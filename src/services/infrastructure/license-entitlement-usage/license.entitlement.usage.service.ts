@@ -93,13 +93,11 @@ export class LicenseEntitlementUsageService {
 
   private getAccountSpacesTypeCount(
     spaces: ISpace[],
-    _entitlementType: LicenseEntitlementType
+    entitlementType: LicenseEntitlementType
   ): number {
-    const matchingSpaces = spaces;
-    //toDo - fix this, at the moment this path is not working
-    // .filter(space =>
-    //   this.hasMatchingLicenseEntitlement(space, entitlementType)
-    // );
+    const matchingSpaces = spaces.filter(space =>
+      this.hasMatchingLicenseEntitlement(space, entitlementType)
+    );
     return matchingSpaces.length;
   }
 

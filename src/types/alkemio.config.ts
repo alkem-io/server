@@ -148,6 +148,7 @@ export type AlkemioConfig = {
         ingest_website_result_queue: string;
         invoke_engine_result: string;
         invoke_engine_expert: string;
+        invoke_engine_libra_flow: string;
         invoke_engine_guidance: string;
         invoke_engine_generic: string;
         invoke_engine_openai_assistant: string;

@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -25,7 +23,7 @@ export class StorageBucketResolverMutations {
     private documentAuthorizationService: DocumentAuthorizationService,
     private documentService: DocumentService
   ) {}
-  @UseGuards(GraphqlGuard)
+
   @Mutation(() => String, {
     description:
       'Create a new Document on the Storage and return the public Url.',
@@ -71,7 +69,6 @@ export class StorageBucketResolverMutations {
     return this.documentService.getPubliclyAccessibleURL(document);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IStorageBucket, {
     description: 'Deletes a Storage Bucket',
   })

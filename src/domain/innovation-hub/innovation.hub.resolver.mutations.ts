@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { IInnovationHub } from './innovation.hub.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -19,7 +17,6 @@ export class InnovationHubResolverMutations {
     private innovationHubService: InnovationHubService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
     description: 'Update Innovation Hub.',
   })
@@ -40,7 +37,6 @@ export class InnovationHubResolverMutations {
     return await this.innovationHubService.updateOrFail(updateData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
     description: 'Delete Innovation Hub.',
   })

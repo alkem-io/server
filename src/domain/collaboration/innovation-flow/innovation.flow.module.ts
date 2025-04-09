@@ -10,6 +10,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { InnovationFlowStatesModule } from '../innovation-flow-states/innovation.flow.state.module';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { InnovationFlowStatesModule } from '../innovation-flow-states/innovation
     InnovationFlowStatesModule,
     ProfileModule,
     TagsetTemplateModule,
+    TagsetModule,
     TypeOrmModule.forFeature([InnovationFlow]),
   ],
   providers: [

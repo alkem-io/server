@@ -1,6 +1,4 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -114,7 +112,6 @@ export class LookupResolverFields {
     private knowledgeBaseService: KnowledgeBaseService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'Lookup the specified Space',
@@ -134,7 +131,6 @@ export class LookupResolverFields {
     return space;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IAccount, {
     nullable: true,
     description: 'Lookup the specified Account',
@@ -164,7 +160,6 @@ export class LookupResolverFields {
     return await this.organizationLookupService.getOrganizationOrFail(id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => LookupMyPrivilegesQueryResults, {
     nullable: true,
     description: 'Lookup myPrivileges on the specified entity.',
@@ -173,7 +168,6 @@ export class LookupResolverFields {
     return {} as LookupMyPrivilegesQueryResults;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IRoleSet, {
     nullable: true,
     description: 'Lookup the specified RoleSet',
@@ -193,7 +187,6 @@ export class LookupResolverFields {
     return roleSet;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IDocument, {
     nullable: true,
     description: 'Lookup the specified Document',
@@ -213,7 +206,6 @@ export class LookupResolverFields {
     return document;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IVirtualContributor, {
     nullable: true,
     description: 'A particular VirtualContributor',
@@ -233,7 +225,6 @@ export class LookupResolverFields {
     return virtualContributor;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IUser, {
     nullable: true,
     description: 'A particular User',
@@ -252,7 +243,6 @@ export class LookupResolverFields {
     return user;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
     description: 'Lookup the specified Authorization Policy',
@@ -276,7 +266,6 @@ export class LookupResolverFields {
     return authorizationPolicy;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(
     'authorizationPrivilegesForUser',
     () => [AuthorizationPrivilege],
@@ -310,7 +299,6 @@ export class LookupResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IStorageAggregator, {
     nullable: true,
     description: 'Lookup the specified StorageAggregator',
@@ -331,7 +319,6 @@ export class LookupResolverFields {
     return document;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IInnovationPack, {
     nullable: true,
     description: 'Lookup the specified InnovationPack',
@@ -352,7 +339,6 @@ export class LookupResolverFields {
     return innovationPack;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IStorageBucket, {
     nullable: true,
     description: 'Lookup the specified StorageBucket',
@@ -372,7 +358,6 @@ export class LookupResolverFields {
     return document;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IInnovationHub, {
     nullable: true,
     description: 'Lookup the specified InnovationHub',
@@ -393,7 +378,6 @@ export class LookupResolverFields {
     return innovationHub;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IApplication, {
     nullable: true,
     description: 'Lookup the specified Application',
@@ -413,7 +397,6 @@ export class LookupResolverFields {
     return application;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IInvitation, {
     nullable: true,
     description: 'Lookup the specified Invitation',
@@ -433,7 +416,6 @@ export class LookupResolverFields {
     return invitation;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICommunity, {
     nullable: true,
     description: 'Lookup the specified Community',
@@ -467,7 +449,6 @@ export class LookupResolverFields {
     return collaboration;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICalendarEvent, {
     nullable: true,
     description: 'Lookup the specified CalendarEvent',
@@ -488,7 +469,6 @@ export class LookupResolverFields {
     return calendarEvent;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICalloutsSet, {
     nullable: true,
     description: 'Lookup the specified CalloutsSet',
@@ -508,7 +488,6 @@ export class LookupResolverFields {
     return calloutsSet;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICalendar, {
     nullable: true,
     description: 'Lookup the specified Calendar',
@@ -528,7 +507,6 @@ export class LookupResolverFields {
     return calendar;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ISpaceAbout, {
     nullable: true,
     description: 'Lookup the specified SpaceAbout',
@@ -547,7 +525,7 @@ export class LookupResolverFields {
 
     return about;
   }
-  @UseGuards(GraphqlGuard)
+
   @ResolveField(() => IWhiteboard, {
     nullable: true,
     description: 'Lookup the specified Whiteboard',
@@ -567,7 +545,6 @@ export class LookupResolverFields {
     return whiteboard;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IProfile, {
     nullable: true,
     description: 'Lookup the specified Profile',
@@ -587,7 +564,6 @@ export class LookupResolverFields {
     return profile;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICallout, {
     nullable: true,
     description: 'Lookup the specified Callout',
@@ -607,7 +583,6 @@ export class LookupResolverFields {
     return callout;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IPost, {
     nullable: true,
     description: 'Lookup the specified Post',
@@ -627,7 +602,6 @@ export class LookupResolverFields {
     return post;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IRoom, {
     nullable: true,
     description: 'Lookup the specified Room',
@@ -647,7 +621,6 @@ export class LookupResolverFields {
     return room;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IInnovationFlow, {
     nullable: true,
     description: 'Lookup the specified InnovationFlow',
@@ -668,7 +641,6 @@ export class LookupResolverFields {
     return innovationFlow;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ITemplate, {
     nullable: true,
     description: 'Lookup the specified Template',
@@ -688,7 +660,6 @@ export class LookupResolverFields {
     return template;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ITemplatesSet, {
     nullable: true,
     description: 'Lookup the specified TemplatesSet',
@@ -709,7 +680,6 @@ export class LookupResolverFields {
     return templatesSet;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ITemplatesManager, {
     nullable: true,
     description: 'Lookup the specified TemplatesManager',
@@ -730,7 +700,6 @@ export class LookupResolverFields {
     return templatesManager;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ICommunityGuidelines, {
     nullable: true,
     description: 'Lookup the specified Community guidelines',
@@ -751,7 +720,6 @@ export class LookupResolverFields {
     return guidelines;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ILicense, {
     nullable: true,
     description: 'Lookup the specified License',
@@ -764,7 +732,6 @@ export class LookupResolverFields {
     return license;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IKnowledgeBase, {
     nullable: false,
     description: 'Lookup as specific KnowledgeBase',

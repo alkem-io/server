@@ -1,7 +1,6 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -25,7 +24,6 @@ export class AdminUsersMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description:
       'Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.',

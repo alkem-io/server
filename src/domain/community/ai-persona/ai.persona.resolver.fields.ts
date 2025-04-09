@@ -70,6 +70,15 @@ export class AiPersonaResolverFields {
       aiPersona.aiPersonaServiceID
     );
   }
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('aiPersonaServiceID', () => String, {
+    nullable: true,
+    description: 'The ID of the AiPersonaService.',
+  })
+  aiPersonaServiceID(@Parent() aiPersona: AiPersona): string {
+    return aiPersona.aiPersonaServiceID;
+  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

@@ -4,11 +4,15 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ForbiddenHttpException } from '@common/exceptions/http';
+import {
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+} from '@core/authentication';
 
 @Injectable()
 export class RestGuard extends AuthGuard([
-  'oathkeeper-jwt',
-  'oathkeeper-api-token',
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
 ]) {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

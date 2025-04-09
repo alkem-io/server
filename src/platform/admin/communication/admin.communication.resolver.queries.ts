@@ -1,7 +1,5 @@
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AdminCommunicationService } from './admin.communication.service';
 import { CommunicationAdminMembershipInput } from './dto';
@@ -36,7 +34,6 @@ export class AdminCommunicationResolverQueries {
     nullable: false,
     description: 'All Users that are members of a given room',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async adminCommunicationMembership(
     @Args('communicationData', { nullable: false })
@@ -59,7 +56,6 @@ export class AdminCommunicationResolverQueries {
     description:
       'Usage of the messaging platform that are not tied to the domain model.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async adminCommunicationOrphanedUsage(
     @CurrentUser() agentInfo: AgentInfo
