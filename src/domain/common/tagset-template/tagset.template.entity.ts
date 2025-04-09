@@ -41,7 +41,7 @@ export class TagsetTemplate
 
   @OneToMany(() => Tagset, tagset => tagset.tagsetTemplate, {
     eager: false,
-    cascade: true,
+    cascade: false, // This must be false, the tagsets are owned by the classification, not the template
   })
   tagsets?: Tagset[];
 

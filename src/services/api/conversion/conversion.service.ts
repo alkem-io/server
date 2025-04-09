@@ -147,7 +147,7 @@ export class ConversionService {
     const resetInnovationFlowStates = await this.getInnovationFlowForSpaceL0();
     spaceL1.collaboration.innovationFlow =
       await this.innovationFlowService.updateInnovationFlowStates(
-        spaceL1.collaboration.innovationFlow.id,
+        spaceL1.collaboration.innovationFlow,
         resetInnovationFlowStates
       );
 
