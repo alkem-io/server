@@ -66,7 +66,7 @@ export class ForumAuthorizationService {
         ],
         'forumRead'
       );
-    createRule.cascade = true;
+    readRule.cascade = true;
     forum.authorization.credentialRules.push(readRule);
 
     forum.authorization = this.appendPrivilegeRules(forum.authorization);
