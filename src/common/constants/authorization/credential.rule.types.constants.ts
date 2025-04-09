@@ -100,3 +100,8 @@ export const CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS =
   'credentialRuleTypes-aiServerGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE =
   'credentialRuleTypes-accountLicenseManage';
+export const CREDENTIAL_RULE_TYPES_FORUM_READ = 'credentialRuleTypes-forumRead';
+export const CREDENTIAL_RULE_TYPES_FORUM_CONTRIBUTE =
+  'credentialRuleTypes-forumContribute';
+export const CREDENTIAL_RULE_TYPES_FORUM_CREATE_DISCUSSION =
+  'credentialRuleTypes-forumCreateDiscussion';
