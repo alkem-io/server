@@ -37,12 +37,15 @@ import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicenseService } from '@domain/common/license/license.service';
 import { InstrumentService } from '@src/apm/decorators';
+import { AccountType } from '@common/enums/account.type';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
 
 @InstrumentService()
 @Injectable()
 export class AccountService {
   constructor(
     private accountHostService: AccountHostService,
+    private accountLookupService: AccountLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
     private agentService: AgentService,
@@ -120,6 +123,16 @@ export class AccountService {
 
     if (agentInfo) {
       await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+    }
+
+    // Add in org as member + lead if applicable
+    if (account.type === AccountType.ORGANIZATION) {
+      const host = await this.accountLookupService.getHostOrFail(account);
+      const organizationID = host.id;
+      await this.spaceService.assignOrganizationToMemberLeadRoles(
+        roleSet,
+        organizationID
+      );
     }
 
     space.agent = await this.accountHostService.assignLicensePlansToSpace(
