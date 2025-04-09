@@ -199,6 +199,34 @@ export class TagsetService {
     return false;
   }
 
+  public async updateTagsetsSelectedValue(
+    tagsets: ITagset[],
+    allowedValues: string[],
+    newDefaultValue: string
+  ): Promise<void> {
+    // Finally update
+    const isDefaultValueAllowed = allowedValues.some(
+      allowedValue => newDefaultValue === allowedValue
+    );
+    if (!isDefaultValueAllowed) {
+      throw new ValidationException(
+        `TagsetTemplate newDefaultValue(${newDefaultValue}) is not in allowedValues!`,
+        LogContext.TAGSET
+      );
+    }
+    for (const tagset of tagsets) {
+      const tagsetSelectedValue = tagset.tags[0];
+      const isNameAllowed = allowedValues.some(
+        allowedValue => tagsetSelectedValue === allowedValue
+      );
+      if (isNameAllowed) {
+        continue;
+      }
+      tagset.tags = [newDefaultValue];
+      await this.tagsetRepository.save(tagset);
+    }
+  }
+
   getTagsetByName(tagsets: ITagset[], name: string): ITagset | undefined {
     //
     if (name === '') {
