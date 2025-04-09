@@ -9,7 +9,11 @@ import {
 } from '@common/enums';
 import { ForumService } from './forum.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { POLICY_RULE_FORUM_CREATE } from '@common/constants';
+import {
+  CREDENTIAL_RULE_TYPES_FORUM_CONTRIBUTE,
+  CREDENTIAL_RULE_TYPES_FORUM_READ,
+  POLICY_RULE_FORUM_CREATE,
+} from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IForum } from './forum.interface';
 
@@ -52,10 +56,19 @@ export class ForumAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_DISCUSSION],
         [AuthorizationCredential.GLOBAL_REGISTERED],
-        'forumCreateDiscussion'
+        CREDENTIAL_RULE_TYPES_FORUM_READ
       );
     createRule.cascade = false;
     forum.authorization.credentialRules.push(createRule);
+
+    const contributeRule =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CONTRIBUTE],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_FORUM_CONTRIBUTE
+      );
+    createRule.cascade = true;
+    forum.authorization.credentialRules.push(contributeRule);
 
     const readRule =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -64,7 +77,7 @@ export class ForumAuthorizationService {
           AuthorizationCredential.GLOBAL_ANONYMOUS,
           AuthorizationCredential.GLOBAL_REGISTERED,
         ],
-        'forumRead'
+        CREDENTIAL_RULE_TYPES_FORUM_READ
       );
     readRule.cascade = true;
     forum.authorization.credentialRules.push(readRule);
