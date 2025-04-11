@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Parent, ResolveField } from '@nestjs/graphql';
 import { AiPersonaServiceService } from './ai.persona.service.service';
-import { GraphqlGuard } from '@core/authorization';
 import { Profiling } from '@common/decorators';
 import { IExternalConfig } from './dto';
 
@@ -9,7 +7,6 @@ import { IExternalConfig } from './dto';
 export class AiPersonaServiceExternalConfigResolverFields {
   constructor(private aiPersonaServiceService: AiPersonaServiceService) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('apiKey', () => String, {
     nullable: true,
     description: 'The signature of the API key',
