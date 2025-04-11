@@ -7,8 +7,14 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAiPersonaService } from './ai.persona.service.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { IExternalConfig } from './dto';
 
+const EXTERNALY_CONFIGURABLE_ENGINES = [
+  AiPersonaEngine.LIBRA_FLOW,
+  AiPersonaEngine.GENERIC_OPENAI,
+  AiPersonaEngine.LIBRA_FLOW,
+];
 @Resolver(() => IAiPersonaService)
 export class AiPersonaServiceResolverFields {
   constructor(
@@ -58,6 +64,9 @@ export class AiPersonaServiceResolverFields {
       AuthorizationPrivilege.READ,
       `ai persona authorization access: ${aiPersonaService.id}`
     );
+    if (!EXTERNALY_CONFIGURABLE_ENGINES.includes(aiPersonaService.engine)) {
+      return null;
+    }
 
     return aiPersonaService.externalConfig;
   }
