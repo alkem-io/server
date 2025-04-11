@@ -10,13 +10,17 @@ import {
   UpdateAiPersonaServiceInput,
 } from './dto';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { AiPersonaServiceAuthorizationService } from './ai.persona.service.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @InstrumentResolver()
 @Resolver(() => IAiPersonaService)
 export class AiPersonaServiceResolverMutations {
   constructor(
     private aiPersonaServiceService: AiPersonaServiceService,
-    private authorizationService: AuthorizationService
+    private authorizationService: AuthorizationService,
+    private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   @Mutation(() => IAiPersonaService, {
@@ -39,9 +43,18 @@ export class AiPersonaServiceResolverMutations {
       `orgUpdate: ${aiPersonaService.id}`
     );
 
-    return await this.aiPersonaServiceService.updateAiPersonaService(
-      aiPersonaServiceData
-    );
+    const updatedAiPersonaService =
+      await this.aiPersonaServiceService.updateAiPersonaService(
+        aiPersonaServiceData
+      );
+
+    const authorizations =
+      await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
+        updatedAiPersonaService,
+        updatedAiPersonaService.aiServer?.authorization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return updatedAiPersonaService;
   }
 
   @Mutation(() => IAiPersonaService, {
