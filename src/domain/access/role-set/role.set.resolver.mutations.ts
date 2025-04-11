@@ -46,7 +46,7 @@ import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.vc';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
-import { InviteNewContributorForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invitation.community';
+import { InviteUsersByEmailForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invite.users.by.email';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
@@ -703,14 +703,14 @@ export class RoleSetResolverMutations {
 
   @Mutation(() => IPlatformInvitation, {
     description:
-      'Invite a User to join the platform and the specified RoleSet as a member.',
+      'Invite a set of Users by email to join the specified RoleSet as a member, including signing up for the platform if needed.',
   })
-  async inviteUserToPlatformAndRoleSet(
+  async inviteUsersByEmailToRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: InviteNewContributorForRoleOnRoleSetInput
-  ): Promise<IPlatformInvitation> {
-    const roleSet = await this.roleSetService.getRoleSetOrFail(
+    invitationData: InviteUsersByEmailForRoleOnRoleSetInput
+  ): Promise<IPlatformInvitation[]> {
+    let roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,
       {
         relations: {
@@ -729,19 +729,8 @@ export class RoleSetResolverMutations {
       `create invitation external community: ${roleSet.id}`
     );
 
-    const existingUser = await this.userLookupService.isRegisteredUser(
-      invitationData.email
-    );
-
-    if (existingUser) {
-      throw new RoleSetInvitationException(
-        `User already has a profile (${invitationData.email})`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    // Logic is that the ability to invite to a subspace requires the ability to invite to the
-    // parent community if the user is not a member there
+    let inviteToParentRoleSet = false;
+    // Check if the the inviting user has permissions to invite to the parent if this is not the root
     if (roleSet.parentRoleSet) {
       const parentRoleSetAuthorization = roleSet.parentRoleSet.authorization;
       const canInviteToParent = this.authorizationService.isAccessGranted(
@@ -753,39 +742,78 @@ export class RoleSetResolverMutations {
       // Not an existing user
       if (!canInviteToParent) {
         throw new RoleSetInvitationException(
-          `New external user (${invitationData.email}) and the current user (${agentInfo.email}) does not have the privilege to invite to the parent community: ${roleSet.parentRoleSet.id}`,
+          `Inviting to a chile RoleSet, but the current user (${agentInfo.email}) does not have the privilege to invite to the parent community: ${roleSet.parentRoleSet.id}`,
           LogContext.COMMUNITY
         );
-      } else {
-        invitationData.roleSetInvitedToParent = true;
       }
+      inviteToParentRoleSet = true;
     }
+
+    // Process each user
+    const platformInvitations: IPlatformInvitation[] = [];
+    for (const email of invitationData.emails) {
+      // If the user is already registered, then just create a normal invitation
+      const existingUser = await this.userLookupService.isRegisteredUser(email);
+      if (existingUser) {
+        // Create a normal invitation
+        // TODO
+      }
+      // Is the user already invited?
+      const existingPlatformInvitations =
+        await this.platformInvitationService.isEmailAlreadyInvited(
+          email,
+          roleSet.id
+        );
+      if (existingPlatformInvitations) {
+        continue;
+      }
+
+      const platformInvitation =
+        await this.roleSetService.createPlatformInvitation(
+          roleSet,
+          email,
+          invitationData.welcomeMessage || '',
+          inviteToParentRoleSet,
+          invitationData.roleSetExtraRole,
+          agentInfo
+        );
+      platformInvitations.push(platformInvitation);
+    }
+
+    invitationData.roleSetInvitedToParent = inviteToParentRoleSet;
+
+    // Logic is that the ability to invite to a subspace requires the ability to invite to the
+    // parent community if the user is not a member there
+    roleSet = await this.roleSetService.getRoleSetOrFail(
+      roleSet.id,
+
+      {
+        relations: {
+          invitations: true,
+          platformInvitations: true,
+        },
+      }
+    );
+    const authorizations =
+      await this.roleSetAuthorizationService.applyAuthorizationPolicyOnInvitations(
+        roleSet
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
 
     const community =
       await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
-
-    let platformInvitation = await this.roleSetService.createPlatformInvitation(
-      invitationData,
-      agentInfo
-    );
-
-    platformInvitation =
-      await this.platformInvitationService.save(platformInvitation);
-    const authorizations =
-      await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
-        platformInvitation,
-        roleSet.authorization
+    for (const platformInvitation of platformInvitations) {
+      const notificationInput: NotificationInputPlatformInvitation = {
+        triggeredBy: agentInfo.userID,
+        community,
+        invitedUser: platformInvitation.email,
+        welcomeMessage: invitationData.welcomeMessage,
+      };
+      await this.notificationAdapter.platformInvitationCreated(
+        notificationInput
       );
-    await this.authorizationPolicyService.save(authorizations);
-
-    const notificationInput: NotificationInputPlatformInvitation = {
-      triggeredBy: agentInfo.userID,
-      community,
-      invitedUser: invitationData.email,
-      welcomeMessage: invitationData.welcomeMessage,
-    };
-    await this.notificationAdapter.platformInvitationCreated(notificationInput);
-    return platformInvitation;
+    }
+    return platformInvitations;
   }
 
   @Mutation(() => IApplication, {

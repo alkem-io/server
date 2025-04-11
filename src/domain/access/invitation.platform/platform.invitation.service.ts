@@ -131,4 +131,23 @@ export class PlatformInvitationService {
       return existingPlatformInvitations;
     return [];
   }
+
+  async isEmailAlreadyInvited(
+    email: string,
+    roleSetID: string
+  ): Promise<boolean> {
+    const existingPlatformInvitations =
+      await this.platformInvitationRepository.find({
+        where: {
+          email: email,
+          roleSet: {
+            id: roleSetID,
+          },
+        },
+        relations: { roleSet: true },
+      });
+
+    if (existingPlatformInvitations.length > 0) return true;
+    return false;
+  }
 }

@@ -64,7 +64,7 @@ import { UpdateSpaceSettingsInput } from '@domain/space/space/dto/space.dto.upda
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
-import { InviteNewContributorForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.platform.invitation.community';
+import { InviteUsersByEmailForRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.platform.invite.users.by.email';
 import { ApplyForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.apply';
 import { InviteForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.invite';
 import { AssignRoleOnRoleSetToUserInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.user';
@@ -113,7 +113,7 @@ export class BaseHandler extends AbstractHandler {
       ApplyForEntryRoleOnRoleSetInput,
       RolesUserInput,
       InviteForEntryRoleOnRoleSetInput,
-      InviteNewContributorForRoleOnRoleSetInput,
+      InviteUsersByEmailForRoleOnRoleSetInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
       CreateCalloutFramingInput,

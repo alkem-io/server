@@ -44,7 +44,6 @@ import { RoleSetUpdateType } from '@common/enums/role.set.update.type';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { CreateApplicationInput } from '../application/dto/application.dto.create';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
-import { InviteNewContributorForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invitation.community';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
@@ -1598,19 +1597,19 @@ export class RoleSetService {
   }
 
   async createPlatformInvitation(
-    invitationData: InviteNewContributorForRoleOnRoleSetInput,
+    roleSet: IRoleSet,
+    email: string,
+    welcomeMessage: string,
+    roleSetInvitedToParent: boolean,
+    roleSetExtraRole: RoleName | undefined,
     agentInfo: AgentInfo
   ): Promise<IPlatformInvitation> {
-    await this.validateInvitationToExternalUser(
-      invitationData.email,
-      invitationData.roleSetID
-    );
-    const roleSet = await this.getRoleSetOrFail(invitationData.roleSetID, {
-      relations: {},
-    });
-
     const externalInvitationInput: CreatePlatformInvitationInput = {
-      ...invitationData,
+      roleSetID: roleSet.id,
+      welcomeMessage,
+      email,
+      roleSetInvitedToParent,
+      roleSetExtraRole,
       createdBy: agentInfo.userID,
     };
     const externalInvitation =
