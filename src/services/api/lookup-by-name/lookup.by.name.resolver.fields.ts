@@ -1,6 +1,4 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -32,7 +30,6 @@ export class LookupByNameResolverFields {
     private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description: 'Lookup the ID of the specified InnovationHub using a NameID',
@@ -53,7 +50,6 @@ export class LookupByNameResolverFields {
     return innovationHub.id;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description: 'Lookup the ID of the specified InnovationPack using a NameID',
@@ -74,7 +70,6 @@ export class LookupByNameResolverFields {
     return innovationPack.id;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'Lookup a Space using a NameID',
@@ -94,7 +89,6 @@ export class LookupByNameResolverFields {
     return space;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description: 'Lookup the ID of the specified User using a NameID',
@@ -114,7 +108,6 @@ export class LookupByNameResolverFields {
     return user.id;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description: 'Lookup the ID of the specified Organization using a NameID',
@@ -129,7 +122,6 @@ export class LookupByNameResolverFields {
     return organization.id;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description:
@@ -154,7 +146,6 @@ export class LookupByNameResolverFields {
     return virtualContributor.id;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: true,
     description:

@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -27,7 +25,6 @@ export class PlatformResolverMutations {
     private platformSettingsService: PlatformSettingsService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IPlatform, {
     description: 'Reset the Authorization Policy on the specified Platform.',
   })
@@ -49,7 +46,6 @@ export class PlatformResolverMutations {
     return await this.platformService.getPlatformOrFail();
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IPlatformSettings, {
     description: 'Updates one of the Setting on the Platform',
   })

@@ -196,13 +196,26 @@ export class AiPersonaServiceService {
     return this.aiPersonaEngineAdapter.invoke(input);
   }
 
+  public getAssistantID(externalConfig: IExternalConfig): string {
+    const decoded = this.decryptExternalConfig(externalConfig);
+    return decoded.assistantId || '';
+  }
+
+  public getApiKeyID(externalConfig: IExternalConfig): string {
+    const { apiKey } = this.decryptExternalConfig(externalConfig);
+    if (!apiKey) {
+      return '';
+    }
+    return `${apiKey.slice(0, 7)}...${apiKey.slice(-4)}` || '';
+  }
+
   private encryptExternalConfig(
     config: IExternalConfig | undefined
   ): IExternalConfig {
     if (!config) {
       return {};
     }
-    const result: IExternalConfig = {};
+    const result: IExternalConfig = config;
     if (config.apiKey) {
       result.apiKey = this.crypto.encrypt(config.apiKey);
     }
@@ -218,7 +231,7 @@ export class AiPersonaServiceService {
     if (!config) {
       return {};
     }
-    const result: IExternalConfig = {};
+    const result: IExternalConfig = config;
     if (config.apiKey) {
       result.apiKey = this.crypto.decrypt(config.apiKey);
     }

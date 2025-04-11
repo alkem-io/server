@@ -1,11 +1,10 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerificationService } from './organization.verification.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
@@ -27,7 +26,6 @@ export class OrganizationVerificationResolverMutations {
     private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganizationVerification, {
     description: 'Trigger an event on the Organization Verification.',
   })

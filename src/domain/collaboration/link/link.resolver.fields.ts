@@ -1,6 +1,4 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ILink } from './link.interface';
 import { Profiling } from '@common/decorators';
@@ -11,7 +9,6 @@ import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => ILink)
 export class LinkResolverFields {
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for framing the associated Link Contribution.',

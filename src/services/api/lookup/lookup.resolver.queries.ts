@@ -1,6 +1,4 @@
 import { Query, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { Profiling } from '@common/decorators';
 import { LookupQueryResults } from './dto/lookup.query.results';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -8,7 +6,6 @@ import { InstrumentResolver } from '@src/apm/decorators';
 @InstrumentResolver()
 @Resolver()
 export class LookupResolverQueries {
-  @UseGuards(GraphqlGuard)
   @Query(() => LookupQueryResults, {
     nullable: false,
     description: 'Allow direct lookup of entities from the domain model',

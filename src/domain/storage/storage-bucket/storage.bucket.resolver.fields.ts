@@ -20,11 +20,11 @@ export class StorageBucketResolverFields {
   constructor(private storageBucketService: StorageBucketService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('document', () => IDocument, {
     nullable: true,
     description: 'A single Document',
   })
-  @UseGuards(GraphqlGuard)
   async document(
     @Parent() storageBucket: IStorageBucket,
     @CurrentUser() agentInfo: AgentInfo,

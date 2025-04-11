@@ -1,5 +1,3 @@
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -12,7 +10,6 @@ import { InnovationFlow } from './innovation.flow.entity';
 export class InnovationFlowResolverFields {
   constructor() {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this InnovationFlow.',

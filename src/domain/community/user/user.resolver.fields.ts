@@ -50,7 +50,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The Profile for this User.',
   })
-  @UseGuards(GraphqlGuard)
   async profile(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo,
@@ -73,7 +72,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The settings for this User.',
   })
-  @UseGuards(GraphqlGuard)
   settings(@Parent() user: IUser): IUserSettings {
     return user.settings;
   }
@@ -90,7 +88,6 @@ export class UserResolverFields {
     return loader.load(user.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: false,
     description: 'The Authorization for this User.',
@@ -103,7 +100,6 @@ export class UserResolverFields {
     return loader.load(user.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('preferences', () => [IPreference], {
     nullable: false,
     description: 'The preferences for this user',
@@ -146,7 +142,6 @@ export class UserResolverFields {
     return this.userService.getDirectRooms(user);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('email', () => String, {
     nullable: false,
     description: 'The email address for this User.',
@@ -167,7 +162,6 @@ export class UserResolverFields {
     return 'not accessible';
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('phone', () => String, {
     nullable: true,
     description: 'The phone number for this User.',
@@ -188,7 +182,6 @@ export class UserResolverFields {
     return 'not accessible';
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: true,
     description: 'The account hosted by this User.',
@@ -210,7 +203,6 @@ export class UserResolverFields {
     return undefined;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('isContactable', () => Boolean, {
     nullable: false,
     description: 'Can a message be sent to this User.',
@@ -230,12 +222,12 @@ export class UserResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description:
       'The StorageAggregator for managing storage buckets in use by this User',
   })
-  @UseGuards(GraphqlGuard)
   async storageAggregator(
     @Parent() user: IUser,
     @Loader(UserStorageAggregatorLoaderCreator)
@@ -248,7 +240,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'Details about the authentication used for this User.',
   })
-  @UseGuards(GraphqlGuard)
   async authentication(
     @Parent() user: IUser,
     @CurrentUser() agentInfo: AgentInfo
@@ -278,7 +269,6 @@ export class UserResolverFields {
     return result;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => IRoom, {
     nullable: true,
     description: 'Guidance Chat Room for this user',

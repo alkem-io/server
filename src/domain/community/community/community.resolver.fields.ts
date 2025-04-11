@@ -51,7 +51,6 @@ export class CommunityResolverFields {
   }
 
   // Note: do not check for READ so that it is accessible to check for authorization
-  @UseGuards(GraphqlGuard)
   @ResolveField('roleSet', () => IRoleSet, {
     nullable: false,
     description: 'The RoleSet for this Community.',

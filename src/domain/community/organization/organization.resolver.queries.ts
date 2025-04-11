@@ -2,10 +2,8 @@ import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
-import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
 import { PaginationArgs } from '@core/pagination';
 import { OrganizationFilterInput } from '@core/filtering';
-import { UseGuards } from '@nestjs/common';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
@@ -36,7 +34,6 @@ export class OrganizationResolverQueries {
     return await this.organizationService.getOrganizationOrFail(id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => PaginatedOrganization, {
     nullable: false,
     description: 'The Organizations on this platform in paginated format',

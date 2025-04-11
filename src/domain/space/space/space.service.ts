@@ -1009,6 +1009,23 @@ export class SpaceService {
     );
   }
 
+  public async assignOrganizationToMemberLeadRoles(
+    roleSet: IRoleSet,
+    organizationID: string
+  ) {
+    await this.roleSetService.assignOrganizationToRole(
+      roleSet,
+      RoleName.MEMBER,
+      organizationID
+    );
+
+    await this.roleSetService.assignOrganizationToRole(
+      roleSet,
+      RoleName.LEAD,
+      organizationID
+    );
+  }
+
   public async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(spaceData.ID, {
       relations: {

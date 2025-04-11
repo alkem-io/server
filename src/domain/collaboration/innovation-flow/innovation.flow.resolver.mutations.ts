@@ -1,8 +1,6 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { InnovationFlowService } from './innovation.flow.service';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -20,7 +18,6 @@ export class InnovationFlowResolverMutations {
     private innovationFlowService: InnovationFlowService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationFlow, {
     description: 'Updates the InnovationFlow.',
   })
@@ -45,7 +42,6 @@ export class InnovationFlowResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationFlow, {
     description: 'Updates the InnovationFlow.',
   })
@@ -70,7 +66,6 @@ export class InnovationFlowResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationFlow, {
     description: 'Updates the specified InnovationFlowState.',
   })

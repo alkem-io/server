@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -22,7 +20,6 @@ export class RolesResolverQueries {
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => ContributorRoles, {
     nullable: false,
     description: 'The roles that that the specified User has.',
@@ -40,7 +37,6 @@ export class RolesResolverQueries {
     return this.rolesServices.getRolesForUser(rolesData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => ContributorRoles, {
     description: 'The roles that the specified Organization has.',
   })
@@ -50,7 +46,6 @@ export class RolesResolverQueries {
     return await this.rolesServices.getRolesForOrganization(rolesData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Query(() => ContributorRoles, {
     description: 'The roles that the specified VirtualContributor has.',
   })

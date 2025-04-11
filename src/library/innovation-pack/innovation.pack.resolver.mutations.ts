@@ -1,9 +1,6 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { InnovationPackService } from './innovation.pack.service';
-
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -20,7 +17,6 @@ export class InnovationPackResolverMutations {
     private innovationPackService: InnovationPackService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationPack, {
     description: 'Updates the InnovationPack.',
   })
@@ -46,7 +42,6 @@ export class InnovationPackResolverMutations {
     return await this.innovationPackService.update(innovationPackData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationPack, {
     description: 'Deletes the specified InnovationPack.',
   })

@@ -1,7 +1,6 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver, Mutation, Args, Field, ObjectType } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -47,7 +46,6 @@ export class AiServerResolverMutations {
     private logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IMigrateEmbeddingsResponse, {
     description: 'Deletes collections nameID-...',
   })
@@ -119,7 +117,6 @@ export class AiServerResolverMutations {
     return { success: true };
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAiServer, {
     description: 'Reset the Authorization Policy on the specified AiServer.',
   })
@@ -139,7 +136,6 @@ export class AiServerResolverMutations {
     return await this.aiServerService.getAiServerOrFail();
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAiPersonaService, {
     description: 'Creates a new AiPersonaService on the aiServer.',
   })

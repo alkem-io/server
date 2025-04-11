@@ -1,9 +1,8 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { ActivityLogService } from './activity.log.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -26,7 +25,6 @@ export class ActivityLogResolverQueries {
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Query(() => [IActivityLogEntry], {
     nullable: false,
     description: 'Retrieve the ActivityLog for the specified Collaboration',

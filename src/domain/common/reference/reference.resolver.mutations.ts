@@ -1,10 +1,8 @@
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { DeleteReferenceInput } from '@domain/common/reference/dto/reference.dto.delete';
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ReferenceService } from './reference.service';
@@ -32,7 +30,6 @@ export class ReferenceResolverMutations {
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description: 'Updates the specified Reference.',
   })
@@ -55,7 +52,6 @@ export class ReferenceResolverMutations {
     return updatedReference;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description: 'Deletes the specified Reference.',
   })
@@ -75,7 +71,6 @@ export class ReferenceResolverMutations {
     return await this.referenceService.deleteReference(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description:
       'Create a new Document on the Storage and return the value as part of the returned Reference.',

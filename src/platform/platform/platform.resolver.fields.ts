@@ -8,8 +8,6 @@ import { IMetadata } from '@platform/metadata/metadata.interface';
 import { MetadataService } from '@platform/metadata/metadata.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { IForum } from '@platform/forum';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
@@ -34,7 +32,6 @@ export class PlatformResolverFields {
   }
 
   // TODO: protect with privilege...
-  @UseGuards(GraphqlGuard)
   @ResolveField('roleSet', () => IRoleSet, {
     nullable: false,
     description: 'The RoleSet for this Platform.',
@@ -108,7 +105,6 @@ export class PlatformResolverFields {
     return await this.metadataService.getMetadata();
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('latestReleaseDiscussion', () => ReleaseDiscussionOutput, {
     nullable: true,
     description: 'The latest release discussion.',
@@ -123,7 +119,6 @@ export class PlatformResolverFields {
     nullable: true,
     description: 'The TemplatesManager in use by the Platform',
   })
-  @UseGuards(GraphqlGuard)
   async templatesManager(): Promise<ITemplatesManager> {
     return await this.platformService.getTemplatesManagerOrFail();
   }

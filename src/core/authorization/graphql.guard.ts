@@ -22,11 +22,15 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
+import {
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+} from '@core/authentication';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
-  'oathkeeper-jwt',
-  'oathkeeper-api-token',
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
 ]) {
   instanceId: string;
 
@@ -59,6 +63,7 @@ export class GraphqlGuard extends AuthGuard([
     }
     return context.switchToHttp().getRequest();
   }
+
   /**
    if *canActive* is defined the authorization WILL NOT GO through the defined strategies, and use the code here instead.
    if **handleRequest* is defined WILL USE the defined strategies

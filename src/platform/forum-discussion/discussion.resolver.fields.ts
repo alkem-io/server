@@ -60,7 +60,6 @@ export class DiscussionResolverFields {
     return await this.discussionService.getComments(discussion.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this Discussion.',

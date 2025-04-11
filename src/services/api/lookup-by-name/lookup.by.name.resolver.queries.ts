@@ -1,6 +1,4 @@
 import { Query, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { Profiling } from '@common/decorators';
 import { LookupByNameQueryResults } from './dto/lookup.by.name.query.results';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -8,7 +6,6 @@ import { InstrumentResolver } from '@src/apm/decorators';
 @InstrumentResolver()
 @Resolver()
 export class LookupByNameResolverQueries {
-  @UseGuards(GraphqlGuard)
   @Query(() => LookupByNameQueryResults, {
     nullable: false,
     description: 'Allow direct lookup of entities using their NameIDs',

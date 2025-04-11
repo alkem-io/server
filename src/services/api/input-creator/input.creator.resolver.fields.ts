@@ -1,6 +1,4 @@
 import { Args, Resolver } from '@nestjs/graphql';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -34,7 +32,6 @@ export class InputCreatorResolverFields {
     private communityGuidelinesService: CommunityGuidelinesService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => CreateCommunityGuidelinesInput, {
     nullable: true,
     description: 'Create an input based on the provided Community Guidelines',
@@ -66,7 +63,6 @@ export class InputCreatorResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => CreateInnovationFlowInput, {
     nullable: true,
     description: 'Create an input based on the provided InnovationFlow',
@@ -98,7 +94,6 @@ export class InputCreatorResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => CreateCalloutInput, {
     nullable: true,
     description: 'Create an input based on the provided Callout',
@@ -120,7 +115,6 @@ export class InputCreatorResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => CreateWhiteboardInput, {
     nullable: true,
     description: 'Create an input based on the provided Whiteboard',
@@ -150,7 +144,6 @@ export class InputCreatorResolverFields {
     return whiteboardInput;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField(() => CreateCollaborationInput, {
     nullable: true,
     description: 'Create an input based on the provided Collaboration',

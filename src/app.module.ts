@@ -91,6 +91,7 @@ import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.modul
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { SearchModule } from '@services/api/search/search.module';
 import { ApmApolloPlugin } from './apm/plugins';
+import { AuthInterceptor } from '@core/interceptors';
 
 @Module({
   imports: [
@@ -226,6 +227,7 @@ import { ApmApolloPlugin } from './apm/plugins';
               /***
                * subscriptions-transport-ws required passing the request object
                * through the onConnect method
+               * required for passport.js to execute the strategy against the incoming headers
                */
               onConnect: (
                 connectionParams: Record<string, any>,
@@ -311,6 +313,10 @@ import { ApmApolloPlugin } from './apm/plugins';
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuthInterceptor,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: DataLoaderInterceptor,

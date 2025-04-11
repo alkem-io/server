@@ -343,7 +343,7 @@ export class TemplateService {
     const newStates = sourceCollaboration.innovationFlow.states;
     targetCollaboration.innovationFlow =
       await this.innovationFlowService.updateInnovationFlowStates(
-        targetCollaboration.innovationFlow.id,
+        targetCollaboration.innovationFlow,
         newStates
       );
 

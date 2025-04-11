@@ -1,7 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { TagsetService } from './tagset.service';
@@ -18,7 +16,6 @@ export class TagsetResolverMutations {
     private tagsetService: TagsetService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITagset, {
     description: 'Updates the specified Tagset.',
   })

@@ -1,11 +1,9 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { LinkService } from './link.service';
 import { UpdateLinkInput } from '@domain/collaboration/link/dto/link.dto.update';
 import { DeleteLinkInput } from '@domain/collaboration/link/dto/link.dto.delete';
 import { ILink } from '@domain/collaboration/link/link.interface';
 import { CurrentUser, Profiling } from '@common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -30,7 +28,6 @@ export class LinkResolverMutations {
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ILink, {
     description: 'Deletes the specified Link.',
   })
@@ -50,7 +47,6 @@ export class LinkResolverMutations {
     return await this.linkService.deleteLink(deleteData.ID);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ILink, {
     description: 'Updates the specified Link.',
   })
@@ -68,7 +64,6 @@ export class LinkResolverMutations {
     return await this.linkService.updateLink(linkData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ILink, {
     description:
       'Create a new Document on the Storage and return the value as part of the returned Link.',

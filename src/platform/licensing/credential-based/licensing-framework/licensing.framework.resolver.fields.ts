@@ -13,11 +13,11 @@ export class LicensingFrameworkResolverFields {
   constructor(private licensingFrameworkService: LicensingFrameworkService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('plans', () => [ILicensePlan], {
     nullable: false,
     description: 'The License Plans in use on the platform.',
   })
-  @UseGuards(GraphqlGuard)
   async plans(
     @Parent() licensing: ILicensingFramework
   ): Promise<ILicensePlan[]> {

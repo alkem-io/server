@@ -8,6 +8,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { AiPersonaService } from './ai.persona.service.entity';
 import { AiPersonaServiceResolverFields } from './ai.persona.service.resolver.fields';
 import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.persona.engine.adapter.module';
+import { AiPersonaServiceExternalConfigResolverFields } from './ai.persona.service.external.config.resolver.fields';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.pe
     AiPersonaServiceAuthorizationService,
     AiPersonaServiceResolverMutations,
     AiPersonaServiceResolverFields,
+    AiPersonaServiceExternalConfigResolverFields,
   ],
   exports: [AiPersonaServiceService, AiPersonaServiceAuthorizationService],
 })

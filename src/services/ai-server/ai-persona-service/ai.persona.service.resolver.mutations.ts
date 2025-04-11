@@ -1,8 +1,6 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { AiPersonaServiceService } from './ai.persona.service.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -21,7 +19,6 @@ export class AiPersonaServiceResolverMutations {
     private authorizationService: AuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAiPersonaService, {
     description: 'Updates the specified AI Persona.',
   })
@@ -47,7 +44,6 @@ export class AiPersonaServiceResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAiPersonaService, {
     description: 'Deletes the specified AiPersonaService.',
   })

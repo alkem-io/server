@@ -42,7 +42,6 @@ import {
 } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
 
@@ -73,7 +72,6 @@ export class AiServerService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
-    private roomLookupService: RoomLookupService,
     private subscriptionPublishService: SubscriptionPublishService,
     private config: ConfigService<AlkemioConfig, true>,
     private roomControllerService: RoomControllerService,
@@ -226,6 +224,7 @@ export class AiServerService {
       AiPersonaEngine.EXPERT,
       AiPersonaEngine.GUIDANCE,
       AiPersonaEngine.GENERIC_OPENAI,
+      AiPersonaEngine.LIBRA_FLOW,
     ]);
 
     // history should be loaded trough the GQL API of the collaboration server
@@ -244,9 +243,15 @@ export class AiServerService {
         )
       );
 
+      //NOTE this should not be needed but untill we start using the callout contents in the
+      //expert engine better skip it
+      const includeCallout =
+        personaService.engine === AiPersonaEngine.LIBRA_FLOW;
+
       history = await this.getLastNInteractionMessages(
         invocationInput.resultHandler.roomDetails,
-        historyLimit
+        historyLimit,
+        includeCallout
       );
     }
 
@@ -256,17 +261,20 @@ export class AiServerService {
   async getLastNInteractionMessages(
     roomDetails: RoomDetails,
     // interactionID: string | undefined,
-    limit: number = 10
+    limit: number = 10,
+    includeCallout = false
   ): Promise<InteractionMessage[]> {
     let roomMessages: IMessage[] = [];
-    const room = await this.roomLookupService.getRoomOrFail(roomDetails.roomID);
+    // const room = await this.roomControllerService.getRoomOrFail(roomDetails.roomID);
     if (roomDetails.threadID) {
-      roomMessages = await this.roomLookupService.getMessagesInThread(
-        room,
+      roomMessages = await this.roomControllerService.getMessagesInThread(
+        roomDetails.roomID,
         roomDetails.threadID
       );
     } else {
-      roomMessages = await this.roomLookupService.getMessages(room);
+      roomMessages = await this.roomControllerService.getMessages(
+        roomDetails.roomID
+      );
     }
 
     const messages: InteractionMessage[] = [];
@@ -284,9 +292,21 @@ export class AiServerService {
         content: message.message,
         role,
       });
+
       if (messages.length === limit) {
         break;
       }
+    }
+    if (includeCallout) {
+      const callout = await this.roomControllerService.getRoomCalloutOrFail(
+        roomDetails.roomID
+      );
+      // remove oldest message in order to keep the historyu length at limit
+      messages.pop();
+      messages.unshift({
+        content: callout.framing.profile.description || '',
+        role: MessageSenderRole.HUMAN,
+      });
     }
 
     return messages;

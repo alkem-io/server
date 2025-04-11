@@ -1,8 +1,6 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CalendarEventService } from './event.service';
 import { CurrentUser } from '@common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -19,7 +17,6 @@ export class CalendarEventResolverMutations {
     private calendarEventService: CalendarEventService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalendarEvent, {
     description: 'Deletes the specified CalendarEvent.',
   })
@@ -38,7 +35,6 @@ export class CalendarEventResolverMutations {
     return this.calendarEventService.deleteCalendarEvent(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICalendarEvent, {
     description: 'Updates the specified CalendarEvent.',
   })

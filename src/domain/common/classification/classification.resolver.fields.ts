@@ -1,6 +1,4 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IClassification } from './classification.interface';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -14,7 +12,6 @@ import { LogContext } from '@common/enums/logging.context';
 export class ClassificationResolverFields {
   constructor() {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('tagsets', () => [ITagset], {
     nullable: true,
     description: 'The classification tagsets.',
@@ -26,7 +23,6 @@ export class ClassificationResolverFields {
     return loader.load(classification.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('tagset', () => ITagset, {
     nullable: true,
     description: 'The default or named tagset.',

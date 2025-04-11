@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -42,7 +40,6 @@ export class PlatformRoleResolverMutations {
     private platformService: PlatformService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Assigns a User to a role on the Platform.',
   })
@@ -102,7 +99,6 @@ export class PlatformRoleResolverMutations {
     return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Removes a User from a Role on the Platform.',
   })

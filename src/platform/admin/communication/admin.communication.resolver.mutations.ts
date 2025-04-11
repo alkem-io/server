@@ -2,8 +2,6 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
@@ -33,7 +31,6 @@ export class AdminCommunicationResolverMutations {
       );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description:
       'Ensure all community members are registered for communications.',
@@ -55,7 +52,6 @@ export class AdminCommunicationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Remove an orphaned room from messaging platform.',
   })
@@ -76,7 +72,6 @@ export class AdminCommunicationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Allow updating the state flags of a particular rule.',
   })

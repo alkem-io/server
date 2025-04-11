@@ -1,6 +1,7 @@
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -26,11 +27,13 @@ import { CreateInnovationFlowStateInput } from '../innovation-flow-states/dto/in
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 @Injectable()
 export class InnovationFlowService {
   constructor(
     private profileService: ProfileService,
+    private tagsetService: TagsetService,
     private tagsetTemplateService: TagsetTemplateService,
     private innovationFlowStatesService: InnovationFlowStatesService,
     @InjectRepository(InnovationFlow)
@@ -96,7 +99,7 @@ export class InnovationFlowService {
     innovationFlowData: UpdateInnovationFlowEntityInput,
     isTemplate: boolean = false
   ): Promise<IInnovationFlow> {
-    const innovationFlow = await this.getInnovationFlowOrFail(
+    let innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
       {
         relations: {
@@ -108,28 +111,17 @@ export class InnovationFlowService {
       }
     );
 
-    if (innovationFlowData.states) {
-      this.innovationFlowStatesService.validateDefinition(
-        innovationFlowData.states,
-        innovationFlow.settings
-      );
-
-      // InnovationFlow templates don't have a tagset
-      if (!isTemplate) {
-        await this.updateFlowStatesTagsetTemplate(
-          innovationFlow,
-          this.innovationFlowStatesService.convertInputsToStates(
-            innovationFlowData.states
-          )
-        );
-      }
-
-      // serialize the states
-      innovationFlow.states =
-        this.innovationFlowStatesService.convertInputsToStates(
-          innovationFlowData.states
-        );
-    }
+    this.innovationFlowStatesService.validateDefinition(
+      innovationFlowData.states,
+      innovationFlow.settings
+    );
+    innovationFlow = await this.updateInnovationFlowStates(
+      innovationFlow,
+      this.innovationFlowStatesService.convertInputsToStates(
+        innovationFlowData.states
+      ),
+      isTemplate
+    );
 
     if (innovationFlowData.profileData) {
       innovationFlow.profile = await this.profileService.updateProfile(
@@ -141,53 +133,78 @@ export class InnovationFlowService {
     return await this.innovationFlowRepository.save(innovationFlow);
   }
 
-  private async updateFlowStatesTagsetTemplate(
+  public async updateInnovationFlowStates(
     innovationFlow: IInnovationFlow,
     newStates: IInnovationFlowState[],
-    oldSelectedValue?: string,
-    newSelectedValue?: string
+    isTemplate: boolean = false
   ) {
-    if (!innovationFlow.flowStatesTagsetTemplate) {
-      throw new ValidationException(
-        `Unable to find flowStatesTagsetTemplate on InnovationFlow: ${innovationFlow.id}`,
-        LogContext.INNOVATION_FLOW
+    // Update the innovation flow entity
+    const currentStateStillValid = newStates.some(
+      state => state.displayName === innovationFlow.currentState.displayName
+    );
+    if (!currentStateStillValid) {
+      // if the current state is not in the new states, set it to the first one
+      innovationFlow.currentState = newStates[0];
+    }
+    innovationFlow.states = newStates;
+    innovationFlow = await this.save(innovationFlow);
+
+    if (!isTemplate) {
+      const tagsetAllowedValues = newStates.map(state => state.displayName);
+      const tagsetDefaultSelectedValue =
+        innovationFlow.currentState.displayName;
+      await this.updateFlowStatesTagsetTemplate(
+        innovationFlow.id,
+        tagsetAllowedValues,
+        tagsetDefaultSelectedValue
       );
     }
-    const newStateNames = newStates.map(state => state.displayName);
-    const defaultSelectedState = newStateNames[0]; // default to first in the list
-    const updatedTagsetTemplateData: UpdateTagsetTemplateDefinitionInput = {
-      allowedValues: newStateNames,
-      defaultSelectedValue: defaultSelectedState,
-      oldSelectedValue,
-      newSelectedValue,
-    };
-    await this.tagsetTemplateService.updateTagsetTemplateDefinition(
-      innovationFlow.flowStatesTagsetTemplate,
-      updatedTagsetTemplateData
-    );
+
+    return innovationFlow;
   }
 
-  public async updateInnovationFlowStates(
+  private async updateFlowStatesTagsetTemplate(
     innovationFlowID: string,
-    newStates: IInnovationFlowState[]
+    allowedValues: string[],
+    defaultSelectedValue: string
   ) {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
         relations: {
-          profile: true,
           flowStatesTagsetTemplate: {
             tagsets: true,
           },
         },
       }
     );
+    if (
+      !innovationFlow.flowStatesTagsetTemplate ||
+      !innovationFlow.flowStatesTagsetTemplate.tagsets
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to find flowStatesTagsetTemplate on InnovationFlow: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    const tagsetsToUpdate = innovationFlow.flowStatesTagsetTemplate.tagsets;
+    // Update the tagset Template
 
-    // serialize the states
-    innovationFlow.states = newStates;
-    await this.updateFlowStatesTagsetTemplate(innovationFlow, newStates);
+    const updatedTagsetTemplateData: UpdateTagsetTemplateDefinitionInput = {
+      allowedValues,
+      defaultSelectedValue,
+    };
+    await this.tagsetTemplateService.updateTagsetTemplateDefinition(
+      innovationFlow.flowStatesTagsetTemplate,
+      updatedTagsetTemplateData
+    );
 
-    return await this.save(innovationFlow);
+    // Update all tagsets using the tagset template
+    await this.tagsetService.updateTagsetsSelectedValue(
+      tagsetsToUpdate,
+      allowedValues,
+      defaultSelectedValue
+    );
   }
 
   async updateSelectedState(
@@ -216,7 +233,8 @@ export class InnovationFlowService {
   }
 
   async updateSingleState(
-    updateData: UpdateInnovationFlowSingleStateInput
+    updateData: UpdateInnovationFlowSingleStateInput,
+    isTemplate: boolean = false
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       updateData.innovationFlowID,
@@ -252,26 +270,11 @@ export class InnovationFlowService {
       }
       newStates.push(state);
     }
-    // Check that the new states setup is valid
-    this.innovationFlowStatesService.validateDefinition(
-      newStates,
-      innovationFlow.settings
-    );
-
-    innovationFlow.states = newStates;
-
-    // Save with new states before updating selected values
-    await this.innovationFlowRepository.save(innovationFlow);
-
-    // Update the allowed values on the tagset, and any tagsets with the old value
-    await this.updateFlowStatesTagsetTemplate(
+    return await this.updateInnovationFlowStates(
       innovationFlow,
       newStates,
-      updateData.stateDisplayName,
-      updateData.stateUpdatedData.displayName
+      isTemplate
     );
-
-    return await this.getInnovationFlowOrFail(updateData.innovationFlowID);
   }
 
   async deleteInnovationFlow(

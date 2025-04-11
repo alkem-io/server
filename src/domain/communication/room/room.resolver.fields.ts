@@ -34,7 +34,6 @@ export class RoomResolverFields {
     return result;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('vcInteractions', () => [IVcInteraction], {
     nullable: false,
     description: 'Virtual Contributor Interactions in this Room.',

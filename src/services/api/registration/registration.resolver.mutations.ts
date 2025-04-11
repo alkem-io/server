@@ -1,7 +1,6 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -43,7 +42,6 @@ export class RegistrationResolverMutations {
     private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description:
       'Creates a new User profile on the platform for a user that has a valid Authentication session.',
@@ -55,7 +53,6 @@ export class RegistrationResolverMutations {
     return await this.processCreatedUser(user, agentInfo);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Creates a new User on the platform.',
   })
@@ -101,7 +98,6 @@ export class RegistrationResolverMutations {
     return await this.userService.getUserOrFail(user.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Creates a new Organization on the platform.',
   })
@@ -151,7 +147,6 @@ export class RegistrationResolverMutations {
     await this.notificationAdapter.userRegistered(notificationInput);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Deletes the specified User.',
   })
@@ -182,7 +177,6 @@ export class RegistrationResolverMutations {
     return userDeleted;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Deletes the specified Organization.',
   })

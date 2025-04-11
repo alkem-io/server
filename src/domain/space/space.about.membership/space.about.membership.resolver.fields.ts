@@ -3,8 +3,7 @@ import { SpaceAboutMembership } from './dto/space.about.membership';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { RoleSetMembershipStatusDataLoader } from '@domain/access/role-set/role.set.data.loader.membership.status';
 import { IForm } from '@domain/common/form/form.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -24,7 +23,6 @@ export class SpaceAboutMembershipResolverFields {
     private readonly membershipStatusLoader: RoleSetMembershipStatusDataLoader
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('myPrivileges', () => [AuthorizationPrivilege], {
     nullable: true,
     description:
@@ -42,7 +40,6 @@ export class SpaceAboutMembershipResolverFields {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('roleSetID', () => UUID, {
     nullable: false,
     description: 'The identifier of the RoleSet within the Space.',
@@ -51,7 +48,6 @@ export class SpaceAboutMembershipResolverFields {
     return membership.roleSet.id;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('communityID', () => UUID, {
     nullable: false,
     description: 'The identifier of the Community within the Space.',
@@ -60,7 +56,6 @@ export class SpaceAboutMembershipResolverFields {
     return membership.community.id;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('applicationForm', () => IForm, {
     nullable: false,
     description: 'The Form used for Applications to this Space.',
@@ -72,7 +67,6 @@ export class SpaceAboutMembershipResolverFields {
     return await this.roleSetService.getApplicationForm(roleSet);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('myMembershipStatus', () => CommunityMembershipStatus, {
     nullable: true,
     description: 'The membership status of the currently logged in user.',
@@ -86,7 +80,6 @@ export class SpaceAboutMembershipResolverFields {
     return this.membershipStatusLoader.loader.load({ agentInfo, roleSet });
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('leadUsers', () => [IUser], {
     nullable: false,
     description: 'The Lead Users that are associated with this Space.',
@@ -98,7 +91,6 @@ export class SpaceAboutMembershipResolverFields {
     return await this.roleSetService.getUsersWithRole(roleSet, RoleName.LEAD);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('leadOrganizations', () => [IOrganization], {
     nullable: false,
     description: 'The Lead Organizations that are associated with this Space.',

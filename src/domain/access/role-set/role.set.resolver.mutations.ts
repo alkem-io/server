@@ -1,8 +1,7 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoleSetService } from './role.set.service';
 import { CurrentUser } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -101,7 +100,6 @@ export class RoleSetResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Assigns a User to a role in the specified Community.',
   })
@@ -167,7 +165,6 @@ export class RoleSetResolverMutations {
     return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Assigns an Organization a Role in the specified Community.',
   })
@@ -194,7 +191,6 @@ export class RoleSetResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVirtualContributor, {
     description:
       'Assigns a Virtual Contributor to a role in the specified Community.',
@@ -264,7 +260,6 @@ export class RoleSetResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Removes a User from a Role in the specified Community.',
   })
@@ -347,7 +342,6 @@ export class RoleSetResolverMutations {
     return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description:
       'Removes an Organization from a Role in the specified Community.',
@@ -375,7 +369,6 @@ export class RoleSetResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVirtualContributor, {
     description: 'Removes a Virtual from a Role in the specified Community.',
   })
@@ -415,7 +408,6 @@ export class RoleSetResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IRoleSet, {
     description:
       'Join the specified RoleSet using the entry Role, without going through an approval process.',
@@ -459,7 +451,6 @@ export class RoleSetResolverMutations {
     return roleSet;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Apply to join the specified RoleSet in the entry Role.',
   })
@@ -529,7 +520,6 @@ export class RoleSetResolverMutations {
     return await this.applicationService.getApplicationOrFail(application.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => [IInvitation], {
     description:
       'Invite an existing Contributor to join the specified RoleSet in the Entry Role.',
@@ -711,7 +701,6 @@ export class RoleSetResolverMutations {
     return await this.invitationService.getInvitationOrFail(invitation.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IPlatformInvitation, {
     description:
       'Invite a User to join the platform and the specified RoleSet as a member.',
@@ -799,7 +788,6 @@ export class RoleSetResolverMutations {
     return platformInvitation;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Trigger an event on the Application.',
   })
@@ -886,7 +874,6 @@ export class RoleSetResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IInvitation, {
     description: 'Trigger an event on the Invitation.',
   })
@@ -978,7 +965,6 @@ export class RoleSetResolverMutations {
     return await this.invitationService.getInvitationOrFail(invitation.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IRoleSet, {
     description: 'Update the Application Form used by this RoleSet.',
   })

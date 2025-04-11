@@ -1,10 +1,8 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-
 import { IUser } from '@domain/community/user/user.interface';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -50,7 +48,6 @@ export class AdminAuthorizationResolverMutations {
       );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Grants an authorization credential to a User.',
   })
@@ -82,7 +79,6 @@ export class AdminAuthorizationResolverMutations {
     return user;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Removes an authorization credential from a User.',
   })
@@ -111,7 +107,6 @@ export class AdminAuthorizationResolverMutations {
     return user;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Grants an authorization credential to an Organization.',
   })
@@ -132,7 +127,6 @@ export class AdminAuthorizationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Removes an authorization credential from an Organization.',
   })
@@ -153,7 +147,6 @@ export class AdminAuthorizationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
     description: 'Reset the Authorization Policy on all entities',
   })
@@ -173,7 +166,6 @@ export class AdminAuthorizationResolverMutations {
     return this.authResetService.publishResetAll();
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IAuthorizationPolicy, {
     description:
       'Reset the specified Authorization Policy to global admin privileges',
@@ -200,7 +192,6 @@ export class AdminAuthorizationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Refresh the Bodies of Knowledge on All VCs',
   })

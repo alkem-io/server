@@ -11,14 +11,11 @@ import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Template } from './template.entity';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
   constructor(private templateService: TemplateService) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this Template.',
@@ -31,7 +28,6 @@ export class TemplateResolverFields {
     return loader.load(template.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('communityGuidelines', () => ICommunityGuidelines, {
     nullable: true,
     description: 'The Community Guidelines for this Template.',
@@ -45,7 +41,6 @@ export class TemplateResolverFields {
     return this.templateService.getCommunityGuidelines(template.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('callout', () => ICallout, {
     nullable: true,
     description: 'The Callout for this Template.',
@@ -57,7 +52,6 @@ export class TemplateResolverFields {
     return this.templateService.getCallout(template.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('whiteboard', () => IWhiteboard, {
     nullable: true,
     description: 'The Whiteboard for this Template.',
@@ -71,7 +65,6 @@ export class TemplateResolverFields {
     return this.templateService.getWhiteboard(template.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: true,
     description: 'The Collaboration for this Template.',

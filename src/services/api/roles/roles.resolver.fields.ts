@@ -1,6 +1,4 @@
 import { Parent, Resolver } from '@nestjs/graphql';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -22,7 +20,6 @@ export class RolesResolverFields {
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('organizations', () => [RolesResultOrganization], {
     description: 'Details of the roles the contributor has in Organizations',
   })
@@ -32,7 +29,6 @@ export class RolesResolverFields {
     return await this.rolesService.getOrganizationRolesForUser(roles);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('spaces', () => [RolesResultSpace], {
     description:
       'Details of Spaces the User or Organization is a member of, with child memberships - if Space is accessible for the current user.',
@@ -44,7 +40,6 @@ export class RolesResolverFields {
     return this.rolesService.getSpaceRolesForContributor(roles, agentInfo);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [CommunityInvitationForRoleResult], {
     description:
       'The invitations for the specified user; only accessible for platform admins',
@@ -73,7 +68,6 @@ export class RolesResolverFields {
     return await this.rolesService.convertInvitationsToRoleResults(invitations);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [CommunityApplicationForRoleResult], {
     description:
       'The applications for the specified user; only accessible for platform admins',

@@ -1,8 +1,6 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IRole } from './role.interface';
 import { IContributorRolePolicy } from './contributor.role.policy.interface';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { UseGuards } from '@nestjs/common';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Resolver(() => IRole)
@@ -39,7 +37,6 @@ export class RoleResolverFields {
     return role.organizationPolicy;
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributorPolicy', () => IContributorRolePolicy, {
     nullable: false,
     description:

@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -19,7 +17,6 @@ export class CommunityGuidelinesResolverMutations {
     private communityGuidelinesService: CommunityGuidelinesService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunityGuidelines, {
     description: 'Updates the CommunityGuidelines.',
   })
@@ -45,7 +42,7 @@ export class CommunityGuidelinesResolverMutations {
       communityGuidelinesData
     );
   }
-  @UseGuards(GraphqlGuard)
+
   @Mutation(() => ICommunityGuidelines, {
     description: 'Empties the CommunityGuidelines.', // Update mutation doesn't allow empty values. And we cannot really delete the entity, but this will leave it empty.
   })

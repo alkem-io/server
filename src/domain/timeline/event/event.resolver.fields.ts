@@ -1,10 +1,9 @@
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@common/decorators/profiling.decorator';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICalendarEvent } from './event.interface';
@@ -48,7 +47,6 @@ export class CalendarEventResolverFields {
     }
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this Post.',

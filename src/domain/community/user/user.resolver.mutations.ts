@@ -1,7 +1,6 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from './user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -37,7 +36,6 @@ export class UserResolverMutations {
     private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Updates the User.',
   })
@@ -55,7 +53,6 @@ export class UserResolverMutations {
     return await this.userService.updateUser(userData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Updates one of the Setting on a User',
   })
@@ -86,7 +83,6 @@ export class UserResolverMutations {
     return this.userService.getUserOrFail(user.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IPreference, {
     description: 'Updates one of the Preferences on a Space',
   })
@@ -116,7 +112,6 @@ export class UserResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
     description:
       'Sends a message on the specified User`s behalf and returns the room id',
@@ -143,7 +138,6 @@ export class UserResolverMutations {
     });
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Reset the Authorization policy on the specified User.',
   })
@@ -169,7 +163,6 @@ export class UserResolverMutations {
     return await this.userService.getUserOrFail(user.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description:
       'Update the platform settings, such as nameID, email, for the specified User.',

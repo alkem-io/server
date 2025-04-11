@@ -1,9 +1,8 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { SpaceService } from './space.service';
 import { DeleteSpaceInput, UpdateSpaceInput } from '@domain/space/space';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -41,7 +40,6 @@ export class SpaceResolverMutations {
     private licenseService: LicenseService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
   })
@@ -91,7 +89,6 @@ export class SpaceResolverMutations {
     return updatedSpace;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Deletes the specified Space.',
   })
@@ -110,7 +107,6 @@ export class SpaceResolverMutations {
     return await this.spaceService.deleteSpaceOrFail(deleteData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Updates one of the Setting on a Space',
   })
@@ -146,7 +142,6 @@ export class SpaceResolverMutations {
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description:
       'Update the platform settings, such as nameID, of the specified Space.',
@@ -175,7 +170,6 @@ export class SpaceResolverMutations {
     return await this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description: 'Creates a new Subspace within the specified Space.',
   })

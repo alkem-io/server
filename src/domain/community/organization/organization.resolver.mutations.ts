@@ -1,10 +1,8 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { OrganizationService } from './organization.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { UpdateOrganizationInput } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
-import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -28,7 +26,6 @@ export class OrganizationResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Creates a new User Group for the specified Organization.',
   })
@@ -56,7 +53,6 @@ export class OrganizationResolverMutations {
     return group;
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Updates one of the Setting on an Organization',
   })
@@ -91,7 +87,6 @@ export class OrganizationResolverMutations {
     return this.organizationService.getOrganizationOrFail(organization.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Updates the specified Organization.',
   })
@@ -113,7 +108,6 @@ export class OrganizationResolverMutations {
     return await this.organizationService.updateOrganization(organizationData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description:
       'Reset the Authorization Policy on the specified Organization.',
