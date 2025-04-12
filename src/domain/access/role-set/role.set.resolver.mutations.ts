@@ -612,54 +612,37 @@ export class RoleSetResolverMutations {
       invitationData.invitedToParent = false;
     }
 
-    return Promise.all(
-      contributors.map(async invitedContributor => {
-        return await this.inviteSingleExistingContributor(
-          roleSet,
-          invitedContributor,
-          agentInfo,
-          invitationData.invitedToParent,
-          invitationData.extraRole,
-          invitationData.welcomeMessage
-        );
-      })
-    );
-  }
+    const invitations: IInvitation[] = [];
+    const invitationResults: RoleSetInvitationResult[] = [];
+    for (const contributor of contributors) {
+      const input: CreateInvitationInput = {
+        roleSetID: roleSet.id,
+        invitedContributorID: contributor.id,
+        createdBy: agentInfo.userID,
+        invitedToParent: invitationData.invitedToParent,
+        extraRole: invitationData.extraRole,
+        welcomeMessage: invitationData.welcomeMessage,
+      };
 
-  private async inviteSingleExistingContributor(
-    roleSet: IRoleSet,
-    invitedContributor: IContributor,
-    agentInfo: AgentInfo,
-    invitedToParent: boolean,
-    extraRole?: RoleName,
-    welcomeMessage?: string
-  ): Promise<IInvitation> {
-    const input: CreateInvitationInput = {
-      roleSetID: roleSet.id,
-      invitedContributorID: invitedContributor.id,
-      createdBy: agentInfo.userID,
-      invitedToParent,
-      extraRole,
-      welcomeMessage,
-    };
+      const invitation =
+        await this.roleSetService.createInvitationExistingContributor(input);
 
-    const invitation =
-      await this.roleSetService.createInvitationExistingContributor(input);
-
-    const invitationResult: RoleSetInvitationResult = {
-      type: RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
-      invitation,
-    };
+      const invitationResult: RoleSetInvitationResult = {
+        type: RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
+        invitation,
+      };
+      invitationResults.push(invitationResult);
+      invitations.push(invitation);
+    }
 
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
 
     await this.sendNotificationEventsForInvitationsOnSpaceRoleSet(
       roleSet,
       agentInfo,
-      [invitationResult]
+      invitationResults
     );
-
-    return await this.invitationService.getInvitationOrFail(invitation.id);
+    return invitations;
   }
 
   @Mutation(() => [RoleSetInvitationResult], {
@@ -693,15 +676,8 @@ export class RoleSetResolverMutations {
       `create invitation external community: ${roleSet.id}`
     );
 
-    const {
-      authorizedToInviteToParentRoleSet,
-      authorizedToInviteToGrandParentRoleSet,
-    } = this.getPrivilegesOnParentRoleSets(roleSet, agentInfo);
-
-    this.logger.verbose?.(
-      `inviting users to role set: ${roleSet.id}, parent auth ${authorizedToInviteToParentRoleSet}, grandparent auth ${authorizedToInviteToGrandParentRoleSet} `,
-      LogContext.COMMUNITY
-    );
+    const { authorizedToInviteToParentRoleSet } =
+      this.getPrivilegesOnParentRoleSets(roleSet, agentInfo);
 
     // Process each user
     const invitationResults: RoleSetInvitationResult[] = [];
@@ -711,7 +687,9 @@ export class RoleSetResolverMutations {
       if (existingUser) {
         // Create a normal invitation
         // TODO
+        continue;
       }
+
       // Is the user already invited?
       const existingPlatformInvitation =
         await this.platformInvitationService.getExistingPlatformInvitationForRoleSet(
@@ -725,23 +703,23 @@ export class RoleSetResolverMutations {
         };
         invitationResults.push(result);
         continue;
+      } else {
+        const newPlatformInvitation =
+          await this.roleSetService.createPlatformInvitation(
+            roleSet,
+            email,
+            invitationData.welcomeMessage || '',
+            authorizedToInviteToParentRoleSet,
+            invitationData.roleSetExtraRole,
+            agentInfo
+          );
+        const result: RoleSetInvitationResult = {
+          type: RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET,
+          platformInvitation: newPlatformInvitation,
+        };
+        invitationResults.push(result);
+        continue;
       }
-
-      const newPlatformInvitation =
-        await this.roleSetService.createPlatformInvitation(
-          roleSet,
-          email,
-          invitationData.welcomeMessage || '',
-          authorizedToInviteToParentRoleSet,
-          invitationData.roleSetExtraRole,
-          agentInfo
-        );
-      const result: RoleSetInvitationResult = {
-        type: RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET,
-        platformInvitation: newPlatformInvitation,
-      };
-      invitationResults.push(result);
-      continue;
     }
 
     invitationData.roleSetInvitedToParent = authorizedToInviteToParentRoleSet;
