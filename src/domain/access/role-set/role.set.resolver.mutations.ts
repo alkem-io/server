@@ -737,158 +737,6 @@ export class RoleSetResolverMutations {
     return invitationResults;
   }
 
-  private getPrivilegesOnParentRoleSets(
-    roleSet: IRoleSet,
-    agentInfo: AgentInfo
-  ): {
-    authorizedToInviteToParentRoleSet: boolean;
-    authorizedToInviteToGrandParentRoleSet: boolean;
-  } {
-    let authorizedToInviteToParentRoleSet = false;
-    let authorizedToInviteToGrandParentRoleSet = false;
-    // Check if the the inviting user has permissions to invite to the parent if this is not the root
-    if (roleSet.parentRoleSet) {
-      const parentRoleSetAuthorization = roleSet.parentRoleSet.authorization;
-      authorizedToInviteToParentRoleSet =
-        this.authorizationService.isAccessGranted(
-          agentInfo,
-          parentRoleSetAuthorization,
-          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
-        );
-      if (roleSet.parentRoleSet.parentRoleSet) {
-        const grantParentRoleSetAuthorization =
-          roleSet.parentRoleSet.parentRoleSet.authorization;
-        authorizedToInviteToGrandParentRoleSet =
-          this.authorizationService.isAccessGranted(
-            agentInfo,
-            grantParentRoleSetAuthorization,
-            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
-          );
-      }
-    }
-    return {
-      authorizedToInviteToParentRoleSet,
-      authorizedToInviteToGrandParentRoleSet,
-    };
-  }
-
-  private async sendNotificationEventsForInvitationsOnSpaceRoleSet(
-    roleSet: IRoleSet,
-    agentInfo: AgentInfo,
-    invitationResults: RoleSetInvitationResult[]
-  ) {
-    // Only trigger the notifications for now on RoleSets for Spaces
-    if (roleSet.type !== RoleSetType.SPACE) {
-      return;
-    }
-    const community =
-      await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
-
-    for (const invitationResult of invitationResults) {
-      switch (invitationResult.type) {
-        case RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET: {
-          const platformInvitation = invitationResult.platformInvitation;
-          if (!platformInvitation) {
-            throw new RelationshipNotFoundException(
-              `Unable to load platform invitation for result: ${invitationResult.type}`,
-              LogContext.ROLES
-            );
-          }
-          const notificationInput: NotificationInputPlatformInvitation = {
-            triggeredBy: agentInfo.userID,
-            community,
-            invitedUser: platformInvitation.email,
-            welcomeMessage: platformInvitation.welcomeMessage,
-          };
-          await this.notificationAdapter.platformInvitationCreated(
-            notificationInput
-          );
-          break;
-        }
-        case RoleSetInvitationResultType.INVITED_TO_ROLE_SET: {
-          const invitation = invitationResult.invitation;
-          if (!invitation) {
-            throw new RelationshipNotFoundException(
-              `Unable to load invitation for result: ${invitationResult.type}`,
-              LogContext.ROLES
-            );
-          }
-          switch (invitation.contributorType) {
-            case RoleSetContributorType.VIRTUAL: {
-              const account =
-                await this.virtualContributorLookupService.getAccountOrFail(
-                  invitation.invitedContributorID
-                );
-              const accountProvider =
-                await this.accountLookupService.getHostOrFail(account);
-
-              const notificationInput: NotificationInputCommunityInvitationVirtualContributor =
-                {
-                  triggeredBy: agentInfo.userID,
-                  community,
-                  invitedContributorID: invitation.invitedContributorID,
-                  accountHost: accountProvider,
-                  welcomeMessage: invitation.welcomeMessage,
-                };
-
-              await this.notificationAdapter.invitationVirtualContributorCreated(
-                notificationInput
-              );
-            }
-            case RoleSetContributorType.USER: {
-              // Send the notification
-              const notificationInput: NotificationInputCommunityInvitation = {
-                triggeredBy: agentInfo.userID,
-                community,
-                invitedContributorID: invitation.invitedContributorID,
-                welcomeMessage: invitation.welcomeMessage,
-              };
-
-              await this.notificationAdapter.invitationCreated(
-                notificationInput
-              );
-              break;
-            }
-            case RoleSetContributorType.ORGANIZATION: {
-              // No notifications supported at the moment
-              break;
-            }
-          }
-
-          break;
-        }
-        case RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET:
-        case RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET:
-        case RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED: {
-          // Nothing to do?
-          break;
-        }
-      }
-    }
-  }
-
-  private async resetAuthorizationsOnRoleSetApplicationsInvitations(
-    roleSetID: string
-  ) {
-    // Logic is that the ability to invite to a subspace requires the ability to invite to the
-    // parent community if the user is not a member there
-    const roleSet = await this.roleSetService.getRoleSetOrFail(
-      roleSetID,
-
-      {
-        relations: {
-          invitations: true,
-          platformInvitations: true,
-        },
-      }
-    );
-    const authorizations =
-      await this.roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications(
-        roleSet
-      );
-    await this.authorizationPolicyService.saveAll(authorizations);
-  }
-
   @Mutation(() => IApplication, {
     description: 'Trigger an event on the Application.',
   })
@@ -1089,6 +937,158 @@ export class RoleSetResolverMutations {
       roleSet,
       applicationFormData.formData
     );
+  }
+
+  private getPrivilegesOnParentRoleSets(
+    roleSet: IRoleSet,
+    agentInfo: AgentInfo
+  ): {
+    authorizedToInviteToParentRoleSet: boolean;
+    authorizedToInviteToGrandParentRoleSet: boolean;
+  } {
+    let authorizedToInviteToParentRoleSet = false;
+    let authorizedToInviteToGrandParentRoleSet = false;
+    // Check if the the inviting user has permissions to invite to the parent if this is not the root
+    if (roleSet.parentRoleSet) {
+      const parentRoleSetAuthorization = roleSet.parentRoleSet.authorization;
+      authorizedToInviteToParentRoleSet =
+        this.authorizationService.isAccessGranted(
+          agentInfo,
+          parentRoleSetAuthorization,
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
+        );
+      if (roleSet.parentRoleSet.parentRoleSet) {
+        const grantParentRoleSetAuthorization =
+          roleSet.parentRoleSet.parentRoleSet.authorization;
+        authorizedToInviteToGrandParentRoleSet =
+          this.authorizationService.isAccessGranted(
+            agentInfo,
+            grantParentRoleSetAuthorization,
+            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
+          );
+      }
+    }
+    return {
+      authorizedToInviteToParentRoleSet,
+      authorizedToInviteToGrandParentRoleSet,
+    };
+  }
+
+  private async sendNotificationEventsForInvitationsOnSpaceRoleSet(
+    roleSet: IRoleSet,
+    agentInfo: AgentInfo,
+    invitationResults: RoleSetInvitationResult[]
+  ) {
+    // Only trigger the notifications for now on RoleSets for Spaces
+    if (roleSet.type !== RoleSetType.SPACE) {
+      return;
+    }
+    const community =
+      await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
+
+    for (const invitationResult of invitationResults) {
+      switch (invitationResult.type) {
+        case RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET: {
+          const platformInvitation = invitationResult.platformInvitation;
+          if (!platformInvitation) {
+            throw new RelationshipNotFoundException(
+              `Unable to load platform invitation for result: ${invitationResult.type}`,
+              LogContext.ROLES
+            );
+          }
+          const notificationInput: NotificationInputPlatformInvitation = {
+            triggeredBy: agentInfo.userID,
+            community,
+            invitedUser: platformInvitation.email,
+            welcomeMessage: platformInvitation.welcomeMessage,
+          };
+          await this.notificationAdapter.platformInvitationCreated(
+            notificationInput
+          );
+          break;
+        }
+        case RoleSetInvitationResultType.INVITED_TO_ROLE_SET: {
+          const invitation = invitationResult.invitation;
+          if (!invitation) {
+            throw new RelationshipNotFoundException(
+              `Unable to load invitation for result: ${invitationResult.type}`,
+              LogContext.ROLES
+            );
+          }
+          switch (invitation.contributorType) {
+            case RoleSetContributorType.VIRTUAL: {
+              const account =
+                await this.virtualContributorLookupService.getAccountOrFail(
+                  invitation.invitedContributorID
+                );
+              const accountProvider =
+                await this.accountLookupService.getHostOrFail(account);
+
+              const notificationInput: NotificationInputCommunityInvitationVirtualContributor =
+                {
+                  triggeredBy: agentInfo.userID,
+                  community,
+                  invitedContributorID: invitation.invitedContributorID,
+                  accountHost: accountProvider,
+                  welcomeMessage: invitation.welcomeMessage,
+                };
+
+              await this.notificationAdapter.invitationVirtualContributorCreated(
+                notificationInput
+              );
+            }
+            case RoleSetContributorType.USER: {
+              // Send the notification
+              const notificationInput: NotificationInputCommunityInvitation = {
+                triggeredBy: agentInfo.userID,
+                community,
+                invitedContributorID: invitation.invitedContributorID,
+                welcomeMessage: invitation.welcomeMessage,
+              };
+
+              await this.notificationAdapter.invitationCreated(
+                notificationInput
+              );
+              break;
+            }
+            case RoleSetContributorType.ORGANIZATION: {
+              // No notifications supported at the moment
+              break;
+            }
+          }
+
+          break;
+        }
+        case RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET:
+        case RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET:
+        case RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED: {
+          // Nothing to do?
+          break;
+        }
+      }
+    }
+  }
+
+  private async resetAuthorizationsOnRoleSetApplicationsInvitations(
+    roleSetID: string
+  ) {
+    // Logic is that the ability to invite to a subspace requires the ability to invite to the
+    // parent community if the user is not a member there
+    const roleSet = await this.roleSetService.getRoleSetOrFail(
+      roleSetID,
+
+      {
+        relations: {
+          invitations: true,
+          platformInvitations: true,
+        },
+      }
+    );
+    const authorizations =
+      await this.roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications(
+        roleSet
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
   }
 
   private validateRoleSetTypeOrFail(
