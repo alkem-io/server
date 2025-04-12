@@ -1601,7 +1601,7 @@ export class RoleSetService {
     email: string,
     welcomeMessage: string,
     roleSetInvitedToParent: boolean,
-    roleSetExtraRole: RoleName | undefined,
+    extraRole: RoleName | undefined,
     agentInfo: AgentInfo
   ): Promise<IPlatformInvitation> {
     const externalInvitationInput: CreatePlatformInvitationInput = {
@@ -1609,7 +1609,7 @@ export class RoleSetService {
       welcomeMessage,
       email,
       roleSetInvitedToParent,
-      roleSetExtraRole,
+      roleSetExtraRole: extraRole,
       createdBy: agentInfo.userID,
     };
     const externalInvitation =
