@@ -384,7 +384,11 @@ export class RoleSetResolverMutationsMembership {
     const invitationResults: RoleSetInvitationResult[] = [];
     for (const email of invitationData.emails) {
       // If the user is already registered, then just create a normal invitation
-      const existingUser = await this.userLookupService.getUserByEmail(email);
+      const existingUser = await this.userLookupService.getUserByEmail(email, {
+        relations: {
+          agent: true,
+        },
+      });
       if (existingUser) {
         // Create a normal invitation
         const existingUserInvitationResults =
