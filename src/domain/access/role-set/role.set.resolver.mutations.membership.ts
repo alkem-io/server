@@ -341,7 +341,19 @@ export class RoleSetResolverMutationsMembership {
 
       // Not an existing user, and not an existing invitation so we need to create a new platform invitation
       // TODO: the logic for invitation to parent role set needs to be added here.
-      const inviteToParentRoleSet = authorizedToInviteToParentRoleSet;
+      let inviteToParentRoleSet = false;
+      if (roleSet.parentRoleSet) {
+        if (!authorizedToInviteToParentRoleSet) {
+          const result: RoleSetInvitationResult = {
+            type: RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED,
+          };
+          invitationResults.push(result);
+
+          continue;
+        }
+        inviteToParentRoleSet = true;
+      }
+
       const newPlatformInvitation =
         await this.roleSetService.createPlatformInvitation(
           roleSet,
@@ -588,10 +600,11 @@ export class RoleSetResolverMutationsMembership {
           roleSet.parentRoleSet
         );
         if (!isMember && !authorizedToInviteToParentRoleSet) {
-          throw new RoleSetInvitationException(
-            `Contributor is not a member of the parent community (${roleSet.parentRoleSet.id}) and the current user does not have the privilege to invite to the parent community`,
-            LogContext.COMMUNITY
-          );
+          const result: RoleSetInvitationResult = {
+            type: RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED,
+          };
+          invitationResults.push(result);
+          continue;
         }
         invitedToParent = true;
       }
@@ -714,6 +727,7 @@ export class RoleSetResolverMutationsMembership {
               await this.notificationAdapter.invitationVirtualContributorCreated(
                 notificationInput
               );
+              break;
             }
             case RoleSetContributorType.USER: {
               // Send the notification
@@ -734,13 +748,12 @@ export class RoleSetResolverMutationsMembership {
               break;
             }
           }
-
           break;
         }
         case RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET:
         case RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET:
         case RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED: {
-          // Nothing to do?
+          // No notifications to be triggered
           break;
         }
       }
