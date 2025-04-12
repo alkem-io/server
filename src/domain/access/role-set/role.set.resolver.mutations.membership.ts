@@ -416,12 +416,14 @@ export class RoleSetResolverMutationsMembership {
       }
 
       // Not an existing user, and not an existing invitation so we need to create a new platform invitation
+      // TODO: the logic for invitation to parent role set needs to be added here.
+      const inviteToParentRoleSet = authorizedToInviteToParentRoleSet;
       const newPlatformInvitation =
         await this.roleSetService.createPlatformInvitation(
           roleSet,
           email,
           invitationData.welcomeMessage || '',
-          authorizedToInviteToParentRoleSet,
+          inviteToParentRoleSet,
           invitationData.roleSetExtraRole,
           agentInfo
         );
