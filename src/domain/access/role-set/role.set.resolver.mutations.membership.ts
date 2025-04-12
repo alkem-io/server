@@ -265,18 +265,53 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
-    // Logic is that the ability to invite to a subspace requires the ability to invite to the
-    // parent community if the user is not a member there
-    let invitedToParent = false;
-    if (roleSet.parentRoleSet) {
-      // Need to see if also can invite to the parent community if any of the users are not members there
-      for (const contributor of contributors) {
-        if (!contributor.agent) {
-          throw new EntityNotInitializedException(
-            `Unable to load agent on contributor: ${contributor.id}`,
-            LogContext.COMMUNITY
-          );
-        }
+    const invitationResults = await this.inviteContributorsToEntryRoleOnRoleSet(
+      roleSet,
+      contributors,
+      agentInfo,
+      authorizedToInviteToParentRoleSet,
+      invitationData.extraRole,
+      invitationData.welcomeMessage
+    );
+
+    await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
+
+    await this.sendNotificationEventsForInvitationsOnSpaceRoleSet(
+      roleSet,
+      agentInfo,
+      invitationResults
+    );
+
+    const invitations: IInvitation[] = [];
+    for (const invitationResult of invitationResults) {
+      if (invitationResult.invitation) {
+        invitations.push(invitationResult.invitation);
+      }
+    }
+    return invitations;
+  }
+
+  private async inviteContributorsToEntryRoleOnRoleSet(
+    roleSet: IRoleSet,
+    contributors: IContributor[],
+    agentInfo: AgentInfo,
+    authorizedToInviteToParentRoleSet: boolean,
+    extraRole: RoleName | undefined,
+    welcomeMessage: string | undefined
+  ): Promise<RoleSetInvitationResult[]> {
+    const invitationResults: RoleSetInvitationResult[] = [];
+    for (const contributor of contributors) {
+      const contributorAgent = contributor.agent;
+      if (!contributorAgent) {
+        throw new EntityNotInitializedException(
+          `Unable to load agent on contributor: ${contributor.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+      let invitedToParent = false;
+      // Logic is that the ability to invite to a subspace requires the ability to invite to the
+      // parent community if the user is not a member there
+      if (roleSet.parentRoleSet) {
         const isMember = await this.roleSetService.isMember(
           contributor.agent,
           roleSet.parentRoleSet
@@ -289,18 +324,14 @@ export class RoleSetResolverMutationsMembership {
         }
         invitedToParent = true;
       }
-    }
 
-    const invitations: IInvitation[] = [];
-    const invitationResults: RoleSetInvitationResult[] = [];
-    for (const contributor of contributors) {
       const input: CreateInvitationInput = {
         roleSetID: roleSet.id,
         invitedContributorID: contributor.id,
         createdBy: agentInfo.userID,
         invitedToParent: invitedToParent,
-        extraRole: invitationData.extraRole,
-        welcomeMessage: invitationData.welcomeMessage,
+        extraRole,
+        welcomeMessage,
       };
 
       const invitation =
@@ -311,17 +342,8 @@ export class RoleSetResolverMutationsMembership {
         invitation,
       };
       invitationResults.push(invitationResult);
-      invitations.push(invitation);
     }
-
-    await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
-
-    await this.sendNotificationEventsForInvitationsOnSpaceRoleSet(
-      roleSet,
-      agentInfo,
-      invitationResults
-    );
-    return invitations;
+    return invitationResults;
   }
 
   @Mutation(() => [RoleSetInvitationResult], {
@@ -362,10 +384,19 @@ export class RoleSetResolverMutationsMembership {
     const invitationResults: RoleSetInvitationResult[] = [];
     for (const email of invitationData.emails) {
       // If the user is already registered, then just create a normal invitation
-      const existingUser = await this.userLookupService.isRegisteredUser(email);
+      const existingUser = await this.userLookupService.getUserByEmail(email);
       if (existingUser) {
         // Create a normal invitation
-        // TODO
+        const existingUserInvitationResults =
+          await this.inviteContributorsToEntryRoleOnRoleSet(
+            roleSet,
+            [existingUser],
+            agentInfo,
+            authorizedToInviteToParentRoleSet,
+            invitationData.roleSetExtraRole,
+            invitationData.welcomeMessage
+          );
+        invitationResults.push(...existingUserInvitationResults);
         continue;
       }
 
@@ -382,26 +413,25 @@ export class RoleSetResolverMutationsMembership {
         };
         invitationResults.push(result);
         continue;
-      } else {
-        const newPlatformInvitation =
-          await this.roleSetService.createPlatformInvitation(
-            roleSet,
-            email,
-            invitationData.welcomeMessage || '',
-            authorizedToInviteToParentRoleSet,
-            invitationData.roleSetExtraRole,
-            agentInfo
-          );
-        const result: RoleSetInvitationResult = {
-          type: RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET,
-          platformInvitation: newPlatformInvitation,
-        };
-        invitationResults.push(result);
-        continue;
       }
-    }
 
-    invitationData.roleSetInvitedToParent = authorizedToInviteToParentRoleSet;
+      // Not an existing user, and not an existing invitation so we need to create a new platform invitation
+      const newPlatformInvitation =
+        await this.roleSetService.createPlatformInvitation(
+          roleSet,
+          email,
+          invitationData.welcomeMessage || '',
+          authorizedToInviteToParentRoleSet,
+          invitationData.roleSetExtraRole,
+          agentInfo
+        );
+      const result: RoleSetInvitationResult = {
+        type: RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET,
+        platformInvitation: newPlatformInvitation,
+      };
+      invitationResults.push(result);
+      continue;
+    }
 
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
 
