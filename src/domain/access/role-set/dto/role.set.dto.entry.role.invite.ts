@@ -33,8 +33,4 @@ export class InviteForEntryRoleOnRoleSetInput {
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   extraRole?: RoleName;
-
-  createdBy!: string;
-
-  invitedToParent!: boolean;
 }

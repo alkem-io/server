@@ -236,6 +236,9 @@ export class RoleSetResolverMutationsMembership {
       `create invitation RoleSet: ${roleSet.id}`
     );
 
+    const { authorizedToInviteToParentRoleSet } =
+      this.getPrivilegesOnParentRoleSets(roleSet, agentInfo);
+
     const contributors: IContributor[] = [];
     for (const contributorID of invitationData.invitedContributors) {
       const contributor =
@@ -262,11 +265,9 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
-    const { authorizedToInviteToParentRoleSet } =
-      this.getPrivilegesOnParentRoleSets(roleSet, agentInfo);
-
     // Logic is that the ability to invite to a subspace requires the ability to invite to the
     // parent community if the user is not a member there
+    let invitedToParent = false;
     if (roleSet.parentRoleSet) {
       // Need to see if also can invite to the parent community if any of the users are not members there
       for (const contributor of contributors) {
@@ -285,12 +286,9 @@ export class RoleSetResolverMutationsMembership {
             `Contributor is not a member of the parent community (${roleSet.parentRoleSet.id}) and the current user does not have the privilege to invite to the parent community`,
             LogContext.COMMUNITY
           );
-        } else {
-          invitationData.invitedToParent = true;
         }
+        invitedToParent = true;
       }
-    } else {
-      invitationData.invitedToParent = false;
     }
 
     const invitations: IInvitation[] = [];
@@ -300,7 +298,7 @@ export class RoleSetResolverMutationsMembership {
         roleSetID: roleSet.id,
         invitedContributorID: contributor.id,
         createdBy: agentInfo.userID,
-        invitedToParent: invitationData.invitedToParent,
+        invitedToParent: invitedToParent,
         extraRole: invitationData.extraRole,
         welcomeMessage: invitationData.welcomeMessage,
       };
