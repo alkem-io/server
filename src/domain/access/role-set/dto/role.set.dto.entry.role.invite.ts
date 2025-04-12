@@ -14,18 +14,18 @@ export class InviteForEntryRoleOnRoleSetInput {
   @MaxLength(UUID_LENGTH)
   roleSetID!: string;
 
+  @Field(() => [UUID], {
+    nullable: false,
+    description: 'The identifiers for the contributors being invited.',
+  })
+  invitedContributorIDs!: string[];
+
   @Field(() => [String], {
     nullable: false,
   })
   @IsEmail({}, { each: true })
   @MaxLength(MID_TEXT_LENGTH, { each: true })
-  emails!: string[];
-
-  @Field(() => [UUID], {
-    nullable: false,
-    description: 'The identifiers for the contributors being invited.',
-  })
-  invitedContributors!: string[];
+  invitedUserEmails!: string[];
 
   @Field({ nullable: true, description: 'The welcome message to send' })
   @IsOptional()
@@ -34,16 +34,9 @@ export class InviteForEntryRoleOnRoleSetInput {
 
   @Field(() => RoleName, {
     nullable: true,
-    description:
-      'An additional role to assign to the Contributors, in addition to the entry Role.',
+    description: 'An additional role to assign in addition to the entry Role.',
   })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   extraRole?: RoleName;
-
-  @Field(() => [UUID], {
-    nullable: false,
-    description: 'The identifiers for the contributors being invited.',
-  })
-  invitedContributorIDs!: string[];
 }

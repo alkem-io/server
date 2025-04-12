@@ -194,7 +194,7 @@ export class RoleSetResolverMutationsMembership {
     return await this.applicationService.getApplicationOrFail(application.id);
   }
 
-  @Mutation(() => [IInvitation], {
+  @Mutation(() => [RoleSetInvitationResult], {
     description:
       'Invite new Contributors or users by email to join the specified RoleSet in the Entry Role.',
   })
@@ -202,7 +202,7 @@ export class RoleSetResolverMutationsMembership {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: InviteForEntryRoleOnRoleSetInput
-  ): Promise<IInvitation[]> {
+  ): Promise<RoleSetInvitationResult[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,
       {
@@ -221,7 +221,10 @@ export class RoleSetResolverMutationsMembership {
     );
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    if (invitationData.invitedContributors.length === 0) {
+    if (
+      invitationData.invitedContributorIDs.length === 0 &&
+      invitationData.invitedUserEmails.length === 0
+    ) {
       throw new RoleSetInvitationException(
         `No contributors were provided to invite: ${roleSet.id}`,
         LogContext.COMMUNITY
@@ -239,7 +242,7 @@ export class RoleSetResolverMutationsMembership {
       this.getPrivilegesOnParentRoleSets(roleSet, agentInfo);
 
     const contributors: IContributor[] = [];
-    for (const contributorID of invitationData.invitedContributors) {
+    for (const contributorID of invitationData.invitedContributorIDs) {
       const contributor =
         await this.contributorService.getContributorByUuidOrFail(
           contributorID,
@@ -264,9 +267,9 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
-    // Loop through the emails provided
+    // Loop through the emails provided to see if are existing users or not
     const newUserEmails: string[] = [];
-    for (const email of invitationData.emails) {
+    for (const email of invitationData.invitedUserEmails) {
       // If the user is already registered, then just create a normal invitation
       const existingUser = await this.userLookupService.getUserByEmail(email, {
         relations: {
@@ -308,13 +311,7 @@ export class RoleSetResolverMutationsMembership {
       invitationResults
     );
 
-    const invitations: IInvitation[] = [];
-    for (const invitationResult of invitationResults) {
-      if (invitationResult.invitation) {
-        invitations.push(invitationResult.invitation);
-      }
-    }
-    return invitations;
+    return invitationResults;
   }
 
   private async inviteNewUsersByEmailToPlatformAndRoleSet(
