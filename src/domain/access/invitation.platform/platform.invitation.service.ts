@@ -19,6 +19,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IRoleSet } from '../role-set/role.set.interface';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 
 @Injectable()
 export class PlatformInvitationService {
@@ -132,10 +133,10 @@ export class PlatformInvitationService {
     return [];
   }
 
-  async isEmailAlreadyInvited(
+  async getExistingPlatformInvitationForRoleSet(
     email: string,
     roleSetID: string
-  ): Promise<boolean> {
+  ): Promise<IPlatformInvitation | undefined> {
     const existingPlatformInvitations =
       await this.platformInvitationRepository.find({
         where: {
@@ -147,7 +148,15 @@ export class PlatformInvitationService {
         relations: { roleSet: true },
       });
 
-    if (existingPlatformInvitations.length > 0) return true;
-    return false;
+    if (existingPlatformInvitations.length > 1) {
+      throw new RoleSetMembershipException(
+        `Found roleSet invitations for email ${email} and roleSet ${roleSetID}, but only one is expected!`,
+        LogContext.ROLES
+      );
+    }
+    if (existingPlatformInvitations.length === 1) {
+      return existingPlatformInvitations[0];
+    }
+    return undefined;
   }
 }

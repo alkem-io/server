@@ -14,7 +14,7 @@ export class InviteUsersByEmailForRoleOnRoleSetInput {
   @MaxLength(UUID_LENGTH)
   roleSetID!: string;
 
-  @Field({
+  @Field(() => [String], {
     nullable: false,
   })
   @IsEmail({}, { each: true })

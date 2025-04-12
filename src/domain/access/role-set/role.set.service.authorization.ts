@@ -84,16 +84,8 @@ export class RoleSetAuthorizationService {
 
     updatedAuthorizations.push(roleSet.authorization);
 
-    for (const application of roleSet.applications) {
-      const applicationAuth =
-        await this.applicationAuthorizationService.applyAuthorizationPolicy(
-          application,
-          roleSet.authorization
-        );
-      updatedAuthorizations.push(applicationAuth);
-    }
     const invitationAuthorizations =
-      await this.applyAuthorizationPolicyOnInvitations(roleSet);
+      await this.applyAuthorizationPolicyOnInvitationsApplications(roleSet);
     updatedAuthorizations.push(...invitationAuthorizations);
 
     const licenseAuthorization =
@@ -106,16 +98,30 @@ export class RoleSetAuthorizationService {
     return updatedAuthorizations;
   }
 
-  public async applyAuthorizationPolicyOnInvitations(
+  public async applyAuthorizationPolicyOnInvitationsApplications(
     roleSet: IRoleSet
   ): Promise<IAuthorizationPolicy[]> {
-    if (!roleSet.invitations || !roleSet.platformInvitations) {
+    if (
+      !roleSet.invitations ||
+      !roleSet.platformInvitations ||
+      !roleSet.applications
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for roleSet authorization: ${roleSet.id} `,
         LogContext.COMMUNITY
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
+    for (const application of roleSet.applications) {
+      const applicationAuth =
+        await this.applicationAuthorizationService.applyAuthorizationPolicy(
+          application,
+          roleSet.authorization
+        );
+      updatedAuthorizations.push(applicationAuth);
+    }
+
     for (const invitation of roleSet.invitations) {
       const invitationAuth =
         await this.invitationAuthorizationService.applyAuthorizationPolicy(
@@ -133,6 +139,7 @@ export class RoleSetAuthorizationService {
         );
       updatedAuthorizations.push(platformInvitationAuthorization);
     }
+
     return updatedAuthorizations;
   }
 
