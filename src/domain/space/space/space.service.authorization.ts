@@ -437,10 +437,26 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
+    const clonedSpaceAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        space.authorization
+      );
+    const readAccessLicense =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        'Read access to License'
+      );
+    readAccessLicense.cascade = true;
+    clonedSpaceAuthorization.credentialRules.push(readAccessLicense);
+
     const licenseAuthorizations =
       this.licenseAuthorizationService.applyAuthorizationPolicy(
         space.license,
-        space.authorization
+        clonedSpaceAuthorization
       );
     updatedAuthorizations.push(...licenseAuthorizations);
 
@@ -626,6 +642,7 @@ export class SpaceAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
       );
