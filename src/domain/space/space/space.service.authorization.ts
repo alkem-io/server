@@ -122,6 +122,7 @@ export class SpaceAuthorizationService {
     switch (space.level) {
       case SpaceLevel.L0: {
         space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
+          space,
           space.authorization
         );
         break;
@@ -131,6 +132,7 @@ export class SpaceAuthorizationService {
         if (isPrivate) {
           // Key: private get the base space authorization setup, that is then extended
           space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
+            space,
             space.authorization
           );
         } else {
@@ -181,7 +183,10 @@ export class SpaceAuthorizationService {
       this.authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping(
         space.authorization,
         AuthorizationPrivilege.READ,
-        [AuthorizationPrivilege.READ_ABOUT],
+        [
+          AuthorizationPrivilege.READ_ABOUT,
+          AuthorizationPrivilege.READ_LICENSE,
+        ],
         POLICY_RULE_READ_ABOUT
       );
     // Ensure that CREATE also allows CREATE_SUBSPACE
@@ -236,9 +241,15 @@ export class SpaceAuthorizationService {
       this.authorizationPolicyService.getCredentialDefinitionsAnonymousRegistered();
 
     switch (space.level) {
-      case SpaceLevel.L0:
+      case SpaceLevel.L0: {
         credentialCriteriasWithAccess.push(...globalAnonymousRegistered);
+
+        // Always allow account admins to see the L0 spaces in their account
+        const accountAdminCredential =
+          this.getAccountAdminCredentialForSpaceL0OrFail(space);
+        credentialCriteriasWithAccess.push(accountAdminCredential);
         break;
+      }
 
       case SpaceLevel.L1:
         credentialCriteriasWithAccess.push(
@@ -266,6 +277,23 @@ export class SpaceAuthorizationService {
     });
 
     return credentialCriteriasWithAccess;
+  }
+
+  private getAccountAdminCredentialForSpaceL0OrFail(
+    space: ISpace
+  ): ICredentialDefinition {
+    const account = space.account;
+    if (!account) {
+      throw new RelationshipNotFoundException(
+        `Unable to load account for L0 space ${space.id} `,
+        LogContext.SPACES
+      );
+    }
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: account.id,
+    };
+    return accountAdminCredential;
   }
 
   /**
@@ -437,26 +465,10 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
-    const clonedSpaceAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        space.authorization
-      );
-    const readAccessLicense =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
-        [
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        'Read access to License'
-      );
-    readAccessLicense.cascade = true;
-    clonedSpaceAuthorization.credentialRules.push(readAccessLicense);
-
     const licenseAuthorizations =
       this.licenseAuthorizationService.applyAuthorizationPolicy(
         space.license,
-        clonedSpaceAuthorization
+        space.authorization
       );
     updatedAuthorizations.push(...licenseAuthorizations);
 
@@ -620,6 +632,7 @@ export class SpaceAuthorizationService {
   }
 
   private resetToPrivateLevelZeroSpaceAuthorization(
+    space: ISpace,
     authorizationPolicy: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     let updatedAuthorization =
@@ -633,12 +646,22 @@ export class SpaceAuthorizationService {
 
     // Allow global admins to manage platform settings
     // Later: to allow account admins to some settings?
-    const platformSettings =
+    const spacePlatformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
         [
-          AuthorizationPrivilege.PLATFORM_ADMIN,
-          AuthorizationPrivilege.READ_ABOUT, // in order for Global Support to be able to administer the spaces
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
+        CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
+      );
+    spacePlatformSettingsAdmin.cascade = false;
+    newRules.push(spacePlatformSettingsAdmin);
+
+    // in order for Global roles to be able to administer the spaces
+    const globalRolesReadAbout =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ_ABOUT],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
@@ -646,8 +669,8 @@ export class SpaceAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
       );
-    platformSettings.cascade = false;
-    newRules.push(platformSettings);
+    globalRolesReadAbout.cascade = false;
+    newRules.push(globalRolesReadAbout);
 
     // Allow Global Spaces Read to view Spaces
     const globalSpacesReader =
@@ -657,6 +680,36 @@ export class SpaceAuthorizationService {
         CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
       );
     newRules.push(globalSpacesReader);
+
+    //
+    if (space.level === SpaceLevel.L0) {
+      // Additional rules so that global roles can see the license information.
+      const globalRolesReadAccessLicense =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.READ_LICENSE],
+          [
+            AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+            AuthorizationCredential.GLOBAL_SUPPORT,
+          ],
+          'Read access to License for global roles'
+        );
+      globalRolesReadAccessLicense.cascade = false;
+      newRules.push(globalRolesReadAccessLicense);
+
+      const accountAdminCredential =
+        this.getAccountAdminCredentialForSpaceL0OrFail(space);
+      const accountAdminReadAboutLicense =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.READ_LICENSE,
+            AuthorizationPrivilege.READ_ABOUT,
+          ],
+          [accountAdminCredential],
+          'Read about and license access to License for account admins'
+        );
+      accountAdminReadAboutLicense.cascade = false;
+      newRules.push(accountAdminReadAboutLicense);
+    }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       updatedAuthorization,
