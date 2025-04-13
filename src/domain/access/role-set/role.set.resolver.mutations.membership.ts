@@ -618,6 +618,19 @@ export class RoleSetResolverMutationsMembership {
         welcomeMessage,
       };
 
+      const openInvitation = await this.roleSetService.findOpenInvitation(
+        contributor.id,
+        roleSet.id
+      );
+      if (openInvitation) {
+        const result: RoleSetInvitationResult = {
+          type: RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET,
+          invitation: openInvitation,
+        };
+        invitationResults.push(result);
+        continue;
+      }
+
       const invitation =
         await this.roleSetService.createInvitationExistingContributor(input);
 
@@ -772,6 +785,7 @@ export class RoleSetResolverMutationsMembership {
         relations: {
           invitations: true,
           platformInvitations: true,
+          applications: true,
         },
       }
     );
