@@ -23,7 +23,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
 import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
-import { ApplyForEntryRoleOnRoleSetInput as ApplyForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.apply';
+import { ApplyForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.apply';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
 import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.invite';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
