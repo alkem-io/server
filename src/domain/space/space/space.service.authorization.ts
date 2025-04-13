@@ -83,6 +83,7 @@ export class SpaceAuthorizationService {
         subspaces: true,
         templatesManager: true,
         license: true,
+        account: true,
       },
     });
     if (
