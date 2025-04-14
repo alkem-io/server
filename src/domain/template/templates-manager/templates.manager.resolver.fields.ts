@@ -27,11 +27,11 @@ export class TemplatesManagerResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,
     description: 'The templatesSet in use by this TemplatesManager.',
   })
-  @UseGuards(GraphqlGuard)
   async templatesSet(
     @Parent() templatesManager: ITemplatesManager
   ): Promise<ITemplatesSet> {

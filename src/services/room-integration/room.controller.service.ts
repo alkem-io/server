@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import { MutationType } from '@common/enums/subscriptions';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
+import { RoomService } from '@domain/communication/room/room.service';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
@@ -17,10 +18,30 @@ export class RoomControllerService {
   constructor(
     private roomLookupService: RoomLookupService,
     private subscriptionPublishService: SubscriptionPublishService,
-
     private vcInteractionService: VcInteractionService,
+    private roomService: RoomService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  public async getRoomCalloutOrFail(roomID: string) {
+    const room = await this.roomService.getRoomOrFail(roomID, {
+      relations: { callout: { framing: { profile: true } } },
+    });
+    return room.callout;
+  }
+  public async getMessages(roomID: string) {
+    const room = await this.getRoomOrFail(roomID);
+    return await this.roomLookupService.getMessages(room);
+  }
+
+  public async getMessagesInThread(roomID: string, threadID: string) {
+    const room = await this.getRoomOrFail(roomID);
+    return await this.roomLookupService.getMessagesInThread(room, threadID);
+  }
+
+  private async getRoomOrFail(roomID: string) {
+    return this.roomLookupService.getRoomOrFail(roomID);
+  }
 
   public async postReply(event: InvokeEngineResult) {
     const { roomID, threadID, communicationID, vcInteractionID }: RoomDetails =

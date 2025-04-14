@@ -1,6 +1,4 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICalloutFraming } from './callout.framing.interface';
 import { Profiling } from '@common/decorators';
@@ -15,7 +13,6 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 export class CalloutFramingResolverFields {
   constructor(private calloutFramingService: CalloutFramingService) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for framing the associated Callout.',
@@ -29,7 +26,6 @@ export class CalloutFramingResolverFields {
     return loader.load(calloutFraming.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('whiteboard', () => IWhiteboard, {
     nullable: true,
     description: 'The Whiteboard for framing the associated Callout.',

@@ -2,11 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { DiscussionAuthorizationService } from '../forum-discussion/discussion.service.authorization';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { ForumService } from './forum.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import {
-  POLICY_RULE_FORUM_CONTRIBUTE,
+  CREDENTIAL_RULE_TYPES_FORUM_CONTRIBUTE,
+  CREDENTIAL_RULE_TYPES_FORUM_READ,
   POLICY_RULE_FORUM_CREATE,
 } from '@common/constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -46,16 +51,47 @@ export class ForumAuthorizationService {
         parentAuthorization
       );
 
+    // Who can create
+    const createRule =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_DISCUSSION],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_FORUM_READ
+      );
+    createRule.cascade = false;
+    forum.authorization.credentialRules.push(createRule);
+
+    const contributeRule =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CONTRIBUTE],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_FORUM_CONTRIBUTE
+      );
+    createRule.cascade = true;
+    forum.authorization.credentialRules.push(contributeRule);
+
+    const readRule =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [
+          AuthorizationCredential.GLOBAL_ANONYMOUS,
+          AuthorizationCredential.GLOBAL_REGISTERED,
+        ],
+        CREDENTIAL_RULE_TYPES_FORUM_READ
+      );
+    readRule.cascade = true;
+    forum.authorization.credentialRules.push(readRule);
+
     forum.authorization = this.appendPrivilegeRules(forum.authorization);
     updatedAuthorizations.push(forum.authorization);
 
     for (const discussion of forum.discussions) {
-      const updatedDiscusionAuthorizations =
+      const updatedDiscussionAuthorizations =
         await this.discussionAuthorizationService.applyAuthorizationPolicy(
           discussion,
           forum.authorization
         );
-      updatedAuthorizations.push(...updatedDiscusionAuthorizations);
+      updatedAuthorizations.push(...updatedDiscussionAuthorizations);
     }
 
     return updatedAuthorizations;
@@ -65,14 +101,6 @@ export class ForumAuthorizationService {
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    // Allow any contributor to this community to create discussions, and to send messages to the discussion
-    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_DISCUSSION],
-      AuthorizationPrivilege.CONTRIBUTE,
-      POLICY_RULE_FORUM_CONTRIBUTE
-    );
-    privilegeRules.push(contributePrivilege);
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_DISCUSSION],

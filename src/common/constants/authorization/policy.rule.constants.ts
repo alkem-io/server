@@ -5,7 +5,6 @@ export const POLICY_RULE_WHITEBOARD_CONTENT_UPDATE =
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
 export const POLICY_RULE_ROOM_CONTRIBUTE = 'policyRule-roomContribute';
 export const POLICY_RULE_ROOM_ADMINS = 'policyRule-roomAdminsCreate';
-export const POLICY_RULE_FORUM_CONTRIBUTE = 'policyRule-forumContribute';
 export const POLICY_RULE_FORUM_CREATE = 'policyRule-forumCreate';
 export const POLICY_RULE_PLATFORM_DELETE = 'policyRule-platformDelete';
 export const POLICY_RULE_CALLOUT_CREATE = 'policyRule-calloutCreate';

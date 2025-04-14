@@ -1,7 +1,5 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Agent } from './agent.entity';
@@ -15,7 +13,6 @@ import { InstrumentResolver } from '@src/apm/decorators';
 export class AgentResolverMutations {
   constructor(private agentService: AgentService) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => AgentBeginVerifiedCredentialRequestOutput, {
     nullable: false,
     description: 'Generate verified credential share request',
@@ -31,7 +28,6 @@ export class AgentResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => AgentBeginVerifiedCredentialOfferOutput, {
     description: 'Generate Alkemio user credential offer',
   })

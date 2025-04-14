@@ -188,28 +188,27 @@ export class SpaceResolverFields {
     nullable: true,
     description: 'The date for the creation of this Space.',
   })
-  @UseGuards(GraphqlGuard)
   async createdDate(@Parent() space: Space): Promise<Date> {
     const createdDate = (space as Space).createdDate;
     return new Date(createdDate);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
     description: 'The settings for this Space.',
   })
-  @UseGuards(GraphqlGuard)
   settings(@Parent() space: ISpace): ISpaceSettings {
     return space.settings;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('templatesManager', () => ITemplatesManager, {
     nullable: true,
     description: 'The TemplatesManager in use by this Space',
   })
-  @UseGuards(GraphqlGuard)
   async templatesManager(@Parent() space: ISpace): Promise<ITemplatesManager> {
     return await this.spaceService.getTemplatesManagerOrFail(
       space.levelZeroSpaceID

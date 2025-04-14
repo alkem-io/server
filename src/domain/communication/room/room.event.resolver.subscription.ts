@@ -1,9 +1,8 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -28,7 +27,6 @@ export class RoomEventResolverSubscription {
     private subscriptionService: SubscriptionReadService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @TypedSubscription<RoomEventSubscriptionPayload, RoomEventSubscriptionArgs>(
     () => RoomEventSubscriptionResult,
     {

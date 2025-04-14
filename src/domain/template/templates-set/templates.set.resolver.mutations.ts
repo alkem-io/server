@@ -1,10 +1,9 @@
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TemplatesSetService } from './templates.set.service';
 import { ITemplate } from '../template/template.interface';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -29,7 +28,6 @@ export class TemplatesSetResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {
     description: 'Creates a new Template on the specified TemplatesSet.',
   })
@@ -61,7 +59,6 @@ export class TemplatesSetResolverMutations {
     return this.templateService.getTemplateOrFail(template.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {
     description:
       'Creates a new Template on the specified TemplatesSet using the provided Collaboration as content.',

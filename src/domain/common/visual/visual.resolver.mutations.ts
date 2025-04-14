@@ -1,8 +1,6 @@
 import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { VisualService } from './visual.service';
@@ -29,7 +27,6 @@ export class VisualResolverMutations {
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVisual, {
     description: 'Updates the image URI for the specified Visual.',
   })
@@ -49,7 +46,6 @@ export class VisualResolverMutations {
     return await this.visualService.updateVisual(updateData);
   }
 
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IVisual, {
     description: 'Uploads and sets an image for the specified Visual.',
   })

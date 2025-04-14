@@ -1,5 +1,4 @@
-import { GraphqlGuard } from '@core/authorization';
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { RoleSetService } from './role.set.service';
@@ -27,7 +26,6 @@ export class RoleSetResolverFieldsPublic {
     private readonly membershipStatusLoader: RoleSetMembershipStatusDataLoader
   ) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('applicationForm', () => IForm, {
     nullable: false,
     description: 'The Form used for Applications to this roleSet.',
@@ -37,7 +35,6 @@ export class RoleSetResolverFieldsPublic {
   }
 
   // Role definitions are not protected
-  @UseGuards(GraphqlGuard)
   @ResolveField('roleDefinitions', () => [IRole], {
     nullable: false,
     description: 'The Role Definitions included in this roleSet.',
@@ -50,8 +47,7 @@ export class RoleSetResolverFieldsPublic {
     return await this.roleSetService.getRoleDefinitions(roleSet, roles);
   }
 
-  // The set of fields from here down are not prote
-  @UseGuards(GraphqlGuard)
+  // The set of fields from here down are not protected
   @ResolveField('roleDefinition', () => IRole, {
     nullable: false,
     description: 'The Role Definitions from this RoleSet to return.',
@@ -64,7 +60,6 @@ export class RoleSetResolverFieldsPublic {
     return await this.roleSetService.getRoleDefinition(roleSet, role);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('roleNames', () => [RoleName], {
     nullable: false,
     description: 'The Roles available in this roleSet.',
@@ -75,7 +70,6 @@ export class RoleSetResolverFieldsPublic {
     );
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('myMembershipStatus', () => CommunityMembershipStatus, {
     nullable: true,
     description: 'The membership status of the currently logged in user.',
@@ -88,7 +82,6 @@ export class RoleSetResolverFieldsPublic {
     return this.membershipStatusLoader.loader.load({ agentInfo, roleSet });
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('myRoles', () => [RoleName], {
     nullable: false,
     description:
@@ -102,7 +95,6 @@ export class RoleSetResolverFieldsPublic {
     return this.agentRolesLoader.loader.load({ agentInfo, roleSet });
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('myRolesImplicit', () => [RoleSetRoleImplicit], {
     nullable: false,
     description:

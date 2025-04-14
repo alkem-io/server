@@ -17,7 +17,6 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 export class InnovationPackResolverFields {
   constructor(private innovationPackService: InnovationPackService) {}
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this InnovationPack.',
@@ -31,11 +30,11 @@ export class InnovationPackResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,
     description: 'The templatesSet in use by this InnovationPack',
   })
-  @UseGuards(GraphqlGuard)
   async templatesSet(
     @Parent() innovationPack: IInnovationPack
   ): Promise<ITemplatesSet> {
