@@ -27,4 +27,29 @@ export class PlatformSettingsService {
     }
     return updatedSettings;
   }
+
+  public addIframeAllowedURL(
+    settings: IPlatformSettings,
+    iframeAllowedURL: string
+  ): string[] {
+    const currentUrls = settings.integration?.iframeAllowedUrls || [];
+
+    // Only add if not already present
+    if (!currentUrls.includes(iframeAllowedURL)) {
+      currentUrls.push(iframeAllowedURL);
+    }
+
+    return currentUrls;
+  }
+
+  public removeIframeAllowedURL(
+    settings: IPlatformSettings,
+    iframeAllowedURL: string
+  ): string[] {
+    const currentUrls = settings.integration?.iframeAllowedUrls || [];
+
+    const updatedUrls = currentUrls.filter(url => url !== iframeAllowedURL);
+
+    return updatedUrls;
+  }
 }

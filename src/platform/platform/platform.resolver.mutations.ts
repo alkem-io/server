@@ -70,4 +70,56 @@ export class PlatformResolverMutations {
 
     return platform.settings;
   }
+
+  @Mutation(() => [String], {
+    description: 'Adds an Iframe Allowed URL to the Platform Settings',
+  })
+  async addIframeAllowedURL(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('iframeAllowedURL') iframeAllowedURL: string
+  ): Promise<string[]> {
+    const platform = await this.platformService.getPlatformOrFail();
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platform.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `add iframe URL: ${iframeAllowedURL}`
+    );
+
+    platform.settings.integration.iframeAllowedUrls =
+      this.platformSettingsService.addIframeAllowedURL(
+        platform.settings,
+        iframeAllowedURL
+      );
+    await this.platformService.savePlatform(platform);
+
+    return platform.settings.integration.iframeAllowedUrls;
+  }
+
+  @Mutation(() => [String], {
+    description: 'Removes an Iframe Allowed URL from the Platform Settings',
+  })
+  async removeIframeAllowedURL(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('iframeAllowedURL') iframeAllowedURL: string
+  ): Promise<string[]> {
+    const platform = await this.platformService.getPlatformOrFail();
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platform.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `remove iframe URL: ${iframeAllowedURL}`
+    );
+
+    platform.settings.integration.iframeAllowedUrls =
+      this.platformSettingsService.removeIframeAllowedURL(
+        platform.settings,
+        iframeAllowedURL
+      );
+    await this.platformService.savePlatform(platform);
+
+    return platform.settings.integration.iframeAllowedUrls;
+  }
 }
