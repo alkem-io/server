@@ -76,7 +76,7 @@ export class PlatformResolverMutations {
   })
   async addIframeAllowedURL(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('iframeAllowedURL') iframeAllowedURL: string
+    @Args('whitelistedURL') whitelistedURL: string
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
 
@@ -84,13 +84,13 @@ export class PlatformResolverMutations {
       agentInfo,
       platform.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `add iframe URL: ${iframeAllowedURL}`
+      `add iframe URL: ${whitelistedURL}`
     );
 
     platform.settings.integration.iframeAllowedUrls =
-      this.platformSettingsService.addIframeAllowedURL(
+      this.platformSettingsService.addIframeAllowedURLOrFail(
         platform.settings,
-        iframeAllowedURL
+        whitelistedURL
       );
     await this.platformService.savePlatform(platform);
 
@@ -102,7 +102,7 @@ export class PlatformResolverMutations {
   })
   async removeIframeAllowedURL(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('iframeAllowedURL') iframeAllowedURL: string
+    @Args('whitelistedURL') whitelistedURL: string
   ): Promise<string[]> {
     const platform = await this.platformService.getPlatformOrFail();
 
@@ -110,13 +110,13 @@ export class PlatformResolverMutations {
       agentInfo,
       platform.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `remove iframe URL: ${iframeAllowedURL}`
+      `remove iframe URL: ${whitelistedURL}`
     );
 
     platform.settings.integration.iframeAllowedUrls =
-      this.platformSettingsService.removeIframeAllowedURL(
+      this.platformSettingsService.removeIframeAllowedURLOrFail(
         platform.settings,
-        iframeAllowedURL
+        whitelistedURL
       );
     await this.platformService.savePlatform(platform);
 

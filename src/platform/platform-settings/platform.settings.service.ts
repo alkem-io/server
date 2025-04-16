@@ -30,10 +30,10 @@ export class PlatformSettingsService {
     return updatedSettings;
   }
 
-  public addIframeAllowedURL(
+  public addIframeAllowedURLOrFail(
     settings: IPlatformSettings,
     iframeAllowedURL: string
-  ): string[] {
+  ): string[] | never {
     if (!settings.integration)
       throw new EntityNotInitializedException(
         'Settings  not initialized',
@@ -49,10 +49,10 @@ export class PlatformSettingsService {
     return currentUrls;
   }
 
-  public removeIframeAllowedURL(
+  public removeIframeAllowedURLOrFail(
     settings: IPlatformSettings,
     iframeAllowedURL: string
-  ): string[] {
+  ): string[] | never {
     if (!settings.integration)
       throw new EntityNotInitializedException(
         'Settings  not initialized',
