@@ -23,9 +23,9 @@ export class PlatformRoles1744650765522 implements MigrationInterface {
     }[] = await queryRunner.query(
       `SELECT id, name FROM \`role\` WHERE roleSetId = '${platform.roleSetId}'`
     );
-    const existingPlatformManager = platformRoles.find(role => {
-      role.name === this.platformManagerName;
-    });
+    const existingPlatformManager = platformRoles.find(role => 
+      role.name === this.platformManagerName
+    );
     if (!existingPlatformManager) {
       await this.createPlatformRole(
         queryRunner,
