@@ -33,9 +33,9 @@ export class PlatformRoles1744650765522 implements MigrationInterface {
         this.platformManagerName
       );
     }
-    const existingSupportManager = platformRoles.find(role => {
-      role.name === this.supportManagerName;
-    });
+    const existingSupportManager = platformRoles.find(role => 
+      role.name === this.supportManagerName
+    );
     if (!existingSupportManager) {
       await this.createPlatformRole(
         queryRunner,
