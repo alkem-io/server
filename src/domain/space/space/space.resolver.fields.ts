@@ -99,7 +99,7 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_LICENSE)
   @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,
