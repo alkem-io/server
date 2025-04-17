@@ -34,6 +34,21 @@ export class UserLookupService {
 
     return user;
   }
+
+  public async getUserByEmail(
+    email: string,
+    options?: FindOneOptions<User> | undefined
+  ): Promise<IUser | null> {
+    const user: IUser | null = await this.entityManager.findOne(User, {
+      where: {
+        email: email,
+      },
+      ...options,
+    });
+
+    return user;
+  }
+
   public async getUserByNameIdOrFail(
     userNameID: string,
     options?: FindOneOptions<User> | undefined
@@ -54,9 +69,7 @@ export class UserLookupService {
   }
 
   async isRegisteredUser(email: string): Promise<boolean> {
-    const user = await this.entityManager.findOneBy(User, {
-      email: email,
-    });
+    const user = await this.getUserByEmail(email);
     if (user) return true;
     return false;
   }

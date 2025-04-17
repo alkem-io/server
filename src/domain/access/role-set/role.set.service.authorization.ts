@@ -84,6 +84,35 @@ export class RoleSetAuthorizationService {
 
     updatedAuthorizations.push(roleSet.authorization);
 
+    const invitationAuthorizations =
+      await this.applyAuthorizationPolicyOnInvitationsApplications(roleSet);
+    updatedAuthorizations.push(...invitationAuthorizations);
+
+    const licenseAuthorization =
+      this.licenseAuthorizationService.applyAuthorizationPolicy(
+        roleSet.license,
+        roleSet.authorization
+      );
+    updatedAuthorizations.push(...licenseAuthorization);
+
+    return updatedAuthorizations;
+  }
+
+  public async applyAuthorizationPolicyOnInvitationsApplications(
+    roleSet: IRoleSet
+  ): Promise<IAuthorizationPolicy[]> {
+    if (
+      !roleSet.invitations ||
+      !roleSet.platformInvitations ||
+      !roleSet.applications
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for roleSet authorization: ${roleSet.id} `,
+        LogContext.COMMUNITY
+      );
+    }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     for (const application of roleSet.applications) {
       const applicationAuth =
         await this.applicationAuthorizationService.applyAuthorizationPolicy(
@@ -110,12 +139,6 @@ export class RoleSetAuthorizationService {
         );
       updatedAuthorizations.push(platformInvitationAuthorization);
     }
-    const licenseAuthorization =
-      this.licenseAuthorizationService.applyAuthorizationPolicy(
-        roleSet.license,
-        roleSet.authorization
-      );
-    updatedAuthorizations.push(...licenseAuthorization);
 
     return updatedAuthorizations;
   }

@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
-import { IsOptional, MaxLength } from 'class-validator';
+import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 import {
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
@@ -18,23 +18,25 @@ export class InviteForEntryRoleOnRoleSetInput {
     nullable: false,
     description: 'The identifiers for the contributors being invited.',
   })
-  invitedContributors!: string[];
+  invitedContributorIDs!: string[];
 
-  @Field({ nullable: true })
+  @Field(() => [String], {
+    nullable: false,
+  })
+  @IsEmail({}, { each: true })
+  @MaxLength(MID_TEXT_LENGTH, { each: true })
+  invitedUserEmails!: string[];
+
+  @Field({ nullable: true, description: 'The welcome message to send' })
   @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
   welcomeMessage?: string;
 
   @Field(() => RoleName, {
     nullable: true,
-    description:
-      'An additional role to assign to the Contributors, in addition to the entry Role.',
+    description: 'An additional role to assign in addition to the entry Role.',
   })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   extraRole?: RoleName;
-
-  createdBy!: string;
-
-  invitedToParent!: boolean;
 }
