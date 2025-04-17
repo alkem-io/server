@@ -9,6 +9,8 @@ export enum AuthorizationCredential {
   GLOBAL_REGISTERED = 'global-registered', // credential issued to all registered users
   GLOBAL_COMMUNITY_READ = 'global-community-read', // able to view all details of the top level community
   GLOBAL_SPACES_READER = 'global-spaces-read', // able to view all details of the top level community
+  GLOBAL_PLATFORM_MANAGER = 'global-platform-manager', // to allow assignment of privileges for platform management
+  GLOBAL_SUPPORT_MANAGER = 'global-support-manager', // to allow an elevated support role
 
   USER_SELF_MANAGEMENT = 'user-self', // able to update a user
 
