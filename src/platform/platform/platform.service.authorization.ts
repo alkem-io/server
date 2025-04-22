@@ -228,7 +228,10 @@ export class PlatformAuthorizationService {
     const platformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );
     platformSettingsAdmin.cascade = false;
