@@ -41,4 +41,47 @@ export class InAppNotificationResolverMutations {
 
     return notificationData.state;
   }
+
+  private async updateNotificationStates(
+    agentInfo: AgentInfo,
+    notificationIds: string[],
+    state: InAppNotificationState
+  ): Promise<boolean> {
+    const result =
+      await this.inAppNotificationReader.bulkUpdateNotificationState(
+        notificationIds,
+        agentInfo.userID,
+        state
+      );
+
+    return (result?.affected ?? 0) > 0;
+  }
+
+  @Mutation(() => Boolean, {
+    description: 'Mark multiple notifications as read.',
+  })
+  async markNotificationsAsRead(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('notificationIds', { type: () => [String] }) notificationIds: string[]
+  ): Promise<boolean> {
+    return this.updateNotificationStates(
+      agentInfo,
+      notificationIds,
+      InAppNotificationState.READ
+    );
+  }
+
+  @Mutation(() => Boolean, {
+    description: 'Mark multiple notifications as unread.',
+  })
+  async markNotificationsAsUnread(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('notificationIds', { type: () => [String] }) notificationIds: string[]
+  ): Promise<boolean> {
+    return this.updateNotificationStates(
+      agentInfo,
+      notificationIds,
+      InAppNotificationState.UNREAD
+    );
+  }
 }
