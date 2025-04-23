@@ -207,7 +207,8 @@ services:
     image: alkemio/notifications:v0.21.1
     platform: linux/x86_64
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -294,7 +295,8 @@ services:
     image: alkemio/whiteboard-collaboration-service:v0.6.0
     platform: linux/x86_64
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -314,7 +316,8 @@ services:
     image: alkemio/file-service:v0.1.2
     platform: linux/x86_64
     depends_on:
-        - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
