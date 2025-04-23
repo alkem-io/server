@@ -204,6 +204,8 @@ export class CalloutAuthorizationService {
         return AuthorizationPrivilege.CREATE_WHITEBOARD;
       case CalloutType.POST_COLLECTION:
         return AuthorizationPrivilege.CREATE_POST;
+      case CalloutType.LINK_COLLECTION:
+        return AuthorizationPrivilege.CONTRIBUTE;
       case CalloutType.POST:
         return undefined;
     }
