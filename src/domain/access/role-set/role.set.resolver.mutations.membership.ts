@@ -530,9 +530,9 @@ export class RoleSetResolverMutationsMembership {
     if (agentInfo.userID && invitation.roleSet) {
       invitationState = this.lifecycleService.getState(
         invitation.lifecycle,
-        this.roleSetServiceLifecycleApplication.getApplicationMachine()
+        this.roleSetServiceLifecycleInvitation.getInvitationMachine()
       );
-      const isMember = invitationState === ApplicationLifecycleState.APPROVED;
+      const isMember = invitationState === InvitationLifecycleState.ACCEPTED;
       if (agentInfo.userID && invitation.roleSet) {
         await this.roleSetCacheService.deleteOpenInvitationFromCache(
           agentInfo.userID,
