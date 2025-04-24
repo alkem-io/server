@@ -8,6 +8,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 
 @Injectable()
+// Note: This class is subject to a rename in the future, as it will likely handle all notification operations, not just reading.
 export class InAppNotificationReader {
   constructor(
     @InjectRepository(InAppNotificationEntity)
@@ -64,7 +65,7 @@ export class InAppNotificationReader {
     userId: string,
     state: InAppNotificationState
   ): Promise<UpdateResult> {
-    return await this.inAppNotificationRepo.update(
+    return this.inAppNotificationRepo.update(
       { id: In(notificationIds), receiverID: userId },
       { state }
     );

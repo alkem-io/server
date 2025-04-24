@@ -42,21 +42,6 @@ export class InAppNotificationResolverMutations {
     return notificationData.state;
   }
 
-  private async updateNotificationStates(
-    agentInfo: AgentInfo,
-    notificationIds: string[],
-    state: InAppNotificationState
-  ): Promise<boolean> {
-    const result =
-      await this.inAppNotificationReader.bulkUpdateNotificationState(
-        notificationIds,
-        agentInfo.userID,
-        state
-      );
-
-    return (result?.affected ?? 0) > 0;
-  }
-
   @Mutation(() => Boolean, {
     description: 'Mark multiple notifications as read.',
   })
@@ -83,5 +68,25 @@ export class InAppNotificationResolverMutations {
       notificationIds,
       InAppNotificationState.UNREAD
     );
+  }
+
+  private async updateNotificationStates(
+    agentInfo: AgentInfo,
+    notificationIds: string[],
+    state: InAppNotificationState
+  ): Promise<boolean> {
+    if (notificationIds.length === 0) {
+      return false;
+    }
+
+    const result =
+      await this.inAppNotificationReader.bulkUpdateNotificationState(
+        notificationIds,
+        agentInfo.userID,
+        state
+      );
+
+    // Note: The `affected` property is not supported by all database drivers. For unsupported drivers, it will be `undefined`.
+    return (result?.affected ?? 0) > 0;
   }
 }
