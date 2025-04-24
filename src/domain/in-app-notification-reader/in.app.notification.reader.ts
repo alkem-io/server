@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { Repository, In, UpdateResult } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationEntity } from '@domain/in-app-notification/in.app.notification.entity';
@@ -8,6 +8,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 
 @Injectable()
+// Note: This class is subject to a rename in the future, as it will likely handle all notification operations, not just reading.
 export class InAppNotificationReader {
   constructor(
     @InjectRepository(InAppNotificationEntity)
@@ -57,5 +58,16 @@ export class InAppNotificationReader {
     });
 
     return updatedNotification.state;
+  }
+
+  async bulkUpdateNotificationState(
+    notificationIds: string[],
+    userId: string,
+    state: InAppNotificationState
+  ): Promise<UpdateResult> {
+    return this.inAppNotificationRepo.update(
+      { id: In(notificationIds), receiverID: userId },
+      { state }
+    );
   }
 }
