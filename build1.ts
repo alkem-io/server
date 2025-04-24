@@ -1,4 +1,4 @@
-import { Project, ts } from 'ts-morph';
+import { Project } from 'ts-morph';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
@@ -18,15 +18,15 @@ entityFiles.forEach(file => {
   const classDeclarations = file.getClasses();
 
   classDeclarations.forEach(classDeclaration => {
-    const className = classDeclaration.getName();
-    const filePath = path.join(outputDir, `${className}.ts`);
+    // Remove decorators on the class itself
+    classDeclaration.getDecorators().forEach(decorator => decorator.remove());
     const props = classDeclaration.getInstanceProperties();
     props.forEach(prop => {
       prop.getDecorators().forEach(decorator => decorator.remove());
     });
-    // Remove decorators on the class itself
-    classDeclaration.getDecorators().forEach(decorator => decorator.remove());
 
+    const className = classDeclaration.getName();
+    const filePath = path.join(outputDir, `${className}.ts`);
     const newSourceFile = project.createSourceFile(filePath, file.getText());
 
     fs.writeFileSync(filePath, newSourceFile.getText());
