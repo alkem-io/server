@@ -45,7 +45,10 @@
     "circular-dependencies": "madge --circular dist",
     "db:recreate": "ts-node .scripts/tests/recreate-db.ts",
     "db:reset": "npm run db:recreate && npm run migration:run",
-    "entity:build": "npx ts-node build1.ts"
+    "entity:build": "npx ts-node build1.ts",
+    "entity:build2": "npx ts-node build2.ts",
+    "entity:prepare": "npx ts-node entity-library/prepare-library.ts",
+    "entity:build3": "npx ts-node entity-library/build3.ts"
   },
   "overrides": {
     "fs-capacitor": "6.2.0",
@@ -133,6 +136,7 @@
     "@typescript-eslint/eslint-plugin": "^7.16.0",
     "@typescript-eslint/parser": "^7.16.0",
     "coveralls": "^3.1.1",
+    "esbuild": "^0.25.3",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",

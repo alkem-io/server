@@ -10,9 +10,8 @@ const entityFiles = project
   .getSourceFiles()
   .filter(file => file.getFilePath().endsWith('.entity.ts'));
 
-const outputDir = 'output';
-
-fs.ensureDirSync(outputDir);
+// const outputDir = 'output';
+// fs.ensureDirSync(outputDir);
 
 entityFiles.forEach(file => {
   file.getClasses().forEach(classDeclaration => {
@@ -23,10 +22,11 @@ entityFiles.forEach(file => {
       prop.getDecorators().forEach(decorator => decorator.remove());
     });
 
-    const className = classDeclaration.getName();
-    const filePath = path.join(outputDir, `${className}.ts`);
-    const newSourceFile = project.createSourceFile(filePath, file.getText());
-
-    fs.writeFileSync(filePath, newSourceFile.getText());
+    const newFilePath = path.join(
+      file.getDirectoryPath(),
+      `${file.getBaseNameWithoutExtension()}.temp.ts`
+    );
+    const newSourceFile = project.createSourceFile(newFilePath, file.getText());
+    fs.writeFileSync(newFilePath, newSourceFile.getText());
   });
 });

@@ -1,0 +1,20 @@
+{
+  "name": "my-typescript-library",
+  "version": "1.0.0",
+  "description": "My awesome TypeScript library",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "npx tsx build3.ts",
+    "build1": "cross-env NODE_OPTIONS=--max-old-space-size=5000 tsup"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "esbuild": "^0.25.3",
+    "fs-extra": "^11.3.0",
+    "ts-morph": "^25.0.1",
+    "tsup": "^8.4.0"
+  }
+}

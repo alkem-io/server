@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "target": "es2018", // Or your desired target
+    "module": "NodeNext", // esbuild can handle esnext input
+    "strict": true,
+    "declaration": true, // Important for generating .d.ts files
+    "emitDeclarationOnly": true,
+    "emitDecoratorMetadata": false,
+    "outDir": "./dist",
+    "removeComments": true,
+    "moduleResolution": "nodenext",
+    "declarationDir": "dist/types",
+    "baseUrl": "../",
+    "paths": {
+      "@interfaces/*": ["../src/common/interfaces/*"],
+      "@domain/*": ["../src/domain/*"],
+      "@config/*": ["../src/config/*"],
+      "@common/*": ["../src/common/*"],
+      "@core/*": ["../src/core/*"],
+      "@platform/*": ["../src/platform/*"],
+      "@library/*": ["../src/library/*"],
+      "@services/*": ["../src/services/*"],
+      "@constants/*": ["../src/common/constants/*"],
+      "@templates/*": ["../src/platform/configuration/templates/*"],
+      "@src/*": ["../src/*"]
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "your-entity-library",
+  "version": "1.0.0",
+  "description": "Decorator-free TypeORM entities library",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build:cjs": "babel ../src/**/*.entity.ts --out-dir ./dist/cjs --extensions \".ts\"",
+    "build:esm": "babel ../src/**/*.entity.ts --out-dir ./dist/esm --extensions \".ts\" --env-name esm",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build": "npm run build:cjs && npm run build:esm && npm run build:types"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.0.0",
+    "@babel/core": "^7.0.0",
+    "@babel/plugin-proposal-decorators": "^7.0.0",
+    "@babel/plugin-transform-class-properties": "^7.25.9",
+    "@babel/preset-env": "^7.0.0",
+    "@babel/preset-typescript": "^7.0.0",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "esnext", // Or a suitable target for your library's consumers
+    "module": "esnext", // Use esnext for declaration files
+    "lib": ["esnext"],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "dist/types", // Output directory for declaration files
+    "emitDecoratorMetadata": false, // No need to emit metadata for decorator-free output
+    "experimentalDecorators": true, // Still needed for tsc to understand the syntax
+    "declaration": true, // Generate declaration files
+    "paths": {
+      "@interfaces/*": ["../src/common/interfaces/*"],
+      "@domain/*": ["../src/domain/*"],
+      "@config/*": ["../src/config/*"],
+      "@common/*": ["../src/common/*"],
+      "@core/*": ["../src/core/*"],
+      "@platform/*": ["../src/platform/*"],
+      "@library/*": ["../src/library/*"],
+      "@services/*": ["../src/services/*"],
+      "@constants/*": ["../src/common/constants/*"],
+      "@templates/*": ["../src/platform/configuration/templates/*"],
+      "@src/*": ["../src/*"]
+    }
+  },
+  "include": [
+    "../src/**/*.entity.ts" // Include your entity files
+  ],
+  "exclude": [
+    "node_modules",
+    "../node_modules" // Exclude node_modules from both lib and root
+  ]
+}
