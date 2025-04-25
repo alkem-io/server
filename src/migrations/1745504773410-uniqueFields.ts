@@ -4,6 +4,12 @@ export class UniqueFields1745504773410 implements MigrationInterface {
   name = 'UniqueFields1745504773410';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Combined update: set accountUpn to email for all cases in one query
+    await queryRunner.query(`
+      UPDATE \`user\`
+      SET \`accountUpn\` = \`email\`
+      WHERE \`accountUpn\` IS NULL OR \`accountUpn\` = '' OR \`accountUpn\` <> \`email\`;
+    `);
     await queryRunner.query(
       'ALTER TABLE `user` ADD UNIQUE INDEX `IDX_ad8730bcd46ca67fb2d1edd756` (`nameID`)'
     );
