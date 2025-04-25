@@ -36,6 +36,7 @@ import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { RoleSetCacheModule } from './role.set.service.cache.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutations.membership';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
     RoleSetAuthorizationService,
     RoleSetLicenseService,
     RoleSetResolverMutations,
+    RoleSetResolverMutationsMembership,
     RoleSetResolverFields,
     RoleSetResolverFieldsPublic,
     RoleSetEventsService,

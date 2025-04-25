@@ -11,6 +11,8 @@ export enum RoleName {
   GLOBAL_LICENSE_MANAGER = 'global-license-manager',
   GLOBAL_COMMUNITY_READER = 'global-community-reader',
   GLOBAL_SPACES_READER = 'global-spaces-reader',
+  GLOBAL_PLATFORM_MANAGER = 'global-platform-manager',
+  GLOBAL_SUPPORT_MANAGER = 'global-support-manager',
   PLATFORM_BETA_TESTER = 'platform-beta-tester',
   PLATFORM_VC_CAMPAIGN = 'platform-vc-campaign',
 }
