@@ -34,6 +34,7 @@ export class CreateSpaceInput {
 
   level!: SpaceLevel;
 
+  // TODO: this needs to be replaced with a different way to select the template
   @Field(() => SpaceType, { nullable: true })
   @IsOptional()
   type!: SpaceType;
