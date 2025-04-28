@@ -229,11 +229,11 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const subspace = await this.spaceService.getSpaceOrFail(
       rawActivity.resourceID
     );
-    const activityChallengeCreated: IActivityLogEntrySubspaceCreated = {
+    const activitySubspaceCreated: IActivityLogEntrySubspaceCreated = {
       ...this.activityLogEntryBase,
       subspace: subspace,
     };
-    return activityChallengeCreated;
+    return activitySubspaceCreated;
   }
 
   async [ActivityEventType.DISCUSSION_COMMENT](rawActivity: IActivity) {
