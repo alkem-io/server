@@ -4,8 +4,7 @@ import { IActivityLogEntryMemberJoined } from '@services/api/activity-log/dto/ac
 import { IActivityLogEntryCalloutPublished } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutPostCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.created';
 import { IActivityLogEntryCalloutWhiteboardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.whiteboard.created';
-import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
-import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subsubspace.created';
+import { IActivityLogEntrySubspaceCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
 import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -226,26 +225,15 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityCalloutPostCommentedOn;
   }
 
-  async [ActivityEventType.CHALLENGE_CREATED](rawActivity: IActivity) {
+  async [ActivityEventType.SUBSPACE_CREATED](rawActivity: IActivity) {
     const subspace = await this.spaceService.getSpaceOrFail(
       rawActivity.resourceID
     );
-    const activityChallengeCreated: IActivityLogEntryChallengeCreated = {
+    const activityChallengeCreated: IActivityLogEntrySubspaceCreated = {
       ...this.activityLogEntryBase,
       subspace: subspace,
     };
     return activityChallengeCreated;
-  }
-
-  async [ActivityEventType.OPPORTUNITY_CREATED](rawActivity: IActivity) {
-    const subsubspace = await this.spaceService.getSpaceOrFail(
-      rawActivity.resourceID
-    );
-    const activityOpportunityCreated: IActivityLogEntryOpportunityCreated = {
-      ...this.activityLogEntryBase,
-      subsubspace: subsubspace,
-    };
-    return activityOpportunityCreated;
   }
 
   async [ActivityEventType.DISCUSSION_COMMENT](rawActivity: IActivity) {

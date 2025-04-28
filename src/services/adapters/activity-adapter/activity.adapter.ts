@@ -77,8 +77,8 @@ export class ActivityAdapter {
     }
     const eventType =
       subspace.level === SpaceLevel.L2
-        ? ActivityEventType.OPPORTUNITY_CREATED
-        : ActivityEventType.CHALLENGE_CREATED;
+        ? ActivityEventType.SUBSPACE_CREATED
+        : ActivityEventType.SUBSPACE_CREATED;
 
     this.logEventTriggered(eventData, eventType);
 
@@ -103,7 +103,7 @@ export class ActivityAdapter {
   public async opportunityCreated(
     eventData: ActivityInputSubsubspaceCreated
   ): Promise<boolean> {
-    const eventType = ActivityEventType.OPPORTUNITY_CREATED;
+    const eventType = ActivityEventType.SUBSPACE_CREATED;
     this.logEventTriggered(eventData, eventType);
 
     const subsubspace = eventData.subsubspace;
