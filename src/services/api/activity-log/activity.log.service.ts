@@ -131,7 +131,6 @@ export class ActivityLogService {
         description: rawActivity.description,
         collaborationID: rawActivity.collaborationID,
         child: rawActivity.child,
-        parentNameID: parentDetails.nameID,
         parentDisplayName: parentDetails.displayName,
         space,
       };

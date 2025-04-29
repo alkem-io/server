@@ -1,5 +1,5 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
-import { NameID, UUID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
@@ -10,8 +10,7 @@ import { IActivityLogEntryCalloutPostCreated } from './activity.log.dto.entry.ca
 import { IActivityLogEntryCalloutWhiteboardCreated } from './activity.log.dto.entry.callout.whiteboard.created';
 import { IActivityLogEntryCalloutPostComment } from './activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.entry.callout.discussion.comment';
-import { IActivityLogEntryChallengeCreated } from './activity.log.dto.entry.subspace.created';
-import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.subsubspace.created';
+import { IActivityLogEntrySubspaceCreated } from './activity.log.dto.entry.subspace.created';
 import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
 import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
@@ -34,10 +33,8 @@ import { ISpace } from '@domain/space/space/space.interface';
         return IActivityLogEntryCalloutPostComment;
       case ActivityEventType.CALLOUT_LINK_CREATED:
         return IActivityLogEntryCalloutLinkCreated;
-      case ActivityEventType.CHALLENGE_CREATED:
-        return IActivityLogEntryChallengeCreated;
-      case ActivityEventType.OPPORTUNITY_CREATED:
-        return IActivityLogEntryOpportunityCreated;
+      case ActivityEventType.SUBSPACE_CREATED:
+        return IActivityLogEntrySubspaceCreated;
       case ActivityEventType.DISCUSSION_COMMENT:
         return IActivityLogEntryCalloutDiscussionComment;
       case ActivityEventType.MEMBER_JOINED:
@@ -97,11 +94,6 @@ export class IActivityLogEntry {
     defaultValue: false,
   })
   child?: boolean;
-
-  @Field(() => NameID, {
-    description: 'The nameID of the parent',
-  })
-  parentNameID!: string;
 
   @Field(() => String, {
     description: 'The display name of the parent',

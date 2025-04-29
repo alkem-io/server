@@ -92,7 +92,7 @@ describe('RolesService', () => {
       const subspaceRolesMocks: RolesResultCommunity[] = [];
       for (const subspaceRoleData of subspaceRolesData) {
         const subspaceRolesMock: RolesResultCommunity =
-          getSubpaceRoleResultMock({
+          getSubspaceRoleResultMock({
             id: subspaceRoleData.id,
             roles: subspaceRoleData.roles,
             displayName: subspaceRoleData.displayName,
@@ -244,7 +244,6 @@ const getSpaceRoleResultMock = ({
   return {
     id,
     displayName,
-    type: SpaceType.SPACE,
     level: SpaceLevel.L0,
     spaceID: id,
     nameID: `space-${id}`,
@@ -285,11 +284,10 @@ const getSpaceRoleResultMock = ({
   };
 };
 
-const getSubpaceRoleResultMock = ({
+const getSubspaceRoleResultMock = ({
   id,
   roles,
   displayName,
-  type,
   level,
 }: {
   id: string;
@@ -303,7 +301,6 @@ const getSubpaceRoleResultMock = ({
     displayName,
     nameID: `subspace-${id}`,
     roles,
-    type,
     level,
   };
 };

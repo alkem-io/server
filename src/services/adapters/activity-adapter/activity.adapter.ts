@@ -27,8 +27,6 @@ import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.cale
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Space } from '@domain/space/space/space.entity';
-import { ActivityInputSubsubspaceCreated } from './dto/activity.dto.input.subsubspace.created';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class ActivityAdapter {
@@ -75,10 +73,7 @@ export class ActivityAdapter {
         LogContext.ACTIVITY
       );
     }
-    const eventType =
-      subspace.level === SpaceLevel.L2
-        ? ActivityEventType.OPPORTUNITY_CREATED
-        : ActivityEventType.CHALLENGE_CREATED;
+    const eventType = ActivityEventType.SUBSPACE_CREATED;
 
     this.logEventTriggered(eventData, eventType);
 
@@ -90,34 +85,6 @@ export class ActivityAdapter {
       triggeredBy: eventData.triggeredBy,
       resourceID: subspace.id,
       parentID: subspace.parentSpace.id,
-      description,
-      type: eventType,
-      visibility: true,
-    });
-
-    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
-
-    return true;
-  }
-
-  public async opportunityCreated(
-    eventData: ActivityInputSubsubspaceCreated
-  ): Promise<boolean> {
-    const eventType = ActivityEventType.OPPORTUNITY_CREATED;
-    this.logEventTriggered(eventData, eventType);
-
-    const subsubspace = eventData.subsubspace;
-
-    const collaborationID = await this.getCollaborationIdForSpace(
-      eventData.subspaceID
-    );
-    const description = subsubspace.about.profile.displayName;
-
-    const activity = await this.activityService.createActivity({
-      collaborationID,
-      triggeredBy: eventData.triggeredBy,
-      resourceID: subsubspace.id,
-      parentID: eventData.subspaceID,
       description,
       type: eventType,
       visibility: true,
