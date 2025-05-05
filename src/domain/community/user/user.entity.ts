@@ -34,7 +34,11 @@ export class User extends ContributorBase implements IUser {
   @Column('json', { nullable: false })
   settings!: IUserSettings;
 
-  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  @Column('varchar', {
+    length: SMALL_TEXT_LENGTH,
+    nullable: false,
+    unique: true,
+  })
   accountUpn!: string;
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
@@ -43,10 +47,13 @@ export class User extends ContributorBase implements IUser {
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   lastName!: string;
 
-  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: false })
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: false, unique: true })
   email!: string;
 
-  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
+  @Column('varchar', {
+    length: SMALL_TEXT_LENGTH,
+    nullable: true,
+  })
   phone?: string;
 
   @Column({ type: 'boolean', nullable: false })

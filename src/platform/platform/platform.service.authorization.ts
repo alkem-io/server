@@ -108,19 +108,10 @@ export class PlatformAuthorizationService {
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
-    const copyPlatformAuthorization: IAuthorizationPolicy =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        platform.authorization
-      );
-
-    // Extend the platform authorization policy for communication only
-    const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
-      copyPlatformAuthorization
-    );
     const forumUpdatedAuthorizations =
       await this.forumAuthorizationService.applyAuthorizationPolicy(
         platform.forum,
-        extendedAuthPolicy
+        platform.authorization
       );
     updatedAuthorizations.push(...forumUpdatedAuthorizations);
 
@@ -164,38 +155,6 @@ export class PlatformAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       credentialRules
-    );
-  }
-
-  private async appendCredentialRulesCommunication(
-    authorization: IAuthorizationPolicy | undefined
-  ): Promise<IAuthorizationPolicy> {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found for Platform Communication',
-        LogContext.PLATFORM
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const communicationRules =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CONTRIBUTE],
-        [AuthorizationCredential.GLOBAL_REGISTERED],
-        'platformReadContributeRegistered'
-      );
-    newRules.push(communicationRules);
-
-    // Set globally visible to replicate what already
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
-        authorization,
-        AuthorizationPrivilege.READ
-      );
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      updatedAuthorization,
-      newRules
     );
   }
 
@@ -269,7 +228,10 @@ export class PlatformAuthorizationService {
     const platformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );
     platformSettingsAdmin.cascade = false;

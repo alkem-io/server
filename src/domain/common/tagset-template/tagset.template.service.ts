@@ -1,16 +1,14 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { TagsetTemplate } from './tagset.template.entity';
+import { FindOneOptions, Repository } from 'typeorm';
 import { ITagsetTemplate } from './tagset.template.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import {
-  EntityNotFoundException,
-  ValidationException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { UpdateTagsetTemplateDefinitionInput } from './dto/tagset.template.dto.update';
+import { TagsetTemplate } from './tagset.template.entity';
+import { ITagset } from '../tagset/tagset.interface';
 
 @Injectable()
 export class TagsetTemplateService {
@@ -32,17 +30,19 @@ export class TagsetTemplateService {
   }
 
   async getTagsetTemplateOrFail(
-    tagsetTemplateID: string
-  ): Promise<ITagsetTemplate> {
-    const tagsetTemplate = await this.tagsetTemplateRepository.findOneBy({
-      id: tagsetTemplateID,
+    tagsetTemplateID: string,
+    options?: FindOneOptions<TagsetTemplate>
+  ): Promise<ITagsetTemplate | never> {
+    const tagsetTemplate = await this.tagsetTemplateRepository.findOne({
+      ...options,
+      where: { ...options?.where, id: tagsetTemplateID },
     });
     if (!tagsetTemplate)
       throw new EntityNotFoundException(
         `TagsetTemplate with id(${tagsetTemplateID}) not found!`,
         LogContext.COMMUNITY
       );
-    return tagsetTemplate as ITagsetTemplate;
+    return tagsetTemplate;
   }
 
   async removeTagsetTemplate(
@@ -70,44 +70,27 @@ export class TagsetTemplateService {
         tagsetTemplateData.defaultSelectedValue;
     }
 
-    if (tagsetTemplateData.newSelectedValue) {
-      // verify in new allowed values
-      const isNameAllowed = tagsetTemplate.allowedValues.some(
-        allowedValue => tagsetTemplateData.newSelectedValue === allowedValue
-      );
-      if (!isNameAllowed) {
-        throw new ValidationException(
-          `TagsetTemplate newSelectedValue(${tagsetTemplateData.newSelectedValue}) is not in allowedValues!`,
-          LogContext.TAGSET
-        );
-      }
-    }
-    // Finally update
-    if (tagsetTemplate.tagsets)
-      for (const tagset of tagsetTemplate.tagsets) {
-        const tagsetSelectedValue = tagset.tags[0];
-        const isNameAllowed = tagsetTemplate.allowedValues.some(
-          allowedValue => tagsetSelectedValue === allowedValue
-        );
-        if (!isNameAllowed) {
-          if (
-            tagsetSelectedValue === tagsetTemplateData.oldSelectedValue &&
-            tagsetTemplateData.newSelectedValue
-          ) {
-            tagset.tags = [tagsetTemplateData.newSelectedValue];
-          } else {
-            if (!tagsetTemplate.defaultSelectedValue) {
-              throw new ValidationException(
-                `TagsetTemplate defaultSelectedValue must be set (${tagsetTemplate.id})`,
-                LogContext.TAGSET
-              );
-            }
-            tagset.tags = [tagsetTemplate.defaultSelectedValue];
-          }
-        }
-      }
-
     return await this.save(tagsetTemplate);
+  }
+
+  public async getTagsetsUsingTagsetTemplate(
+    tagsetTemplateID: string
+  ): Promise<ITagset[]> {
+    const tagsetTemplate = await this.getTagsetTemplateOrFail(
+      tagsetTemplateID,
+      {
+        relations: {
+          tagsets: true,
+        },
+      }
+    );
+    if (!tagsetTemplate.tagsets) {
+      throw new EntityNotFoundException(
+        `TagsetTemplate with id(${tagsetTemplateID}) has no tagsets!`,
+        LogContext.TAGSET
+      );
+    }
+    return tagsetTemplate.tagsets;
   }
 
   async save(tagsetTemplate: ITagsetTemplate): Promise<ITagsetTemplate> {

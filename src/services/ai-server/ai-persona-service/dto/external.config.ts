@@ -49,7 +49,7 @@ export class IExternalConfig {
   @Field(() => String, {
     nullable: true,
     description:
-      'The assistent ID backing the service in OpenAI`s assistant API',
+      'The assistant ID backing the service in OpenAI`s assistant API',
   })
   assistantId?: string;
   @Field(() => OpenAIModel, {

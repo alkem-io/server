@@ -80,7 +80,6 @@ export const getSpaceRolesForContributorQueryResult = (
         subspace.nameID,
         subspace.id,
         subspace.about.profile.displayName,
-        subspace.type,
         subspace.level
       );
       subspaceResult.roles = spacesCredentialsMap?.get(subspace.id) ?? [];

@@ -32,7 +32,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   contributorType!: RoleSetContributorType;
 
-  @ManyToOne(() => RoleSet, manager => manager.invitations, {
+  @ManyToOne(() => RoleSet, roleSet => roleSet.invitations, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',

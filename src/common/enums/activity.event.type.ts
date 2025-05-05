@@ -10,8 +10,7 @@ export enum ActivityEventType {
   DISCUSSION_COMMENT = 'discussion-comment',
   UPDATE_SENT = 'update-sent',
   MEMBER_JOINED = 'member-joined',
-  CHALLENGE_CREATED = 'challenge-created',
-  OPPORTUNITY_CREATED = 'opportunity-created',
+  SUBSPACE_CREATED = 'subspace-created',
   CALENDAR_EVENT_CREATED = 'calendar-event-created',
 }
 
