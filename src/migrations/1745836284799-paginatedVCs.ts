@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class PaginatedVCs1743965565677 implements MigrationInterface {
-  name = 'PaginatedVCs1743965565677';
+export class PaginatedVCs1745836284799 implements MigrationInterface {
+  name = 'PaginatedVCs1745836284799';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
