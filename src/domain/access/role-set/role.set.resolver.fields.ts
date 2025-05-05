@@ -91,15 +91,15 @@ export class RoleSetResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
-    'availableVirtualContributors',
+    'availableVirtualContributorsForEntryRole',
     () => PaginatedVirtualContributor,
     {
       nullable: false,
       description:
-        'All available VirtualContributors that are could join this RoleSet in the entry role.',
+        'All available VirtualContributors that are eligible to invite to this RoleSet in the entry role.',
     }
   )
-  async availableVirtualContributors(
+  async availableVirtualContributorsForEntryRole(
     @Parent() roleSet: IRoleSet,
     @Args({ nullable: true }) pagination: PaginationArgs
   ) {
@@ -122,7 +122,7 @@ export class RoleSetResolverFields {
       parentRoleSetRole: parentRoleSetEntryRoleCredential,
     };
 
-    return this.virtualContributorLookupService.getPaginatedAvailableEntryRoleUsers(
+    return this.virtualContributorLookupService.getPaginatedAvailableEntryRoleVCs(
       roleSetEntryRoleCredential,
       pagination
     );

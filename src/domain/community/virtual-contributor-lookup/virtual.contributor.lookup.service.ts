@@ -123,7 +123,8 @@ export class VirtualContributorLookupService {
       );
     return account;
   }
-  public async getPaginatedAvailableEntryRoleUsers(
+
+  public async getPaginatedAvailableEntryRoleVCs(
     entryRoleCredentials: RoleSetRoleWithParentCredentials,
     paginationArgs: PaginationArgs
   ): Promise<IPaginatedType<IVirtualContributor>> {
