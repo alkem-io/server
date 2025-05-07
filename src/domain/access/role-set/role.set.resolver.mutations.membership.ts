@@ -61,6 +61,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 
 @InstrumentResolver()
 @Resolver()
@@ -79,6 +80,7 @@ export class RoleSetResolverMutationsMembership {
     private roleSetServiceLifecycleInvitation: RoleSetServiceLifecycleInvitation,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
+    private invitationAuthorizationService: InvitationAuthorizationService,
     private contributorService: ContributorService,
     private platformInvitationService: PlatformInvitationService,
     private licenseService: LicenseService,
@@ -303,6 +305,8 @@ export class RoleSetResolverMutationsMembership {
       );
     invitationResults.push(...newUserInvitationResults);
 
+    // TODO: Why do we need to reset the authorizations to all the invitations & applications
+    // and not just to the newly created ones
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
 
     await this.sendNotificationEventsForInvitationsOnSpaceRoleSet(
@@ -633,6 +637,11 @@ export class RoleSetResolverMutationsMembership {
 
       const invitation =
         await this.roleSetService.createInvitationExistingContributor(input);
+
+      await this.invitationAuthorizationService.applyAuthorizationPolicy(
+        invitation,
+        roleSet.authorization
+      );
 
       const invitationResult: RoleSetInvitationResult = {
         type: RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
