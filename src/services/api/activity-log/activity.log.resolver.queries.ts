@@ -64,13 +64,18 @@ export class ActivityLogResolverQueries {
 
       // Filter the child collaborations by read access
       const readableChildCollaborations = childCollaborations.filter(
-        childCollaboration =>
-          this.authorizationService.grantAccessOrFail(
-            agentInfo,
-            childCollaboration.authorization,
-            AuthorizationPrivilege.READ,
-            `Collaboration activity query: ${agentInfo.email}`
-          )
+        childCollaboration => {
+          try {
+            return this.authorizationService.grantAccessOrFail(
+              agentInfo,
+              childCollaboration.authorization,
+              AuthorizationPrivilege.READ,
+              `Collaboration activity query: ${agentInfo.email}`
+            );
+          } catch (e) {
+            return false;
+          }
+        }
       );
 
       const childCollaborationIds = readableChildCollaborations.map(
