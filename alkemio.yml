@@ -75,6 +75,7 @@ security:
 
 innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
+  whitelisted_subdomains: ${INNOVATION_HUB_WHITELISTED_SUBDOMAINS}:identity
 
 search:
   # max results per search

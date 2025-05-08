@@ -30,11 +30,15 @@ const SUBDOMAIN_REGEX = new RegExp(
   `https?:\/\/(?<${SUBDOMAIN_GROUP}>${SUBDOMAIN_PATTERN})\\.${DOMAIN_PATTERN}.\\w+`
 );
 
+// List of subdomains that should not be treated as innovation hubs
+const WHITELISTED_SUBDOMAINS = ['identity'];
+
 /***
  * Injects the Innovation Hub in the execution context, if matched with the subdomain
  */
 export class InnovationHubInterceptor implements NestInterceptor {
   private readonly innovationHubHeader: string;
+  private readonly whitelistedSubdomains: string[];
 
   constructor(
     private readonly innovationHubService: InnovationHubService,
@@ -45,6 +49,18 @@ export class InnovationHubInterceptor implements NestInterceptor {
     this.innovationHubHeader = this.configService.get('innovation_hub.header', {
       infer: true,
     });
+
+    // Get whitelisted subdomains from config or use default list
+    this.whitelistedSubdomains = this.configService.get(
+      'innovation_hub.whitelisted_subdomains',
+      {
+        infer: true,
+      }
+    );
+
+    if (!this.whitelistedSubdomains) {
+      this.whitelistedSubdomains = WHITELISTED_SUBDOMAINS;
+    }
   }
 
   async intercept(context: ExecutionContext, next: CallHandler) {
@@ -61,7 +77,7 @@ export class InnovationHubInterceptor implements NestInterceptor {
 
     const subDomain = SUBDOMAIN_REGEX.exec(host)?.groups?.[SUBDOMAIN_GROUP];
 
-    if (!subDomain) {
+    if (!subDomain || this.whitelistedSubdomains.includes(subDomain)) {
       return next.handle();
     }
 
