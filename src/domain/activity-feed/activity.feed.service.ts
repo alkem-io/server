@@ -282,23 +282,20 @@ export class ActivityFeedService {
         );
       }
 
-      // filter the child collaborations by read access
-      for (const childCollaboration of childCollaborations) {
-        try {
+      // Filter the child collaborations by read access
+      const readableChildCollaborations = childCollaborations.filter(
+        childCollaboration =>
           this.authorizationService.grantAccessOrFail(
             agentInfo,
             childCollaboration.authorization,
             AuthorizationPrivilege.READ,
             `Collaboration activity query: ${agentInfo.email}`
-          );
-          collaborationIds.push(childCollaboration.id);
-        } catch (e) {
-          this.logger?.warn(
-            `User ${agentInfo.userID} is not able to read child collaboration ${childCollaboration.id}`,
-            LogContext.ACTIVITY_FEED
-          );
-        }
-      }
+          )
+      );
+
+      const collaborationIds = readableChildCollaborations.map(
+        childCollaboration => childCollaboration.id
+      );
     }
 
     return collaborationIds;
