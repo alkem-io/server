@@ -75,6 +75,7 @@ security:
 
 innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
+  # comma separated list of subdomains that are not an innovation hub (starting page)
   whitelisted_subdomains: ${INNOVATION_HUB_WHITELISTED_SUBDOMAINS}:identity
 
 search:
