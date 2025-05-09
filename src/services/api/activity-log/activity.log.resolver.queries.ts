@@ -61,24 +61,26 @@ export class ActivityLogResolverQueries {
         await this.collaborationService.getChildCollaborationsOrFail(
           queryData.collaborationID
         );
-      // can agent read each collaboration
-      const childCollaborationIds: string[] = [];
-      for (const childCollaboration of childCollaborations) {
-        try {
-          await this.authorizationService.grantAccessOrFail(
-            agentInfo,
-            childCollaboration.authorization,
-            AuthorizationPrivilege.READ,
-            `Collaboration activity query: ${agentInfo.email}`
-          );
-          childCollaborationIds.push(childCollaboration.id);
-        } catch (e) {
-          this.logger?.warn(
-            `User ${agentInfo.userID} is not able to read child collaboration ${childCollaboration.id}`,
-            LogContext.COLLABORATION
-          );
+
+      // Filter the child collaborations by read access
+      const readableChildCollaborations = childCollaborations.filter(
+        childCollaboration => {
+          try {
+            return this.authorizationService.grantAccessOrFail(
+              agentInfo,
+              childCollaboration.authorization,
+              AuthorizationPrivilege.READ,
+              `Collaboration activity query: ${agentInfo.email}`
+            );
+          } catch (e) {
+            return false;
+          }
         }
-      }
+      );
+
+      const childCollaborationIds = readableChildCollaborations.map(
+        childCollaboration => childCollaboration.id
+      );
       // get activities for all collaborations
       return this.activityLogService.activityLog(
         queryData,
