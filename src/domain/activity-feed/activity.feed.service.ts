@@ -248,7 +248,7 @@ export class ActivityFeedService {
     agentInfo: AgentInfo,
     spaceIds: string[]
   ): Promise<string[]> {
-    const collaborationIds: string[] = [];
+    const readableCollaborationIds: string[] = [];
     for (const spaceId of spaceIds) {
       // filter the collaborations by read access
       const collaboration =
@@ -261,7 +261,7 @@ export class ActivityFeedService {
           AuthorizationPrivilege.READ,
           `Collaboration activity query: ${agentInfo.email}`
         );
-        collaborationIds.push(collaboration.id);
+        readableCollaborationIds.push(collaboration.id);
       } catch (error) {
         this.logger?.warn(
           `User ${agentInfo.userID} is not able to read collaboration ${collaboration.id}`,
@@ -298,12 +298,14 @@ export class ActivityFeedService {
         }
       );
 
-      const collaborationIds = readableChildCollaborations.map(
+      const readableChildCollaborationIds = readableChildCollaborations.map(
         childCollaboration => childCollaboration.id
       );
+
+      readableCollaborationIds.push(...readableChildCollaborationIds);
     }
 
-    return collaborationIds;
+    return readableCollaborationIds;
   }
 }
 
