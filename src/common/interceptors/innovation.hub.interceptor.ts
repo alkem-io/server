@@ -35,6 +35,7 @@ const SUBDOMAIN_REGEX = new RegExp(
  */
 export class InnovationHubInterceptor implements NestInterceptor {
   private readonly innovationHubHeader: string;
+  private readonly whitelistedSubdomains: string[];
 
   constructor(
     private readonly innovationHubService: InnovationHubService,
@@ -45,6 +46,14 @@ export class InnovationHubInterceptor implements NestInterceptor {
     this.innovationHubHeader = this.configService.get('innovation_hub.header', {
       infer: true,
     });
+
+    // Get whitelisted subdomains from config or use default list
+    this.whitelistedSubdomains =
+      this.configService
+        .get('innovation_hub.whitelisted_subdomains', {
+          infer: true,
+        })
+        .split(',') || [];
   }
 
   async intercept(context: ExecutionContext, next: CallHandler) {
@@ -61,7 +70,7 @@ export class InnovationHubInterceptor implements NestInterceptor {
 
     const subDomain = SUBDOMAIN_REGEX.exec(host)?.groups?.[SUBDOMAIN_GROUP];
 
-    if (!subDomain) {
+    if (!subDomain || this.whitelistedSubdomains.includes(subDomain)) {
       return next.handle();
     }
 
