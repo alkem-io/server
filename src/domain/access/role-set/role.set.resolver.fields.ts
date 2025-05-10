@@ -31,12 +31,15 @@ import {
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { IPaginatedType } from '@core/pagination/paginated.type';
+import { PaginatedVirtualContributor } from '@core/pagination/paginated.virtual.contributor';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFields {
   constructor(
     private roleSetService: RoleSetService,
-    private userService: UserService
+    private userService: UserService,
+    private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -82,6 +85,46 @@ export class RoleSetResolverFields {
       roleSetEntryRoleCredential,
       pagination,
       filter
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'availableVirtualContributorsForEntryRole',
+    () => PaginatedVirtualContributor,
+    {
+      nullable: false,
+      description:
+        'All available VirtualContributors that are eligible to invite to this RoleSet in the entry role.',
+    }
+  )
+  async availableVirtualContributorsForEntryRole(
+    @Parent() roleSet: IRoleSet,
+    @Args({ nullable: true }) pagination: PaginationArgs
+  ) {
+    const entryRoleDefinition = await this.roleSetService.getRoleDefinition(
+      roleSet,
+      roleSet.entryRoleName
+    );
+
+    const parentRoleSet = await this.roleSetService.getParentRoleSet(roleSet);
+
+    const parentRoleSetEntryRoleCredential = parentRoleSet
+      ? await this.roleSetService.getCredentialDefinitionForRole(
+          parentRoleSet,
+          roleSet.entryRoleName
+        )
+      : undefined;
+
+    const roleSetEntryRoleCredential: RoleSetRoleWithParentCredentials = {
+      role: entryRoleDefinition.credential,
+      parentRoleSetRole: parentRoleSetEntryRoleCredential,
+    };
+
+    return this.virtualContributorLookupService.getPaginatedAvailableEntryRoleVCs(
+      roleSetEntryRoleCredential,
+      pagination
     );
   }
 

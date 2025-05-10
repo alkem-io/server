@@ -70,7 +70,6 @@ export class VirtualContributorResolverFields {
   })
   async profile(
     @Parent() virtualContributor: VirtualContributor,
-    @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: VirtualContributor })
     loader: ILoader<IProfile>
   ) {

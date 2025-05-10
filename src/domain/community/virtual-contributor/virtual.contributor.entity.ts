@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Generated,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
@@ -13,6 +20,12 @@ export class VirtualContributor
   extends ContributorBase
   implements IVirtualContributor
 {
+  @Column({
+    unique: true,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @ManyToOne(() => Account, account => account.virtualContributors, {
     eager: false,
     onDelete: 'SET NULL',
