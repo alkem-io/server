@@ -248,7 +248,7 @@ export class ActivityFeedService {
     agentInfo: AgentInfo,
     spaceIds: string[]
   ): Promise<string[]> {
-    const collaborationIds: string[] = [];
+    const readableCollaborationIds: string[] = [];
     for (const spaceId of spaceIds) {
       // filter the collaborations by read access
       const collaboration =
@@ -261,7 +261,7 @@ export class ActivityFeedService {
           AuthorizationPrivilege.READ,
           `Collaboration activity query: ${agentInfo.email}`
         );
-        collaborationIds.push(collaboration.id);
+        readableCollaborationIds.push(collaboration.id);
       } catch (error) {
         this.logger?.warn(
           `User ${agentInfo.userID} is not able to read collaboration ${collaboration.id}`,
@@ -282,26 +282,30 @@ export class ActivityFeedService {
         );
       }
 
-      // filter the child collaborations by read access
-      for (const childCollaboration of childCollaborations) {
-        try {
-          this.authorizationService.grantAccessOrFail(
-            agentInfo,
-            childCollaboration.authorization,
-            AuthorizationPrivilege.READ,
-            `Collaboration activity query: ${agentInfo.email}`
-          );
-          collaborationIds.push(childCollaboration.id);
-        } catch (e) {
-          this.logger?.warn(
-            `User ${agentInfo.userID} is not able to read child collaboration ${childCollaboration.id}`,
-            LogContext.ACTIVITY_FEED
-          );
+      // Filter the child collaborations by read access
+      const readableChildCollaborations = childCollaborations.filter(
+        childCollaboration => {
+          try {
+            return this.authorizationService.grantAccessOrFail(
+              agentInfo,
+              childCollaboration.authorization,
+              AuthorizationPrivilege.READ,
+              `Collaboration activity query: ${agentInfo.email}`
+            );
+          } catch (e) {
+            return false;
+          }
         }
-      }
+      );
+
+      const readableChildCollaborationIds = readableChildCollaborations.map(
+        childCollaboration => childCollaboration.id
+      );
+
+      readableCollaborationIds.push(...readableChildCollaborationIds);
     }
 
-    return collaborationIds;
+    return readableCollaborationIds;
   }
 }
 
