@@ -61,7 +61,6 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 
 @InstrumentResolver()
 @Resolver()
@@ -80,7 +79,6 @@ export class RoleSetResolverMutationsMembership {
     private roleSetServiceLifecycleInvitation: RoleSetServiceLifecycleInvitation,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
-    private invitationAuthorizationService: InvitationAuthorizationService,
     private contributorService: ContributorService,
     private platformInvitationService: PlatformInvitationService,
     private licenseService: LicenseService,
