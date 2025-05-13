@@ -305,9 +305,17 @@ export class RoleSetResolverMutationsMembership {
       );
     invitationResults.push(...newUserInvitationResults);
 
-    // TODO: Why do we need to reset the authorizations to all the invitations & applications
-    // and not just to the newly created ones
+    // Reset all authorizations on the invitations and applications because it's easier
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
+
+    // Reload the invitations to get the latest authorizations
+    for (const result of invitationResults) {
+      if (result.invitation) {
+        result.invitation = await this.invitationService.getInvitationOrFail(
+          result.invitation.id
+        );
+      }
+    }
 
     await this.sendNotificationEventsForInvitationsOnSpaceRoleSet(
       roleSet,
@@ -637,11 +645,6 @@ export class RoleSetResolverMutationsMembership {
 
       const invitation =
         await this.roleSetService.createInvitationExistingContributor(input);
-
-      await this.invitationAuthorizationService.applyAuthorizationPolicy(
-        invitation,
-        roleSet.authorization
-      );
 
       const invitationResult: RoleSetInvitationResult = {
         type: RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
