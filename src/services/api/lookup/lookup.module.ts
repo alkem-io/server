@@ -14,6 +14,7 @@ import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
+import { PlatformInvitationModule } from '@domain/access/invitation.platform/platform.invitation.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
@@ -61,6 +62,7 @@ import { SpaceAboutModule } from '@domain/space/space.about/space.about.module';
     RoomModule,
     ApplicationModule,
     InvitationModule,
+    PlatformInvitationModule,
     InnovationHubModule,
     DocumentModule,
     StorageAggregatorModule,
