@@ -12,7 +12,7 @@ import { InAppNotificationBase } from './in.app.notification.base';
   implements: () => InAppNotification,
 })
 export abstract class InAppNotificationCalloutPublished extends InAppNotificationBase() {
-  type!: NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED;
+  type = NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED;
   payload!: InAppNotificationCalloutPublishedPayload;
   // fields resolved by a concrete resolver
   callout?: ICallout;
