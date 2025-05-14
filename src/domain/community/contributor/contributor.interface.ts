@@ -58,4 +58,16 @@ export abstract class IContributor {
     description: 'The profile for the Contributor.',
   })
   profile!: IProfile;
+
+  @Field(() => Date, {
+    description: 'The date at which the entity was created.',
+    nullable: true,
+  })
+  createdDate!: Date;
+
+  @Field(() => Date, {
+    description: 'The date at which the entity was last updated.',
+    nullable: true,
+  })
+  updatedDate!: Date;
 }
