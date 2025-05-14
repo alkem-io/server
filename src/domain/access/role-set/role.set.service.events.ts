@@ -9,6 +9,8 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { IRoleSet } from './role.set.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { SpaceLevel } from '@common/enums/space.level';
+import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class RoleSetEventsService {
@@ -50,7 +52,7 @@ export class RoleSetEventsService {
       await this.communityResolverService.getDisplayNameForRoleSetOrFail(
         roleSet.id
       );
-    // TODO: community just needs to know the level, not the type
+
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
       contributorID: newContributor.id,
@@ -61,7 +63,7 @@ export class RoleSetEventsService {
 
     // Record the contribution events
     switch (space.level) {
-      case SpaceLevel.L0:
+      case SpaceLevel.L0: {
         this.contributionReporter.spaceJoined(
           {
             id: community.parentID,
@@ -74,7 +76,9 @@ export class RoleSetEventsService {
           }
         );
         break;
-      default: // Challenge, Opportunity, VIRTUAL_CONTRIBUTOR, BLANK_SLATE...
+      }
+      case SpaceLevel.L1:
+      case SpaceLevel.L2: {
         this.contributionReporter.subspaceJoined(
           {
             id: community.parentID,
@@ -87,6 +91,12 @@ export class RoleSetEventsService {
           }
         );
         break;
+      }
+      default:
+        throw new RoleSetMembershipException(
+          `Invalid space level: ${space.level} on community ${community.id}`,
+          LogContext.ROLES
+        );
     }
   }
 }

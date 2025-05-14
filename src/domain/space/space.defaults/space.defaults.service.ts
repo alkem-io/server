@@ -4,7 +4,7 @@ import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
 import { spaceCommunityRoles } from './definitions/space.community.roles';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
-import { subspceCommunityApplicationForm } from './definitions/subspace.community.role.application.form';
+import { subspaceCommunityApplicationForm } from './definitions/subspace.community.role.application.form';
 import { spaceCommunityApplicationForm } from './definitions/space.community.role.application.form';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -193,7 +193,7 @@ export class SpaceDefaultsService {
     switch (spaceLevel) {
       case SpaceLevel.L1:
       case SpaceLevel.L2:
-        return subspceCommunityApplicationForm;
+        return subspaceCommunityApplicationForm;
       case SpaceLevel.L0:
         return spaceCommunityApplicationForm;
     }

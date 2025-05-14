@@ -27,6 +27,7 @@ export type AlkemioConfig = {
   };
   innovation_hub: {
     header: string;
+    whitelisted_subdomains: string;
   };
   search: {
     max_results: number;

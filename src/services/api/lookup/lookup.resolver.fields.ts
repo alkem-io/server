@@ -26,8 +26,10 @@ import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { IApplication } from '@domain/access/application';
 import { IInvitation } from '@domain/access/invitation';
+import { IPlatformInvitation } from '@domain/access/invitation.platform';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -83,6 +85,7 @@ export class LookupResolverFields {
     private communityService: CommunityService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
+    private platformInvitationService: PlatformInvitationService,
     private collaborationService: CollaborationService,
     private spaceAboutService: SpaceAboutService,
     private whiteboardService: WhiteboardService,
@@ -414,6 +417,26 @@ export class LookupResolverFields {
     );
 
     return invitation;
+  }
+
+  @ResolveField(() => IPlatformInvitation, {
+    nullable: true,
+    description: 'Lookup the specified PlatformInvitation',
+  })
+  async platformInvitation(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IPlatformInvitation> {
+    const platformInvitation =
+      await this.platformInvitationService.getPlatformInvitationOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformInvitation.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Platform Invitation: ${platformInvitation.id}`
+    );
+
+    return platformInvitation;
   }
 
   @ResolveField(() => ICommunity, {

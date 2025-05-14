@@ -3,11 +3,10 @@ import { IActivityLogEntryMemberJoined } from '@services/api/activity-log/dto/ac
 import { IActivityLogEntryCalloutPublished } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutPostCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.created';
 import { IActivityLogEntryCalloutWhiteboardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.whiteboard.created';
-import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
-import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subsubspace.created';
+import { IActivityLogEntrySubspaceCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
 import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
-import { IActivity } from '@platform/activity';
+import { IActivity } from '@platform/activity/activity.interface';
 import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
 import { IActivityLogEntryCalloutLinkCreated } from './dto/activity.log.dto.entry.callout.link.created';
@@ -25,8 +24,7 @@ export interface IActivityLogBuilder {
   [ActivityEventType.CALLOUT_WHITEBOARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
   [ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardContentModified>;
   [ActivityEventType.CALLOUT_POST_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
-  [ActivityEventType.CHALLENGE_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryChallengeCreated>;
-  [ActivityEventType.OPPORTUNITY_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryOpportunityCreated>;
+  [ActivityEventType.SUBSPACE_CREATED]: ActivityLogBuilderFunction<IActivityLogEntrySubspaceCreated>;
   [ActivityEventType.DISCUSSION_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
   [ActivityEventType.UPDATE_SENT]: ActivityLogBuilderFunction<IActivityLogEntryUpdateSent>;
   [ActivityEventType.CALENDAR_EVENT_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalendarEventCreated>;
