@@ -99,7 +99,7 @@ export class ClassificationService {
     tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
     if (!classification.tagsets) {
-      classification.tagsets = await this.getTagsets(classification);
+      classification.tagsets = await this.getTagsets(classification.id);
     }
 
     const tagset = this.tagsetService.createTagsetWithName(
@@ -126,9 +126,9 @@ export class ClassificationService {
     return classification;
   }
 
-  async getTagsets(classificationInput: IClassification): Promise<ITagset[]> {
+  async getTagsets(classificationID: string): Promise<ITagset[]> {
     const classification = await this.getClassificationOrFail(
-      classificationInput.id,
+      classificationID,
       {
         relations: { tagsets: true },
       }
@@ -146,7 +146,7 @@ export class ClassificationService {
     classificationID: string,
     tagsetName: string
   ): Promise<ITagset> {
-    const tagsets = await this.getTagsets({ id: classificationID });
+    const tagsets = await this.getTagsets(classificationID);
     return this.tagsetService.getTagsetByNameOrFail(tagsets, tagsetName);
   }
 
