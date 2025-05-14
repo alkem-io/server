@@ -116,7 +116,7 @@ export class InvitationService {
 
   async getInvitationsOrFail(
     invitationIds: string[],
-    options?: FindOptionsWhere<Invitation>[]
+    options?: FindOptionsWhere<Invitation>
   ): Promise<IInvitation[] | never> {
     const invitations = await this.invitationRepository.findBy({
       ...options,
