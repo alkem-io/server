@@ -14,9 +14,14 @@ import { InAppNotificationBase } from '@domain/in-app-notification-reader/dto/in
 })
 export class InAppNotificationCommunityNewMember extends InAppNotificationBase() {
   type = NotificationEventType.COMMUNITY_NEW_MEMBER;
-  payload!: InAppNotificationCommunityNewMemberPayload;
+  payload: InAppNotificationCommunityNewMemberPayload;
   // fields resolved by a concrete resolver
   contributorType!: RoleSetContributorType;
   actor?: IContributor;
   space?: ISpace;
+
+  constructor(payload: InAppNotificationCommunityNewMemberPayload) {
+    super();
+    this.payload = payload;
+  }
 }

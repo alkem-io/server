@@ -317,7 +317,11 @@ export class SearchExtractService {
         score: hit._score ?? -1,
         type,
         terms: [], // todo - https://github.com/alkem-io/server/issues/3702
-        result: { id: entityId ?? 'N/A' },
+        result: {
+          id: entityId ?? 'N/A',
+          createdDate: hit.fields?.createdDate?.[0],
+          updatedDate: hit.fields?.updatedDate?.[0],
+        },
       };
     });
   }

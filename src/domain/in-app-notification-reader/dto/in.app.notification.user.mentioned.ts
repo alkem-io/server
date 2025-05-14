@@ -12,9 +12,14 @@ import { InAppNotificationBase } from '@domain/in-app-notification-reader/dto/in
 })
 export class InAppNotificationUserMentioned extends InAppNotificationBase() {
   type = NotificationEventType.COMMUNICATION_USER_MENTION;
-  payload!: InAppNotificationContributorMentionedPayload;
+  payload: InAppNotificationContributorMentionedPayload;
   // fields resolved by a concrete resolver
   contributorType!: RoleSetContributorType;
   comment!: string;
   commentUrl!: string;
+
+  constructor(payload: InAppNotificationContributorMentionedPayload) {
+    super();
+    this.payload = payload;
+  }
 }
