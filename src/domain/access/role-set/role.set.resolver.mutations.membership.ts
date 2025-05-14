@@ -61,6 +61,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { compact } from 'lodash';
 
 @InstrumentResolver()
 @Resolver()
@@ -307,10 +308,15 @@ export class RoleSetResolverMutationsMembership {
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
 
     // Reload the invitations to get the latest authorizations
+    const invitationsReloaded =
+      await this.invitationService.getInvitationsOrFail(
+        compact(invitationResults.map(result => result.invitation?.id))
+      );
+
     for (const result of invitationResults) {
       if (result.invitation) {
-        result.invitation = await this.invitationService.getInvitationOrFail(
-          result.invitation.id
+        result.invitation = invitationsReloaded.find(
+          invitationReloaded => invitationReloaded.id === result.invitation!.id
         );
       }
     }

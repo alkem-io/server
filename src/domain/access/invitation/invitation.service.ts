@@ -12,7 +12,13 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsWhere,
+  In,
+  Repository,
+} from 'typeorm';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -106,6 +112,23 @@ export class InvitationService {
         LogContext.COMMUNITY
       );
     return invitation;
+  }
+
+  async getInvitationsOrFail(
+    invitationIds: string[],
+    options?: FindOptionsWhere<Invitation>[]
+  ): Promise<IInvitation[] | never> {
+    const invitations = await this.invitationRepository.findBy({
+      ...options,
+      id: In(invitationIds),
+    });
+
+    if (!invitations || invitationIds.length !== invitations.length)
+      throw new EntityNotFoundException(
+        `Some invitations couldn't be found with these Ids:${JSON.stringify(invitationIds)}`,
+        LogContext.COMMUNITY
+      );
+    return invitations;
   }
 
   async save(invitation: IInvitation): Promise<IInvitation> {
