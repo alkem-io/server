@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "target": "es2018",
-    "module": "commonjs",
-    "lib": ["es2019", "esnext.asynciterable", "ES2020.Promise"],
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "target": "ESNext",
+    "lib": ["es2020"],
     "sourceMap": true,
     "outDir": "./dist",
     "removeComments": true,

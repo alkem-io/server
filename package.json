@@ -4,6 +4,7 @@
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
+  "type": "module",
   "license": "EUPL-1.2",
   "main": "src/main.ts",
   "repository": {
@@ -142,7 +143,7 @@
     "prettier": "^3.3.3",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.2",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
     "typescript": "5.3.3"
   },
   "_moduleAliases": {

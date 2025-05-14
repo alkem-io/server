@@ -13,13 +13,13 @@ export abstract class IBaseAlkemio {
     description: 'The date at which the entity was created.',
     nullable: true,
   })
-  createdDate?: Date;
+  createdDate!: Date;
 
   @Field(() => Date, {
     description: 'The date at which the entity was last updated.',
     nullable: true,
   })
-  updatedDate?: Date;
+  updatedDate!: Date;
 
   constructor() {
     this.id = '';
