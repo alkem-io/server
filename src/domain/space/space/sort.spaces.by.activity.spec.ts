@@ -20,6 +20,7 @@ const createTestActivity = (createdDate: Date): IActivity => {
     parentID: '1',
     messageID: '1',
     visibility: true,
+    updatedDate: new Date(),
     type: ActivityEventType.CALLOUT_WHITEBOARD_CREATED,
   };
 };
@@ -50,6 +51,8 @@ const createTestSpace = (id: string): ISpace => {
     settings: spaceSettings,
     levelZeroSpaceID: '',
     visibility: SpaceVisibility.ACTIVE,
+    createdDate: new Date(),
+    updatedDate: new Date(),
     about: {
       id: '1',
       profile: {
@@ -58,7 +61,11 @@ const createTestSpace = (id: string): ISpace => {
         description: '',
         tagline: '',
         type: ProfileType.SPACE_ABOUT,
+        createdDate: new Date(),
+        updatedDate: new Date(),
       },
+      createdDate: new Date(),
+      updatedDate: new Date(),
     },
     account: {
       id: `account${id}`,
@@ -68,6 +75,8 @@ const createTestSpace = (id: string): ISpace => {
       externalSubscriptionID: '',
       spaces: [],
       type: AccountType.ORGANIZATION,
+      createdDate: new Date(),
+      updatedDate: new Date(),
     },
     type: SpaceType.SPACE,
     level: 0,

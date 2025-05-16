@@ -54,7 +54,7 @@ export class WinstonConfigService {
     if (contextToFileConfig.enabled) {
       const filename = contextToFileConfig.filename;
 
-      function filterMessagesFormat(filterFunc: any) {
+      const filterMessagesFormat = (filterFunc: any) => {
         const formatFunc = (info: any) => {
           if (filterFunc(info)) return info;
           return null;
@@ -65,7 +65,7 @@ export class WinstonConfigService {
         format.transform = formatFunc;
 
         return format;
-      }
+      };
 
       const myFormat = winston.format.combine(
         winston.format.timestamp({

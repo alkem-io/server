@@ -15,10 +15,4 @@ export abstract class IApplication extends IAuthorizable {
   lifecycle!: ILifecycle;
 
   questions?: IQuestion[];
-
-  @Field(() => Date)
-  createdDate!: Date;
-
-  @Field(() => Date)
-  updatedDate!: Date;
 }

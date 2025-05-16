@@ -10,7 +10,6 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Entity()
 export class Document extends AuthorizableEntity implements IDocument {
@@ -26,14 +25,6 @@ export class Document extends AuthorizableEntity implements IDocument {
   // @JoinColumn()
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy!: string;
-
-  @OneToOne(() => AuthorizationPolicy, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  authorization?: AuthorizationPolicy;
 
   @ManyToOne(() => StorageBucket, storage => storage.documents, {
     eager: false,

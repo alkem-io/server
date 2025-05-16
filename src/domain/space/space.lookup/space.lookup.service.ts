@@ -168,9 +168,14 @@ export class SpaceLookupService {
     });
   }
 
+  /**
+   * Retrieves a collaboration for a given space ID or throws if not found.
+   * @throws {RelationshipNotFoundException} if collaboration is not found.
+   * @throws {EntityNotFoundException} if space is not found.
+   */
   public async getCollaborationOrFail(
     spaceID: string
-  ): Promise<ICollaboration> | never {
+  ): Promise<ICollaboration> {
     const subspaceWithCollaboration = await this.getSpaceOrFail(spaceID, {
       relations: { collaboration: true },
     });

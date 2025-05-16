@@ -101,14 +101,12 @@ export class KratosService {
   /**
    * Retrieves a bearer token by initiating and completing a login flow with the provided identifier and password.
    *
-   * @param identifier - The identifier (e.g., username or email) used for login.
-   * @param password - The password associated with the identifier.
    * @returns A promise that resolves to a bearer token string.
-   * @throws LoginFlowInitializeException - If the login flow initialization fails.
-   * @throws LoginFlowException - If the login flow update fails.
-   * @throws BearerTokenNotFoundException - If the bearer token is not found after the login flow completes.
+   * @throws {LoginFlowInitializeException} If the login flow initialization fails.
+   * @throws {LoginFlowException} If the login flow update fails.
+   * @throws {BearerTokenNotFoundException} If the bearer token is not found after the login flow completes.
    */
-  public async getBearerToken(): Promise<string> | never {
+  public async getBearerToken(): Promise<string> {
     const kratos = this.kratosFrontEndClient;
     const identifier = this.adminPasswordIdentifier;
     const password = this.adminPassword;
@@ -403,8 +401,8 @@ export class KratosService {
    * Retrieves a session using either an authorization header or a cookie.
    * @param authorization - The authorization header value (optional).
    * @param cookie - The cookie value (optional).
-   * @returns A promise that resolves to a Session object or throws an error if neither authorization nor cookie is provided.
-   * @throws Will throw an error if neither authorization nor cookie is provided.
+   * @returns A promise that resolves to a Session object.
+   * @throws {Error} if neither authorization nor cookie is provided, or if session retrieval fails.
    */
   public async getSession(
     authorization?: string,
@@ -458,6 +456,7 @@ export class KratosService {
       );
 
       return latestDate;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return undefined;
     }
@@ -534,12 +533,14 @@ export class KratosService {
 
     try {
       return this.getSessionFromJwt(token);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // ...
     }
 
     try {
       return this.getSessionFromApiToken(kratosClient, token);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // ...
     }

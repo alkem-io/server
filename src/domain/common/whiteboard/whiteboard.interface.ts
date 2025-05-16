@@ -13,21 +13,10 @@ export abstract class IWhiteboard extends INameable {
   content!: string;
 
   @Field(() => ContentUpdatePolicy, {
-    description: 'The policy governing who can update the Whiteboard contet.',
+    description: 'The policy governing who can update the Whiteboard content.',
     nullable: false,
   })
   contentUpdatePolicy!: ContentUpdatePolicy;
-
-  @Field(() => Date, {
-    description: 'The date at which the Whiteboard was created.',
-  })
-  createdDate!: Date;
-
-  @Field(() => Date, {
-    nullable: true,
-    description: 'The date at which the Whiteboard was last updated.',
-  })
-  updatedDate!: Date;
 
   createdBy?: string;
 

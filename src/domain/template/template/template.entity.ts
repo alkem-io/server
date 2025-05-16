@@ -24,7 +24,7 @@ export class Template extends NameableEntity implements ITemplate {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  profile!: Profile;
+  declare profile: Profile;
 
   @Column('varchar', { length: 128, nullable: false })
   type!: TemplateType;

@@ -37,6 +37,7 @@ const createTestActivity = (
     parentID: '1',
     messageID: '1',
     visibility: true,
+    updatedDate: new Date(),
     type: ActivityEventType.CALLOUT_WHITEBOARD_CREATED,
   };
 };

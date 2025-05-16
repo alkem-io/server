@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es2018",
     "module": "commonjs",
-    "lib": ["es2019", "esnext.asynciterable", "ES2020.Promise"],
+    "target": "ES2022",
+    "lib": ["ES2023"],
     "sourceMap": true,
     "outDir": "./dist",
     "removeComments": true,
@@ -15,7 +15,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "strictNullChecks": true,
+    "downlevelIteration": true,
     "paths": {
       "@interfaces/*": ["src/common/interfaces/*"],
       "@domain/*": ["src/domain/*"],

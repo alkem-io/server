@@ -24,6 +24,7 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { OrganizationLicenseService } from './organization.service.license';
 import { OrganizationLookupModule } from '../organization-lookup/organization.lookup.module';
+import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { OrganizationLookupModule } from '../organization-lookup/organization.lo
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoleSetModule,
+    LicenseEntitlementModule,
     ContributorModule,
     OrganizationVerificationModule,
     OrganizationLookupModule,
