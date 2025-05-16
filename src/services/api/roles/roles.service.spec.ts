@@ -82,7 +82,7 @@ describe('RolesService', () => {
 
   describe('User Roles', () => {
     beforeEach(() => {
-      const spaceRolesData = testData.rolesUser.space as any;
+      const spaceRolesData = testData.rolesUser.space;
       const spaceRolesMock: RolesResultSpace = getSpaceRoleResultMock({
         id: spaceRolesData.id,
         roles: spaceRolesData.roles,
@@ -139,7 +139,7 @@ describe('RolesService', () => {
 
       jest
         .spyOn(communityResolverService, 'getSpaceForCommunityOrFail')
-        .mockResolvedValue(testData.space as any);
+        .mockResolvedValue(testData.space);
     });
 
     it('Should get user roles', async () => {
