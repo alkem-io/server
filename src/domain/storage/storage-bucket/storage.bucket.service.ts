@@ -101,7 +101,7 @@ export class StorageBucketService {
   async getStorageBucketOrFail(
     storageBucketID: string,
     options?: FindOneOptions<StorageBucket>
-  ): Promise<IStorageBucket | never> {
+  ): Promise<IStorageBucket> {
     if (!storageBucketID) {
       throw new EntityNotFoundException(
         `StorageBucket not found: ${storageBucketID}`,
@@ -122,7 +122,7 @@ export class StorageBucketService {
 
   public async getDocuments(
     storageInput: IStorageBucket
-  ): Promise<IDocument[] | never> {
+  ): Promise<IDocument[]> {
     const storage = await this.getStorageBucketOrFail(storageInput.id, {
       relations: { documents: true },
     });
@@ -162,7 +162,7 @@ export class StorageBucketService {
     mimeType: string,
     userID: string,
     temporaryLocation = false
-  ): Promise<IDocument | never> {
+  ): Promise<IDocument> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: {},
     });
@@ -195,6 +195,7 @@ export class StorageBucketService {
       if (docByExternalId) {
         return docByExternalId;
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       /* just consume */
     }
@@ -218,7 +219,7 @@ export class StorageBucketService {
     filename: string,
     mimetype: string,
     userID: string
-  ): Promise<IDocument | never> {
+  ): Promise<IDocument> {
     if (!readStream)
       throw new ValidationException(
         'Readstream should be defined!',
@@ -260,10 +261,13 @@ export class StorageBucketService {
     }
   }
 
+  /**
+   * @throws {Error}
+   */
   public async addDocumentToStorageBucketOrFail(
     storageBucket: IStorageBucket,
     document: IDocument
-  ): Promise<IDocument> | never {
+  ): Promise<IDocument> {
     this.validateMimeTypes(storageBucket, document.mimeType);
     this.validateSize(storageBucket, document.size);
     document.storageBucket = storageBucket;
@@ -280,7 +284,7 @@ export class StorageBucketService {
   public async addDocumentToStorageBucketByIdOrFail(
     storageBucketId: string,
     document: IDocument
-  ): Promise<IDocument> | never {
+  ): Promise<IDocument> {
     const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
     return this.addDocumentToStorageBucketOrFail(storageBucket, document);
   }
@@ -301,7 +305,7 @@ export class StorageBucketService {
     storage: IStorageBucket,
     args: StorageBucketArgsDocuments,
     agentInfo: AgentInfo
-  ): Promise<IDocument[] | never> {
+  ): Promise<IDocument[]> {
     const storageLoaded = await this.getStorageBucketOrFail(storage.id, {
       relations: { documents: true },
     });
@@ -355,7 +359,7 @@ export class StorageBucketService {
   private validateMimeTypes(
     storageBucket: IStorageBucket,
     mimeType: string
-  ): void | never {
+  ): void {
     const result = Object.values(storageBucket.allowedMimeTypes).includes(
       mimeType as MimeFileType
     );
@@ -367,10 +371,7 @@ export class StorageBucketService {
     }
   }
 
-  private validateSize(
-    storageBucket: IStorageBucket,
-    size: number
-  ): void | never {
+  private validateSize(storageBucket: IStorageBucket, size: number): void {
     if (size > storageBucket.maxFileSize) {
       throw new ValidationException(
         `File size (${size}) exceeds maximum allowed file size for storage bucket: ${storageBucket.maxFileSize}`,

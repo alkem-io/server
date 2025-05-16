@@ -229,10 +229,14 @@ export class WhiteboardService {
   // todo: use one optimized query with a "where not exists"
   // to return just the ones not in the bucket
   // https://github.com/alkem-io/server/issues/4559
+  /**
+   * Re-uploads documents if not in the bucket.
+   * @throws {EntityNotInitializedException} if profile or storage bucket is not found.
+   */
   private async reuploadDocumentsIfNotInBucket(
     whiteboardContent: ExcalidrawContent,
     profileIdToCheck: string
-  ): Promise<ExcalidrawContent> | never {
+  ): Promise<ExcalidrawContent> {
     if (!whiteboardContent.files) {
       return whiteboardContent;
     }
