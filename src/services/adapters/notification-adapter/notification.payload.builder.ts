@@ -734,7 +734,7 @@ export class NotificationPayloadBuilder {
       space: {
         id: space.id,
         nameID: space.nameID,
-        type: space.type,
+        level: space.level.toString(),
         profile: {
           displayName: space.about.profile.displayName,
           url: url,

@@ -725,7 +725,6 @@ export class SearchResultService {
       },
       select: {
         id: true,
-        type: true,
         level: true,
         settings: {
           collaboration: {

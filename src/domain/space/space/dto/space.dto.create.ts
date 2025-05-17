@@ -1,5 +1,4 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { SpaceType } from '@common/enums/space.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -8,6 +7,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
 
 @InputType()
 export class CreateSpaceInput {
@@ -34,8 +34,10 @@ export class CreateSpaceInput {
 
   level!: SpaceLevel;
 
-  // TODO: this needs to be replaced with a different way to select the template
-  @Field(() => SpaceType, { nullable: true })
+  @Field(() => TemplateDefaultType, {
+    nullable: true,
+    description: 'Pick up a different platform template.',
+  })
   @IsOptional()
-  type!: SpaceType;
+  platformTemplate?: TemplateDefaultType;
 }
