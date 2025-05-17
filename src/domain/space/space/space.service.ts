@@ -29,7 +29,6 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { SpaceType } from '@common/enums/space.type';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -113,34 +112,6 @@ export class SpaceService {
     spaceData: CreateSpaceInput,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
-    if (!spaceData.type) {
-      // default to match the level if not specified
-      switch (spaceData.level) {
-        case SpaceLevel.L0:
-          spaceData.type = SpaceType.SPACE;
-          break;
-        case SpaceLevel.L1:
-          spaceData.type = SpaceType.CHALLENGE;
-          break;
-        case SpaceLevel.L2:
-          spaceData.type = SpaceType.OPPORTUNITY;
-          break;
-        default:
-          spaceData.type = SpaceType.CHALLENGE;
-          break;
-      }
-    }
-    // Hard code / overwrite for now for root space level
-    if (
-      spaceData.level === SpaceLevel.L0 &&
-      spaceData.type !== SpaceType.SPACE
-    ) {
-      throw new NotSupportedException(
-        `Root space must have a type of SPACE: '${spaceData.type}'`,
-        LogContext.SPACES
-      );
-    }
-
     const space: ISpace = Space.create(spaceData);
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
@@ -149,7 +120,7 @@ export class SpaceService {
       AuthorizationPolicyType.SPACE
     );
     space.settings = this.spaceDefaultsService.getDefaultSpaceSettings(
-      spaceData.type
+      space.level
     );
 
     const storageAggregator =
@@ -201,7 +172,8 @@ export class SpaceService {
     collaborationData =
       await this.spaceDefaultsService.createCollaborationInput(
         collaborationData,
-        space.type,
+        space.level,
+        spaceData.platformTemplate,
         spaceData.templatesManagerParent
       );
     space.collaboration = await this.collaborationService.createCollaboration(

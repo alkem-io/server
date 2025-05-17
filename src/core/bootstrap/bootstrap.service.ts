@@ -24,7 +24,6 @@ import { AdminAuthorizationService } from '@platform/admin/authorization/admin.a
 import { PlatformService } from '@platform/platform/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
-import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
 import { AccountService } from '@domain/space/account/account.service';
@@ -507,7 +506,6 @@ export class BootstrapService {
           },
         },
         level: SpaceLevel.L0,
-        type: SpaceType.SPACE,
         collaborationData: {
           calloutsSetData: {},
         },

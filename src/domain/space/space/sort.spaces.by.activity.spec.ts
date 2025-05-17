@@ -3,7 +3,6 @@ import { IActivity } from '@platform/activity/activity.interface';
 import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type';
 import { ISpace } from './space.interface';
 import { sortSpacesByActivity } from './sort.spaces.by.activity';
-import { SpaceType } from '@common/enums/space.type';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
@@ -69,7 +68,6 @@ const createTestSpace = (id: string): ISpace => {
       spaces: [],
       type: AccountType.ORGANIZATION,
     },
-    type: SpaceType.SPACE,
     level: 0,
   };
 };
