@@ -77,14 +77,6 @@ export class SpaceDefaultsService {
                 );
             } catch (e) {
               // Space does not have a subspace default template, just use the platform default
-              this.logger.error(
-                `Error while getting subspace default template, using platform default parentSpaceTemplatesManager.id: ${spaceL0TemplatesManager?.id}`,
-                undefined,
-                LogContext.TEMPLATES
-              );
-            }
-            if (!inputFromTemplate) {
-              // Space does not have a subspace default template, just use the platform default
               this.logger.warn(
                 `Space does not have a subspace default template, using platform default parentSpaceTemplatesManager.id: ${spaceL0TemplatesManager?.id}`,
                 undefined,
