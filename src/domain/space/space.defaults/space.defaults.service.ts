@@ -110,6 +110,18 @@ export class SpaceDefaultsService {
       );
     }
 
+    if (!collaborationData.innovationFlowData) {
+      if (inputFromTemplate) {
+        collaborationData.innovationFlowData =
+          inputFromTemplate.innovationFlowData;
+      } else {
+        throw new ValidationException(
+          'No innovation flow data provided',
+          LogContext.SPACES
+        );
+      }
+    }
+
     if (collaborationData.addCallouts) {
       if (!collaborationData.calloutsSetData.calloutsData) {
         collaborationData.calloutsSetData.calloutsData =
