@@ -7,6 +7,12 @@ import { ModelCardAiEngineResult } from './dto/ai.persona.model.card.dto.ai.engi
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { ModelCardMonitoringResult } from './dto/ai.persona.model.card.dto.monitoring.result';
 
+/*
+ * This resolver is used to provide a set of Model Cards about the AI Persona.
+ * It is at the moment a simple and static set of data that is returned, based on the engine
+ * that is used by the AI Persona. It is expected that the set of Model Cards returned will expand
+ * in the future, as more engines are added and more data is available.
+ */
 @Resolver(() => AiPersonaModelCard)
 export class AiPersonaModelCardResolverFields {
   @ResolveField('spaceUsage', () => [ModelCardSpaceUsageResult], {

@@ -12,6 +12,7 @@ import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.k
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { AiPersonaModelCard } from '../ai-persona-model-card/dto/ai.persona.model.card.dto.result';
 
 @Resolver(() => IAiPersona)
 export class AiPersonaResolverFields {
@@ -57,6 +58,26 @@ export class AiPersonaResolverFields {
     return await this.aiServerAdapter.getPersonaServiceEngine(
       aiPersona.aiPersonaServiceID
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('modelCard', () => AiPersonaModelCard, {
+    nullable: false,
+    description: 'The model card information about this AI Persona.',
+  })
+  async membership(
+    @Parent() aiPersona: AiPersona
+  ): Promise<AiPersonaModelCard> {
+    const engine = await this.aiServerAdapter.getPersonaServiceEngine(
+      aiPersona.aiPersonaServiceID
+    );
+    const modelCard: AiPersonaModelCard = {
+      aiPersona,
+      aiPersonaEngine: engine,
+    };
+
+    return modelCard;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
