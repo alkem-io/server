@@ -2,6 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 import {
+  LONGER_TEXT_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
@@ -29,7 +30,7 @@ export class InviteForEntryRoleOnRoleSetInput {
 
   @Field({ nullable: true, description: 'The welcome message to send' })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(LONGER_TEXT_LENGTH)
   welcomeMessage?: string;
 
   @Field(() => RoleName, {

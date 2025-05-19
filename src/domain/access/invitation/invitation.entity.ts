@@ -3,7 +3,11 @@ import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IInvitation } from './invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { ENUM_LENGTH, MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
+import {
+  ENUM_LENGTH,
+  LONGER_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@common/constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { RoleName } from '@common/enums/role.name';
 @Entity()
@@ -23,7 +27,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   @Column('char', { length: UUID_LENGTH, nullable: false })
   createdBy!: string;
 
-  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
+  @Column('varchar', { length: LONGER_TEXT_LENGTH, nullable: true })
   welcomeMessage?: string;
 
   @Column('boolean', { default: false })
