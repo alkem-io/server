@@ -7,6 +7,8 @@ import { ModelCardAiEngineResult } from './dto/ai.persona.model.card.dto.ai.engi
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { ModelCardMonitoringResult } from './dto/ai.persona.model.card.dto.monitoring.result';
 
+const DEFAULT_ENGINE_HOSTING_LOCATION = 'Sweden, EU';
+
 /*
  * This resolver is used to provide a set of Model Cards about the AI Persona.
  * It is at the moment a simple and static set of data that is returned, based on the engine
@@ -105,8 +107,10 @@ export class AiPersonaModelCardResolverFields {
             return 'Yes';
         }
       })(),
-      canAccessWebWhenAnswering: !isExternal,
-      hostingLocation: isExternalOrAssistant ? 'Unknown' : 'Sweden, EU',
+      canAccessWebWhenAnswering: isExternal,
+      hostingLocation: isExternalOrAssistant
+        ? 'Unknown'
+        : DEFAULT_ENGINE_HOSTING_LOCATION,
       additionalTechnicalDetails: isExternal
         ? 'https://platform.openai.com/docs/overview'
         : isAssistant
