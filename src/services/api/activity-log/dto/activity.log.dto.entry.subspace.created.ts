@@ -3,10 +3,10 @@ import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 
-@ObjectType('ActivityLogEntryChallengeCreated', {
+@ObjectType('ActivityLogEntrySubspaceCreated', {
   implements: () => [IActivityLogEntry],
 })
-export abstract class IActivityLogEntryChallengeCreated
+export abstract class IActivityLogEntrySubspaceCreated
   extends IActivityLogEntryBase
   implements IActivityLogEntry
 {
