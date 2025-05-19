@@ -865,6 +865,15 @@ export class UrlGeneratorService {
     );
   }
 
+  public async createSpaceAdminCommunityURL(id: string): Promise<string> {
+    const spaceAdminUrl = await this.getSpaceUrlPathByID(
+      id,
+      UrlPathElementSpace.SETTINGS
+    );
+
+    return `${spaceAdminUrl}/${UrlPathElementSpace.COMMUNITY}`;
+  }
+
   private async getCalendarEventUrlPathByField(
     fieldName: string,
     fieldID: string
