@@ -66,9 +66,7 @@ export class AiPersonaResolverFields {
     nullable: false,
     description: 'The model card information about this AI Persona.',
   })
-  async membership(
-    @Parent() aiPersona: AiPersona
-  ): Promise<AiPersonaModelCard> {
+  async modelCard(@Parent() aiPersona: AiPersona): Promise<AiPersonaModelCard> {
     const engine = await this.aiServerAdapter.getPersonaServiceEngine(
       aiPersona.aiPersonaServiceID
     );
