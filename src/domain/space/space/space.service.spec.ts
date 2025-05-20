@@ -14,7 +14,6 @@ import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation
 import { ProfileType } from '@common/enums';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Account } from '../account/account.entity';
-import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountType } from '@common/enums/account.type';
@@ -293,7 +292,6 @@ const getSubspacesMock = (
         type: AccountType.ORGANIZATION,
         ...getEntityMock<Account>(),
       },
-      type: SpaceType.CHALLENGE,
       level: SpaceLevel.L1,
       visibility: SpaceVisibility.ACTIVE,
       collaboration: {
@@ -393,7 +391,6 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         type: AccountType.ORGANIZATION,
         ...getEntityMock<Account>(),
       },
-      type: SpaceType.OPPORTUNITY,
       level: SpaceLevel.L2,
       visibility: SpaceVisibility.ACTIVE,
       collaboration: {
@@ -501,7 +498,6 @@ const getSpaceMock = ({
       },
       ...getEntityMock<SpaceAbout>(),
     },
-    type: SpaceType.SPACE,
     level: 0,
     visibility,
     account: {
