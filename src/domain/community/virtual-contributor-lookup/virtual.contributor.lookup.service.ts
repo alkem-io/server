@@ -132,6 +132,7 @@ export class VirtualContributorLookupService {
       await this.virtualContributorsWithCredentials(entryRoleCredentials.role);
     const qb = this.virtualContributorRepository
       .createQueryBuilder('virtual_contributor')
+      .leftJoinAndSelect('virtual_contributor.authorization', 'authorization')
       .select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
