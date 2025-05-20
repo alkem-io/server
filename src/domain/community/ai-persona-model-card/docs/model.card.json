@@ -1,0 +1,66 @@
+{
+  "model_name": "string",
+  "version": "string",
+  "architecture": "string",
+  "framework": "string",
+  "parameters": "string or number",
+  "training": {
+    "training_data": "string (e.g., sources, description)",
+    "data_period": {
+      "start": "YYYY-MM-DD",
+      "end": "YYYY-MM-DD"
+    },
+    "data_sources": ["string"],
+    "preprocessing": "string",
+    "training_method": "string",
+    "training_time": "string (e.g., 1M GPU hours)",
+    "open_weights": true
+  },
+  "deployment": {
+    "hosting_provider": "string",
+    "inference_hardware": "string",
+    "api_access": {
+      "available": true,
+      "url": "string (if applicable)"
+    }
+  },
+  "evaluation": {
+    "benchmarks": [
+      {
+        "name": "string",
+        "score": "string or number"
+      }
+    ],
+    "intended_tasks": ["string"],
+    "limitations": ["string"],
+    "robustness_notes": "string"
+  },
+  "ethical_considerations": {
+    "bias_fairness": "string",
+    "safety_measures": ["string"],
+    "misuse_risks": ["string"],
+    "mitigations": ["string"]
+  },
+  "usage": {
+    "intended_users": ["string"],
+    "not_intended_for": ["string"],
+    "languages_supported": ["string"],
+    "licensing_terms": "string"
+  },
+  "provenance": {
+    "developed_by": "string",
+    "funding": "string",
+    "version_history": [
+      {
+        "version": "string",
+        "date": "YYYY-MM-DD",
+        "notes": "string"
+      }
+    ],
+    "contact": "string (email or URL)"
+  },
+  "metadata": {
+    "last_updated": "YYYY-MM-DD",
+    "license": "string (e.g., Apache 2.0, MIT)"
+  }
+}
