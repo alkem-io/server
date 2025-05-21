@@ -14,6 +14,8 @@ export class IVirtualContributor
   extends IContributorBase
   implements IContributor
 {
+  rowId!: number;
+
   account?: IAccount;
 
   aiPersona!: IAiPersona;

@@ -1,5 +1,5 @@
-import { EntityManager, FindOneOptions } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
@@ -11,11 +11,17 @@ import { CredentialsSearchInput, IAgent } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
+import { PaginationArgs } from '@core/pagination/pagination.args';
+import { RoleSetRoleWithParentCredentials } from '@domain/access/role-set/dto/role.set.dto.role.with.parent.credentials';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
 
 export class VirtualContributorLookupService {
   constructor(
     @InjectEntityManager('default')
     private entityManager: EntityManager,
+    @InjectRepository(VirtualContributor)
+    private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -116,5 +122,44 @@ export class VirtualContributorLookupService {
         LogContext.AUTH
       );
     return account;
+  }
+
+  public async getPaginatedAvailableEntryRoleVCs(
+    entryRoleCredentials: RoleSetRoleWithParentCredentials,
+    paginationArgs: PaginationArgs
+  ): Promise<IPaginatedType<IVirtualContributor>> {
+    const currentEntryRoleVirtualContributors =
+      await this.virtualContributorsWithCredentials(entryRoleCredentials.role);
+    const qb = this.virtualContributorRepository
+      .createQueryBuilder('virtual_contributor')
+      .leftJoinAndSelect('virtual_contributor.authorization', 'authorization')
+      .select();
+
+    if (entryRoleCredentials.parentRoleSetRole) {
+      qb.leftJoin('virtual_contributor.agent', 'agent')
+        .leftJoin('agent.credentials', 'credential')
+        .addSelect(['credential.type', 'credential.resourceID'])
+        .where('credential.type = :type')
+        .andWhere('credential.resourceID = :resourceID')
+        .setParameters({
+          type: entryRoleCredentials.parentRoleSetRole.type,
+          resourceID: entryRoleCredentials.parentRoleSetRole.resourceID,
+        });
+    }
+
+    if (currentEntryRoleVirtualContributors.length > 0) {
+      const hasWhere =
+        qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
+
+      qb[hasWhere ? 'andWhere' : 'where'](
+        'NOT virtual_contributor.id IN (:memberVirtualContributors)'
+      ).setParameters({
+        memberVirtualContributors: currentEntryRoleVirtualContributors.map(
+          virtualContributor => virtualContributor.id
+        ),
+      });
+    }
+
+    return getPaginationResults(qb, paginationArgs);
   }
 }

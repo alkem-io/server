@@ -1,5 +1,4 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { SpaceType } from '@common/enums/space.type';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { ICommunity } from '@domain/community/community';
@@ -37,8 +36,6 @@ export class ISpace extends IAuthorizable {
       'The level of this Space, representing the number of Spaces above this one.',
   })
   level!: SpaceLevel;
-
-  type!: SpaceType;
 
   @Field(() => SpaceVisibility, {
     description: 'Visibility of the Space.',

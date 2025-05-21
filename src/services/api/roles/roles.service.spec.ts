@@ -22,7 +22,6 @@ import { MockCommunityResolverService } from '@test/mocks/community.resolver.ser
 import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { ProfileType } from '@common/enums/profile.type';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { Space } from '@domain/space/space/space.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
@@ -98,7 +97,6 @@ describe('RolesService', () => {
             id: subspaceRoleData.id,
             roles: subspaceRoleData.roles,
             displayName: subspaceRoleData.displayName,
-            type: subspaceRoleData.type,
             level: subspaceRoleData.level,
           });
         subspaceRolesMocks.push(subspaceRolesMock);
@@ -269,7 +267,6 @@ const getSpaceRoleResultMock = ({
         },
         ...getEntityMock<SpaceAbout>(),
       },
-      type: SpaceType.SPACE,
       level: SpaceLevel.L0,
       visibility: SpaceVisibility.ACTIVE,
       account: {
@@ -297,7 +294,6 @@ const getSubspaceRoleResultMock = ({
   id: string;
   roles: string[];
   displayName: string;
-  type: SpaceType;
   level: SpaceLevel;
 }): RolesResultCommunity => {
   return {
