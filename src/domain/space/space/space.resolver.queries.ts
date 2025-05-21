@@ -61,7 +61,7 @@ export class SpaceResolverQueries {
     nullable: false,
     description: 'Get the list of restricted space names.',
   })
-  RestrictedSpaceNames(): string[] {
+  restrictedSpaceNames(): string[] {
     return RestrictedSpaceNames;
   }
 }
