@@ -10,6 +10,7 @@ import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
 
 @InstrumentResolver()
 @Resolver()
@@ -54,5 +55,14 @@ export class SpaceResolverQueries {
     @Args('options', { nullable: true }) options?: ExploreSpacesInput
   ): Promise<ISpace[]> {
     return this.spaceService.getExploreSpaces(options?.limit, options?.daysOld);
+  }
+
+  // exposing the enum RestrictedSpaceNames to the GraphQL schema
+  @Query(() => [RestrictedSpaceNames], {
+    nullable: false,
+    description: 'Get the list of restricted space names.',
+  })
+  getRestrictedSpaceNames(): RestrictedSpaceNames[] {
+    return Object.values(RestrictedSpaceNames) as RestrictedSpaceNames[];
   }
 }

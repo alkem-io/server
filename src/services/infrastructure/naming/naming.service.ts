@@ -23,7 +23,7 @@ import { generateNameId } from '@services/infrastructure/naming/generate.name.id
 import { Template } from '@domain/template/template/template.entity';
 import { IRoleSet } from '@domain/access/role-set';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { UrlPathBase } from '@common/enums/url.path.base';
+import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
 
 export class NamingService {
   constructor(
@@ -60,7 +60,9 @@ export class NamingService {
       },
     });
     const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
-    const reservedTopLevelSpaces = Object.values(UrlPathBase) as string[];
+    const reservedTopLevelSpaces = Object.values(
+      RestrictedSpaceNames
+    ) as string[];
 
     return nameIDs.concat(reservedTopLevelSpaces);
   }
