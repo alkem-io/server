@@ -366,7 +366,7 @@ export class AiServerService {
 
     const updatedAuthorizations =
       await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
-        aiPersonaService,
+        aiPersonaService.id,
         server.authorization
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
