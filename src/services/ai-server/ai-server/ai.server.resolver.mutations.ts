@@ -161,7 +161,7 @@ export class AiServerResolverMutations {
 
     const authorizations =
       await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
-        aiPersonaService,
+        aiPersonaService.id,
         aiServer.authorization
       );
     await this.authorizationPolicyService.saveAll(authorizations);
