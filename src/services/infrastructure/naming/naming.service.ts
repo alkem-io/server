@@ -60,11 +60,8 @@ export class NamingService {
       },
     });
     const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
-    const reservedTopLevelSpaces = Object.values(
-      RestrictedSpaceNames
-    ) as string[];
 
-    return nameIDs.concat(reservedTopLevelSpaces);
+    return nameIDs.concat(RestrictedSpaceNames);
   }
 
   public async getReservedNameIDsInForum(forumID: string): Promise<string[]> {

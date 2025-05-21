@@ -57,12 +57,11 @@ export class SpaceResolverQueries {
     return this.spaceService.getExploreSpaces(options?.limit, options?.daysOld);
   }
 
-  // exposing the enum RestrictedSpaceNames to the GraphQL schema
-  @Query(() => [RestrictedSpaceNames], {
+  @Query(() => [String], {
     nullable: false,
     description: 'Get the list of restricted space names.',
   })
-  getRestrictedSpaceNames(): RestrictedSpaceNames[] {
-    return Object.values(RestrictedSpaceNames) as RestrictedSpaceNames[];
+  RestrictedSpaceNames(): string[] {
+    return RestrictedSpaceNames;
   }
 }
