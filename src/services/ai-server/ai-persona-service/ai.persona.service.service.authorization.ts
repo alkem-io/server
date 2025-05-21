@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   EntityNotInitializedException,
@@ -14,6 +14,7 @@ import { EntityManager } from 'typeorm';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE } from '@common/constants';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class AiPersonaServiceAuthorizationService {
@@ -22,7 +23,9 @@ export class AiPersonaServiceAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -70,9 +73,53 @@ export class AiPersonaServiceAuthorizationService {
     return updatedAuthorizations;
   }
 
+  private appendCredentialRules(
+    authorization: IAuthorizationPolicy | undefined,
+    virtualID: string,
+    accountID: string | undefined
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for virtual: ${virtualID}`,
+        LogContext.AI_PERSONA_SERVICE
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    if (accountID) {
+      const accountAdminCredential: ICredentialDefinition = {
+        type: AuthorizationCredential.ACCOUNT_ADMIN,
+        resourceID: accountID,
+      };
+
+      // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
+      const accountHostManage =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+          ],
+          [accountAdminCredential],
+          CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
+        );
+      accountHostManage.cascade = true;
+      newRules.push(accountHostManage);
+    }
+
+    const updatedAuthorization =
+      this.authorizationPolicy.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
+  }
+
   private async getAccountIdForVirtualContributorUsingAiPersonaService(
     aiPersonaServiceID: string
-  ): Promise<string> {
+  ): Promise<string | undefined> {
     const virtualContributor = await this.entityManager.findOne(
       VirtualContributor,
       {
@@ -87,53 +134,12 @@ export class AiPersonaServiceAuthorizationService {
       }
     );
     if (!virtualContributor || !virtualContributor.account) {
-      throw new RelationshipNotFoundException(
+      this.logger.warn(
         `Virtual contributor not found for AI Persona Service with account: ${aiPersonaServiceID}`,
         LogContext.AI_PERSONA_SERVICE
       );
+      return undefined;
     }
     return virtualContributor.account.id;
-  }
-
-  private appendCredentialRules(
-    authorization: IAuthorizationPolicy | undefined,
-    virtualID: string,
-    accountID: string
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for virtual: ${virtualID}`,
-        LogContext.AI_PERSONA_SERVICE
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const accountAdminCredential: ICredentialDefinition = {
-      type: AuthorizationCredential.ACCOUNT_ADMIN,
-      resourceID: accountID,
-    };
-
-    // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
-    const accountHostManage =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [accountAdminCredential],
-        CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
-      );
-    accountHostManage.cascade = true;
-    newRules.push(accountHostManage);
-
-    const updatedAuthorization =
-      this.authorizationPolicy.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
   }
 }

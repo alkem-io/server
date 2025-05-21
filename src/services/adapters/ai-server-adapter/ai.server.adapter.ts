@@ -10,6 +10,7 @@ import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { LogContext } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class AiServerAdapter {
@@ -75,6 +76,14 @@ export class AiServerAdapter {
 
   async updateAiPersonaService(updateData: UpdateAiPersonaServiceInput) {
     return this.aiServer.updateAiPersonaService(updateData);
+  }
+
+  async resetAuthorizationOnAiPersonaService(
+    personaServiceID: string
+  ): Promise<IAuthorizationPolicy[]> {
+    return await this.aiServer.resetAuthorizationPolicyOnAiPersonaService(
+      personaServiceID
+    );
   }
 
   invoke(invocationInput: AiServerAdapterInvocationInput): Promise<void> {
