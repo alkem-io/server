@@ -1,9 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
@@ -20,7 +23,8 @@ export class ProfileDocumentsService {
    * @param fileUrl The url of the file to check
    * @param storageBucket The StorageBucket in which the file should be
    * @param internalUrlRequired If true, the file must be inside Alkemio: if the url passed is outside Alkemio will return undefined.
-   *                            If false, the file can be outside Alkemio: if the url passed is outside Alkemio will return the same url (will never download it, just let it pass)
+   * If false, the file can be outside Alkemio: if the url passed is outside Alkemio will return the same url (will never download it, just let it pass)
+   * @throws {EntityNotFoundException} If the document is not found
    */
   public async reuploadFileOnStorageBucket(
     fileUrl: string,
@@ -51,7 +55,7 @@ export class ProfileDocumentsService {
     );
 
     if (!docInContent) {
-      throw new NotFoundException(
+      throw new EntityNotFoundException(
         `File with URL '${fileUrl}' not found`,
         LogContext.COLLABORATION
       );

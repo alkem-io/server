@@ -8,7 +8,6 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { SpaceType } from '@common/enums/space.type';
 import { SpaceService } from '@domain/space/space/space.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -131,7 +130,6 @@ export class ConversionService {
 
     spaceL1.level = SpaceLevel.L0;
     spaceL1.nameID = spaceL0NewNameID;
-    spaceL1.type = SpaceType.SPACE;
     spaceL1.levelZeroSpaceID = spaceL1.id;
     spaceL1.parentSpace = undefined; // Unfortunately this is not enough
     spaceL1.account = account;
@@ -218,7 +216,6 @@ export class ConversionService {
     const roleSetL2 = spaceL2.community.roleSet;
 
     spaceL2.level = SpaceLevel.L1;
-    spaceL2.type = SpaceType.CHALLENGE;
     spaceL2.parentSpace = spaceL0;
     spaceL2.levelZeroSpaceID = spaceL0.id;
     spaceL2.storageAggregator.parentStorageAggregator = storageAggregatorL0;
@@ -396,7 +393,6 @@ export class ConversionService {
     await this.removeContributors(roleSetL1, spaceCommunityRoles);
 
     spaceL1.level = SpaceLevel.L2;
-    spaceL1.type = SpaceType.OPPORTUNITY;
     spaceL1.parentSpace = parentSpaceL1;
     spaceL1.storageAggregator.parentStorageAggregator =
       storageAggregatorParentL1;

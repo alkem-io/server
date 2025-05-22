@@ -1,17 +1,22 @@
 local claims = {
-  email_verified: false
+  email_verified: true,
 } + std.extVar('claims');
-
 {
   identity: {
     traits: {
-      // Allowing unverified email addresses enables account
-      // enumeration attacks, especially if the value is used for
-      // e.g. verification or as a password login identifier.
-      //
-      // Therefore we only return the email if it (a) exists and (b) is marked verified
-      // by GitHub.
-      [if "email" in claims && claims.email_verified then "email" else null]: claims.email,
+      [if "email" in claims && claims.email != null && claims.email_verified then "email" else null]: claims.email,
+      name: {
+        first: if "name" in claims && claims.name != null && claims.name != "" then
+                 std.split(claims.name, ' ')[0]
+               else if "login" in claims then
+                 claims.login
+               else
+                 "",
+        last: if "name" in claims && claims.name != null && std.length(std.split(claims.name, ' ')) > 1 then
+                std.join(' ', std.split(claims.name, ' ')[1:])
+              else
+                "",
+      },
     },
   },
 }

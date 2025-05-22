@@ -8,24 +8,28 @@ import {
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAiPersona } from './ai.persona.interface';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 
 @Injectable()
 export class AiPersonaAuthorizationService {
   constructor(
     private authorizationPolicy: AuthorizationPolicyService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private aiServerAdapter: AiServerAdapter
   ) {}
 
-  applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     aiPersona: IAiPersona,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!aiPersona.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual persona: ${aiPersona.id} `,
         LogContext.COMMUNITY
       );
     }
+
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     aiPersona.authorization = this.authorizationPolicyService.reset(
       aiPersona.authorization
     );
@@ -40,7 +44,15 @@ export class AiPersonaAuthorizationService {
       aiPersona.id
     );
 
-    return aiPersona.authorization;
+    // TODO: this is a hack to deal with the fact that the AI Persona Service has an authorization policy that uses the VC's account
+    const aiPersonaServiceAuthorizations =
+      await this.aiServerAdapter.resetAuthorizationOnAiPersonaService(
+        aiPersona.aiPersonaServiceID
+      );
+    updatedAuthorizations.push(...aiPersonaServiceAuthorizations);
+    updatedAuthorizations.push(aiPersona.authorization);
+
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(

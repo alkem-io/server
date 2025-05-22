@@ -116,12 +116,12 @@ export class VirtualContributorAuthorizationService {
       );
     updatedAuthorizations.push(agentAuthorization);
 
-    const aiPersonaAuthorization =
-      this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+    const aiPersonaAuthorizations =
+      await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
         virtual.aiPersona,
         virtual.authorization
       );
-    updatedAuthorizations.push(aiPersonaAuthorization);
+    updatedAuthorizations.push(...aiPersonaAuthorizations);
 
     // The KnowledgeBase needs to start from a reset VC auth, and then use the criterias with access to go further
     const knowledgeBaseAuthorizations =

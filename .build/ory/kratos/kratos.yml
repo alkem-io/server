@@ -45,6 +45,13 @@ selfservice:
             scope:
               - profile
               - email
+          - id: github
+            provider: github
+            client_id: Ov23lizFYULcSqONM2wR
+            client_secret: d8859d62246220dc3434f3d43e4ee6de54d9e021
+            mapper_url: file:///etc/config/kratos/oidc/oidc.github.jsonnet
+            scope:
+              - user:email
 
   flows:
     error:

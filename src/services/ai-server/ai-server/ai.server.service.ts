@@ -366,7 +366,7 @@ export class AiServerService {
 
     const updatedAuthorizations =
       await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
-        aiPersonaService,
+        aiPersonaService.id,
         server.authorization
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
@@ -454,6 +454,41 @@ export class AiServerService {
     }
 
     return authorization;
+  }
+
+  private async getAuthorizationPolicyAiServer(): Promise<IAuthorizationPolicy> {
+    const aiServer = await this.getAiServerOrFail({
+      relations: {
+        authorization: true,
+      },
+    });
+    if (!aiServer || !aiServer.authorization) {
+      throw new EntityNotFoundException(
+        `Unable to find Authorization Policy for AiServer: ${aiServer.id}`,
+        LogContext.AI_SERVER
+      );
+    }
+    const authorization = aiServer.authorization;
+
+    if (!authorization) {
+      throw new EntityNotFoundException(
+        `Unable to find Authorization Policy for AiServer: ${aiServer.id}`,
+        LogContext.AI_SERVER
+      );
+    }
+
+    return authorization;
+  }
+
+  public async resetAuthorizationPolicyOnAiPersonaService(
+    aiPersonaServiceID: string
+  ): Promise<IAuthorizationPolicy[]> {
+    const aiServerAuthorization = await this.getAuthorizationPolicyAiServer();
+
+    return await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
+      aiPersonaServiceID,
+      aiServerAuthorization
+    );
   }
 
   public async handleInvokeEngineResult(event: InvokeEngineResult) {
