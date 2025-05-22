@@ -11,6 +11,8 @@ import { Response } from 'express';
 import { BaseHttpException } from '@common/exceptions/http';
 import { RestErrorResponse } from './rest.error.response';
 import { HttpContext } from '@src/types';
+import { LogContext } from '@common/enums';
+import { ContextTypeWithGraphQL } from '@src/types/context.type';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -20,6 +22,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
   ) {}
 
   catch(exception: BaseHttpException, host: ArgumentsHost) {
+    if (host.getType<ContextTypeWithGraphQL>() !== 'http') {
+      this.logger.error(
+        `Exception '${exception.name}' probably thrown in the wrong execution context`,
+        undefined,
+        LogContext.UNSPECIFIED
+      );
+
+      return exception;
+    }
+
     const httpArguments = host.switchToHttp();
     const response = httpArguments.getResponse<Response<RestErrorResponse>>();
     const req = httpArguments.getRequest<HttpContext['req']>();
