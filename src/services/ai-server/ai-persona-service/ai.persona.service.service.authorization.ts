@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   EntityNotInitializedException,
@@ -6,8 +6,6 @@ import {
 } from '@common/exceptions';
 import { AiPersonaServiceService } from './ai.persona.service.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-
-import { IAiPersonaService } from './ai.persona.service.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -16,6 +14,7 @@ import { EntityManager } from 'typeorm';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE } from '@common/constants';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class AiPersonaServiceAuthorizationService {
@@ -24,16 +23,18 @@ export class AiPersonaServiceAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async applyAuthorizationPolicy(
-    aiPersonaServiceInput: IAiPersonaService,
+    aiPersonaServiceID: string,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
-        aiPersonaServiceInput.id,
+        aiPersonaServiceID,
         {
           relations: {
             authorization: true,
@@ -41,25 +42,16 @@ export class AiPersonaServiceAuthorizationService {
         }
       );
 
-    const VC = await this.entityManager.findOne(VirtualContributor, {
-      where: {
-        aiPersona: {
-          aiPersonaServiceID: aiPersonaServiceInput.id,
-        },
-      },
-      relations: {
-        account: true,
-      },
-    });
-
-    const aiPersonaAccountID: string | undefined = VC?.account?.id;
-
     if (!aiPersonaService.authorization)
       throw new RelationshipNotFoundException(
         `Unable to load entities for AI Persona Service: ${aiPersonaService.id} `,
         LogContext.COMMUNITY
       );
 
+    const accountID =
+      await this.getAccountIdForVirtualContributorUsingAiPersonaService(
+        aiPersonaServiceID
+      );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     aiPersonaService.authorization = this.authorizationPolicyService.reset(
@@ -72,20 +64,9 @@ export class AiPersonaServiceAuthorizationService {
       );
     aiPersonaService.authorization = this.appendCredentialRules(
       aiPersonaService.authorization,
-      aiPersonaService.id
+      aiPersonaService.id,
+      accountID
     );
-
-    if (aiPersonaAccountID) {
-      const accountAdminCredential: ICredentialDefinition = {
-        type: AuthorizationCredential.ACCOUNT_ADMIN,
-        resourceID: aiPersonaAccountID,
-      };
-
-      aiPersonaService.authorization = await this.extendAuthorizationPolicy(
-        aiPersonaService.authorization,
-        accountAdminCredential
-      );
-    }
 
     updatedAuthorizations.push(aiPersonaService.authorization);
 
@@ -94,7 +75,8 @@ export class AiPersonaServiceAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    virtualID: string
+    virtualID: string,
+    accountID: string | undefined
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -103,6 +85,28 @@ export class AiPersonaServiceAuthorizationService {
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    if (accountID) {
+      const accountAdminCredential: ICredentialDefinition = {
+        type: AuthorizationCredential.ACCOUNT_ADMIN,
+        resourceID: accountID,
+      };
+
+      // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
+      const accountHostManage =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+          ],
+          [accountAdminCredential],
+          CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
+        );
+      accountHostManage.cascade = true;
+      newRules.push(accountHostManage);
+    }
 
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(
@@ -113,37 +117,29 @@ export class AiPersonaServiceAuthorizationService {
     return updatedAuthorization;
   }
 
-  private async extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    accountAdminCredential: ICredentialDefinition
-  ): Promise<IAuthorizationPolicy> {
-    if (!authorization) {
-      throw new EntityNotInitializedException(
-        'Authorization definition not found for account',
+  private async getAccountIdForVirtualContributorUsingAiPersonaService(
+    aiPersonaServiceID: string
+  ): Promise<string | undefined> {
+    const virtualContributor = await this.entityManager.findOne(
+      VirtualContributor,
+      {
+        where: {
+          aiPersona: {
+            aiPersonaServiceID: aiPersonaServiceID,
+          },
+        },
+        relations: {
+          account: true,
+        },
+      }
+    );
+    if (!virtualContributor || !virtualContributor.account) {
+      this.logger.warn(
+        `Virtual contributor not found for AI Persona Service with account: ${aiPersonaServiceID}`,
         LogContext.AI_PERSONA_SERVICE
       );
+      return undefined;
     }
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
-    const accountHostManage =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [accountAdminCredential],
-        CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
-      );
-    accountHostManage.cascade = true;
-    newRules.push(accountHostManage);
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
+    return virtualContributor.account.id;
   }
 }
