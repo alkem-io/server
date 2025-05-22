@@ -1,5 +1,4 @@
 import { RoleName } from '@common/enums/role.name';
-import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 
 interface IRolesUserSubspace {
@@ -7,7 +6,6 @@ interface IRolesUserSubspace {
   nameID: string;
   id: string;
   roles: RoleName[];
-  type: SpaceType;
   level: SpaceLevel;
 }
 
@@ -57,7 +55,6 @@ export const rolesUserData: { rolesUser: IRolesUserData } = {
           nameID: 'food-sec',
           id: 'd3c76102-087b-4b40-8aa5-b5e6023784d0',
           roles: [RoleName.MEMBER, RoleName.LEAD],
-          type: SpaceType.CHALLENGE,
           level: SpaceLevel.L1,
         },
         {
@@ -65,7 +62,6 @@ export const rolesUserData: { rolesUser: IRolesUserData } = {
           nameID: 'rural',
           id: 'ed5b344e-72d1-4256-a385-f3b6e4aaaabf',
           roles: [RoleName.MEMBER],
-          type: SpaceType.CHALLENGE,
           level: SpaceLevel.L1,
         },
       ],

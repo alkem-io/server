@@ -9,7 +9,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { SpaceType } from '@common/enums/space.type';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ProfileType } from '@common/enums/profile.type';
@@ -129,7 +128,6 @@ export const spaceData: { space: ISpace } = {
     authorization: mockAuthorization,
     // Tagset is not a direct ISpace property, but included here for completeness if needed in tests
     // tagset: mockTagset,
-    type: SpaceType.SPACE,
     level: SpaceLevel.L0,
     visibility: SpaceVisibility.ACTIVE,
     levelZeroSpaceID: '00655835-4d15-4546-801e-1ab80ac3078a',
