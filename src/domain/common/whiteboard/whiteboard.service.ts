@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  LoggerService,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
@@ -277,7 +272,7 @@ export class WhiteboardService {
             true
           );
       } catch (e: any) {
-        if (e instanceof NotFoundException) {
+        if (e instanceof EntityNotFoundException) {
           this.logger.warn?.(
             `Tried to re-upload file (${file.url}) but file was not found: ${e?.message}`,
             LogContext.WHITEBOARDS

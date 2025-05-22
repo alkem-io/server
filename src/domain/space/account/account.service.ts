@@ -89,7 +89,7 @@ export class AccountService {
     } else {
       if (reservedNameIDs.includes(spaceData.nameID)) {
         throw new ValidationException(
-          `Unable to create entity: the provided nameID is already taken: ${spaceData.nameID}`,
+          `Unable to create entity: the provided nameID is already taken or restricted: ${spaceData.nameID}`,
           LogContext.SPACES
         );
       }

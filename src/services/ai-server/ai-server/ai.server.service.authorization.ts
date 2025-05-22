@@ -48,7 +48,7 @@ export class AiServerAuthorizationService {
     for (const aiPersonaService of aiServer.aiPersonaServices) {
       const updatedPersonaAuthorizations =
         await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
-          aiPersonaService,
+          aiPersonaService.id,
           aiServer.authorization
         );
       updatedAuthorizations.push(...updatedPersonaAuthorizations);
