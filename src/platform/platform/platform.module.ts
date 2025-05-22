@@ -19,6 +19,7 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { PlatformLicenseService } from './platform.service.license';
 import { PlatformSettingsModule } from '@platform/platform-settings/platform.settings.module';
+import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PlatformSettingsModule } from '@platform/platform-settings/platform.set
     LibraryModule,
     ForumModule,
     StorageAggregatorModule,
+    LicenseEntitlementModule,
     KonfigModule,
     MetadataModule,
     LicensingFrameworkModule,

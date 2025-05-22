@@ -24,6 +24,8 @@ const mockAuth = (
   verifiedCredentialRules: [],
   privilegeRules: [],
   id: uniqueId(),
+  createdDate: new Date(),
+  updatedDate: new Date(),
   ...props,
   type,
 });
@@ -34,6 +36,8 @@ const mockStorageBucket = (props?: Partial<IStorageBucket>): IStorageBucket => {
     documents: [],
     allowedMimeTypes: [],
     maxFileSize: 2000,
+    createdDate: new Date(),
+    updatedDate: new Date(),
     ...props,
   };
 };
@@ -54,12 +58,16 @@ const mockDocument = (
       id: 'tagset1',
       name: 'default',
       type: TagsetType.FREEFORM,
+      createdDate: new Date(),
+      updatedDate: new Date(),
       tags: [],
     },
     authorization: mockAuth(AuthorizationPolicyType.DOCUMENT),
     temporaryLocation: false,
     ...props,
     storageBucket,
+    createdDate: new Date(),
+    updatedDate: new Date(),
   };
   if (addToStorageBucket) {
     storageBucket.documents.push(doc);
