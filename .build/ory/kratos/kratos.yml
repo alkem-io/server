@@ -52,7 +52,14 @@ selfservice:
             mapper_url: file:///etc/config/kratos/oidc/oidc.github.jsonnet
             scope:
               - user:email
-
+          - id: vidua  # This is used in the callback URL
+            provider: generic
+            client_id: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+            client_secret: aaaaaaaaaaaaaaaaaaaaaa
+            mapper_url: file:///etc/config/oidc.vidua.jsonnet
+            issuer_url: https://connect.cleverbase.com
+            scope:
+              - openid
   flows:
     error:
       ui_url: http://localhost:3000/error
