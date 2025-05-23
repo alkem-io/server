@@ -56,10 +56,21 @@ selfservice:
             provider: generic
             client_id: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
             client_secret: aaaaaaaaaaaaaaaaaaaaaa
-            mapper_url: file:///etc/config/oidc.vidua.jsonnet
+            mapper_url: file:///etc/config/kratos/oidc/oidc.vidua.jsonnet
             issuer_url: https://connect.cleverbase.com
             scope:
               - openid
+          - id: apple
+            provider: apple
+            client_id: com.alkemio.alkemio
+            apple_team_id: KP76DQS54M
+            apple_private_key_id: UX56C66723
+            apple_private_key: -----BEGIN PRIVATE KEY-----\n........\n-----END PRIVATE KEY-----
+            issuer_url: https://appleid.apple.com
+            mapper_url: file:///etc/config/oidc.apple.jsonnet
+            scope:
+              - profile
+              - email
   flows:
     error:
       ui_url: http://localhost:3000/error
