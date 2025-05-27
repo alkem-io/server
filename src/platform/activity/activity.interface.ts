@@ -5,13 +5,6 @@ import { UUID } from '../../domain/common/scalars/scalar.uuid';
 
 @ObjectType('Activity')
 export abstract class IActivity extends IBaseAlkemio {
-  // Expose the date at which the Activity was created from parent entity
-  @Field(() => Date, {
-    description: 'The timestamp for the Activity.',
-    nullable: false,
-  })
-  createdDate!: Date;
-
   @Field(() => UUID, {
     nullable: false,
     description:

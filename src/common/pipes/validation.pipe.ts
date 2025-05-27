@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import { Handler } from '@core/validation/handlers/base/handler.interface';

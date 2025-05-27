@@ -11,10 +11,4 @@ export abstract class IPost extends INameable {
     description: 'The comments on this Post.',
   })
   comments!: IRoom;
-
-  @Field(() => Date, {
-    description: 'The date at which the entity was created.',
-    nullable: false,
-  })
-  createdDate?: Date;
 }

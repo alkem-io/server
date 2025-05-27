@@ -6,12 +6,15 @@ import { RoleSetLicenseService } from '@domain/access/role-set/role.set.service.
 import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { PlatformService } from './platform.service';
+import { LicenseEntitlementService } from '@domain/common/license-entitlement/license.entitlement.service';
+import { CreateLicenseEntitlementInput } from '@domain/common/license-entitlement/dto/license.entitlement.dto.create';
 
 @Injectable()
 export class PlatformLicenseService {
   constructor(
     private platformService: PlatformService,
     private roleSetLicenseService: RoleSetLicenseService,
+    private licenseEntitlementService: LicenseEntitlementService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -33,17 +36,18 @@ export class PlatformLicenseService {
   }
 
   private createPlatformEntitlements(): ILicenseEntitlement[] {
+    const createLicenseInput: CreateLicenseEntitlementInput = {
+      type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
+      dataType: LicenseEntitlementDataType.FLAG,
+      limit: 999,
+      enabled: true,
+    };
     // create a single entitlement, showing that VCs are not enabled
     // TODO: the name of the entitlement will need to no longer be SPACE related
-    const result: ILicenseEntitlement[] = [
-      {
-        id: '',
-        type: LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
-        dataType: LicenseEntitlementDataType.FLAG,
-        limit: 999,
-        enabled: true,
-      },
-    ];
-    return result;
+    const result: ILicenseEntitlement =
+      this.licenseEntitlementService.createEntitlement(createLicenseInput);
+    // create a single entitlement, showing that VCs are not enabled
+
+    return [result];
   }
 }

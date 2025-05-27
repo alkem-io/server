@@ -7,3 +7,5 @@ export * from './search.result.organization';
 
 export * from './search.result.dto';
 export * from './search.category.result';
+
+export * from './base.search.hit';

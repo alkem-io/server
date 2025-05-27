@@ -87,7 +87,7 @@ export class DocumentService {
   public async getDocumentOrFail(
     documentID: string,
     options?: FindOneOptions<Document>
-  ): Promise<IDocument | never> {
+  ): Promise<IDocument> {
     const document = await this.documentRepository.findOne({
       where: {
         ...options?.where,
@@ -138,9 +138,11 @@ export class DocumentService {
     return document.createdDate;
   }
 
-  public async getDocumentContents(
-    document: IDocument
-  ): Promise<Readable> | never {
+  /**
+   * Retrieves the contents of a document as a Readable stream.
+   * @throws {Error} if the storage service fails to read the document.
+   */
+  public async getDocumentContents(document: IDocument): Promise<Readable> {
     const content = await this.storageService.read(document.externalID);
     return Readable.from(content);
   }
