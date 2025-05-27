@@ -1,9 +1,10 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class AddBlueSkyRefToUserProfiles1747925999514 implements MigrationInterface {
-
-    public async up(queryRunner: QueryRunner): Promise<void> {
+export class AddBlueSkyRefToUserProfiles1747925999514
+  implements MigrationInterface
+{
+  public async up(queryRunner: QueryRunner): Promise<void> {
     // Define the new reference
     const bskyReference = {
       name: 'bsky',
@@ -60,11 +61,5 @@ export class AddBlueSkyRefToUserProfiles1747925999514 implements MigrationInterf
     `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    // Remove the "bsky" reference from all profiles
-    await queryRunner.query(`
-      DELETE FROM reference
-      WHERE name = 'bsky'
-    `);
-  }
+  public async down(queryRunner: QueryRunner): Promise<void> {}
 }
