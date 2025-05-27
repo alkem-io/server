@@ -1,4 +1,4 @@
-export const userDefaults: any = {
+export const contributorDefaults: any = {
   references: [
     {
       name: 'linkedin',
