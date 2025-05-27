@@ -13,7 +13,6 @@ import {
   NAMEID_MAX_LENGTH_SCHEMA,
   UUID_LENGTH,
 } from '@common/constants';
-import { SpaceType } from '@common/enums/space.type';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
@@ -94,9 +93,6 @@ export class Space extends AuthorizableEntity implements ISpace {
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
-
-  @Column('varchar', { length: ENUM_LENGTH })
-  type!: SpaceType;
 
   @Column('char', { length: UUID_LENGTH, nullable: true })
   levelZeroSpaceID!: string;
