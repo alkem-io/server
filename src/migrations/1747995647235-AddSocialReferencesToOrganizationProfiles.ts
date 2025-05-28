@@ -64,11 +64,5 @@ export class AddSocialReferencesToOrganizationProfiles1747995647235
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    // Remove the added references ('bsky', 'github', 'linkedin') from all organization profiles
-    await queryRunner.query(`
-      DELETE FROM reference
-      WHERE name IN ('bsky', 'github', 'linkedin')
-    `);
-  }
+  public async down(queryRunner: QueryRunner): Promise<void> {}
 }
