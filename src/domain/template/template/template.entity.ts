@@ -8,6 +8,7 @@ import { Callout } from '@domain/collaboration/callout';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
+import { Space } from '@domain/space/space/space.entity';
 
 @Entity()
 export class Template extends NameableEntity implements ITemplate {
@@ -63,4 +64,12 @@ export class Template extends NameableEntity implements ITemplate {
   })
   @JoinColumn()
   collaboration?: Collaboration;
+
+  @OneToOne(() => Space, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  space?: Space;
 }

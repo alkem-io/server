@@ -7,6 +7,7 @@ import { ICallout } from '@domain/collaboration/callout';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @ObjectType('Template')
 export abstract class ITemplate extends INameable {
@@ -29,4 +30,5 @@ export abstract class ITemplate extends INameable {
   callout?: ICallout;
   whiteboard?: IWhiteboard;
   collaboration?: ICollaboration;
+  space?: ISpace;
 }

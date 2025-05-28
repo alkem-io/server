@@ -52,14 +52,9 @@ import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { IAccount } from '../account/account.interface';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
-import { TemplateType } from '@common/enums/template.type';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
-import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
@@ -99,7 +94,6 @@ export class SpaceService {
     private spaceSettingsService: SpaceSettingsService,
     private spaceDefaultsService: SpaceDefaultsService,
     private storageAggregatorService: StorageAggregatorService,
-    private templatesManagerService: TemplatesManagerService,
     private collaborationService: CollaborationService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
@@ -186,10 +180,6 @@ export class SpaceService {
       type: AgentType.SPACE,
     });
 
-    if (space.level === SpaceLevel.L0) {
-      space.templatesManager = await this.createTemplatesManagerForSpaceL0();
-    }
-
     // Community:
     // set immediate community parent + resourceID
     if (!space.community || !space.community.roleSet) {
@@ -251,22 +241,6 @@ export class SpaceService {
     });
   }
 
-  public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
-    const templateDefaultData: CreateTemplateDefaultInput = {
-      type: TemplateDefaultType.SPACE_SUBSPACE,
-      allowedTemplateType: TemplateType.COLLABORATION,
-    };
-    const templatesManagerData: CreateTemplatesManagerInput = {
-      templateDefaultsData: [templateDefaultData],
-    };
-
-    const templatesManager =
-      await this.templatesManagerService.createTemplatesManager(
-        templatesManagerData
-      );
-    return templatesManager;
-  }
-
   async save(space: ISpace): Promise<ISpace> {
     return await this.spaceRepository.save(space);
   }
@@ -280,7 +254,6 @@ export class SpaceService {
         about: true,
         agent: true,
         storageAggregator: true,
-        templatesManager: true,
         license: true,
       },
     });

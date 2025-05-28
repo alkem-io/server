@@ -16,6 +16,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.s
     StorageAggregatorResolverModule,
     CollaborationModule,
     CalloutsSetModule,
+    SpaceLookupModule,
     TypeOrmModule.forFeature([Template]),
   ],
   providers: [

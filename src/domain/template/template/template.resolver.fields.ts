@@ -11,6 +11,7 @@ import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Template } from './template.entity';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
@@ -76,5 +77,16 @@ export class TemplateResolverFields {
       return undefined;
     }
     return this.templateService.getCollaboration(template.id);
+  }
+
+  @ResolveField('space', () => ISpace, {
+    nullable: true,
+    description: 'The Space for this Template.',
+  })
+  async space(@Parent() template: ITemplate): Promise<ISpace | undefined> {
+    if (template.type !== TemplateType.SPACE) {
+      return undefined;
+    }
+    return this.templateService.getSpace(template.id);
   }
 }

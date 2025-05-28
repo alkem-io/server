@@ -15,7 +15,6 @@ import {
   In,
   Repository,
 } from 'typeorm';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
@@ -95,23 +94,6 @@ export class SpaceLookupService {
       },
     });
     return space;
-  }
-
-  public async getAgent(spaceID: string): Promise<IAgent> {
-    const space = await this.getSpaceOrFail(spaceID, {
-      relations: {
-        agent: true,
-      },
-    });
-
-    if (!space.agent) {
-      throw new RelationshipNotFoundException(
-        `Unable to retrieve Agent for Space: ${space.id}`,
-        LogContext.PLATFORM
-      );
-    }
-
-    return space.agent;
   }
 
   /***

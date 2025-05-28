@@ -4,7 +4,6 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { SpaceService } from './space.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from './space.interface';
@@ -32,12 +31,12 @@ import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.aut
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set';
-import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { SpaceAboutAuthorizationService } from '../space.about/space.about.service.authorization';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -49,9 +48,8 @@ export class SpaceAuthorizationService {
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
-    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceAboutAuthorizationService: SpaceAboutAuthorizationService,
-    private spaceService: SpaceService,
+    private spaceLookupService: SpaceLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -60,7 +58,7 @@ export class SpaceAuthorizationService {
     spaceID: string,
     providedParentAuthorization?: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
-    const space = await this.spaceService.getSpaceOrFail(spaceID, {
+    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
         authorization: {
           parentAuthorizationPolicy: true,
@@ -81,7 +79,6 @@ export class SpaceAuthorizationService {
         },
         storageAggregator: true,
         subspaces: true,
-        templatesManager: true,
         license: true,
         account: true,
       },
@@ -439,23 +436,6 @@ export class SpaceAuthorizationService {
         space.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
-
-    // Level zero space only entities
-    if (space.level === SpaceLevel.L0) {
-      if (!space.templatesManager) {
-        throw new RelationshipNotFoundException(
-          `Unable to load templatesManager on level zero space for auth reset ${space.id} `,
-          LogContext.SPACES
-        );
-      }
-
-      const templatesManagerAuthorizations =
-        await this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
-          space.templatesManager.id,
-          space.authorization
-        );
-      updatedAuthorizations.push(...templatesManagerAuthorizations);
-    }
 
     const collaborationAuthorizations =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(

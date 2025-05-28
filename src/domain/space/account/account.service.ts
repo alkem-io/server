@@ -39,6 +39,12 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { AccountType } from '@common/enums/account.type';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { TemplateType } from '@common/enums/template.type';
+import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
+import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 
 @InstrumentService()
 @Injectable()
@@ -55,6 +61,7 @@ export class AccountService {
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private innovationPackService: InnovationPackService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
+    private templatesManagerService: TemplatesManagerService,
     private namingService: NamingService,
     private licenseService: LicenseService,
     @InjectRepository(Account)
@@ -101,6 +108,9 @@ export class AccountService {
 
     let space = await this.spaceService.createSpace(spaceData, agentInfo);
     space.account = account;
+
+    // The Account has the responsibility to create the TemplatesManager for the L0 Space
+    space.templatesManager = await this.createTemplatesManagerForSpaceL0();
 
     space = await this.spaceService.save(space);
 
@@ -289,6 +299,22 @@ export class AccountService {
     if (!accounts) return [];
 
     return accounts;
+  }
+
+  public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
+    const templateDefaultData: CreateTemplateDefaultInput = {
+      type: TemplateDefaultType.SPACE_SUBSPACE,
+      allowedTemplateType: TemplateType.COLLABORATION,
+    };
+    const templatesManagerData: CreateTemplatesManagerInput = {
+      templateDefaultsData: [templateDefaultData],
+    };
+
+    const templatesManager =
+      await this.templatesManagerService.createTemplatesManager(
+        templatesManagerData
+      );
+    return templatesManager;
   }
 
   public async createVirtualContributorOnAccount(
