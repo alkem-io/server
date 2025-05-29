@@ -36,7 +36,7 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
-import { ISpace } from '@domain/space/space/space.interface';
+import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
 
 @Injectable()
 export class TemplateService {
@@ -610,7 +610,7 @@ export class TemplateService {
     return template.collaboration;
   }
 
-  async getSpace(templateID: string): Promise<ISpace> {
+  async getSpace(templateID: string): Promise<ITemplateContentSpace> {
     const template = await this.getTemplateOrFail(templateID, {
       relations: {
         space: true,
@@ -618,7 +618,7 @@ export class TemplateService {
     });
     if (!template.space) {
       throw new RelationshipNotFoundException(
-        `Unable to load Template with Space: ${template.id} `,
+        `Unable to load Template with Space content: ${template.id} `,
         LogContext.TEMPLATES
       );
     }
