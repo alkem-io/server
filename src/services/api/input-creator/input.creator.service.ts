@@ -148,6 +148,9 @@ export class InputCreatorService {
         relations: {
           calloutsSet: {
             callouts: {
+              classification: {
+                tagsets: true,
+              },
               framing: {
                 profile: true,
                 whiteboard: {
