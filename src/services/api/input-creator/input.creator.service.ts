@@ -38,6 +38,7 @@ import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.serv
 import { CreateSpaceInput } from '@domain/space';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
+import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
 
 @Injectable()
 export class InputCreatorService {
@@ -169,7 +170,9 @@ export class InputCreatorService {
 
     const result: CreateTemplateContentSpaceInput = {
       collaborationData: collaborationInput,
-      aboutData: {},
+      about: this.buildCreateSpaceAboutInputFromSpaceAbout(space.about),
+      level: space.level,
+      settings: space.settings,
     };
 
     return result;
@@ -312,6 +315,17 @@ export class InputCreatorService {
       nameID: whiteboard.nameID,
     };
   }
+
+  private buildCreateSpaceAboutInputFromSpaceAbout(
+    spaceAbout: ISpaceAbout
+  ): CreateSpaceAboutInput {
+    const result: CreateSpaceAboutInput = {
+      profileData: this.buildCreateProfileInputFromProfile(spaceAbout.profile),
+    };
+
+    return result;
+  }
+
   private buildCreateCalloutFramingInputFromCalloutFraming(
     calloutFraming: ICalloutFraming
   ): CreateCalloutFramingInput {
