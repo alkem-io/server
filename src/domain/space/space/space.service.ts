@@ -852,6 +852,7 @@ export class SpaceService {
         community: {
           roleSet: true,
         },
+        parentSpace: true,
       },
     });
 
@@ -882,7 +883,20 @@ export class SpaceService {
 
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
-    subspaceData.templatesManagerParent = space.templatesManager;
+
+    let rootTemplatesManager = space.templatesManager;
+    let parentSpace = space.parentSpace;
+    while (!rootTemplatesManager && parentSpace) {
+      parentSpace = await this.getSpaceOrFail(parentSpace.id, {
+        relations: {
+          templatesManager: true,
+          parentSpace: true,
+        },
+      });
+      rootTemplatesManager = parentSpace.templatesManager;
+    }
+
+    subspaceData.templatesManagerParent = rootTemplatesManager;
     subspaceData.level = space.level + 1;
     let subspace = await this.createSpace(subspaceData, agentInfo);
 

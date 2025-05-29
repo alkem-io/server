@@ -61,6 +61,8 @@ import { RoleName } from '@common/enums/role.name';
 import { organizationApplicationForm } from './definitions/organization.role.application.form';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { CreateReferenceInput } from '@domain/common/reference';
+import { contributorDefaults } from '../contributor/contributor.defaults';
 
 @Injectable()
 export class OrganizationService {
@@ -118,6 +120,10 @@ export class OrganizationService {
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.ORGANIZATION
       );
+
+    organizationData.profileData.referencesData =
+      this.getDefaultContributorProfileReferences();
+
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData,
       ProfileType.ORGANIZATION,
@@ -615,5 +621,22 @@ export class OrganizationService {
       base,
       reservedNameIDs
     );
+  }
+
+  private getDefaultContributorProfileReferences(): CreateReferenceInput[] {
+    const references: CreateReferenceInput[] = [];
+    const referenceTemplates = contributorDefaults.references;
+
+    if (referenceTemplates) {
+      for (const referenceTemplate of referenceTemplates) {
+        references.push({
+          name: referenceTemplate.name,
+          uri: referenceTemplate.uri,
+          description: referenceTemplate.description,
+        });
+      }
+    }
+
+    return references;
   }
 }

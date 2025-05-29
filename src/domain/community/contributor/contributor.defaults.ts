@@ -1,9 +1,8 @@
-export const userDefaults: any = {
+export const contributorDefaults: any = {
   references: [
     {
       name: 'linkedin',
       description: 'User profile on LinkedIn',
-
       uri: '',
     },
     {
@@ -12,8 +11,8 @@ export const userDefaults: any = {
       uri: '',
     },
     {
-      name: 'twitter',
-      description: 'User profile on Twitter',
+      name: 'bsky',
+      description: 'User profile on BlueSky',
       uri: '',
     },
   ],
