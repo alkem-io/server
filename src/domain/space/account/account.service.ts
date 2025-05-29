@@ -39,6 +39,9 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { AccountType } from '@common/enums/account.type';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
 
 @InstrumentService()
 @Injectable()
@@ -57,6 +60,7 @@ export class AccountService {
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private namingService: NamingService,
     private licenseService: LicenseService,
+    private platformTemplatesService: PlatformTemplatesService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -314,8 +318,13 @@ export class AccountService {
       );
     }
 
+    const knowledgeBaseCalloutDefaults: CreateCalloutInput[] =
+      await this.platformTemplatesService.getCreateCalloutInputsFromTemplate(
+        TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE
+      );
     const vc = await this.virtualContributorService.createVirtualContributor(
       vcData,
+      knowledgeBaseCalloutDefaults,
       account.storageAggregator,
       agentInfo
     );
