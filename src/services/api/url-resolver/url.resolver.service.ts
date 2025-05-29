@@ -11,7 +11,6 @@ import { ForumDiscussionLookupService } from '@platform/forum-discussion-lookup/
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -27,6 +26,7 @@ import { UrlResolverQueryResultCalloutsSet } from './dto/url.resolver.query.call
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { UrlPathBase } from '@common/enums/url.path.base';
 import { UrlResolverException } from './url.resolver.exception';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 @Injectable()
 export class UrlResolverService {
@@ -58,7 +58,7 @@ export class UrlResolverService {
     private organizationLookupService: OrganizationLookupService,
     private forumDiscussionLookupService: ForumDiscussionLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
-    private spaceLookupService: SpaceService,
+    private spaceLookupService: SpaceLookupService,
     private innovationPackService: InnovationPackService,
     private innovationHubService: InnovationHubService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)

@@ -2,17 +2,13 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UrlResolverService } from './url.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()
 export class UrlResolverResolverQueries {
-  constructor(
-    private authorizationService: AuthorizationService,
-    private urlResolverService: UrlResolverService
-  ) {}
+  constructor(private urlResolverService: UrlResolverService) {}
 
   @Query(() => UrlResolverQueryResults, {
     nullable: false,

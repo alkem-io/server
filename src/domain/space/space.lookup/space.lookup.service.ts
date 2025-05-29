@@ -19,6 +19,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { ISpaceAbout } from '../space.about';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class SpaceLookupService {
@@ -66,6 +67,43 @@ export class SpaceLookupService {
       where: { ...options?.where, id: spaceID },
     });
     return space;
+  }
+
+  public async getSpaceByNameIdOrFail(
+    spaceNameID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
+    const space = await this.spaceRepository.findOne({
+      where: {
+        nameID: spaceNameID,
+        level: SpaceLevel.L0,
+      },
+      ...options,
+    });
+    if (!space) {
+      if (!space)
+        throw new EntityNotFoundException(
+          `Unable to find L0 Space with nameID: ${spaceNameID}`,
+          LogContext.SPACES
+        );
+    }
+    return space;
+  }
+
+  public async getSubspaceByNameIdInLevelZeroSpace(
+    subspaceNameID: string,
+    levelZeroSpaceID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace | null> {
+    const subspace = await this.spaceRepository.findOne({
+      where: {
+        nameID: subspaceNameID,
+        levelZeroSpaceID: levelZeroSpaceID,
+      },
+      ...options,
+    });
+
+    return subspace;
   }
 
   private async getSpaceForSpaceAbout(

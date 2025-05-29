@@ -75,6 +75,7 @@ import { CreateTemplateDefaultInput } from '@domain/template/template-default/dt
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -98,6 +99,7 @@ export class SpaceService {
     private namingService: NamingService,
     private spaceSettingsService: SpaceSettingsService,
     private spaceDefaultsService: SpaceDefaultsService,
+    private spaceLookupService: SpaceLookupService,
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     private licensingFrameworkService: LicensingFrameworkService,
@@ -616,27 +618,6 @@ export class SpaceService {
     return space;
   }
 
-  public async getSpaceByNameIdOrFail(
-    spaceNameID: string,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        nameID: spaceNameID,
-        level: SpaceLevel.L0,
-      },
-      ...options,
-    });
-    if (!space) {
-      if (!space)
-        throw new EntityNotFoundException(
-          `Unable to find L0 Space with nameID: ${spaceNameID}`,
-          LogContext.SPACES
-        );
-    }
-    return space;
-  }
-
   public async getAllSpaces(
     options?: FindManyOptions<ISpace>
   ): Promise<ISpace[]> {
@@ -1036,32 +1017,17 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  async getSubspaceByNameIdInLevelZeroSpace(
-    subspaceNameID: string,
-    levelZeroSpaceID: string,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace | null> {
-    const subspace = await this.spaceRepository.findOne({
-      where: {
-        nameID: subspaceNameID,
-        levelZeroSpaceID: levelZeroSpaceID,
-      },
-      ...options,
-    });
-
-    return subspace;
-  }
-
   async getSubspaceInLevelZeroScopeOrFail(
     subspaceID: string,
     levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace> {
-    const subspace = await this.getSubspaceByNameIdInLevelZeroSpace(
-      subspaceID,
-      levelZeroSpaceID,
-      options
-    );
+    const subspace =
+      await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
+        subspaceID,
+        levelZeroSpaceID,
+        options
+      );
 
     if (!subspace) {
       throw new EntityNotFoundException(

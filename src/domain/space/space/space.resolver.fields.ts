@@ -32,10 +32,14 @@ import { ITemplatesManager } from '@domain/template/templates-manager';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 import { ISpaceAbout } from '../space.about';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
-  constructor(private spaceService: SpaceService) {}
+  constructor(
+    private spaceService: SpaceService,
+    private spaceLookupService: SpaceLookupService
+  ) {}
 
   // Check authorization inside the field resolver directly on the Community
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -170,7 +174,7 @@ export class SpaceResolverFields {
     @Parent() space: ISpace
   ): Promise<ISpace> {
     const subspace =
-      await this.spaceService.getSubspaceByNameIdInLevelZeroSpace(
+      await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
         id,
         space.levelZeroSpaceID
       );
