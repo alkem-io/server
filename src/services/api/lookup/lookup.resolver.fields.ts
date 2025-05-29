@@ -16,7 +16,7 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IProfile } from '@domain/common/profile';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { IRoom } from '@domain/communication/room/room.interface';

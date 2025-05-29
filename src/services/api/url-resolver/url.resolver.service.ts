@@ -17,7 +17,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
-import { Callout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { UrlType } from '@common/enums/url.type';
 import { UrlResolverQueryResultSpace } from './dto/url.resolver.query.space.result';

@@ -2,7 +2,7 @@ import {
   SMALL_TEXT_LENGTH,
   VERY_LONG_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
-import { CreateCalloutInput } from '@domain/collaboration/callout';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';

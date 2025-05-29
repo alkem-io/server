@@ -4,7 +4,7 @@ import { TemplateType } from '@common/enums/template.type';
 import { ITemplate } from './template.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
-import { Callout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { TemplateContentSpace } from '../template-content-space/template.content.space.entity';

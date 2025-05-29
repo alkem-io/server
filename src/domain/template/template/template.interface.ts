@@ -3,7 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplatesSet } from '../templates-set/templates.set.interface';
 import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
