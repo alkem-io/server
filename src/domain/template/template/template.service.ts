@@ -28,7 +28,6 @@ import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { randomUUID } from 'crypto';
 import { ICollaboration } from '@domain/collaboration/collaboration';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TemplateDefault } from '../template-default/template.default.entity';
 import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
@@ -54,7 +53,6 @@ export class TemplateService {
     private templateContentSpaceService: TemplateContentSpaceService,
     private calloutsSetService: CalloutsSetService,
     private spaceLookupService: SpaceLookupService,
-    private collaborationService: CollaborationService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @InjectEntityManager('default')
@@ -387,59 +385,7 @@ export class TemplateService {
     return await this.templateContentSpaceService.save(templateContentSpace);
   }
 
-  public async updateCollaborationFromTemplateContentSpace(
-    targetCollaboration: ICollaboration,
-    templateContentSpace: ITemplateContentSpace,
-    addCallouts: boolean,
-    userID: string
-  ): Promise<ICollaboration> {
-    const sourceCollaboration = templateContentSpace.collaboration;
-    if (
-      !targetCollaboration ||
-      !targetCollaboration.innovationFlow ||
-      !targetCollaboration.calloutsSet?.callouts ||
-      !sourceCollaboration?.innovationFlow ||
-      !sourceCollaboration?.calloutsSet?.callouts
-    ) {
-      throw new RelationshipNotFoundException(
-        `Template cannot be applied on entities not fully loaded space.id:'${targetCollaboration.id}' templateContentSpace.id='${templateContentSpace.id}'`,
-        LogContext.TEMPLATES
-      );
-    }
-
-    const newStates = sourceCollaboration.innovationFlow.states;
-    targetCollaboration.innovationFlow =
-      await this.innovationFlowService.updateInnovationFlowStates(
-        targetCollaboration.innovationFlow,
-        newStates
-      );
-
-    const storageAggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
-        targetCollaboration.id
-      );
-    if (addCallouts) {
-      const calloutsFromSourceCollaboration =
-        await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
-          sourceCollaboration.calloutsSet.callouts ?? []
-        );
-
-      const newCallouts = await this.calloutsSetService.addCallouts(
-        targetCollaboration.calloutsSet,
-        calloutsFromSourceCollaboration,
-        storageAggregator,
-        userID
-      );
-      targetCollaboration.calloutsSet.callouts?.push(...newCallouts);
-    }
-
-    this.ensureCalloutsInValidGroupsAndStates(targetCollaboration);
-
-    // Need to save before applying authorization policy to get the callout ids
-    return await this.collaborationService.save(targetCollaboration);
-  }
-
-  private ensureCalloutsInValidGroupsAndStates(
+  public ensureCalloutsInValidGroupsAndStates(
     targetCollaboration: ICollaboration
   ) {
     // We don't have callouts or we don't have innovationFlow, can't do anything

@@ -30,6 +30,7 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
+import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { PlatformTemplatesModule } from '@platform/platform-templates/platform.t
     InnovationPackModule,
     VirtualContributorModule,
     VirtualContributorLookupModule,
+    TemplatesManagerModule,
     NameReporterModule,
     NamingModule,
     TypeOrmModule.forFeature([Account]),

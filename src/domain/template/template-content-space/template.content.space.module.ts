@@ -10,10 +10,12 @@ import { TemplateContentSpaceLicenseService } from './template.content.space.ser
 import { TemplateContentSpaceResolverFields } from './template.content.space.resolver.fields';
 import { TemplateContentSpaceResolverMutations } from './template.content.space.resolver.mutations';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationModule,
+    AuthorizationPolicyModule,
     SpaceAboutModule,
     CollaborationModule,
     LicenseModule,
