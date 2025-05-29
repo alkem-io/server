@@ -29,7 +29,6 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
-import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 
 @Module({
   imports: [
@@ -48,7 +47,6 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
     LicensingWingbackSubscriptionModule,
     LicenseModule,
     SpaceModule,
-    TemplatesManagerModule,
     InnovationHubModule,
     InnovationPackModule,
     VirtualContributorModule,

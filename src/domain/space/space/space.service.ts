@@ -70,6 +70,11 @@ import { RoleSetType } from '@common/enums/role.set.type';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
 import { ILicense } from '@domain/common/license/license.interface';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { TemplateType } from '@common/enums/template.type';
+import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -96,6 +101,7 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     private licensingFrameworkService: LicensingFrameworkService,
+    private templatesManagerService: TemplatesManagerService,
     private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -308,6 +314,22 @@ export class SpaceService {
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
     return result;
+  }
+
+  public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
+    const templateDefaultData: CreateTemplateDefaultInput = {
+      type: TemplateDefaultType.SPACE_SUBSPACE,
+      allowedTemplateType: TemplateType.COLLABORATION,
+    };
+    const templatesManagerData: CreateTemplatesManagerInput = {
+      templateDefaultsData: [templateDefaultData],
+    };
+
+    const templatesManager =
+      await this.templatesManagerService.createTemplatesManager(
+        templatesManagerData
+      );
+    return templatesManager;
   }
 
   /**
