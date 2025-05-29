@@ -142,7 +142,7 @@ export class BootstrapService {
       await this.templatesManagerService.getTemplatesSetOrFail(
         templatesManager.id
       );
-    let authResetNeeded = await this.ensureSubspaceKnowledgeTemplatesArePresent(
+    let authResetNeeded = await this.ensureSpaceTemplateIsPresent(
       templateDefaults,
       TemplateDefaultType.PLATFORM_SPACE,
       templatesSet,
@@ -151,7 +151,7 @@ export class BootstrapService {
       bootstrapSpaceCallouts
     );
     authResetNeeded =
-      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+      (await this.ensureSpaceTemplateIsPresent(
         templateDefaults,
         TemplateDefaultType.PLATFORM_SUBSPACE,
         templatesSet,
@@ -160,7 +160,7 @@ export class BootstrapService {
         bootstrapSubspaceCallouts
       )) || authResetNeeded;
     authResetNeeded =
-      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+      (await this.ensureSpaceTemplateIsPresent(
         templateDefaults,
         TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
         templatesSet,
@@ -169,7 +169,7 @@ export class BootstrapService {
         bootstrapSpaceTutorialsCallouts
       )) || authResetNeeded;
     authResetNeeded =
-      (await this.ensureSubspaceKnowledgeTemplatesArePresent(
+      (await this.ensureSpaceTemplateIsPresent(
         templateDefaults,
         TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
         templatesSet,
@@ -188,7 +188,7 @@ export class BootstrapService {
     }
   }
 
-  private async ensureSubspaceKnowledgeTemplatesArePresent(
+  private async ensureSpaceTemplateIsPresent(
     templateDefaults: ITemplateDefault[],
     templateDefaultType: TemplateDefaultType,
     templatesSet: ITemplatesSet,
@@ -216,12 +216,22 @@ export class BootstrapService {
           profileData: {
             displayName: `${nameID}-Template`,
           },
-          type: TemplateType.COLLABORATION,
-          collaborationData: {
-            innovationFlowData,
-            calloutsSetData: {
-              calloutsData: callouts,
+          type: TemplateType.SPACE,
+          spaceData: {
+            collaborationData: {
+              innovationFlowData,
+              calloutsSetData: {
+                calloutsData: callouts,
+              },
             },
+            level: SpaceLevel.L1,
+            about: {
+              profileData: {
+                displayName: `${nameID} Space`,
+                tagline: `A space for ${nameID} knowledge`,
+              },
+            },
+            settings: {},
           },
         }
       );

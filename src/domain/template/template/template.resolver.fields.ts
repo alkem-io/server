@@ -5,7 +5,6 @@ import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { ICollaboration } from '@domain/collaboration/collaboration';
 import { IProfile } from '@domain/common/profile';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
@@ -64,19 +63,6 @@ export class TemplateResolverFields {
       return undefined;
     }
     return this.templateService.getWhiteboard(template.id);
-  }
-
-  @ResolveField('collaboration', () => ICollaboration, {
-    nullable: true,
-    description: 'The Collaboration for this Template.',
-  })
-  async collaboration(
-    @Parent() template: ITemplate
-  ): Promise<ICollaboration | undefined> {
-    if (template.type !== TemplateType.COLLABORATION) {
-      return undefined;
-    }
-    return this.templateService.getCollaboration(template.id);
   }
 
   @ResolveField('space', () => ITemplateContentSpace, {

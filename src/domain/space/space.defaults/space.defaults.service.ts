@@ -78,7 +78,7 @@ export class SpaceDefaultsService {
             } catch (e) {
               // Space does not have a subspace default template, just use the platform default
               this.logger.warn(
-                `Space does not have a subspace default template, using platform default parentSpaceTemplatesManager.id: ${spaceL0TemplatesManager?.id}`,
+                `Space does not have a subspace default template, using platform default parentSpaceTemplatesManager.id: ${spaceL0TemplatesManager?.id}, ${e}`,
                 undefined,
                 LogContext.TEMPLATES
               );
@@ -175,7 +175,7 @@ export class SpaceDefaultsService {
     templateID: string
   ): Promise<CreateCollaborationInput | undefined> {
     const collaborationFromTemplate =
-      await this.templateService.getCollaboration(templateID);
+      await this.templateService.getTemplateContentSpace(templateID);
     const collaborationInput =
       await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
         collaborationFromTemplate.id

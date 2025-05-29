@@ -356,17 +356,19 @@ export class UrlGeneratorService {
       );
     }
     if (collaboration.isTemplate) {
-      return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+      return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
     }
 
     return this.getSpaceUrlPathByCollaborationID(collaboration.id);
   }
 
-  private async getCollaborationTemplateUrlPathOrFail(collaborationId: string) {
+  private async getSpaceTemplateUrlPathOrFail(collaborationId: string) {
     const template = await this.entityManager.findOne(Template, {
       where: {
-        collaboration: {
-          id: collaborationId,
+        space: {
+          collaboration: {
+            id: collaborationId,
+          },
         },
       },
       relations: {
@@ -497,7 +499,7 @@ export class UrlGeneratorService {
         }
 
         if (collaboration.isTemplate) {
-          return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+          return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
         }
 
         const collaborationJourneyUrlPath =

@@ -81,7 +81,7 @@ export class VirtualContributorDefaultsService {
           );
         const templateID = knowledgeTemplate.id;
         const collaborationFromTemplate =
-          await this.templateService.getCollaboration(templateID);
+          await this.templateService.getTemplateContentSpace(templateID);
         const collaborationTemplateInput =
           await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
             collaborationFromTemplate.id

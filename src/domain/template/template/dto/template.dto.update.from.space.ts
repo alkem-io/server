@@ -2,7 +2,7 @@ import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class UpdateTemplateFromCollaborationInput {
+export class UpdateTemplateFromSpaceInput {
   @Field(() => UUID, {
     nullable: false,
     description: 'The ID of the Template.',
@@ -11,8 +11,7 @@ export class UpdateTemplateFromCollaborationInput {
 
   @Field(() => UUID, {
     nullable: false,
-    description:
-      'The Collaboration whose content should be copied to this Template.',
+    description: 'The Space whose content should be copied to this Template.',
   })
-  collaborationID!: string;
+  spaceID!: string;
 }

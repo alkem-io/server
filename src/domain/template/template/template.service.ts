@@ -31,12 +31,15 @@ import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TemplateDefault } from '../template-default/template.default.entity';
-import { UpdateTemplateFromCollaborationInput } from './dto/template.dto.update.from.collaboration';
+import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
+import { TemplateContentSpaceService } from '../template-content-space/template.content.space.service';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class TemplateService {
@@ -48,8 +51,10 @@ export class TemplateService {
     private innovationFlowService: InnovationFlowService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
-    private collaborationService: CollaborationService,
+    private templateContentSpaceService: TemplateContentSpaceService,
     private calloutsSetService: CalloutsSetService,
+    private spaceLookupService: SpaceLookupService,
+    private collaborationService: CollaborationService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @InjectEntityManager('default')
@@ -109,14 +114,15 @@ export class TemplateService {
           );
         break;
       }
-      case TemplateType.COLLABORATION: {
-        if (!templateData.collaborationData) {
+      case TemplateType.SPACE: {
+        if (!templateData.spaceData) {
           throw new ValidationException(
-            `Collaboration Template requires collaboration input: ${JSON.stringify(templateData)}`,
+            `Space Template requires space input: ${JSON.stringify(templateData)}`,
             LogContext.TEMPLATES
           );
         }
-        const collaborationData = templateData.collaborationData;
+        const spaceData = templateData.spaceData;
+        const collaborationData = spaceData.collaborationData;
         // Mark as a template
         collaborationData.isTemplate = true;
 
@@ -149,9 +155,9 @@ export class TemplateService {
           calloutData.isTemplate = true;
           calloutData.enableComments = false;
         });
-        template.collaboration =
-          await this.collaborationService.createCollaboration(
-            collaborationData!,
+        template.space =
+          await this.templateContentSpaceService.createTemplateContentSpace(
+            spaceData!,
             storageAggregator
           );
 
@@ -278,69 +284,129 @@ export class TemplateService {
     return await this.templateRepository.save(template);
   }
 
-  public async updateTemplateFromCollaboration(
+  public async updateTemplateFromSpace(
     templateInput: ITemplate,
-    templateData: UpdateTemplateFromCollaborationInput,
+    templateData: UpdateTemplateFromSpaceInput,
     userID: string
   ): Promise<ITemplate> {
-    if (!templateInput.collaboration) {
+    if (!templateInput.space || !templateInput.space.collaboration) {
       throw new RelationshipNotFoundException(
-        `Unable to load Collaboration on Template: ${templateInput.id} `,
+        `Unable to updateTemplate as not all entities are loaded: ${templateInput.id} `,
         LogContext.TEMPLATES
       );
     }
-    const sourceCollaboration =
-      await this.collaborationService.getCollaborationOrFail(
-        templateData.collaborationID,
-        {
-          relations: {
+    const sourceSpace = await this.spaceLookupService.getSpaceOrFail(
+      templateData.spaceID,
+      {
+        relations: {
+          collaboration: {
             innovationFlow: true,
             calloutsSet: {
               callouts: true,
             },
           },
-        }
-      );
+        },
+      }
+    );
 
     if (
-      templateInput.collaboration.calloutsSet &&
-      templateInput.collaboration.calloutsSet.callouts &&
-      templateInput.collaboration.calloutsSet.callouts.length > 0
+      templateInput.space.collaboration.calloutsSet &&
+      templateInput.space.collaboration.calloutsSet.callouts &&
+      templateInput.space.collaboration.calloutsSet.callouts.length > 0
     ) {
-      for (const callout of templateInput.collaboration.calloutsSet.callouts) {
+      for (const callout of templateInput.space.collaboration.calloutsSet
+        .callouts) {
         await this.calloutService.deleteCallout(callout.id);
       }
-      templateInput.collaboration.calloutsSet.callouts = [];
+      templateInput.space.collaboration.calloutsSet.callouts = [];
     }
 
-    templateInput.collaboration =
-      await this.updateCollaborationFromCollaboration(
-        sourceCollaboration,
-        templateInput.collaboration,
-        true,
-        userID
-      );
+    templateInput.space = await this.updateTemplateContentSpaceFromSpace(
+      sourceSpace,
+      templateInput.space,
+      true,
+      userID
+    );
 
     return await this.getTemplateOrFail(templateInput.id);
   }
 
-  public async updateCollaborationFromCollaboration(
-    sourceCollaboration: ICollaboration,
-    targetCollaboration: ICollaboration,
+  public async updateTemplateContentSpaceFromSpace(
+    space: ISpace,
+    templateContentSpace: ITemplateContentSpace,
     addCallouts: boolean,
     userID: string
-  ): Promise<ICollaboration> {
+  ): Promise<ITemplateContentSpace> {
     if (
-      !sourceCollaboration.innovationFlow ||
-      !targetCollaboration.innovationFlow ||
-      !sourceCollaboration.calloutsSet?.callouts ||
-      !targetCollaboration.calloutsSet?.callouts
+      !space.collaboration ||
+      !space.collaboration.innovationFlow ||
+      !space.collaboration.calloutsSet?.callouts ||
+      !templateContentSpace.collaboration?.innovationFlow ||
+      !templateContentSpace.collaboration?.calloutsSet?.callouts
     ) {
       throw new RelationshipNotFoundException(
-        `Template cannot be applied on uninitialized collaboration sourceCollaboration.i:'${sourceCollaboration.id}' TargetCollaboration.id='${targetCollaboration.id}'`,
+        `Template cannot be applied on entities not fully loaded space.id:'${space.id}' temmplateContentSpace.id='${templateContentSpace.id}'`,
         LogContext.TEMPLATES
       );
     }
+
+    // TODO: expand this to also take over the settings + the about
+    const newStates = space.collaboration.innovationFlow.states;
+    templateContentSpace.collaboration.innovationFlow =
+      await this.innovationFlowService.updateInnovationFlowStates(
+        templateContentSpace.collaboration.innovationFlow,
+        newStates
+      );
+
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
+        templateContentSpace.collaboration.id
+      );
+    if (addCallouts) {
+      const calloutsFromSourceCollaboration =
+        await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
+          space.collaboration.calloutsSet.callouts ?? []
+        );
+
+      const newCallouts = await this.calloutsSetService.addCallouts(
+        templateContentSpace.collaboration.calloutsSet,
+        calloutsFromSourceCollaboration,
+        storageAggregator,
+        userID
+      );
+      templateContentSpace.collaboration.calloutsSet.callouts?.push(
+        ...newCallouts
+      );
+    }
+
+    this.ensureCalloutsInValidGroupsAndStates(
+      templateContentSpace.collaboration
+    );
+
+    // Need to save before applying authorization policy to get the callout ids
+    return await this.templateContentSpaceService.save(templateContentSpace);
+  }
+
+  public async updateCollaborationFromTemplateContentSpace(
+    targetCollaboration: ICollaboration,
+    templateContentSpace: ITemplateContentSpace,
+    addCallouts: boolean,
+    userID: string
+  ): Promise<ICollaboration> {
+    const sourceCollaboration = templateContentSpace.collaboration;
+    if (
+      !targetCollaboration ||
+      !targetCollaboration.innovationFlow ||
+      !targetCollaboration.calloutsSet?.callouts ||
+      !sourceCollaboration?.innovationFlow ||
+      !sourceCollaboration?.calloutsSet?.callouts
+    ) {
+      throw new RelationshipNotFoundException(
+        `Template cannot be applied on entities not fully loaded space.id:'${targetCollaboration.id}' templateContentSpace.id='${templateContentSpace.id}'`,
+        LogContext.TEMPLATES
+      );
+    }
+
     const newStates = sourceCollaboration.innovationFlow.states;
     targetCollaboration.innovationFlow =
       await this.innovationFlowService.updateInnovationFlowStates(
@@ -404,7 +470,7 @@ export class TemplateService {
         communityGuidelines: true,
         callout: true,
         whiteboard: true,
-        collaboration: true,
+        space: true,
       },
     });
 
@@ -447,15 +513,15 @@ export class TemplateService {
         await this.whiteboardService.deleteWhiteboard(template.whiteboard.id);
         break;
       }
-      case TemplateType.COLLABORATION: {
-        if (!template.collaboration) {
+      case TemplateType.SPACE: {
+        if (!template.space) {
           throw new RelationshipNotFoundException(
-            `Unable to load Collaboration on Template: ${templateInput.id} `,
+            `Unable to load Space content on Template: ${templateInput.id} `,
             LogContext.TEMPLATES
           );
         }
-        await this.collaborationService.deleteCollaborationOrFail(
-          template.collaboration.id
+        await this.templateContentSpaceService.deleteTemplateContentSpaceOrFail(
+          template.space.id
         );
         break;
       }
@@ -595,19 +661,21 @@ export class TemplateService {
     return template.whiteboard;
   }
 
-  async getCollaboration(templateID: string): Promise<ICollaboration> {
+  async getTemplateContentSpace(
+    templateID: string
+  ): Promise<ITemplateContentSpace> {
     const template = await this.getTemplateOrFail(templateID, {
       relations: {
-        collaboration: true,
+        space: true,
       },
     });
-    if (!template.collaboration) {
+    if (!template.space) {
       throw new RelationshipNotFoundException(
-        `Unable to load Template with Collaboration: ${template.id} `,
+        `Unable to load Template with Space content: ${template.id} `,
         LogContext.TEMPLATES
       );
     }
-    return template.collaboration;
+    return template.space;
   }
 
   async getSpace(templateID: string): Promise<ITemplateContentSpace> {

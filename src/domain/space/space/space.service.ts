@@ -319,7 +319,7 @@ export class SpaceService {
   public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
     const templateDefaultData: CreateTemplateDefaultInput = {
       type: TemplateDefaultType.SPACE_SUBSPACE,
-      allowedTemplateType: TemplateType.COLLABORATION,
+      allowedTemplateType: TemplateType.SPACE,
     };
     const templatesManagerData: CreateTemplatesManagerInput = {
       templateDefaultsData: [templateDefaultData],

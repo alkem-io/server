@@ -238,22 +238,24 @@ export class ConversionService {
     const templateWithInnovationFlow =
       await this.templateService.getTemplateOrFail(levelZeroTemplate.id, {
         relations: {
-          collaboration: {
-            innovationFlow: true,
+          space: {
+            collaboration: {
+              innovationFlow: true,
+            },
           },
         },
       });
 
     if (
-      !templateWithInnovationFlow.collaboration ||
-      !templateWithInnovationFlow.collaboration.innovationFlow
+      !templateWithInnovationFlow.space?.collaboration ||
+      !templateWithInnovationFlow.space.collaboration.innovationFlow
     ) {
       throw new RelationshipNotFoundException(
         `Unable to retrieve Space L0 innovation flow template: ${levelZeroTemplate.id} is missing a relation`,
         LogContext.CONVERSION
       );
     }
-    return templateWithInnovationFlow.collaboration.innovationFlow.states;
+    return templateWithInnovationFlow.space.collaboration.innovationFlow.states;
   }
 
   async convertSpaceL2ToSpaceL1OrFail(

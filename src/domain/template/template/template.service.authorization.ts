@@ -10,8 +10,8 @@ import { TemplateService } from './template.service';
 import { LogContext } from '@common/enums/logging.context';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
-import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { TemplateContentSpaceAuthorizationService } from '../template-content-space/template.content.space.service.authorization';
 
 @Injectable()
 export class TemplateAuthorizationService {
@@ -22,7 +22,7 @@ export class TemplateAuthorizationService {
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private collaborationAuthorizationService: CollaborationAuthorizationService
+    private templateContentSpaceAuthorizationService: TemplateContentSpaceAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -48,7 +48,7 @@ export class TemplateAuthorizationService {
             contributionDefaults: true,
           },
           whiteboard: true,
-          collaboration: {
+          space: {
             authorization: true,
           },
         },
@@ -125,19 +125,19 @@ export class TemplateAuthorizationService {
         updatedAuthorizations.push(...whiteboardAuthorizations);
         break;
       }
-      case TemplateType.COLLABORATION: {
-        if (!template.collaboration) {
+      case TemplateType.SPACE: {
+        if (!template.space) {
           throw new RelationshipNotFoundException(
-            `Unable to load Collaboration on Template of that type: ${template.id} `,
+            `Unable to load Space content on Template of that type: ${template.id} `,
             LogContext.TEMPLATES
           );
         }
-        const collaborationAuthorizations =
-          await this.collaborationAuthorizationService.applyAuthorizationPolicy(
-            template.collaboration,
+        const spaceContentAuthorizations =
+          await this.templateContentSpaceAuthorizationService.applyAuthorizationPolicy(
+            template.space.id,
             template.authorization
           );
-        updatedAuthorizations.push(...collaborationAuthorizations);
+        updatedAuthorizations.push(...spaceContentAuthorizations);
         break;
       }
       case TemplateType.POST: {

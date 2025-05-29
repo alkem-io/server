@@ -34,12 +34,18 @@ import { CreateCommunityGuidelinesInput } from '@domain/community/community-guid
 import { Injectable } from '@nestjs/common';
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { CreateClassificationInput } from '@domain/common/classification/dto/classification.dto.create';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { CreateSpaceInput } from '@domain/space';
+import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
+import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 
 @Injectable()
 export class InputCreatorService {
   constructor(
     private collaborationService: CollaborationService,
-    private calloutService: CalloutService
+    private spaceLookupService: SpaceLookupService,
+    private calloutService: CalloutService,
+    private templateContentSpaceService: TemplateContentSpaceService
   ) {}
 
   public async buildCreateCalloutInputsFromCallouts(
@@ -135,6 +141,74 @@ export class InputCreatorService {
 
     const result: CreateCalloutsSetInput = {
       calloutsData: calloutInputs,
+    };
+
+    return result;
+  }
+
+  public async buildCreateTemplateContentSpaceInputFromSpace(
+    spaceID: string
+  ): Promise<CreateTemplateContentSpaceInput> {
+    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
+      relations: {
+        collaboration: true,
+        about: true,
+      },
+    });
+    if (!space.collaboration || !space.about) {
+      throw new RelationshipNotFoundException(
+        `Space ${space.id} is missing a relation`,
+        LogContext.INPUT_CREATOR
+      );
+    }
+
+    const collaborationInput =
+      await this.buildCreateCollaborationInputFromCollaboration(
+        space.collaboration.id
+      );
+
+    const result: CreateTemplateContentSpaceInput = {
+      collaborationData: collaborationInput,
+      aboutData: {},
+    };
+
+    return result;
+  }
+
+  public async buildCreateSpaceInputFromTemplateContentSpace(
+    templateContentSpaceID: string
+  ): Promise<CreateSpaceInput> {
+    const templateSpaceContent =
+      await this.templateContentSpaceService.getTemplateContentSpaceOrFail(
+        templateContentSpaceID,
+        {
+          relations: {
+            collaboration: true,
+            about: true,
+          },
+        }
+      );
+    if (!templateSpaceContent.collaboration || !templateSpaceContent.about) {
+      throw new RelationshipNotFoundException(
+        `Template Content Space ${templateSpaceContent.id} is missing a relation`,
+        LogContext.INPUT_CREATOR
+      );
+    }
+
+    const collaborationData =
+      await this.buildCreateCollaborationInputFromCollaboration(
+        templateSpaceContent.collaboration.id
+      );
+
+    // TODO: Fill out the creation DTO with additional data
+    const result: CreateSpaceInput = {
+      collaborationData,
+      level: templateSpaceContent.level,
+      about: {
+        profileData: this.buildCreateProfileInputFromProfile(
+          templateSpaceContent.about.profile
+        ),
+      },
     };
 
     return result;
