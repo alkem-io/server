@@ -97,7 +97,7 @@ export class SpaceTemplate1748613934555 implements MigrationInterface {
     }
     // Update all template_default entries with type 'collaboration' to 'space'
     await queryRunner.query(
-      `UPDATE template_default SET type = 'space' WHERE type = 'collaboration'`
+      `UPDATE template_default SET allowedTemplateType = 'space' WHERE allowedTemplateType = 'collaboration'`
     );
     // --- End migration logic ---
 
