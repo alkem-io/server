@@ -41,10 +41,65 @@ export class SpaceDefaultsService {
 
   public async createCollaborationInput(
     collaborationData: CreateCollaborationOnSpaceInput,
+    templateWithSpaceContent: ITemplate
+  ): Promise<CreateCollaborationOnSpaceInput> {
+    const collaborationDataFromTemplate =
+      await this.getCreateCollaborationInputFromTemplate(
+        templateWithSpaceContent.id
+      );
+    if (!collaborationDataFromTemplate) {
+      throw new RelationshipNotFoundException(
+        `Collaboration not found in template with ID: ${templateWithSpaceContent.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+
+    if (!collaborationData.innovationFlowData) {
+      if (collaborationDataFromTemplate) {
+        collaborationData.innovationFlowData =
+          collaborationDataFromTemplate.innovationFlowData;
+      } else {
+        throw new ValidationException(
+          'No innovation flow data provided',
+          LogContext.SPACES
+        );
+      }
+    }
+
+    if (collaborationData.addCallouts) {
+      if (!collaborationData.calloutsSetData.calloutsData) {
+        collaborationData.calloutsSetData.calloutsData =
+          collaborationDataFromTemplate?.calloutsSetData.calloutsData;
+      } else if (collaborationDataFromTemplate.calloutsSetData.calloutsData) {
+        // The request includes the calloutsData, so merge template callouts with request callouts
+        collaborationData.calloutsSetData.calloutsData.push(
+          ...collaborationDataFromTemplate.calloutsSetData.calloutsData
+        );
+      }
+    } else {
+      collaborationData.calloutsSetData.calloutsData = [];
+    }
+
+    // Move callouts that are not in valid flowStates to the default first flowState
+    const validFlowStateNames =
+      collaborationData.innovationFlowData?.states?.map(
+        state => state.displayName
+      );
+
+    this.calloutsSetService.moveCalloutsToDefaultFlowState(
+      validFlowStateNames ?? [],
+      collaborationData.calloutsSetData.calloutsData ?? []
+    );
+
+    return collaborationData;
+  }
+
+  public async getSpaceContentTemplateToAugmentFrom(
+    collaborationData: CreateCollaborationOnSpaceInput,
     spaceLevel: SpaceLevel,
     platformTemplate?: TemplateDefaultType,
     spaceL0TemplatesManager?: ITemplatesManager
-  ): Promise<CreateCollaborationOnSpaceInput> {
+  ): Promise<ITemplate> {
     // First get the template to augment the provided data with
     let templateWithSpaceContent: ITemplate | undefined = undefined;
 
@@ -104,60 +159,25 @@ export class SpaceDefaultsService {
         LogContext.SPACES
       );
     }
+    return templateWithSpaceContent;
+  }
 
-    const collaborationDataFromTemplate =
+  public async addTutorialCalloutsFromTemplate(
+    collaborationData: CreateCollaborationInput
+  ): Promise<CreateCollaborationInput> {
+    const tutorialsSpaceContentTemplate =
+      await this.platformTemplatesService.getPlatformDefaultTemplateByType(
+        TemplateDefaultType.PLATFORM_SPACE_TUTORIALS
+      );
+    const tutorialsInputFromTemplate =
       await this.getCreateCollaborationInputFromTemplate(
-        templateWithSpaceContent.id
+        tutorialsSpaceContentTemplate.id
       );
-    if (!collaborationDataFromTemplate) {
-      throw new RelationshipNotFoundException(
-        `Collaboration not found in template with ID: ${templateWithSpaceContent.id}`,
-        LogContext.TEMPLATES
+
+    if (tutorialsInputFromTemplate?.calloutsSetData.calloutsData) {
+      collaborationData.calloutsSetData.calloutsData?.push(
+        ...tutorialsInputFromTemplate.calloutsSetData.calloutsData
       );
-    }
-
-    if (!collaborationData.innovationFlowData) {
-      if (collaborationDataFromTemplate) {
-        collaborationData.innovationFlowData =
-          collaborationDataFromTemplate.innovationFlowData;
-      } else {
-        throw new ValidationException(
-          'No innovation flow data provided',
-          LogContext.SPACES
-        );
-      }
-    }
-
-    if (collaborationData.addCallouts) {
-      if (!collaborationData.calloutsSetData.calloutsData) {
-        collaborationData.calloutsSetData.calloutsData =
-          collaborationDataFromTemplate?.calloutsSetData.calloutsData;
-      } else if (collaborationDataFromTemplate.calloutsSetData.calloutsData) {
-        // The request includes the calloutsData, so merge template callouts with request callouts
-        collaborationData.calloutsSetData.calloutsData.push(
-          ...collaborationDataFromTemplate.calloutsSetData.calloutsData
-        );
-      }
-    } else {
-      collaborationData.calloutsSetData.calloutsData = [];
-    }
-
-    // Add in tutorials if needed
-    if (collaborationData.addTutorialCallouts) {
-      const tutorialsSpaceContentTemplate =
-        await this.platformTemplatesService.getPlatformDefaultTemplateByType(
-          TemplateDefaultType.PLATFORM_SPACE_TUTORIALS
-        );
-      const tutorialsInputFromTemplate =
-        await this.getCreateCollaborationInputFromTemplate(
-          tutorialsSpaceContentTemplate.id
-        );
-
-      if (tutorialsInputFromTemplate?.calloutsSetData.calloutsData) {
-        collaborationData.calloutsSetData.calloutsData?.push(
-          ...tutorialsInputFromTemplate.calloutsSetData.calloutsData
-        );
-      }
     }
 
     // Move callouts that are not in valid flowStates to the default first flowState

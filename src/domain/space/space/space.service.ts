@@ -166,20 +166,32 @@ export class SpaceService {
       space.levelZeroSpaceID = space.id;
     }
 
-    //// Collaboration
-    let collaborationData: CreateCollaborationInput =
-      spaceData.collaborationData;
-    collaborationData.isTemplate = false;
-    // Pick up the default template that is applicable
-    collaborationData =
-      await this.spaceDefaultsService.createCollaborationInput(
-        collaborationData,
+    const templateWithSpaceContent =
+      await this.spaceDefaultsService.getSpaceContentTemplateToAugmentFrom(
+        spaceData.collaborationData,
         space.level,
         spaceData.platformTemplate,
         spaceData.templatesManagerParent
       );
+
+    //// Collaboration
+    let updatedCollaborationData: CreateCollaborationInput =
+      spaceData.collaborationData;
+    updatedCollaborationData.isTemplate = false;
+    // Pick up the default template that is applicable
+    updatedCollaborationData =
+      await this.spaceDefaultsService.createCollaborationInput(
+        updatedCollaborationData,
+        templateWithSpaceContent
+      );
+    if (spaceData.collaborationData.addTutorialCallouts) {
+      updatedCollaborationData =
+        await this.spaceDefaultsService.addTutorialCalloutsFromTemplate(
+          updatedCollaborationData
+        );
+    }
     space.collaboration = await this.collaborationService.createCollaboration(
-      collaborationData,
+      updatedCollaborationData,
       space.storageAggregator,
       agentInfo
     );
