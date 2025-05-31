@@ -1,4 +1,6 @@
+import { LogContext } from '@common/enums';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
 import { ITemplateDefault } from '@domain/template/template-default/template.default.interface';
 import { ITemplate } from '@domain/template/template/template.interface';
@@ -61,11 +63,17 @@ export class PlatformTemplatesService {
       platformDefaultTemplateType
     );
     const templateID = template.id;
-    const collaborationFromTemplate =
+    const contentSpaceFromTemplate =
       await this.templateService.getTemplateContentSpace(templateID);
+    if (!contentSpaceFromTemplate || !contentSpaceFromTemplate.collaboration) {
+      throw new RelationshipNotFoundException(
+        `Collaboration not found for the template content space: ${contentSpaceFromTemplate.id}`,
+        LogContext.TEMPLATES
+      );
+    }
     const collaborationTemplateInput =
       await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
-        collaborationFromTemplate.id
+        contentSpaceFromTemplate.collaboration.id
       );
     return collaborationTemplateInput.calloutsSetData.calloutsData || [];
   }

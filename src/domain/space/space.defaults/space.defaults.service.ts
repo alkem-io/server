@@ -102,24 +102,18 @@ export class SpaceDefaultsService {
 
     if (collaborationData.spaceTemplateID) {
       templateWithSpaceContent = await this.templateService.getTemplateOrFail(
-        collaborationData.spaceTemplateID,
-        {
-          relations: {
-            contentSpace: {
-              collaboration: true,
-              about: true,
-            },
-          },
-        }
+        collaborationData.spaceTemplateID
       );
     } else if (platformTemplate) {
       templateWithSpaceContent =
-        await this.getPlatformTemplateWithSpaceContent(platformTemplate);
+        await this.platformTemplatesService.getPlatformDefaultTemplateByType(
+          platformTemplate
+        );
     } else {
       switch (spaceLevel) {
         case SpaceLevel.L0:
           templateWithSpaceContent =
-            await this.getPlatformTemplateWithSpaceContent(
+            await this.platformTemplatesService.getPlatformDefaultTemplateByType(
               TemplateDefaultType.PLATFORM_SPACE
             );
           break;
@@ -144,7 +138,7 @@ export class SpaceDefaultsService {
           }
           if (!templateWithSpaceContent) {
             templateWithSpaceContent =
-              await this.getPlatformTemplateWithSpaceContent(
+              await this.platformTemplatesService.getPlatformDefaultTemplateByType(
                 TemplateDefaultType.PLATFORM_SUBSPACE
               );
           }
@@ -152,26 +146,7 @@ export class SpaceDefaultsService {
         }
       }
     }
-    if (
-      !templateWithSpaceContent ||
-      !templateWithSpaceContent.contentSpace ||
-      !templateWithSpaceContent.contentSpace.collaboration
-    ) {
-      throw new ValidationException(
-        `Unable to get templates using provided data: ${collaborationData}, ${platformTemplate}, ${spaceLevel}`,
-        LogContext.SPACES
-      );
-    }
-    return templateWithSpaceContent.contentSpace;
-  }
 
-  private async getPlatformTemplateWithSpaceContent(
-    platformTemplate: TemplateDefaultType
-  ): Promise<ITemplate> {
-    const templateWithSpaceContent =
-      await this.platformTemplatesService.getPlatformDefaultTemplateByType(
-        platformTemplate
-      );
     if (!templateWithSpaceContent) {
       throw new ValidationException(
         `Unable to get platform template for type: ${platformTemplate}`,
@@ -201,7 +176,7 @@ export class SpaceDefaultsService {
         LogContext.TEMPLATES
       );
     }
-    return templateWithSpaceContentReloaded;
+    return templateWithSpaceContentReloaded.contentSpace;
   }
 
   public async addTutorialCalloutsFromTemplate(
