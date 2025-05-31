@@ -37,4 +37,6 @@ export class TemplateContentSpace
 
   @Column('int', { nullable: false })
   level!: SpaceLevel;
+
+  // Later: add in application form, community roles, hierarchy so with subspaces etc.
 }
