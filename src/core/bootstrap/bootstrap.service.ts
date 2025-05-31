@@ -36,11 +36,8 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IUser } from '@domain/community/user/user.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { TemplateDefaultService } from '@domain/template/template-default/template.default.service';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
-import { ITemplateDefault } from '@domain/template/template-default/template.default.interface';
-import { ITemplatesSet } from '@domain/template/templates-set';
 import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
@@ -56,6 +53,7 @@ import { bootstrapTemplateSpaceContentSpaceL0 } from './platform-template-defini
 import { bootstrapTemplateSpaceContentSubspace } from './platform-template-definitions/default-templates/bootstrap.template.space.content.subspace';
 import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
 import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base';
+import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 
 @Injectable()
 export class BootstrapService {
@@ -83,9 +81,9 @@ export class BootstrapService {
     private aiServer: AiServerService,
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
-    private templatesManagerService: TemplatesManagerService,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
+    private platformTemplatesService: PlatformTemplatesService,
     private accountLicenseService: AccountLicenseService,
     private licenseService: LicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
@@ -128,44 +126,26 @@ export class BootstrapService {
   }
 
   private async ensurePlatformTemplatesArePresent() {
-    const templatesManager =
-      await this.platformService.getTemplatesManagerOrFail();
-    const templateDefaults =
-      await this.templatesManagerService.getTemplateDefaults(
-        templatesManager.id
-      );
-    const templatesSet =
-      await this.templatesManagerService.getTemplatesSetOrFail(
-        templatesManager.id
-      );
     let authResetNeeded = await this.ensureSpaceTemplateIsPresent(
-      templateDefaults,
       TemplateDefaultType.PLATFORM_SPACE,
-      templatesSet,
       'space',
       bootstrapTemplateSpaceContentSpaceL0
     );
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
-        templateDefaults,
         TemplateDefaultType.PLATFORM_SUBSPACE,
-        templatesSet,
         'subspace',
         bootstrapTemplateSpaceContentSubspace
       )) || authResetNeeded;
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
-        templateDefaults,
         TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
-        templatesSet,
         'space-tutorials',
         bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials
       )) || authResetNeeded;
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
-        templateDefaults,
         TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
-        templatesSet,
         'knowledge',
         bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase
       )) || authResetNeeded;
@@ -181,21 +161,23 @@ export class BootstrapService {
   }
 
   private async ensureSpaceTemplateIsPresent(
-    templateDefaults: ITemplateDefault[],
     templateDefaultType: TemplateDefaultType,
-    templatesSet: ITemplatesSet,
     nameID: string,
     spaceContentData: CreateTemplateContentSpaceInput
   ): Promise<boolean> {
-    const knowledgeTemplateDefault = templateDefaults.find(
-      td => td.type === templateDefaultType
-    );
-    if (!knowledgeTemplateDefault) {
+    const templatesSet =
+      await this.platformTemplatesService.getPlatformTemplatesSet();
+    const templateDefault =
+      await this.platformTemplatesService.getPlatformTemplateDefault(
+        templateDefaultType
+      );
+
+    if (!templateDefault) {
       throw new BootstrapException(
         `Unable to load Template Default for ${templateDefaultType}`
       );
     }
-    if (!knowledgeTemplateDefault.template) {
+    if (!templateDefault.template) {
       this.logger.verbose?.(
         `No template set for ${templateDefaultType}, setting it...`,
         LogContext.BOOTSTRAP
@@ -212,8 +194,8 @@ export class BootstrapService {
         }
       );
       // Set the default template
-      knowledgeTemplateDefault.template = template;
-      await this.templateDefaultService.save(knowledgeTemplateDefault);
+      templateDefault.template = template;
+      await this.templateDefaultService.save(templateDefault);
       return true;
     }
     return false;

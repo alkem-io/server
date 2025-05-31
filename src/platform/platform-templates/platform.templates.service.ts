@@ -1,8 +1,10 @@
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { ITemplateDefault } from '@domain/template/template-default/template.default.interface';
 import { ITemplate } from '@domain/template/template/template.interface';
 import { TemplateService } from '@domain/template/template/template.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { PlatformService } from '@platform/platform/platform.service';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
@@ -17,6 +19,27 @@ export class PlatformTemplatesService {
     private inputCreatorService: InputCreatorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  public async getPlatformTemplatesSet(): Promise<ITemplatesSet> {
+    const platformTemplatesManager =
+      await this.platformService.getTemplatesManagerOrFail();
+    return await this.templatesManagerService.getTemplatesSetOrFail(
+      platformTemplatesManager.id
+    );
+  }
+
+  public async getPlatformTemplateDefault(
+    platformDefaultTemplateType: TemplateDefaultType
+  ): Promise<ITemplateDefault> {
+    const platformTemplatesManager =
+      await this.platformService.getTemplatesManagerOrFail();
+    const templateDefault =
+      await this.templatesManagerService.getTemplateDefault(
+        platformTemplatesManager.id,
+        platformDefaultTemplateType
+      );
+    return templateDefault;
+  }
 
   public async getPlatformDefaultTemplateByType(
     platformDefaultTemplateType: TemplateDefaultType
