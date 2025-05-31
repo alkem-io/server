@@ -113,13 +113,13 @@ export class TemplateService {
         break;
       }
       case TemplateType.SPACE: {
-        if (!templateData.spaceData) {
+        if (!templateData.contentSpaceData) {
           throw new ValidationException(
             `Space Template requires space input: ${JSON.stringify(templateData)}`,
             LogContext.TEMPLATES
           );
         }
-        const spaceData = templateData.spaceData;
+        const spaceData = templateData.contentSpaceData;
         const collaborationData = spaceData.collaborationData;
         // Mark as a template
         collaborationData.isTemplate = true;

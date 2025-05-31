@@ -65,5 +65,5 @@ export class CreateTemplateInput extends CreateTemplateBaseInput {
   @IsOptional()
   @ValidateNested()
   @Type(() => CreateTemplateContentSpaceInput)
-  spaceData?: CreateTemplateContentSpaceInput;
+  contentSpaceData?: CreateTemplateContentSpaceInput;
 }

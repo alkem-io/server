@@ -217,7 +217,7 @@ export class BootstrapService {
             displayName: `${nameID}-Template`,
           },
           type: TemplateType.SPACE,
-          spaceData: {
+          contentSpaceData: {
             collaborationData: {
               innovationFlowData,
               calloutsSetData: {

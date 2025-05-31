@@ -65,11 +65,11 @@ export class TemplateResolverFields {
     return this.templateService.getWhiteboard(template.id);
   }
 
-  @ResolveField('space', () => ITemplateContentSpace, {
+  @ResolveField('contentSpace', () => ITemplateContentSpace, {
     nullable: true,
     description: 'The Space for this Template.',
   })
-  async space(
+  async contentSpace(
     @Parent() template: ITemplate
   ): Promise<ITemplateContentSpace | undefined> {
     if (template.type !== TemplateType.SPACE) {

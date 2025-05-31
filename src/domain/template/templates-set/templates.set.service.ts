@@ -146,14 +146,14 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     templateSpaceInput: CreateTemplateFromSpaceOnTemplatesSetInput
   ): Promise<ITemplate> {
-    const createSpaceInput =
+    const createSpaceContentInput =
       await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
         templateSpaceInput.spaceID
       );
     const templateInput: CreateTemplateInput = {
       ...templateSpaceInput,
       type: TemplateType.SPACE,
-      spaceData: createSpaceInput,
+      contentSpaceData: createSpaceContentInput,
     };
     return await this.createTemplate(templatesSet, templateInput);
   }
