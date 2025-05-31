@@ -1,5 +1,6 @@
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { ITemplate } from '@domain/template/template/template.interface';
 import { TemplateService } from '@domain/template/template/template.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -17,17 +18,26 @@ export class PlatformTemplatesService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async getCreateCalloutInputsFromTemplate(
+  public async getPlatformDefaultTemplateByType(
     platformDefaultTemplateType: TemplateDefaultType
-  ): Promise<CreateCalloutInput[]> {
+  ): Promise<ITemplate> {
     const platformTemplatesManager =
       await this.platformService.getTemplatesManagerOrFail();
-    const knowledgeTemplate =
+    const template =
       await this.templatesManagerService.getTemplateFromTemplateDefault(
         platformTemplatesManager.id,
         platformDefaultTemplateType
       );
-    const templateID = knowledgeTemplate.id;
+    return template;
+  }
+
+  public async getCreateCalloutInputsFromTemplate(
+    platformDefaultTemplateType: TemplateDefaultType
+  ): Promise<CreateCalloutInput[]> {
+    const template = await this.getPlatformDefaultTemplateByType(
+      platformDefaultTemplateType
+    );
+    const templateID = template.id;
     const collaborationFromTemplate =
       await this.templateService.getTemplateContentSpace(templateID);
     const collaborationTemplateInput =

@@ -615,7 +615,9 @@ export class TemplateService {
   ): Promise<ITemplateContentSpace> {
     const template = await this.getTemplateOrFail(templateID, {
       relations: {
-        contentSpace: true,
+        contentSpace: {
+          collaboration: true,
+        },
       },
     });
     if (!template.contentSpace) {

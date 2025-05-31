@@ -22,5 +22,5 @@ export class CreateCollaborationOnSpaceInput extends CreateCollaborationInput {
     nullable: true,
     description: 'The Template to use for instantiating the Collaboration.',
   })
-  collaborationTemplateID?: string;
+  spaceTemplateID?: string;
 }
