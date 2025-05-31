@@ -54,6 +54,7 @@ import { bootstrapTemplateSpaceContentSubspace } from './platform-template-defin
 import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
 import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base';
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
+import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 
 @Injectable()
 export class BootstrapService {
@@ -83,6 +84,7 @@ export class BootstrapService {
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
+    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private platformTemplatesService: PlatformTemplatesService,
     private accountLicenseService: AccountLicenseService,
     private licenseService: LicenseService,
@@ -482,6 +484,16 @@ export class BootstrapService {
       const space = await this.accountService.createSpaceOnAccount(spaceInput);
       const spaceAuthorizations =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
+
+      // ALso update the authorizations on the templates manager
+      const templatesManager =
+        await this.spaceService.getTemplatesManagerOrFail(space.id);
+      const templatesManagerAuthorizations =
+        await this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
+          templatesManager.id,
+          space.authorization
+        );
+      spaceAuthorizations.push(...templatesManagerAuthorizations);
       await this.authorizationPolicyService.saveAll(spaceAuthorizations);
 
       const accountEntitlements =

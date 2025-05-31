@@ -13,10 +13,6 @@ export abstract class ITemplateDefault extends IAuthorizable {
   })
   type!: TemplateDefaultType;
 
-  @Field(() => ITemplate, {
-    nullable: true,
-    description: 'The template accessible via this TemplateDefault, if any.',
-  })
   template?: ITemplate;
 
   @Field(() => TemplateType, {
