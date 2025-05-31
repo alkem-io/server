@@ -23,9 +23,10 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
       id: string;
       collaborationId: string;
       profileId: string | null;
+      nameID: string;
       type: string;
     }[] = await queryRunner.query(
-      `SELECT id, collaborationId, profileId, type FROM \`template\` WHERE type = 'collaboration'`
+      `SELECT id, collaborationId, profileId, nameID, type FROM \`template\` WHERE type = 'collaboration'`
     );
     for (const template of templates) {
       // 1. Change type to 'space'
@@ -87,7 +88,12 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
         queryRunner,
         'template-content-space'
       );
-      const settings = JSON.stringify(spaceDefaultsSettingsL1); // Default settings, adjust as needed
+      let settings = JSON.stringify(spaceDefaultsSettingsL1);
+      // Assumption: only one template of type collaboration with this nameID
+      // Note: L0 has different settings, which previously were picked up from the code.
+      if (template.nameID === 'space-template') {
+        settings = JSON.stringify(spaceDefaultsSettingsL0);
+      }
       const level = 1;
       await queryRunner.query(
         `INSERT INTO template_content_space (id, version, settings, level, authorizationId, collaborationId, aboutId) VALUES (?, 1, ?, ?, ?, ?, ?)`,
@@ -295,6 +301,24 @@ export const spaceDefaultsSettingsL1 = {
     inheritMembershipRights: true,
     allowMembersToCreateSubspaces: true,
     allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
+  },
+};
+
+export const spaceDefaultsSettingsL0 = {
+  privacy: {
+    mode: 'private',
+    allowPlatformSupportAsAdmin: false,
+  },
+  membership: {
+    policy: 'applications',
+    trustedOrganizations: [], // only allow to be host org for now, not on subspaces
+    allowSubspaceAdminsToInviteMembers: true,
+  },
+  collaboration: {
+    inheritMembershipRights: false,
+    allowMembersToCreateSubspaces: false,
+    allowMembersToCreateCallouts: false,
     allowEventsFromSubspaces: true,
   },
 };
