@@ -263,7 +263,6 @@ export class BootstrapService {
     }
   }
 
-  @Profiling.api
   async createUserProfiles(usersData: any[]) {
     try {
       for (const userData of usersData) {
