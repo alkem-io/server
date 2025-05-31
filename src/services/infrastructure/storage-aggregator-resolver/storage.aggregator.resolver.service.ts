@@ -353,7 +353,7 @@ export class StorageAggregatorResolverService {
     // If not found on Space, try with Collaboration templates
     const template = await this.entityManager.findOne(Template, {
       where: {
-        space: {
+        contentSpace: {
           collaboration: {
             id: collaborationID,
           },

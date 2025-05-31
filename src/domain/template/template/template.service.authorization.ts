@@ -48,7 +48,7 @@ export class TemplateAuthorizationService {
             contributionDefaults: true,
           },
           whiteboard: true,
-          space: {
+          contentSpace: {
             authorization: true,
           },
         },
@@ -126,7 +126,7 @@ export class TemplateAuthorizationService {
         break;
       }
       case TemplateType.SPACE: {
-        if (!template.space) {
+        if (!template.contentSpace) {
           throw new RelationshipNotFoundException(
             `Unable to load Space content on Template of that type: ${template.id} `,
             LogContext.TEMPLATES
@@ -134,7 +134,7 @@ export class TemplateAuthorizationService {
         }
         const spaceContentAuthorizations =
           await this.templateContentSpaceAuthorizationService.applyAuthorizationPolicy(
-            template.space.id,
+            template.contentSpace.id,
             template.authorization
           );
         updatedAuthorizations.push(...spaceContentAuthorizations);

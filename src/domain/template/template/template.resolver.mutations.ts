@@ -66,7 +66,7 @@ export class TemplateResolverMutations {
       {
         relations: {
           templatesSet: true,
-          space: {
+          contentSpace: {
             collaboration: {
               innovationFlow: true,
               calloutsSet: {

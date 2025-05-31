@@ -13,7 +13,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
       `DROP INDEX \`REL_21fdaf6dc88bdd6e8839e29b0b\` ON \`template\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`template\` ADD \`spaceId\` char(36) NULL`
+      `ALTER TABLE \`template\` ADD \`contentSpaceId\` char(36) NULL`
     );
     await queryRunner.query(
       `CREATE TABLE \`template_content_space\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`rowId\` int NOT NULL AUTO_INCREMENT, \`settings\` json NOT NULL, \`level\` int NOT NULL, \`authorizationId\` char(36) NULL, \`collaborationId\` char(36) NULL, \`aboutId\` char(36) NULL, UNIQUE INDEX \`IDX_93791de89f18db45fe1e9bd5e5\` (\`rowId\`), UNIQUE INDEX \`REL_6c3991ba75f25e07d478a6296d\` (\`authorizationId\`), UNIQUE INDEX \`REL_1101883dd80b6c54f3171979b9\` (\`collaborationId\`), UNIQUE INDEX \`REL_9d01f912e7465553e45a551509\` (\`aboutId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
@@ -103,7 +103,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
       );
       // 5. Update template to point to new space content
       await queryRunner.query(
-        `UPDATE \`template\` SET spaceId = ? WHERE id = ?`,
+        `UPDATE \`template\` SET contentSpaceId = ? WHERE id = ?`,
         [spaceContentId, template.id]
       );
     }
@@ -114,10 +114,10 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
     // --- End migration logic ---
 
     await queryRunner.query(
-      `ALTER TABLE \`template\` ADD UNIQUE INDEX \`IDX_cbe03a4e82a555fe315271ca9f\` (\`spaceId\`)`
+      `ALTER TABLE \`template\` ADD UNIQUE INDEX \`IDX_cbe03a4e82a555fe315271ca9f\` (\`contentSpaceId\`)`
     );
     await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_cbe03a4e82a555fe315271ca9f\` ON \`template\` (\`spaceId\`)`
+      `CREATE UNIQUE INDEX \`REL_cbe03a4e82a555fe315271ca9f\` ON \`template\` (\`contentSpaceId\`)`
     );
     await queryRunner.query(
       `ALTER TABLE \`template_content_space\` ADD CONSTRAINT \`FK_6c3991ba75f25e07d478a6296dd\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -129,7 +129,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
       `ALTER TABLE \`template_content_space\` ADD CONSTRAINT \`FK_9d01f912e7465553e45a551509b\` FOREIGN KEY (\`aboutId\`) REFERENCES \`space_about\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`template\` ADD CONSTRAINT \`FK_cbe03a4e82a555fe315271ca9f8\` FOREIGN KEY (\`spaceId\`) REFERENCES \`template_content_space\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`template\` ADD CONSTRAINT \`FK_cbe03a4e82a555fe315271ca9f8\` FOREIGN KEY (\`contentSpaceId\`) REFERENCES \`template_content_space\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       'ALTER TABLE `template` DROP COLUMN `collaborationId`'
@@ -169,7 +169,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
     );
     await queryRunner.query(`DROP TABLE \`template_content_space\``);
     await queryRunner.query(
-      `ALTER TABLE \`template\` CHANGE \`spaceId\` \`collaborationId\` char(36) NULL`
+      `ALTER TABLE \`template\` CHANGE \`contentSpaceId\` \`collaborationId\` char(36) NULL`
     );
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_21fdaf6dc88bdd6e8839e29b0b\` ON \`template\` (\`collaborationId\`)`

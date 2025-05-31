@@ -62,5 +62,5 @@ export class Template extends NameableEntity implements ITemplate {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  space?: TemplateContentSpace;
+  contentSpace?: TemplateContentSpace;
 }

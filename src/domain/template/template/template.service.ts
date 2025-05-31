@@ -153,7 +153,7 @@ export class TemplateService {
           calloutData.isTemplate = true;
           calloutData.enableComments = false;
         });
-        template.space =
+        template.contentSpace =
           await this.templateContentSpaceService.createTemplateContentSpace(
             spaceData!,
             storageAggregator
@@ -287,7 +287,10 @@ export class TemplateService {
     templateData: UpdateTemplateFromSpaceInput,
     userID: string
   ): Promise<ITemplate> {
-    if (!templateInput.space || !templateInput.space.collaboration) {
+    if (
+      !templateInput.contentSpace ||
+      !templateInput.contentSpace.collaboration
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to updateTemplate as not all entities are loaded: ${templateInput.id} `,
         LogContext.TEMPLATES
@@ -308,20 +311,20 @@ export class TemplateService {
     );
 
     if (
-      templateInput.space.collaboration.calloutsSet &&
-      templateInput.space.collaboration.calloutsSet.callouts &&
-      templateInput.space.collaboration.calloutsSet.callouts.length > 0
+      templateInput.contentSpace.collaboration.calloutsSet &&
+      templateInput.contentSpace.collaboration.calloutsSet.callouts &&
+      templateInput.contentSpace.collaboration.calloutsSet.callouts.length > 0
     ) {
-      for (const callout of templateInput.space.collaboration.calloutsSet
+      for (const callout of templateInput.contentSpace.collaboration.calloutsSet
         .callouts) {
         await this.calloutService.deleteCallout(callout.id);
       }
-      templateInput.space.collaboration.calloutsSet.callouts = [];
+      templateInput.contentSpace.collaboration.calloutsSet.callouts = [];
     }
 
-    templateInput.space = await this.updateTemplateContentSpaceFromSpace(
+    templateInput.contentSpace = await this.updateTemplateContentSpaceFromSpace(
       sourceSpace,
-      templateInput.space,
+      templateInput.contentSpace,
       true,
       userID
     );
@@ -416,7 +419,7 @@ export class TemplateService {
         communityGuidelines: true,
         callout: true,
         whiteboard: true,
-        space: true,
+        contentSpace: true,
       },
     });
 
@@ -460,14 +463,14 @@ export class TemplateService {
         break;
       }
       case TemplateType.SPACE: {
-        if (!template.space) {
+        if (!template.contentSpace) {
           throw new RelationshipNotFoundException(
             `Unable to load Space content on Template: ${templateInput.id} `,
             LogContext.TEMPLATES
           );
         }
         await this.templateContentSpaceService.deleteTemplateContentSpaceOrFail(
-          template.space.id
+          template.contentSpace.id
         );
         break;
       }
@@ -612,31 +615,31 @@ export class TemplateService {
   ): Promise<ITemplateContentSpace> {
     const template = await this.getTemplateOrFail(templateID, {
       relations: {
-        space: true,
+        contentSpace: true,
       },
     });
-    if (!template.space) {
+    if (!template.contentSpace) {
       throw new RelationshipNotFoundException(
         `Unable to load Template with Space content: ${template.id} `,
         LogContext.TEMPLATES
       );
     }
-    return template.space;
+    return template.contentSpace;
   }
 
   async getSpace(templateID: string): Promise<ITemplateContentSpace> {
     const template = await this.getTemplateOrFail(templateID, {
       relations: {
-        space: true,
+        contentSpace: true,
       },
     });
-    if (!template.space) {
+    if (!template.contentSpace) {
       throw new RelationshipNotFoundException(
         `Unable to load Template with Space content: ${template.id} `,
         LogContext.TEMPLATES
       );
     }
-    return template.space;
+    return template.contentSpace;
   }
 
   public async isTemplateInUseInTemplateDefault(

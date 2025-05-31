@@ -28,5 +28,5 @@ export abstract class ITemplate extends INameable {
   communityGuidelines?: ICommunityGuidelines;
   callout?: ICallout;
   whiteboard?: IWhiteboard;
-  space?: ITemplateContentSpace;
+  contentSpace?: ITemplateContentSpace;
 }

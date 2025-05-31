@@ -365,7 +365,7 @@ export class UrlGeneratorService {
   private async getSpaceTemplateUrlPathOrFail(collaborationId: string) {
     const template = await this.entityManager.findOne(Template, {
       where: {
-        space: {
+        contentSpace: {
           collaboration: {
             id: collaborationId,
           },

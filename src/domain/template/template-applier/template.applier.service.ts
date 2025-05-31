@@ -30,14 +30,14 @@ export class TemplateApplierService {
     const templateWithContentSpace =
       await this.templateService.getTemplateOrFail(updateData.spaceTemplateID, {
         relations: {
-          space: {
+          contentSpace: {
             collaboration: true,
           },
         },
       });
     if (
-      !templateWithContentSpace.space ||
-      !templateWithContentSpace.space.collaboration
+      !templateWithContentSpace.contentSpace ||
+      !templateWithContentSpace.contentSpace.collaboration
     ) {
       throw new RelationshipNotFoundException(
         `Template with ID ${updateData.spaceTemplateID} does not have a Space associated.`,
@@ -47,7 +47,7 @@ export class TemplateApplierService {
 
     return this.updateCollaborationFromTemplateContentSpace(
       targetCollaboration,
-      templateWithContentSpace.space,
+      templateWithContentSpace.contentSpace,
       updateData.addCallouts,
       userID
     );
