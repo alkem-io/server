@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter';
 
 export class SpaceTemplate1748628720999 implements MigrationInterface {
   name = 'SpaceTemplate1748628720999';
@@ -71,7 +72,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
         oldProfile?.storageBucketId
       );
       await queryRunner.query(
-        `INSERT INTO space_about (id, version, why, who, authorizationId, profileId, guidelinesId) VALUES (?, 1, ?, ?, ?, ?)`,
+        `INSERT INTO space_about (id, version, why, who, authorizationId, profileId, guidelinesId) VALUES (?, 1, ?, ?, ?, ?, ?)`,
         [
           aboutUUID,
           aboutWhy,
@@ -253,9 +254,8 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
       'Please fill out the community guidelines here'
     );
     await queryRunner.query(
-      `INSERT INTO community_guidelines (id, version, authorizationId, allowedMimeTypes, maxFileSize, storageAggregatorId)
-        SELECT '${newGuidelinesId}' as id, 1 as version, '${authID}' as authorizationId, allowedMimeTypes, maxFileSize, storageAggregatorId
-          FROM storage_bucket WHERE id = '${siblingStorageBucketID}'`
+      `INSERT INTO community_guidelines (id, version, authorizationId, profileId) VALUES (?, 1, ?, ?)`,
+      [newGuidelinesId, authID, profileID]
     );
 
     return newGuidelinesId;
