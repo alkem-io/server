@@ -41,8 +41,8 @@ export class SpaceDefaultsService {
     templateSpaceContent: ITemplateContentSpace
   ): Promise<CreateCollaborationOnSpaceInput> {
     const collaborationDataFromTemplate =
-      await this.getCreateCollaborationInputFromTemplate(
-        templateSpaceContent.id
+      await this.getCreateCollaborationInputFromContentSpace(
+        templateSpaceContent
       );
     if (!collaborationDataFromTemplate) {
       throw new RelationshipNotFoundException(
@@ -186,9 +186,13 @@ export class SpaceDefaultsService {
       await this.platformTemplatesService.getPlatformDefaultTemplateByType(
         TemplateDefaultType.PLATFORM_SPACE_TUTORIALS
       );
-    const tutorialsInputFromTemplate =
-      await this.getCreateCollaborationInputFromTemplate(
+    const contentSpaceFromTemplate =
+      await this.templateService.getTemplateContentSpace(
         tutorialsSpaceContentTemplate.id
+      );
+    const tutorialsInputFromTemplate =
+      await this.getCreateCollaborationInputFromContentSpace(
+        contentSpaceFromTemplate
       );
 
     if (tutorialsInputFromTemplate?.calloutsSetData.calloutsData) {
@@ -211,14 +215,12 @@ export class SpaceDefaultsService {
     return collaborationData;
   }
 
-  private async getCreateCollaborationInputFromTemplate(
-    templateID: string
+  private async getCreateCollaborationInputFromContentSpace(
+    contentSpaceFromTemplate: ITemplateContentSpace
   ): Promise<CreateCollaborationInput | undefined> {
-    const contentSpaceFromTemplate =
-      await this.templateService.getTemplateContentSpace(templateID);
     if (!contentSpaceFromTemplate?.collaboration) {
       throw new RelationshipNotFoundException(
-        `Collaboration not found in SpaceContentTemplate with ID: ${templateID}`,
+        `Collaboration not found in SpaceContent with ID: ${contentSpaceFromTemplate}`,
         LogContext.TEMPLATES
       );
     }
