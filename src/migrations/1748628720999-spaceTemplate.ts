@@ -66,9 +66,20 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
       // Create space_about using the new profile and new about authorization
       const aboutWhy = `Fill out the why here`;
       const aboutWho = `Fill out the who here`;
+      const communityGuidelinesId = await this.createCommunityGuidelines(
+        queryRunner,
+        oldProfile?.storageBucketId
+      );
       await queryRunner.query(
-        `INSERT INTO space_about (id, version, why, who, authorizationId, profileId) VALUES (?, 1, ?, ?, ?, ?)`,
-        [aboutUUID, aboutWhy, aboutWho, aboutAuthUUID, profileId]
+        `INSERT INTO space_about (id, version, why, who, authorizationId, profileId, guidelinesId) VALUES (?, 1, ?, ?, ?, ?)`,
+        [
+          aboutUUID,
+          aboutWhy,
+          aboutWho,
+          aboutAuthUUID,
+          profileId,
+          communityGuidelinesId,
+        ]
       );
       // 4. Create new template_content_space, with a new authorization policy and set level to 1
       const spaceContentId = randomUUID();
@@ -76,7 +87,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
         queryRunner,
         'template-content-space'
       );
-      const settings = JSON.stringify({}); // Default settings, adjust as needed
+      const settings = JSON.stringify(spaceDefaultsSettingsL1); // Default settings, adjust as needed
       const level = 1;
       await queryRunner.query(
         `INSERT INTO template_content_space (id, version, settings, level, authorizationId, collaborationId, aboutId) VALUES (?, 1, ?, ?, ?, ?, ?)`,
@@ -182,7 +193,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
 
   private async createProfile(
     queryRunner: QueryRunner,
-    entityName: string,
+    displayName: string,
     siblingStorageBucketID: string,
     profileType: string,
     description: string
@@ -206,7 +217,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
         profileId,
         authID,
         locationId,
-        `${entityName} Template`,
+        `${displayName} Template`,
         description,
         profileStorageBucketId,
         profileType,
@@ -223,6 +234,31 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
       [tagsetId, tagsetAuthId, profileId]
     );
     return profileId;
+  }
+
+  private async createCommunityGuidelines(
+    queryRunner: QueryRunner,
+    siblingStorageBucketID: string
+  ): Promise<string> {
+    const newGuidelinesId = randomUUID();
+    const authID = await this.createAuthorizationPolicy(
+      queryRunner,
+      'community-guidelines'
+    );
+    const profileID = await this.createProfile(
+      queryRunner,
+      'Professional Networking Community Name',
+      siblingStorageBucketID,
+      'community-guidelines',
+      'Please fill out the community guidelines here'
+    );
+    await queryRunner.query(
+      `INSERT INTO community_guidelines (id, version, authorizationId, allowedMimeTypes, maxFileSize, storageAggregatorId)
+        SELECT '${newGuidelinesId}' as id, 1 as version, '${authID}' as authorizationId, allowedMimeTypes, maxFileSize, storageAggregatorId
+          FROM storage_bucket WHERE id = '${siblingStorageBucketID}'`
+    );
+
+    return newGuidelinesId;
   }
 
   private async createStorageBucket(
@@ -244,3 +280,21 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
     return newStorageBucketId;
   }
 }
+
+export const spaceDefaultsSettingsL1 = {
+  privacy: {
+    mode: 'public',
+    allowPlatformSupportAsAdmin: false,
+  },
+  membership: {
+    policy: 'open',
+    trustedOrganizations: [],
+    allowSubspaceAdminsToInviteMembers: false,
+  },
+  collaboration: {
+    inheritMembershipRights: true,
+    allowMembersToCreateSubspaces: true,
+    allowMembersToCreateCallouts: true,
+    allowEventsFromSubspaces: true,
+  },
+};
