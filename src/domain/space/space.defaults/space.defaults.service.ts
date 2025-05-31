@@ -174,20 +174,6 @@ export class SpaceDefaultsService {
     return collaborationData;
   }
 
-  private async getCreateCollaborationInputFromTemplatesManager(
-    templatesManager: ITemplatesManager,
-    templateDefaultType: TemplateDefaultType
-  ): Promise<CreateCollaborationInput | undefined> {
-    const template =
-      await this.templatesManagerService.getTemplateFromTemplateDefault(
-        templatesManager.id,
-        templateDefaultType
-      );
-    if (!template) return undefined;
-
-    return await this.getCreateCollaborationInputFromTemplate(template.id);
-  }
-
   private async getCreateCollaborationInputFromTemplate(
     templateID: string
   ): Promise<CreateCollaborationInput | undefined> {
