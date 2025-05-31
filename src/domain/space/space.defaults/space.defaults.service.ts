@@ -102,18 +102,24 @@ export class SpaceDefaultsService {
 
     if (collaborationData.spaceTemplateID) {
       templateWithSpaceContent = await this.templateService.getTemplateOrFail(
-        collaborationData.spaceTemplateID
+        collaborationData.spaceTemplateID,
+        {
+          relations: {
+            contentSpace: {
+              collaboration: true,
+              about: true,
+            },
+          },
+        }
       );
     } else if (platformTemplate) {
       templateWithSpaceContent =
-        await this.platformTemplatesService.getPlatformDefaultTemplateByType(
-          platformTemplate
-        );
+        await this.getPlatformTemplateWithSpaceContent(platformTemplate);
     } else {
       switch (spaceLevel) {
         case SpaceLevel.L0:
           templateWithSpaceContent =
-            await this.platformTemplatesService.getPlatformDefaultTemplateByType(
+            await this.getPlatformTemplateWithSpaceContent(
               TemplateDefaultType.PLATFORM_SPACE
             );
           break;
@@ -138,7 +144,7 @@ export class SpaceDefaultsService {
           }
           if (!templateWithSpaceContent) {
             templateWithSpaceContent =
-              await this.platformTemplatesService.getPlatformDefaultTemplateByType(
+              await this.getPlatformTemplateWithSpaceContent(
                 TemplateDefaultType.PLATFORM_SUBSPACE
               );
           }
@@ -157,6 +163,45 @@ export class SpaceDefaultsService {
       );
     }
     return templateWithSpaceContent.contentSpace;
+  }
+
+  private async getPlatformTemplateWithSpaceContent(
+    platformTemplate: TemplateDefaultType
+  ): Promise<ITemplate> {
+    const templateWithSpaceContent =
+      await this.platformTemplatesService.getPlatformDefaultTemplateByType(
+        platformTemplate
+      );
+    if (!templateWithSpaceContent) {
+      throw new ValidationException(
+        `Unable to get platform template for type: ${platformTemplate}`,
+        LogContext.TEMPLATES
+      );
+    }
+    // Reload to get the data
+    const templateWithSpaceContentReloaded =
+      await this.templateService.getTemplateOrFail(
+        templateWithSpaceContent.id,
+        {
+          relations: {
+            contentSpace: {
+              collaboration: true,
+              about: true,
+            },
+          },
+        }
+      );
+
+    if (
+      !templateWithSpaceContentReloaded.contentSpace ||
+      !templateWithSpaceContentReloaded.contentSpace.collaboration
+    ) {
+      throw new ValidationException(
+        `Unable to get platform template with space content for type: ${platformTemplate}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templateWithSpaceContentReloaded;
   }
 
   public async addTutorialCalloutsFromTemplate(
