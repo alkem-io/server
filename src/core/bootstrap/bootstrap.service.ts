@@ -39,15 +39,8 @@ import { TemplateDefaultService } from '@domain/template/template-default/templa
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
-import { bootstrapSubspaceKnowledgeInnovationFlow } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.innovation.flow';
-import { bootstrapSubspaceKnowledgeCallouts } from './platform-template-definitions/subspace-knowledge/bootstrap.subspace.knowledge.callouts';
 import { ITemplateDefault } from '@domain/template/template-default/template.default.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
-import { bootstrapSubspaceInnovationFlow } from './platform-template-definitions/subspace/bootstrap.subspace.innovation.flow';
-import { bootstrapSubspaceCallouts } from './platform-template-definitions/subspace/bootstrap.subspace.callouts';
-import { bootstrapSpaceInnovationFlow } from './platform-template-definitions/space/bootstrap.space.innovation.flow';
-import { bootstrapSpaceCallouts } from './platform-template-definitions/space/bootstrap.space.callouts';
-import { bootstrapSpaceTutorialsCallouts } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.callouts';
 import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
@@ -58,8 +51,11 @@ import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.k
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
-import { bootstrapSpaceTutorialsInnovationFlow } from './platform-template-definitions/space-tutorials/bootstrap.space.tutorials.innovation.flow';
+import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
+import { bootstrapTemplateSpaceContentSpaceL0 } from './platform-template-definitions/default-templates/bootstrap.template.space.content.space.l0';
+import { bootstrapTemplateSpaceContentSubspace } from './platform-template-definitions/default-templates/bootstrap.template.space.content.subspace';
+import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
+import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base';
 
 @Injectable()
 export class BootstrapService {
@@ -147,8 +143,7 @@ export class BootstrapService {
       TemplateDefaultType.PLATFORM_SPACE,
       templatesSet,
       'space',
-      bootstrapSpaceInnovationFlow,
-      bootstrapSpaceCallouts
+      bootstrapTemplateSpaceContentSpaceL0
     );
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
@@ -156,8 +151,7 @@ export class BootstrapService {
         TemplateDefaultType.PLATFORM_SUBSPACE,
         templatesSet,
         'subspace',
-        bootstrapSubspaceInnovationFlow,
-        bootstrapSubspaceCallouts
+        bootstrapTemplateSpaceContentSubspace
       )) || authResetNeeded;
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
@@ -165,8 +159,7 @@ export class BootstrapService {
         TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
         templatesSet,
         'space-tutorials',
-        bootstrapSpaceTutorialsInnovationFlow,
-        bootstrapSpaceTutorialsCallouts
+        bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials
       )) || authResetNeeded;
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
@@ -174,8 +167,7 @@ export class BootstrapService {
         TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
         templatesSet,
         'knowledge',
-        bootstrapSubspaceKnowledgeInnovationFlow,
-        bootstrapSubspaceKnowledgeCallouts
+        bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase
       )) || authResetNeeded;
     if (authResetNeeded) {
       this.logger.verbose?.(
@@ -193,8 +185,7 @@ export class BootstrapService {
     templateDefaultType: TemplateDefaultType,
     templatesSet: ITemplatesSet,
     nameID: string,
-    innovationFlowData: CreateInnovationFlowInput,
-    callouts: any[]
+    spaceContentData: CreateTemplateContentSpaceInput
   ): Promise<boolean> {
     const knowledgeTemplateDefault = templateDefaults.find(
       td => td.type === templateDefaultType
@@ -217,22 +208,7 @@ export class BootstrapService {
             displayName: `${nameID}-Template`,
           },
           type: TemplateType.SPACE,
-          contentSpaceData: {
-            collaborationData: {
-              innovationFlowData,
-              calloutsSetData: {
-                calloutsData: callouts,
-              },
-            },
-            level: SpaceLevel.L1,
-            about: {
-              profileData: {
-                displayName: `${nameID} Space`,
-                tagline: `A space for ${nameID} knowledge`,
-              },
-            },
-            settings: {},
-          },
+          contentSpaceData: spaceContentData,
         }
       );
       // Set the default template

@@ -121,9 +121,15 @@ export class SpaceService {
     space.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.SPACE
     );
-    space.settings = this.spaceDefaultsService.getDefaultSpaceSettings(
-      space.level
-    );
+
+    const templateSpaceContent =
+      await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
+        spaceData.collaborationData,
+        space.level,
+        spaceData.platformTemplate,
+        spaceData.templatesManagerParent
+      );
+    space.settings = templateSpaceContent.settings;
 
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -166,14 +172,6 @@ export class SpaceService {
       space.levelZeroSpaceID = space.id;
     }
 
-    const templateWithSpaceContent =
-      await this.spaceDefaultsService.getSpaceContentTemplateToAugmentFrom(
-        spaceData.collaborationData,
-        space.level,
-        spaceData.platformTemplate,
-        spaceData.templatesManagerParent
-      );
-
     //// Collaboration
     let updatedCollaborationData: CreateCollaborationInput =
       spaceData.collaborationData;
@@ -182,7 +180,7 @@ export class SpaceService {
     updatedCollaborationData =
       await this.spaceDefaultsService.createCollaborationInput(
         updatedCollaborationData,
-        templateWithSpaceContent
+        templateSpaceContent
       );
     if (spaceData.collaborationData.addTutorialCallouts) {
       updatedCollaborationData =

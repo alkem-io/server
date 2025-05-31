@@ -1,6 +1,5 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums/logging.context';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
 import { spaceCommunityRoles } from './definitions/space.community.roles';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
@@ -8,9 +7,6 @@ import { subspaceCommunityApplicationForm } from './definitions/subspace.communi
 import { spaceCommunityApplicationForm } from './definitions/space.community.role.application.form';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { spaceDefaultsSettingsL0 } from './definitions/settings/space.defaults.settings.l0';
-import { spaceDefaultsSettingsL2 } from './definitions/settings/space.defaults.settings.l2';
-import { spaceDefaultsSettingsL1 } from './definitions/settings/space.defaults.settings.l1';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.collaboration';
 import { TemplateService } from '@domain/template/template/template.service';
@@ -27,6 +23,7 @@ import { PlatformTemplatesService } from '@platform/platform-templates/platform.
 import { ITemplate } from '@domain/template/template/template.interface';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -41,15 +38,15 @@ export class SpaceDefaultsService {
 
   public async createCollaborationInput(
     collaborationData: CreateCollaborationOnSpaceInput,
-    templateWithSpaceContent: ITemplate
+    templateSpaceContent: ITemplateContentSpace
   ): Promise<CreateCollaborationOnSpaceInput> {
     const collaborationDataFromTemplate =
       await this.getCreateCollaborationInputFromTemplate(
-        templateWithSpaceContent.id
+        templateSpaceContent.id
       );
     if (!collaborationDataFromTemplate) {
       throw new RelationshipNotFoundException(
-        `Collaboration not found in template with ID: ${templateWithSpaceContent.id}`,
+        `Collaboration not found in template with ID: ${templateSpaceContent.id}`,
         LogContext.TEMPLATES
       );
     }
@@ -94,12 +91,12 @@ export class SpaceDefaultsService {
     return collaborationData;
   }
 
-  public async getSpaceContentTemplateToAugmentFrom(
+  public async getTemplateSpaceContentToAugmentFrom(
     collaborationData: CreateCollaborationOnSpaceInput,
     spaceLevel: SpaceLevel,
     platformTemplate?: TemplateDefaultType,
     spaceL0TemplatesManager?: ITemplatesManager
-  ): Promise<ITemplate> {
+  ): Promise<ITemplateContentSpace> {
     // First get the template to augment the provided data with
     let templateWithSpaceContent: ITemplate | undefined = undefined;
 
@@ -159,7 +156,7 @@ export class SpaceDefaultsService {
         LogContext.SPACES
       );
     }
-    return templateWithSpaceContent;
+    return templateWithSpaceContent.contentSpace;
   }
 
   public async addTutorialCalloutsFromTemplate(
@@ -236,22 +233,6 @@ export class SpaceDefaultsService {
         return subspaceCommunityApplicationForm;
       case SpaceLevel.L0:
         return spaceCommunityApplicationForm;
-    }
-  }
-
-  public getDefaultSpaceSettings(spaceLevel: SpaceLevel): ISpaceSettings {
-    switch (spaceLevel) {
-      case SpaceLevel.L0:
-        return spaceDefaultsSettingsL0;
-      case SpaceLevel.L1:
-        return spaceDefaultsSettingsL1;
-      case SpaceLevel.L2:
-        return spaceDefaultsSettingsL2;
-      default:
-        throw new EntityNotInitializedException(
-          `Invalid space level: ${spaceLevel}`,
-          LogContext.ROLES
-        );
     }
   }
 }

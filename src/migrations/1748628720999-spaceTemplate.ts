@@ -1,6 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter';
 
 export class SpaceTemplate1748628720999 implements MigrationInterface {
   name = 'SpaceTemplate1748628720999';
@@ -281,6 +280,7 @@ export class SpaceTemplate1748628720999 implements MigrationInterface {
   }
 }
 
+// TODO: need to have the L0 ones also available + choose the right one depending on the template
 export const spaceDefaultsSettingsL1 = {
   privacy: {
     mode: 'public',
