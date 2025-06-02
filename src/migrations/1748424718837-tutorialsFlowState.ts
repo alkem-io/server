@@ -5,7 +5,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class TutorialsFlowState1748424718837 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Get the calloutsSetId from the collaboration associated with the platform space tutorials template
-    const [{ calloutsSetId }]: { calloutsSetId: string }[] =
+    const [collaboration]: { calloutsSetId: string }[] =
       await queryRunner.query(
         `SELECT calloutsSetId FROM collaboration WHERE id = (
           SELECT collaborationId FROM template WHERE id = (
@@ -15,6 +15,13 @@ export class TutorialsFlowState1748424718837 implements MigrationInterface {
           )
         )`
       );
+    if (!collaboration) {
+      console.warn(
+        'No collaboration found for platform space tutorials template. Skipping flow state updates.'
+      );
+      return;
+    }
+    const { calloutsSetId } = collaboration;
 
     // Get the callouts of the tutorial
     const callouts: {
