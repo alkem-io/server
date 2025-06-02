@@ -8,16 +8,15 @@ export class RefAuths1748628720167 implements MigrationInterface {
         SELECT id FROM reference
         WHERE authorizationId IS NULL
       `);
-    for (const policy of referencesWithoutAuthorization) {
+    for (const reference of referencesWithoutAuthorization) {
       const authId = await this.createAuthorizationPolicy(
         queryRunner,
         'reference'
       );
-      await queryRunner.query(`
-          UPDATE reference
-          SET authorizationId = '${authId}'
-          WHERE id = '${policy.id}'
-        `);
+      await queryRunner.query(
+        `UPDATE reference SET authorizationId = ? WHERE id = ?`,
+        [authId, reference.id]
+      );
     }
   }
 
@@ -29,9 +28,9 @@ export class RefAuths1748628720167 implements MigrationInterface {
   ): Promise<string> {
     const authID = randomUUID();
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, privilegeRules, type) VALUES
-                              ('${authID}',
-                              1, '[]', '[]', '[]', '${policyType}')`
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, privilegeRules, type)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [authID, 1, '[]', '[]', '[]', policyType]
     );
     return authID;
   }
