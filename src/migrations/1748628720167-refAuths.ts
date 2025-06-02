@@ -14,7 +14,7 @@ export class RefAuths1748628720167 implements MigrationInterface {
         'reference'
       );
       await queryRunner.query(
-        `UPDATE reference SET authorizationId = $1 WHERE id = $2`,
+        `UPDATE reference SET authorizationId = ? WHERE id = ?`,
         [authId, reference.id]
       );
     }
@@ -28,9 +28,9 @@ export class RefAuths1748628720167 implements MigrationInterface {
   ): Promise<string> {
     const authID = randomUUID();
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, privilegeRules, type) VALUES
-                              ('${authID}',
-                              1, '[]', '[]', '[]', '${policyType}')`
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, privilegeRules, type)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [authID, 1, '[]', '[]', '[]', policyType]
     );
     return authID;
   }
