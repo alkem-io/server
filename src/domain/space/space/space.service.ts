@@ -124,8 +124,8 @@ export class SpaceService {
 
     const templateSpaceContent =
       await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
-        spaceData.collaborationData,
         space.level,
+        spaceData.spaceTemplateID,
         spaceData.platformTemplate,
         spaceData.templatesManagerParent
       );

@@ -92,22 +92,21 @@ export class SpaceDefaultsService {
   }
 
   public async getTemplateSpaceContentToAugmentFrom(
-    collaborationData: CreateCollaborationOnSpaceInput,
     spaceLevel: SpaceLevel,
-    platformTemplate?: TemplateDefaultType,
+    spaceTemplateID?: string,
+    platformTemplateType?: TemplateDefaultType,
     spaceL0TemplatesManager?: ITemplatesManager
   ): Promise<ITemplateContentSpace> {
     // First get the template to augment the provided data with
     let templateWithSpaceContent: ITemplate | undefined = undefined;
 
-    if (collaborationData.spaceTemplateID) {
-      templateWithSpaceContent = await this.templateService.getTemplateOrFail(
-        collaborationData.spaceTemplateID
-      );
-    } else if (platformTemplate) {
+    if (spaceTemplateID) {
+      templateWithSpaceContent =
+        await this.templateService.getTemplateOrFail(spaceTemplateID);
+    } else if (platformTemplateType) {
       templateWithSpaceContent =
         await this.platformTemplatesService.getPlatformDefaultTemplateByType(
-          platformTemplate
+          platformTemplateType
         );
     } else {
       switch (spaceLevel) {
@@ -149,7 +148,7 @@ export class SpaceDefaultsService {
 
     if (!templateWithSpaceContent) {
       throw new ValidationException(
-        `Unable to get platform template for type: ${platformTemplate}`,
+        `Unable to get platform template for type: ${platformTemplateType}`,
         LogContext.TEMPLATES
       );
     }
@@ -172,7 +171,7 @@ export class SpaceDefaultsService {
       !templateWithSpaceContentReloaded.contentSpace.collaboration
     ) {
       throw new ValidationException(
-        `Unable to get platform template with space content for type: ${platformTemplate}`,
+        `Unable to get platform template with space content for type: ${platformTemplateType}`,
         LogContext.TEMPLATES
       );
     }

@@ -8,6 +8,7 @@ import { ITemplatesManager } from '@domain/template/templates-manager';
 import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @InputType()
 export class CreateSpaceInput {
@@ -38,6 +39,12 @@ export class CreateSpaceInput {
     nullable: true,
     description: 'Pick up a different platform template.',
   })
-  @IsOptional()
   platformTemplate?: TemplateDefaultType;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description: 'The Template to use for instantiating the Collaboration.',
+  })
+  @IsOptional()
+  spaceTemplateID?: string;
 }
