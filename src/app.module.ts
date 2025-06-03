@@ -92,6 +92,7 @@ import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/ca
 import { SearchModule } from '@services/api/search/search.module';
 import { ApmApolloPlugin } from './apm/plugins';
 import { AuthInterceptor } from '@core/interceptors';
+import { HocuspocusModule } from '@services/collaboration/hocuspocus/hocuspocus.module';
 
 @Module({
   imports: [
@@ -310,6 +311,7 @@ import { AuthInterceptor } from '@core/interceptors';
     WingbackWebhookModule,
     CalloutTransferModule,
     SearchModule,
+    HocuspocusModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

@@ -16,6 +16,7 @@ import { INestApplication } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
 import { renderGraphiQL } from 'graphql-helix';
 import { Request, Response } from 'express';
+import { HocuspocusService } from './services/collaboration/hocuspocus/hocuspocus.service';
 // this is used - it needs to start before the app
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { apmAgent } from './apm';
@@ -87,6 +88,10 @@ const bootstrap = async () => {
   });
 
   await app.listen(port);
+
+  // Start Hocuspocus collaboration server
+  const hocuspocusService: HocuspocusService = app.get(HocuspocusService);
+  await hocuspocusService.startServer();
 
   const connectionOptions = configService.get(
     'microservices.rabbitmq.connection',
