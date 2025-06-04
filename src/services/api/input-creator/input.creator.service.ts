@@ -153,7 +153,9 @@ export class InputCreatorService {
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
         collaboration: true,
-        about: true,
+        about: {
+          profile: true,
+        },
       },
     });
     if (!space.collaboration || !space.about) {
@@ -187,7 +189,9 @@ export class InputCreatorService {
         {
           relations: {
             collaboration: true,
-            about: true,
+            about: {
+              profile: true,
+            },
           },
         }
       );
@@ -321,6 +325,8 @@ export class InputCreatorService {
   ): CreateSpaceAboutInput {
     const result: CreateSpaceAboutInput = {
       profileData: this.buildCreateProfileInputFromProfile(spaceAbout.profile),
+      who: spaceAbout.who,
+      why: spaceAbout.why,
     };
 
     return result;
@@ -381,6 +387,15 @@ export class InputCreatorService {
   private buildCreateProfileInputFromProfile(
     profile: IProfile
   ): CreateProfileInput {
+    if (!profile) {
+      throw new EntityNotInitializedException(
+        'Profile not fully initialized',
+        LogContext.INPUT_CREATOR,
+        {
+          cause: 'Profile relation not loaded',
+        }
+      );
+    }
     return {
       description: profile.description,
       displayName: profile.displayName,
