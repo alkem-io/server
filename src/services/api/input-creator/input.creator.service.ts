@@ -207,7 +207,6 @@ export class InputCreatorService {
         templateSpaceContent.collaboration.id
       );
 
-    // TODO: Fill out the creation DTO with additional data
     const result: CreateSpaceInput = {
       collaborationData,
       level: templateSpaceContent.level,
@@ -215,7 +214,10 @@ export class InputCreatorService {
         profileData: this.buildCreateProfileInputFromProfile(
           templateSpaceContent.about.profile
         ),
+        who: templateSpaceContent.about.who,
+        why: templateSpaceContent.about.why,
       },
+      settingsData: templateSpaceContent.settings,
     };
 
     return result;

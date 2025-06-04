@@ -9,6 +9,7 @@ import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { CreateSpaceSettingsInput } from '@domain/space/space.settings';
 
 @InputType()
 export class CreateSpaceInput {
@@ -27,6 +28,11 @@ export class CreateSpaceInput {
   @ValidateNested()
   @Type(() => CreateCollaborationOnSpaceInput)
   collaborationData!: CreateCollaborationOnSpaceInput;
+
+  @Field(() => CreateSpaceSettingsInput, { nullable: true })
+  @ValidateNested()
+  @Type(() => CreateSpaceSettingsInput)
+  settingsData?: CreateSpaceSettingsInput;
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;
