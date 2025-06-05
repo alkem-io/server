@@ -17,7 +17,7 @@ import { SpaceCollaborationLoaderCreator } from '@core/dataloader/creators';
 export class TemplateContentSpaceResolverFields {
   constructor() {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
