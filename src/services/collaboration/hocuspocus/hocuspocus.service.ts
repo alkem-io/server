@@ -4,6 +4,7 @@ import { Server } from '@hocuspocus/server';
 import { Logger as HocuspocusLogger } from '@hocuspocus/extension-logger';
 import * as Y from 'yjs';
 import { AlkemioConfig } from '@src/types';
+import { CollaborativeDocumentService } from './collaborative-document.service';
 
 @Injectable()
 export class HocuspocusService implements OnApplicationShutdown {
@@ -11,7 +12,10 @@ export class HocuspocusService implements OnApplicationShutdown {
   private server!: Server;
   private readonly port: number;
 
-  constructor(private configService: ConfigService<AlkemioConfig, true>) {
+  constructor(
+    private configService: ConfigService<AlkemioConfig, true>,
+    private documentService: CollaborativeDocumentService
+  ) {
     // Get port from config or use default
     this.port = this.configService.get('hosting.port', { infer: true }) || 3000;
     this.initializeServer();
@@ -30,10 +34,11 @@ export class HocuspocusService implements OnApplicationShutdown {
       onAuthenticate: async data => {
         const { token, documentName } = data;
 
+        this.logger.log(`Token: ${token}`);
         // Basic validation - in production you'd validate against your auth system
-        if (!token) {
-          throw new Error('Authentication required');
-        }
+        // if (!token) {
+        //   throw new Error('Authentication required');
+        // }
 
         this.logger.log(`Authentication request for document: ${documentName}`);
 
@@ -52,15 +57,40 @@ export class HocuspocusService implements OnApplicationShutdown {
         const { documentName, document } = data;
         this.logger.log(`Loading document: ${documentName}`);
 
-        // Here you could load document content from your database
-        // For now, start with empty document
-        if (Y.encodeStateAsUpdate(document).length === 0) {
-          // Initialize with empty content if document is new
+        try {
+          // Try to load document state from database
+          const storedState =
+            await this.documentService.loadDocument(documentName);
+
+          if (storedState) {
+            // Apply the stored state to the document
+            Y.applyUpdate(document, storedState);
+            this.logger.log(
+              `Successfully loaded document from database: ${documentName}`
+            );
+          } else {
+            // Document doesn't exist in database, initialize with default content
+            this.logger.log(
+              `Document not found in database, initializing: ${documentName}`
+            );
+            const yText = document.getText('content');
+            if (yText.length === 0) {
+              yText.insert(
+                0,
+                `# Welcome to ${documentName}\n\nStart collaborating!`
+              );
+            }
+          }
+        } catch (error) {
+          this.logger.error(`Failed to load document ${documentName}:`, error);
+          // Fallback: initialize with default content
           const yText = document.getText('content');
-          yText.insert(
-            0,
-            `# Welcome to ${documentName}\n\nStart collaborating!`
-          );
+          if (yText.length === 0) {
+            yText.insert(
+              0,
+              `# Welcome to ${documentName}\n\nStart collaborating!`
+            );
+          }
         }
 
         return document;
@@ -70,14 +100,24 @@ export class HocuspocusService implements OnApplicationShutdown {
         const { documentName, document } = data;
         this.logger.log(`Storing document: ${documentName}`);
 
-        // Here you could persist the document to your database
-        const content = document.getText('content').toString();
-        this.logger.debug(
-          `Document content length: ${content.length} characters`
-        );
+        try {
+          // Get the current state of the document
+          const yDocState = Y.encodeStateAsUpdate(document);
+          const textContent = document.getText('content').toString();
 
-        // In a real implementation, save to database
-        // await this.saveDocumentToDatabase(documentName, Y.encodeStateAsUpdate(document));
+          // Save to database
+          await this.documentService.saveDocument(
+            documentName,
+            yDocState,
+            textContent
+          );
+
+          this.logger.debug(
+            `Document saved successfully: ${documentName}, content length: ${textContent.length} characters`
+          );
+        } catch (error) {
+          this.logger.error(`Failed to store document ${documentName}:`, error);
+        }
       },
 
       // Connection lifecycle
