@@ -217,7 +217,7 @@ export class InputCreatorService {
         who: templateSpaceContent.about.who,
         why: templateSpaceContent.about.why,
       },
-      settingsData: templateSpaceContent.settings,
+      settings: templateSpaceContent.settings,
     };
 
     return result;

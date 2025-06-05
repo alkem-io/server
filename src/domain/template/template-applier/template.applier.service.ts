@@ -31,7 +31,12 @@ export class TemplateApplierService {
       await this.templateService.getTemplateOrFail(updateData.spaceTemplateID, {
         relations: {
           contentSpace: {
-            collaboration: true,
+            collaboration: {
+              innovationFlow: true,
+              calloutsSet: {
+                callouts: true,
+              },
+            },
           },
         },
       });

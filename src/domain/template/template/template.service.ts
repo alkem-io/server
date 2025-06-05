@@ -346,7 +346,7 @@ export class TemplateService {
       !templateContentSpace.collaboration?.calloutsSet?.callouts
     ) {
       throw new RelationshipNotFoundException(
-        `Template cannot be applied on entities not fully loaded space.id:'${space.id}' temmplateContentSpace.id='${templateContentSpace.id}'`,
+        `Template cannot be applied on entities not fully loaded space.id:'${space.id}' templateContentSpace.id='${templateContentSpace.id}'`,
         LogContext.TEMPLATES
       );
     }

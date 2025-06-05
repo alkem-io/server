@@ -32,7 +32,7 @@ export class CreateSpaceInput {
   @Field(() => CreateSpaceSettingsInput, { nullable: true })
   @ValidateNested()
   @Type(() => CreateSpaceSettingsInput)
-  settingsData?: CreateSpaceSettingsInput;
+  settings?: CreateSpaceSettingsInput;
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;
