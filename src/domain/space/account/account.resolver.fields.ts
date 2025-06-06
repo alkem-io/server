@@ -42,7 +42,7 @@ export class AccountResolverFields {
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this Account.',
-  })
+  }) // todo
   async agent(
     @Parent() account: Account,
     @Loader(AgentLoaderCreator, { parentClassRef: Account })
@@ -56,7 +56,7 @@ export class AccountResolverFields {
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this Account.',
-  })
+  }) // todo
   async license(
     @Parent() account: Account,
     @Loader(LicenseLoaderCreator, { parentClassRef: Account })

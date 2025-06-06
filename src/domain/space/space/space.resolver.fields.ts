@@ -43,7 +43,7 @@ export class SpaceResolverFields {
   @ResolveField('community', () => ICommunity, {
     nullable: false,
     description: 'Get the Community for the Space. ',
-  })
+  }) // todo
   async community(
     @Parent() space: Space,
     @Loader(SpaceCommunityLoaderCreator, { parentClassRef: Space })
@@ -59,7 +59,7 @@ export class SpaceResolverFields {
   @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
     description: 'About this space.',
-  })
+  }) // todo
   async about(
     @Parent() space: Space,
     @Loader(SpaceAboutLoaderCreator, { parentClassRef: Space })
@@ -90,7 +90,7 @@ export class SpaceResolverFields {
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
     description: 'The collaboration for the Space.',
-  })
+  }) // todo
   async collaboration(
     @Parent() space: Space,
     @Loader(SpaceCollaborationLoaderCreator, { parentClassRef: Space })
@@ -104,7 +104,7 @@ export class SpaceResolverFields {
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this Space.',
-  })
+  }) // todo
   async license(
     @Parent() space: ISpace,
     @Loader(LicenseLoaderCreator, { parentClassRef: Space })
@@ -118,7 +118,7 @@ export class SpaceResolverFields {
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this Space.',
-  })
+  }) // todo
   async agent(
     @Parent() space: Space,
     @Loader(AgentLoaderCreator, { parentClassRef: Space })

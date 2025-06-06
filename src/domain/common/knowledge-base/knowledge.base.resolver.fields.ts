@@ -23,7 +23,7 @@ export class KnowledgeBaseResolverFields {
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for describing this KnowledgeBase.',
-  })
+  }) // todo
   async profile(
     @Parent() knowledgeBase: IKnowledgeBase,
     @Loader(ProfileLoaderCreator, { parentClassRef: KnowledgeBase })
@@ -37,7 +37,7 @@ export class KnowledgeBaseResolverFields {
   @ResolveField('calloutsSet', () => ICalloutsSet, {
     nullable: false,
     description: 'The calloutsSet with Callouts in use by this KnowledgeBase',
-  })
+  }) // todo
   async calloutsSet(
     @Parent() knowledgeBase: IKnowledgeBase,
     @Loader(KnowledgeBaseCalloutsSetLoaderCreator) loader: ILoader<ICalloutsSet>

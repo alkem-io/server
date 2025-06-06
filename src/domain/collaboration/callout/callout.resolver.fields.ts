@@ -126,7 +126,7 @@ export class CalloutResolverFields {
   @ResolveField('publishedBy', () => IUser, {
     nullable: true,
     description: 'The user that published this Callout',
-  })
+  }) // todo investigate out of tick
   async publishedBy(
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
@@ -154,7 +154,7 @@ export class CalloutResolverFields {
   @ResolveField('createdBy', () => IUser, {
     nullable: true,
     description: 'The user that created this Callout',
-  })
+  }) // todo investigate out of tick
   async createdBy(
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>

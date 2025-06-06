@@ -49,7 +49,7 @@ export class UserResolverFields {
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this User.',
-  })
+  }) // todo
   async profile(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo,
@@ -227,7 +227,7 @@ export class UserResolverFields {
     nullable: true,
     description:
       'The StorageAggregator for managing storage buckets in use by this User',
-  })
+  }) // todo
   async storageAggregator(
     @Parent() user: IUser,
     @Loader(UserStorageAggregatorLoaderCreator)

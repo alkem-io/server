@@ -37,7 +37,7 @@ export class VirtualContributorResolverFields {
   @ResolveField('account', () => IAccount, {
     nullable: true,
     description: 'The Account of the Virtual Contributor.',
-  })
+  }) // todo
   async account(
     @Parent() virtualContributor: VirtualContributor,
     @Loader(AccountLoaderCreator, { parentClassRef: VirtualContributor })
@@ -46,7 +46,7 @@ export class VirtualContributorResolverFields {
     let account: IAccount | never;
     try {
       account = await loader.load(virtualContributor.id);
-    } catch (error) {
+    } catch {
       return null;
     }
     return account;
@@ -67,7 +67,7 @@ export class VirtualContributorResolverFields {
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this Virtual.',
-  })
+  }) // todo
   async profile(
     @Parent() virtualContributor: VirtualContributor,
     @Loader(ProfileLoaderCreator, { parentClassRef: VirtualContributor })
@@ -82,7 +82,7 @@ export class VirtualContributorResolverFields {
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
-  })
+  }) // todo
   async agent(
     @Parent() virtualContributor: VirtualContributor,
     @Loader(AgentLoaderCreator, { parentClassRef: VirtualContributor })

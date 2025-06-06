@@ -154,7 +154,7 @@ export class OrganizationResolverFields {
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this Organization.',
-  })
+  }) // todo
   async profile(
     @Parent() organization: Organization,
     @CurrentUser() agentInfo: AgentInfo,
@@ -200,7 +200,7 @@ export class OrganizationResolverFields {
     nullable: true,
     description:
       'The StorageAggregator for managing storage buckets in use by this Organization',
-  })
+  }) // todo
   async storageAggregator(
     @Parent() organization: Organization,
     @Loader(OrganizationStorageAggregatorLoaderCreator)

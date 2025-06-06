@@ -64,7 +64,7 @@ export class InnovationHubResolverFields {
   @ResolveField('account', () => IAccount, {
     nullable: false,
     description: 'The Innovation Hub account.',
-  })
+  }) // todo
   @Profiling.api
   async account(
     @Parent() innovationHub: InnovationHub,

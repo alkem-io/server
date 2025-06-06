@@ -353,7 +353,7 @@ export class RoleSetResolverFields {
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this RoleSet.',
-  })
+  }) // todo
   async license(
     @Parent() roleSet: IRoleSet,
     @Loader(LicenseLoaderCreator, { parentClassRef: RoleSet })

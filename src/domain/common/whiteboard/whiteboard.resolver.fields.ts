@@ -39,6 +39,7 @@ export class WhiteboardResolverFields {
     @Parent() whiteboard: IWhiteboard,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
+    // todo out of tick
     const createdBy = whiteboard.createdBy;
     if (!createdBy) {
       this.logger?.warn(
