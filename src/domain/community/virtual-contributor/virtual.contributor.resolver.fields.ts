@@ -40,16 +40,17 @@ export class VirtualContributorResolverFields {
   }) // todo
   async account(
     @Parent() virtualContributor: VirtualContributor,
-    @Loader(AccountLoaderCreator, { parentClassRef: VirtualContributor })
+    @Loader(AccountLoaderCreator, {
+      parentClassRef: VirtualContributor,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IAccount>
   ): Promise<IAccount | null> {
-    let account: IAccount | never;
     try {
-      account = await loader.load(virtualContributor.id);
+      return await loader.load(virtualContributor.id);
     } catch {
       return null;
     }
-    return account;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

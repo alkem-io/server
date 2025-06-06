@@ -51,7 +51,7 @@ export class DataLoaderInterceptor implements NestInterceptor {
               `${DataLoaderInterceptor.name} unable to resolve ${creatorName}. Make sure that it is provided in your module providers list.`
             );
           })
-          .then(x => {
+          .then(creator => {
             // WORKAROUND -> disable the cache for subscription context
             // these headers are determining if it's a subscription context
             const enableCacheForQueries =
@@ -59,7 +59,7 @@ export class DataLoaderInterceptor implements NestInterceptor {
               (ctx.req.headers.connection !== 'Upgrade' &&
                 ctx.req.headers.upgrade !== 'websocket');
 
-            return x.create({
+            return creator.create({
               ...options,
               cache: enableCacheForQueries,
             });

@@ -21,7 +21,7 @@ export class AccountLoaderCreator implements DataLoaderCreator<IAccount> {
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`
       );
     }
-
+    // todo pass authorization service to the dataloader
     return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
