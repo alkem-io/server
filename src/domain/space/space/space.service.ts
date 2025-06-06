@@ -170,6 +170,8 @@ export class SpaceService {
 
     if (spaceData.level === SpaceLevel.L0) {
       space.levelZeroSpaceID = space.id;
+
+      space.templatesManager = await this.createTemplatesManagerForSpaceL0();
     }
 
     //// Collaboration
@@ -272,6 +274,7 @@ export class SpaceService {
         about: true,
         agent: true,
         storageAggregator: true,
+        templatesManager: true,
         license: true,
       },
     });

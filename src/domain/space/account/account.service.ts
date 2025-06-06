@@ -105,11 +105,6 @@ export class AccountService {
 
     let space = await this.spaceService.createSpace(spaceData, agentInfo);
     space.account = account;
-
-    // The Account has the responsibility to create the TemplatesManager for the L0 Space
-    space.templatesManager =
-      await this.spaceService.createTemplatesManagerForSpaceL0();
-
     space = await this.spaceService.save(space);
 
     space = await this.spaceService.getSpaceOrFail(space.id, {

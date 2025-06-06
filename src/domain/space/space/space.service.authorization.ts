@@ -37,6 +37,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { EntityNotFoundException } from '@common/exceptions';
 import { SpaceAboutAuthorizationService } from '../space.about/space.about.service.authorization';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -49,6 +50,7 @@ export class SpaceAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceAboutAuthorizationService: SpaceAboutAuthorizationService,
+    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceLookupService: SpaceLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -78,6 +80,7 @@ export class SpaceAuthorizationService {
           profile: true,
         },
         storageAggregator: true,
+        templatesManager: true,
         subspaces: true,
         license: true,
         account: true,
@@ -452,6 +455,23 @@ export class SpaceAuthorizationService {
         space.authorization
       );
     updatedAuthorizations.push(...licenseAuthorizations);
+
+    if (space.level === SpaceLevel.L0) {
+      if (!space.templatesManager) {
+        // Must be a templatesManager
+        throw new RelationshipNotFoundException(
+          `Unable to load templatesManager on level zero space for auth reset ${space.id} `,
+          LogContext.SPACES
+        );
+      }
+
+      const templatesManagerAuthorizations =
+        await this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
+          space.templatesManager.id,
+          space.authorization
+        );
+      updatedAuthorizations.push(...templatesManagerAuthorizations);
+    }
 
     // And the children that may be read about
     const spaceAboutExtraCredentialRules: IAuthorizationPolicyRuleCredential[] =

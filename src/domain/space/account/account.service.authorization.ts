@@ -35,7 +35,6 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -48,7 +47,6 @@ export class AccountAuthorizationService {
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
-    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private accountService: AccountService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -163,21 +161,6 @@ export class AccountAuthorizationService {
         LogContext.AUTH
       );
       updatedAuthorizations.push(...spaceAuthorizations);
-
-      if (!space.templatesManager) {
-        // The account has responsibility for managing the templates manager
-        throw new RelationshipNotFoundException(
-          `Unable to load templatesManager on level zero space for auth reset ${space.id} `,
-          LogContext.SPACES
-        );
-      }
-
-      const templatesManagerAuthorizations =
-        await this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
-          space.templatesManager.id,
-          space.authorization
-        );
-      updatedAuthorizations.push(...templatesManagerAuthorizations);
     }
 
     const agentAuthorization =

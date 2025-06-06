@@ -44,7 +44,6 @@ import { SpaceLicenseService } from '../space/space.service.license';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 
 @InstrumentResolver()
 @Resolver()
@@ -65,7 +64,6 @@ export class AccountResolverMutations {
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
-    private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceLicenseService: SpaceLicenseService,
     private notificationAdapter: NotificationAdapter,
     private temporaryStorageService: TemporaryStorageService,
@@ -106,17 +104,6 @@ export class AccountResolverMutations {
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
 
-    // ALso update the authorizations on the templates manager
-    const templatesManager = await this.spaceService.getTemplatesManagerOrFail(
-      space.id
-    );
-
-    const templatesManagerAuthorizations =
-      await this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
-        templatesManager.id,
-        space.authorization
-      );
-    updatedAuthorizations.push(...templatesManagerAuthorizations);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
