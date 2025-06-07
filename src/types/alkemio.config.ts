@@ -164,6 +164,10 @@ export type AlkemioConfig = {
       allowed_calls_to_service: number;
       allowed_calls_to_service_window: number;
     };
+    geoapify: {
+      geocode_rest_endpoint: string;
+      api_key: string;
+    };
     elasticsearch: {
       host: string;
       api_key: string;

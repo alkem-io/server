@@ -34,4 +34,14 @@ export abstract class ILocation extends IBaseAlkemio {
     nullable: true,
   })
   postalCode?: string;
+
+  @Field(() => Number, {
+    nullable: true,
+  })
+  longitude?: number;
+
+  @Field(() => Number, {
+    nullable: true,
+  })
+  latitude?: number;
 }
