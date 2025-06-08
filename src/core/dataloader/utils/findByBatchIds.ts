@@ -9,6 +9,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
 import { sorOutputByKeys } from './sort.output.by.keys';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 export const findByBatchIds = async <
   TParent extends { id: string } & { [key: string]: any }, // todo better type
@@ -19,7 +20,14 @@ export const findByBatchIds = async <
   ids: string[],
   relations: FindOptionsRelations<TParent>,
   options?: FindByBatchIdsOptions<TParent, TResult>
-): Promise<(TResult | null | EntityNotFoundException)[] | never> => {
+): Promise<
+  (
+    | TResult
+    | null
+    | EntityNotFoundException
+    | ForbiddenAuthorizationPolicyException
+  )[]
+> => {
   if (!ids.length) {
     return [];
   }
@@ -42,6 +50,7 @@ export const findByBatchIds = async <
     relations: relations,
     select: select,
   });
+  // todo: check if sorting is needed; hint - results are converted to Map
   const sortedResults = sorOutputByKeys(unsortedResults, ids);
 
   const topLevelRelation = relationKeys[0];
@@ -66,6 +75,31 @@ export const findByBatchIds = async <
       getRelation(result),
     ])
   );
-  // ensure the result length matches the input length
-  return ids.map(id => resultsById.get(id) ?? resolveUnresolvedForKey(id));
+
+  const resolveForKey = (
+    id: string
+  ): TResult | undefined | ForbiddenAuthorizationPolicyException => {
+    const result = resultsById.get(id);
+    if (result === undefined) {
+      return undefined;
+    }
+    // if the auth function is defined
+    // it will return either the exception or the result
+    if (options?.authorize) {
+      try {
+        options?.authorize(result);
+      } catch (e) {
+        if (e instanceof ForbiddenAuthorizationPolicyException) {
+          return e;
+        }
+
+        throw e;
+      }
+    }
+    // directly return the result if no authorization is provided
+    return result;
+  };
+
+  // ensure the result length matches the input length; fill the missing values with unresolved values
+  return ids.map(id => resolveForKey(id) ?? resolveUnresolvedForKey(id));
 };

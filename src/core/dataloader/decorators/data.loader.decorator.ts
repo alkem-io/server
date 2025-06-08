@@ -6,7 +6,6 @@ import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import {
   DataLoaderCreator,
   DataLoaderCreatorInitOptions,
-  DataLoaderCreatorOptions,
 } from '../creators/base';
 
 export function Loader<TParent, TReturn>(
@@ -18,10 +17,6 @@ export function Loader<TParent, TReturn>(
       innerCreatorRef: Type<DataLoaderCreator<TReturn>>,
       context: ExecutionContext
     ) => {
-      const creatorOptions: DataLoaderCreatorOptions<TReturn, TParent> = {
-        ...options,
-      };
-
       const ctx =
         GqlExecutionContext.create(context).getContext<IGraphQLContext>();
       // as the default behaviour we resolve to null if the field is nullable
@@ -32,18 +27,11 @@ export function Loader<TParent, TReturn>(
           const fieldName = info.fieldName;
           const field = info.parentType.getFields()[fieldName];
 
-          creatorOptions.resolveToNull = !isNonNullType(field.type);
+          options.resolveToNull = !isNonNullType(field.type);
         }
       }
 
-      if (options.checkPrivilege) {
-        creatorOptions.agentInfo = ctx.req.user;
-      }
-
-      return ctx[DATA_LOADER_CTX_INJECT_TOKEN].get(
-        innerCreatorRef,
-        creatorOptions
-      );
+      return ctx[DATA_LOADER_CTX_INJECT_TOKEN].get(innerCreatorRef, options);
     }
   )(creatorRef);
 }

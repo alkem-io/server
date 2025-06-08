@@ -4,6 +4,7 @@ import { LogContext } from '@common/enums';
 import { ILoader } from '../loader.interface';
 import { sorOutputByKeys } from '@core/dataloader/utils/sort.output.by.keys';
 import { DataLoaderCreatorBaseOptions } from '@core/dataloader/creators/base/data.loader.creator.base.options';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 export const createBatchLoader = <TResult extends { id: string }>(
   /**
@@ -52,11 +53,14 @@ export const createBatchLoader = <TResult extends { id: string }>(
         );
   };
 
-  return new DataLoader<string, TResult | null>(
-    keys => loadAndEnsureOutputLengthAndOrder(keys),
-    {
-      cache: true,
-      name,
-    }
-  );
+  return new DataLoader<
+    string,
+    | TResult
+    | null
+    | EntityNotFoundException
+    | ForbiddenAuthorizationPolicyException
+  >(keys => loadAndEnsureOutputLengthAndOrder(keys), {
+    cache: true,
+    name,
+  });
 };

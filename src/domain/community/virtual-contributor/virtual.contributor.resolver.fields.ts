@@ -42,7 +42,6 @@ export class VirtualContributorResolverFields {
     @Parent() virtualContributor: VirtualContributor,
     @Loader(AccountLoaderCreator, {
       parentClassRef: VirtualContributor,
-      checkPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IAccount>
   ): Promise<IAccount | null> {

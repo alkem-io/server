@@ -13,10 +13,14 @@ import {
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderCreator } from '../creators/base/data.loader.creator';
 import { DataLoaderContextEntry } from './data.loader.context.entry';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Injectable()
 export class DataLoaderInterceptor implements NestInterceptor {
-  constructor(private readonly moduleRef: ModuleRef) {}
+  constructor(
+    private readonly moduleRef: ModuleRef,
+    private authorizationService: AuthorizationService
+  ) {}
   // intercept every request and inject the data loader creator in the context
   intercept(context: ExecutionContext, next: CallHandler) {
     const ctx =
@@ -58,6 +62,20 @@ export class DataLoaderInterceptor implements NestInterceptor {
               options?.cache ??
               (ctx.req.headers.connection !== 'Upgrade' &&
                 ctx.req.headers.upgrade !== 'websocket');
+
+            if (options?.checkPrivilege) {
+              const agentInfo = ctx.req.user;
+              options.authorize = (result: any) => {
+                this.authorizationService.grantAccessOrFail(
+                  agentInfo,
+                  result.authorization,
+                  options.checkPrivilege!,
+                  'authorize data loader result'
+                );
+
+                return true;
+              };
+            }
 
             return creator.create({
               ...options,

@@ -52,20 +52,23 @@ export class UserResolverFields {
   }) // todo
   async profile(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Loader(ProfileLoaderCreator, { parentClassRef: User })
+    @Loader(ProfileLoaderCreator, {
+      parentClassRef: User,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    const profile = await loader.load(user.id);
+    // const profile = await loader.load(user.id);
     // Note: the user profile is public.
     // Check if the user can read the profile entity, not the actual User entity
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on User: ${profile.displayName} with current user being: ${agentInfo.userID}`
-    );
-    return profile;
+    // this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   profile.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `read profile on User: ${profile.displayName} with current user being: ${agentInfo.userID}`
+    // );
+    // return profile;
+    return loader.load(user.id);
   }
 
   @ResolveField('settings', () => IUserSettings, {
