@@ -1,6 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -32,24 +31,20 @@ export class VirtualContributorResolverFields {
     private authorizationService: AuthorizationService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: true,
     description: 'The Account of the Virtual Contributor.',
-  }) // todo
+  })
   async account(
     @Parent() virtualContributor: VirtualContributor,
     @Loader(AccountLoaderCreator, {
       parentClassRef: VirtualContributor,
+      checkPrivilege: AuthorizationPrivilege.READ,
+      resolveToNull: true,
     })
-    loader: ILoader<IAccount>
+    loader: ILoader<IAccount | null>
   ): Promise<IAccount | null> {
-    try {
-      return await loader.load(virtualContributor.id);
-    } catch {
-      return null;
-    }
+    return loader.load(virtualContributor.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -62,30 +57,31 @@ export class VirtualContributorResolverFields {
     return parent.authorization;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this Virtual.',
-  }) // todo
+  })
   async profile(
     @Parent() virtualContributor: VirtualContributor,
-    @Loader(ProfileLoaderCreator, { parentClassRef: VirtualContributor })
+    @Loader(ProfileLoaderCreator, {
+      parentClassRef: VirtualContributor,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IProfile>
   ) {
-    const profile = await loader.load(virtualContributor.id);
-    return profile;
+    return loader.load(virtualContributor.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
-  }) // todo
+  })
   async agent(
     @Parent() virtualContributor: VirtualContributor,
-    @Loader(AgentLoaderCreator, { parentClassRef: VirtualContributor })
+    @Loader(AgentLoaderCreator, {
+      parentClassRef: VirtualContributor,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(virtualContributor.id);
