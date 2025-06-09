@@ -1,10 +1,8 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Organization } from './organization.entity';
 import { OrganizationService } from './organization.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { GraphqlGuard } from '@core/authorization';
+
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IProfile } from '@domain/common/profile';
@@ -154,23 +152,16 @@ export class OrganizationResolverFields {
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this Organization.',
-  }) // todo
+  })
   async profile(
     @Parent() organization: Organization,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Loader(ProfileLoaderCreator, { parentClassRef: Organization })
+    @Loader(ProfileLoaderCreator, {
+      parentClassRef: Organization,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IProfile>
   ) {
-    const profile = await loader.load(organization.id);
-    // Note: the Organization profile is public.
-    // Check if the user can read the profile entity, not the actual Organization entity
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on Organization: ${profile.displayName}`
-    );
-    return profile;
+    return loader.load(organization.id);
   }
 
   @ResolveField('verification', () => IOrganizationVerification, {
@@ -194,16 +185,16 @@ export class OrganizationResolverFields {
     return loader.load(organization.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description:
       'The StorageAggregator for managing storage buckets in use by this Organization',
-  }) // todo
+  })
   async storageAggregator(
     @Parent() organization: Organization,
-    @Loader(OrganizationStorageAggregatorLoaderCreator)
+    @Loader(OrganizationStorageAggregatorLoaderCreator, {
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(organization.id);
