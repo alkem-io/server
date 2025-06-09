@@ -37,7 +37,6 @@ export class ClassificationResolverFields {
     @Loader(ClassificationTagsetsLoaderCreator)
     loader: ILoader<ITagset[]>
   ): Promise<ITagset> {
-    // todo out of tick?
     const tagsets = await loader.load(classification.id);
 
     const namedTagset = tagsets.find(t => t.name === tagsetName);

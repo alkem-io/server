@@ -65,6 +65,12 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
 
     return result;
   };
+  console.log(
+    'findByBatchIdsSimple',
+    classRef.name,
+    options?.dataLoaderName,
+    ids.length
+  );
   // ensure the result length matches the input length
   return ids.map(id => resolveForKey(id) ?? resolveUnresolvedForKey(id));
 };

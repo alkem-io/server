@@ -12,4 +12,5 @@ export type FindByBatchIdsOptions<TParent, TResult> = Omit<
 > &
   DataLoaderCreatorAuthOptions<TResult> & {
     select: FindOptionsSelect<TParent>;
+    dataLoaderName?: string; // for debugging purposes
   };

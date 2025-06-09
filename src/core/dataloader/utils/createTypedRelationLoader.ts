@@ -58,6 +58,7 @@ export const createTypedRelationDataLoader = <
         ...restOptions,
         select: selectOptions as FindOptionsSelect<TParent>,
         authorize: options?.authorize as any, // todo
+        dataLoaderName: name,
       }),
     {
       cache: options?.cache,

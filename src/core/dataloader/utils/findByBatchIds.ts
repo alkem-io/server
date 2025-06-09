@@ -101,7 +101,12 @@ export const findByBatchIds = async <
 
     return result;
   };
-  console.log('findByBatchIds', classRef.name, ids.length);
+  console.log(
+    'findByBatchIds',
+    classRef.name,
+    options?.dataLoaderName,
+    ids.length
+  );
 
   // ensure the result length matches the input length; fill the missing values with unresolved values
   return ids.map(id => resolveForKey(id) ?? resolveUnresolvedForKey(id));

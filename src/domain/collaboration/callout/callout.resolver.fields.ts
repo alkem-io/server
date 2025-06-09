@@ -126,16 +126,15 @@ export class CalloutResolverFields {
   @ResolveField('publishedBy', () => IUser, {
     nullable: true,
     description: 'The user that published this Callout',
-  }) // todo investigate out of tick
+  })
   async publishedBy(
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
-    const publishedBy = callout.publishedBy;
-    if (!publishedBy) {
+    if (!callout.publishedBy) {
       return null;
     }
-    return loader.load(publishedBy);
+    return loader.load(callout.publishedBy);
   }
 
   @ResolveField('publishedDate', () => Number, {
@@ -154,16 +153,14 @@ export class CalloutResolverFields {
   @ResolveField('createdBy', () => IUser, {
     nullable: true,
     description: 'The user that created this Callout',
-  }) // todo investigate out of tick
+  })
   async createdBy(
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
-    const createdBy = callout.createdBy;
-    if (!createdBy) {
+    if (!callout.createdBy) {
       return null;
     }
-
-    return loader.load(createdBy);
+    return loader.load(callout.createdBy);
   }
 }

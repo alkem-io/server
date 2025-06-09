@@ -36,6 +36,7 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
       findByBatchIdsSimple(manager, classRef, keys as string[], {
         ...restOptions,
         select: selectOptions as FindOptionsSelect<TResult>,
+        dataLoaderName: name,
       }),
     {
       cache: options?.cache,
