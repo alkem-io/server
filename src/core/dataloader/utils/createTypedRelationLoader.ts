@@ -21,7 +21,12 @@ export const createTypedRelationDataLoader = <
   relations: FindOptionsRelations<TParent>,
   name: string,
   options?: DataLoaderCreatorOptions<TResult, TParent>
-): ILoader<TResult | null | EntityNotFoundException> => {
+): ILoader<
+  | TResult
+  | null
+  | EntityNotFoundException
+  | ForbiddenAuthorizationPolicyException
+> => {
   const { fields, ...restOptions } = options ?? {};
 
   const topRelation = <keyof TResult>Object.keys(relations)[0];

@@ -3,6 +3,7 @@ import { Type } from '@nestjs/common';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   manager: EntityManager,
@@ -38,6 +39,32 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   const resultsById = new Map<string, TResult>(
     results.map<[string, TResult]>(result => [result.id, result])
   );
+
+  const resolveForKey = (
+    id: string
+  ): TResult | undefined | ForbiddenAuthorizationPolicyException => {
+    const result = resultsById.get(id);
+    if (result === undefined) {
+      return undefined;
+    }
+    // directly return the result if no authorization is provided
+    if (!options?.authorize) {
+      return result;
+    }
+    // if the auth function is defined
+    // it will return either the exception or the result
+    if (options?.authorize) {
+      try {
+        options?.authorize(result);
+      } catch (e) {
+        if (e instanceof ForbiddenAuthorizationPolicyException) {
+          return e;
+        }
+
+        throw e;
+      }
+    }
+  };
   // ensure the result length matches the input length
-  return ids.map(id => resultsById.get(id) ?? resolveUnresolvedForKey(id));
+  return ids.map(id => resolveForKey(id) ?? resolveUnresolvedForKey(id));
 };

@@ -83,6 +83,10 @@ export const findByBatchIds = async <
     if (result === undefined) {
       return undefined;
     }
+    // directly return the result if no authorization is provided
+    if (!options?.authorize) {
+      return result;
+    }
     // if the auth function is defined
     // it will return either the exception or the result
     if (options?.authorize) {
@@ -96,8 +100,6 @@ export const findByBatchIds = async <
         throw e;
       }
     }
-    // directly return the result if no authorization is provided
-    return result;
   };
   console.log('findByBatchIds', classRef.name, ids.length);
 
