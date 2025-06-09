@@ -280,7 +280,7 @@ export class PlatformAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.SPACE_ADMIN,
+          AuthorizationCredential.BETA_TESTER,
         ],
         CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION
       );
