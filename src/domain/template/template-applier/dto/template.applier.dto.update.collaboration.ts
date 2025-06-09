@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @InputType()
-export class UpdateCollaborationFromTemplateInput {
+export class UpdateCollaborationFromSpaceTemplateInput {
   @Field(() => UUID, {
     description: 'ID of the Collaboration to be updated',
   })
@@ -11,9 +11,9 @@ export class UpdateCollaborationFromTemplateInput {
   @Field(() => UUID, {
     nullable: false,
     description:
-      'The Collaboration Template that will be used for updates to the Collaboration',
+      'The Space Template whose Collaboration that will be used for updates to the target Collaboration',
   })
-  collaborationTemplateID!: string;
+  spaceTemplateID!: string;
 
   @Field(() => Boolean, {
     nullable: true,

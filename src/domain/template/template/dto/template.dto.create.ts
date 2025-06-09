@@ -2,8 +2,7 @@ import {
   SMALL_TEXT_LENGTH,
   VERY_LONG_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
-import { CreateCalloutInput } from '@domain/collaboration/callout';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
@@ -12,6 +11,7 @@ import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { CreateTemplateBaseInput } from './template.dto.create.base';
 import { TemplateType } from '@common/enums/template.type';
+import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 
 @InputType()
 export class CreateTemplateInput extends CreateTemplateBaseInput {
@@ -57,12 +57,13 @@ export class CreateTemplateInput extends CreateTemplateBaseInput {
   @Type(() => CreateWhiteboardInput)
   whiteboard?: CreateWhiteboardInput;
 
-  @Field(() => CreateCollaborationInput, {
+  @Field(() => CreateTemplateContentSpaceInput, {
     nullable: true,
-    description: 'The Collaboration to associate with this template.',
+    description:
+      'The Template Content for a Space to associate with this template.',
   })
   @IsOptional()
   @ValidateNested()
-  @Type(() => CreateCollaborationInput)
-  collaborationData?: CreateCollaborationInput;
+  @Type(() => CreateTemplateContentSpaceInput)
+  contentSpaceData?: CreateTemplateContentSpaceInput;
 }

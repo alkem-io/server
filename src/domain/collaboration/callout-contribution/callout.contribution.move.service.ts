@@ -7,11 +7,10 @@ import {
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Callout } from '../callout';
+import { Callout } from '../callout/callout.entity';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 
 @Injectable()
@@ -22,7 +21,6 @@ export class CalloutContributionMoveService {
     @InjectRepository(CalloutContribution)
     private calloutContributionRepository: Repository<CalloutContribution>,
     private calloutContributionService: CalloutContributionService,
-    private urlGeneratorService: UrlGeneratorService,
     private urlGeneratorCacheService: UrlGeneratorCacheService
   ) {}
 

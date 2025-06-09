@@ -3,7 +3,7 @@ import {
   InAppNotificationCalloutPublishedPayload,
   NotificationEventType,
 } from '@alkemio/notifications-lib';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 import { InAppNotification } from '../in.app.notification.interface';
 import { InAppNotificationBase } from './in.app.notification.base';

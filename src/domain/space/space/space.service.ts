@@ -52,14 +52,9 @@ import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { IAccount } from '../account/account.interface';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
-import { TemplateType } from '@common/enums/template.type';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
-import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { Activity } from '@platform/activity';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
@@ -75,6 +70,12 @@ import { RoleSetType } from '@common/enums/role.set.type';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
 import { ILicense } from '@domain/common/license/license.interface';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { TemplateType } from '@common/enums/template.type';
+import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -98,10 +99,11 @@ export class SpaceService {
     private namingService: NamingService,
     private spaceSettingsService: SpaceSettingsService,
     private spaceDefaultsService: SpaceDefaultsService,
+    private spaceLookupService: SpaceLookupService,
     private storageAggregatorService: StorageAggregatorService,
-    private templatesManagerService: TemplatesManagerService,
     private collaborationService: CollaborationService,
     private licensingFrameworkService: LicensingFrameworkService,
+    private templatesManagerService: TemplatesManagerService,
     private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -119,9 +121,15 @@ export class SpaceService {
     space.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.SPACE
     );
-    space.settings = this.spaceDefaultsService.getDefaultSpaceSettings(
-      space.level
-    );
+
+    const templateSpaceContent =
+      await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
+        space.level,
+        spaceData.spaceTemplateID,
+        spaceData.platformTemplate,
+        spaceData.templatesManagerParent
+      );
+    space.settings = templateSpaceContent.settings;
 
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -162,22 +170,28 @@ export class SpaceService {
 
     if (spaceData.level === SpaceLevel.L0) {
       space.levelZeroSpaceID = space.id;
+
+      space.templatesManager = await this.createTemplatesManagerForSpaceL0();
     }
 
     //// Collaboration
-    let collaborationData: CreateCollaborationInput =
+    let updatedCollaborationData: CreateCollaborationInput =
       spaceData.collaborationData;
-    collaborationData.isTemplate = false;
+    updatedCollaborationData.isTemplate = false;
     // Pick up the default template that is applicable
-    collaborationData =
+    updatedCollaborationData =
       await this.spaceDefaultsService.createCollaborationInput(
-        collaborationData,
-        space.level,
-        spaceData.platformTemplate,
-        spaceData.templatesManagerParent
+        updatedCollaborationData,
+        templateSpaceContent
       );
+    if (spaceData.collaborationData.addTutorialCallouts) {
+      updatedCollaborationData =
+        await this.spaceDefaultsService.addTutorialCalloutsFromTemplate(
+          updatedCollaborationData
+        );
+    }
     space.collaboration = await this.collaborationService.createCollaboration(
-      collaborationData,
+      updatedCollaborationData,
       space.storageAggregator,
       agentInfo
     );
@@ -185,10 +199,6 @@ export class SpaceService {
     space.agent = await this.agentService.createAgent({
       type: AgentType.SPACE,
     });
-
-    if (space.level === SpaceLevel.L0) {
-      space.templatesManager = await this.createTemplatesManagerForSpaceL0();
-    }
 
     // Community:
     // set immediate community parent + resourceID
@@ -249,22 +259,6 @@ export class SpaceService {
         },
       ],
     });
-  }
-
-  public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
-    const templateDefaultData: CreateTemplateDefaultInput = {
-      type: TemplateDefaultType.SPACE_SUBSPACE,
-      allowedTemplateType: TemplateType.COLLABORATION,
-    };
-    const templatesManagerData: CreateTemplatesManagerInput = {
-      templateDefaultsData: [templateDefaultData],
-    };
-
-    const templatesManager =
-      await this.templatesManagerService.createTemplatesManager(
-        templatesManagerData
-      );
-    return templatesManager;
   }
 
   async save(space: ISpace): Promise<ISpace> {
@@ -335,6 +329,22 @@ export class SpaceService {
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
     return result;
+  }
+
+  public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
+    const templateDefaultData: CreateTemplateDefaultInput = {
+      type: TemplateDefaultType.SPACE_SUBSPACE,
+      allowedTemplateType: TemplateType.SPACE,
+    };
+    const templatesManagerData: CreateTemplatesManagerInput = {
+      templateDefaultsData: [templateDefaultData],
+    };
+
+    const templatesManager =
+      await this.templatesManagerService.createTemplatesManager(
+        templatesManagerData
+      );
+    return templatesManager;
   }
 
   /**
@@ -618,27 +628,6 @@ export class SpaceService {
       ...options,
     });
 
-    return space;
-  }
-
-  public async getSpaceByNameIdOrFail(
-    spaceNameID: string,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        nameID: spaceNameID,
-        level: SpaceLevel.L0,
-      },
-      ...options,
-    });
-    if (!space) {
-      if (!space)
-        throw new EntityNotFoundException(
-          `Unable to find L0 Space with nameID: ${spaceNameID}`,
-          LogContext.SPACES
-        );
-    }
     return space;
   }
 
@@ -1041,32 +1030,17 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  async getSubspaceByNameIdInLevelZeroSpace(
-    subspaceNameID: string,
-    levelZeroSpaceID: string,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace | null> {
-    const subspace = await this.spaceRepository.findOne({
-      where: {
-        nameID: subspaceNameID,
-        levelZeroSpaceID: levelZeroSpaceID,
-      },
-      ...options,
-    });
-
-    return subspace;
-  }
-
   async getSubspaceInLevelZeroScopeOrFail(
     subspaceID: string,
     levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace> {
-    const subspace = await this.getSubspaceByNameIdInLevelZeroSpace(
-      subspaceID,
-      levelZeroSpaceID,
-      options
-    );
+    const subspace =
+      await this.spaceLookupService.getSubspaceByNameIdInLevelZeroSpace(
+        subspaceID,
+        levelZeroSpaceID,
+        options
+      );
 
     if (!subspace) {
       throw new EntityNotFoundException(

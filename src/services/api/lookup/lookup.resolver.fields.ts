@@ -16,7 +16,7 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IProfile } from '@domain/common/profile';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -74,6 +74,8 @@ import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.int
 import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
 import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
 import { ISpaceAbout } from '@domain/space/space.about';
+import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
+import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -112,7 +114,8 @@ export class LookupResolverFields {
     private innovationHubService: InnovationHubService,
     private roleSetService: RoleSetService,
     private licenseService: LicenseService,
-    private knowledgeBaseService: KnowledgeBaseService
+    private knowledgeBaseService: KnowledgeBaseService,
+    private templateContentSpaceService: TemplateContentSpaceService
   ) {}
 
   @ResolveField(() => ISpace, {
@@ -678,6 +681,26 @@ export class LookupResolverFields {
       template.authorization,
       AuthorizationPrivilege.READ,
       `lookup Template: ${template.id}`
+    );
+
+    return template;
+  }
+
+  @ResolveField(() => ITemplateContentSpace, {
+    nullable: true,
+    description: 'Lookup the specified Space Content Template',
+  })
+  async templateContentSpace(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ITemplateContentSpace> {
+    const template =
+      await this.templateContentSpaceService.getTemplateContentSpaceOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      template.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup TemplateContentSpace: ${template.id}`
     );
 
     return template;

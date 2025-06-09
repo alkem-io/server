@@ -1,6 +1,6 @@
 import { ObjectType } from '@nestjs/graphql';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
-import { CreateCalloutInput } from '@domain/collaboration/callout';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 

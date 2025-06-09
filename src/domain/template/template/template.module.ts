@@ -11,11 +11,12 @@ import { CommunityGuidelinesModule } from '@domain/community/community-guideline
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { TemplateResolverFields } from './template.resolver.fields';
-import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
+import { TemplateContentSpaceModule } from '../template-content-space/template.content.space.module';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 
 @Module({
   imports: [
@@ -28,8 +29,9 @@ import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.s
     InnovationFlowModule,
     InputCreatorModule,
     StorageAggregatorResolverModule,
-    CollaborationModule,
     CalloutsSetModule,
+    TemplateContentSpaceModule,
+    SpaceLookupModule,
     TypeOrmModule.forFeature([Template]),
   ],
   providers: [

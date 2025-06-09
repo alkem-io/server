@@ -3,7 +3,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { ICommunity } from '@domain/community/community';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { IProfile } from '@domain/common/profile';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';

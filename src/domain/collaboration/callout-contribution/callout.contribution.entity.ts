@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Post } from '../post';
+import { Post } from '../post/post.entity';
 import { Callout } from '../callout/callout.entity';
 import { Link } from '../link/link.entity';
 import { UUID_LENGTH } from '@common/constants';

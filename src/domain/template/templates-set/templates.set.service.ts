@@ -19,8 +19,7 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateType } from '@common/enums/template.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { CreateTemplateFromCollaborationOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.collaboration';
-import { ICollaboration } from '@domain/collaboration/collaboration';
+import { CreateTemplateFromSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.collaboration';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 
 @Injectable()
@@ -143,19 +142,18 @@ export class TemplatesSetService {
     return await this.templateService.save(template);
   }
 
-  async createTemplateFromCollaboration(
+  async createTemplateFromSpace(
     templatesSet: ITemplatesSet,
-    templateCollaborationInput: CreateTemplateFromCollaborationOnTemplatesSetInput,
-    collaboration: ICollaboration
+    templateSpaceInput: CreateTemplateFromSpaceOnTemplatesSetInput
   ): Promise<ITemplate> {
-    const collaborationInput =
-      await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
-        collaboration.id
+    const createSpaceContentInput =
+      await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
+        templateSpaceInput.spaceID
       );
     const templateInput: CreateTemplateInput = {
-      ...templateCollaborationInput,
-      type: TemplateType.COLLABORATION,
-      collaborationData: collaborationInput,
+      ...templateSpaceInput,
+      type: TemplateType.SPACE,
+      contentSpaceData: createSpaceContentInput,
     };
     return await this.createTemplate(templatesSet, templateInput);
   }
@@ -195,10 +193,10 @@ export class TemplatesSetService {
         TemplateType.POST
       );
 
-    const collaborationTemplatesCount =
+    const spaceTemplatesCount =
       await this.templateService.getCountInTemplatesSet(
         templatesSetID,
-        TemplateType.COLLABORATION
+        TemplateType.SPACE
       );
 
     const calloutTemplatesCount =
@@ -216,7 +214,7 @@ export class TemplatesSetService {
     return (
       whiteboardTemplatesCount +
       postTemplatesCount +
-      collaborationTemplatesCount +
+      spaceTemplatesCount +
       calloutTemplatesCount +
       communityGuidelinesTemplatesCount
     );

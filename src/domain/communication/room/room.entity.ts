@@ -4,7 +4,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { RoomType } from '@common/enums/room.type';
 import { VcInteraction } from '../vc-interaction/vc.interaction.entity';
 import { ENUM_LENGTH } from '@common/constants';
-import { Callout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 @Entity()
 export class Room extends AuthorizableEntity implements IRoom {

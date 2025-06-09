@@ -38,6 +38,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 import { SpaceAboutModule } from '@domain/space/space.about/space.about.module';
+import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { SpaceAboutModule } from '@domain/space/space.about/space.about.module';
     VirtualContributorModule,
     SpaceModule,
     CommunityGuidelinesModule,
+    TemplateContentSpaceModule,
     RoleSetModule,
     LicenseModule,
     KnowledgeBaseModule,

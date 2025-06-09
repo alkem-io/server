@@ -6,6 +6,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { TemplateModule } from '../template/template.module';
 import { TemplateDefaultAuthorizationService } from './template.default.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { TemplateDefaultResolverFields } from './template.default.resolver.fields';
 
 @Module({
   imports: [
@@ -14,7 +15,11 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     TemplateModule,
     TypeOrmModule.forFeature([TemplateDefault]),
   ],
-  providers: [TemplateDefaultService, TemplateDefaultAuthorizationService],
+  providers: [
+    TemplateDefaultService,
+    TemplateDefaultAuthorizationService,
+    TemplateDefaultResolverFields,
+  ],
   exports: [TemplateDefaultService, TemplateDefaultAuthorizationService],
 })
 export class TemplateDefaultModule {}
