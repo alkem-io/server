@@ -204,7 +204,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
@@ -214,16 +214,16 @@ export class UserResolverFields {
     return user.settings.communication.allowOtherUsersToSendMessages;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description:
       'The StorageAggregator for managing storage buckets in use by this User',
-  }) // todo
+  })
   async storageAggregator(
     @Parent() user: IUser,
-    @Loader(UserStorageAggregatorLoaderCreator)
+    @Loader(UserStorageAggregatorLoaderCreator, {
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(user.id);
