@@ -26,7 +26,7 @@ export class KnowledgeBaseResolverFields {
     @Parent() knowledgeBase: IKnowledgeBase,
     @Loader(ProfileLoaderCreator, {
       parentClassRef: KnowledgeBase,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
@@ -41,7 +41,7 @@ export class KnowledgeBaseResolverFields {
     @Parent() knowledgeBase: IKnowledgeBase,
     @Loader(KnowledgeBaseCalloutsSetLoaderCreator, {
       parentClassRef: KnowledgeBase,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<ICalloutsSet>
   ): Promise<ICalloutsSet> {

@@ -63,14 +63,14 @@ export class DataLoaderInterceptor implements NestInterceptor {
               (ctx.req.headers.connection !== 'Upgrade' &&
                 ctx.req.headers.upgrade !== 'websocket');
             // if a privilege is provided, initialize the authorize function
-            if (options?.checkPrivilege) {
+            if (options?.checkResultPrivilege) {
               const agentInfo = ctx.req.user;
               // todo better type for result
               options.authorize = (result: any) => {
                 this.authorizationService.grantAccessOrFail(
                   agentInfo,
                   result.authorization,
-                  options.checkPrivilege!,
+                  options.checkResultPrivilege!,
                   'authorize data loader result'
                 );
 

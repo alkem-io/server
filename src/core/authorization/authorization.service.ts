@@ -118,6 +118,10 @@ export class AuthorizationService {
     // Keep track of all the granted privileges via Credential rules so can use with Privilege rules
     const grantedPrivileges: AuthorizationPrivilege[] = [];
 
+    if (authorization.id === '7ad27a10-8cb3-4e51-b498-ef3f4c03a1ce') {
+      console.warn('');
+    }
+
     const credentialRules = authorization.credentialRules;
     for (const rule of credentialRules) {
       for (const credential of agentInfo.credentials) {

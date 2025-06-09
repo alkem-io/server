@@ -76,7 +76,7 @@ export const findByBatchIds = async <
     ])
   );
 
-  const resolveForKey = (
+  const resolveForKeyAndMaybeAuthorize = (
     id: string
   ): TResult | undefined | ForbiddenAuthorizationPolicyException => {
     const result = resultsById.get(id);
@@ -109,5 +109,7 @@ export const findByBatchIds = async <
   );
 
   // ensure the result length matches the input length; fill the missing values with unresolved values
-  return ids.map(id => resolveForKey(id) ?? resolveUnresolvedForKey(id));
+  return ids.map(
+    id => resolveForKeyAndMaybeAuthorize(id) ?? resolveUnresolvedForKey(id)
+  );
 };

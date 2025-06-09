@@ -54,7 +54,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @Loader(ProfileLoaderCreator, {
       parentClassRef: User,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
@@ -222,7 +222,7 @@ export class UserResolverFields {
   async storageAggregator(
     @Parent() user: IUser,
     @Loader(UserStorageAggregatorLoaderCreator, {
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {

@@ -39,7 +39,7 @@ export class VirtualContributorResolverFields {
     @Parent() virtualContributor: VirtualContributor,
     @Loader(AccountLoaderCreator, {
       parentClassRef: VirtualContributor,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
       resolveToNull: true,
     })
     loader: ILoader<IAccount | null>
@@ -65,7 +65,7 @@ export class VirtualContributorResolverFields {
     @Parent() virtualContributor: VirtualContributor,
     @Loader(ProfileLoaderCreator, {
       parentClassRef: VirtualContributor,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IProfile>
   ) {
@@ -80,7 +80,7 @@ export class VirtualContributorResolverFields {
     @Parent() virtualContributor: VirtualContributor,
     @Loader(AgentLoaderCreator, {
       parentClassRef: VirtualContributor,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {

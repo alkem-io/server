@@ -45,7 +45,7 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(SpaceCommunityLoaderCreator, {
       parentClassRef: Space,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<ICommunity>
   ): Promise<ICommunity> {
@@ -60,7 +60,7 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(SpaceAboutLoaderCreator, {
       parentClassRef: Space,
-      checkPrivilege: AuthorizationPrivilege.READ_ABOUT,
+      checkResultPrivilege: AuthorizationPrivilege.READ_ABOUT,
     })
     loader: ILoader<ISpaceAbout>
   ): Promise<ISpaceAbout> {
@@ -91,7 +91,7 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(SpaceCollaborationLoaderCreator, {
       parentClassRef: Space,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
@@ -106,7 +106,7 @@ export class SpaceResolverFields {
     @Parent() space: ISpace,
     @Loader(LicenseLoaderCreator, {
       parentClassRef: Space,
-      checkPrivilege: AuthorizationPrivilege.READ_LICENSE,
+      checkResultPrivilege: AuthorizationPrivilege.READ_LICENSE,
     })
     loader: ILoader<ILicense>
   ): Promise<ILicense> {
@@ -121,7 +121,7 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(AgentLoaderCreator, {
       parentClassRef: Space,
-      checkPrivilege: AuthorizationPrivilege.READ,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
