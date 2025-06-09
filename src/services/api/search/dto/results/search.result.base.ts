@@ -1,6 +1,6 @@
-import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { SearchResultType } from '../../search.result.type';
 import { ISearchResult } from './search.result.interface';
+import { BaseSearchHit } from './base.search.hit';
 
 /**
  * A mixin, providing all the properties of ISearchResult in a class
@@ -16,6 +16,6 @@ export function SearchResultBase() {
     type!: SearchResultType;
     // used to store the result object
     // to not be exposed by the API
-    result!: IBaseAlkemio;
+    result!: BaseSearchHit;
   };
 }

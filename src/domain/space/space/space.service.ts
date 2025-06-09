@@ -271,9 +271,7 @@ export class SpaceService {
     return await this.spaceRepository.save(space);
   }
 
-  async deleteSpaceOrFail(
-    deleteData: DeleteSpaceInput
-  ): Promise<ISpace | never> {
+  async deleteSpaceOrFail(deleteData: DeleteSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {
         subspaces: true,
@@ -339,12 +337,17 @@ export class SpaceService {
     return result;
   }
 
+  /**
+   * Retrieves spaces for a given innovation hub.
+   * @throws {EntityNotInitializedException} if a filter is not defined.
+   * @throws {NotSupportedException} if the innovation hub type is not supported.
+   */
   public async getSpacesForInnovationHub({
     id,
     type,
     spaceListFilter,
     spaceVisibilityFilter,
-  }: InnovationHub): Promise<Space[]> | never {
+  }: InnovationHub): Promise<Space[]> {
     if (type === InnovationHubType.VISIBILITY) {
       if (!spaceVisibilityFilter) {
         throw new EntityNotInitializedException(
@@ -567,7 +570,7 @@ export class SpaceService {
   async getSpaceOrFail(
     spaceID: string,
     options?: FindOneOptions<Space>
-  ): Promise<ISpace | never> {
+  ): Promise<ISpace> {
     const space = await this.getSpace(spaceID, options);
     if (!space)
       throw new EntityNotFoundException(
@@ -854,6 +857,7 @@ export class SpaceService {
         community: {
           roleSet: true,
         },
+        parentSpace: true,
       },
     });
 
@@ -884,7 +888,20 @@ export class SpaceService {
 
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
-    subspaceData.templatesManagerParent = space.templatesManager;
+
+    let rootTemplatesManager = space.templatesManager;
+    let parentSpace = space.parentSpace;
+    while (!rootTemplatesManager && parentSpace) {
+      parentSpace = await this.getSpaceOrFail(parentSpace.id, {
+        relations: {
+          templatesManager: true,
+          parentSpace: true,
+        },
+      });
+      rootTemplatesManager = parentSpace.templatesManager;
+    }
+
+    subspaceData.templatesManagerParent = rootTemplatesManager;
     subspaceData.level = space.level + 1;
     let subspace = await this.createSpace(subspaceData, agentInfo);
 
@@ -1044,7 +1061,7 @@ export class SpaceService {
     subspaceID: string,
     levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
-  ): Promise<ISpace | never> {
+  ): Promise<ISpace> {
     const subspace = await this.getSubspaceByNameIdInLevelZeroSpace(
       subspaceID,
       levelZeroSpaceID,
@@ -1220,9 +1237,12 @@ export class SpaceService {
     return about;
   }
 
-  public async getCalloutsSetOrFail(
-    spaceId: string
-  ): Promise<ICalloutsSet> | never {
+  /**
+   * Retrieves a callouts set for a given space ID or throws if not found.
+   * @throws {RelationshipNotFoundException} if callouts set or collaboration is not found.
+   * @throws {EntityNotFoundException} if space is not found.
+   */
+  public async getCalloutsSetOrFail(spaceId: string): Promise<ICalloutsSet> {
     const subspaceWithCollaboration = await this.getSpaceOrFail(spaceId, {
       relations: {
         collaboration: {

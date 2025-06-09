@@ -27,7 +27,6 @@ import { Space } from '@domain/space/space/space.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
-import { IUser } from '@domain/community/user/user.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AccountType } from '@common/enums/account.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
@@ -37,6 +36,9 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
 import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
 import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
+import { SpaceAbout } from '@domain/space/space.about';
+import { Account } from '@domain/space/account/account.entity';
+import { Organization } from '@domain/community/organization';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -79,13 +81,13 @@ describe('RolesService', () => {
 
   describe('User Roles', () => {
     beforeEach(() => {
-      const spaceRolesData = testData.rolesUser.space as any;
+      const spaceRolesData = testData.rolesUser.space;
       const spaceRolesMock: RolesResultSpace = getSpaceRoleResultMock({
         id: spaceRolesData.id,
         roles: spaceRolesData.roles,
         displayName: spaceRolesData.displayName,
       });
-      const user = testData.user as IUser;
+      const user = testData.user;
 
       const subspaceRolesData = spaceRolesData.subspaces;
       const subspaceRolesMocks: RolesResultCommunity[] = [];
@@ -119,7 +121,7 @@ describe('RolesService', () => {
           getOrganizationRolesForUserEntityData,
           'getOrganizationRolesForUserEntityData'
         )
-        .mockResolvedValue([testData.organization as any]);
+        .mockResolvedValue([testData.organization as Organization]);
 
       jest
         .spyOn(applicationService, 'findApplicationsForUser')
@@ -135,7 +137,7 @@ describe('RolesService', () => {
 
       jest
         .spyOn(communityResolverService, 'getSpaceForCommunityOrFail')
-        .mockResolvedValue(testData.space as any);
+        .mockResolvedValue(testData.space);
     });
 
     it('Should get user roles', async () => {
@@ -188,7 +190,7 @@ describe('RolesService', () => {
       jest
         .spyOn(organizationLookupService, 'getOrganizationAndAgent')
         .mockResolvedValue({
-          organization: testData.organization as any,
+          organization: testData.organization,
           agent: testData.agent,
         } as any);
 
@@ -263,6 +265,7 @@ const getSpaceRoleResultMock = ({
           type: ProfileType.SPACE_ABOUT,
           ...getEntityMock<Profile>(),
         },
+        ...getEntityMock<SpaceAbout>(),
       },
       level: SpaceLevel.L0,
       visibility: SpaceVisibility.ACTIVE,
@@ -274,6 +277,7 @@ const getSpaceRoleResultMock = ({
         externalSubscriptionID: '',
         spaces: [],
         type: AccountType.ORGANIZATION,
+        ...getEntityMock<Account>(),
       },
       ...getEntityMock<Space>(),
     },

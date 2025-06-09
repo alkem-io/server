@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/ban-types */
-
 import { ValidationError } from 'class-validator';
 import { Handler } from './handler.interface';
 
@@ -14,6 +11,7 @@ export abstract class AbstractHandler implements Handler {
 
   public async handle(
     value: any,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
     metatype: Function
   ): Promise<ValidationError[]> {
     if (this.nextHandler) {

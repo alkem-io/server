@@ -49,7 +49,7 @@ export class LocalStorageAdapter implements StorageService {
     return this.saveFromBuffer(data);
   }
 
-  public async read(fileName: string): Promise<Buffer> | never {
+  public async read(fileName: string): Promise<Buffer> {
     if (!this.enabled) {
       throw new StorageDisabledException(
         'Storage is currently disabled',
@@ -74,7 +74,7 @@ export class LocalStorageAdapter implements StorageService {
     }
   }
 
-  public async delete(fileName: string): Promise<void> | never {
+  public async delete(fileName: string): Promise<void> {
     if (!this.enabled) {
       throw new StorageDisabledException(
         'Storage is currently disabled',
@@ -112,7 +112,7 @@ export class LocalStorageAdapter implements StorageService {
     return existsSync(filePath);
   }
 
-  private async saveFromBuffer(buffer: Buffer): Promise<string> | never {
+  private async saveFromBuffer(buffer: Buffer): Promise<string> {
     const fileName = this.getFileName(buffer);
     const filePath = this.getFilePath(fileName);
 
