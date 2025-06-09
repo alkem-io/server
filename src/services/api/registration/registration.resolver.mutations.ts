@@ -101,7 +101,6 @@ export class RegistrationResolverMutations {
   @Mutation(() => IOrganization, {
     description: 'Creates a new Organization on the platform.',
   })
-  @Profiling.api
   async createOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('organizationData') organizationData: CreateOrganizationInput

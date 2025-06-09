@@ -33,6 +33,7 @@ export enum AuthorizationPrivilege {
   ROLESET_ENTRY_ROLE_INVITE = 'roleset-entry-role-invite',
   ROLESET_ENTRY_ROLE_INVITE_ACCEPT = 'roleset-entry-role-invite-accept',
   ROLESET_ENTRY_ROLE_ASSIGN = 'roleset-entry-role-assign', // only for global admins
+  ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION = 'roleset-entry-role-assign-organization', // only for global admins
   COMMUNITY_ASSIGN_VC_FROM_ACCOUNT = 'community-assign-vc-from-account', // allow adding a VC as member to a community from an account
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   READ_ABOUT = 'read-about', // access the external about information for an entity

@@ -159,6 +159,18 @@ export class RoleSetAuthorizationService {
       );
     newRules.push(globalAdminAddMembers);
 
+    const globalAdminAddOrganizations =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.BETA_TESTER,
+        ],
+        'assign-organization-global-admins-beta-testers'
+      );
+    newRules.push(globalAdminAddOrganizations);
+
     //
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

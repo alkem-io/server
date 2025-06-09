@@ -121,6 +121,13 @@ export class RoleSetResolverMutations {
     );
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
+    // Check if has **both** grant + assign org privileges
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      roleSet.authorization,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION,
+      `assign organization RoleSet role: ${roleSet.id}`
+    );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       roleSet.authorization,
