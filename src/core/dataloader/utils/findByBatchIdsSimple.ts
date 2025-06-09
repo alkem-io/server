@@ -53,17 +53,17 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
     }
     // if the auth function is defined
     // it will return either the exception or the result
-    if (options?.authorize) {
-      try {
-        options?.authorize(result);
-      } catch (e) {
-        if (e instanceof ForbiddenAuthorizationPolicyException) {
-          return e;
-        }
-
-        throw e;
+    try {
+      options?.authorize(result);
+    } catch (e) {
+      if (e instanceof ForbiddenAuthorizationPolicyException) {
+        return e;
       }
+
+      throw e;
     }
+
+    return result;
   };
   // ensure the result length matches the input length
   return ids.map(id => resolveForKey(id) ?? resolveUnresolvedForKey(id));

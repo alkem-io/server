@@ -23,6 +23,7 @@ export const createBatchLoader = <TResult extends { id: string }>(
   // the provided batch function does not necessarily complete this requirement
   // so we create a wrapper function that executes the batch function and ensure the output length and order
   // by either returning the original output (if the length matches) or filling the missing values with errors or nulls, as per configuration.
+  // todo: why not use findByBatchIds?
   const loadAndEnsureOutputLengthAndOrder = async (
     keys: readonly string[]
   ): Promise<(TResult | null | Error)[]> => {

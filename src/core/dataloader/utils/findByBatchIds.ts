@@ -89,17 +89,17 @@ export const findByBatchIds = async <
     }
     // if the auth function is defined
     // it will return either the exception or the result
-    if (options?.authorize) {
-      try {
-        options?.authorize(result);
-      } catch (e) {
-        if (e instanceof ForbiddenAuthorizationPolicyException) {
-          return e;
-        }
-
-        throw e;
+    try {
+      options?.authorize(result);
+    } catch (e) {
+      if (e instanceof ForbiddenAuthorizationPolicyException) {
+        return e;
       }
+
+      throw e;
     }
+
+    return result;
   };
   console.log('findByBatchIds', classRef.name, ids.length);
 
