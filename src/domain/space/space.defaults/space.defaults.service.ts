@@ -219,7 +219,7 @@ export class SpaceDefaultsService {
   ): Promise<CreateCollaborationInput | undefined> {
     if (!contentSpaceFromTemplate?.collaboration) {
       throw new RelationshipNotFoundException(
-        `Collaboration not found in SpaceContent with ID: ${contentSpaceFromTemplate}`,
+        `Collaboration not found in SpaceContent with ID: ${contentSpaceFromTemplate.id}`,
         LogContext.TEMPLATES
       );
     }

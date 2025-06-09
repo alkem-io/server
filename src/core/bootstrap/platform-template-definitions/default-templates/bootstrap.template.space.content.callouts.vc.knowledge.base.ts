@@ -261,7 +261,7 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
           },
           {
-            nameID: 'vc-profile',
+            nameID: 'where-to-find-vc-profile',
             type: CalloutType.POST,
             contributionPolicy: {
               state: CalloutState.CLOSED,

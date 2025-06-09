@@ -629,7 +629,7 @@ export class TemplateService {
     return template.contentSpace;
   }
 
-  async getSpace(templateID: string): Promise<ITemplateContentSpace> {
+  async getSpaceContent(templateID: string): Promise<ITemplateContentSpace> {
     const template = await this.getTemplateOrFail(templateID, {
       relations: {
         contentSpace: true,

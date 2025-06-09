@@ -163,7 +163,7 @@ export class TemplateContentSpaceService {
 
     if (!templateContentSpace.about) {
       throw new EntityNotInitializedException(
-        `TContentSpace not initialised: ${templateContentSpaceData.ID}`,
+        `TemplateContentSpace not initialized: ${templateContentSpaceData.ID}`,
         LogContext.TEMPLATES
       );
     }

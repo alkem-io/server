@@ -13,5 +13,5 @@ export class CreateSpaceSettingsPrivacyInput {
     nullable: true,
     description: 'Flag to control if Platform Support has admin rights.',
   })
-  allowPlatformSupportAsAdmin!: boolean;
+  allowPlatformSupportAsAdmin?: boolean;
 }

@@ -75,6 +75,6 @@ export class TemplateResolverFields {
     if (template.type !== TemplateType.SPACE) {
       return undefined;
     }
-    return this.templateService.getSpace(template.id);
+    return this.templateService.getSpaceContent(template.id);
   }
 }
