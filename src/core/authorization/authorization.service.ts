@@ -28,7 +28,11 @@ export class AuthorizationService {
     privilegeRequired: AuthorizationPrivilege,
     msg: string
   ) {
-    const auth = this.validateAuthorization(authorization);
+    const auth = this.validateAuthorization(
+      authorization,
+      msg,
+      privilegeRequired
+    );
 
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
@@ -77,7 +81,9 @@ export class AuthorizationService {
   };
 
   validateAuthorization(
-    authorization: IAuthorizationPolicy | undefined
+    authorization: IAuthorizationPolicy | undefined,
+    msg: string,
+    privilegeRequired: AuthorizationPrivilege
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new ForbiddenException(
@@ -86,7 +92,7 @@ export class AuthorizationService {
       );
     if (authorization.credentialRules.length === 0) {
       throw new AuthorizationInvalidPolicyException(
-        `AuthorizationPolicy without credential rules provided: ${authorization.id}, type: ${authorization.type}`,
+        `AuthorizationPolicy without credential rules provided: ${authorization.id}, type: ${authorization.type}, privilege: ${privilegeRequired}, message: ${msg}`,
         LogContext.AUTH
       );
     }
