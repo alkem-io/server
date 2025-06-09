@@ -18,15 +18,16 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 export class KnowledgeBaseResolverFields {
   constructor() {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for describing this KnowledgeBase.',
-  }) // todo
+  })
   async profile(
     @Parent() knowledgeBase: IKnowledgeBase,
-    @Loader(ProfileLoaderCreator, { parentClassRef: KnowledgeBase })
+    @Loader(ProfileLoaderCreator, {
+      parentClassRef: KnowledgeBase,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(knowledgeBase.id);
