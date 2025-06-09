@@ -52,19 +52,19 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
-  @UseGuards(GraphqlGuard)
   @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
     description: 'About this space.',
-  }) // todo
+  })
   async about(
     @Parent() space: Space,
-    @Loader(SpaceAboutLoaderCreator, { parentClassRef: Space })
+    @Loader(SpaceAboutLoaderCreator, {
+      parentClassRef: Space,
+      checkPrivilege: AuthorizationPrivilege.READ_ABOUT,
+    })
     loader: ILoader<ISpaceAbout>
   ): Promise<ISpaceAbout> {
-    const about = await loader.load(space.id);
-    return about;
+    return loader.load(space.id);
   }
 
   @ResolveField('subscriptions', () => [ISpaceSubscription], {
@@ -98,29 +98,31 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_LICENSE)
-  @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this Space.',
-  }) // todo
+  })
   async license(
     @Parent() space: ISpace,
-    @Loader(LicenseLoaderCreator, { parentClassRef: Space })
+    @Loader(LicenseLoaderCreator, {
+      parentClassRef: Space,
+      checkPrivilege: AuthorizationPrivilege.READ_LICENSE,
+    })
     loader: ILoader<ILicense>
   ): Promise<ILicense> {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this Space.',
-  }) // todo
+  })
   async agent(
     @Parent() space: Space,
-    @Loader(AgentLoaderCreator, { parentClassRef: Space })
+    @Loader(AgentLoaderCreator, {
+      parentClassRef: Space,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(space.id);
