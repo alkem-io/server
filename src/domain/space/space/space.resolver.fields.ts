@@ -85,15 +85,16 @@ export class SpaceResolverFields {
     return this.spaceService.activeSubscription(space);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
     description: 'The collaboration for the Space.',
-  }) // todo
+  })
   async collaboration(
     @Parent() space: Space,
-    @Loader(SpaceCollaborationLoaderCreator, { parentClassRef: Space })
+    @Loader(SpaceCollaborationLoaderCreator, {
+      parentClassRef: Space,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
     return loader.load(space.id);
