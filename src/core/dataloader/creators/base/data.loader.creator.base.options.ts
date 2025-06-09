@@ -55,11 +55,11 @@ export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
    */
   resolveToNull?: boolean;
   /***
-   * If set, the dataloader will check if the agent has the specified privilege on the RESULT.
+   * If set, the dataloader will check if the requester has the specified privilege on the RESULT.
    */
   checkResultPrivilege?: AuthorizationPrivilege;
   /***
-   * If set, the dataloader will check if the agent has the specified privilege on the PARENT.
+   * If set, the dataloader will check if the requester has the specified privilege on the PARENT.
    */
   checkParentPrivilege?: AuthorizationPrivilege;
 }

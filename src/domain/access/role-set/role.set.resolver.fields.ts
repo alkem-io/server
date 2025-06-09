@@ -356,7 +356,7 @@ export class RoleSetResolverFields {
     @Parent() roleSet: IRoleSet,
     @Loader(LicenseLoaderCreator, {
       parentClassRef: RoleSet,
-      checkResultPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<ILicense>
   ): Promise<ILicense> {

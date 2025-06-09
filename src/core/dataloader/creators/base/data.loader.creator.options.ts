@@ -1,18 +1,20 @@
 import { DataLoaderCreatorLimitOptions } from './data.loader.creator.limit.options';
 import { DataLoaderCreatorPaginationOptions } from './data.loader.creator.pagination.options';
+import { AuthorizationPrivilege } from '@common/enums';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 export type DataLoaderCreatorOptions<
   TResult,
   TParent = any,
 > = DataLoaderCreatorInitOptions<TResult, TParent> &
-  DataLoaderCreatorAuthOptions<TResult>;
+  DataLoaderCreatorAuthOptions<any>;
 
 export type DataLoaderCreatorInitOptions<TResult, TParent = any> =
   | DataLoaderCreatorLimitOptions<TParent, TResult>
   | DataLoaderCreatorPaginationOptions<TParent, TResult>;
 
 export type DataLoaderCreatorAuthOptions<
-  TResult /* extends { authorization: IAuthorizationPolicy }*/, // todo
+  TEntity extends { authorization?: IAuthorizationPolicy }, // todo
 > = {
   /**
    * Authorization function that throws or returns _true_, indicating whether results are passing the authorization check.
@@ -21,5 +23,5 @@ export type DataLoaderCreatorAuthOptions<
    * @throws ForbiddenAuthorizationPolicyException
    * @return true if the result is authorized, otherwise throws an exception.
    */
-  authorize?: (result: TResult) => true;
+  authorize: (result: TEntity, privilege: AuthorizationPrivilege) => boolean;
 };

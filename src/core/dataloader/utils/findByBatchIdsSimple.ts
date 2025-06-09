@@ -1,5 +1,5 @@
 import { FindOptionsWhere, EntityManager, In } from 'typeorm';
-import { Type } from '@nestjs/common';
+import { NotImplementedException, Type } from '@nestjs/common';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
@@ -9,7 +9,7 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   manager: EntityManager,
   classRef: Type<TResult>,
   ids: string[],
-  options?: FindByBatchIdsOptions<TResult, TResult>
+  options: FindByBatchIdsOptions<TResult, TResult>
 ): Promise<(TResult | null | EntityNotFoundException)[] | never> => {
   if (!ids.length) {
     return [];
@@ -40,30 +40,31 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
     results.map<[string, TResult]>(result => [result.id, result])
   );
 
-  const resolveForKey = (
+  const resolveForKeyAndMaybeAuthorize = (
     id: string
   ): TResult | undefined | ForbiddenAuthorizationPolicyException => {
-    const result = resultsById.get(id);
-    if (result === undefined) {
+    const parent = resultsById.get(id);
+    if (parent === undefined) {
       return undefined;
     }
-    // directly return the result if no authorization is provided
-    if (!options?.authorize) {
-      return result;
+
+    if (options.checkParentPrivilege) {
+      throw new NotImplementedException(
+        'Checking parent privilege is not implemented yet for simple batch loading'
+      );
     }
-    // if the auth function is defined
-    // it will return either the exception or the result
-    try {
-      options?.authorize(result);
-    } catch (e) {
-      if (e instanceof ForbiddenAuthorizationPolicyException) {
-        return e;
+    // check the result if flag is present
+    if (options.checkResultPrivilege) {
+      try {
+        options.authorize(parent, options.checkResultPrivilege);
+      } catch (e) {
+        if (e instanceof ForbiddenAuthorizationPolicyException) {
+          return e;
+        }
       }
-
-      throw e;
     }
 
-    return result;
+    return parent;
   };
   console.log(
     'findByBatchIdsSimple',
@@ -72,5 +73,7 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
     ids.length
   );
   // ensure the result length matches the input length
-  return ids.map(id => resolveForKey(id) ?? resolveUnresolvedForKey(id));
+  return ids.map(
+    id => resolveForKeyAndMaybeAuthorize(id) ?? resolveUnresolvedForKey(id)
+  );
 };

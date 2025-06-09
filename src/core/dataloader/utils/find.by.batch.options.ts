@@ -10,7 +10,7 @@ export type FindByBatchIdsOptions<TParent, TResult> = Omit<
     DataLoaderCreatorPaginationOptions<TParent, TResult>,
   'cache' | 'parentClassRef' | 'fields'
 > &
-  DataLoaderCreatorAuthOptions<TResult> & {
+  DataLoaderCreatorAuthOptions<any> & {
     select: FindOptionsSelect<TParent>;
     dataLoaderName?: string; // for debugging purposes
   };

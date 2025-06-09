@@ -10,16 +10,19 @@ import { LogContext } from '@common/enums';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
 import { sorOutputByKeys } from './sort.output.by.keys';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 export const findByBatchIds = async <
-  TParent extends { id: string } & { [key: string]: any }, // todo better type
+  TParent extends { id: string } & {
+    [key: string]: any;
+  }, // todo better type
   TResult,
 >(
   manager: EntityManager,
   classRef: Type<TParent>,
   ids: string[],
   relations: FindOptionsRelations<TParent>,
-  options?: FindByBatchIdsOptions<TParent, TResult>
+  options: FindByBatchIdsOptions<TParent, TResult>
 ): Promise<
   (
     | TResult
@@ -69,37 +72,38 @@ export const findByBatchIds = async <
         );
   };
 
-  const resultsById = new Map<string, TResult>(
-    sortedResults.map<[string, TResult]>(result => [
-      result.id,
-      getRelation(result),
-    ])
+  const resultsById = new Map<string, TParent>(
+    sortedResults.map<[string, TParent]>(parent => [parent.id, parent])
   );
 
   const resolveForKeyAndMaybeAuthorize = (
     id: string
   ): TResult | undefined | ForbiddenAuthorizationPolicyException => {
-    const result = resultsById.get(id);
-    if (result === undefined) {
+    const parent = resultsById.get(id);
+    if (parent === undefined) {
       return undefined;
     }
-    // directly return the result if no authorization is provided
-    if (!options?.authorize) {
-      return result;
-    }
-    // if the auth function is defined
-    // it will return either the exception or the result
-    try {
-      options?.authorize(result);
-    } catch (e) {
-      if (e instanceof ForbiddenAuthorizationPolicyException) {
-        return e;
+    // check the parent if flag is present
+    if (options.checkParentPrivilege) {
+      try {
+        options.authorize(parent, options.checkParentPrivilege);
+      } catch (e) {
+        if (e instanceof ForbiddenAuthorizationPolicyException) {
+          return e;
+        }
       }
-
-      throw e;
     }
-
-    return result;
+    // check the result if flag is present
+    if (options.checkResultPrivilege) {
+      try {
+        options.authorize(parent, options.checkResultPrivilege);
+      } catch (e) {
+        if (e instanceof ForbiddenAuthorizationPolicyException) {
+          return e;
+        }
+      }
+    }
+    return getRelation(parent);
   };
   console.log(
     'findByBatchIds',

@@ -193,7 +193,7 @@ export class OrganizationResolverFields {
   async storageAggregator(
     @Parent() organization: Organization,
     @Loader(OrganizationStorageAggregatorLoaderCreator, {
-      checkResultPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {

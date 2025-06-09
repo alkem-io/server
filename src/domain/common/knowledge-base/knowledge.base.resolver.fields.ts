@@ -1,9 +1,6 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IKnowledgeBase } from './knowledge.base.interface';
-import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { Loader } from '@core/dataloader/decorators';
 import { KnowledgeBase } from './knowledge.base.entity';
 import {
@@ -26,7 +23,7 @@ export class KnowledgeBaseResolverFields {
     @Parent() knowledgeBase: IKnowledgeBase,
     @Loader(ProfileLoaderCreator, {
       parentClassRef: KnowledgeBase,
-      checkResultPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
@@ -41,7 +38,7 @@ export class KnowledgeBaseResolverFields {
     @Parent() knowledgeBase: IKnowledgeBase,
     @Loader(KnowledgeBaseCalloutsSetLoaderCreator, {
       parentClassRef: KnowledgeBase,
-      checkResultPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<ICalloutsSet>
   ): Promise<ICalloutsSet> {

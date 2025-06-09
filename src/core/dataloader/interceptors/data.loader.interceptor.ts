@@ -14,6 +14,8 @@ import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderCreator } from '../creators/base/data.loader.creator';
 import { DataLoaderContextEntry } from './data.loader.context.entry';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class DataLoaderInterceptor implements NestInterceptor {
@@ -31,7 +33,7 @@ export class DataLoaderInterceptor implements NestInterceptor {
       // the key is used to generate a single instance across multiple resolve() calls,
       // and ensure they share the same generated DI container sub-tree
       contextId: ContextIdFactory.create(),
-      get: (creatorRef, options) => {
+      get: (creatorRef, options = {}) => {
         // handle generic loaders initialized with different typeorm definitions
         const creatorName = options?.parentClassRef
           ? `${creatorRef.name}:${options.parentClassRef.name}`
@@ -62,24 +64,26 @@ export class DataLoaderInterceptor implements NestInterceptor {
               options?.cache ??
               (ctx.req.headers.connection !== 'Upgrade' &&
                 ctx.req.headers.upgrade !== 'websocket');
-            // if a privilege is provided, initialize the authorize function
-            if (options?.checkResultPrivilege) {
-              const agentInfo = ctx.req.user;
-              // todo better type for result
-              options.authorize = (result: any) => {
-                this.authorizationService.grantAccessOrFail(
-                  agentInfo,
-                  result.authorization,
-                  options.checkResultPrivilege!,
-                  'authorize data loader result'
-                );
+            // initialize the authorize function
+            const agentInfo = ctx.req.user;
+            // todo better type for result
+            const authorize = (
+              result: { authorization?: AuthorizationPolicy },
+              privilege: AuthorizationPrivilege
+            ) => {
+              this.authorizationService.grantAccessOrFail(
+                agentInfo,
+                result.authorization,
+                privilege!,
+                'authorize data loader result'
+              );
 
-                return true;
-              };
-            }
+              return true;
+            };
 
             return creator.create({
               ...options,
+              authorize,
               cache: enableCacheForQueries,
             });
           })

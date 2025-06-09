@@ -1,10 +1,9 @@
 import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser } from '@domain/community/user/user.interface';
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
@@ -222,7 +221,7 @@ export class UserResolverFields {
   async storageAggregator(
     @Parent() user: IUser,
     @Loader(UserStorageAggregatorLoaderCreator, {
-      checkResultPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {

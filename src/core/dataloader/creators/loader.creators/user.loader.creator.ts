@@ -10,7 +10,7 @@ import { User } from '@domain/community/user/user.entity';
 export class UserLoaderCreator implements DataLoaderCreator<IUser> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IUser>) {
+  create(options: DataLoaderCreatorOptions<IUser>) {
     return createTypedSimpleDataLoader(
       this.manager,
       User,

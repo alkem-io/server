@@ -45,7 +45,7 @@ export class AccountResolverFields {
     @Parent() account: Account,
     @Loader(AgentLoaderCreator, {
       parentClassRef: Account,
-      checkResultPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
@@ -60,7 +60,7 @@ export class AccountResolverFields {
     @Parent() account: Account,
     @Loader(LicenseLoaderCreator, {
       parentClassRef: Account,
-      checkResultPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<ILicense>
   ): Promise<ILicense> {

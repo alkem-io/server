@@ -68,7 +68,7 @@ export class InnovationHubResolverFields {
     @Parent() innovationHub: InnovationHub,
     @Loader(AccountLoaderCreator, {
       parentClassRef: InnovationHub,
-      checkResultPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
     })
     loader: ILoader<IAccount>
   ) {
