@@ -20,7 +20,6 @@ import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { AlkemioConfig } from '@src/types';
 import { Template } from '@domain/template/template/template.entity';
-import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
@@ -33,6 +32,7 @@ import { UrlGeneratorCacheService } from './url.generator.service.cache';
 import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -81,7 +81,7 @@ export class UrlGeneratorService {
   ): Promise<string> {
     switch (profile.type) {
       case ProfileType.SPACE_ABOUT:
-        return await this.getSpaceUrlPathByAboutProfileID(profile.id);
+        return await this.getUrlPathByAboutProfileID(profile.id);
       case ProfileType.USER: {
         const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'user',
@@ -327,25 +327,12 @@ export class UrlGeneratorService {
   private async getInnovationFlowUrlPathOrFail(
     profileID: string
   ): Promise<string> {
-    const innovationFlow = await this.entityManager.findOne(InnovationFlow, {
-      where: {
-        profile: {
-          id: profileID,
-        },
-      },
-    });
-
-    if (!innovationFlow) {
-      throw new EntityNotFoundException(
-        `Unable to find innovationFlow for profile: ${profileID}`,
-        LogContext.URL_GENERATOR
-      );
-    }
-
     const collaboration = await this.entityManager.findOne(Collaboration, {
       where: {
         innovationFlow: {
-          id: innovationFlow.id,
+          profile: {
+            id: profileID,
+          },
         },
       },
     });
@@ -356,17 +343,19 @@ export class UrlGeneratorService {
       );
     }
     if (collaboration.isTemplate) {
-      return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+      return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
     }
 
     return this.getSpaceUrlPathByCollaborationID(collaboration.id);
   }
 
-  private async getCollaborationTemplateUrlPathOrFail(collaborationId: string) {
+  private async getSpaceTemplateUrlPathOrFail(collaborationId: string) {
     const template = await this.entityManager.findOne(Template, {
       where: {
-        collaboration: {
-          id: collaborationId,
+        contentSpace: {
+          collaboration: {
+            id: collaborationId,
+          },
         },
       },
       relations: {
@@ -497,7 +486,7 @@ export class UrlGeneratorService {
         }
 
         if (collaboration.isTemplate) {
-          return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+          return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
         }
 
         const collaborationJourneyUrlPath =
@@ -578,22 +567,38 @@ export class UrlGeneratorService {
     return this.generateUrlForSpaceAllLevels(space, spacePath);
   }
 
-  private async getSpaceUrlPathByAboutProfileID(
-    profileID: string,
-    spacePath?: UrlPathElementSpace
-  ): Promise<string> {
+  private async getSpaceAboutByProfileID(profileID: string): Promise<string> {
     if (!profileID || profileID === 'null') {
       throw new EntityNotFoundException(
-        `Unable to find Space with provided collaborationID: ${profileID}`,
+        `Unable to find SpaceAbout with provided profileID: ${profileID}`,
         LogContext.URL_GENERATOR
       );
     }
+    const spaceAbout = await this.entityManager.findOne(SpaceAbout, {
+      where: {
+        profile: {
+          id: profileID,
+        },
+      },
+    });
+    if (!spaceAbout) {
+      throw new EntityNotFoundException(
+        `Unable to find SpaceAbout with provided about profileID: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return spaceAbout.id;
+  }
+
+  private async getUrlPathByAboutProfileID(
+    profileID: string,
+    spacePath?: UrlPathElementSpace
+  ): Promise<string> {
+    const spaceAboutID = await this.getSpaceAboutByProfileID(profileID);
     const space = await this.entityManager.findOne(Space, {
       where: {
         about: {
-          profile: {
-            id: profileID,
-          },
+          id: spaceAboutID,
         },
       },
       relations: {
@@ -602,13 +607,32 @@ export class UrlGeneratorService {
         },
       },
     });
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find Space with provided about profileID: ${profileID}`,
-        LogContext.URL_GENERATOR
+    if (space) {
+      return this.generateUrlForSpaceAllLevels(space, spacePath);
+    }
+    // Check if part of a TemplateContentSpace
+    const templateContentSpace = await this.entityManager.findOne(Template, {
+      where: {
+        contentSpace: {
+          about: {
+            id: spaceAboutID,
+          },
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (templateContentSpace && templateContentSpace.profile) {
+      return await this.getTemplateUrlPathOrFail(
+        templateContentSpace.profile.id
       );
     }
-    return this.generateUrlForSpaceAllLevels(space, spacePath);
+
+    throw new EntityNotFoundException(
+      `Unable to find url for about with ID: ${spaceAboutID}`,
+      LogContext.URL_GENERATOR
+    );
   }
 
   private async getSpaceUrlPathByCommunityID(

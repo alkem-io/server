@@ -29,6 +29,7 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { VirtualContributorLookupModule } from '@domain/community/virtual-contri
     StorageAggregatorModule,
     TemporaryStorageModule,
     PlatformAuthorizationPolicyModule,
+    PlatformTemplatesModule,
     LicensingFrameworkModule,
     LicenseIssuerModule,
     LicensingCredentialBasedModule,

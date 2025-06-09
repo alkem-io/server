@@ -32,6 +32,7 @@ import { LicenseModule } from '@domain/common/license/license.module';
 import { SpaceLicenseService } from './space.service.license';
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { SpaceAboutModule } from '../space.about/space.about.module';
+import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { SpaceAboutModule } from '../space.about/space.about.module';
     RoleSetModule,
     NameReporterModule,
     SpaceDefaultsModule,
+    SpaceLookupModule,
     LicenseModule,
     TypeOrmModule.forFeature([Space]),
   ],

@@ -3,9 +3,10 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, EntityNotFoundError, FindOneOptions } from 'typeorm';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Callout, ICallout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 
 @Injectable()
 export class ContributionResolverService {

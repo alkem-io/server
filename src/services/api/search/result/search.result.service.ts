@@ -20,7 +20,7 @@ import {
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { Post } from '@domain/collaboration/post';
-import { Callout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {

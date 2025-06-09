@@ -15,11 +15,11 @@ import {
   In,
   Repository,
 } from 'typeorm';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { ISpaceAbout } from '../space.about';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class SpaceLookupService {
@@ -69,6 +69,43 @@ export class SpaceLookupService {
     return space;
   }
 
+  public async getSpaceByNameIdOrFail(
+    spaceNameID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
+    const space = await this.spaceRepository.findOne({
+      where: {
+        nameID: spaceNameID,
+        level: SpaceLevel.L0,
+      },
+      ...options,
+    });
+    if (!space) {
+      if (!space)
+        throw new EntityNotFoundException(
+          `Unable to find L0 Space with nameID: ${spaceNameID}`,
+          LogContext.SPACES
+        );
+    }
+    return space;
+  }
+
+  public async getSubspaceByNameIdInLevelZeroSpace(
+    subspaceNameID: string,
+    levelZeroSpaceID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace | null> {
+    const subspace = await this.spaceRepository.findOne({
+      where: {
+        nameID: subspaceNameID,
+        levelZeroSpaceID: levelZeroSpaceID,
+      },
+      ...options,
+    });
+
+    return subspace;
+  }
+
   private async getSpaceForSpaceAbout(
     spaceAboutID: string,
     options?: FindOneOptions<Space>
@@ -95,23 +132,6 @@ export class SpaceLookupService {
       },
     });
     return space;
-  }
-
-  public async getAgent(spaceID: string): Promise<IAgent> {
-    const space = await this.getSpaceOrFail(spaceID, {
-      relations: {
-        agent: true,
-      },
-    });
-
-    if (!space.agent) {
-      throw new RelationshipNotFoundException(
-        `Unable to retrieve Agent for Space: ${space.id}`,
-        LogContext.PLATFORM
-      );
-    }
-
-    return space.agent;
   }
 
   /***

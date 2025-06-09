@@ -13,8 +13,8 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 @Resolver(() => LookupByNameQueryResults)
 export class LookupByNameResolverFields {
@@ -25,7 +25,7 @@ export class LookupByNameResolverFields {
     private innovationPackService: InnovationPackService,
     private templateService: TemplateService,
     private userLookupService: UserLookupService,
-    private spaceService: SpaceService,
+    private spaceLookupService: SpaceLookupService,
     private organizationLookupService: OrganizationLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
@@ -78,7 +78,7 @@ export class LookupByNameResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('NAMEID', { type: () => NameID }) nameid: string
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceByNameIdOrFail(nameid);
+    const space = await this.spaceLookupService.getSpaceByNameIdOrFail(nameid);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
