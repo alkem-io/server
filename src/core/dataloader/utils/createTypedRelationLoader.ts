@@ -52,7 +52,7 @@ export const createTypedRelationDataLoader = <
       >(manager, parentClassRef, keys as string[], relations, {
         ...restOptions,
         select: selectOptions as FindOptionsSelect<TParent>,
-        authorize: options?.authorize,
+        authorize: options?.authorize as any, // todo
       }),
     {
       cache: options?.cache,

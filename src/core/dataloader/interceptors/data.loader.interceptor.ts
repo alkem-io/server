@@ -65,6 +65,7 @@ export class DataLoaderInterceptor implements NestInterceptor {
 
             if (options?.checkPrivilege) {
               const agentInfo = ctx.req.user;
+              // todo better type for result
               options.authorize = (result: any) => {
                 this.authorizationService.grantAccessOrFail(
                   agentInfo,

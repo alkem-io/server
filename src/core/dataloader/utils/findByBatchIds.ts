@@ -99,6 +99,7 @@ export const findByBatchIds = async <
     // directly return the result if no authorization is provided
     return result;
   };
+  console.log('findByBatchIds', ids.length);
 
   // ensure the result length matches the input length; fill the missing values with unresolved values
   return ids.map(id => resolveForKey(id) ?? resolveUnresolvedForKey(id));
