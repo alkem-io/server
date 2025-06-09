@@ -33,15 +33,17 @@ export class KnowledgeBaseResolverFields {
     return loader.load(knowledgeBase.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('calloutsSet', () => ICalloutsSet, {
     nullable: false,
     description: 'The calloutsSet with Callouts in use by this KnowledgeBase',
-  }) // todo
+  })
   async calloutsSet(
     @Parent() knowledgeBase: IKnowledgeBase,
-    @Loader(KnowledgeBaseCalloutsSetLoaderCreator) loader: ILoader<ICalloutsSet>
+    @Loader(KnowledgeBaseCalloutsSetLoaderCreator, {
+      parentClassRef: KnowledgeBase,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
+    loader: ILoader<ICalloutsSet>
   ): Promise<ICalloutsSet> {
     return loader.load(knowledgeBase.id);
   }
