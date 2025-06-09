@@ -37,21 +37,19 @@ import { ISpaceAbout } from '../space.about';
 export class SpaceResolverFields {
   constructor(private spaceService: SpaceService) {}
 
-  // Check authorization inside the field resolver directly on the Community
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: false,
     description: 'Get the Community for the Space. ',
-  }) // todo
+  })
   async community(
     @Parent() space: Space,
-    @Loader(SpaceCommunityLoaderCreator, { parentClassRef: Space })
+    @Loader(SpaceCommunityLoaderCreator, {
+      parentClassRef: Space,
+      checkPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<ICommunity>
   ): Promise<ICommunity> {
-    const community = await loader.load(space.id);
-    // Do not check for READ access here, rely on per field check on resolver in Community
-    return community;
+    return loader.load(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
