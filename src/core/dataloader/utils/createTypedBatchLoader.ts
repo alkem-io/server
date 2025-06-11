@@ -23,19 +23,17 @@ export const createBatchLoader = <TResult extends { id: string }>(
   // the provided batch function does not necessarily complete this requirement
   // so we create a wrapper function that executes the batch function and ensure the output length and order
   // by either returning the original output (if the length matches) or filling the missing values with errors or nulls, as per configuration.
-  // todo: why not use findByBatchIds?
   const loadAndEnsureOutputLengthAndOrder = async (
     keys: readonly string[]
   ): Promise<(TResult | null | Error)[]> => {
     const unsortedOutput = await batchLoadFn(keys);
-    const sortedOutput = sorOutputByKeys(unsortedOutput, keys);
-    if (sortedOutput.length == keys.length) {
-      // length is ensured
-      return sortedOutput;
+    if (unsortedOutput.length == keys.length) {
+      // length is ensured and sorted
+      return sorOutputByKeys(unsortedOutput, keys);
     }
     // maps each returned result to its id for O(1) search
     const resultsById = new Map<string, TResult>(
-      sortedOutput.map<[string, TResult]>(result => [result.id, result])
+      unsortedOutput.map<[string, TResult]>(result => [result.id, result])
     );
     // ensure the result length matches the input length and order
     return keys.map(

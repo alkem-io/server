@@ -52,9 +52,6 @@ export const findByBatchIds = async <
     relations: relations,
     select: select,
   });
-  // todo: check if sorting is needed; hint - results are converted to Map
-  const sortedResults = sorOutputByKeys(unsortedResults, ids);
-
   const topLevelRelation = relationKeys[0];
 
   const getRelation = (result: TParent) =>
@@ -72,7 +69,7 @@ export const findByBatchIds = async <
   };
 
   const resultsById = new Map<string, TParent>(
-    sortedResults.map<[string, TParent]>(parent => [parent.id, parent])
+    unsortedResults.map<[string, TParent]>(parent => [parent.id, parent])
   );
 
   const resolveForKeyAndMaybeAuthorize = (
