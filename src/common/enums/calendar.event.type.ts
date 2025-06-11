@@ -2,8 +2,10 @@ import { registerEnumType } from '@nestjs/graphql';
 
 export enum CalendarEventType {
   EVENT = 'event',
-  TRAINING = 'training',
+  DEADLINE = 'deadline',
+  MEETING = 'meeting',
   MILESTONE = 'milestone',
+  TRAINING = 'training',
   OTHER = 'other',
 }
 
