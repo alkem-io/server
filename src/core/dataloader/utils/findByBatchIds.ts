@@ -93,24 +93,27 @@ export const findByBatchIds = async <
         }
       }
     }
+
+    const result = getRelation(parent);
+
     // check the result if flag is present
     if (options.checkResultPrivilege) {
       try {
-        options.authorize(parent, options.checkResultPrivilege);
+        options.authorize(result, options.checkResultPrivilege);
       } catch (e) {
         if (e instanceof ForbiddenAuthorizationPolicyException) {
           return e;
         }
       }
     }
-    return getRelation(parent);
+    return result;
   };
-  console.log(
-    'findByBatchIds',
-    classRef.name,
-    options?.dataLoaderName,
-    ids.length
-  );
+  // console.log(
+  //   'findByBatchIds',
+  //   classRef.name,
+  //   options?.dataLoaderName,
+  //   ids.length
+  // );
 
   // ensure the result length matches the input length; fill the missing values with unresolved values
   return ids.map(

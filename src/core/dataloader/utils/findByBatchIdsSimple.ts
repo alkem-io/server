@@ -43,8 +43,8 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   const resolveForKeyAndMaybeAuthorize = (
     id: string
   ): TResult | undefined | ForbiddenAuthorizationPolicyException => {
-    const parent = resultsById.get(id);
-    if (parent === undefined) {
+    const result = resultsById.get(id);
+    if (result === undefined) {
       return undefined;
     }
 
@@ -53,10 +53,11 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
         'Checking parent privilege is not implemented yet for simple batch loading'
       );
     }
+
     // check the result if flag is present
     if (options.checkResultPrivilege) {
       try {
-        options.authorize(parent, options.checkResultPrivilege);
+        options.authorize(result, options.checkResultPrivilege);
       } catch (e) {
         if (e instanceof ForbiddenAuthorizationPolicyException) {
           return e;
@@ -64,14 +65,14 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
       }
     }
 
-    return parent;
+    return result;
   };
-  console.log(
-    'findByBatchIdsSimple',
-    classRef.name,
-    options?.dataLoaderName,
-    ids.length
-  );
+  // console.log(
+  //   'findByBatchIdsSimple',
+  //   classRef.name,
+  //   options?.dataLoaderName,
+  //   ids.length
+  // );
   // ensure the result length matches the input length
   return ids.map(
     id => resolveForKeyAndMaybeAuthorize(id) ?? resolveUnresolvedForKey(id)
