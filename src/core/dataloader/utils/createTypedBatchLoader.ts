@@ -18,7 +18,12 @@ export const createBatchLoader = <TResult extends { id: string }>(
     name: string; // for debugging purposes
     loadedTypeName: string; // for debugging purposes
   } & Pick<DataLoaderCreatorBaseOptions<any, any>, 'resolveToNull'>
-): ILoader<TResult | null | EntityNotFoundException> => {
+): ILoader<
+  | TResult
+  | null
+  | EntityNotFoundException
+  | ForbiddenAuthorizationPolicyException
+> => {
   // the data loader returns an array the MUST match the input length AND input key order
   // the provided batch function does not necessarily complete this requirement
   // so we create a wrapper function that executes the batch function and ensure the output length and order
