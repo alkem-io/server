@@ -12,7 +12,7 @@ export class CollaborationTimelineLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ITimeline[]>) {
+  create(options: DataLoaderCreatorOptions<ITimeline[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Collaboration,

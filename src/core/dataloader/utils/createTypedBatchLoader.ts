@@ -14,7 +14,7 @@ export const createBatchLoader = <TResult extends { id: string }>(
    * The incompleteness will be handled on a later stage while the result is verified.
    */
   batchLoadFn: (keys: ReadonlyArray<string>) => Promise<TResult[]>,
-  options?: {
+  options: {
     name: string; // for debugging purposes
     loadedTypeName: string; // for debugging purposes
   } & Pick<DataLoaderCreatorBaseOptions<any, any>, 'resolveToNull'>
@@ -40,7 +40,7 @@ export const createBatchLoader = <TResult extends { id: string }>(
       key => resultsById.get(key) ?? resolveUnresolvedForKey(key)
     );
   };
-  const { name, loadedTypeName, resolveToNull } = options ?? {};
+  const { name, loadedTypeName, resolveToNull } = options;
   // a function to resolve an unresolved entity for a given key (e.g. if not found, etc.)
   const resolveUnresolvedForKey = (key: string) => {
     return resolveToNull

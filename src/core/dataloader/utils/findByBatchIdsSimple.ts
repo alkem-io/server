@@ -1,16 +1,31 @@
 import { FindOptionsWhere, EntityManager, In } from 'typeorm';
 import { NotImplementedException, Type } from '@nestjs/common';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ForbiddenAuthorizationPolicyException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
-import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   manager: EntityManager,
   classRef: Type<TResult>,
   ids: string[],
   options: FindByBatchIdsOptions<TResult, TResult>
-): Promise<(TResult | null | EntityNotFoundException)[] | never> => {
+): Promise<
+  (
+    | TResult
+    | null
+    | EntityNotFoundException
+    | ForbiddenAuthorizationPolicyException
+  )[]
+> => {
+  if (options.checkParentPrivilege) {
+    throw new NotImplementedException(
+      'Checking parent privilege is not supported for simple batch loading'
+    );
+  }
+
   if (!ids.length) {
     return [];
   }
@@ -46,12 +61,6 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
     const result = resultsById.get(id);
     if (result === undefined) {
       return undefined;
-    }
-
-    if (options.checkParentPrivilege) {
-      throw new NotImplementedException(
-        'Checking parent privilege is not implemented yet for simple batch loading'
-      );
     }
 
     // check the result if flag is present

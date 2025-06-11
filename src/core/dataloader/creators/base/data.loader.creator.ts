@@ -7,7 +7,7 @@ import { DataLoaderCreatorOptions } from './data.loader.creator.options';
 
 export interface DataLoaderCreator<TReturn> {
   create(
-    options?: DataLoaderCreatorOptions<TReturn>
+    options: DataLoaderCreatorOptions<TReturn>
   ): ILoader<
     | TReturn
     | null

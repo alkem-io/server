@@ -20,7 +20,7 @@ export const createTypedRelationDataLoader = <
   parentClassRef: Type<TParent>,
   relations: FindOptionsRelations<TParent>,
   name: string,
-  options?: DataLoaderCreatorOptions<TResult, TParent>
+  options: DataLoaderCreatorOptions<TResult, TParent>
 ): ILoader<
   | TResult
   | null
@@ -57,7 +57,6 @@ export const createTypedRelationDataLoader = <
       >(manager, parentClassRef, keys as string[], relations, {
         ...restOptions,
         select: selectOptions as FindOptionsSelect<TParent>,
-        authorize: options?.authorize as any, // todo
         dataLoaderName: name,
       }),
     {

@@ -12,7 +12,7 @@ export class ProfileLocationLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ILocation>) {
+  create(options: DataLoaderCreatorOptions<ILocation>) {
     return createTypedRelationDataLoader(
       this.manager,
       Profile,

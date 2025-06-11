@@ -14,7 +14,7 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
   name: string,
   options: DataLoaderCreatorOptions<TResult, TResult>
 ): ILoader<TResult | null | EntityNotFoundException> => {
-  const { fields, ...restOptions } = options ?? {};
+  const { fields, ...restOptions } = options;
   // if fields ia specified, select specific fields, otherwise select all fields
   const selectOptions = fields
     ? Array.isArray(fields)

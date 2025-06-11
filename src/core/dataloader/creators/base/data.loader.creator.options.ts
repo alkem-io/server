@@ -14,7 +14,7 @@ export type DataLoaderCreatorInitOptions<TResult, TParent = any> =
   | DataLoaderCreatorPaginationOptions<TParent, TResult>;
 
 export type DataLoaderCreatorAuthOptions<
-  TEntity extends { authorization?: IAuthorizationPolicy }, // todo
+  TEntity extends { authorization?: IAuthorizationPolicy },
 > = {
   /**
    * Authorization function that throws or returns _true_, indicating whether results are passing the authorization check.

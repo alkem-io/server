@@ -10,7 +10,7 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 export class ProfileAvatarsLoaderCreator implements DataLoaderCreator<IVisual> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IVisual>) {
+  create(options: DataLoaderCreatorOptions<IVisual>) {
     return createTypedRelationDataLoader(
       this.manager,
       Profile,

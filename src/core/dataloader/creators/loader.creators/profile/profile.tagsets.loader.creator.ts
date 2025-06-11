@@ -12,7 +12,7 @@ export class ProfileTagsetsLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ITagset[]>) {
+  create(options: DataLoaderCreatorOptions<ITagset[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Profile,

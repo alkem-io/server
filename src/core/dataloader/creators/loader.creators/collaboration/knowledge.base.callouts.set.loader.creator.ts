@@ -12,7 +12,7 @@ export class KnowledgeBaseCalloutsSetLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ICalloutsSet[]>) {
+  create(options: DataLoaderCreatorOptions<ICalloutsSet[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       KnowledgeBase,
