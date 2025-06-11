@@ -10,6 +10,7 @@ import { DataLoaderCreatorOptions } from '../creators/base';
 import { ILoader } from '../loader.interface';
 import { findByBatchIds } from './findByBatchIds';
 import { selectOptionsFromFields } from './selectOptionsFromFields';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 export const createTypedRelationDataLoader = <
   TParent extends { id: string } & { [key: string]: any }, // todo better type,
@@ -19,8 +20,13 @@ export const createTypedRelationDataLoader = <
   parentClassRef: Type<TParent>,
   relations: FindOptionsRelations<TParent>,
   name: string,
-  options?: DataLoaderCreatorOptions<TResult, TParent>
-): ILoader<TResult | null | EntityNotFoundException> => {
+  options: DataLoaderCreatorOptions<TResult, TParent>
+): ILoader<
+  | TResult
+  | null
+  | EntityNotFoundException
+  | ForbiddenAuthorizationPolicyException
+> => {
   const { fields, ...restOptions } = options ?? {};
 
   const topRelation = <keyof TResult>Object.keys(relations)[0];
@@ -34,18 +40,25 @@ export const createTypedRelationDataLoader = <
       : fields
     : { id: true };
 
-  return new DataLoader<string, TResult | null | EntityNotFoundException>(
+  return new DataLoader<
+    string,
+    | TResult
+    | null
+    | EntityNotFoundException
+    | ForbiddenAuthorizationPolicyException
+  >(
     keys =>
-      findByBatchIds<TParent, TResult | null | EntityNotFoundException>(
-        manager,
-        parentClassRef,
-        keys as string[],
-        relations,
-        {
-          ...restOptions,
-          select: selectOptions as FindOptionsSelect<TParent>,
-        }
-      ),
+      findByBatchIds<
+        TParent,
+        | TResult
+        | null
+        | EntityNotFoundException
+        | ForbiddenAuthorizationPolicyException
+      >(manager, parentClassRef, keys as string[], relations, {
+        ...restOptions,
+        select: selectOptions as FindOptionsSelect<TParent>,
+        dataLoaderName: name,
+      }),
     {
       cache: options?.cache,
       name,

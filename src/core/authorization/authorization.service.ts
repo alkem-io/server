@@ -22,6 +22,10 @@ export class AuthorizationService {
     private readonly logger: LoggerService
   ) {}
 
+  /**
+   * @returns _true_ if access is granted, otherwise throws {@link ForbiddenAuthorizationPolicyException}
+   * @throws ForbiddenAuthorizationPolicyException
+   */
   grantAccessOrFail(
     agentInfo: AgentInfo,
     authorization: IAuthorizationPolicy | undefined,

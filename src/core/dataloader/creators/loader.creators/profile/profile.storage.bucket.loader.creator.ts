@@ -12,7 +12,7 @@ export class ProfileStorageBucketLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IStorageBucket>) {
+  create(options: DataLoaderCreatorOptions<IStorageBucket>) {
     return createTypedRelationDataLoader(
       this.manager,
       Profile,

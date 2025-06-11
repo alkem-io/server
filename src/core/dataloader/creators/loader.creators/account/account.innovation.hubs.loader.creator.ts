@@ -12,7 +12,7 @@ export class AccountInnovationHubsLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IInnovationHub[]>) {
+  create(options: DataLoaderCreatorOptions<IInnovationHub[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Account,

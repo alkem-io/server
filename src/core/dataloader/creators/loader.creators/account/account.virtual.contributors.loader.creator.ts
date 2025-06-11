@@ -12,7 +12,7 @@ export class AccountVirtualContributorsLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IVirtualContributor[]>) {
+  create(options: DataLoaderCreatorOptions<IVirtualContributor[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Account,
