@@ -76,6 +76,8 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { CreateSpaceAboutInput } from '@domain/space/space.about';
+import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -159,8 +161,14 @@ export class SpaceService {
     space.community =
       await this.communityService.createCommunity(communityData);
 
+    // Apply the About from the Template but preserve the user provided data
+    const modifiedAbout = this.mergeTemplateSpaceAbout(
+      templateSpaceContent,
+      spaceData
+    );
+
     space.about = await this.spaceAboutService.createSpaceAbout(
-      spaceData.about,
+      modifiedAbout,
       storageAggregator
     );
 
@@ -1244,5 +1252,25 @@ export class SpaceService {
         LogContext.AGENT
       );
     return agent;
+  }
+
+  private mergeTemplateSpaceAbout(
+    templateSpaceContent: ITemplateContentSpace,
+    spaceData: CreateSpaceInput
+  ): CreateSpaceAboutInput {
+    return {
+      why: templateSpaceContent.about.why,
+      who: templateSpaceContent.about.who,
+      profileData: {
+        ...spaceData.about.profileData,
+        description:
+          spaceData.about.profileData.description ||
+          templateSpaceContent.about.profile.description,
+        tagline:
+          spaceData.about.profileData.tagline ||
+          templateSpaceContent.about.profile.tagline,
+      },
+      // TODO: add the rest of the fields from the template (gather them on tmpl creation first)
+    };
   }
 }

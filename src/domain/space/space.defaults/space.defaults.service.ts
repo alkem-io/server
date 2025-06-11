@@ -160,7 +160,9 @@ export class SpaceDefaultsService {
           relations: {
             contentSpace: {
               collaboration: true,
-              about: true,
+              about: {
+                profile: true,
+              },
             },
           },
         }
