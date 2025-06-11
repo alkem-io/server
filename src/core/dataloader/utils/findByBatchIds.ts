@@ -5,17 +5,16 @@ import {
   In,
 } from 'typeorm';
 import { Type } from '@nestjs/common';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ForbiddenAuthorizationPolicyException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
 import { sorOutputByKeys } from './sort.output.by.keys';
-import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 export const findByBatchIds = async <
-  TParent extends { id: string } & {
-    [key: string]: any;
-  }, // todo better type
+  TParent extends { id: string } & { [key: string]: any }, // todo better type
   TResult,
 >(
   manager: EntityManager,
