@@ -82,7 +82,6 @@ export class ProfileResolverFields {
     @Loader(ProfileTagsetsLoaderCreator)
     loader: ILoader<ITagset[]>
   ): Promise<ITagset> {
-    // todo out of tick?
     const tagsets = await loader.load(profile.id);
     if (!tagsetName) {
       const defaultTagset = tagsets.find(
