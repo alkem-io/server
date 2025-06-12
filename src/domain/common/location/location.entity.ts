@@ -2,6 +2,7 @@ import { Column, Entity } from 'typeorm';
 import { BaseAlkemioEntity } from '../entity/base-entity/base.alkemio.entity';
 import { ILocation } from './location.interface';
 import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { IGeoLocation } from './geolocation.interface';
 
 @Entity()
 export class Location extends BaseAlkemioEntity implements ILocation {
@@ -23,9 +24,6 @@ export class Location extends BaseAlkemioEntity implements ILocation {
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   postalCode?: string;
 
-  @Column('double precision', { nullable: true })
-  latitude?: number;
-
-  @Column('double precision', { nullable: true })
-  longitude?: number;
+  @Column('json', { nullable: false })
+  geoLocation!: IGeoLocation;
 }

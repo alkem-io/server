@@ -25,6 +25,10 @@ export class LocationService {
     return await this.locationRepository.remove(location as Location);
   }
 
+  async save(location: ILocation): Promise<ILocation> {
+    return await this.locationRepository.save(location);
+  }
+
   /** Returns whether the location has been changed */
   updateLocationValues(
     location: ILocation | undefined,
@@ -37,11 +41,13 @@ export class LocationService {
       );
     }
     let locationChanged = false;
+    let geoLocationChanged = false;
     if (
       locationData.city !== undefined &&
       locationData.city !== location.city
     ) {
       locationChanged = true;
+      geoLocationChanged = true;
       location.city = locationData.city;
     }
 
@@ -50,6 +56,7 @@ export class LocationService {
       locationData.country !== location.country
     ) {
       locationChanged = true;
+      geoLocationChanged = true;
       location.country = locationData.country;
     }
 
@@ -83,6 +90,10 @@ export class LocationService {
       locationChanged = true;
       location.stateOrProvince = locationData.stateOrProvince;
     }
+
+    if (geoLocationChanged) {
+      location.geoLocation.isValid = false;
+    }
     return locationChanged;
   }
 
@@ -90,17 +101,18 @@ export class LocationService {
     location: ILocation,
     locationData: UpdateLocationInput
   ): Promise<ILocation> {
-    const locationChanged = this.updateLocationValues(location, locationData);
-    if (locationChanged) {
-      const geocodeLocation =
-        await this.geoapifyService.getGeoapifyGeocodeLocation(
-          location.country,
-          location.city
-        );
-      location.longitude = geocodeLocation?.longitude;
-      location.latitude = geocodeLocation?.latitude;
-    }
+    this.updateLocationValues(location, locationData);
 
     return await this.locationRepository.save(location);
+  }
+
+  public hasValidLocationDataForGeoLocation(location: ILocation): boolean {
+    const hasValidCity = this.hasValidLocationField(location.city);
+    const hasValidCountry = this.hasValidLocationField(location.country);
+    return hasValidCity || hasValidCountry;
+  }
+
+  private hasValidLocationField(value: string | undefined): boolean {
+    return value !== undefined && value.length > 0;
   }
 }
