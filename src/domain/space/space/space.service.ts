@@ -1258,17 +1258,21 @@ export class SpaceService {
     templateSpaceContent: ITemplateContentSpace,
     spaceData: CreateSpaceInput
   ): CreateSpaceAboutInput {
+    const templateAbout = templateSpaceContent.about;
+    if (!templateAbout || !templateAbout.profile) {
+      return spaceData.about;
+    }
+
     return {
-      why: templateSpaceContent.about.why,
-      who: templateSpaceContent.about.who,
+      why: spaceData.about.why || templateAbout.why,
+      who: spaceData.about.who || templateAbout.who,
       profileData: {
         ...spaceData.about.profileData,
         description:
           spaceData.about.profileData.description ||
-          templateSpaceContent.about.profile.description,
+          templateAbout.profile.description,
         tagline:
-          spaceData.about.profileData.tagline ||
-          templateSpaceContent.about.profile.tagline,
+          spaceData.about.profileData.tagline || templateAbout.profile.tagline,
       },
       // TODO: add the rest of the fields from the template (gather them on tmpl creation first)
     };
