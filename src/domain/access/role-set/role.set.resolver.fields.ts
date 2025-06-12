@@ -348,15 +348,16 @@ export class RoleSetResolverFields {
     return apps || [];
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this RoleSet.',
   })
   async license(
     @Parent() roleSet: IRoleSet,
-    @Loader(LicenseLoaderCreator, { parentClassRef: RoleSet })
+    @Loader(LicenseLoaderCreator, {
+      parentClassRef: RoleSet,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<ILicense>
   ): Promise<ILicense> {
     return loader.load(roleSet.id);

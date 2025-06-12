@@ -1,6 +1,9 @@
 import { FindOptionsWhere, EntityManager, In } from 'typeorm';
-import { Type } from '@nestjs/common';
-import { EntityNotFoundException } from '@common/exceptions';
+import { NotImplementedException, Type } from '@nestjs/common';
+import {
+  EntityNotFoundException,
+  ForbiddenAuthorizationPolicyException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
 
@@ -8,8 +11,21 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   manager: EntityManager,
   classRef: Type<TResult>,
   ids: string[],
-  options?: FindByBatchIdsOptions<TResult, TResult>
-): Promise<(TResult | null | EntityNotFoundException)[] | never> => {
+  options: FindByBatchIdsOptions<TResult, TResult>
+): Promise<
+  (
+    | TResult
+    | null
+    | EntityNotFoundException
+    | ForbiddenAuthorizationPolicyException
+  )[]
+> => {
+  if (options.checkParentPrivilege) {
+    throw new NotImplementedException(
+      'Checking parent privilege is not supported for simple batch loading'
+    );
+  }
+
   if (!ids.length) {
     return [];
   }
@@ -38,6 +54,30 @@ export const findByBatchIdsSimple = async <TResult extends { id: string }>(
   const resultsById = new Map<string, TResult>(
     results.map<[string, TResult]>(result => [result.id, result])
   );
+
+  const resolveForKeyAndMaybeAuthorize = (
+    id: string
+  ): TResult | undefined | ForbiddenAuthorizationPolicyException => {
+    const result = resultsById.get(id);
+    if (result === undefined) {
+      return undefined;
+    }
+
+    // check the result if flag is present
+    if (options.checkResultPrivilege) {
+      try {
+        options.authorize(result, options.checkResultPrivilege);
+      } catch (e) {
+        if (e instanceof ForbiddenAuthorizationPolicyException) {
+          return e;
+        }
+      }
+    }
+
+    return result;
+  };
   // ensure the result length matches the input length
-  return ids.map(id => resultsById.get(id) ?? resolveUnresolvedForKey(id));
+  return ids.map(
+    id => resolveForKeyAndMaybeAuthorize(id) ?? resolveUnresolvedForKey(id)
+  );
 };

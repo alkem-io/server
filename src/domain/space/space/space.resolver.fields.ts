@@ -41,36 +41,34 @@ export class SpaceResolverFields {
     private spaceLookupService: SpaceLookupService
   ) {}
 
-  // Check authorization inside the field resolver directly on the Community
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: false,
     description: 'Get the Community for the Space. ',
   })
   async community(
     @Parent() space: Space,
-    @Loader(SpaceCommunityLoaderCreator, { parentClassRef: Space })
+    @Loader(SpaceCommunityLoaderCreator, {
+      parentClassRef: Space,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<ICommunity>
   ): Promise<ICommunity> {
-    const community = await loader.load(space.id);
-    // Do not check for READ access here, rely on per field check on resolver in Community
-    return community;
+    return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_ABOUT)
-  @UseGuards(GraphqlGuard)
   @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
     description: 'About this space.',
   })
   async about(
     @Parent() space: Space,
-    @Loader(SpaceAboutLoaderCreator, { parentClassRef: Space })
+    @Loader(SpaceAboutLoaderCreator, {
+      parentClassRef: Space,
+      checkParentPrivilege: AuthorizationPrivilege.READ_ABOUT,
+    })
     loader: ILoader<ISpaceAbout>
   ): Promise<ISpaceAbout> {
-    const about = await loader.load(space.id);
-    return about;
+    return loader.load(space.id);
   }
 
   @ResolveField('subscriptions', () => [ISpaceSubscription], {
@@ -89,43 +87,46 @@ export class SpaceResolverFields {
     return this.spaceService.activeSubscription(space);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
     description: 'The collaboration for the Space.',
   })
   async collaboration(
     @Parent() space: Space,
-    @Loader(SpaceCollaborationLoaderCreator, { parentClassRef: Space })
+    @Loader(SpaceCollaborationLoaderCreator, {
+      parentClassRef: Space,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ_LICENSE)
-  @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this Space.',
   })
   async license(
     @Parent() space: ISpace,
-    @Loader(LicenseLoaderCreator, { parentClassRef: Space })
+    @Loader(LicenseLoaderCreator, {
+      parentClassRef: Space,
+      checkParentPrivilege: AuthorizationPrivilege.READ_LICENSE,
+    })
     loader: ILoader<ILicense>
   ): Promise<ILicense> {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this Space.',
   })
   async agent(
     @Parent() space: Space,
-    @Loader(AgentLoaderCreator, { parentClassRef: Space })
+    @Loader(AgentLoaderCreator, {
+      parentClassRef: Space,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(space.id);

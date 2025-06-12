@@ -10,7 +10,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 export class AccountSpacesLoaderCreator implements DataLoaderCreator<ISpace[]> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ISpace[]>) {
+  create(options: DataLoaderCreatorOptions<ISpace[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Account,

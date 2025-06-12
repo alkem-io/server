@@ -12,7 +12,7 @@ export class SpaceCollaborationLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ICollaboration>) {
+  create(options: DataLoaderCreatorOptions<ICollaboration>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`

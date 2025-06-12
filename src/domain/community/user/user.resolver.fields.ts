@@ -1,10 +1,9 @@
 import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser } from '@domain/community/user/user.interface';
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
@@ -52,20 +51,13 @@ export class UserResolverFields {
   })
   async profile(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Loader(ProfileLoaderCreator, { parentClassRef: User })
+    @Loader(ProfileLoaderCreator, {
+      parentClassRef: User,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    const profile = await loader.load(user.id);
-    // Note: the user profile is public.
-    // Check if the user can read the profile entity, not the actual User entity
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on User: ${profile.displayName} with current user being: ${agentInfo.userID}`
-    );
-    return profile;
+    return loader.load(user.id);
   }
 
   @ResolveField('settings', () => IUserSettings, {
@@ -211,7 +203,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
@@ -221,8 +213,6 @@ export class UserResolverFields {
     return user.settings.communication.allowOtherUsersToSendMessages;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description:
@@ -230,7 +220,9 @@ export class UserResolverFields {
   })
   async storageAggregator(
     @Parent() user: IUser,
-    @Loader(UserStorageAggregatorLoaderCreator)
+    @Loader(UserStorageAggregatorLoaderCreator, {
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(user.id);

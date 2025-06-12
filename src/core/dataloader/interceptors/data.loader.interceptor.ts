@@ -13,10 +13,16 @@ import {
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderCreator } from '../creators/base/data.loader.creator';
 import { DataLoaderContextEntry } from './data.loader.context.entry';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class DataLoaderInterceptor implements NestInterceptor {
-  constructor(private readonly moduleRef: ModuleRef) {}
+  constructor(
+    private readonly moduleRef: ModuleRef,
+    private authorizationService: AuthorizationService
+  ) {}
   // intercept every request and inject the data loader creator in the context
   intercept(context: ExecutionContext, next: CallHandler) {
     const ctx =
@@ -27,7 +33,7 @@ export class DataLoaderInterceptor implements NestInterceptor {
       // the key is used to generate a single instance across multiple resolve() calls,
       // and ensure they share the same generated DI container sub-tree
       contextId: ContextIdFactory.create(),
-      get: (creatorRef, options) => {
+      get: (creatorRef, options = {}) => {
         // handle generic loaders initialized with different typeorm definitions
         const creatorName = options?.parentClassRef
           ? `${creatorRef.name}:${options.parentClassRef.name}`
@@ -51,16 +57,31 @@ export class DataLoaderInterceptor implements NestInterceptor {
               `${DataLoaderInterceptor.name} unable to resolve ${creatorName}. Make sure that it is provided in your module providers list.`
             );
           })
-          .then(x => {
+          .then(creator => {
             // WORKAROUND -> disable the cache for subscription context
             // these headers are determining if it's a subscription context
             const enableCacheForQueries =
               options?.cache ??
               (ctx.req.headers.connection !== 'Upgrade' &&
                 ctx.req.headers.upgrade !== 'websocket');
+            // initialize the authorize function
+            const authorize = (
+              result: { authorization?: AuthorizationPolicy },
+              privilege: AuthorizationPrivilege
+            ) => {
+              this.authorizationService.grantAccessOrFail(
+                ctx.req.user,
+                result.authorization,
+                privilege!,
+                'authorize data loader result'
+              );
 
-            return x.create({
+              return true;
+            };
+
+            return creator.create({
               ...options,
+              authorize,
               cache: enableCacheForQueries,
             });
           })
