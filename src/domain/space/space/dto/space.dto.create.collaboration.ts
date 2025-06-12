@@ -1,5 +1,4 @@
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
@@ -17,10 +16,4 @@ export class CreateCollaborationOnSpaceInput extends CreateCollaborationInput {
       'Add callouts from the template to the Collaboration; defaults to true.',
   })
   addCallouts? = true;
-
-  @Field(() => UUID, {
-    nullable: true,
-    description: 'The Template to use for instantiating the Collaboration.',
-  })
-  collaborationTemplateID?: string;
 }

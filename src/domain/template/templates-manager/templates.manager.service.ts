@@ -153,7 +153,11 @@ export class TemplatesManagerService {
     const templatesManager = await this.getTemplatesManagerOrFail(
       templatesManagerID,
       {
-        relations: { templateDefaults: true },
+        relations: {
+          templateDefaults: {
+            authorization: true,
+          },
+        },
       }
     );
     if (!templatesManager.templateDefaults) {

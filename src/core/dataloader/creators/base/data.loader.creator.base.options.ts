@@ -1,5 +1,6 @@
 import { Type } from '@nestjs/common';
 import { FindOptionsSelect } from 'typeorm';
+import { AuthorizationPrivilege } from '@common/enums';
 
 export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
   /***
@@ -53,4 +54,12 @@ export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
    * You can override this behaviour by setting the option to `false`. That way the problematic values will always be resolved to errors.
    */
   resolveToNull?: boolean;
+  /***
+   * If set, the dataloader will check if the requester has the specified privilege on the RESULT.
+   */
+  checkResultPrivilege?: AuthorizationPrivilege;
+  /***
+   * If set, the dataloader will check if the requester has the specified privilege on the PARENT.
+   */
+  checkParentPrivilege?: AuthorizationPrivilege;
 }

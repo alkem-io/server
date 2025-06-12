@@ -12,7 +12,7 @@ export class OrganizationStorageAggregatorLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IStorageAggregator[]>) {
+  create(options: DataLoaderCreatorOptions<IStorageAggregator[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Organization,

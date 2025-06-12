@@ -50,30 +50,27 @@ export class TemplatesSetResolverFields {
     );
   }
 
-  @ResolveField('collaborationTemplates', () => [ITemplate], {
+  @ResolveField('spaceTemplates', () => [ITemplate], {
     nullable: false,
-    description: 'The CollaborationTemplates in this TemplatesSet.',
+    description: 'The Space Templates in this TemplatesSet.',
   })
-  async collaborationTemplates(
+  async spaceTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<ITemplate[]> {
     return this.templatesSetService.getTemplatesOfType(
       templatesSet,
-      TemplateType.COLLABORATION
+      TemplateType.SPACE
     );
   }
 
-  @ResolveField('collaborationTemplatesCount', () => Float, {
+  @ResolveField('spaceTemplatesCount', () => Float, {
     nullable: false,
-    description:
-      'The total number of CollaborationTemplates in this TemplatesSet.',
+    description: 'The total number of Space Templates in this TemplatesSet.',
   })
-  collaborationTemplatesCount(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<number> {
+  spaceTemplatesCount(@Parent() templatesSet: ITemplatesSet): Promise<number> {
     return this.templatesSetService.getTemplatesCountForType(
       templatesSet.id,
-      TemplateType.COLLABORATION
+      TemplateType.SPACE
     );
   }
 
