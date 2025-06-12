@@ -30,7 +30,7 @@ export class SpaceTemplatesFix1749737734548 implements MigrationInterface {
 
       // Update the content space about profile with the new displayName and description
       await queryRunner.query(
-        `UPDATE profile SET type, displayName = ?, description = ? WHERE id = ?`,
+        `UPDATE profile SET type = ?, displayName = ?, description = ? WHERE id = ?`,
         [
           'space-about',
           template.templateProfileDisplayName,
