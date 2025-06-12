@@ -60,7 +60,9 @@ export class AccountAuthorizationService {
       {
         relations: {
           agent: true,
-          spaces: true,
+          spaces: {
+            templatesManager: true,
+          },
           virtualContributors: true,
           innovationPacks: true,
           innovationHubs: true,

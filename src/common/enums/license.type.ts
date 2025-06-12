@@ -6,6 +6,7 @@ export enum LicenseType {
   WHITEBOARD = 'whiteboard',
   ROLESET = 'roleset',
   COLLABORATION = 'collaboration',
+  TEMPLATE_CONTENT_SPACE = 'template_content_space',
 }
 
 registerEnumType(LicenseType, {

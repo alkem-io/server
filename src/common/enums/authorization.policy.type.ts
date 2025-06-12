@@ -45,6 +45,7 @@ export enum AuthorizationPolicyType {
   STORAGE_AGGREGATOR = 'storage-aggregator',
   STORAGE_BUCKET = 'storage-bucket',
   TEMPLATE = 'template',
+  TEMPLATE_CONTENT_SPACE = 'template-content-space',
   TEMPLATES_SET = 'templates-set',
   TEMPLATES_MANAGER = 'templates-manager',
   TEMPLATE_DEFAULT = 'template-default',

@@ -10,8 +10,8 @@ import { TemplatesSetService } from './templates.set.service';
 import { TemplatesSetAuthorizationService } from './templates.set.service.authorization';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     TemplateModule,
     NamingModule,
     StorageAggregatorResolverModule,
-    CollaborationModule,
+    SpaceLookupModule,
     InputCreatorModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],

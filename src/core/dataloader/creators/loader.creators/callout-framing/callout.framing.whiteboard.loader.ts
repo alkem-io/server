@@ -12,7 +12,7 @@ export class CalloutFramingWhiteboardLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IWhiteboard>) {
+  create(options: DataLoaderCreatorOptions<IWhiteboard>) {
     return createTypedRelationDataLoader(
       this.manager,
       CalloutFraming,

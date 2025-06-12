@@ -37,29 +37,31 @@ export class AccountResolverFields {
     private accountLookupService: AccountLookupService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this Account.',
   })
   async agent(
     @Parent() account: Account,
-    @Loader(AgentLoaderCreator, { parentClassRef: Account })
+    @Loader(AgentLoaderCreator, {
+      parentClassRef: Account,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(account.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this Account.',
   })
   async license(
     @Parent() account: Account,
-    @Loader(LicenseLoaderCreator, { parentClassRef: Account })
+    @Loader(LicenseLoaderCreator, {
+      parentClassRef: Account,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<ILicense>
   ): Promise<ILicense> {
     return loader.load(account.id);

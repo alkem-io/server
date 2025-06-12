@@ -34,8 +34,7 @@ export class SpaceAboutResolverFields {
     @Loader(ProfileLoaderCreator, { parentClassRef: SpaceAbout })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    const profile = await loader.load(space.id);
-    return profile;
+    return loader.load(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

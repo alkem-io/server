@@ -11,6 +11,8 @@ import { InputCreatorResolverQueries } from './input.creator.resolver.queries';
 import { InputCreatorResolverFields } from './input.creator.resolver.fields';
 import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.module';
 import { CalloutFramingModule } from '@domain/collaboration/callout-framing/callout.framing.module';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { CalloutFramingModule } from '@domain/collaboration/callout-framing/call
     CalloutModule,
     CalloutFramingModule,
     CommunityGuidelinesModule,
+    TemplateContentSpaceModule,
+    SpaceLookupModule,
   ],
   providers: [
     InputCreatorService,

@@ -131,11 +131,10 @@ export class CalloutResolverFields {
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
-    const publishedBy = callout.publishedBy;
-    if (!publishedBy) {
+    if (!callout.publishedBy) {
       return null;
     }
-    return loader.load(publishedBy);
+    return loader.load(callout.publishedBy);
   }
 
   @ResolveField('publishedDate', () => Number, {
@@ -159,11 +158,9 @@ export class CalloutResolverFields {
     @Parent() callout: ICallout,
     @Loader(UserLoaderCreator) loader: ILoader<IUser | null>
   ): Promise<IUser | null> {
-    const createdBy = callout.createdBy;
-    if (!createdBy) {
+    if (!callout.createdBy) {
       return null;
     }
-
-    return loader.load(createdBy);
+    return loader.load(callout.createdBy);
   }
 }

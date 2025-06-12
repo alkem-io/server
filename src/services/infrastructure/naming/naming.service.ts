@@ -10,7 +10,7 @@ import {
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpaceLevel } from '@common/enums/space.level';
