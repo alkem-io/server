@@ -12,7 +12,7 @@ export class ProfileReferencesLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IReference[]>) {
+  create(options: DataLoaderCreatorOptions<IReference[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Profile,

@@ -59,8 +59,6 @@ export class InnovationHubResolverFields {
     return loader.load(innovationHub.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: false,
     description: 'The Innovation Hub account.',
@@ -68,7 +66,10 @@ export class InnovationHubResolverFields {
   @Profiling.api
   async account(
     @Parent() innovationHub: InnovationHub,
-    @Loader(AccountLoaderCreator, { parentClassRef: InnovationHub })
+    @Loader(AccountLoaderCreator, {
+      parentClassRef: InnovationHub,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IAccount>
   ) {
     return loader.load(innovationHub.id);

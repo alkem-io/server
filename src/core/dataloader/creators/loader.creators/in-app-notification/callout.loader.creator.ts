@@ -7,8 +7,9 @@ import {
 } from '@core/dataloader/creators/base';
 import { createBatchLoader } from '@core/dataloader/utils';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Callout, ICallout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 
 @Injectable()
 export class CalloutLoaderCreator implements DataLoaderCreator<ICallout> {

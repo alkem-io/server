@@ -1,0 +1,101 @@
+import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CalloutState } from '@common/enums/callout.state';
+import { CalloutType } from '@common/enums/callout.type';
+
+export enum FlowState {
+  HOME = 'Home',
+  COMMUNITY = 'Community',
+  SUBSPACES = 'Subspaces',
+  KNOWLEDGE = 'Knowledge',
+}
+
+export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInput =
+  {
+    level: 0,
+    collaborationData: {
+      innovationFlowData: {
+        profile: {
+          displayName: 'Space Innovation Flow',
+        },
+        settings: {
+          maximumNumberOfStates: 5,
+          minimumNumberOfStates: 4,
+        },
+        states: [
+          {
+            displayName: FlowState.HOME,
+            description:
+              '🔍 A journey of discovery! Gather insights through research and observation.',
+          },
+          {
+            displayName: FlowState.COMMUNITY,
+            description: '🔍 The contributors to this Space!',
+          },
+          {
+            displayName: FlowState.SUBSPACES,
+            description:
+              '🔍 Here you can explore the hosted Subspaces. Filter by key words to show just the topics you care about.',
+          },
+          {
+            displayName: FlowState.KNOWLEDGE,
+            description:
+              '🔍 In the Knowledge Base you will find relevant documents, insights and other materials about the topic. The leads of the Space can provide the content, but also community members can contribute.',
+          },
+        ],
+      },
+      calloutsSetData: {
+        calloutsData: [
+          {
+            nameID: 'welcome',
+            type: CalloutType.POST,
+            contributionPolicy: {
+              state: CalloutState.OPEN,
+            },
+            sortOrder: 1,
+            classification: {
+              tagsets: [
+                {
+                  name: TagsetReservedName.FLOW_STATE,
+                  tags: [FlowState.HOME],
+                },
+              ],
+            },
+            visibility: CalloutVisibility.PUBLISHED,
+            framing: {
+              profile: {
+                displayName: '👋 Welcome to your space!',
+                description: 'An empty space for you to configure!.',
+              },
+            },
+          },
+        ],
+      },
+    },
+    settings: {
+      privacy: {
+        mode: SpacePrivacyMode.PRIVATE,
+        allowPlatformSupportAsAdmin: false,
+      },
+      membership: {
+        policy: CommunityMembershipPolicy.APPLICATIONS,
+        trustedOrganizations: [], // only allow to be host org for now, not on subspaces
+        allowSubspaceAdminsToInviteMembers: true,
+      },
+      collaboration: {
+        inheritMembershipRights: false,
+        allowMembersToCreateSubspaces: false,
+        allowMembersToCreateCallouts: false,
+        allowEventsFromSubspaces: true,
+      },
+    },
+    about: {
+      profileData: {
+        displayName: 'Home Space',
+        tagline: 'A home to go from here to there, together!',
+      },
+    },
+  };

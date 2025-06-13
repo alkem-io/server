@@ -10,7 +10,7 @@ import { ISpaceAbout } from '@domain/space/space.about';
 export class SpaceAboutLoaderCreator implements DataLoaderCreator<ISpaceAbout> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ISpaceAbout>) {
+  create(options: DataLoaderCreatorOptions<ISpaceAbout>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`

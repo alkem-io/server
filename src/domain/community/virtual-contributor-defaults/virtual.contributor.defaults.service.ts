@@ -1,21 +1,13 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { TemplateService } from '@domain/template/template/template.service';
-import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { PlatformService } from '@platform/platform/platform.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto/knowledge.base.dto.create';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
 @Injectable()
 export class VirtualContributorDefaultsService {
   constructor(
-    private templateService: TemplateService,
-    private inputCreatorService: InputCreatorService,
-    private platformService: PlatformService,
-    private templatesManagerService: TemplatesManagerService,
     private namingService: NamingService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -34,6 +26,7 @@ export class VirtualContributorDefaultsService {
 
   public async createKnowledgeBaseInput(
     knowledgeBaseData?: CreateKnowledgeBaseInput,
+    knowledgeBaseDefaultCalloutInputs: CreateCalloutInput[] = [],
     bodyOfKnowledgeType?: AiPersonaBodyOfKnowledgeType
   ): Promise<CreateKnowledgeBaseInput> {
     // Create default data for a knowledge base if not provided
@@ -71,23 +64,8 @@ export class VirtualContributorDefaultsService {
         bodyOfKnowledgeType ===
         AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
       ) {
-        // get the default templates
-        const platformTemplatesManager =
-          await this.platformService.getTemplatesManagerOrFail();
-        const knowledgeTemplate =
-          await this.templatesManagerService.getTemplateFromTemplateDefault(
-            platformTemplatesManager.id,
-            TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE
-          );
-        const templateID = knowledgeTemplate.id;
-        const collaborationFromTemplate =
-          await this.templateService.getCollaboration(templateID);
-        const collaborationTemplateInput =
-          await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
-            collaborationFromTemplate.id
-          );
-        result.calloutsSetData.calloutsData =
-          collaborationTemplateInput.calloutsSetData.calloutsData;
+        // use the default templates
+        result.calloutsSetData.calloutsData = knowledgeBaseDefaultCalloutInputs;
       } else {
         result.calloutsSetData.calloutsData = [];
       }

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Callout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutModule } from '../callout/callout.module';

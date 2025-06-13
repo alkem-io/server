@@ -5,10 +5,12 @@ import {
   In,
 } from 'typeorm';
 import { Type } from '@nestjs/common';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ForbiddenAuthorizationPolicyException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { FindByBatchIdsOptions } from './find.by.batch.options';
-import { sorOutputByKeys } from './sort.output.by.keys';
 
 export const findByBatchIds = async <
   TParent extends { id: string } & { [key: string]: any }, // todo better type
@@ -18,8 +20,15 @@ export const findByBatchIds = async <
   classRef: Type<TParent>,
   ids: string[],
   relations: FindOptionsRelations<TParent>,
-  options?: FindByBatchIdsOptions<TParent, TResult>
-): Promise<(TResult | null | EntityNotFoundException)[] | never> => {
+  options: FindByBatchIdsOptions<TParent, TResult>
+): Promise<
+  (
+    | TResult
+    | null
+    | EntityNotFoundException
+    | ForbiddenAuthorizationPolicyException
+  )[]
+> => {
   if (!ids.length) {
     return [];
   }
@@ -42,8 +51,6 @@ export const findByBatchIds = async <
     relations: relations,
     select: select,
   });
-  const sortedResults = sorOutputByKeys(unsortedResults, ids);
-
   const topLevelRelation = relationKeys[0];
 
   const getRelation = (result: TParent) =>
@@ -60,12 +67,45 @@ export const findByBatchIds = async <
         );
   };
 
-  const resultsById = new Map<string, TResult>(
-    sortedResults.map<[string, TResult]>(result => [
-      result.id,
-      getRelation(result),
-    ])
+  const resultsById = new Map<string, TParent>(
+    unsortedResults.map<[string, TParent]>(parent => [parent.id, parent])
   );
-  // ensure the result length matches the input length
-  return ids.map(id => resultsById.get(id) ?? resolveUnresolvedForKey(id));
+
+  const resolveForKeyAndMaybeAuthorize = (
+    id: string
+  ): TResult | undefined | ForbiddenAuthorizationPolicyException => {
+    const parent = resultsById.get(id);
+    if (parent === undefined) {
+      return undefined;
+    }
+    // check the parent if flag is present
+    if (options.checkParentPrivilege) {
+      try {
+        options.authorize(parent, options.checkParentPrivilege);
+      } catch (e) {
+        if (e instanceof ForbiddenAuthorizationPolicyException) {
+          return e;
+        }
+      }
+    }
+
+    const result = getRelation(parent);
+
+    // check the result if flag is present
+    if (options.checkResultPrivilege) {
+      try {
+        options.authorize(result, options.checkResultPrivilege);
+      } catch (e) {
+        if (e instanceof ForbiddenAuthorizationPolicyException) {
+          return e;
+        }
+      }
+    }
+    return result;
+  };
+
+  // ensure the result length matches the input length; fill the missing values with unresolved values
+  return ids.map(
+    id => resolveForKeyAndMaybeAuthorize(id) ?? resolveUnresolvedForKey(id)
+  );
 };
