@@ -113,6 +113,9 @@ export class LocationService {
   }
 
   private hasValidLocationField(value: string | undefined): boolean {
-    return value !== undefined && value.length > 0;
+    if (value === undefined || value === null) {
+      return false;
+    }
+    return value.length > 0;
   }
 }

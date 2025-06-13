@@ -7,10 +7,14 @@ import { GeoapifyGeocodeResponse } from './geoapify.geocode.response';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlkemioConfig } from '@src/types';
 import { firstValueFrom } from 'rxjs';
+import countries from 'i18n-iso-countries';
+import enLocale from 'i18n-iso-countries/langs/en.json';
+
+countries.registerLocale(enLocale);
 
 const EMPTY_GEO_LOCATION: GeoLocation = {
-  longitude: 0,
-  latitude: 0,
+  longitude: null,
+  latitude: null,
 };
 
 @Injectable()
@@ -31,12 +35,14 @@ export class GeoapifyService {
   }
 
   public async getGeoapifyGeocodeLocation(
-    country: string | undefined,
+    countryInput: string | undefined,
     city: string | undefined
   ): Promise<GeoLocation | undefined> {
-    if (!country) {
+    if (!countryInput) {
       return EMPTY_GEO_LOCATION;
     }
+
+    const country = this.resolveCountryName(countryInput || '');
 
     if (!country?.trim() && !city?.trim()) {
       this.logger.verbose?.(
@@ -45,6 +51,7 @@ export class GeoapifyService {
       );
       return EMPTY_GEO_LOCATION;
     }
+
     let searchText = '';
     if (country) {
       searchText = country;
@@ -82,7 +89,8 @@ export class GeoapifyService {
         latitude,
       };
       this.logger.verbose?.(
-        `Search term '${searchText}' resulted in location: longitude=${longitude}, latitude=${latitude}`
+        `Search term '${searchText}' resulted in location: longitude=${longitude}, latitude=${latitude}`,
+        LogContext.GEO
       );
       return result;
     } catch (error) {
@@ -94,5 +102,13 @@ export class GeoapifyService {
       );
       return EMPTY_GEO_LOCATION;
     }
+  }
+
+  private resolveCountryName(codeOrName: string): string {
+    if (!codeOrName) return '';
+    const code = codeOrName.trim().toUpperCase();
+    // Try ISO-2 and ISO-3
+    const name = countries.getName(code, 'en');
+    return name || codeOrName;
   }
 }
