@@ -78,6 +78,7 @@ import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { CreateSpaceAboutInput } from '@domain/space/space.about';
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
+import { VisualType } from '@common/enums/visual.type';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -1273,8 +1274,58 @@ export class SpaceService {
           templateAbout.profile.description,
         tagline:
           spaceData.about.profileData.tagline || templateAbout.profile.tagline,
+        // TODO: add the tagsets to the template
+        // buildCreateTagsetsInputFromTagsets gives an error - Already exists a Tagset with the given name: default"
+        tagsets: (
+          spaceData.about.profileData.tagsets ||
+          templateAbout.profile.tagsets ||
+          []
+        ).map(tagset => {
+          const templateTagset = (templateAbout.profile.tagsets || []).find(
+            t => t.name === tagset.name
+          );
+          return {
+            name: tagset.name,
+            type: tagset.type,
+            tags: [...(tagset.tags || []), ...(templateTagset?.tags || [])],
+          };
+        }),
+        referencesData: (templateAbout.profile.references || []).map(
+          reference => ({
+            name: reference.name,
+            uri: reference.uri,
+            description: reference.description,
+          })
+        ),
+        location: {
+          city: templateAbout.profile.location?.city,
+          country: templateAbout.profile.location?.country,
+        },
+        visuals: [
+          {
+            name: VisualType.AVATAR,
+            uri:
+              (spaceData.about.profileData.visuals?.find(
+                v => v.name === VisualType.AVATAR
+              )?.uri ||
+                templateAbout.profile.visuals?.find(
+                  v => v.name === VisualType.AVATAR
+                )?.uri) ??
+              '',
+          },
+          {
+            name: VisualType.CARD,
+            uri:
+              (spaceData.about.profileData.visuals?.find(
+                v => v.name === VisualType.CARD
+              )?.uri ||
+                templateAbout.profile.visuals?.find(
+                  v => v.name === VisualType.CARD
+                )?.uri) ??
+              '',
+          },
+        ],
       },
-      // TODO: add the rest of the fields from the template (gather them on tmpl creation first)
     };
   }
 }

@@ -161,7 +161,11 @@ export class SpaceDefaultsService {
             contentSpace: {
               collaboration: true,
               about: {
-                profile: true,
+                profile: {
+                  references: true,
+                  visuals: true,
+                  location: true,
+                },
               },
             },
           },
