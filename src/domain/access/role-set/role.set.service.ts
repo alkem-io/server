@@ -1921,8 +1921,10 @@ export class RoleSetService {
     spaceSettings: ISpaceSettings // TODO: would like not to have this here; for later
   ): Promise<ICredentialDefinition[]> {
     const result = [await this.getCredentialForRole(roleSet, roleName)];
+    // Roles covered by supportAsAdmins flag
+    const ROLES_AS_ADMINS_SETTING = [RoleName.ADMIN, RoleName.MEMBER];
     if (
-      roleName === RoleName.ADMIN &&
+      ROLES_AS_ADMINS_SETTING.includes(roleName) &&
       spaceSettings.privacy.allowPlatformSupportAsAdmin
     ) {
       result.push({
