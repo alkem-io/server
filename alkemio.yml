@@ -381,6 +381,10 @@ integrations:
     allowed_calls_to_service: ${GEO_SERVICE_CALL_LIMIT}:120
     # Time window (in seconds) in which a certain amount of calls are allowed
     allowed_calls_to_service_window: ${GEO_SERVICE_CALL_WINDOW}:60
+  geoapify:
+    geocode_rest_endpoint: ${GEOAPIFY_GEOCODE_REST_ENDPOINT}:https://api.geoapify.com/v1/geocode/search
+    # https://www.geoplugin.com/faq#i_stopped_getting_responses_from_geoplugin.net
+    api_key: ${GEOAPIFY_API_KEY}:'' # something link 4cfbe072a6904698aa21382c71a3a999
   elasticsearch:
     host: ${ELASTICSEARCH_URL}
     api_key: ${ELASTICSEARCH_API_KEY}

@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '../entity/base-entity/base.alkemio.interface';
+import { IGeoLocation } from './geolocation.interface';
 
 @ObjectType('Location')
 export abstract class ILocation extends IBaseAlkemio {
@@ -34,4 +35,7 @@ export abstract class ILocation extends IBaseAlkemio {
     nullable: true,
   })
   postalCode?: string;
+
+  // Cache of the calculate geolocation, exposed through field resolver to allow retrieval on demand
+  geoLocation!: IGeoLocation;
 }
