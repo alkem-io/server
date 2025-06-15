@@ -36,6 +36,10 @@ export abstract class ILocation extends IBaseAlkemio {
   })
   postalCode?: string;
 
-  // Cache of the calculate geolocation, exposed through field resolver to allow retrieval on demand
+  @Field(() => IGeoLocation, {
+    nullable: true,
+    description:
+      'The GeoLocation for this Location, derived from (City, Country) if those are set.',
+  })
   geoLocation!: IGeoLocation;
 }

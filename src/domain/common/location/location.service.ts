@@ -7,6 +7,7 @@ import { CreateLocationInput, UpdateLocationInput } from './dto';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { GeoapifyService } from '@services/external/geoapify/geoapify.service';
+import { IGeoLocation } from './geolocation.interface';
 
 @Injectable()
 export class LocationService {
@@ -29,11 +30,11 @@ export class LocationService {
     return await this.locationRepository.save(location);
   }
 
-  /** Returns whether the location has been changed */
-  updateLocationValues(
+  /** Update the location, including the GeoLocation if needed. */
+  public async updateLocation(
     location: ILocation | undefined,
     locationData: UpdateLocationInput
-  ): boolean {
+  ): Promise<ILocation> {
     if (!location) {
       throw new EntityNotInitializedException(
         'Location entity not provided',
@@ -64,6 +65,7 @@ export class LocationService {
       locationData.addressLine1 !== undefined &&
       locationData.addressLine1 !== location.addressLine1
     ) {
+      locationChanged = true;
       location.addressLine1 = locationData.addressLine1;
     }
 
@@ -93,23 +95,46 @@ export class LocationService {
 
     if (geoLocationChanged) {
       location.geoLocation.isValid = false;
+      location.geoLocation = await this.checkAndUpdateGeoLocation(location);
     }
-    return locationChanged;
+    if (!locationChanged) {
+      return location;
+    }
+
+    return await this.save(location);
   }
 
-  async updateLocation(
-    location: ILocation,
-    locationData: UpdateLocationInput
-  ): Promise<ILocation> {
-    this.updateLocationValues(location, locationData);
+  public async checkAndUpdateGeoLocation(
+    location: ILocation
+  ): Promise<IGeoLocation> {
+    if (location.geoLocation.isValid) {
+      return location.geoLocation;
+    }
+    if (!this.hasValidLocationDataForGeoLocation(location)) {
+      // If no valid location data is available, we cannot update the geoLocation.
+      return location.geoLocation;
+    }
 
-    return await this.locationRepository.save(location);
+    const geoLocationFromData =
+      await this.geoapifyService.getGeoapifyGeocodeLocation(
+        location.country!,
+        location.city
+      );
+    if (!geoLocationFromData) {
+      // If no valid geoLocation data is available, we cannot update the geoLocation.
+      return location.geoLocation;
+    }
+
+    // In the ideal case the data should not be updated on query; to be discussed.
+    location.geoLocation.longitude = geoLocationFromData.longitude;
+    location.geoLocation.latitude = geoLocationFromData.latitude;
+    location.geoLocation.isValid = true;
+
+    return location.geoLocation;
   }
 
   public hasValidLocationDataForGeoLocation(location: ILocation): boolean {
-    const hasValidCity = this.hasValidLocationField(location.city);
-    const hasValidCountry = this.hasValidLocationField(location.country);
-    return hasValidCity || hasValidCountry;
+    return this.hasValidLocationField(location.country);
   }
 
   private hasValidLocationField(value: string | undefined): boolean {

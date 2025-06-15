@@ -165,6 +165,7 @@ export type AlkemioConfig = {
       allowed_calls_to_service_window: number;
     };
     geoapify: {
+      enabled: boolean;
       geocode_rest_endpoint: string;
       api_key: string;
     };

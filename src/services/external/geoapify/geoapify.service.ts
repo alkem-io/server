@@ -12,15 +12,11 @@ import enLocale from 'i18n-iso-countries/langs/en.json';
 
 countries.registerLocale(enLocale);
 
-const EMPTY_GEO_LOCATION: GeoLocation = {
-  longitude: null,
-  latitude: null,
-};
-
 @Injectable()
 export class GeoapifyService {
   private readonly endpoint: string;
   private readonly apiKey: string;
+  private readonly enabled: boolean;
 
   constructor(
     private readonly httpService: HttpService,
@@ -32,46 +28,47 @@ export class GeoapifyService {
     });
     this.endpoint = config.geocode_rest_endpoint;
     this.apiKey = config.api_key;
+    this.enabled = this.configService.get('integrations.geoapify.enabled', {
+      infer: true,
+    });
+  }
+
+  public isEnabled(): boolean {
+    return this.enabled;
   }
 
   public async getGeoapifyGeocodeLocation(
-    countryInput: string | undefined,
+    countryInput: string,
     city: string | undefined
   ): Promise<GeoLocation | undefined> {
-    if (!countryInput) {
-      return EMPTY_GEO_LOCATION;
+    if (!this.enabled) {
+      return undefined;
+    }
+    if (!countryInput || countryInput.length === 0) {
+      return undefined;
     }
 
     const country = this.resolveCountryName(countryInput || '');
 
-    if (!country?.trim() && !city?.trim()) {
-      this.logger.verbose?.(
-        `Ignoring lookup with values '${city}', ${country}`,
-        LogContext.GEO
-      );
-      return EMPTY_GEO_LOCATION;
+    let searchText = country;
+    if (city) {
+      searchText = `${city}, ${country}`;
     }
 
-    let searchText = '';
-    if (country) {
-      searchText = country;
-      if (city) {
-        searchText = `${city}, ${country}`;
-      }
-    } else if (city) {
-      searchText = city;
-    }
     const params = {
       text: searchText,
       apiKey: this.apiKey,
     };
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<GeoapifyGeocodeResponse>(this.endpoint, {
+      const httpResponse = this.httpService.get<GeoapifyGeocodeResponse>(
+        this.endpoint,
+        {
           headers: { Accept: 'application/json' },
           params,
-        })
+        }
       );
+      const response = await firstValueFrom(httpResponse);
+
       const data = response.data;
       const firstFeature = data.features?.[0];
       if (!firstFeature) {
@@ -79,7 +76,7 @@ export class GeoapifyService {
           `Search term '${searchText}' resulted in no results: ${JSON.stringify(data)}`,
           LogContext.GEO
         );
-        return EMPTY_GEO_LOCATION;
+        return undefined;
       }
       const properties = firstFeature.properties;
       const longitude = properties.lon;
@@ -100,7 +97,7 @@ export class GeoapifyService {
         JSON.stringify(error),
         LogContext.GEO
       );
-      return EMPTY_GEO_LOCATION;
+      return undefined;
     }
   }
 

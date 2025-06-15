@@ -154,8 +154,8 @@ export class ProfileService {
       );
     }
 
-    if (profileData.location) {
-      this.locationService.updateLocationValues(
+    if (profileData.location && profile.location) {
+      profile.location = await this.locationService.updateLocation(
         profile.location,
         profileData.location
       );
