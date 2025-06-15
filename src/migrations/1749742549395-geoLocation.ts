@@ -8,7 +8,7 @@ export class GeoLocation1749742549395 implements MigrationInterface {
       `ALTER TABLE \`location\` ADD \`geoLocation\` json NOT NULL`
     );
     await queryRunner.query(
-      `UPDATE \`location\` SET geoLocation = '{"latitude": null, "longitude": null, "isValid": false}'`
+      `UPDATE \`location\` SET geoLocation = '{"isValid": false}'`
     );
   }
 
