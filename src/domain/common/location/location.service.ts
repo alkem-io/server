@@ -17,9 +17,14 @@ export class LocationService {
     private locationRepository: Repository<Location>
   ) {}
 
-  public createLocation(locationData?: CreateLocationInput): ILocation {
+  public async createLocation(
+    locationData?: CreateLocationInput
+  ): Promise<ILocation> {
     const location = Location.create({ ...locationData });
-    // TODO: how to make the geolocation be retrieved later automatically?
+    location.geoLocation = {
+      isValid: false,
+    };
+    location.geoLocation = await this.checkAndUpdateGeoLocation(location);
     return location;
   }
   async removeLocation(location: ILocation): Promise<ILocation> {
