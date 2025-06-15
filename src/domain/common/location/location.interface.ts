@@ -37,7 +37,7 @@ export abstract class ILocation extends IBaseAlkemio {
   postalCode?: string;
 
   @Field(() => IGeoLocation, {
-    nullable: true,
+    nullable: false,
     description:
       'The GeoLocation for this Location, derived from (City, Country) if those are set.',
   })
