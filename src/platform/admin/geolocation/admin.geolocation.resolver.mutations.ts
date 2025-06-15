@@ -59,7 +59,9 @@ export class AdminGeoLocationMutations {
     // Filter out empty strings in code
     const filteredLocations = locations.filter(
       loc =>
-        loc.country && loc.country.trim().length > 0 && !loc.geoLocation.isValid
+        loc.country &&
+        loc.country.trim().length > 0 &&
+        (!loc.geoLocation || !loc.geoLocation.isValid)
     );
     this.logger.verbose?.(
       `Identified ${filteredLocations.length} locations to potentially GeoLocation data for.`,
@@ -82,7 +84,7 @@ export class AdminGeoLocationMutations {
           LogContext.GEO
         );
         throw new GeoLocationException(
-          'Failed to delete user account',
+          `Failed to updateGeoLocationData: ${error.message}`,
           LogContext.GEO
         );
       }
