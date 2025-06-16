@@ -1,4 +1,4 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SpaceAboutAuthorizationService } from './space.about.service.authorization';
@@ -22,7 +22,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     SpaceLookupModule,
     SpaceAboutMembershipModule,
     RoleSetModule,
-    forwardRef(() => InputCreatorModule),
+    InputCreatorModule,
     TypeOrmModule.forFeature([SpaceAbout]),
   ],
   providers: [
