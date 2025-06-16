@@ -158,6 +158,7 @@ export class InputCreatorService {
             references: true,
             visuals: true,
             location: true,
+            tagsets: true,
           },
           guidelines: {
             profile: {
@@ -199,7 +200,12 @@ export class InputCreatorService {
           relations: {
             collaboration: true,
             about: {
-              profile: true,
+              profile: {
+                references: true,
+                visuals: true,
+                location: true,
+                tagsets: true,
+              },
               guidelines: {
                 profile: {
                   references: true,

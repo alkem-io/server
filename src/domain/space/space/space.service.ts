@@ -76,11 +76,6 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { CreateSpaceAboutInput } from '@domain/space/space.about';
-import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
-import { VisualType } from '@common/enums/visual.type';
-import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
-import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -110,7 +105,6 @@ export class SpaceService {
     private licensingFrameworkService: LicensingFrameworkService,
     private templatesManagerService: TemplatesManagerService,
     private licenseService: LicenseService,
-    private inputCreatorService: InputCreatorService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -166,10 +160,11 @@ export class SpaceService {
       await this.communityService.createCommunity(communityData);
 
     // Apply the About from the Template but preserve the user provided data
-    const modifiedAbout = await this.mergeTemplateSpaceAbout(
-      templateSpaceContent,
-      spaceData
-    );
+    const modifiedAbout =
+      await this.spaceAboutService.getMergedTemplateSpaceAbout(
+        templateSpaceContent.about,
+        spaceData.about
+      );
 
     space.about = await this.spaceAboutService.createSpaceAbout(
       modifiedAbout,
@@ -1256,86 +1251,5 @@ export class SpaceService {
         LogContext.AGENT
       );
     return agent;
-  }
-
-  private async mergeTemplateSpaceAbout(
-    templateSpaceContent: ITemplateContentSpace,
-    spaceData: CreateSpaceInput
-  ): Promise<CreateSpaceAboutInput> {
-    const templateAbout = templateSpaceContent.about;
-    if (!templateAbout || !templateAbout.profile) {
-      return spaceData.about;
-    }
-
-    return {
-      why: spaceData.about.why || templateAbout.why,
-      who: spaceData.about.who || templateAbout.who,
-      guidelines: templateAbout.guidelines
-        ? await this.inputCreatorService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
-            templateAbout.guidelines
-          )
-        : undefined,
-      profileData: {
-        ...spaceData.about.profileData,
-        description:
-          spaceData.about.profileData.description ||
-          templateAbout.profile.description,
-        tagline:
-          spaceData.about.profileData.tagline || templateAbout.profile.tagline,
-        // TODO: add the tagsets to the template
-        // buildCreateTagsetsInputFromTagsets gives an error - Already exists a Tagset with the given name: default"
-        tagsets: (
-          spaceData.about.profileData.tagsets ||
-          templateAbout.profile.tagsets ||
-          []
-        ).map(tagset => {
-          const templateTagset = (templateAbout.profile.tagsets || []).find(
-            t => t.name === tagset.name
-          );
-          return {
-            name: tagset.name,
-            type: tagset.type,
-            tags: [...(tagset.tags || []), ...(templateTagset?.tags || [])],
-          };
-        }),
-        referencesData: (templateAbout.profile.references || []).map(
-          reference => ({
-            name: reference.name,
-            uri: reference.uri,
-            description: reference.description,
-          })
-        ),
-        location: {
-          city: templateAbout.profile.location?.city,
-          country: templateAbout.profile.location?.country,
-        },
-        visuals: [
-          {
-            name: VisualType.AVATAR,
-            uri:
-              (spaceData.about.profileData.visuals?.find(
-                v => v.name === VisualType.AVATAR
-              )?.uri ||
-                templateAbout.profile.visuals?.find(
-                  v => v.name === VisualType.AVATAR
-                )?.uri) ??
-              '',
-            ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
-          },
-          {
-            name: VisualType.CARD,
-            uri:
-              (spaceData.about.profileData.visuals?.find(
-                v => v.name === VisualType.CARD
-              )?.uri ||
-                templateAbout.profile.visuals?.find(
-                  v => v.name === VisualType.CARD
-                )?.uri) ??
-              '',
-            ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.CARD],
-          },
-        ],
-      },
-    };
   }
 }

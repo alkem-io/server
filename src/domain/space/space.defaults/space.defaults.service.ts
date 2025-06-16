@@ -165,6 +165,7 @@ export class SpaceDefaultsService {
                   references: true,
                   visuals: true,
                   location: true,
+                  tagsets: true,
                 },
                 guidelines: {
                   profile: {

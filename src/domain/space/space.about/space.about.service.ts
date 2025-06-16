@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -26,6 +26,8 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
+import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 
 @Injectable()
 export class SpaceAboutService {
@@ -35,6 +37,8 @@ export class SpaceAboutService {
     private communityGuidelinesService: CommunityGuidelinesService,
     private profileService: ProfileService,
     private roleSetService: RoleSetService,
+    @Inject(forwardRef(() => InputCreatorService))
+    private inputCreatorService: InputCreatorService,
     @InjectRepository(SpaceAbout)
     private spaceAboutRepository: Repository<SpaceAbout>
   ) {}
@@ -52,7 +56,7 @@ export class SpaceAboutService {
       ProfileType.SPACE_ABOUT,
       storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(spaceAbout.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(spaceAbout.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: spaceAboutData.profileData.tags,
     });
@@ -199,5 +203,94 @@ export class SpaceAboutService {
     }
 
     return community;
+  }
+
+  public async getMergedTemplateSpaceAbout(
+    templateSpaceAbout: ISpaceAbout,
+    spaceInputAbout: CreateSpaceAboutInput
+  ): Promise<CreateSpaceAboutInput> {
+    if (!templateSpaceAbout || !templateSpaceAbout.profile) {
+      return spaceInputAbout;
+    }
+
+    return {
+      why: spaceInputAbout.why || templateSpaceAbout.why,
+      who: spaceInputAbout.who || templateSpaceAbout.who,
+      guidelines: templateSpaceAbout.guidelines
+        ? await this.inputCreatorService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+            templateSpaceAbout.guidelines
+          )
+        : undefined,
+      profileData: {
+        ...spaceInputAbout.profileData,
+        description:
+          spaceInputAbout.profileData.description ||
+          templateSpaceAbout.profile.description,
+        tagline:
+          spaceInputAbout.profileData.tagline ||
+          templateSpaceAbout.profile.tagline,
+        tagsets: (() => {
+          const combinedTagsets = [
+            ...(spaceInputAbout.profileData.tagsets || []),
+            ...(templateSpaceAbout.profile.tagsets || []),
+          ];
+          const tagsetMap = new Map();
+
+          combinedTagsets.forEach(tagset => {
+            if (!tagsetMap.has(tagset.name)) {
+              tagsetMap.set(tagset.name, {
+                ...tagset,
+                tags: new Set(tagset.tags || []),
+              });
+            } else {
+              const existingTagset = tagsetMap.get(tagset.name);
+              tagset.tags?.forEach(tag => existingTagset.tags.add(tag));
+            }
+          });
+
+          return Array.from(tagsetMap.values()).map(tagset => ({
+            ...tagset,
+            tags: Array.from(tagset.tags), // Convert Set back to Array
+          }));
+        })(),
+        referencesData: (templateSpaceAbout.profile.references || []).map(
+          reference => ({
+            name: reference.name,
+            uri: reference.uri,
+            description: reference.description,
+          })
+        ),
+        location: {
+          city: templateSpaceAbout.profile.location?.city,
+          country: templateSpaceAbout.profile.location?.country,
+        },
+        visuals: [
+          {
+            name: VisualType.AVATAR,
+            uri:
+              (spaceInputAbout.profileData.visuals?.find(
+                v => v.name === VisualType.AVATAR
+              )?.uri ||
+                templateSpaceAbout.profile.visuals?.find(
+                  v => v.name === VisualType.AVATAR
+                )?.uri) ??
+              '',
+            ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
+          },
+          {
+            name: VisualType.CARD,
+            uri:
+              (spaceInputAbout.profileData.visuals?.find(
+                v => v.name === VisualType.CARD
+              )?.uri ||
+                templateSpaceAbout.profile.visuals?.find(
+                  v => v.name === VisualType.CARD
+                )?.uri) ??
+              '',
+            ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.CARD],
+          },
+        ],
+      },
+    };
   }
 }

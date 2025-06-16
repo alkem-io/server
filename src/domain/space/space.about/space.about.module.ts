@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SpaceAboutAuthorizationService } from './space.about.service.authorization';
@@ -11,6 +11,7 @@ import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { SpaceAboutMembershipModule } from '../space.about.membership/space.about.membership.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CommunityGuidelinesModule } from '@domain/community/community-guideline
     SpaceLookupModule,
     SpaceAboutMembershipModule,
     RoleSetModule,
+    forwardRef(() => InputCreatorModule),
     TypeOrmModule.forFeature([SpaceAbout]),
   ],
   providers: [
