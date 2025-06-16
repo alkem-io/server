@@ -159,6 +159,11 @@ export class InputCreatorService {
             visuals: true,
             location: true,
           },
+          guidelines: {
+            profile: {
+              references: true,
+            },
+          },
         },
       },
     });
@@ -176,7 +181,7 @@ export class InputCreatorService {
 
     const result: CreateTemplateContentSpaceInput = {
       collaborationData: collaborationInput,
-      about: this.buildCreateSpaceAboutInputFromSpaceAbout(space.about),
+      about: await this.buildCreateSpaceAboutInputFromSpaceAbout(space.about),
       level: space.level,
       settings: space.settings,
     };
@@ -195,6 +200,11 @@ export class InputCreatorService {
             collaboration: true,
             about: {
               profile: true,
+              guidelines: {
+                profile: {
+                  references: true,
+                },
+              },
             },
           },
         }
@@ -220,6 +230,11 @@ export class InputCreatorService {
         ),
         who: templateSpaceContent.about.who,
         why: templateSpaceContent.about.why,
+        guidelines: templateSpaceContent.about.guidelines
+          ? await this.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+              templateSpaceContent.about.guidelines
+            )
+          : undefined,
       },
       settings: templateSpaceContent.settings,
     };
@@ -326,13 +341,18 @@ export class InputCreatorService {
     };
   }
 
-  private buildCreateSpaceAboutInputFromSpaceAbout(
+  private async buildCreateSpaceAboutInputFromSpaceAbout(
     spaceAbout: ISpaceAbout
-  ): CreateSpaceAboutInput {
+  ): Promise<CreateSpaceAboutInput> {
     const result: CreateSpaceAboutInput = {
       profileData: this.buildCreateProfileInputFromProfile(spaceAbout.profile),
       who: spaceAbout.who,
       why: spaceAbout.why,
+      guidelines: spaceAbout.guidelines
+        ? await this.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+            spaceAbout.guidelines
+          )
+        : undefined,
     };
 
     return result;

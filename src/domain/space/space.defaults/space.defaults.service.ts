@@ -166,6 +166,11 @@ export class SpaceDefaultsService {
                   visuals: true,
                   location: true,
                 },
+                guidelines: {
+                  profile: {
+                    references: true,
+                  },
+                },
               },
             },
           },

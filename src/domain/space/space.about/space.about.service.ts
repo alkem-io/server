@@ -67,7 +67,7 @@ export class SpaceAboutService {
 
     spaceAbout.guidelines =
       await this.communityGuidelinesService.createCommunityGuidelines(
-        guidelinesInput,
+        spaceAboutData.guidelines ?? guidelinesInput,
         storageAggregator
       );
 
