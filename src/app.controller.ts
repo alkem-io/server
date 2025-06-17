@@ -7,14 +7,22 @@ import {
 } from '@services/external/geo-location';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
 
 @Controller('/rest')
 export class AppController {
+  private readonly header: string;
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly geoLocationService: GeoLocationService
-  ) {}
+    private readonly geoLocationService: GeoLocationService,
+    private readonly configService: ConfigService<AlkemioConfig, true>
+  ) {
+    this.header = this.configService.get('integrations.geo.header', {
+      infer: true,
+    });
+  }
 
   @Get()
   getHello(): string {
@@ -25,7 +33,8 @@ export class AppController {
   public async getGeo(
     @Req() req: Request
   ): Promise<GeoInformation | undefined> {
-    const forwardedFor = req.headers['x-forwarded-for'];
+    this.logger.verbose?.(req.headers);
+    const forwardedFor = req.headers[this.header]; // x-forwarded-proto
 
     if (!forwardedFor) {
       this.logger.error(
