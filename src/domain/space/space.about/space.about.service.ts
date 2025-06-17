@@ -212,14 +212,26 @@ export class SpaceAboutService {
       return spaceInputAbout;
     }
 
+    const guidelines = templateSpaceAbout.guidelines
+      ? await this.inputCreatorService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+          templateSpaceAbout.guidelines
+        )
+      : undefined;
+
+    const mergedTagsets = this.mergeTagsets(
+      spaceInputAbout.profileData.tagsets,
+      templateSpaceAbout.profile.tagsets
+    );
+
+    const mergedVisuals = this.mergeVisuals(
+      spaceInputAbout.profileData.visuals,
+      templateSpaceAbout.profile.visuals
+    );
+
     return {
       why: spaceInputAbout.why || templateSpaceAbout.why,
       who: spaceInputAbout.who || templateSpaceAbout.who,
-      guidelines: templateSpaceAbout.guidelines
-        ? await this.inputCreatorService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
-            templateSpaceAbout.guidelines
-          )
-        : undefined,
+      guidelines,
       profileData: {
         ...spaceInputAbout.profileData,
         description:
@@ -228,30 +240,6 @@ export class SpaceAboutService {
         tagline:
           spaceInputAbout.profileData.tagline ||
           templateSpaceAbout.profile.tagline,
-        tagsets: (() => {
-          const combinedTagsets = [
-            ...(spaceInputAbout.profileData.tagsets || []),
-            ...(templateSpaceAbout.profile.tagsets || []),
-          ];
-          const tagsetMap = new Map();
-
-          combinedTagsets.forEach(tagset => {
-            if (!tagsetMap.has(tagset.name)) {
-              tagsetMap.set(tagset.name, {
-                ...tagset,
-                tags: new Set(tagset.tags || []),
-              });
-            } else {
-              const existingTagset = tagsetMap.get(tagset.name);
-              tagset.tags?.forEach(tag => existingTagset.tags.add(tag));
-            }
-          });
-
-          return Array.from(tagsetMap.values()).map(tagset => ({
-            ...tagset,
-            tags: Array.from(tagset.tags), // Convert Set back to Array
-          }));
-        })(),
         referencesData: (templateSpaceAbout.profile.references || []).map(
           reference => ({
             name: reference.name,
@@ -263,33 +251,56 @@ export class SpaceAboutService {
           city: templateSpaceAbout.profile.location?.city,
           country: templateSpaceAbout.profile.location?.country,
         },
-        visuals: [
-          {
-            name: VisualType.AVATAR,
-            uri:
-              (spaceInputAbout.profileData.visuals?.find(
-                v => v.name === VisualType.AVATAR
-              )?.uri ||
-                templateSpaceAbout.profile.visuals?.find(
-                  v => v.name === VisualType.AVATAR
-                )?.uri) ??
-              '',
-            ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
-          },
-          {
-            name: VisualType.CARD,
-            uri:
-              (spaceInputAbout.profileData.visuals?.find(
-                v => v.name === VisualType.CARD
-              )?.uri ||
-                templateSpaceAbout.profile.visuals?.find(
-                  v => v.name === VisualType.CARD
-                )?.uri) ??
-              '',
-            ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.CARD],
-          },
-        ],
+        tagsets: mergedTagsets,
+        visuals: mergedVisuals,
       },
     };
+  }
+
+  private mergeTagsets(
+    inputTagsets: Array<{ name: string; tags?: string[] }> | undefined,
+    templateTagsets: Array<{ name: string; tags?: string[] }> | undefined
+  ): Array<{ name: string; tags: string[] }> {
+    const combinedTagsets = [
+      ...(inputTagsets || []),
+      ...(templateTagsets || []),
+    ];
+    const tagsetMap = new Map();
+
+    combinedTagsets.forEach(tagset => {
+      if (!tagsetMap.has(tagset.name)) {
+        tagsetMap.set(tagset.name, {
+          ...tagset,
+          tags: new Set(tagset.tags || []),
+        });
+      } else {
+        const existingTagset = tagsetMap.get(tagset.name);
+        tagset.tags?.forEach(tag => existingTagset.tags.add(tag));
+      }
+    });
+
+    return Array.from(tagsetMap.values()).map(tagset => ({
+      ...tagset,
+      tags: Array.from(tagset.tags),
+    }));
+  }
+
+  private mergeVisuals(
+    inputVisuals: Array<{ name: string; uri?: string }> | undefined,
+    templateVisuals: Array<{ name: string; uri?: string }> | undefined
+  ): Array<{ name: VisualType; uri: string }> {
+    const visualsMap = new Map<VisualType, string>();
+
+    [VisualType.AVATAR, VisualType.CARD, VisualType.BANNER].forEach(type => {
+      const inputUri = inputVisuals?.find(v => v.name === type)?.uri;
+      const templateUri = templateVisuals?.find(v => v.name === type)?.uri;
+      visualsMap.set(type, inputUri || templateUri || '');
+    });
+
+    return Array.from(visualsMap.entries()).map(([name, uri]) => ({
+      name,
+      uri,
+      ...DEFAULT_VISUAL_CONSTRAINTS[name],
+    }));
   }
 }

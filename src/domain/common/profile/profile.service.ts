@@ -289,7 +289,10 @@ export class ProfileService {
     );
 
     if (index !== -1) {
-      profile.tagsets[index].tags.push(...(tagsetData.tags ?? []));
+      const newTags = tagsetData.tags ?? [];
+      profile.tagsets[index].tags = Array.from(
+        new Set([...profile.tagsets[index].tags, ...newTags])
+      );
 
       return profile.tagsets[index];
     } else {
