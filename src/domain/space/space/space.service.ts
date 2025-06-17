@@ -160,11 +160,10 @@ export class SpaceService {
       await this.communityService.createCommunity(communityData);
 
     // Apply the About from the Template but preserve the user provided data
-    const modifiedAbout =
-      await this.spaceAboutService.getMergedTemplateSpaceAbout(
-        templateSpaceContent.about,
-        spaceData.about
-      );
+    const modifiedAbout = this.spaceAboutService.getMergedTemplateSpaceAbout(
+      templateSpaceContent.about,
+      spaceData.about
+    );
 
     space.about = await this.spaceAboutService.createSpaceAbout(
       modifiedAbout,

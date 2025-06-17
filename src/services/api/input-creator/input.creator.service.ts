@@ -179,7 +179,7 @@ export class InputCreatorService {
 
     const result: CreateTemplateContentSpaceInput = {
       collaborationData: collaborationInput,
-      about: await this.buildCreateSpaceAboutInputFromSpaceAbout(space.about),
+      about: this.buildCreateSpaceAboutInputFromSpaceAbout(space.about),
       level: space.level,
       settings: space.settings,
     };
@@ -264,9 +264,9 @@ export class InputCreatorService {
     return result;
   }
 
-  public async buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+  public buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
     communityGuidelines: ICommunityGuidelines
-  ): Promise<CreateCommunityGuidelinesInput> {
+  ): CreateCommunityGuidelinesInput {
     const result: CreateCommunityGuidelinesInput = {
       profile: this.buildCreateProfileInputFromProfile(
         communityGuidelines.profile
@@ -286,15 +286,15 @@ export class InputCreatorService {
     };
   }
 
-  private async buildCreateSpaceAboutInputFromSpaceAbout(
+  private buildCreateSpaceAboutInputFromSpaceAbout(
     spaceAbout: ISpaceAbout
-  ): Promise<CreateSpaceAboutInput> {
+  ): CreateSpaceAboutInput {
     const result: CreateSpaceAboutInput = {
       profileData: this.buildCreateProfileInputFromProfile(spaceAbout.profile),
       who: spaceAbout.who,
       why: spaceAbout.why,
       guidelines: spaceAbout.guidelines
-        ? await this.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+        ? this.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
             spaceAbout.guidelines
           )
         : undefined,
