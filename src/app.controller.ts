@@ -12,14 +12,14 @@ import { AlkemioConfig } from '@src/types';
 
 @Controller('/rest')
 export class AppController {
-  private readonly header: string;
+  private readonly geoHeaderName: string;
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly geoLocationService: GeoLocationService,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
-    this.header = this.configService.get('integrations.geo.header', {
+    this.geoHeaderName = this.configService.get('integrations.geo.header', {
       infer: true,
     });
   }
@@ -33,21 +33,20 @@ export class AppController {
   public async getGeo(
     @Req() req: Request
   ): Promise<GeoInformation | undefined> {
-    this.logger.verbose?.(req.headers);
-    const forwardedFor = req.headers[this.header]; // x-forwarded-proto
+    const geoHeaderValue = req.headers[this.geoHeaderName];
 
-    if (!forwardedFor) {
+    if (!geoHeaderValue) {
       this.logger.error(
-        'X-Forwarded-For header not set',
+        `'${this.geoHeaderName}' header not set`,
         undefined,
         LogContext.GEO
       );
       return undefined;
     }
 
-    const ip = String(forwardedFor).split(',')?.[0];
+    const ip = String(geoHeaderValue).split(',')?.[0];
 
-    this.logger.verbose?.(`X-Forwarded-For header: ${forwardedFor}`);
+    this.logger.verbose?.(`'${this.geoHeaderName}' header: ${geoHeaderValue}`);
 
     if (!ip) {
       this.logger.error(
