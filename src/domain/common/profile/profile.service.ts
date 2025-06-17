@@ -74,7 +74,7 @@ export class ProfileService {
         profile.storageBucket
       );
     profile.visuals = [];
-    profile.location = this.locationService.createLocation(
+    profile.location = await this.locationService.createLocation(
       profileData?.location
     );
     await this.createReferencesOnProfile(profileData?.referencesData, profile);
@@ -154,8 +154,8 @@ export class ProfileService {
       );
     }
 
-    if (profileData.location) {
-      this.locationService.updateLocationValues(
+    if (profileData.location && profile.location) {
+      profile.location = await this.locationService.updateLocation(
         profile.location,
         profileData.location
       );
