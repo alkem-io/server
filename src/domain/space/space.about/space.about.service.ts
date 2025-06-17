@@ -26,6 +26,11 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
+import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
+import { CreateVisualOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.visual';
+import { IVisual } from '@domain/common/visual';
+import { CreateTagsetInput, ITagset } from '@domain/common/tagset';
 
 @Injectable()
 export class SpaceAboutService {
@@ -35,6 +40,7 @@ export class SpaceAboutService {
     private communityGuidelinesService: CommunityGuidelinesService,
     private profileService: ProfileService,
     private roleSetService: RoleSetService,
+    private inputCreatorService: InputCreatorService,
     @InjectRepository(SpaceAbout)
     private spaceAboutRepository: Repository<SpaceAbout>
   ) {}
@@ -52,7 +58,7 @@ export class SpaceAboutService {
       ProfileType.SPACE_ABOUT,
       storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(spaceAbout.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(spaceAbout.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: spaceAboutData.profileData.tags,
     });
@@ -67,7 +73,7 @@ export class SpaceAboutService {
 
     spaceAbout.guidelines =
       await this.communityGuidelinesService.createCommunityGuidelines(
-        guidelinesInput,
+        spaceAboutData.guidelines ?? guidelinesInput,
         storageAggregator
       );
 
@@ -199,5 +205,123 @@ export class SpaceAboutService {
     }
 
     return community;
+  }
+
+  public getMergedTemplateSpaceAbout(
+    templateSpaceAbout: ISpaceAbout,
+    spaceInputAbout: CreateSpaceAboutInput
+  ): CreateSpaceAboutInput {
+    const guidelines = templateSpaceAbout.guidelines
+      ? this.inputCreatorService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+          templateSpaceAbout.guidelines
+        )
+      : undefined;
+
+    const mergedTagsets = this.mergeTagsets(
+      spaceInputAbout.profileData.tagsets,
+      templateSpaceAbout.profile.tagsets
+    );
+
+    const mergedVisuals = this.mergeVisuals(
+      spaceInputAbout.profileData.visuals,
+      templateSpaceAbout.profile.visuals
+    );
+
+    return {
+      why: spaceInputAbout.why || templateSpaceAbout.why,
+      who: spaceInputAbout.who || templateSpaceAbout.who,
+      guidelines,
+      profileData: {
+        ...spaceInputAbout.profileData,
+        description:
+          spaceInputAbout.profileData.description ||
+          templateSpaceAbout.profile.description,
+        tagline:
+          spaceInputAbout.profileData.tagline ||
+          templateSpaceAbout.profile.tagline,
+        referencesData: (templateSpaceAbout.profile.references || []).map(
+          reference => ({
+            name: reference.name,
+            uri: reference.uri,
+            description: reference.description,
+          })
+        ),
+        location: {
+          city: templateSpaceAbout.profile.location?.city,
+          country: templateSpaceAbout.profile.location?.country,
+        },
+        tagsets: mergedTagsets,
+        visuals: mergedVisuals,
+      },
+    };
+  }
+
+  /**
+   * Merges two sets of tagsets, combining tags for tagsets with the same name.
+   *
+   * @param inputTagsets - The tagsets provided in the input.
+   * @param templateTagsets - The tagsets from the template.
+   * @returns An array of merged tagsets with combined tags.
+   */
+  private mergeTagsets(
+    inputTagsets: CreateTagsetInput[] | undefined,
+    templateTagsets: ITagset[] | undefined
+  ): CreateTagsetInput[] | undefined {
+    if (!inputTagsets && !templateTagsets) {
+      return undefined;
+    }
+
+    const combinedTagsets = [
+      ...(inputTagsets || []),
+      ...(templateTagsets || []),
+    ];
+    const tagsetMap = new Map<string, { name: string; tags: Set<string> }>();
+
+    combinedTagsets.forEach(tagset => {
+      if (!tagsetMap.has(tagset.name)) {
+        tagsetMap.set(tagset.name, {
+          ...tagset,
+          tags: new Set(tagset.tags || []),
+        });
+      } else {
+        const existingTagset = tagsetMap.get(tagset.name);
+        tagset.tags?.forEach(tag => existingTagset?.tags.add(tag));
+      }
+    });
+
+    return Array.from(tagsetMap.values()).map(tagset => ({
+      ...tagset,
+      tags: Array.from(tagset.tags),
+    }));
+  }
+
+  /**
+   * Merges visuals from input and template, prioritizing input visuals if available.
+   *
+   * @param inputVisuals - The visuals provided in the input.
+   * @param templateVisuals - The visuals from the template.
+   * @returns An array of merged visuals with constraints applied.
+   */
+  private mergeVisuals(
+    inputVisuals: CreateVisualOnProfileInput[] | undefined,
+    templateVisuals: IVisual[] | undefined
+  ): CreateVisualOnProfileInput[] | undefined {
+    if (!inputVisuals && !templateVisuals) {
+      return undefined;
+    }
+
+    const visualsMap = new Map<VisualType, string>();
+
+    [VisualType.AVATAR, VisualType.CARD, VisualType.BANNER].forEach(type => {
+      const inputUri = inputVisuals?.find(v => v.name === type)?.uri;
+      const templateUri = templateVisuals?.find(v => v.name === type)?.uri;
+      visualsMap.set(type, inputUri || templateUri || '');
+    });
+
+    return Array.from(visualsMap.entries()).map(([name, uri]) => ({
+      name,
+      uri,
+      ...DEFAULT_VISUAL_CONSTRAINTS[name],
+    }));
   }
 }

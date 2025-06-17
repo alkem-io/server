@@ -6,7 +6,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 export abstract class ICommunityGuidelines extends IAuthorizable {
   @Field(() => IProfile, {
     nullable: false,
-    description: 'The details of the guidelilnes',
+    description: 'The details of the guidelines',
   })
   profile!: IProfile;
 }

@@ -129,11 +129,11 @@ export class OrganizationService {
       ProfileType.ORGANIZATION,
       organization.storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(organization.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(organization.profile, {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
-    await this.profileService.addTagsetOnProfile(organization.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(organization.profile, {
       name: TagsetReservedName.CAPABILITIES,
       tags: [],
     });

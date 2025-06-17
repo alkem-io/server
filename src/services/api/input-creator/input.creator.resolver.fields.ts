@@ -58,7 +58,7 @@ export class InputCreatorResolverFields {
       `inputCreator Community guidelines: ${guidelines.id}`
     );
 
-    return await this.inputCreatorService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+    return this.inputCreatorService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
       guidelines
     );
   }

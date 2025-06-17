@@ -276,7 +276,7 @@ export class ProfileService {
     return profile;
   }
 
-  async addTagsetOnProfile(
+  async addOrUpdateTagsetOnProfile(
     profile: IProfile,
     tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
@@ -284,13 +284,26 @@ export class ProfileService {
       profile.tagsets = await this.getTagsets(profile);
     }
 
-    const tagset = this.tagsetService.createTagsetWithName(
-      profile.tagsets,
-      tagsetData
+    const index = profile.tagsets.findIndex(
+      tagset => tagset.name === tagsetData.name
     );
-    profile.tagsets.push(tagset);
 
-    return tagset;
+    if (index !== -1) {
+      const newTags = tagsetData.tags ?? [];
+      profile.tagsets[index].tags = Array.from(
+        new Set([...profile.tagsets[index].tags, ...newTags])
+      );
+
+      return profile.tagsets[index];
+    } else {
+      const tagset = this.tagsetService.createTagsetWithName(
+        profile.tagsets,
+        tagsetData
+      );
+      profile.tagsets.push(tagset);
+
+      return tagset;
+    }
   }
 
   async createReference(
