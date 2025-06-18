@@ -214,7 +214,7 @@ export class RoomResolverMutations {
         }
 
         if (
-          callout.visibility === CalloutVisibility.PUBLISHED &&
+          callout.settings.visibility === CalloutVisibility.PUBLISHED &&
           callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
         ) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
@@ -455,7 +455,7 @@ export class RoomResolverMutations {
             );
           }
         }
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             reply,

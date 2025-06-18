@@ -16,6 +16,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { RoomModule } from '@domain/communication/room/room.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
+import { CalloutSettingsModule } from '../callout-settings/callout.settings.module';
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
 import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
@@ -37,6 +38,7 @@ import { ClassificationModule } from '@domain/common/classification/classificati
     UserLookupModule,
     NamingModule,
     CalloutFramingModule,
+    CalloutSettingsModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,
     CalloutContributionPolicyModule,

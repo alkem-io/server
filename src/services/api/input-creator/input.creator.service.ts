@@ -37,6 +37,8 @@ import { CreateClassificationInput } from '@domain/common/classification/dto/cla
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
+import { ICalloutSettings } from '@domain/collaboration/callout-settings/callout.settings.interface';
+import { CreateCalloutSettingsInput } from '@domain/collaboration/callout-settings/dto';
 
 @Injectable()
 export class InputCreatorService {
@@ -101,12 +103,14 @@ export class InputCreatorService {
     return {
       nameID: callout.nameID,
       type: callout.type,
-      visibility: callout.visibility,
       classification: this.buildCreateClassificationInputFromClassification(
         callout.classification
       ),
       framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
         callout.framing
+      ),
+      settings: this.buildCreateCalloutSettingsInputFromCalloutSettings(
+        callout.settings
       ),
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
@@ -321,6 +325,30 @@ export class InputCreatorService {
       whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
       ),
+    };
+  }
+
+  private buildCreateCalloutSettingsInputFromCalloutSettings(
+    calloutSettings: ICalloutSettings
+  ): CreateCalloutSettingsInput {
+    /*
+    if (!calloutSettings.profile) {
+      throw new EntityNotInitializedException(
+        'CalloutSettings not fully initialised',
+        LogContext.INPUT_CREATOR,
+        {
+          cause: 'Relation for callout settings not loaded',
+          calloutSettingsId: calloutSettings.id,
+        }
+      );
+    }
+      */
+    return {
+      /*profile: this.buildCreateProfileInputFromProfile(calloutSettings.profile),
+      whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
+        calloutSettings.whiteboard
+      ),*/
+      visibility: calloutSettings.visibility,
     };
   }
 

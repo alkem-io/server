@@ -64,12 +64,14 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '👋 Welcome to your space!',
                 description: 'An empty space for you to configure!.',
               },
+            },
+            settings: {
+              visibility: CalloutVisibility.PUBLISHED,
             },
           },
         ],

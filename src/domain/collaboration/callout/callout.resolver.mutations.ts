@@ -109,7 +109,7 @@ export class CalloutResolverMutations {
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID,
-      { relations: { framing: true, calloutsSet: true } }
+      { relations: { framing: true, calloutsSet: true, settings: true } }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -117,12 +117,15 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update visibility on callout: ${callout.id}`
     );
-    const oldVisibility = callout.visibility;
+    const oldVisibility = callout.settings.visibility;
     const savedCallout =
       await this.calloutService.updateCalloutVisibility(calloutData);
 
-    if (!savedCallout.isTemplate && savedCallout.visibility !== oldVisibility) {
-      if (savedCallout.visibility === CalloutVisibility.PUBLISHED) {
+    if (
+      !savedCallout.isTemplate &&
+      savedCallout.settings.visibility !== oldVisibility
+    ) {
+      if (savedCallout.settings.visibility === CalloutVisibility.PUBLISHED) {
         // Save published info
         await this.calloutService.updateCalloutPublishInfo(
           savedCallout,
@@ -189,12 +192,20 @@ export class CalloutResolverMutations {
       {
         relations: {
           calloutsSet: true,
+          settings: true,
         },
       }
     );
     if (!callout.calloutsSet) {
       throw new RelationshipNotFoundException(
         `Callout ${callout.id} has no calloutSet relationship`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (!callout.settings) {
+      throw new RelationshipNotFoundException(
+        `Callout ${callout.id} has no settings relationship`,
         LogContext.COLLABORATION
       );
     }
@@ -281,7 +292,7 @@ export class CalloutResolverMutations {
         );
 
       if (contributionData.post && contribution.post) {
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityPostCreated(
             callout,
             contribution,
@@ -293,7 +304,7 @@ export class CalloutResolverMutations {
       }
 
       if (contributionData.link && contribution.link) {
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityLinkCreated(
             callout,
             contribution.link,
@@ -304,7 +315,7 @@ export class CalloutResolverMutations {
       }
 
       if (contributionData.whiteboard && contribution.whiteboard) {
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityWhiteboardCreated(
             callout,
             contribution,

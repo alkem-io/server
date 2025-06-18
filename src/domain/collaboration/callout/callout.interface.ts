@@ -2,11 +2,11 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { CalloutType } from '@common/enums/callout.type';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
+import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
@@ -22,16 +22,14 @@ export abstract class ICallout extends IAuthorizable {
   })
   nameID!: string;
 
+  /**
+   * @deprecated //!!
+   */
   @Field(() => CalloutType, {
     nullable: false,
     description: 'The Callout type, e.g. Post, Whiteboard, Discussion',
   })
   type!: CalloutType;
-
-  @Field(() => CalloutVisibility, {
-    description: 'Visibility of the Callout.',
-  })
-  visibility!: CalloutVisibility;
 
   @Field(() => ICalloutFraming, {
     nullable: false,
@@ -39,8 +37,17 @@ export abstract class ICallout extends IAuthorizable {
   })
   framing!: ICalloutFraming;
 
+  @Field(() => ICalloutSettings, {
+    nullable: false,
+    description: 'The Callout Settings associated with this Callout.',
+  })
+  settings!: ICalloutSettings;
+
   classification!: IClassification;
 
+  /**
+   * @deprecated //!!
+   */
   contributionPolicy!: ICalloutContributionPolicy;
   contributionDefaults?: ICalloutContributionDefaults;
 

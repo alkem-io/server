@@ -24,6 +24,8 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
+import { CalloutSettingsService } from '../callout-settings/callout.settings.service';
+import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '../callout-contribution-policy/callout.contribution.policy.service';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
@@ -52,6 +54,7 @@ export class CalloutService {
     private roomService: RoomService,
     private userLookupService: UserLookupService,
     private calloutFramingService: CalloutFramingService,
+    private calloutSettingsService: CalloutSettingsService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionPolicyService: CalloutContributionPolicyService,
     private contributionService: CalloutContributionService,
@@ -78,11 +81,19 @@ export class CalloutService {
       AuthorizationPolicyType.CALLOUT
     );
     callout.createdBy = userID ?? undefined;
-    callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
     callout.contributions = [];
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
       calloutData.framing,
+      storageAggregator,
+      userID
+    );
+
+    callout.settings = await this.calloutSettingsService.createCalloutSettings(
+      {
+        // ...calloutData.settings, //!!
+        visibility: calloutData.settings?.visibility || CalloutVisibility.DRAFT,
+      },
       storageAggregator,
       userID
     );
@@ -129,6 +140,7 @@ export class CalloutService {
     }
 
     if (
+      //!! type is now in framing settings
       calloutData.type == CalloutType.WHITEBOARD &&
       !calloutData.framing.whiteboard
     ) {
@@ -167,13 +179,16 @@ export class CalloutService {
   }
 
   public async updateCalloutVisibility(
-    calloutUpdateData: UpdateCalloutVisibilityInput
+    calloutVisibilityUpdateData: UpdateCalloutVisibilityInput
   ): Promise<ICallout> {
-    const callout = await this.getCalloutOrFail(calloutUpdateData.calloutID);
+    const callout = await this.getCalloutOrFail(
+      calloutVisibilityUpdateData.calloutID
+    );
 
-    if (calloutUpdateData.visibility)
-      callout.visibility = calloutUpdateData.visibility;
+    if (calloutVisibilityUpdateData.visibility)
+      callout.settings.visibility = calloutVisibilityUpdateData.visibility;
 
+    //!! maybe update callout visibility through settings service?
     return await this.calloutRepository.save(callout);
   }
 
@@ -210,6 +225,7 @@ export class CalloutService {
         classification: {
           tagsets: true,
         },
+        settings: true,
       },
     });
 
@@ -268,6 +284,7 @@ export class CalloutService {
         contributionDefaults: true,
         contributionPolicy: true,
         framing: true,
+        settings: true,
       },
     });
 
@@ -283,6 +300,8 @@ export class CalloutService {
     }
 
     await this.calloutFramingService.delete(callout.framing);
+    await this.calloutSettingsService.delete(callout.settings);
+
     for (const contribution of callout.contributions) {
       await this.contributionService.delete(contribution);
     }
@@ -562,6 +581,22 @@ export class CalloutService {
       );
 
     return calloutLoaded.framing;
+  }
+
+  public async getCalloutSettings(
+    calloutID: string,
+    relations: FindOneOptions<ICallout>[] = []
+  ): Promise<ICalloutSettings> {
+    const calloutLoaded = await this.getCalloutOrFail(calloutID, {
+      relations: { settings: true, ...relations },
+    });
+    if (!calloutLoaded.settings)
+      throw new EntityNotFoundException(
+        `Callout not initialised, no settings: ${calloutID}`,
+        LogContext.COLLABORATION
+      );
+
+    return calloutLoaded.settings;
   }
 
   public async getContributions(

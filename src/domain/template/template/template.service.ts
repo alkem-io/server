@@ -189,7 +189,9 @@ export class TemplateService {
         }
         // Ensure no comments are created on the callout
         templateData.calloutData.enableComments = false;
-        templateData.calloutData.visibility = CalloutVisibility.DRAFT;
+        templateData.calloutData.settings = {
+          visibility: CalloutVisibility.DRAFT, //!! is this correct?
+        };
         templateData.calloutData.isTemplate = true;
         templateData.calloutData.nameID = `template-${randomUUID().slice(0, 8)}`;
         template.callout = await this.calloutService.createCallout(

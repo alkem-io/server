@@ -8,18 +8,14 @@ import {
 } from 'typeorm';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Room } from '@domain/communication/room/room.entity';
 import { CalloutFraming } from '../callout-framing/callout.framing.entity';
+import { CalloutSettings } from '../callout-settings/callout.settings.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { CalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.entity';
 import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
 import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
-import {
-  ENUM_LENGTH,
-  NAMEID_MAX_LENGTH_SCHEMA,
-  UUID_LENGTH,
-} from '@common/constants';
+import { NAMEID_MAX_LENGTH_SCHEMA, UUID_LENGTH } from '@common/constants';
 import { CalloutsSet } from '../callouts-set/callouts.set.entity';
 import { Classification } from '@domain/common/classification/classification.entity';
 
@@ -28,6 +24,9 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
   nameID!: string;
 
+  /**
+   * @deprecated remove //!!
+   */
   @Column('text', { nullable: false })
   type!: CalloutType;
 
@@ -37,9 +36,6 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy?: string;
 
-  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  visibility!: CalloutVisibility;
-
   @OneToOne(() => CalloutFraming, {
     eager: true,
     cascade: true,
@@ -47,6 +43,14 @@ export class Callout extends AuthorizableEntity implements ICallout {
   })
   @JoinColumn()
   framing!: CalloutFraming;
+
+  @OneToOne(() => CalloutSettings, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  settings!: CalloutSettings;
 
   @OneToOne(() => Classification, {
     eager: false,
@@ -56,6 +60,9 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @JoinColumn()
   classification!: Classification;
 
+  /**
+   * @deprecated //!! move to CalloutSettings
+   */
   @OneToOne(() => CalloutContributionPolicy, {
     eager: true,
     cascade: true,
@@ -107,5 +114,6 @@ export class Callout extends AuthorizableEntity implements ICallout {
   constructor() {
     super();
     this.framing = new CalloutFraming();
+    this.settings = new CalloutSettings();
   }
 }

@@ -449,6 +449,7 @@ export class CalloutsSetService {
           classification: {
             tagsets: true,
           },
+          settings: true,
         },
       },
     });
@@ -558,7 +559,7 @@ export class CalloutsSetService {
     callout: ICallout,
     agentInfo: AgentInfo
   ): boolean {
-    switch (callout.visibility) {
+    switch (callout.settings.visibility) {
       case CalloutVisibility.PUBLISHED:
         return this.authorizationService.isAccessGranted(
           agentInfo,

@@ -4,6 +4,7 @@ import { UpdateCalloutContributionDefaultsInput } from '@domain/collaboration/ca
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { UpdateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.update';
+import { UpdateCalloutSettingsInput } from '@domain/collaboration/callout-settings/dto';
 import { UpdateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.update';
 import { UpdateClassificationInput } from '@domain/common/classification/dto/classification.dto.update';
 
@@ -19,6 +20,11 @@ export class UpdateCalloutInput {
   @ValidateNested({ each: true })
   @Type(() => UpdateCalloutFramingInput)
   framing!: UpdateCalloutFramingInput;
+
+  @Field(() => UpdateCalloutSettingsInput, { nullable: true })
+  @ValidateNested({ each: true })
+  @Type(() => UpdateCalloutSettingsInput)
+  settings!: UpdateCalloutSettingsInput;
 
   @Field(() => UpdateClassificationInput, { nullable: true })
   @ValidateNested({ each: true })
