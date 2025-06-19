@@ -261,7 +261,7 @@ export class AiServerService {
   async getLastNInteractionMessages(
     roomDetails: RoomDetails,
     // interactionID: string | undefined,
-    limit: number = 10,
+    limit: number = 100,
     includeCallout = false
   ): Promise<InteractionMessage[]> {
     let roomMessages: IMessage[] = [];
@@ -293,7 +293,10 @@ export class AiServerService {
         role,
       });
 
-      if (messages.length === limit) {
+      if (
+        (includeCallout && messages.length === limit - 1) ||
+        (!includeCallout && messages.length === limit)
+      ) {
         break;
       }
     }
@@ -301,12 +304,13 @@ export class AiServerService {
       const callout = await this.roomControllerService.getRoomCalloutOrFail(
         roomDetails.roomID
       );
-      // remove oldest message in order to keep the historyu length at limit
-      messages.pop();
-      messages.unshift({
-        content: callout.framing.profile.description || '',
-        role: MessageSenderRole.HUMAN,
-      });
+      if (callout.framing.profile.description) {
+        // remove oldest message in order to keep the historyu length at limit
+        messages.unshift({
+          content: callout.framing.profile.description || '',
+          role: MessageSenderRole.HUMAN,
+        });
+      }
     }
 
     return messages;
