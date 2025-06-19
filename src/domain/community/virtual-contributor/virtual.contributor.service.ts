@@ -148,14 +148,20 @@ export class VirtualContributorService {
       ProfileType.VIRTUAL_CONTRIBUTOR,
       storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(virtualContributor.profile, {
-      name: TagsetReservedName.KEYWORDS,
-      tags: [],
-    });
-    await this.profileService.addTagsetOnProfile(virtualContributor.profile, {
-      name: TagsetReservedName.CAPABILITIES,
-      tags: [],
-    });
+    await this.profileService.addOrUpdateTagsetOnProfile(
+      virtualContributor.profile,
+      {
+        name: TagsetReservedName.KEYWORDS,
+        tags: [],
+      }
+    );
+    await this.profileService.addOrUpdateTagsetOnProfile(
+      virtualContributor.profile,
+      {
+        name: TagsetReservedName.CAPABILITIES,
+        tags: [],
+      }
+    );
 
     this.contributorService.addAvatarVisualToContributorProfile(
       virtualContributor.profile,

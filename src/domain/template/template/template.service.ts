@@ -75,7 +75,7 @@ export class TemplateService {
       ProfileType.TEMPLATE,
       storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(template.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(template.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });

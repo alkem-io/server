@@ -381,6 +381,10 @@ integrations:
     allowed_calls_to_service: ${GEO_SERVICE_CALL_LIMIT}:120
     # Time window (in seconds) in which a certain amount of calls are allowed
     allowed_calls_to_service_window: ${GEO_SERVICE_CALL_WINDOW}:60
+  geoapify:
+    enabled: ${GEOAPIFY_ENABLED}:false
+    geocode_rest_endpoint: ${GEOAPIFY_GEOCODE_REST_ENDPOINT}:https://api.geoapify.com/v1/geocode/search
+    api_key: ${GEOAPIFY_API_KEY}:'' # something like 4cfbe072a6904698aa21382c71a3a999
   elasticsearch:
     host: ${ELASTICSEARCH_URL}
     api_key: ${ELASTICSEARCH_API_KEY}
@@ -472,9 +476,10 @@ platform:
   tips: ${PLATFORM_TIPS}:https://alkemio.org/post/
 
   # Acceptable Usage Policy
-  aup: ${PLATFORM_AUP}:https://www.alkemio.org/legal/hub/#aup
+  aup:
+    ${PLATFORM_AUP}:https://www.alkemio.org/legal/hub/#aup
 
-   # Documentation site path, endpoint is endpoint_cluster + documentation_path
+    # Documentation site path, endpoint is endpoint_cluster + documentation_path
   documentation_path: ${PLATFORM_DOCUMENTATION_PATH}:/documentation
 
   # Client can optionally work with a landing page, to give additional information
@@ -491,7 +496,7 @@ platform:
     credentials: ${VECTOR_DB_CREDENTIALS}:root\:toor
 
   virtual_contributors:
-    history_length: ${VC_HISTORY_LENGTH}:10
+    history_length: ${VC_HISTORY_LENGTH}:30
 
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
