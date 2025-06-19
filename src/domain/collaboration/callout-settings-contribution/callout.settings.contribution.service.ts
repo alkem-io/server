@@ -2,27 +2,27 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateCalloutContributionPolicyInput } from './dto';
-import { UpdateCalloutContributionPolicyInput } from './dto';
-import { ICalloutContributionPolicy } from './callout.contribution.policy.interface';
-import { CalloutContributionPolicy } from './callout.contribution.policy.entity';
+import { CreateCalloutSettingsContributionInput } from './dto';
+import { UpdateCalloutSettingsContributionInput } from './dto';
+import { ICalloutSettingsContribution } from './callout.settings.contribution.interface';
+import { CalloutSettingsContribution } from './callout.settings.contribution.entity';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @Injectable()
-export class CalloutContributionPolicyService {
+export class CalloutSettingsContributionService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @InjectRepository(CalloutContributionPolicy)
-    private calloutContributionPolicyRepository: Repository<CalloutContributionPolicy>
+    @InjectRepository(CalloutSettingsContribution)
+    private calloutContributionPolicyRepository: Repository<CalloutSettingsContribution>
   ) {}
 
-  public createCalloutContributionPolicy(
-    calloutContributionPolicyData: CreateCalloutContributionPolicyInput
-  ): ICalloutContributionPolicy {
-    const calloutContributionPolicy = new CalloutContributionPolicy();
+  public createCalloutSettingsContribution(
+    calloutContributionPolicyData: CreateCalloutSettingsContributionInput
+  ): ICalloutSettingsContribution {
+    const calloutContributionPolicy = new CalloutSettingsContribution();
     calloutContributionPolicy.allowedContributionTypes = [];
     calloutContributionPolicy.state = CalloutState.OPEN;
     if (calloutContributionPolicyData.allowedContributionTypes) {
@@ -37,10 +37,11 @@ export class CalloutContributionPolicyService {
     return calloutContributionPolicy;
   }
 
-  public updateContributionPolicyInput(
+  public updateCalloutSettingsContributionInput(
     calloutType: CalloutType,
-    policyData: CreateCalloutContributionPolicyInput | undefined
-  ): CreateCalloutContributionPolicyInput {
+    policyData: CreateCalloutSettingsContributionInput | undefined
+  ): CreateCalloutSettingsContributionInput {
+    //!! what does this do?
     const allowedContributionTypes: CalloutContributionType[] = [];
     switch (calloutType) {
       case CalloutType.LINK_COLLECTION:
@@ -54,7 +55,7 @@ export class CalloutContributionPolicyService {
         break;
     }
     if (!policyData) {
-      const result: CreateCalloutContributionPolicyInput = {
+      const result: CreateCalloutSettingsContributionInput = {
         state: CalloutState.OPEN,
         allowedContributionTypes: allowedContributionTypes,
       };
@@ -64,10 +65,10 @@ export class CalloutContributionPolicyService {
     return policyData;
   }
 
-  public updateCalloutContributionPolicy(
-    calloutContributionPolicy: ICalloutContributionPolicy,
-    calloutContributionPolicyData: UpdateCalloutContributionPolicyInput
-  ): ICalloutContributionPolicy {
+  public updateCalloutSettingsContribution(
+    calloutContributionPolicy: ICalloutSettingsContribution,
+    calloutContributionPolicyData: UpdateCalloutSettingsContributionInput
+  ): ICalloutSettingsContribution {
     if (calloutContributionPolicyData.allowedContributionTypes) {
       calloutContributionPolicy.allowedContributionTypes =
         calloutContributionPolicyData.allowedContributionTypes;
@@ -81,11 +82,11 @@ export class CalloutContributionPolicyService {
   }
 
   public async delete(
-    calloutContributionPolicy: ICalloutContributionPolicy
-  ): Promise<ICalloutContributionPolicy> {
+    calloutContributionPolicy: ICalloutSettingsContribution
+  ): Promise<ICalloutSettingsContribution> {
     const calloutContributionPolicyID = calloutContributionPolicy.id;
     const result = await this.calloutContributionPolicyRepository.remove(
-      calloutContributionPolicy as CalloutContributionPolicy
+      calloutContributionPolicy as CalloutSettingsContribution
     );
     result.id = calloutContributionPolicyID;
     return result;

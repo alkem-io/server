@@ -4,6 +4,7 @@ import { Type } from 'class-transformer';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CreateCalloutSettingsContributionInput } from '@domain/collaboration/callout-settings-contribution/dto';
 
 @InputType()
 @ObjectType('CreateCalloutSettingsData')
@@ -23,6 +24,11 @@ export class CreateCalloutSettingsInput {
   @IsOptional()
   tags?: string[];
   */
+
+  @Field(() => CreateCalloutSettingsContributionInput, { nullable: true })
+  @ValidateNested({ each: true })
+  @Type(() => CreateCalloutSettingsContributionInput)
+  contributionPolicy?: CreateCalloutSettingsContributionInput;
 
   @Field(() => CalloutVisibility, {
     nullable: true,

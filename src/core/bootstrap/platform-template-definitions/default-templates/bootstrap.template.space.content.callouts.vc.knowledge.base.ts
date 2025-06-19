@@ -47,9 +47,6 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
           {
             nameID: 'summary',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -68,14 +65,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'introduction',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 2,
             classification: {
               tagsets: [
@@ -94,14 +91,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'interacting-with-vc',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 3,
             classification: {
               tagsets: [
@@ -120,14 +117,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'vc-profile',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 4,
             classification: {
               tagsets: [
@@ -146,14 +143,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'content-types',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 5,
             classification: {
               tagsets: [
@@ -172,14 +169,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'terms-conditions',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 6,
             classification: {
               tagsets: [
@@ -198,14 +195,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'body-of-knowledge-ex1',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 7,
             classification: {
               tagsets: [
@@ -224,14 +221,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'body-of-knowledge-ex2',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 8,
             classification: {
               tagsets: [
@@ -250,14 +247,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'body-of-knowledge-ex3',
             type: CalloutType.LINK_COLLECTION,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 9,
             classification: {
               tagsets: [
@@ -276,14 +273,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'where-to-find-vc-profile',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 10,
             classification: {
               tagsets: [
@@ -302,14 +299,14 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
           {
             nameID: 'activate',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.CLOSED,
-            },
             sortOrder: 11,
             classification: {
               tagsets: [
@@ -328,6 +325,9 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.CLOSED,
+              },
             },
           },
         ],

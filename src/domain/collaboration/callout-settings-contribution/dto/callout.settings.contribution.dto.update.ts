@@ -3,7 +3,7 @@ import { CalloutContributionType } from '@common/enums/callout.contribution.type
 import { CalloutState } from '@common/enums/callout.state';
 
 @InputType()
-export class UpdateCalloutContributionPolicyInput {
+export class UpdateCalloutSettingsContributionInput {
   allowedContributionTypes?: CalloutContributionType[];
 
   @Field(() => CalloutState, {

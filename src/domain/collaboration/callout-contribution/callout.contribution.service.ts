@@ -12,7 +12,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { PostService } from '../post/post.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPost } from '../post';
-import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
+import { ICalloutSettingsContribution } from '../callout-settings-contribution/callout.settings.contribution.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import {
   RelationshipNotFoundException,
@@ -39,7 +39,7 @@ export class CalloutContributionService {
   public async createCalloutContribution(
     calloutContributionData: CreateCalloutContributionInput,
     storageAggregator: IStorageAggregator,
-    contributionPolicy: ICalloutContributionPolicy,
+    contributionPolicy: ICalloutSettingsContribution,
     userID: string
   ): Promise<ICalloutContribution> {
     const contribution: ICalloutContribution = CalloutContribution.create(
@@ -95,7 +95,7 @@ export class CalloutContributionService {
   }
 
   private validateContributionType(
-    contributionPolicy: ICalloutContributionPolicy,
+    contributionPolicy: ICalloutSettingsContribution,
     contributionType: CalloutContributionType
   ) {
     if (

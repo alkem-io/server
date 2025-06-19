@@ -15,7 +15,6 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
-import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { IClassification } from '@domain/common/classification/classification.interface';
 
@@ -89,18 +88,6 @@ export class CalloutResolverFields {
   ): Promise<IClassification | undefined> {
     // TODO: must be a loader, will be used a lot
     return await this.calloutService.getClassification(callout.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('contributionPolicy', () => ICalloutContributionPolicy, {
-    nullable: false,
-    description: 'The ContributionPolicy for this Callout.',
-  })
-  async contributionPolicy(
-    @Parent() callout: Callout
-  ): Promise<ICalloutContributionPolicy> {
-    return await this.calloutService.getContributionPolicy(callout.id);
   }
 
   @ResolveField('activity', () => Number, {

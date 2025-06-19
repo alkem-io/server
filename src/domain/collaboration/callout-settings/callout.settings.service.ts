@@ -23,11 +23,16 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ICalloutSettingsContribution } from '../callout-settings-contribution/callout.settings.contribution.interface';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { CalloutSettingsContributionService } from '../callout-settings-contribution/callout.settings.contribution.service';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class CalloutSettingsService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private calloutSettingsContributionService: CalloutSettingsContributionService,
     /*private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
     private namingService: NamingService,
@@ -52,6 +57,17 @@ export class CalloutSettingsService {
     calloutSettings.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_FRAMING
     );
+
+    const policyData =
+      this.calloutSettingsContributionService.updateCalloutSettingsContributionInput(
+        //!! calloutData.type,
+        CalloutType.POST, //!! PASS the calloutSettingsData.framing.type or None
+        calloutSettingsData.contributionPolicy
+      );
+    calloutSettings.contributionPolicy =
+      this.calloutSettingsContributionService.createCalloutSettingsContribution(
+        policyData
+      );
     /*
     const { profile: profileData, whiteboard, tags } = calloutSettingsData;
 
@@ -110,6 +126,14 @@ export class CalloutSettingsService {
         },
       }
     );
+
+    if (calloutSettingsData.contributionPolicy) {
+      calloutSettingsEntity.contributionPolicy =
+        this.calloutSettingsContributionService.updateCalloutSettingsContribution(
+          calloutSettingsEntity.contributionPolicy,
+          calloutSettingsData.contributionPolicy
+        );
+    }
     /*if (calloutSettingsData.profile) {
       calloutSettings.profile = await this.profileService.updateProfile(
         calloutSettings.profile,
@@ -139,12 +163,18 @@ export class CalloutSettingsService {
       calloutSettingsID,
       {
         relations: {
+          contributionPolicy: true,
           /*profile: true,
           whiteboard: true,
           */
         },
       }
     );
+    if (calloutSettings.contributionPolicy) {
+      await this.calloutSettingsContributionService.delete(
+        calloutSettings.contributionPolicy
+      );
+    }
 
     /*
     if (calloutSettings.profile) {
@@ -189,6 +219,20 @@ export class CalloutSettingsService {
         LogContext.COLLABORATION
       );
     return calloutSettings;
+  }
+
+  public async getContributionPolicy(
+    calloutSettingsID: string
+  ): Promise<ICalloutSettingsContribution> {
+    const callout = await this.getCalloutSettingsOrFail(calloutSettingsID, {
+      relations: { contributionPolicy: true },
+    });
+    if (!callout.contributionPolicy)
+      throw new EntityNotInitializedException(
+        `Callout Settings (${calloutSettingsID}) not initialised as it does not have contribution policy`,
+        LogContext.COLLABORATION
+      );
+    return callout.contributionPolicy;
   }
   /*
   public async getProfile(

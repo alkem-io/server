@@ -52,9 +52,6 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
           {
             nameID: 'welcome',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -72,6 +69,9 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
         ],

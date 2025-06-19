@@ -4,12 +4,21 @@ import { CalloutContributionType } from '@common/enums/callout.contribution.type
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { ICalloutSettings } from './callout.settings.interface';
+import { CalloutSettingsContribution } from '../callout-settings-contribution/callout.settings.contribution.entity';
 
 @Entity()
 export class CalloutSettings
   extends AuthorizableEntity
   implements ICalloutSettings
 {
+  @OneToOne(() => CalloutSettingsContribution, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  contributionPolicy!: CalloutSettingsContribution;
+
   /*@Column('json', { nullable: false })
   contribution!: {
     enabled: boolean;

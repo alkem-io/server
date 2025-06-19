@@ -4,8 +4,8 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
-import { ICalloutContributionPolicy } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.interface';
-import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
+import { ICalloutSettingsContribution } from '@domain/collaboration/callout-settings-contribution/callout.settings.contribution.interface';
+import { CreateCalloutSettingsContributionInput } from '@domain/collaboration/callout-settings-contribution/dto/callout.settings.contribution.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -64,7 +64,6 @@ export class InputCreatorService {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
         contributionDefaults: true,
-        contributionPolicy: true,
         classification: {
           tagsets: true,
         },
@@ -80,6 +79,9 @@ export class InputCreatorService {
             },
           },
         },
+        settings: {
+          contributionPolicy: true,
+        },
       },
     });
     if (
@@ -87,7 +89,7 @@ export class InputCreatorService {
       !callout.framing.profile ||
       !callout.framing.profile.tagsets ||
       !callout.contributionDefaults ||
-      !callout.contributionPolicy ||
+      !callout.settings ||
       !callout.classification
     ) {
       throw new EntityNotInitializedException(
@@ -115,10 +117,6 @@ export class InputCreatorService {
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
           callout.contributionDefaults
-        ),
-      contributionPolicy:
-        this.buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          callout.contributionPolicy
         ),
       sortOrder: callout.sortOrder,
     };
@@ -349,6 +347,10 @@ export class InputCreatorService {
         calloutSettings.whiteboard
       ),*/
       visibility: calloutSettings.visibility,
+      contributionPolicy:
+        this.buildCreateCalloutSettingsContributionInputFromCalloutSettingsContribution(
+          calloutSettings.contributionPolicy
+        ),
     };
   }
 
@@ -365,13 +367,13 @@ export class InputCreatorService {
     return result;
   }
 
-  private buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-    calloutContributionPolicy: ICalloutContributionPolicy
-  ): CreateCalloutContributionPolicyInput {
+  private buildCreateCalloutSettingsContributionInputFromCalloutSettingsContribution(
+    calloutSettingsContribution: ICalloutSettingsContribution
+  ): CreateCalloutSettingsContributionInput {
     return {
-      state: calloutContributionPolicy.state,
+      state: calloutSettingsContribution.state,
       allowedContributionTypes:
-        calloutContributionPolicy.allowedContributionTypes,
+        calloutSettingsContribution.allowedContributionTypes,
     };
   }
 

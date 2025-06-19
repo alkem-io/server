@@ -3,8 +3,8 @@ import { CalloutContributionType } from '@common/enums/callout.contribution.type
 import { CalloutState } from '@common/enums/callout.state';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 
-@ObjectType('CalloutContributionPolicy')
-export abstract class ICalloutContributionPolicy extends IBaseAlkemio {
+@ObjectType('CalloutSettingsContribution')
+export abstract class ICalloutSettingsContribution extends IBaseAlkemio {
   @Field(() => [CalloutContributionType], {
     nullable: false,
     description: 'The allowed contribution types for this callout.',

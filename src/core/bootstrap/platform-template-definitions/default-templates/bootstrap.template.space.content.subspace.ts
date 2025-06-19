@@ -59,9 +59,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
           {
             nameID: 'welcome',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -81,14 +78,14 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
           {
             nameID: 'collaboration-tools',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 2,
             classification: {
               tagsets: [
@@ -109,6 +106,9 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
         ],

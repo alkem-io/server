@@ -4,6 +4,7 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { UpdateCalloutSettingsContributionInput } from '@domain/collaboration/callout-settings-contribution/dto';
 
 @InputType()
 export class UpdateCalloutSettingsInput {
@@ -24,6 +25,11 @@ export class UpdateCalloutSettingsInput {
   @IsOptional()
   whiteboardContent?: string;
 */
+  @Field(() => UpdateCalloutSettingsContributionInput, { nullable: true })
+  @ValidateNested({ each: true })
+  @Type(() => UpdateCalloutSettingsContributionInput)
+  contributionPolicy?: UpdateCalloutSettingsContributionInput;
+
   @Field(() => CalloutVisibility, {
     description: 'Visibility of the Callout.',
   })

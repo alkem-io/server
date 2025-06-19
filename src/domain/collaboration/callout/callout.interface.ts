@@ -7,7 +7,6 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authori
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
-import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
@@ -45,10 +44,6 @@ export abstract class ICallout extends IAuthorizable {
 
   classification!: IClassification;
 
-  /**
-   * @deprecated //!!
-   */
-  contributionPolicy!: ICalloutContributionPolicy;
   contributionDefaults?: ICalloutContributionDefaults;
 
   @Field(() => [IPost], {

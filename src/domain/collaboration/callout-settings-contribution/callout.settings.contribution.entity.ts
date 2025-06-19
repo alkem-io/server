@@ -2,13 +2,13 @@ import { Column, Entity } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { ICalloutContributionPolicy } from './callout.contribution.policy.interface';
+import { ICalloutSettingsContribution } from './callout.settings.contribution.interface';
 import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
-export class CalloutContributionPolicy
+export class CalloutSettingsContribution
   extends BaseAlkemioEntity
-  implements ICalloutContributionPolicy
+  implements ICalloutSettingsContribution
 {
   @Column('simple-array')
   allowedContributionTypes!: CalloutContributionType[];

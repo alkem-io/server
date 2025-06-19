@@ -192,7 +192,9 @@ export class CalloutResolverMutations {
       {
         relations: {
           calloutsSet: true,
-          settings: true,
+          settings: {
+            contributionPolicy: true,
+          },
         },
       }
     );
@@ -217,7 +219,7 @@ export class CalloutResolverMutations {
       `create contribution on callout: ${callout.id}`
     );
 
-    if (callout.contributionPolicy.state === CalloutState.CLOSED) {
+    if (callout.settings.contributionPolicy.state === CalloutState.CLOSED) {
       if (
         !this.authorizationService.isAccessGranted(
           agentInfo,

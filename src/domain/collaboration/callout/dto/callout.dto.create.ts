@@ -6,7 +6,6 @@ import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
 import { CreateCalloutSettingsInput } from '@domain/collaboration/callout-settings/dto';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
-import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
 import { CreateClassificationInput } from '@domain/common/classification/dto/classification.dto.create';
 
 @InputType()
@@ -31,11 +30,6 @@ export class CreateCalloutInput {
   @ValidateNested({ each: true })
   @Type(() => CreateCalloutContributionDefaultsInput)
   contributionDefaults?: CreateCalloutContributionDefaultsInput;
-
-  @Field(() => CreateCalloutContributionPolicyInput, { nullable: true })
-  @ValidateNested({ each: true })
-  @Type(() => CreateCalloutContributionPolicyInput)
-  contributionPolicy?: CreateCalloutContributionPolicyInput;
 
   @Field(() => NameID, {
     nullable: true,

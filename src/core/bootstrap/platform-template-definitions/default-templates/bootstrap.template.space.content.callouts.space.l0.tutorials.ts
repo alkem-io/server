@@ -39,9 +39,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
           {
             nameID: 'welcome',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -60,14 +57,14 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
           {
             nameID: 'space-setup',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 2,
             classification: {
               tagsets: [
@@ -86,14 +83,14 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
           {
             nameID: 'collaboration-tools',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 3,
             classification: {
               tagsets: [
@@ -112,14 +109,14 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
           {
             nameID: 'cleaning-up',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 4,
             classification: {
               tagsets: [
@@ -138,14 +135,14 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
           {
             nameID: 'community-setup',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -164,14 +161,14 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
           {
             nameID: 'about-subspaces',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -190,14 +187,14 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
           {
             nameID: 'about-knowledge-base',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -216,6 +213,9 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
+              contributionPolicy: {
+                state: CalloutState.OPEN,
+              },
             },
           },
         ],

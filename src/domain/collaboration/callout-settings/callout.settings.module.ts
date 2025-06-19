@@ -9,11 +9,13 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
+import { CalloutSettingsContributionModule } from '../callout-settings-contribution/callout.settings.contribution.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    CalloutSettingsContributionModule,
     /*ProfileModule,
     TagsetModule,
     WhiteboardModule,
