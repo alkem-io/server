@@ -9,6 +9,7 @@ import { InputCreatorService } from './input.creator.service';
 import { InputCreatorResolverQueries } from './input.creator.resolver.queries';
 import { InputCreatorResolverFields } from './input.creator.resolver.fields';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
     CalloutModule,
     CommunityGuidelinesModule,
     SpaceLookupModule,
+    TemplateContentSpaceModule,
   ],
   providers: [
     InputCreatorService,

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -27,10 +27,10 @@ import { CommunityGuidelinesService } from '@domain/community/community-guidelin
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
 import { DEFAULT_VISUAL_CONSTRAINTS } from '@domain/common/visual/visual.constraints';
-import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { CreateVisualOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.visual';
 import { IVisual } from '@domain/common/visual';
 import { CreateTagsetInput, ITagset } from '@domain/common/tagset';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 
 @Injectable()
 export class SpaceAboutService {
@@ -40,6 +40,7 @@ export class SpaceAboutService {
     private communityGuidelinesService: CommunityGuidelinesService,
     private profileService: ProfileService,
     private roleSetService: RoleSetService,
+    @Inject(forwardRef(() => InputCreatorService))
     private inputCreatorService: InputCreatorService,
     @InjectRepository(SpaceAbout)
     private spaceAboutRepository: Repository<SpaceAbout>

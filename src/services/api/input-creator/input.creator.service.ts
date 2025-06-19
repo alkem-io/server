@@ -37,13 +37,15 @@ import { CreateClassificationInput } from '@domain/common/classification/dto/cla
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
+import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 
 @Injectable()
 export class InputCreatorService {
   constructor(
     private collaborationService: CollaborationService,
     private spaceLookupService: SpaceLookupService,
-    private calloutService: CalloutService
+    private calloutService: CalloutService,
+    private templateContentSpaceService: TemplateContentSpaceService
   ) {}
 
   public async buildCreateCalloutInputsFromCallouts(
@@ -182,6 +184,54 @@ export class InputCreatorService {
       about: this.buildCreateSpaceAboutInputFromSpaceAbout(space.about),
       level: space.level,
       settings: space.settings,
+    };
+
+    return result;
+  }
+
+  public async buildCreateTemplateContentSpaceInputFromContentSpace(
+    contentSpaceID: string
+  ): Promise<CreateTemplateContentSpaceInput> {
+    const contentSpace =
+      await this.templateContentSpaceService.getTemplateContentSpaceOrFail(
+        contentSpaceID,
+        {
+          relations: {
+            collaboration: true,
+            about: {
+              profile: {
+                references: true,
+                visuals: true,
+                location: true,
+                tagsets: true,
+              },
+              guidelines: {
+                profile: {
+                  references: true,
+                },
+              },
+            },
+          },
+        }
+      );
+
+    if (!contentSpace.collaboration || !contentSpace.about) {
+      throw new RelationshipNotFoundException(
+        `ContentSpace ${contentSpace.id} is missing a relation`,
+        LogContext.INPUT_CREATOR
+      );
+    }
+
+    const collaborationInput =
+      await this.buildCreateCollaborationInputFromCollaboration(
+        contentSpace.collaboration.id
+      );
+
+    const result: CreateTemplateContentSpaceInput = {
+      collaborationData: collaborationInput,
+      about: this.buildCreateSpaceAboutInputFromSpaceAbout(contentSpace.about),
+      level: contentSpace.level,
+      settings: contentSpace.settings,
     };
 
     return result;
@@ -355,7 +405,7 @@ export class InputCreatorService {
     };
   }
 
-  private buildCreateProfileInputFromProfile(
+  public buildCreateProfileInputFromProfile(
     profile: IProfile
   ): CreateProfileInput {
     if (!profile) {
