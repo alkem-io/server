@@ -46,7 +46,7 @@ export class PostService {
       postInput.profileData.visuals,
       [VisualType.BANNER, VisualType.CARD]
     );
-    await this.profileService.addTagsetOnProfile(post.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(post.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: postInput.tags || [],
     });

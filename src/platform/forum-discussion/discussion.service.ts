@@ -43,7 +43,7 @@ export class DiscussionService {
       storageAggregator
     );
 
-    await this.profileService.addTagsetOnProfile(discussion.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(discussion.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: discussionData.tags || [],
     });

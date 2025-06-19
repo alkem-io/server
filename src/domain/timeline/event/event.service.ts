@@ -49,10 +49,13 @@ export class CalendarEventService {
       ProfileType.CALENDAR_EVENT,
       storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(calendarEvent.profile, {
-      name: TagsetReservedName.DEFAULT,
-      tags: calendarEventInput.tags || [],
-    });
+    await this.profileService.addOrUpdateTagsetOnProfile(
+      calendarEvent.profile,
+      {
+        name: TagsetReservedName.DEFAULT,
+        tags: calendarEventInput.tags || [],
+      }
+    );
     calendarEvent.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALENDAR_EVENT
     );

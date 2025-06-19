@@ -76,8 +76,6 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { CreateSpaceAboutInput } from '@domain/space/space.about';
-import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -162,9 +160,9 @@ export class SpaceService {
       await this.communityService.createCommunity(communityData);
 
     // Apply the About from the Template but preserve the user provided data
-    const modifiedAbout = this.mergeTemplateSpaceAbout(
-      templateSpaceContent,
-      spaceData
+    const modifiedAbout = this.spaceAboutService.getMergedTemplateSpaceAbout(
+      templateSpaceContent.about,
+      spaceData.about
     );
 
     space.about = await this.spaceAboutService.createSpaceAbout(
@@ -1252,29 +1250,5 @@ export class SpaceService {
         LogContext.AGENT
       );
     return agent;
-  }
-
-  private mergeTemplateSpaceAbout(
-    templateSpaceContent: ITemplateContentSpace,
-    spaceData: CreateSpaceInput
-  ): CreateSpaceAboutInput {
-    const templateAbout = templateSpaceContent.about;
-    if (!templateAbout || !templateAbout.profile) {
-      return spaceData.about;
-    }
-
-    return {
-      why: spaceData.about.why || templateAbout.why,
-      who: spaceData.about.who || templateAbout.who,
-      profileData: {
-        ...spaceData.about.profileData,
-        description:
-          spaceData.about.profileData.description ||
-          templateAbout.profile.description,
-        tagline:
-          spaceData.about.profileData.tagline || templateAbout.profile.tagline,
-      },
-      // TODO: add the rest of the fields from the template (gather them on tmpl creation first)
-    };
   }
 }

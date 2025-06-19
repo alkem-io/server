@@ -95,7 +95,7 @@ export class InnovationHubService {
       account.storageAggregator
     );
 
-    await this.profileService.addTagsetOnProfile(hub.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(hub.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });

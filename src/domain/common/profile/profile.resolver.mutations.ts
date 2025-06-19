@@ -57,7 +57,7 @@ export class ProfileResolverMutations {
       );
     }
 
-    const tagset = await this.profileService.addTagsetOnProfile(
+    const tagset = await this.profileService.addOrUpdateTagsetOnProfile(
       profile,
       tagsetData
     );
