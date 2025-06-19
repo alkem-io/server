@@ -305,7 +305,6 @@ export class AiServerService {
         roomDetails.roomID
       );
       if (callout.framing.profile.description) {
-        // remove oldest message in order to keep the historyu length at limit
         messages.unshift({
           content: callout.framing.profile.description || '',
           role: MessageSenderRole.HUMAN,
