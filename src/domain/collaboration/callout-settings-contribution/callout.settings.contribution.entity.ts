@@ -18,7 +18,6 @@ export class CalloutSettingsContribution
 
   @Column('simple-array', {
     nullable: false,
-    default: [],
   })
   allowedTypes!: CalloutContributionType[];
 
