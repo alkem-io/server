@@ -1,4 +1,4 @@
-import { Injectable, forwardRef, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -40,7 +40,6 @@ export class SpaceAboutService {
     private communityGuidelinesService: CommunityGuidelinesService,
     private profileService: ProfileService,
     private roleSetService: RoleSetService,
-    @Inject(forwardRef(() => InputCreatorService))
     private inputCreatorService: InputCreatorService,
     @InjectRepository(SpaceAbout)
     private spaceAboutRepository: Repository<SpaceAbout>
