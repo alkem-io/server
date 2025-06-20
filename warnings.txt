@@ -1,0 +1,58 @@
+warnings
+/home/carlos/DEV/Alkemio/server/src/domain/collaboration/callout-settings/callout.settings.entity.ts
+  1:26  error  'JoinColumn' is defined but never used               @typescript-eslint/no-unused-vars
+  1:38  error  'OneToOne' is defined but never used                 @typescript-eslint/no-unused-vars
+  3:10  error  'CalloutContributionType' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/carlos/DEV/Alkemio/server/src/domain/collaboration/callout-settings/callout.settings.module.ts
+   9:10  error  'WhiteboardModule' is defined but never used  @typescript-eslint/no-unused-vars
+  10:10  error  'NamingModule' is defined but never used      @typescript-eslint/no-unused-vars
+  11:10  error  'TagsetModule' is defined but never used      @typescript-eslint/no-unused-vars
+
+/home/carlos/DEV/Alkemio/server/src/domain/collaboration/callout-settings/callout.settings.resolver.fields.ts
+   1:10  error  'Parent' is defined but never used                @typescript-eslint/no-unused-vars
+   1:18  error  'ResolveField' is defined but never used          @typescript-eslint/no-unused-vars
+   2:10  error  'IProfile' is defined but never used              @typescript-eslint/no-unused-vars
+   4:10  error  'Profiling' is defined but never used             @typescript-eslint/no-unused-vars
+   5:10  error  'Loader' is defined but never used                @typescript-eslint/no-unused-vars
+   6:10  error  'CalloutSettings' is defined but never used       @typescript-eslint/no-unused-vars
+   7:10  error  'ProfileLoaderCreator' is defined but never used  @typescript-eslint/no-unused-vars
+   8:10  error  'ILoader' is defined but never used               @typescript-eslint/no-unused-vars
+  10:10  error  'IWhiteboard' is defined but never used           @typescript-eslint/no-unused-vars
+
+/home/carlos/DEV/Alkemio/server/src/domain/collaboration/callout-settings/callout.settings.service.authorization.ts
+  4:10  error  'ProfileAuthorizationService' is defined but never used     @typescript-eslint/no-unused-vars
+  7:10  error  'WhiteboardAuthorizationService' is defined but never used  @typescript-eslint/no-unused-vars
+  8:10  error  'RelationshipNotFoundException' is defined but never used   @typescript-eslint/no-unused-vars
+  9:10  error  'LogContext' is defined but never used                      @typescript-eslint/no-unused-vars
+
+/home/carlos/DEV/Alkemio/server/src/domain/collaboration/callout-settings/callout.settings.service.ts
+   1:10  error  'ProfileService' is defined but never used                                           @typescript-eslint/no-unused-vars
+   9:26  error  'FindOptionsRelations' is defined but never used                                     @typescript-eslint/no-unused-vars
+  12:10  error  'IProfile' is defined but never used                                                 @typescript-eslint/no-unused-vars
+  13:10  error  'ProfileType' is defined but never used                                              @typescript-eslint/no-unused-vars
+  14:10  error  'WhiteboardService' is defined but never used                                        @typescript-eslint/no-unused-vars
+  15:10  error  'IWhiteboard' is defined but never used                                              @typescript-eslint/no-unused-vars
+  16:10  error  'VisualType' is defined but never used                                               @typescript-eslint/no-unused-vars
+  17:10  error  'NamingService' is defined but never used                                            @typescript-eslint/no-unused-vars
+  18:10  error  'CreateTagsetInput' is defined but never used                                        @typescript-eslint/no-unused-vars
+  19:10  error  'TagsetReservedName' is defined but never used                                       @typescript-eslint/no-unused-vars
+  20:10  error  'TagsetType' is defined but never used                                               @typescript-eslint/no-unused-vars
+  24:10  error  'TagsetService' is defined but never used                                            @typescript-eslint/no-unused-vars
+  25:10  error  'CalloutVisibility' is defined but never used                                        @typescript-eslint/no-unused-vars
+  42:5   error  'storageAggregator' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  43:5   error  'userID' is defined but never used. Allowed unused args must match /^_/u             @typescript-eslint/no-unused-vars
+
+/home/carlos/DEV/Alkemio/server/src/domain/collaboration/callout-settings/dto/callout.settings.dto.create.ts
+  2:10  error  'IsOptional' is defined but never used             @typescript-eslint/no-unused-vars
+  2:22  error  'ValidateNested' is defined but never used         @typescript-eslint/no-unused-vars
+  3:10  error  'Type' is defined but never used                   @typescript-eslint/no-unused-vars
+  4:10  error  'CreateProfileInput' is defined but never used     @typescript-eslint/no-unused-vars
+  5:10  error  'CreateWhiteboardInput' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/carlos/DEV/Alkemio/server/src/domain/collaboration/callout-settings/dto/callout.settings.dto.update.ts
+  2:10  error  'Type' is defined but never used                @typescript-eslint/no-unused-vars
+  3:10  error  'IsOptional' is defined but never used          @typescript-eslint/no-unused-vars
+  3:22  error  'ValidateNested' is defined but never used      @typescript-eslint/no-unused-vars
+  4:10  error  'UpdateProfileInput' is defined but never used  @typescript-eslint/no-unused-vars
+  5:10  error  'WhiteboardContent' is defined but never used   @typescript-eslint/no-unused-vars

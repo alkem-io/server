@@ -4,8 +4,8 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
-import { ICalloutContributionPolicy } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.interface';
-import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
+import { ICalloutSettingsContribution } from '@domain/collaboration/callout-settings-contribution/callout.settings.contribution.interface';
+import { CreateCalloutSettingsContributionInput } from '@domain/collaboration/callout-settings-contribution/dto/callout.settings.contribution.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -37,6 +37,8 @@ import { CreateClassificationInput } from '@domain/common/classification/dto/cla
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
+import { ICalloutSettings } from '@domain/collaboration/callout-settings/callout.settings.interface';
+import { CreateCalloutSettingsInput } from '@domain/collaboration/callout-settings/dto';
 
 @Injectable()
 export class InputCreatorService {
@@ -62,7 +64,6 @@ export class InputCreatorService {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
         contributionDefaults: true,
-        contributionPolicy: true,
         classification: {
           tagsets: true,
         },
@@ -78,6 +79,9 @@ export class InputCreatorService {
             },
           },
         },
+        settings: {
+          contribution: true,
+        },
       },
     });
     if (
@@ -85,7 +89,7 @@ export class InputCreatorService {
       !callout.framing.profile ||
       !callout.framing.profile.tagsets ||
       !callout.contributionDefaults ||
-      !callout.contributionPolicy ||
+      !callout.settings ||
       !callout.classification
     ) {
       throw new EntityNotInitializedException(
@@ -101,20 +105,18 @@ export class InputCreatorService {
     return {
       nameID: callout.nameID,
       type: callout.type,
-      visibility: callout.visibility,
       classification: this.buildCreateClassificationInputFromClassification(
         callout.classification
       ),
       framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
         callout.framing
       ),
+      settings: this.buildCreateCalloutSettingsInputFromCalloutSettings(
+        callout.settings
+      ),
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
           callout.contributionDefaults
-        ),
-      contributionPolicy:
-        this.buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          callout.contributionPolicy
         ),
       sortOrder: callout.sortOrder,
     };
@@ -324,6 +326,34 @@ export class InputCreatorService {
     };
   }
 
+  private buildCreateCalloutSettingsInputFromCalloutSettings(
+    calloutSettings: ICalloutSettings
+  ): CreateCalloutSettingsInput {
+    /*
+    if (!calloutSettings.profile) {
+      throw new EntityNotInitializedException(
+        'CalloutSettings not fully initialised',
+        LogContext.INPUT_CREATOR,
+        {
+          cause: 'Relation for callout settings not loaded',
+          calloutSettingsId: calloutSettings.id,
+        }
+      );
+    }
+      */
+    return {
+      /*profile: this.buildCreateProfileInputFromProfile(calloutSettings.profile),
+      whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
+        calloutSettings.whiteboard
+      ),*/
+      visibility: calloutSettings.visibility,
+      contribution:
+        this.buildCreateCalloutSettingsContributionInputFromCalloutSettingsContribution(
+          calloutSettings.contribution
+        ),
+    };
+  }
+
   private buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
     calloutContributionDefaults?: ICalloutContributionDefaults
   ): CreateCalloutContributionDefaultsInput | undefined {
@@ -337,13 +367,14 @@ export class InputCreatorService {
     return result;
   }
 
-  private buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-    calloutContributionPolicy: ICalloutContributionPolicy
-  ): CreateCalloutContributionPolicyInput {
+  private buildCreateCalloutSettingsContributionInputFromCalloutSettingsContribution(
+    calloutSettingsContribution: ICalloutSettingsContribution
+  ): CreateCalloutSettingsContributionInput {
     return {
-      state: calloutContributionPolicy.state,
-      allowedContributionTypes:
-        calloutContributionPolicy.allowedContributionTypes,
+      enabled: calloutSettingsContribution.enabled,
+      allowedTypes: calloutSettingsContribution.allowedTypes,
+      canAddContributions: calloutSettingsContribution.canAddContributions,
+      commentsEnabled: calloutSettingsContribution.commentsEnabled,
     };
   }
 

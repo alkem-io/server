@@ -3,7 +3,7 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutType } from '@common/enums/callout.type';
 
 export enum FlowState {
@@ -59,9 +59,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
           {
             nameID: 'welcome',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -71,7 +68,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '👋 Welcome to your subspace!',
@@ -80,13 +76,17 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
                   "Take an interactive tour below to discover how our subspaces are designed. We're excited to have you here! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/X6hQiRnkEmUSoOgRupvA?embed&show_copy_link=true'title='Welcome to your Subspace ' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n",
               },
             },
+            settings: {
+              visibility: CalloutVisibility.PUBLISHED,
+              contribution: {
+                enabled: true,
+                canAddContributions: CalloutAllowedContributors.MEMBERS,
+              },
+            },
           },
           {
             nameID: 'collaboration-tools',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 2,
             classification: {
               tagsets: [
@@ -96,7 +96,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName:
@@ -104,6 +103,13 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
                 description:
                   // eslint-disable-next-line quotes
                   "Collaboration tools allow you to gather existing knowledge from your community and (co-)create new insights through text and visuals. In the tour below you will learn all about the different tools and how to use them. Enjoy! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/5fvizP4ekEOya5CGHIwa?embed&show_copy_link=true'title='Subpace Collaboration Tools' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n",
+              },
+            },
+            settings: {
+              visibility: CalloutVisibility.PUBLISHED,
+              contribution: {
+                enabled: true,
+                canAddContributions: CalloutAllowedContributors.MEMBERS,
               },
             },
           },

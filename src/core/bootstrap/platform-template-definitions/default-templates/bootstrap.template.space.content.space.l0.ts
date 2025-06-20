@@ -3,7 +3,7 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutType } from '@common/enums/callout.type';
 
 export enum FlowState {
@@ -52,9 +52,6 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
           {
             nameID: 'welcome',
             type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -64,11 +61,17 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '👋 Welcome to your space!',
                 description: 'An empty space for you to configure!.',
+              },
+            },
+            settings: {
+              visibility: CalloutVisibility.PUBLISHED,
+              contribution: {
+                enabled: true,
+                canAddContributions: CalloutAllowedContributors.MEMBERS,
               },
             },
           },
