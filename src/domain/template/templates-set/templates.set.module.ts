@@ -12,6 +12,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
     StorageAggregatorResolverModule,
     SpaceLookupModule,
     InputCreatorModule,
+    TemplateContentSpaceModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],
   providers: [
