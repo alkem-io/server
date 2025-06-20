@@ -8,7 +8,7 @@ export class CreateTemplateFromContentSpaceOnTemplatesSetInput extends CreateTem
   templatesSetID!: string;
 
   @Field(() => UUID, {
-    nullable: true,
+    nullable: false,
     description: 'The ID of the ContentSpace to use as for the Template.',
   })
   contentSpaceID!: string;
