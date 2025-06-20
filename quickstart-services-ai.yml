@@ -237,7 +237,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.5.0
+    image: alkemio/matrix-adapter:v0.5.1
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
