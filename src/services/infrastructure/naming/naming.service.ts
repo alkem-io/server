@@ -332,7 +332,7 @@ export class NamingService {
       relations: {
         calloutsSet: true,
         settings: {
-          contributionPolicy: true,
+          contribution: true,
         },
       },
     });

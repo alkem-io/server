@@ -1,6 +1,5 @@
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { ENUM_LENGTH } from '@common/constants';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { ICalloutSettings } from './callout.settings.interface';
@@ -17,7 +16,7 @@ export class CalloutSettings
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  contributionPolicy!: CalloutSettingsContribution;
+  contribution!: CalloutSettingsContribution;
 
   /*@Column('json', { nullable: false })
   contribution!: {
@@ -26,14 +25,6 @@ export class CalloutSettings
     canAddContributions: CalloutContributionAddType;
     commentsEnabled: boolean;
   };
-
-  @OneToOne(() => CalloutContributionPolicy, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  contributionPolicy!: CalloutContributionPolicy;
 
   @Column('json', { nullable: false })
   framing!: {

@@ -6,7 +6,7 @@ import { CreateCalloutSettingsContributionInput } from './dto';
 import { UpdateCalloutSettingsContributionInput } from './dto';
 import { ICalloutSettingsContribution } from './callout.settings.contribution.interface';
 import { CalloutSettingsContribution } from './callout.settings.contribution.entity';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
@@ -16,79 +16,84 @@ export class CalloutSettingsContributionService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(CalloutSettingsContribution)
-    private calloutContributionPolicyRepository: Repository<CalloutSettingsContribution>
+    private calloutSettingsContributionRepository: Repository<CalloutSettingsContribution>
   ) {}
 
   public createCalloutSettingsContribution(
-    calloutContributionPolicyData: CreateCalloutSettingsContributionInput
+    calloutSettingsContributionData: CreateCalloutSettingsContributionInput
   ): ICalloutSettingsContribution {
-    const calloutContributionPolicy = new CalloutSettingsContribution();
-    calloutContributionPolicy.allowedContributionTypes = [];
-    calloutContributionPolicy.state = CalloutState.OPEN;
-    if (calloutContributionPolicyData.allowedContributionTypes) {
-      calloutContributionPolicy.allowedContributionTypes =
-        calloutContributionPolicyData.allowedContributionTypes;
+    //!! Refactor this
+    const calloutSettingsContribution = new CalloutSettingsContribution();
+    calloutSettingsContribution.allowedTypes = [];
+    calloutSettingsContribution.canAddContributions =
+      CalloutAllowedContributors.MEMBERS;
+    if (calloutSettingsContributionData.allowedTypes) {
+      calloutSettingsContribution.allowedTypes =
+        calloutSettingsContributionData.allowedTypes;
     }
 
-    if (calloutContributionPolicyData.state) {
-      calloutContributionPolicy.state = calloutContributionPolicyData.state;
+    if (calloutSettingsContributionData.enabled) {
+      calloutSettingsContribution.canAddContributions = // ??
+        CalloutAllowedContributors.MEMBERS;
     }
 
-    return calloutContributionPolicy;
+    return calloutSettingsContribution;
   }
 
   public updateCalloutSettingsContributionInput(
     calloutType: CalloutType,
     policyData: CreateCalloutSettingsContributionInput | undefined
   ): CreateCalloutSettingsContributionInput {
-    //!! what does this do?
-    const allowedContributionTypes: CalloutContributionType[] = [];
+    //!! Refactor this
+    const allowedTypes: CalloutContributionType[] = [];
     switch (calloutType) {
       case CalloutType.LINK_COLLECTION:
-        allowedContributionTypes.push(CalloutContributionType.LINK);
+        allowedTypes.push(CalloutContributionType.LINK);
         break;
       case CalloutType.POST_COLLECTION:
-        allowedContributionTypes.push(CalloutContributionType.POST);
+        allowedTypes.push(CalloutContributionType.POST);
         break;
       case CalloutType.WHITEBOARD_COLLECTION:
-        allowedContributionTypes.push(CalloutContributionType.WHITEBOARD);
+        allowedTypes.push(CalloutContributionType.WHITEBOARD);
         break;
     }
     if (!policyData) {
       const result: CreateCalloutSettingsContributionInput = {
-        state: CalloutState.OPEN,
-        allowedContributionTypes: allowedContributionTypes,
+        enabled: true,
+        canAddContributions: CalloutAllowedContributors.MEMBERS,
+        allowedTypes: allowedTypes,
       };
       return result;
     }
-    policyData.allowedContributionTypes = allowedContributionTypes;
+    policyData.allowedTypes = allowedTypes;
     return policyData;
   }
 
   public updateCalloutSettingsContribution(
-    calloutContributionPolicy: ICalloutSettingsContribution,
-    calloutContributionPolicyData: UpdateCalloutSettingsContributionInput
+    calloutSettingsContribution: ICalloutSettingsContribution,
+    calloutSettingsContributionData: UpdateCalloutSettingsContributionInput
   ): ICalloutSettingsContribution {
-    if (calloutContributionPolicyData.allowedContributionTypes) {
-      calloutContributionPolicy.allowedContributionTypes =
-        calloutContributionPolicyData.allowedContributionTypes;
+    if (calloutSettingsContributionData.allowedTypes) {
+      calloutSettingsContribution.allowedTypes =
+        calloutSettingsContributionData.allowedTypes;
     }
 
-    if (calloutContributionPolicyData.state) {
-      calloutContributionPolicy.state = calloutContributionPolicyData.state;
+    if (calloutSettingsContributionData.canAddContributions) {
+      calloutSettingsContribution.canAddContributions =
+        calloutSettingsContributionData.canAddContributions;
     }
 
-    return calloutContributionPolicy;
+    return calloutSettingsContribution;
   }
 
   public async delete(
-    calloutContributionPolicy: ICalloutSettingsContribution
+    calloutSettingsContribution: ICalloutSettingsContribution
   ): Promise<ICalloutSettingsContribution> {
-    const calloutContributionPolicyID = calloutContributionPolicy.id;
-    const result = await this.calloutContributionPolicyRepository.remove(
-      calloutContributionPolicy as CalloutSettingsContribution
+    const calloutSettingsContributionID = calloutSettingsContribution.id;
+    const result = await this.calloutSettingsContributionRepository.remove(
+      calloutSettingsContribution as CalloutSettingsContribution
     );
-    result.id = calloutContributionPolicyID;
+    result.id = calloutSettingsContributionID;
     return result;
   }
 }

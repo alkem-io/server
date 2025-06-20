@@ -46,7 +46,7 @@ export class CalloutAuthorizationService {
         contributions: true,
         contributionDefaults: true,
         settings: {
-          contributionPolicy: true,
+          contribution: true,
         },
         framing: {
           profile: true,
@@ -61,7 +61,7 @@ export class CalloutAuthorizationService {
       !callout.contributions ||
       !callout.contributionDefaults ||
       !callout.settings ||
-      !callout.settings.contributionPolicy ||
+      !callout.settings.contribution ||
       !callout.framing
     ) {
       throw new EntityNotInitializedException(

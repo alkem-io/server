@@ -20,7 +20,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { RoomServiceEvents } from './room.service.events';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutType } from '@common/enums/callout.type';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
@@ -245,18 +245,12 @@ export class RoomResolverMutations {
     if (room.type === RoomType.CALLOUT) {
       const callout = await this.namingService.getCalloutForRoom(room.id);
 
-      if (callout.type !== CalloutType.POST) {
-        throw new NotSupportedException(
-          'Messages only supported on Comments Callout',
-          LogContext.COLLABORATION
-        );
-      }
-
-      if (callout.settings.contributionPolicy.state === CalloutState.CLOSED) {
-        throw new CalloutClosedException(
-          `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
-        );
-      }
+      //!!
+      // if (!callout.settings.framing.commentsEnabled) {
+      //   throw new CalloutClosedException(
+      //     `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+      //   );
+      // }
     }
   }
 

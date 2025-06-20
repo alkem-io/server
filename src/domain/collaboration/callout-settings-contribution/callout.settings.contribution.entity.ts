@@ -1,6 +1,6 @@
 import { Column, Entity } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ICalloutSettingsContribution } from './callout.settings.contribution.interface';
 import { ENUM_LENGTH } from '@common/constants';
@@ -10,12 +10,28 @@ export class CalloutSettingsContribution
   extends BaseAlkemioEntity
   implements ICalloutSettingsContribution
 {
-  @Column('simple-array')
-  allowedContributionTypes!: CalloutContributionType[];
+  @Column('boolean', {
+    nullable: false,
+    default: true,
+  })
+  enabled!: boolean;
+
+  @Column('simple-array', {
+    nullable: false,
+    default: [],
+  })
+  allowedTypes!: CalloutContributionType[];
 
   @Column('varchar', {
     length: ENUM_LENGTH,
     nullable: false,
+    default: CalloutAllowedContributors.NONE,
   })
-  state!: CalloutState;
+  canAddContributions!: CalloutAllowedContributors;
+
+  @Column('boolean', {
+    nullable: false,
+    default: false,
+  })
+  commentsEnabled!: boolean;
 }

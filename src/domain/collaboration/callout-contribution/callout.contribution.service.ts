@@ -39,7 +39,7 @@ export class CalloutContributionService {
   public async createCalloutContribution(
     calloutContributionData: CreateCalloutContributionInput,
     storageAggregator: IStorageAggregator,
-    contributionPolicy: ICalloutSettingsContribution,
+    contributionSettings: ICalloutSettingsContribution,
     userID: string
   ): Promise<ICalloutContribution> {
     const contribution: ICalloutContribution = CalloutContribution.create(
@@ -56,7 +56,7 @@ export class CalloutContributionService {
 
     if (whiteboard) {
       this.validateContributionType(
-        contributionPolicy,
+        contributionSettings,
         CalloutContributionType.WHITEBOARD
       );
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -68,7 +68,7 @@ export class CalloutContributionService {
 
     if (post) {
       this.validateContributionType(
-        contributionPolicy,
+        contributionSettings,
         CalloutContributionType.POST
       );
 
@@ -81,7 +81,7 @@ export class CalloutContributionService {
 
     if (link) {
       this.validateContributionType(
-        contributionPolicy,
+        contributionSettings,
         CalloutContributionType.LINK
       );
 
@@ -95,14 +95,12 @@ export class CalloutContributionService {
   }
 
   private validateContributionType(
-    contributionPolicy: ICalloutSettingsContribution,
+    contributionSettings: ICalloutSettingsContribution,
     contributionType: CalloutContributionType
   ) {
-    if (
-      !contributionPolicy.allowedContributionTypes.includes(contributionType)
-    ) {
+    if (!contributionSettings.allowedTypes?.includes(contributionType)) {
       throw new ValidationException(
-        `Attemtped to create a contribution of type '${contributionType}', which is not in the allowed types: ${contributionPolicy.allowedContributionTypes}`,
+        `Attemtped to create a contribution of type '${contributionType}', which is not in the allowed types: ${contributionSettings.allowedTypes}`,
         LogContext.COLLABORATION
       );
     }

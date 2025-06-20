@@ -5,6 +5,6 @@ import { ICalloutSettingsContribution } from '../callout-settings-contribution/c
 
 @ObjectType('CalloutSettings')
 export abstract class ICalloutSettings extends IAuthorizable {
-  contributionPolicy!: ICalloutSettingsContribution;
+  contribution!: ICalloutSettingsContribution;
   visibility!: CalloutVisibility;
 }

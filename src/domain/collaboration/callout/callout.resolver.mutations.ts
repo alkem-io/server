@@ -22,7 +22,7 @@ import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapt
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
@@ -193,7 +193,7 @@ export class CalloutResolverMutations {
         relations: {
           calloutsSet: true,
           settings: {
-            contributionPolicy: true,
+            contribution: true,
           },
         },
       }
@@ -219,7 +219,10 @@ export class CalloutResolverMutations {
       `create contribution on callout: ${callout.id}`
     );
 
-    if (callout.settings.contributionPolicy.state === CalloutState.CLOSED) {
+    if (
+      callout.settings.contribution.canAddContributions ===
+      CalloutAllowedContributors.NONE
+    ) {
       if (
         !this.authorizationService.isAccessGranted(
           agentInfo,

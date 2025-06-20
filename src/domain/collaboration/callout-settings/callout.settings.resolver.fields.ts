@@ -25,14 +25,14 @@ export class CalloutSettingsResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributionPolicy', () => ICalloutSettingsContribution, {
+  @ResolveField('contribution', () => ICalloutSettingsContribution, {
     nullable: false,
-    description: 'The ContributionPolicy for this Callout.',
+    description: 'The Contribution Settings for this Callout.',
   })
-  async contributionPolicy(
+  async contribution(
     @Parent() calloutSettings: CalloutSettings
   ): Promise<ICalloutSettingsContribution> {
-    return await this.calloutSettingsService.getContributionPolicy(
+    return await this.calloutSettingsService.getContributionSettings(
       calloutSettings.id
     );
   }

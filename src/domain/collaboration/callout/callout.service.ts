@@ -212,12 +212,12 @@ export class CalloutService {
           tagsets: true,
         },
         settings: {
-          contributionPolicy: true,
+          contribution: true,
         },
       },
     });
 
-    if (!callout.contributionDefaults || !callout.settings.contributionPolicy) {
+    if (!callout.contributionDefaults || !callout.settings.contribution) {
       throw new EntityNotInitializedException(
         `Unable to load callout: ${callout.id}`,
         LogContext.COLLABORATION
@@ -411,10 +411,10 @@ export class CalloutService {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: {
         contributions: true,
-        settings: { contributionPolicy: true },
+        settings: { contribution: true },
       },
     });
-    if (!callout.settings.contributionPolicy)
+    if (!callout.settings.contribution)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised as no contributions`,
         LogContext.COLLABORATION
@@ -464,7 +464,7 @@ export class CalloutService {
       await this.contributionService.createCalloutContribution(
         contributionData,
         storageAggregator,
-        callout.settings.contributionPolicy,
+        callout.settings.contribution,
         userID
       );
     contribution.callout = callout;
@@ -514,7 +514,7 @@ export class CalloutService {
   ): Promise<ICalloutContribution[]> {
     const callout = await this.getCalloutOrFail(calloutId, {
       relations: {
-        settings: { contributionPolicy: true },
+        settings: { contribution: true },
         contributions: true,
       },
     });

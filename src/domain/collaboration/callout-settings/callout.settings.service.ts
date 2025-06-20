@@ -62,9 +62,9 @@ export class CalloutSettingsService {
       this.calloutSettingsContributionService.updateCalloutSettingsContributionInput(
         //!! calloutData.type,
         CalloutType.POST, //!! PASS the calloutSettingsData.framing.type or None
-        calloutSettingsData.contributionPolicy
+        calloutSettingsData.contribution
       );
-    calloutSettings.contributionPolicy =
+    calloutSettings.contribution =
       this.calloutSettingsContributionService.createCalloutSettingsContribution(
         policyData
       );
@@ -127,11 +127,11 @@ export class CalloutSettingsService {
       }
     );
 
-    if (calloutSettingsData.contributionPolicy) {
-      calloutSettingsEntity.contributionPolicy =
+    if (calloutSettingsData.contribution) {
+      calloutSettingsEntity.contribution =
         this.calloutSettingsContributionService.updateCalloutSettingsContribution(
-          calloutSettingsEntity.contributionPolicy,
-          calloutSettingsData.contributionPolicy
+          calloutSettingsEntity.contribution,
+          calloutSettingsData.contribution
         );
     }
     /*if (calloutSettingsData.profile) {
@@ -163,16 +163,16 @@ export class CalloutSettingsService {
       calloutSettingsID,
       {
         relations: {
-          contributionPolicy: true,
+          contribution: true,
           /*profile: true,
           whiteboard: true,
           */
         },
       }
     );
-    if (calloutSettings.contributionPolicy) {
+    if (calloutSettings.contribution) {
       await this.calloutSettingsContributionService.delete(
-        calloutSettings.contributionPolicy
+        calloutSettings.contribution
       );
     }
 
@@ -221,18 +221,18 @@ export class CalloutSettingsService {
     return calloutSettings;
   }
 
-  public async getContributionPolicy(
+  public async getContributionSettings(
     calloutSettingsID: string
   ): Promise<ICalloutSettingsContribution> {
     const callout = await this.getCalloutSettingsOrFail(calloutSettingsID, {
-      relations: { contributionPolicy: true },
+      relations: { contribution: true },
     });
-    if (!callout.contributionPolicy)
+    if (!callout.contribution)
       throw new EntityNotInitializedException(
         `Callout Settings (${calloutSettingsID}) not initialised as it does not have contribution policy`,
         LogContext.COLLABORATION
       );
-    return callout.contributionPolicy;
+    return callout.contribution;
   }
   /*
   public async getProfile(

@@ -3,7 +3,7 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutType } from '@common/enums/callout.type';
 
 export enum FlowState {
@@ -78,8 +78,9 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
-              contributionPolicy: {
-                state: CalloutState.OPEN,
+              contribution: {
+                enabled: true,
+                canAddContributions: CalloutAllowedContributors.MEMBERS,
               },
             },
           },
@@ -106,8 +107,9 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
             },
             settings: {
               visibility: CalloutVisibility.PUBLISHED,
-              contributionPolicy: {
-                state: CalloutState.OPEN,
+              contribution: {
+                enabled: true,
+                canAddContributions: CalloutAllowedContributors.MEMBERS,
               },
             },
           },

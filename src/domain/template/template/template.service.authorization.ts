@@ -45,7 +45,7 @@ export class TemplateAuthorizationService {
               },
             },
             settings: {
-              contributionPolicy: true,
+              contribution: true,
             },
             contributionDefaults: true,
           },

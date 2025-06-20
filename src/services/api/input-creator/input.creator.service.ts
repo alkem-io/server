@@ -80,7 +80,7 @@ export class InputCreatorService {
           },
         },
         settings: {
-          contributionPolicy: true,
+          contribution: true,
         },
       },
     });
@@ -347,9 +347,9 @@ export class InputCreatorService {
         calloutSettings.whiteboard
       ),*/
       visibility: calloutSettings.visibility,
-      contributionPolicy:
+      contribution:
         this.buildCreateCalloutSettingsContributionInputFromCalloutSettingsContribution(
-          calloutSettings.contributionPolicy
+          calloutSettings.contribution
         ),
     };
   }
@@ -371,9 +371,10 @@ export class InputCreatorService {
     calloutSettingsContribution: ICalloutSettingsContribution
   ): CreateCalloutSettingsContributionInput {
     return {
-      state: calloutSettingsContribution.state,
-      allowedContributionTypes:
-        calloutSettingsContribution.allowedContributionTypes,
+      enabled: calloutSettingsContribution.enabled,
+      allowedTypes: calloutSettingsContribution.allowedTypes,
+      canAddContributions: calloutSettingsContribution.canAddContributions,
+      commentsEnabled: calloutSettingsContribution.commentsEnabled,
     };
   }
 

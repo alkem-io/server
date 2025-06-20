@@ -1,18 +1,32 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 
 @ObjectType('CalloutSettingsContribution')
 export abstract class ICalloutSettingsContribution extends IBaseAlkemio {
+  @Field(() => Boolean, {
+    description:
+      'Can add contributions to the Callout. Allowed Contribution types is going to be readOnly, so this field can be used to enable or disable the contribution temporarily instead of setting allowedTypes to None.',
+    nullable: true,
+  })
+  enabled?: boolean;
+
+  @Field(() => CalloutAllowedContributors, {
+    nullable: true,
+    description: 'Indicate who can add more contributions to the callout.',
+  })
+  canAddContributions!: CalloutAllowedContributors;
+
   @Field(() => [CalloutContributionType], {
     nullable: false,
     description: 'The allowed contribution types for this callout.',
   })
-  allowedContributionTypes!: CalloutContributionType[];
+  allowedTypes!: CalloutContributionType[];
 
-  @Field(() => CalloutState, {
-    description: 'State of the Callout.',
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Can comment to contributions callout.',
   })
-  state!: CalloutState;
+  commentsEnabled?: boolean;
 }

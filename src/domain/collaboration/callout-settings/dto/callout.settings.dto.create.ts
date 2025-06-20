@@ -28,7 +28,7 @@ export class CreateCalloutSettingsInput {
   @Field(() => CreateCalloutSettingsContributionInput, { nullable: true })
   @ValidateNested({ each: true })
   @Type(() => CreateCalloutSettingsContributionInput)
-  contributionPolicy?: CreateCalloutSettingsContributionInput;
+  contribution?: CreateCalloutSettingsContributionInput;
 
   @Field(() => CalloutVisibility, {
     nullable: true,
