@@ -73,6 +73,11 @@ export class CalloutSettingsContributionService {
     calloutSettingsContribution: ICalloutSettingsContribution,
     calloutSettingsContributionData: UpdateCalloutSettingsContributionInput
   ): ICalloutSettingsContribution {
+    if (calloutSettingsContributionData.enabled) {
+      calloutSettingsContribution.enabled =
+        calloutSettingsContributionData.enabled;
+    }
+
     if (calloutSettingsContributionData.allowedTypes) {
       calloutSettingsContribution.allowedTypes =
         calloutSettingsContributionData.allowedTypes;
@@ -81,6 +86,11 @@ export class CalloutSettingsContributionService {
     if (calloutSettingsContributionData.canAddContributions) {
       calloutSettingsContribution.canAddContributions =
         calloutSettingsContributionData.canAddContributions;
+    }
+
+    if (calloutSettingsContributionData.commentsEnabled) {
+      calloutSettingsContribution.commentsEnabled =
+        calloutSettingsContributionData.commentsEnabled;
     }
 
     return calloutSettingsContribution;

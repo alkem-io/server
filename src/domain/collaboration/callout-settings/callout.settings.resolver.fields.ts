@@ -1,19 +1,15 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ICalloutSettings } from './callout.settings.interface';
-import { Loader } from '@core/dataloader/decorators';
-import { CalloutSettings } from './callout.settings.entity';
-import { ProfileLoaderCreator } from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { CalloutSettingsService } from './callout.settings.service';
-import { IWhiteboard } from '@domain/common/whiteboard/types';
-import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
+import { LoggerService } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common/decorators';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICalloutSettingsContribution } from '../callout-settings-contribution/callout.settings.contribution.interface';
+import { ICalloutSettingsFraming } from '../callout-settings-framing/callout.settings.framing.interface';
+import { CalloutSettings } from './callout.settings.entity';
+import { ICalloutSettings } from './callout.settings.interface';
+import { CalloutSettingsService } from './callout.settings.service';
 
 @Resolver(() => ICalloutSettings)
 export class CalloutSettingsResolverFields {
@@ -22,6 +18,20 @@ export class CalloutSettingsResolverFields {
     private readonly logger: LoggerService,
     private calloutSettingsService: CalloutSettingsService
   ) {}
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('framing', () => ICalloutSettingsFraming, {
+    nullable: false,
+    description: 'The Framing Settings for this Callout.',
+  })
+  async framing(
+    @Parent() calloutSettings: CalloutSettings
+  ): Promise<ICalloutSettingsFraming> {
+    return await this.calloutSettingsService.getFramingSettings(
+      calloutSettings.id
+    );
+  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
