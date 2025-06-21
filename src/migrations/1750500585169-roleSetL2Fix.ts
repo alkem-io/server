@@ -43,13 +43,7 @@ export class RoleSetL2Fix1750500585169 implements MigrationInterface {
         continue;
       }
       for (const roleDefinition of roleDefinitions) {
-        console.log(
-          `Processing role ${roleDefinition.name} in space ${space.spaceId}`
-        );
         if (roleDefinition.parentCredentials.length === 1) {
-          console.log(
-            `Found role definition at L2 with just one parent credential ${roleDefinition.name} in space ${space.spaceId}`
-          );
           // These are the role definitions to fix
           // Find the equivalent parent role definition
           const parentRoleDefinition = parentRoleDefinitions.find(
