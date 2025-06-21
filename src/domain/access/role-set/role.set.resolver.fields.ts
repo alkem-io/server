@@ -273,7 +273,8 @@ export class RoleSetResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
     nullable: false,
-    description: 'All virtuals that have the specified Role in this Community.',
+    description:
+      'All Virtual Contributors that have the specified Role in this Community.',
   })
   async virtualContributorsInRole(
     @Parent() roleSet: IRoleSet,
@@ -281,6 +282,28 @@ export class RoleSetResolverFields {
     role: RoleName
   ) {
     return await this.roleSetService.getVirtualContributorsWithRole(
+      roleSet,
+      role
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'virtualContributorsInRoleFromTopLevelRoleSet',
+    () => [IVirtualContributor],
+    {
+      nullable: false,
+      description:
+        'All Virtual Contributors that are available from the ultimate parent RoleSet.',
+    }
+  )
+  async virtualContributorsInRoleFromTopLevelRoleSet(
+    @Parent() roleSet: IRoleSet,
+    @Args('role', { type: () => RoleName, nullable: false })
+    role: RoleName
+  ) {
+    return await this.roleSetService.getVirtualContributorsWithRoleFromTopLevelRoleSet(
       roleSet,
       role
     );

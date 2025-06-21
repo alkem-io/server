@@ -545,6 +545,26 @@ export class RoleSetService {
     });
   }
 
+  public async getVirtualContributorsWithRoleFromTopLevelRoleSet(
+    roleSet: IRoleSet,
+    roleType: RoleName
+  ): Promise<IVirtualContributor[]> {
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
+
+    let membershipCredential = roleDefinition.credential;
+    const parentMembershipCredentials = roleDefinition.parentCredentials;
+    if (parentMembershipCredentials.length !== 0) {
+      // First one will be the top level roleSet credential for VC
+      membershipCredential = parentMembershipCredentials[0];
+    }
+    return await this.virtualContributorLookupService.virtualContributorsWithCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+  }
+
   public async getVirtualContributorsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName
