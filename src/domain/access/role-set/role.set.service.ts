@@ -1833,7 +1833,7 @@ export class RoleSetService {
         roleDefinition.name
       );
       const parentDirectCredential = parentRoleDefinition.credential;
-      const parentParentCredentials = roleDefinition.parentCredentials;
+      const parentParentCredentials = parentRoleDefinition.parentCredentials;
 
       parentCredentials.push(parentDirectCredential);
       parentParentCredentials.forEach(c => parentCredentials?.push(c));
