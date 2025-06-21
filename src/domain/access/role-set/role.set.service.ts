@@ -545,6 +545,36 @@ export class RoleSetService {
     });
   }
 
+  public async getVirtualContributorsInRoleInHierarchy(
+    roleSet: IRoleSet,
+    roleType: RoleName
+  ): Promise<IVirtualContributor[]> {
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
+
+    const membershipCredentials: ICredentialDefinition[] = [
+      roleDefinition.credential,
+    ];
+    const parentMembershipCredentials = roleDefinition.parentCredentials;
+    if (parentMembershipCredentials.length !== 0) {
+      // First one will be the top level roleSet credential for VC
+      membershipCredentials.push(...parentMembershipCredentials);
+    }
+    const eligibleVirtualContributors: IVirtualContributor[] = [];
+    for (const membershipCredential of membershipCredentials) {
+      const vcsForCredential =
+        await this.virtualContributorLookupService.virtualContributorsWithCredentials(
+          {
+            type: membershipCredential.type,
+            resourceID: membershipCredential.resourceID,
+          }
+        );
+      if (vcsForCredential.length > 0) {
+        eligibleVirtualContributors.push(...vcsForCredential);
+      }
+    }
+    return eligibleVirtualContributors;
+  }
+
   public async getVirtualContributorsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName
@@ -1833,7 +1863,7 @@ export class RoleSetService {
         roleDefinition.name
       );
       const parentDirectCredential = parentRoleDefinition.credential;
-      const parentParentCredentials = roleDefinition.parentCredentials;
+      const parentParentCredentials = parentRoleDefinition.parentCredentials;
 
       parentCredentials.push(parentDirectCredential);
       parentParentCredentials.forEach(c => parentCredentials?.push(c));
