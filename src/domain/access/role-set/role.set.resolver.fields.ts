@@ -290,20 +290,20 @@ export class RoleSetResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
-    'virtualContributorsInRoleFromTopLevelRoleSet',
+    'virtualContributorsInRoleInHierarchy',
     () => [IVirtualContributor],
     {
       nullable: false,
       description:
-        'All Virtual Contributors that are available from the ultimate parent RoleSet.',
+        'All Virtual Contributors that are available from the current or parent RoleSets.',
     }
   )
-  async virtualContributorsInRoleFromTopLevelRoleSet(
+  async virtualContributorsInRoleInHierarchy(
     @Parent() roleSet: IRoleSet,
     @Args('role', { type: () => RoleName, nullable: false })
     role: RoleName
   ) {
-    return await this.roleSetService.getVirtualContributorsWithRoleFromTopLevelRoleSet(
+    return await this.roleSetService.getVirtualContributorsInRoleInHierarchy(
       roleSet,
       role
     );

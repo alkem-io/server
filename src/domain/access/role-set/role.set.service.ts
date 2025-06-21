@@ -545,24 +545,34 @@ export class RoleSetService {
     });
   }
 
-  public async getVirtualContributorsWithRoleFromTopLevelRoleSet(
+  public async getVirtualContributorsInRoleInHierarchy(
     roleSet: IRoleSet,
     roleType: RoleName
   ): Promise<IVirtualContributor[]> {
     const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
 
-    let membershipCredential = roleDefinition.credential;
+    const membershipCredentials: ICredentialDefinition[] = [
+      roleDefinition.credential,
+    ];
     const parentMembershipCredentials = roleDefinition.parentCredentials;
     if (parentMembershipCredentials.length !== 0) {
       // First one will be the top level roleSet credential for VC
-      membershipCredential = parentMembershipCredentials[0];
+      membershipCredentials.push(...parentMembershipCredentials);
     }
-    return await this.virtualContributorLookupService.virtualContributorsWithCredentials(
-      {
-        type: membershipCredential.type,
-        resourceID: membershipCredential.resourceID,
+    const eligibleVirtualContributors: IVirtualContributor[] = [];
+    for (const membershipCredential of membershipCredentials) {
+      const vcsForCredential =
+        await this.virtualContributorLookupService.virtualContributorsWithCredentials(
+          {
+            type: membershipCredential.type,
+            resourceID: membershipCredential.resourceID,
+          }
+        );
+      if (vcsForCredential.length > 0) {
+        eligibleVirtualContributors.push(...vcsForCredential);
       }
-    );
+    }
+    return eligibleVirtualContributors;
   }
 
   public async getVirtualContributorsWithRole(
@@ -1853,7 +1863,7 @@ export class RoleSetService {
         roleDefinition.name
       );
       const parentDirectCredential = parentRoleDefinition.credential;
-      const parentParentCredentials = roleDefinition.parentCredentials;
+      const parentParentCredentials = parentRoleDefinition.parentCredentials;
 
       parentCredentials.push(parentDirectCredential);
       parentParentCredentials.forEach(c => parentCredentials?.push(c));
