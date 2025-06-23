@@ -10,7 +10,7 @@ import {
 } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { CalloutType } from '@common/enums/callout.type';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_CALLOUT_CREATED_BY,
@@ -45,9 +45,7 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
-        settings: {
-          contribution: true,
-        },
+        settings: true,
         framing: {
           profile: true,
           whiteboard: {
@@ -79,7 +77,7 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendPrivilegeRules(
       callout.authorization,
-      callout.type
+      callout.settings.contribution.allowedTypes
     );
 
     callout.authorization = this.appendCredentialRules(callout);
@@ -172,12 +170,13 @@ export class CalloutAuthorizationService {
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
-    calloutType: CalloutType
+    allowedContributions: CalloutContributionType[] | undefined
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    const privilegeToGrant = this.getPrivilegeForCalloutType(calloutType);
-    if (privilegeToGrant) {
+    const privilegesToGrant =
+      this.getPrivilegesForCalloutAllowedContributions(allowedContributions);
+    for (const privilegeToGrant of privilegesToGrant) {
       const createPrivilege = new AuthorizationPolicyRulePrivilege(
         [privilegeToGrant],
         AuthorizationPrivilege.CREATE,
@@ -199,18 +198,23 @@ export class CalloutAuthorizationService {
     );
   }
 
-  private getPrivilegeForCalloutType(
-    calloutType: CalloutType
-  ): AuthorizationPrivilege | undefined {
-    switch (calloutType) {
-      case CalloutType.WHITEBOARD_COLLECTION:
-        return AuthorizationPrivilege.CREATE_WHITEBOARD;
-      case CalloutType.POST_COLLECTION:
-        return AuthorizationPrivilege.CREATE_POST;
-      case CalloutType.LINK_COLLECTION:
-        return AuthorizationPrivilege.CONTRIBUTE;
-      case CalloutType.POST:
-        return undefined;
+  private getPrivilegesForCalloutAllowedContributions(
+    allowedContributions: CalloutContributionType[] | undefined
+  ): AuthorizationPrivilege[] {
+    const privilegesToGrant: AuthorizationPrivilege[] = [];
+    if (!allowedContributions || allowedContributions.length === 0) {
+      return privilegesToGrant;
+    } else {
+      if (allowedContributions.includes(CalloutContributionType.LINK)) {
+        privilegesToGrant.push(AuthorizationPrivilege.CONTRIBUTE);
+      }
+      if (allowedContributions.includes(CalloutContributionType.POST)) {
+        privilegesToGrant.push(AuthorizationPrivilege.CREATE_POST);
+      }
+      if (allowedContributions.includes(CalloutContributionType.WHITEBOARD)) {
+        privilegesToGrant.push(AuthorizationPrivilege.CREATE_WHITEBOARD);
+      }
+      return privilegesToGrant;
     }
   }
 }

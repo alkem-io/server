@@ -54,6 +54,9 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AlkemioConfig } from '@src/types';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -233,6 +236,35 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
+  // TODO: CalloutType is deprecated, remove it when possible
+  private inferCalloutType(callout: ICallout): CalloutType {
+    if (callout.framing.type === CalloutFramingType.WHITEBOARD) {
+      return CalloutType.WHITEBOARD;
+    }
+    if (
+      callout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.POST
+      )
+    ) {
+      return CalloutType.POST_COLLECTION;
+    }
+    if (
+      callout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.WHITEBOARD
+      )
+    ) {
+      return CalloutType.WHITEBOARD_COLLECTION;
+    }
+    if (
+      callout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.LINK
+      )
+    ) {
+      return CalloutType.LINK_COLLECTION;
+    }
+    return CalloutType.POST;
+  }
+
   public async buildCalloutPublishedPayload(
     userId: string,
     callout: ICallout
@@ -252,7 +284,7 @@ export class NotificationPayloadBuilder {
         displayName: callout.framing.profile.displayName,
         description: callout.framing.profile.description ?? '',
         nameID: callout.nameID,
-        type: callout.type,
+        type: this.inferCalloutType(callout), // TODO: CalloutType is deprecated, remove it when possible
         url: calloutURL,
       },
       ...spacePayload,

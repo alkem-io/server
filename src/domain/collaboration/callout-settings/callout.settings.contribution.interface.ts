@@ -1,28 +1,31 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 
-@InputType()
-export class UpdateCalloutSettingsContributionInput {
+@ObjectType('CalloutSettingsContribution')
+export abstract class ICalloutSettingsContribution {
   @Field(() => Boolean, {
     description:
       'Can add contributions to the Callout. Allowed Contribution types is going to be readOnly, so this field can be used to enable or disable the contribution temporarily instead of setting allowedTypes to None.',
-    nullable: true,
+    nullable: false,
   })
-  enabled?: boolean;
+  enabled!: boolean;
 
   @Field(() => CalloutAllowedContributors, {
-    nullable: true,
+    nullable: false,
     description: 'Indicate who can add more contributions to the callout.',
   })
   canAddContributions!: CalloutAllowedContributors;
 
-  // Not a field, this cannot be changed from the API
-  allowedTypes?: CalloutContributionType[];
+  @Field(() => [CalloutContributionType], {
+    nullable: false,
+    description: 'The allowed contribution types for this callout.',
+  })
+  allowedTypes!: CalloutContributionType[];
 
   @Field(() => Boolean, {
-    nullable: true,
+    nullable: false,
     description: 'Can comment to contributions callout.',
   })
-  commentsEnabled?: boolean;
+  commentsEnabled!: boolean;
 }

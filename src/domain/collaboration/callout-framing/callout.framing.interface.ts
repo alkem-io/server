@@ -2,10 +2,13 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ObjectType } from '@nestjs/graphql';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 
 @ObjectType('CalloutFraming')
 export abstract class ICalloutFraming extends IAuthorizable {
   profile!: IProfile;
+
+  type!: CalloutFramingType;
 
   whiteboard?: IWhiteboard;
 }

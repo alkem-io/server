@@ -4,8 +4,8 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
-import { ICalloutSettingsContribution } from '@domain/collaboration/callout-settings-contribution/callout.settings.contribution.interface';
-import { CreateCalloutSettingsContributionInput } from '@domain/collaboration/callout-settings-contribution/dto/callout.settings.contribution.dto.create';
+import { ICalloutSettingsContribution } from '@domain/collaboration/callout-settings/callout.settings.contribution.interface';
+import { CreateCalloutSettingsContributionInput } from '@domain/collaboration/callout-settings/dto/callout.settings.contribution.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -79,9 +79,7 @@ export class InputCreatorService {
             },
           },
         },
-        settings: {
-          contribution: true,
-        },
+        settings: true,
       },
     });
     if (
@@ -104,7 +102,6 @@ export class InputCreatorService {
 
     return {
       nameID: callout.nameID,
-      type: callout.type,
       classification: this.buildCreateClassificationInputFromClassification(
         callout.classification
       ),
@@ -319,6 +316,7 @@ export class InputCreatorService {
       );
     }
     return {
+      type: calloutFraming.type,
       profile: this.buildCreateProfileInputFromProfile(calloutFraming.profile),
       whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard

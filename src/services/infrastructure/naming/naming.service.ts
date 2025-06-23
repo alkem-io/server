@@ -331,9 +331,7 @@ export class NamingService {
       },
       relations: {
         calloutsSet: true,
-        settings: {
-          contribution: true,
-        },
+        settings: true,
       },
     });
     if (!result) {

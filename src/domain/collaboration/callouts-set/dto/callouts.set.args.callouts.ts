@@ -1,7 +1,6 @@
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { TagsetArgs } from '@domain/common/tagset/dto/tagset.args';
-import { CalloutType } from '@common/enums/callout.type';
 
 @ArgsType()
 export class CalloutsSetArgsCallouts {
@@ -11,12 +10,13 @@ export class CalloutsSetArgsCallouts {
   })
   IDs?: string[];
 
-  @Field(() => [CalloutType], {
-    description:
-      'The type of Callouts to return; if omitted return all types of Callouts.',
-    nullable: true,
-  })
-  types?: CalloutType[];
+  // TODO: Not supported anymore, as CalloutType has been removed. Find another way to filter by framingType or allowedContributionsType
+  // @Field(() => [CalloutType], {
+  //   description:
+  //     'The type of Callouts to return; if omitted return all types of Callouts.',
+  //   nullable: true,
+  // })
+  // types?: CalloutType[];
 
   @Field(() => Float, {
     description:

@@ -15,16 +15,13 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
 import { limitAndShuffle } from '@common/utils';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
-import { CalloutSettingsService } from '../callout-settings/callout.settings.service';
 import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
@@ -38,11 +35,14 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { UpdateCalloutInput } from './dto/callout.dto.update';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
-import { keyBy } from 'lodash';
+import { cloneDeep, keyBy, merge } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
 
 @Injectable()
 export class CalloutService {
@@ -52,7 +52,6 @@ export class CalloutService {
     private roomService: RoomService,
     private userLookupService: UserLookupService,
     private calloutFramingService: CalloutFramingService,
-    private calloutSettingsService: CalloutSettingsService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
@@ -86,14 +85,7 @@ export class CalloutService {
       userID
     );
 
-    callout.settings = await this.calloutSettingsService.createCalloutSettings(
-      {
-        // ...calloutData.settings, //!!
-        visibility: calloutData.settings?.visibility || CalloutVisibility.DRAFT,
-      },
-      storageAggregator,
-      userID
-    );
+    callout.settings = await this.createCalloutSettings(calloutData.settings);
 
     callout.classification = this.classificationService.createClassification(
       classificationTagsetTemplates,
@@ -105,7 +97,7 @@ export class CalloutService {
         calloutData.contributionDefaults
       );
 
-    if (calloutData.type === CalloutType.POST && calloutData.enableComments) {
+    if (callout.settings.framing.commentsEnabled) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
@@ -115,9 +107,22 @@ export class CalloutService {
     return callout;
   }
 
+  private createCalloutSettings(
+    settingsData?: CreateCalloutInput['settings']
+  ): ICalloutSettings {
+    const calloutSettings = cloneDeep(DefaultCalloutSettings);
+    if (settingsData) {
+      merge(calloutSettings, settingsData);
+    }
+    return calloutSettings;
+  }
+
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {
     if (
-      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
+      // If can contribute with whiteboard
+      (calloutData.settings?.contribution?.allowedTypes ?? []).includes(
+        CalloutContributionType.WHITEBOARD
+      ) && //  but no whiteboard template provided
       !calloutData.contributionDefaults?.whiteboardContent
     ) {
       throw new ValidationException(
@@ -127,12 +132,19 @@ export class CalloutService {
     }
 
     if (
-      //!! type is now in framing settings
-      calloutData.type == CalloutType.WHITEBOARD &&
+      calloutData.framing.type == CalloutFramingType.WHITEBOARD &&
       !calloutData.framing.whiteboard
     ) {
       throw new ValidationException(
         'Please provide a whiteboard',
+        LogContext.COLLABORATION
+      );
+    } else if (
+      calloutData.framing.type !== CalloutFramingType.WHITEBOARD &&
+      calloutData.framing.whiteboard
+    ) {
+      throw new ValidationException(
+        'Whiteboard framing can only be used with whiteboard framing type',
         LogContext.COLLABORATION
       );
     }
@@ -232,11 +244,7 @@ export class CalloutService {
     }
 
     if (calloutUpdateData.settings) {
-      callout.settings =
-        await this.calloutSettingsService.updateCalloutSettings(
-          callout.settings,
-          calloutUpdateData.settings
-        );
+      callout.settings = merge(callout.settings, calloutUpdateData.settings);
     }
 
     if (calloutUpdateData.classification) {
@@ -287,7 +295,6 @@ export class CalloutService {
     }
 
     await this.calloutFramingService.delete(callout.framing);
-    await this.calloutSettingsService.delete(callout.settings);
 
     for (const contribution of callout.contributions) {
       await this.contributionService.delete(contribution);
@@ -312,23 +319,17 @@ export class CalloutService {
     return this.calloutRepository.find(options);
   }
 
-  public async getActivityCount(callout: ICallout): Promise<number> {
-    const result = 0;
-    switch (callout.type) {
-      case CalloutType.POST_COLLECTION:
-      case CalloutType.WHITEBOARD_COLLECTION:
-      case CalloutType.LINK_COLLECTION:
-        return await this.contributionService.getContributionsInCalloutCount(
-          callout.id
-        );
-    }
+  public async getActivityCount(
+    callout: ICallout
+  ): Promise<{ messagesCount: number; contributionsCount: number }> {
+    const contributionsCount =
+      await this.contributionService.getContributionsInCalloutCount(callout.id);
+    const messagesCount = await this.getCommentsCount(callout.id);
 
-    const comments = await this.getComments(callout.id);
-    if (comments) {
-      return comments.messagesCount;
-    }
-
-    return result;
+    return {
+      messagesCount,
+      contributionsCount,
+    };
   }
 
   private async setNameIdOnPostData(
@@ -381,6 +382,12 @@ export class CalloutService {
       relations: { comments: true },
     });
     return callout.comments;
+  }
+
+  private async getCommentsCount(calloutID: string): Promise<number> {
+    const comments = await this.getComments(calloutID);
+    if (!comments) return 0;
+    return comments.messagesCount;
   }
 
   private async setNameIdOnWhiteboardData(

@@ -2,8 +2,8 @@ import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CreateCalloutSettingsFramingInput } from '@domain/collaboration/callout-settings-framing/dto';
-import { CreateCalloutSettingsContributionInput } from '@domain/collaboration/callout-settings-contribution/dto';
+import { CreateCalloutSettingsFramingInput } from './callout.settings.framing.dto.create';
+import { CreateCalloutSettingsContributionInput } from './callout.settings.contribution.dto.create';
 
 @InputType()
 @ObjectType('CreateCalloutSettingsData')

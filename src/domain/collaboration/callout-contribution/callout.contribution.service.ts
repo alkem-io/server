@@ -12,7 +12,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { PostService } from '../post/post.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPost } from '../post';
-import { ICalloutSettingsContribution } from '../callout-settings-contribution/callout.settings.contribution.interface';
+import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import {
   RelationshipNotFoundException,

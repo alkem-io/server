@@ -36,7 +36,6 @@ import { compact, keyBy } from 'lodash';
 import { CreateCalloutsSetInput } from './dto/callouts.set.dto.create';
 import { Callout } from '../callout/callout.entity';
 import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
-import { CalloutType } from '@common/enums/callout.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.interface';
@@ -205,12 +204,7 @@ export class CalloutsSetService {
           );
         calloutNameIds.push(calloutDefault.nameID);
       }
-      if (
-        !calloutDefault.isTemplate &&
-        calloutDefault.type === CalloutType.POST
-      ) {
-        calloutDefault.enableComments = true;
-      }
+
       const callout = await this.calloutService.createCallout(
         calloutDefault,
         calloutsSet.tagsetTemplateSet.tagsetTemplates,
@@ -466,11 +460,6 @@ export class CalloutsSetService {
       const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
       if (!hasAccess) return false;
 
-      // Filter by Callout types
-      if (args.types && !args.types.includes(callout.type)) {
-        return false;
-      }
-
       // Only process classificationTagsets with values specified
       const filteredArgClassificationTagsets =
         args.classificationTagsets?.filter(
@@ -529,7 +518,9 @@ export class CalloutsSetService {
     // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
     if (args.sortByActivity) {
       for (const callout of availableCallouts) {
-        callout.activity = await this.calloutService.getActivityCount(callout);
+        callout.activity = (
+          await this.calloutService.getActivityCount(callout)
+        ).contributionsCount;
       }
       const sortedCallouts = availableCallouts.sort((a, b) =>
         a.activity < b.activity ? 1 : -1

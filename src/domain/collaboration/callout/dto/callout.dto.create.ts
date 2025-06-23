@@ -1,5 +1,4 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { CalloutType } from '@common/enums/callout.type';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
@@ -37,11 +36,6 @@ export class CreateCalloutInput {
   })
   nameID?: string;
 
-  @Field(() => CalloutType, {
-    description: 'Callout type.',
-  })
-  type!: CalloutType;
-
   @Field(() => Number, {
     nullable: true,
     description: 'The sort order to assign to this Callout.',
@@ -54,13 +48,6 @@ export class CreateCalloutInput {
       'Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.',
   })
   sendNotification?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description:
-      'Controls if the comments are enabled for this Callout. Defaults to false.',
-  })
-  enableComments?: boolean;
 
   isTemplate?: boolean;
 }

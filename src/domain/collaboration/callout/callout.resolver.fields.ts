@@ -95,7 +95,14 @@ export class CalloutResolverFields {
     description: 'The activity for this Callout.',
   })
   async activity(@Parent() callout: ICallout): Promise<number> {
-    return await this.calloutService.getActivityCount(callout);
+    //!! TODO: This is not right. getActivity now should be splitted bettwen getComments and getContributions
+    const activity = await this.calloutService.getActivityCount(callout);
+    if (activity.messagesCount) {
+      return activity.messagesCount;
+    } else if (activity.contributionsCount) {
+      return activity.contributionsCount;
+    }
+    return 0;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

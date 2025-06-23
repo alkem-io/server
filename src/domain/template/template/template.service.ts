@@ -151,7 +151,21 @@ export class TemplateService {
         // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
         collaborationData.calloutsSetData.calloutsData.forEach(calloutData => {
           calloutData.isTemplate = true;
-          calloutData.enableComments = false;
+          if (calloutData.settings) {
+            if (calloutData.settings.framing) {
+              calloutData.settings.framing.commentsEnabled = false;
+            } else {
+              calloutData.settings.framing = {
+                commentsEnabled: false, // Ensure no comments are created on the callout
+              };
+            }
+          } else {
+            calloutData.settings = {
+              framing: {
+                commentsEnabled: false, // Ensure no comments are created on the callout
+              },
+            };
+          }
         });
         template.contentSpace =
           await this.templateContentSpaceService.createTemplateContentSpace(
@@ -187,10 +201,11 @@ export class TemplateService {
             LogContext.TEMPLATES
           );
         }
-        // Ensure no comments are created on the callout
-        templateData.calloutData.enableComments = false;
         templateData.calloutData.settings = {
-          visibility: CalloutVisibility.DRAFT, //!! is this correct?
+          framing: {
+            commentsEnabled: false, // Ensure no comments are created on the callout
+          },
+          visibility: CalloutVisibility.DRAFT,
         };
         templateData.calloutData.isTemplate = true;
         templateData.calloutData.nameID = `template-${randomUUID().slice(0, 8)}`;

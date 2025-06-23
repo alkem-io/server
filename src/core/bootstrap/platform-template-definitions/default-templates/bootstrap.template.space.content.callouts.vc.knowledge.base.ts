@@ -2,9 +2,8 @@ import { CreateTemplateContentSpaceInput } from '@domain/template/template-conte
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
-import { CalloutType } from '@common/enums/callout.type';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 export enum FlowState {
   GOING_LIVE = 'Going Live',
@@ -46,7 +45,6 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
         calloutsData: [
           {
             nameID: 'summary',
-            type: CalloutType.POST,
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -64,16 +62,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'introduction',
-            type: CalloutType.POST,
             sortOrder: 2,
             classification: {
               tagsets: [
@@ -91,16 +86,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'interacting-with-vc',
-            type: CalloutType.POST,
             sortOrder: 3,
             classification: {
               tagsets: [
@@ -118,16 +110,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'vc-profile',
-            type: CalloutType.POST,
             sortOrder: 4,
             classification: {
               tagsets: [
@@ -145,16 +134,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'content-types',
-            type: CalloutType.POST,
             sortOrder: 5,
             classification: {
               tagsets: [
@@ -172,16 +158,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'terms-conditions',
-            type: CalloutType.POST,
             sortOrder: 6,
             classification: {
               tagsets: [
@@ -199,16 +182,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'body-of-knowledge-ex1',
-            type: CalloutType.POST,
             sortOrder: 7,
             classification: {
               tagsets: [
@@ -226,16 +206,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'body-of-knowledge-ex2',
-            type: CalloutType.POST,
             sortOrder: 8,
             classification: {
               tagsets: [
@@ -253,16 +230,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'body-of-knowledge-ex3',
-            type: CalloutType.LINK_COLLECTION,
             sortOrder: 9,
             classification: {
               tagsets: [
@@ -280,16 +254,19 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
+              framing: {
+                commentsEnabled: false,
+              },
               contribution: {
                 enabled: false,
+                allowedTypes: [CalloutContributionType.LINK],
                 canAddContributions: CalloutAllowedContributors.NONE,
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'where-to-find-vc-profile',
-            type: CalloutType.POST,
             sortOrder: 10,
             classification: {
               tagsets: [
@@ -307,16 +284,13 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },
           {
             nameID: 'activate',
-            type: CalloutType.POST,
             sortOrder: 11,
             classification: {
               tagsets: [
@@ -334,10 +308,8 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               },
             },
             settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: false,
-                canAddContributions: CalloutAllowedContributors.NONE,
+              framing: {
+                commentsEnabled: false,
               },
             },
           },

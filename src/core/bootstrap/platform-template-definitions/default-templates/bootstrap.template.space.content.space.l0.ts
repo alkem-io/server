@@ -2,9 +2,6 @@ import { CreateTemplateContentSpaceInput } from '@domain/template/template-conte
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
-import { CalloutType } from '@common/enums/callout.type';
 
 export enum FlowState {
   HOME = 'Home',
@@ -51,7 +48,6 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
         calloutsData: [
           {
             nameID: 'welcome',
-            type: CalloutType.POST,
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -65,13 +61,6 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
               profile: {
                 displayName: '👋 Welcome to your space!',
                 description: 'An empty space for you to configure!.',
-              },
-            },
-            settings: {
-              visibility: CalloutVisibility.PUBLISHED,
-              contribution: {
-                enabled: true,
-                canAddContributions: CalloutAllowedContributors.MEMBERS,
               },
             },
           },

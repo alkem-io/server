@@ -15,12 +15,9 @@ import { RoomType } from '@common/enums/room.type';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
-import { NotSupportedException } from '@common/exceptions/not.supported.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { RoomServiceEvents } from './room.service.events';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CalloutType } from '@common/enums/callout.type';
-import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
@@ -245,12 +242,11 @@ export class RoomResolverMutations {
     if (room.type === RoomType.CALLOUT) {
       const callout = await this.namingService.getCalloutForRoom(room.id);
 
-      //!!
-      // if (!callout.settings.framing.commentsEnabled) {
-      //   throw new CalloutClosedException(
-      //     `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
-      //   );
-      // }
+      if (!callout.settings.framing.commentsEnabled) {
+        throw new CalloutClosedException(
+          `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+        );
+      }
     }
   }
 

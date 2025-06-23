@@ -192,9 +192,7 @@ export class CalloutResolverMutations {
       {
         relations: {
           calloutsSet: true,
-          settings: {
-            contribution: true,
-          },
+          settings: true,
         },
       }
     );

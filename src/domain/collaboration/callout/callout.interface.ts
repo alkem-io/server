@@ -1,7 +1,6 @@
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { CalloutType } from '@common/enums/callout.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
@@ -20,15 +19,6 @@ export abstract class ICallout extends IAuthorizable {
       'A name identifier of the entity, unique within a given scope.',
   })
   nameID!: string;
-
-  /**
-   * @deprecated //!!
-   */
-  @Field(() => CalloutType, {
-    nullable: false,
-    description: 'The Callout type, e.g. Post, Whiteboard, Discussion',
-  })
-  type!: CalloutType;
 
   @Field(() => ICalloutFraming, {
     nullable: false,
