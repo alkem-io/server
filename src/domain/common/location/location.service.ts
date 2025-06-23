@@ -115,6 +115,15 @@ export class LocationService {
     if (location.geoLocation.isValid) {
       return location.geoLocation;
     }
+
+    if (location.country === '' && location.city === '') {
+      // If both country and city are empty, we cannot update the geoLocation.
+      // In the ideal case the data should not be updated on query; to be discussed.
+      location.geoLocation.longitude = 0;
+      location.geoLocation.latitude = 0;
+      return location.geoLocation;
+    }
+
     if (!this.hasValidLocationDataForGeoLocation(location)) {
       // If no valid location data is available, we cannot update the geoLocation.
       return location.geoLocation;
