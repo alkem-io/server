@@ -25,8 +25,12 @@ export class CalloutsRefresh1750679255135 implements MigrationInterface {
   name = 'CalloutsRefresh1750679255135';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(`ALTER TABLE \`callout_framing\` ADD \`type\` varchar(128) NOT NULL DEFAULT 'none'`);
-    // await queryRunner.query(`ALTER TABLE \`callout\` ADD \`settings\` json NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` ADD \`type\` varchar(128) NOT NULL DEFAULT 'none'`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD \`settings\` json NOT NULL`
+    );
 
     const callouts: {
       id: string;

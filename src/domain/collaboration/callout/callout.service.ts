@@ -187,7 +187,6 @@ export class CalloutService {
     if (calloutVisibilityUpdateData.visibility)
       callout.settings.visibility = calloutVisibilityUpdateData.visibility;
 
-    //!! maybe update callout visibility through settings service?
     return await this.calloutRepository.save(callout);
   }
 

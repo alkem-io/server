@@ -1,8 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 /**
- * @deprecated At the end of this PR, this type will be removed.
- * //!!
+ * @deprecated Do not use this. Maintained for the notifications, but this enum should be removed in the future.
  */
 export enum CalloutType {
   POST = 'post',
