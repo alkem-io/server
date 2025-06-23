@@ -35,10 +35,11 @@ import { Injectable } from '@nestjs/common';
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { CreateClassificationInput } from '@domain/common/classification/dto/classification.dto.create';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { CreateSpaceInput } from '@domain/space';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
-import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
+import { EntityManager } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 
 @Injectable()
 export class InputCreatorService {
@@ -46,7 +47,8 @@ export class InputCreatorService {
     private collaborationService: CollaborationService,
     private spaceLookupService: SpaceLookupService,
     private calloutService: CalloutService,
-    private templateContentSpaceService: TemplateContentSpaceService
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   public async buildCreateCalloutInputsFromCallouts(
@@ -154,7 +156,17 @@ export class InputCreatorService {
       relations: {
         collaboration: true,
         about: {
-          profile: true,
+          profile: {
+            references: true,
+            visuals: true,
+            location: true,
+            tagsets: true,
+          },
+          guidelines: {
+            profile: {
+              references: true,
+            },
+          },
         },
       },
     });
@@ -180,44 +192,51 @@ export class InputCreatorService {
     return result;
   }
 
-  public async buildCreateSpaceInputFromTemplateContentSpace(
-    templateContentSpaceID: string
-  ): Promise<CreateSpaceInput> {
-    const templateSpaceContent =
-      await this.templateContentSpaceService.getTemplateContentSpaceOrFail(
-        templateContentSpaceID,
-        {
-          relations: {
-            collaboration: true,
-            about: {
-              profile: true,
+  public async buildCreateTemplateContentSpaceInputFromContentSpace(
+    contentSpaceID: string
+  ): Promise<CreateTemplateContentSpaceInput> {
+    const contentSpace = await this.entityManager.findOneOrFail(
+      TemplateContentSpace,
+      {
+        where: {
+          id: contentSpaceID,
+        },
+        relations: {
+          collaboration: true,
+          about: {
+            profile: {
+              references: true,
+              visuals: true,
+              location: true,
+              tagsets: true,
+            },
+            guidelines: {
+              profile: {
+                references: true,
+              },
             },
           },
-        }
-      );
-    if (!templateSpaceContent.collaboration || !templateSpaceContent.about) {
+        },
+      }
+    );
+
+    if (!contentSpace.collaboration || !contentSpace.about) {
       throw new RelationshipNotFoundException(
-        `Template Content Space ${templateSpaceContent.id} is missing a relation`,
+        `ContentSpace ${contentSpace.id} is missing a relation`,
         LogContext.INPUT_CREATOR
       );
     }
 
-    const collaborationData =
+    const collaborationInput =
       await this.buildCreateCollaborationInputFromCollaboration(
-        templateSpaceContent.collaboration.id
+        contentSpace.collaboration.id
       );
 
-    const result: CreateSpaceInput = {
-      collaborationData,
-      level: templateSpaceContent.level,
-      about: {
-        profileData: this.buildCreateProfileInputFromProfile(
-          templateSpaceContent.about.profile
-        ),
-        who: templateSpaceContent.about.who,
-        why: templateSpaceContent.about.why,
-      },
-      settings: templateSpaceContent.settings,
+    const result: CreateTemplateContentSpaceInput = {
+      collaborationData: collaborationInput,
+      about: this.buildCreateSpaceAboutInputFromSpaceAbout(contentSpace.about),
+      level: contentSpace.level,
+      settings: contentSpace.settings,
     };
 
     return result;
@@ -300,9 +319,9 @@ export class InputCreatorService {
     return result;
   }
 
-  public async buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+  public buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
     communityGuidelines: ICommunityGuidelines
-  ): Promise<CreateCommunityGuidelinesInput> {
+  ): CreateCommunityGuidelinesInput {
     const result: CreateCommunityGuidelinesInput = {
       profile: this.buildCreateProfileInputFromProfile(
         communityGuidelines.profile
@@ -329,6 +348,11 @@ export class InputCreatorService {
       profileData: this.buildCreateProfileInputFromProfile(spaceAbout.profile),
       who: spaceAbout.who,
       why: spaceAbout.why,
+      guidelines: spaceAbout.guidelines
+        ? this.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+            spaceAbout.guidelines
+          )
+        : undefined,
     };
 
     return result;
@@ -386,7 +410,7 @@ export class InputCreatorService {
     };
   }
 
-  private buildCreateProfileInputFromProfile(
+  public buildCreateProfileInputFromProfile(
     profile: IProfile
   ): CreateProfileInput {
     if (!profile) {

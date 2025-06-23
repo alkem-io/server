@@ -161,11 +161,11 @@ export class UserService {
       user.storageAggregator
     );
 
-    await this.profileService.addTagsetOnProfile(user.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
       name: TagsetReservedName.SKILLS,
       tags: [],
     });
-    await this.profileService.addTagsetOnProfile(user.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });

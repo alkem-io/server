@@ -92,6 +92,7 @@ import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/ca
 import { SearchModule } from '@services/api/search/search.module';
 import { ApmApolloPlugin } from './apm/plugins';
 import { AuthInterceptor } from '@core/interceptors';
+import { AdminGeoLocationModule } from '@platform/admin/geolocation/admin.geolocation.module';
 
 @Module({
   imports: [
@@ -274,6 +275,7 @@ import { AuthInterceptor } from '@core/interceptors';
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
+    AdminGeoLocationModule,
     LicensingWingbackSubscriptionModule,
     WingbackManagerModule,
     AgentModule,
