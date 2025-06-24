@@ -88,7 +88,8 @@ export class TemplateContentSpaceService {
     if (
       !templateContentSpace.collaboration ||
       !templateContentSpace.about ||
-      !templateContentSpace.authorization
+      !templateContentSpace.authorization ||
+      !templateContentSpace.subspaces
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to delete TemplateContentSpace: ${templateContentSpace.id} `,
@@ -106,6 +107,11 @@ export class TemplateContentSpaceService {
     await this.authorizationPolicyService.delete(
       templateContentSpace.authorization
     );
+
+    for (const subspace of templateContentSpace.subspaces) {
+      // Recursively delete subspaces
+      await this.deleteTemplateContentSpaceOrFail(subspace.id);
+    }
 
     const result = await this.templateContentSpaceRepository.remove(
       templateContentSpace as TemplateContentSpace
@@ -239,5 +245,23 @@ export class TemplateContentSpaceService {
         LogContext.TEMPLATES
       );
     return about;
+  }
+
+  public async getSubspaces(
+    templateContentSpaceID: string
+  ): Promise<ITemplateContentSpace[]> {
+    const templateContentSpace = await this.getTemplateContentSpaceOrFail(
+      templateContentSpaceID,
+      {
+        relations: { subspaces: true },
+      }
+    );
+    const subspaces = templateContentSpace.subspaces;
+    if (!subspaces)
+      throw new RelationshipNotFoundException(
+        `Unable to load subspaces for TemplateContentSpace ${templateContentSpaceID} `,
+        LogContext.TEMPLATES
+      );
+    return subspaces;
   }
 }

@@ -12,10 +12,25 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { TemplateContentSpace } from './template.content.space.entity';
 import { SpaceAboutLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.about.loader.creator';
 import { SpaceCollaborationLoaderCreator } from '@core/dataloader/creators';
+import { TemplateContentSpaceService } from './template.content.space.service';
 
 @Resolver(() => ITemplateContentSpace)
 export class TemplateContentSpaceResolverFields {
-  constructor() {}
+  constructor(
+    private templateContentSpaceService: TemplateContentSpaceService
+  ) {}
+
+  @ResolveField('subspaces', () => [ITemplateContentSpace], {
+    nullable: false,
+    description: 'The template subspaces for the Template Content Space.',
+  })
+  async subspaces(
+    @Parent() templateContentSpace: ITemplateContentSpace
+  ): Promise<ITemplateContentSpace[]> {
+    return await this.templateContentSpaceService.getSubspaces(
+      templateContentSpace.id
+    );
+  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

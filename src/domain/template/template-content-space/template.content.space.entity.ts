@@ -1,4 +1,12 @@
-import { Column, Entity, Generated, JoinColumn, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Generated,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
@@ -15,6 +23,26 @@ export class TemplateContentSpace
   })
   @Generated('increment')
   rowId!: number;
+
+  @OneToMany(
+    () => TemplateContentSpace,
+    templateContentSpace => templateContentSpace.parentSpace,
+    {
+      eager: false,
+      cascade: false,
+    }
+  )
+  subspaces?: TemplateContentSpace[];
+
+  @ManyToOne(
+    () => TemplateContentSpace,
+    templateContentSpace => templateContentSpace.subspaces,
+    {
+      eager: false,
+      cascade: false,
+    }
+  )
+  parentSpace?: TemplateContentSpace;
 
   @OneToOne(() => Collaboration, {
     eager: false,
