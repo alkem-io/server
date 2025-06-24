@@ -119,8 +119,8 @@ export class LocationService {
     if (location.country === '' && location.city === '') {
       // If both country and city are empty, we cannot update the geoLocation.
       // In the ideal case the data should not be updated on query; to be discussed.
-      location.geoLocation.longitude = 0;
-      location.geoLocation.latitude = 0;
+      location.geoLocation.longitude = undefined;
+      location.geoLocation.latitude = undefined;
       return location.geoLocation;
     }
 
