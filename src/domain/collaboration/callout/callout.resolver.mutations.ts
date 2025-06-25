@@ -231,7 +231,7 @@ export class CalloutResolverMutations {
         )
       ) {
         throw new CalloutClosedException(
-          `Only admins are allowed to contributo to Callout with id: '${callout.id}'`
+          `Only admins are allowed to contribute to Callout with id: '${callout.id}'`
         );
       }
     }
