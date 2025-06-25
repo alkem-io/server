@@ -45,7 +45,6 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
-        settings: true,
         framing: {
           profile: true,
           whiteboard: {

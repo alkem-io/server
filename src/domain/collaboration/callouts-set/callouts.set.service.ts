@@ -443,7 +443,6 @@ export class CalloutsSetService {
           classification: {
             tagsets: true,
           },
-          settings: true,
         },
       },
     });

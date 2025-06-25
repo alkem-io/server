@@ -4,8 +4,6 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
-import { ICalloutSettingsContribution } from '@domain/collaboration/callout-settings/callout.settings.contribution.interface';
-import { CreateCalloutSettingsContributionInput } from '@domain/collaboration/callout-settings/dto/callout.settings.contribution.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -37,8 +35,6 @@ import { CreateClassificationInput } from '@domain/common/classification/dto/cla
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
-import { ICalloutSettings } from '@domain/collaboration/callout-settings/callout.settings.interface';
-import { CreateCalloutSettingsInput } from '@domain/collaboration/callout-settings/dto';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
@@ -84,7 +80,6 @@ export class InputCreatorService {
             },
           },
         },
-        settings: true,
       },
     });
     if (
@@ -113,9 +108,7 @@ export class InputCreatorService {
       framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
         callout.framing
       ),
-      settings: this.buildCreateCalloutSettingsInputFromCalloutSettings(
-        callout.settings
-      ),
+      settings: callout.settings,
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
           callout.contributionDefaults
@@ -379,34 +372,6 @@ export class InputCreatorService {
     };
   }
 
-  private buildCreateCalloutSettingsInputFromCalloutSettings(
-    calloutSettings: ICalloutSettings
-  ): CreateCalloutSettingsInput {
-    /*
-    if (!calloutSettings.profile) {
-      throw new EntityNotInitializedException(
-        'CalloutSettings not fully initialised',
-        LogContext.INPUT_CREATOR,
-        {
-          cause: 'Relation for callout settings not loaded',
-          calloutSettingsId: calloutSettings.id,
-        }
-      );
-    }
-      */
-    return {
-      /*profile: this.buildCreateProfileInputFromProfile(calloutSettings.profile),
-      whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
-        calloutSettings.whiteboard
-      ),*/
-      visibility: calloutSettings.visibility,
-      contribution:
-        this.buildCreateCalloutSettingsContributionInputFromCalloutSettingsContribution(
-          calloutSettings.contribution
-        ),
-    };
-  }
-
   private buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
     calloutContributionDefaults?: ICalloutContributionDefaults
   ): CreateCalloutContributionDefaultsInput | undefined {
@@ -418,17 +383,6 @@ export class InputCreatorService {
       whiteboardContent: calloutContributionDefaults.whiteboardContent,
     };
     return result;
-  }
-
-  private buildCreateCalloutSettingsContributionInputFromCalloutSettingsContribution(
-    calloutSettingsContribution: ICalloutSettingsContribution
-  ): CreateCalloutSettingsContributionInput {
-    return {
-      enabled: calloutSettingsContribution.enabled,
-      allowedTypes: calloutSettingsContribution.allowedTypes,
-      canAddContributions: calloutSettingsContribution.canAddContributions,
-      commentsEnabled: calloutSettingsContribution.commentsEnabled,
-    };
   }
 
   private buildCreateClassificationInputFromClassification(

@@ -50,7 +50,6 @@ export class CalloutContributionMoveService {
       where: { id: calloutID },
       relations: {
         calloutsSet: true,
-        settings: true,
       },
     });
 

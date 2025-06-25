@@ -222,9 +222,6 @@ export class CalloutService {
         classification: {
           tagsets: true,
         },
-        settings: {
-          contribution: true,
-        },
       },
     });
 
@@ -278,7 +275,6 @@ export class CalloutService {
         contributions: true,
         contributionDefaults: true,
         framing: true,
-        settings: true,
       },
     });
 
@@ -417,7 +413,6 @@ export class CalloutService {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: {
         contributions: true,
-        settings: { contribution: true },
       },
     });
     if (!callout.settings.contribution)
@@ -520,7 +515,6 @@ export class CalloutService {
   ): Promise<ICalloutContribution[]> {
     const callout = await this.getCalloutOrFail(calloutId, {
       relations: {
-        settings: { contribution: true },
         contributions: true,
       },
     });
@@ -565,22 +559,6 @@ export class CalloutService {
       );
 
     return calloutLoaded.framing;
-  }
-
-  public async getCalloutSettings(
-    calloutID: string,
-    relations: FindOneOptions<ICallout>[] = []
-  ): Promise<ICalloutSettings> {
-    const calloutLoaded = await this.getCalloutOrFail(calloutID, {
-      relations: { settings: true, ...relations },
-    });
-    if (!calloutLoaded.settings)
-      throw new EntityNotFoundException(
-        `Callout not initialised, no settings: ${calloutID}`,
-        LogContext.COLLABORATION
-      );
-
-    return calloutLoaded.settings;
   }
 
   public async getContributions(

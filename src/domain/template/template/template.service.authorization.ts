@@ -44,7 +44,6 @@ export class TemplateAuthorizationService {
                 profile: true,
               },
             },
-            settings: true,
             contributionDefaults: true,
           },
           whiteboard: true,
