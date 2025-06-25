@@ -92,17 +92,11 @@ export class CalloutResolverFields {
 
   @ResolveField('activity', () => Number, {
     nullable: false,
-    description: 'The activity for this Callout.',
+    description:
+      'The activity for this Callout. The number of Contributions if the callout allows contributions, or the number of comments if it does not.',
   })
   async activity(@Parent() callout: ICallout): Promise<number> {
-    //!! TODO: This is not right. getActivity now should be splitted between getComments and getContributions
-    const activity = await this.calloutService.getActivityCount(callout);
-    if (activity.messagesCount) {
-      return activity.messagesCount;
-    } else if (activity.contributionsCount) {
-      return activity.contributionsCount;
-    }
-    return 0;
+    return await this.calloutService.getActivityCount(callout);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

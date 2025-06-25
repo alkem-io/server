@@ -314,17 +314,19 @@ export class CalloutService {
     return this.calloutRepository.find(options);
   }
 
-  public async getActivityCount(
-    callout: ICallout
-  ): Promise<{ messagesCount: number; contributionsCount: number }> {
-    const contributionsCount =
-      await this.contributionService.getContributionsInCalloutCount(callout.id);
-    const messagesCount = await this.getCommentsCount(callout.id);
-
-    return {
-      messagesCount,
-      contributionsCount,
-    };
+  /**
+   *
+   * @param callout
+   * @returns a number, the number of messages or the number of contributions if the callout allows contributions
+   */
+  public async getActivityCount(callout: ICallout): Promise<number> {
+    if (callout.settings.contribution.allowedTypes.length > 0) {
+      return this.contributionService.getContributionsInCalloutCount(
+        callout.id
+      );
+    } else {
+      return this.getCommentsCount(callout.id);
+    }
   }
 
   private async setNameIdOnPostData(

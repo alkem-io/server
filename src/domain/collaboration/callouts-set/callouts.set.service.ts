@@ -517,9 +517,7 @@ export class CalloutsSetService {
     // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
     if (args.sortByActivity) {
       for (const callout of availableCallouts) {
-        callout.activity = (
-          await this.calloutService.getActivityCount(callout)
-        ).contributionsCount;
+        callout.activity = await this.calloutService.getActivityCount(callout);
       }
       const sortedCallouts = availableCallouts.sort((a, b) =>
         a.activity < b.activity ? 1 : -1
