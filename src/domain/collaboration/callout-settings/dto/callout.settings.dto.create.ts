@@ -20,7 +20,7 @@ export class CreateCalloutSettingsInput {
 
   @Field(() => CalloutVisibility, {
     nullable: true,
-    description: 'Visibility of the Callout. Defaults to DRAFT.',
+    description: 'Visibility of the Callout. Defaults to PUBLISHED.',
   })
   visibility?: CalloutVisibility;
 }

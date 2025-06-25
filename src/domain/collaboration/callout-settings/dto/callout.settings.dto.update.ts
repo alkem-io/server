@@ -19,6 +19,7 @@ export class UpdateCalloutSettingsInput {
 
   @Field(() => CalloutVisibility, {
     description: 'Visibility of the Callout.',
+    nullable: true,
   })
-  visibility!: CalloutVisibility;
+  visibility?: CalloutVisibility;
 }
