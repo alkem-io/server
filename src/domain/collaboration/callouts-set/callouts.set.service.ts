@@ -459,6 +459,17 @@ export class CalloutsSetService {
       const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
       if (!hasAccess) return false;
 
+      // Filter by Contribution types
+      if (
+        args.withContributionTypes &&
+        args.withContributionTypes.length &&
+        !callout.settings.contribution.allowedTypes.some(allowedType =>
+          args.withContributionTypes!.includes(allowedType)
+        )
+      ) {
+        return false;
+      }
+
       // Only process classificationTagsets with values specified
       const filteredArgClassificationTagsets =
         args.classificationTagsets?.filter(
