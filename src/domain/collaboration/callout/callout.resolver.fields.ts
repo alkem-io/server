@@ -17,6 +17,8 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { IClassification } from '@domain/common/classification/classification.interface';
+import { CalloutType } from '@common/enums/callout.type';
+import { inferCalloutType } from './deprecated/callout.type.inference';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -150,5 +152,14 @@ export class CalloutResolverFields {
       return null;
     }
     return loader.load(callout.createdBy);
+  }
+
+  @ResolveField('type', () => CalloutType, {
+    nullable: false,
+    description:
+      'The type of this Callout. WARNING. This field is deprecated and will be removed in the future. Use `framing.type` + `settings.contribution.allowedTypes` instead.',
+  })
+  async type(@Parent() callout: ICallout): Promise<CalloutType> {
+    return inferCalloutType(callout);
   }
 }
