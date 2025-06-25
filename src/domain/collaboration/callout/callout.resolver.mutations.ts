@@ -202,13 +202,6 @@ export class CalloutResolverMutations {
       );
     }
 
-    if (!callout.settings) {
-      throw new RelationshipNotFoundException(
-        `Callout ${callout.id} has no settings relationship`,
-        LogContext.COLLABORATION
-      );
-    }
-
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
@@ -217,8 +210,18 @@ export class CalloutResolverMutations {
     );
 
     if (
+      !callout.settings.contribution.enabled ||
       callout.settings.contribution.canAddContributions ===
-      CalloutAllowedContributors.NONE
+        CalloutAllowedContributors.NONE
+    ) {
+      throw new CalloutClosedException(
+        `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+      );
+    }
+
+    if (
+      callout.settings.contribution.canAddContributions ===
+      CalloutAllowedContributors.ADMINS
     ) {
       if (
         !this.authorizationService.isAccessGranted(
@@ -226,10 +229,11 @@ export class CalloutResolverMutations {
           callout.authorization,
           AuthorizationPrivilege.UPDATE
         )
-      )
+      ) {
         throw new CalloutClosedException(
-          `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+          `Only admins are allowed to contributo to Callout with id: '${callout.id}'`
         );
+      }
     }
 
     let contribution = await this.calloutService.createContributionOnCallout(
