@@ -123,32 +123,32 @@ export class CalloutsRefresh1750679255135 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `CREATE TABLE \`callout_contribution_policy\` (
-    //   \`id\` char(36) NOT NULL,
-    //   \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    //   \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    //   \`version\` int NOT NULL,
-    //   \`allowedContributionTypes\` text NOT NULL,
-    //   \`state\` varchar(128) NOT NULL,
-    //   PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
-    // );
+    await queryRunner.query(
+      `CREATE TABLE \`callout_contribution_policy\` (
+      \`id\` char(36) NOT NULL,
+      \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+      \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+      \`version\` int NOT NULL,
+      \`allowedContributionTypes\` text NOT NULL,
+      \`state\` varchar(128) NOT NULL,
+      PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
 
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` ADD \`visibility\` varchar(128) NOT NULL;`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` ADD \`type\` text NOT NULL;`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` ADD \`contributionPolicyId\` char(36) NULL;`
-    // );
-    // await queryRunner.query(
-    //   `CREATE UNIQUE INDEX \`REL_1e740008a7e1512966e3b08414\` ON \`callout\` (\`contributionPolicyId\`);`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_1e740008a7e1512966e3b084148\` FOREIGN KEY (\`contributionPolicyId\`) REFERENCES \`callout_contribution_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION;`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD \`visibility\` varchar(128) NOT NULL;`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD \`type\` text NOT NULL;`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD \`contributionPolicyId\` char(36) NULL;`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_1e740008a7e1512966e3b08414\` ON \`callout\` (\`contributionPolicyId\`);`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_1e740008a7e1512966e3b084148\` FOREIGN KEY (\`contributionPolicyId\`) REFERENCES \`callout_contribution_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION;`
+    );
 
     const callouts: {
       id: string;
