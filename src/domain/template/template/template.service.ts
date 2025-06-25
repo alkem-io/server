@@ -28,7 +28,6 @@ import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { randomUUID } from 'crypto';
 import { ICollaboration } from '@domain/collaboration/collaboration';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TemplateDefault } from '../template-default/template.default.entity';
 import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
@@ -39,6 +38,7 @@ import { ITemplateContentSpace } from '../template-content-space/template.conten
 import { TemplateContentSpaceService } from '../template-content-space/template.content.space.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
 
 @Injectable()
 export class TemplateService {
@@ -149,24 +149,9 @@ export class TemplateService {
           };
         }
         // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
-        collaborationData.calloutsSetData.calloutsData.forEach(calloutData => {
-          calloutData.isTemplate = true;
-          if (calloutData.settings) {
-            if (calloutData.settings.framing) {
-              calloutData.settings.framing.commentsEnabled = false;
-            } else {
-              calloutData.settings.framing = {
-                commentsEnabled: false, // Ensure no comments are created on the callout
-              };
-            }
-          } else {
-            calloutData.settings = {
-              framing: {
-                commentsEnabled: false, // Ensure no comments are created on the callout
-              },
-            };
-          }
-        });
+        collaborationData.calloutsSetData.calloutsData.forEach(
+          this.overrideCalloutSettingsForTemplate
+        );
         template.contentSpace =
           await this.templateContentSpaceService.createTemplateContentSpace(
             spaceData!,
@@ -201,13 +186,7 @@ export class TemplateService {
             LogContext.TEMPLATES
           );
         }
-        templateData.calloutData.settings = {
-          framing: {
-            commentsEnabled: false, // Ensure no comments are created on the callout
-          },
-          visibility: CalloutVisibility.DRAFT,
-        };
-        templateData.calloutData.isTemplate = true;
+        this.overrideCalloutSettingsForTemplate(templateData.calloutData);
         templateData.calloutData.nameID = `template-${randomUUID().slice(0, 8)}`;
         template.callout = await this.calloutService.createCallout(
           templateData.calloutData!,
@@ -224,6 +203,30 @@ export class TemplateService {
     }
 
     return await this.templateRepository.save(template);
+  }
+
+  /**
+   * Ensures that the callout is marked as a template and that comments are disabled
+   * @param calloutData gets modified
+   * @returns (modifies the callout input)
+   */
+  private overrideCalloutSettingsForTemplate(calloutData: CreateCalloutInput) {
+    calloutData.isTemplate = true; // Mark as a template callout
+    if (calloutData.settings) {
+      if (calloutData.settings.framing) {
+        calloutData.settings.framing.commentsEnabled = false;
+      } else {
+        calloutData.settings.framing = {
+          commentsEnabled: false, // Ensure no comments are created on the callout
+        };
+      }
+    } else {
+      calloutData.settings = {
+        framing: {
+          commentsEnabled: false, // Ensure no comments are created on the callout
+        },
+      };
+    }
   }
 
   async getTemplateOrFail(
