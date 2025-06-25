@@ -180,14 +180,22 @@ export class CalloutsRefresh1750679255135 implements MigrationInterface {
         [newContributionPolicyId, 1, allowedContributionTypes, state]
       );
       let calloutType = 'post';
-      if (allowedContributionTypes.includes(CalloutContributionType.LINK)) {
+      if (
+        settings.contribution.allowedTypes.includes(
+          CalloutContributionType.LINK
+        )
+      ) {
         calloutType = CalloutType.LINK_COLLECTION;
       } else if (
-        allowedContributionTypes.includes(CalloutContributionType.POST)
+        settings.contribution.allowedTypes.includes(
+          CalloutContributionType.POST
+        )
       ) {
         calloutType = CalloutType.POST_COLLECTION;
       } else if (
-        allowedContributionTypes.includes(CalloutContributionType.WHITEBOARD)
+        settings.contribution.allowedTypes.includes(
+          CalloutContributionType.WHITEBOARD
+        )
       ) {
         calloutType = CalloutType.WHITEBOARD_COLLECTION;
       }

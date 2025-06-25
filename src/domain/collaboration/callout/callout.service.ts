@@ -85,7 +85,7 @@ export class CalloutService {
       userID
     );
 
-    callout.settings = await this.createCalloutSettings(calloutData.settings);
+    callout.settings = this.createCalloutSettings(calloutData.settings);
 
     callout.classification = this.classificationService.createClassification(
       classificationTagsetTemplates,
