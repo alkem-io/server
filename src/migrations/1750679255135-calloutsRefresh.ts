@@ -3,6 +3,7 @@ import { CalloutContributionType } from '@common/enums/callout.contribution.type
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ICalloutSettings } from '@domain/collaboration/callout-settings/callout.settings.interface';
+import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
@@ -122,25 +123,89 @@ export class CalloutsRefresh1750679255135 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    throw new Error('Not supported (yet?)');
-    await queryRunner.query(`ALTER TABLE \`callout\` DROP COLUMN \`settings\``);
+    // await queryRunner.query(
+    //   `CREATE TABLE \`callout_contribution_policy\` (
+    //   \`id\` char(36) NOT NULL,
+    //   \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    //   \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    //   \`version\` int NOT NULL,
+    //   \`allowedContributionTypes\` text NOT NULL,
+    //   \`state\` varchar(128) NOT NULL,
+    //   PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    // );
+
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout\` ADD \`visibility\` varchar(128) NOT NULL;`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout\` ADD \`type\` text NOT NULL;`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout\` ADD \`contributionPolicyId\` char(36) NULL;`
+    // );
+    // await queryRunner.query(
+    //   `CREATE UNIQUE INDEX \`REL_1e740008a7e1512966e3b08414\` ON \`callout\` (\`contributionPolicyId\`);`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_1e740008a7e1512966e3b084148\` FOREIGN KEY (\`contributionPolicyId\`) REFERENCES \`callout_contribution_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION;`
+    // );
+
+    const callouts: {
+      id: string;
+      settings: ICalloutSettings;
+      framingId: string;
+      framingType: CalloutFramingType;
+    }[] = await queryRunner.query(`
+      SELECT \
+        \`callout\`.\`id\`, \
+        \`callout\`.\`settings\`, \
+        \`callout\`.\`framingId\`, \
+        \`callout_framing\`.\`type\` AS \`framingType\`
+      FROM \`callout\` JOIN
+        \`callout_framing\` ON \`callout\`.\`framingId\` = \`callout_framing\`.\`id\`;
+    `);
+
+    for (const callout of callouts) {
+      const settings = callout.settings;
+
+      const visibility = settings.visibility;
+      const state = settings.contribution.enabled ? 'open' : 'closed';
+      const allowedContributionTypes =
+        settings.contribution.allowedTypes.join(',');
+
+      const newContributionPolicyId = randomUUID();
+      await queryRunner.query(
+        `INSERT INTO \`callout_contribution_policy\`
+        (\`id\`, \`version\`, \`allowedContributionTypes\`, \`state\`) VALUES (?, ?, ?, ?);`,
+        [newContributionPolicyId, 1, allowedContributionTypes, state]
+      );
+      let calloutType = 'post';
+      if (allowedContributionTypes.includes(CalloutContributionType.LINK)) {
+        calloutType = CalloutType.LINK_COLLECTION;
+      } else if (
+        allowedContributionTypes.includes(CalloutContributionType.POST)
+      ) {
+        calloutType = CalloutType.POST_COLLECTION;
+      } else if (
+        allowedContributionTypes.includes(CalloutContributionType.WHITEBOARD)
+      ) {
+        calloutType = CalloutType.WHITEBOARD_COLLECTION;
+      }
+      if (callout.framingType === CalloutFramingType.WHITEBOARD) {
+        calloutType = CalloutType.WHITEBOARD;
+      }
+
+      await queryRunner.query(
+        `UPDATE \`callout\` SET \`visibility\` = ?, \`type\` = ?, \`contributionPolicyId\` = ? WHERE \`id\` = ?;`,
+        [visibility, calloutType, newContributionPolicyId, callout.id]
+      );
+    }
+
     await queryRunner.query(
-      `ALTER TABLE \`callout_framing\` DROP COLUMN \`type\``
+      `ALTER TABLE \`callout\` DROP COLUMN \`settings\`;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD \`visibility\` varchar(128) NOT NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD \`type\` text NOT NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD \`contributionPolicyId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_1e740008a7e1512966e3b08414\` ON \`callout\` (\`contributionPolicyId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_1e740008a7e1512966e3b084148\` FOREIGN KEY (\`contributionPolicyId\`) REFERENCES \`callout_contribution_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`callout_framing\` DROP COLUMN \`type\`;`
     );
   }
 
