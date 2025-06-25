@@ -258,6 +258,14 @@ export class CalloutService {
         );
     }
 
+    // Create the Matrix room for comments if it doesn't yet exist
+    if (callout.settings.framing.commentsEnabled && !callout.comments) {
+      callout.comments = await this.roomService.createRoom(
+        `callout-comments-${callout.nameID}`,
+        RoomType.CALLOUT
+      );
+    }
+
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
 
