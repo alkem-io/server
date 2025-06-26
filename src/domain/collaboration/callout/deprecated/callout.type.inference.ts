@@ -11,25 +11,14 @@ export const inferCalloutType = (callout: ICallout): CalloutType => {
   if (callout.framing.type === CalloutFramingType.WHITEBOARD) {
     return CalloutType.WHITEBOARD;
   }
-  if (
-    callout.settings.contribution.allowedTypes.includes(
-      CalloutContributionType.POST
-    )
-  ) {
+  const allowedTypes = callout?.settings?.contribution?.allowedTypes ?? [];
+  if (allowedTypes.includes(CalloutContributionType.POST)) {
     return CalloutType.POST_COLLECTION;
   }
-  if (
-    callout.settings.contribution.allowedTypes.includes(
-      CalloutContributionType.WHITEBOARD
-    )
-  ) {
+  if (allowedTypes.includes(CalloutContributionType.WHITEBOARD)) {
     return CalloutType.WHITEBOARD_COLLECTION;
   }
-  if (
-    callout.settings.contribution.allowedTypes.includes(
-      CalloutContributionType.LINK
-    )
-  ) {
+  if (allowedTypes.includes(CalloutContributionType.LINK)) {
     return CalloutType.LINK_COLLECTION;
   }
   return CalloutType.POST;

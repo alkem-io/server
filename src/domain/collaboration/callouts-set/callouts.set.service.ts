@@ -461,8 +461,7 @@ export class CalloutsSetService {
 
       // Filter by Contribution types
       if (
-        args.withContributionTypes &&
-        args.withContributionTypes.length &&
+        args.withContributionTypes?.length &&
         !callout.settings.contribution.allowedTypes.some(allowedType =>
           args.withContributionTypes!.includes(allowedType)
         )
