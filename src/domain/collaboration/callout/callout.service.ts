@@ -210,7 +210,8 @@ export class CalloutService {
 
   public async updateCallout(
     calloutInput: ICallout,
-    calloutUpdateData: UpdateCalloutInput
+    calloutUpdateData: UpdateCalloutInput,
+    userID?: string
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutInput.id, {
       relations: {
@@ -222,8 +223,10 @@ export class CalloutService {
         classification: {
           tagsets: true,
         },
+        calloutsSet: true,
       },
     });
+    const storageAggregator = await this.getStorageAggregator(callout.id);
 
     if (!callout.contributionDefaults || !callout.settings.contribution) {
       throw new EntityNotInitializedException(
@@ -235,7 +238,9 @@ export class CalloutService {
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
-        calloutUpdateData.framing
+        calloutUpdateData.framing,
+        storageAggregator,
+        userID
       );
     }
 

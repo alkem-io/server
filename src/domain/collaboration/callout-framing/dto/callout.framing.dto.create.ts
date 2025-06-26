@@ -16,7 +16,7 @@ export class CreateCalloutFramingInput {
   @Field(() => CalloutFramingType, {
     nullable: true,
     description:
-      'The type of additional content attached to the framing of the callout. Defaults to None. ReadOnly.',
+      'The type of additional content attached to the framing of the callout. Defaults to None.',
   })
   @IsOptional()
   type?: CalloutFramingType;

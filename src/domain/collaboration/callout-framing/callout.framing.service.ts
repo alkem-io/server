@@ -22,6 +22,9 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
+import { ValidationException } from '@common/exceptions';
 
 @Injectable()
 export class CalloutFramingService {
@@ -47,7 +50,7 @@ export class CalloutFramingService {
       AuthorizationPolicyType.CALLOUT_FRAMING
     );
 
-    const { profile: profileData, whiteboard, tags } = calloutFramingData;
+    const { profile: profileData, tags } = calloutFramingData;
 
     const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
@@ -68,31 +71,56 @@ export class CalloutFramingService {
       storageAggregator
     );
 
-    if (whiteboard) {
-      const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
-      whiteboard.nameID =
-        this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboard.profile?.displayName ?? 'whiteboard'}`,
-          reservedNameIDs
+    calloutFraming.type = calloutFramingData.type ?? CalloutFramingType.NONE;
+
+    if (calloutFraming.type === CalloutFramingType.WHITEBOARD) {
+      if (calloutFramingData.whiteboard) {
+        this.createNewWhiteboardInCalloutFraming(
+          calloutFraming,
+          calloutFramingData.whiteboard,
+          storageAggregator,
+          userID
         );
-      calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
-        whiteboard,
-        storageAggregator,
-        userID
-      );
-      await this.profileService.addVisualsOnProfile(
-        calloutFraming.whiteboard.profile,
-        whiteboard.profile?.visuals,
-        [VisualType.BANNER]
-      );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type WHITEBOARD requires whiteboard data.',
+          LogContext.COLLABORATION
+        );
+      }
     }
 
     return calloutFraming;
   }
 
+  private async createNewWhiteboardInCalloutFraming(
+    calloutFraming: ICalloutFraming,
+    whiteboardData: CreateWhiteboardInput,
+    storageAggregator: IStorageAggregator,
+    userID?: string
+  ) {
+    const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
+    whiteboardData.nameID =
+      this.namingService.createNameIdAvoidingReservedNameIDs(
+        `${whiteboardData.profile?.displayName ?? 'whiteboard'}`,
+        reservedNameIDs
+      );
+    calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
+      whiteboardData,
+      storageAggregator,
+      userID
+    );
+    await this.profileService.addVisualsOnProfile(
+      calloutFraming.whiteboard.profile,
+      whiteboardData.profile?.visuals,
+      [VisualType.BANNER]
+    );
+  }
+
   public async updateCalloutFraming(
     calloutFraming: ICalloutFraming,
-    calloutFramingData: UpdateCalloutFramingInput
+    calloutFramingData: UpdateCalloutFramingInput,
+    storageAggregator: IStorageAggregator,
+    userID?: string
   ): Promise<ICalloutFraming> {
     if (calloutFramingData.profile) {
       calloutFraming.profile = await this.profileService.updateProfile(
@@ -100,13 +128,37 @@ export class CalloutFramingService {
         calloutFramingData.profile
       );
     }
+    if (calloutFramingData.type) {
+      calloutFraming.type = calloutFramingData.type;
+    }
 
-    if (calloutFraming.whiteboard && calloutFramingData.whiteboardContent) {
-      calloutFraming.whiteboard =
-        await this.whiteboardService.updateWhiteboardContent(
-          calloutFraming.whiteboard.id,
-          calloutFramingData.whiteboardContent
+    if (calloutFraming.type === CalloutFramingType.WHITEBOARD) {
+      if (!calloutFraming.whiteboard) {
+        this.createNewWhiteboardInCalloutFraming(
+          calloutFraming,
+          {
+            profile: {
+              displayName: 'Callout Framing Whiteboard',
+            },
+            content: calloutFramingData.whiteboardContent,
+          },
+          storageAggregator,
+          userID
         );
+      }
+      if (calloutFraming.whiteboard && calloutFramingData.whiteboardContent) {
+        calloutFraming.whiteboard =
+          await this.whiteboardService.updateWhiteboardContent(
+            calloutFraming.whiteboard.id,
+            calloutFramingData.whiteboardContent
+          );
+      }
+    } else {
+      if (calloutFraming.whiteboard) {
+        await this.whiteboardService.deleteWhiteboard(
+          calloutFraming.whiteboard.id
+        );
+      }
     }
 
     return calloutFraming;
