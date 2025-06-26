@@ -458,6 +458,9 @@ export class SpaceService {
       relations: {
         parentSpace: true,
         collaboration: true,
+        about: {
+          profile: true,
+        },
       },
     });
 
@@ -689,8 +692,10 @@ export class SpaceService {
       const oldNameID = space.nameID;
       space.nameID = updateData.nameID;
 
-      // Invalidate URL cache for this space
-      await this.urlGeneratorCacheService.revokeUrlCache(space.id);
+      // Invalidate URL cache for this space's profile
+      await this.urlGeneratorCacheService.revokeUrlCache(
+        space.about.profile.id
+      );
 
       // Invalidate URL cache for all subspaces since their URLs include parent nameIDs
       if (space.level === SpaceLevel.L0) {
@@ -699,10 +704,19 @@ export class SpaceService {
           where: {
             levelZeroSpaceID: space.id,
           },
+          relations: {
+            about: {
+              profile: true,
+            },
+          },
         });
 
         for (const subspace of allSubspaces) {
-          await this.urlGeneratorCacheService.revokeUrlCache(subspace.id);
+          if (subspace.about?.profile?.id) {
+            await this.urlGeneratorCacheService.revokeUrlCache(
+              subspace.about.profile.id
+            );
+          }
         }
 
         this.logger.verbose?.(
@@ -715,10 +729,19 @@ export class SpaceService {
           where: {
             parentSpace: { id: space.id },
           },
+          relations: {
+            about: {
+              profile: true,
+            },
+          },
         });
 
         for (const childSubspace of childSubspaces) {
-          await this.urlGeneratorCacheService.revokeUrlCache(childSubspace.id);
+          if (childSubspace.about?.profile?.id) {
+            await this.urlGeneratorCacheService.revokeUrlCache(
+              childSubspace.about.profile.id
+            );
+          }
         }
 
         this.logger.verbose?.(

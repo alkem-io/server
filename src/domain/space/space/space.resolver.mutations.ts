@@ -150,7 +150,9 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
-    let space = await this.spaceService.getSpaceOrFail(updateData.spaceID);
+    let space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
+      relations: { about: { profile: true } },
+    });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
