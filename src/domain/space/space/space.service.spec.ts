@@ -73,6 +73,11 @@ describe('SpaceService', () => {
         nameID: oldNameID,
         level: SpaceLevel.L0,
         levelZeroSpaceID: spaceId,
+        about: {
+          profile: {
+            id: `profile-${spaceId}`,
+          },
+        },
       } as Space;
 
       const mockSubspace = {
@@ -80,6 +85,11 @@ describe('SpaceService', () => {
         nameID: 'subspace-name',
         level: SpaceLevel.L1,
         levelZeroSpaceID: spaceId,
+        about: {
+          profile: {
+            id: `profile-${subspaceId}`,
+          },
+        },
       } as Space;
 
       const updateData: UpdateSpacePlatformSettingsInput = {
@@ -107,8 +117,8 @@ describe('SpaceService', () => {
 
       // Assert
       expect(mockSpace.nameID).toBe(newNameID);
-      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(spaceId); // Main space cache invalidated
-      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(subspaceId); // Subspace cache invalidated
+      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${spaceId}`); // Main space cache invalidated
+      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${subspaceId}`); // Subspace cache invalidated
       expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
     });
 
@@ -125,6 +135,11 @@ describe('SpaceService', () => {
         nameID: oldNameID,
         level: SpaceLevel.L1,
         levelZeroSpaceID: parentSpaceId,
+        about: {
+          profile: {
+            id: `profile-${subspaceId}`,
+          },
+        },
       } as Space;
 
       const mockChildSubspace = {
@@ -132,6 +147,11 @@ describe('SpaceService', () => {
         nameID: 'child-subspace-name',
         level: SpaceLevel.L2,
         levelZeroSpaceID: parentSpaceId,
+        about: {
+          profile: {
+            id: `profile-${childSubspaceId}`,
+          },
+        },
       } as Space;
 
       const updateData: UpdateSpacePlatformSettingsInput = {
@@ -161,8 +181,10 @@ describe('SpaceService', () => {
 
       // Assert
       expect(mockSubspace.nameID).toBe(newNameID);
-      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(subspaceId); // Main subspace cache invalidated
-      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(childSubspaceId); // Child subspace cache invalidated
+      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${subspaceId}`); // Main subspace cache invalidated
+      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(
+        `profile-${childSubspaceId}`
+      ); // Child subspace cache invalidated
       expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
     });
 
