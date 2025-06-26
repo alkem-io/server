@@ -76,6 +76,7 @@ import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -105,6 +106,7 @@ export class SpaceService {
     private licensingFrameworkService: LicensingFrameworkService,
     private templatesManagerService: TemplatesManagerService,
     private licenseService: LicenseService,
+    private urlGeneratorCacheService: UrlGeneratorCacheService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -682,7 +684,48 @@ export class SpaceService {
           LogContext.ACCOUNT
         );
       }
+
+      // Store the old nameID for logging purposes
+      const oldNameID = space.nameID;
       space.nameID = updateData.nameID;
+
+      // Invalidate URL cache for this space
+      await this.urlGeneratorCacheService.revokeUrlCache(space.id);
+
+      // Invalidate URL cache for all subspaces since their URLs include parent nameIDs
+      if (space.level === SpaceLevel.L0) {
+        // For L0 spaces, invalidate all subspaces in the entire space hierarchy
+        const allSubspaces = await this.spaceRepository.find({
+          where: {
+            levelZeroSpaceID: space.id,
+          },
+        });
+
+        for (const subspace of allSubspaces) {
+          await this.urlGeneratorCacheService.revokeUrlCache(subspace.id);
+        }
+
+        this.logger.verbose?.(
+          `Invalidated URL cache for space ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID}) and ${allSubspaces.length} subspaces`,
+          LogContext.SPACES
+        );
+      } else {
+        // For subspaces, also invalidate any child subspaces
+        const childSubspaces = await this.spaceRepository.find({
+          where: {
+            parentSpace: { id: space.id },
+          },
+        });
+
+        for (const childSubspace of childSubspaces) {
+          await this.urlGeneratorCacheService.revokeUrlCache(childSubspace.id);
+        }
+
+        this.logger.verbose?.(
+          `Invalidated URL cache for subspace ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID}) and ${childSubspaces.length} child subspaces`,
+          LogContext.SPACES
+        );
+      }
     }
 
     return await this.save(space);
