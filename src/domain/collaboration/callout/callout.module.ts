@@ -17,7 +17,6 @@ import { RoomModule } from '@domain/communication/room/room.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
-import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 import { PostModule } from '../post/post.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
@@ -39,7 +38,6 @@ import { ClassificationModule } from '@domain/common/classification/classificati
     CalloutFramingModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,
-    CalloutContributionPolicyModule,
     StorageAggregatorResolverModule,
     PostModule,
     ClassificationModule,

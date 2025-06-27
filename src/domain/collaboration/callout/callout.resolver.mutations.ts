@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { Inject } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -22,7 +22,7 @@ import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapt
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
-import { CalloutState } from '@common/enums/callout.state';
+import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
@@ -66,7 +66,6 @@ export class CalloutResolverMutations {
   @Mutation(() => ICallout, {
     description: 'Delete a Callout.',
   })
-  @Profiling.api
   async deleteCallout(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteCalloutInput
@@ -84,7 +83,6 @@ export class CalloutResolverMutations {
   @Mutation(() => ICallout, {
     description: 'Update a Callout.',
   })
-  @Profiling.api
   async updateCallout(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('calloutData') calloutData: UpdateCalloutEntityInput
@@ -96,13 +94,16 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    return await this.calloutService.updateCallout(callout, calloutData);
+    return await this.calloutService.updateCallout(
+      callout,
+      calloutData,
+      agentInfo.userID
+    );
   }
 
   @Mutation(() => ICallout, {
     description: 'Update the visibility of the specified Callout.',
   })
-  @Profiling.api
   async updateCalloutVisibility(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('calloutData') calloutData: UpdateCalloutVisibilityInput
@@ -117,12 +118,15 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update visibility on callout: ${callout.id}`
     );
-    const oldVisibility = callout.visibility;
+    const oldVisibility = callout.settings.visibility;
     const savedCallout =
       await this.calloutService.updateCalloutVisibility(calloutData);
 
-    if (!savedCallout.isTemplate && savedCallout.visibility !== oldVisibility) {
-      if (savedCallout.visibility === CalloutVisibility.PUBLISHED) {
+    if (
+      !savedCallout.isTemplate &&
+      savedCallout.settings.visibility !== oldVisibility
+    ) {
+      if (savedCallout.settings.visibility === CalloutVisibility.PUBLISHED) {
         // Save published info
         await this.calloutService.updateCalloutPublishInfo(
           savedCallout,
@@ -155,7 +159,6 @@ export class CalloutResolverMutations {
     description:
       'Update the information describing the publishing of the specified Callout.',
   })
-  @Profiling.api
   async updateCalloutPublishInfo(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('calloutData') calloutData: UpdateCalloutPublishInfoInput
@@ -179,7 +182,6 @@ export class CalloutResolverMutations {
   @Mutation(() => ICalloutContribution, {
     description: 'Create a new Contribution on the Callout.',
   })
-  @Profiling.api
   async createContributionOnCallout(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('contributionData') contributionData: CreateContributionOnCalloutInput
@@ -206,17 +208,31 @@ export class CalloutResolverMutations {
       `create contribution on callout: ${callout.id}`
     );
 
-    if (callout.contributionPolicy.state === CalloutState.CLOSED) {
+    if (
+      !callout.settings.contribution.enabled ||
+      callout.settings.contribution.canAddContributions ===
+        CalloutAllowedContributors.NONE
+    ) {
+      throw new CalloutClosedException(
+        `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+      );
+    }
+
+    if (
+      callout.settings.contribution.canAddContributions ===
+      CalloutAllowedContributors.ADMINS
+    ) {
       if (
         !this.authorizationService.isAccessGranted(
           agentInfo,
           callout.authorization,
           AuthorizationPrivilege.UPDATE
         )
-      )
+      ) {
         throw new CalloutClosedException(
-          `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+          `Only admins are allowed to contribute to Callout with id: '${callout.id}'`
         );
+      }
     }
 
     let contribution = await this.calloutService.createContributionOnCallout(
@@ -281,7 +297,7 @@ export class CalloutResolverMutations {
         );
 
       if (contributionData.post && contribution.post) {
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityPostCreated(
             callout,
             contribution,
@@ -293,7 +309,7 @@ export class CalloutResolverMutations {
       }
 
       if (contributionData.link && contribution.link) {
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityLinkCreated(
             callout,
             contribution.link,
@@ -304,7 +320,7 @@ export class CalloutResolverMutations {
       }
 
       if (contributionData.whiteboard && contribution.whiteboard) {
-        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityWhiteboardCreated(
             callout,
             contribution,
@@ -420,7 +436,6 @@ export class CalloutResolverMutations {
     description:
       'Update the sortOrder field of the Contributions of s Callout.',
   })
-  @Profiling.api
   async updateContributionsSortOrder(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('sortOrderData')

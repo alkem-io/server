@@ -17,6 +17,9 @@ export class CalloutContributionDefaults
   implements ICalloutContributionDefaults
 {
   @Column('text', { nullable: true })
+  defaultDisplayName?: string;
+
+  @Column('text', { nullable: true })
   postDescription? = '';
 
   @Column('longtext', { nullable: true })

@@ -21,6 +21,9 @@ export class CalloutContributionDefaultsService {
   ): ICalloutContributionDefaults {
     const calloutContributionDefaults = new CalloutContributionDefaults();
     if (calloutContributionDefaultsData) {
+      calloutContributionDefaults.defaultDisplayName =
+        calloutContributionDefaultsData.defaultDisplayName;
+
       calloutContributionDefaults.postDescription =
         calloutContributionDefaultsData.postDescription;
 
@@ -35,6 +38,11 @@ export class CalloutContributionDefaultsService {
     calloutContributionDefaults: ICalloutContributionDefaults,
     calloutContributionDefaultsData: UpdateCalloutContributionDefaultsInput
   ): ICalloutContributionDefaults {
+    if (calloutContributionDefaultsData.defaultDisplayName) {
+      calloutContributionDefaults.defaultDisplayName =
+        calloutContributionDefaultsData.defaultDisplayName;
+    }
+
     if (calloutContributionDefaultsData.postDescription) {
       calloutContributionDefaults.postDescription =
         calloutContributionDefaultsData.postDescription;

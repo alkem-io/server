@@ -11,21 +11,25 @@ Variables:
   "calloutTemplateInput": {
     "templatesSetID": "uuid",
     "profile": {
-        "displayName": "template displayname",
+        "displayName": "template displayName",
         "description": "template description"
     },
     "contributionDefaults": {
       "postDescription": "this is what users will see"
     },
-    "contributionPolicy": {
-      "allowedContributionTypes": ["COMMENTS"],
-      "state": "OPEN"
-    },
     "framing": {
       "profile": {
-        "displayName": "callout framing displayname",
-        "description": "dallout framing description"
+        "displayName": "callout framing displayName",
+        "description": "callout framing description"
       }
+    },
+    "settings": {
+      "framing": {
+        "type": "NONE",
+      },
+      "contribution": {
+        "enabled": true
+      },
     }
   }
 }

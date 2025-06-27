@@ -431,9 +431,9 @@ export class SearchResultService {
       select: {
         id: true,
         nameID: true,
-        type: true,
         framing: {
           id: true,
+          type: true,
           whiteboard: {
             id: true,
           },
@@ -519,9 +519,9 @@ export class SearchResultService {
       select: {
         id: true,
         nameID: true,
-        type: true,
         framing: {
           id: true,
+          type: true,
           whiteboard: {
             id: true,
           },

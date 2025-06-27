@@ -15,9 +15,10 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
-import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { IClassification } from '@domain/common/classification/classification.interface';
+import { CalloutType } from '@common/enums/callout.type';
+import { inferCalloutType } from './deprecated/callout.type.inference';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -91,21 +92,10 @@ export class CalloutResolverFields {
     return await this.calloutService.getClassification(callout.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('contributionPolicy', () => ICalloutContributionPolicy, {
-    nullable: false,
-    description: 'The ContributionPolicy for this Callout.',
-  })
-  async contributionPolicy(
-    @Parent() callout: Callout
-  ): Promise<ICalloutContributionPolicy> {
-    return await this.calloutService.getContributionPolicy(callout.id);
-  }
-
   @ResolveField('activity', () => Number, {
     nullable: false,
-    description: 'The activity for this Callout.',
+    description:
+      'The activity for this Callout. The number of Contributions if the callout allows contributions, or the number of comments if it does not.',
   })
   async activity(@Parent() callout: ICallout): Promise<number> {
     return await this.calloutService.getActivityCount(callout);
@@ -162,5 +152,14 @@ export class CalloutResolverFields {
       return null;
     }
     return loader.load(callout.createdBy);
+  }
+
+  @ResolveField('type', () => CalloutType, {
+    nullable: false,
+    description:
+      'The type of this Callout. WARNING. This field is deprecated and will be removed in the future. Use `framing.type` + `settings.contribution.allowedTypes` instead.',
+  })
+  async type(@Parent() callout: ICallout): Promise<CalloutType> {
+    return inferCalloutType(callout);
   }
 }

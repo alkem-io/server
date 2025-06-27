@@ -4,8 +4,6 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
-import { ICalloutContributionPolicy } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.interface';
-import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -67,7 +65,6 @@ export class InputCreatorService {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
         contributionDefaults: true,
-        contributionPolicy: true,
         classification: {
           tagsets: true,
         },
@@ -90,7 +87,7 @@ export class InputCreatorService {
       !callout.framing.profile ||
       !callout.framing.profile.tagsets ||
       !callout.contributionDefaults ||
-      !callout.contributionPolicy ||
+      !callout.settings ||
       !callout.classification
     ) {
       throw new EntityNotInitializedException(
@@ -105,21 +102,16 @@ export class InputCreatorService {
 
     return {
       nameID: callout.nameID,
-      type: callout.type,
-      visibility: callout.visibility,
       classification: this.buildCreateClassificationInputFromClassification(
         callout.classification
       ),
       framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
         callout.framing
       ),
+      settings: callout.settings,
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
           callout.contributionDefaults
-        ),
-      contributionPolicy:
-        this.buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          callout.contributionPolicy
         ),
       sortOrder: callout.sortOrder,
     };
@@ -372,6 +364,7 @@ export class InputCreatorService {
       );
     }
     return {
+      type: calloutFraming.type,
       profile: this.buildCreateProfileInputFromProfile(calloutFraming.profile),
       whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
@@ -390,16 +383,6 @@ export class InputCreatorService {
       whiteboardContent: calloutContributionDefaults.whiteboardContent,
     };
     return result;
-  }
-
-  private buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-    calloutContributionPolicy: ICalloutContributionPolicy
-  ): CreateCalloutContributionPolicyInput {
-    return {
-      state: calloutContributionPolicy.state,
-      allowedContributionTypes:
-        calloutContributionPolicy.allowedContributionTypes,
-    };
   }
 
   private buildCreateClassificationInputFromClassification(

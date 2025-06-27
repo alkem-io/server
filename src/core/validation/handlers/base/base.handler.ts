@@ -43,10 +43,6 @@ import {
   UpdateCalloutFramingInput,
 } from '@domain/collaboration/callout-framing/dto';
 import {
-  CreateCalloutContributionPolicyInput,
-  UpdateCalloutContributionPolicyInput,
-} from '@domain/collaboration/callout-contribution-policy/dto';
-import {
   CreateCalloutContributionDefaultsInput,
   UpdateCalloutContributionDefaultsInput,
 } from '@domain/collaboration/callout-contribution-defaults/dto';
@@ -114,7 +110,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
       CreateCalloutFramingInput,
-      CreateCalloutContributionPolicyInput,
       CreateCalloutContributionDefaultsInput,
       CreateSpaceAboutInput,
       CreateContributionOnCalloutInput,
@@ -136,7 +131,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateDocumentInput,
       UpdateCalloutFramingInput,
       UpdateCalloutContributionDefaultsInput,
-      UpdateCalloutContributionPolicyInput,
       UpdateTemplateInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,
