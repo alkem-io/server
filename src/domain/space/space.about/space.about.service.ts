@@ -257,11 +257,11 @@ export class SpaceAboutService {
   }
 
   /**
-   * Merges two sets of tagsets, combining tags for tagsets with the same name.
+   * Merges two sets of tagsets, ensuring deep copies are created for template tagsets.
    *
    * @param inputTagsets - The tagsets provided in the input.
    * @param templateTagsets - The tagsets from the template.
-   * @returns An array of merged tagsets with combined tags.
+   * @returns An array of merged tagsets with combined tags, ensuring new entities for template tagsets.
    */
   private mergeTagsets(
     inputTagsets: CreateTagsetInput[] | undefined,
@@ -273,8 +273,12 @@ export class SpaceAboutService {
 
     const combinedTagsets = [
       ...(inputTagsets || []),
-      ...(templateTagsets || []),
+      ...(templateTagsets || []).map(tagset => ({
+        name: tagset.name,
+        tags: [...tagset.tags],
+      })),
     ];
+
     const tagsetMap = new Map<string, { name: string; tags: Set<string> }>();
 
     combinedTagsets.forEach(tagset => {
