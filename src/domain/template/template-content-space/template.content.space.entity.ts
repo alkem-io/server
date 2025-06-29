@@ -29,7 +29,7 @@ export class TemplateContentSpace
     templateContentSpace => templateContentSpace.parentSpace,
     {
       eager: false,
-      cascade: false,
+      cascade: false, // Important: each subspace content saves itself
     }
   )
   subspaces?: TemplateContentSpace[];

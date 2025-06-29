@@ -151,7 +151,7 @@ export class InputCreatorService {
 
   public async buildCreateTemplateContentSpaceInputFromSpace(
     spaceID: string,
-    recursive: boolean = false
+    recursive: boolean = true
   ): Promise<CreateTemplateContentSpaceInput> {
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
@@ -190,7 +190,10 @@ export class InputCreatorService {
     if (recursive) {
       for (const subspace of space.subspaces) {
         const subspaceInput =
-          await this.buildCreateTemplateContentSpaceInputFromSpace(subspace.id);
+          await this.buildCreateTemplateContentSpaceInputFromSpace(
+            subspace.id,
+            recursive
+          );
         subspacesInput.push(subspaceInput);
       }
     }

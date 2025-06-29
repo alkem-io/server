@@ -49,6 +49,7 @@ export class TemplateContentSpaceService {
     templateContentSpace.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATE_CONTENT_SPACE
     );
+    templateContentSpace.subspaces = [];
 
     templateContentSpace.about = await this.spaceAboutService.createSpaceAbout(
       templateContentSpaceData.about,
@@ -62,6 +63,15 @@ export class TemplateContentSpaceService {
         storageAggregator,
         agentInfo
       );
+
+    for (const subspace of templateContentSpaceData.subspaces) {
+      const subspaceContent = await this.createTemplateContentSpace(
+        subspace,
+        storageAggregator,
+        agentInfo
+      );
+      templateContentSpace.subspaces.push(subspaceContent);
+    }
 
     return await this.save(templateContentSpace);
   }
@@ -88,8 +98,7 @@ export class TemplateContentSpaceService {
     if (
       !templateContentSpace.collaboration ||
       !templateContentSpace.about ||
-      !templateContentSpace.authorization ||
-      !templateContentSpace.subspaces
+      !templateContentSpace.authorization
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to delete TemplateContentSpace: ${templateContentSpace.id} `,
@@ -108,9 +117,11 @@ export class TemplateContentSpaceService {
       templateContentSpace.authorization
     );
 
-    for (const subspace of templateContentSpace.subspaces) {
-      // Recursively delete subspaces
-      await this.deleteTemplateContentSpaceOrFail(subspace.id);
+    if (templateContentSpace.subspaces) {
+      for (const subspace of templateContentSpace.subspaces) {
+        // Recursively delete subspaces
+        await this.deleteTemplateContentSpaceOrFail(subspace.id);
+      }
     }
 
     const result = await this.templateContentSpaceRepository.remove(
