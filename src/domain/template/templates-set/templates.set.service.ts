@@ -149,7 +149,8 @@ export class TemplatesSetService {
   ): Promise<ITemplate> {
     const createSpaceContentInput =
       await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
-        templateSpaceInput.spaceID
+        templateSpaceInput.spaceID,
+        templateSpaceInput.recursive
       );
     const templateInput: CreateTemplateInput = {
       ...templateSpaceInput,

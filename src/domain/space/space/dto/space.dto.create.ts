@@ -4,10 +4,8 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateCollaborationOnSpaceInput } from './space.dto.create.collaboration';
 import { SpaceLevel } from '@common/enums/space.level';
-import { ITemplatesManager } from '@domain/template/templates-manager';
 import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { CreateSpaceSettingsInput } from '@domain/space/space.settings';
 
@@ -36,16 +34,9 @@ export class CreateSpaceInput {
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;
-  // For accessing the default templates of the parent space
-  templatesManagerParent?: ITemplatesManager;
 
   level!: SpaceLevel;
-
-  @Field(() => TemplateDefaultType, {
-    nullable: true,
-    description: 'Pick up a different platform template.',
-  })
-  platformTemplate?: TemplateDefaultType;
+  levelZeroSpaceID!: string;
 
   @Field(() => UUID, {
     nullable: true,

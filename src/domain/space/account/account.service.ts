@@ -68,7 +68,7 @@ export class AccountService {
 
   async createSpaceOnAccount(
     spaceData: CreateSpaceOnAccountInput,
-    agentInfo?: AgentInfo
+    agentInfo: AgentInfo
   ): Promise<ISpace> {
     const account = await this.getAccountOrFail(spaceData.accountID, {
       relations: {
@@ -102,8 +102,10 @@ export class AccountService {
     // Set data for the root space
     spaceData.level = SpaceLevel.L0;
     spaceData.storageAggregatorParent = account.storageAggregator;
+    // will be set properly after saving to its own ID
+    spaceData.levelZeroSpaceID = '';
 
-    let space = await this.spaceService.createSpace(spaceData, agentInfo);
+    let space = await this.spaceService.createSpaceL0(spaceData, agentInfo);
     space.account = account;
     space = await this.spaceService.save(space);
 

@@ -16,6 +16,7 @@ export enum FlowState {
 export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplateContentSpaceInput =
   {
     level: 0,
+    subspaces: [],
     collaborationData: {
       innovationFlowData: {
         profile: {

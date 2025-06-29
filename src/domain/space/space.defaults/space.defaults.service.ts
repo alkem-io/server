@@ -94,20 +94,14 @@ export class SpaceDefaultsService {
   public async getTemplateSpaceContentToAugmentFrom(
     spaceLevel: SpaceLevel,
     spaceTemplateID?: string,
-    platformTemplateType?: TemplateDefaultType,
     spaceL0TemplatesManager?: ITemplatesManager
-  ): Promise<ITemplateContentSpace> {
+  ): Promise<string> {
     // First get the template to augment the provided data with
     let templateWithSpaceContent: ITemplate | undefined = undefined;
 
     if (spaceTemplateID) {
       templateWithSpaceContent =
         await this.templateService.getTemplateOrFail(spaceTemplateID);
-    } else if (platformTemplateType) {
-      templateWithSpaceContent =
-        await this.platformTemplatesService.getPlatformDefaultTemplateByType(
-          platformTemplateType
-        );
     } else {
       switch (spaceLevel) {
         case SpaceLevel.L0:
@@ -148,46 +142,27 @@ export class SpaceDefaultsService {
 
     if (!templateWithSpaceContent) {
       throw new ValidationException(
-        `Unable to get platform template for type: ${platformTemplateType}`,
+        `Unable to get template content space to use: ${spaceLevel}, templateID: ${spaceTemplateID}`,
         LogContext.TEMPLATES
       );
     }
-    // Reload to get the data
-    const templateWithSpaceContentReloaded =
-      await this.templateService.getTemplateOrFail(
-        templateWithSpaceContent.id,
-        {
-          relations: {
-            contentSpace: {
-              collaboration: true,
-              about: {
-                profile: {
-                  references: true,
-                  visuals: true,
-                  location: true,
-                  tagsets: true,
-                },
-                guidelines: {
-                  profile: {
-                    references: true,
-                  },
-                },
-              },
-            },
-          },
-        }
-      );
-
-    if (
-      !templateWithSpaceContentReloaded.contentSpace ||
-      !templateWithSpaceContentReloaded.contentSpace.collaboration
-    ) {
+    // Reload to ensure we have the content space
+    templateWithSpaceContent = await this.templateService.getTemplateOrFail(
+      templateWithSpaceContent.id,
+      {
+        relations: {
+          contentSpace: true,
+        },
+      }
+    );
+    if (!templateWithSpaceContent.contentSpace) {
       throw new ValidationException(
-        `Unable to get platform template with space content for type: ${platformTemplateType}`,
+        `Have template without template content space to use: ${spaceLevel}, templateID: ${spaceTemplateID}`,
         LogContext.TEMPLATES
       );
     }
-    return templateWithSpaceContentReloaded.contentSpace;
+
+    return templateWithSpaceContent.contentSpace.id;
   }
 
   public async addTutorialCalloutsFromTemplate(
