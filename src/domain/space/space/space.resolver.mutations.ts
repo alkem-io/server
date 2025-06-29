@@ -175,7 +175,6 @@ export class SpaceResolverMutations {
   @Mutation(() => ISpace, {
     description: 'Creates a new Subspace within the specified Space.',
   })
-  @Profiling.api
   async createSubspace(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('subspaceData') subspaceData: CreateSubspaceInput

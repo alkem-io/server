@@ -125,7 +125,7 @@ export class SpaceService {
   private async createSpace(
     spaceData: CreateSpaceInput,
     templateContentSpaceID: string,
-    agentInfo?: AgentInfo
+    agentInfo: AgentInfo
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
     // default to demo space
@@ -232,6 +232,27 @@ export class SpaceService {
 
     const spaceUpdated = await this.save(space);
     // If template has child spaces, then create child spaces here
+    if (
+      templateContentSpace.subspaces &&
+      templateContentSpace.subspaces.length > 0
+    ) {
+      for (const subspaceContent of templateContentSpace.subspaces) {
+        const subspaceData: CreateSubspaceInput = {
+          spaceID: spaceUpdated.id,
+          storageAggregatorParent: spaceUpdated.storageAggregator,
+          level: space.level + 1,
+          about: {
+            profileData: {
+              displayName: subspaceContent.about.profile.displayName,
+            },
+          },
+          collaborationData: {
+            calloutsSetData: {},
+          },
+        };
+        await this.createSubspace(subspaceData, agentInfo, subspaceContent.id);
+      }
+    }
 
     return spaceUpdated;
   }
@@ -920,7 +941,7 @@ export class SpaceService {
 
   public async createSpaceL0(
     spaceData: CreateSpaceInput,
-    agentInfo?: AgentInfo
+    agentInfo: AgentInfo
   ): Promise<ISpace> {
     const templateContentSpaceID =
       await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
@@ -933,7 +954,8 @@ export class SpaceService {
 
   public async createSubspace(
     subspaceData: CreateSubspaceInput,
-    agentInfo?: AgentInfo
+    agentInfo: AgentInfo,
+    templateContentSpaceID?: string
   ): Promise<ISpace> {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {
       relations: {
@@ -986,15 +1008,18 @@ export class SpaceService {
     }
 
     subspaceData.level = space.level + 1;
-    const templateContentSpaceID =
-      await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
-        subspaceData.level,
-        subspaceData.spaceTemplateID,
-        levelZeroSpace.templatesManager
-      );
+    let templateContentSubspaceID = templateContentSpaceID;
+    if (!templateContentSubspaceID) {
+      templateContentSubspaceID =
+        await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
+          subspaceData.level,
+          subspaceData.spaceTemplateID,
+          levelZeroSpace.templatesManager
+        );
+    }
     let subspace = await this.createSpace(
       subspaceData,
-      templateContentSpaceID,
+      templateContentSubspaceID,
       agentInfo
     );
 
@@ -1070,6 +1095,7 @@ export class SpaceService {
         templateContentSpaceID,
         {
           relations: {
+            subspaces: true,
             collaboration: true,
             about: {
               profile: {
@@ -1088,7 +1114,11 @@ export class SpaceService {
         }
       );
 
-    if (!templateContentSpace.collaboration) {
+    if (
+      !templateContentSpace.collaboration ||
+      !templateContentSpace.about ||
+      !templateContentSpace.subspaces
+    ) {
       throw new ValidationException(
         `Unable to get template content space with data: ${templateContentSpaceID}`,
         LogContext.TEMPLATES
