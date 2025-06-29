@@ -54,6 +54,7 @@ import { bootstrapTemplateSpaceContentSubspace } from './platform-template-defin
 import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
 import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base';
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 
 @Injectable()
 export class BootstrapService {
@@ -61,6 +62,7 @@ export class BootstrapService {
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
     private agentService: AgentService,
+    private agentInfoService: AgentInfoService,
     private spaceService: SpaceService,
     private userService: UserService,
     private userLookupService: UserLookupService,
@@ -104,13 +106,16 @@ export class BootstrapService {
         Profiling.profilingEnabled = profilingEnabled;
       }
 
+      const anonymousAgentInfo =
+        this.agentInfoService.createAnonymousAgentInfo();
+
       await this.bootstrapUserProfiles();
       await this.bootstrapLicensePlans();
       await this.platformService.ensureForumCreated();
       await this.ensureAuthorizationsPopulated();
       await this.ensurePlatformTemplatesArePresent();
       await this.ensureOrganizationSingleton();
-      await this.ensureSpaceSingleton();
+      await this.ensureSpaceSingleton(anonymousAgentInfo);
       await this.ensureGuidanceChat();
       await this.ensureSsiPopulated();
       // reset auth as last in the actions
@@ -444,7 +449,7 @@ export class BootstrapService {
     return this.createSystemAgentInfo(adminUser);
   }
 
-  private async ensureSpaceSingleton() {
+  private async ensureSpaceSingleton(agentInfo: AgentInfo) {
     this.logger.verbose?.(
       '=== Ensuring at least one Account with a space is present ===',
       LogContext.BOOTSTRAP
@@ -478,7 +483,10 @@ export class BootstrapService {
         },
       };
 
-      const space = await this.accountService.createSpaceOnAccount(spaceInput);
+      const space = await this.accountService.createSpaceOnAccount(
+        spaceInput,
+        agentInfo
+      );
       const spaceAuthorizations =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
       await this.authorizationPolicyService.saveAll(spaceAuthorizations);

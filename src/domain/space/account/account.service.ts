@@ -68,7 +68,7 @@ export class AccountService {
 
   async createSpaceOnAccount(
     spaceData: CreateSpaceOnAccountInput,
-    agentInfo?: AgentInfo
+    agentInfo: AgentInfo
   ): Promise<ISpace> {
     const account = await this.getAccountOrFail(spaceData.accountID, {
       relations: {
