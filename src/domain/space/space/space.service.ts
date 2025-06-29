@@ -77,6 +77,8 @@ import { TemplateType } from '@common/enums/template.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
+import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -105,6 +107,7 @@ export class SpaceService {
     private collaborationService: CollaborationService,
     private licensingFrameworkService: LicensingFrameworkService,
     private templatesManagerService: TemplatesManagerService,
+    private templateContentSpaceService: TemplateContentSpaceService,
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
     @InjectRepository(Space)
@@ -112,8 +115,16 @@ export class SpaceService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createSpace(
+  /**
+   * Create a new Space.
+   * @param spaceData
+   * @param templateContentSpaceID The template to use for any content missing.
+   * @param agentInfo
+   * @returns
+   */
+  private async createSpace(
     spaceData: CreateSpaceInput,
+    templateContentSpaceID: string,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
@@ -124,14 +135,11 @@ export class SpaceService {
       AuthorizationPolicyType.SPACE
     );
 
-    const templateSpaceContent =
-      await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
-        space.level,
-        spaceData.spaceTemplateID,
-        spaceData.platformTemplate,
-        spaceData.templatesManagerParent
-      );
-    space.settings = templateSpaceContent.settings;
+    const templateContentSpace = await this.getTemplateContentSpaceWithData(
+      templateContentSpaceID
+    );
+
+    space.settings = templateContentSpace.settings;
 
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -163,7 +171,7 @@ export class SpaceService {
 
     // Apply the About from the Template but preserve the user provided data
     const modifiedAbout = this.spaceAboutService.getMergedTemplateSpaceAbout(
-      templateSpaceContent.about,
+      templateContentSpace.about,
       spaceData.about
     );
 
@@ -190,7 +198,7 @@ export class SpaceService {
     updatedCollaborationData =
       await this.spaceDefaultsService.createCollaborationInput(
         updatedCollaborationData,
-        templateSpaceContent
+        templateContentSpace
       );
     if (spaceData.collaborationData.addTutorialCallouts) {
       updatedCollaborationData =
@@ -222,7 +230,10 @@ export class SpaceService {
       space.id
     );
 
-    return await this.save(space);
+    const spaceUpdated = await this.save(space);
+    // If template has child spaces, then create child spaces here
+
+    return spaceUpdated;
   }
 
   public createLicenseForSpaceL0(): ILicense {
@@ -907,7 +918,20 @@ export class SpaceService {
     return subscriptions;
   }
 
-  async createSubspace(
+  public async createSpaceL0(
+    spaceData: CreateSpaceInput,
+    agentInfo?: AgentInfo
+  ): Promise<ISpace> {
+    const templateContentSpaceID =
+      await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
+        spaceData.level,
+        spaceData.spaceTemplateID
+      );
+
+    return await this.createSpace(spaceData, templateContentSpaceID, agentInfo);
+  }
+
+  public async createSubspace(
     subspaceData: CreateSubspaceInput,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
@@ -950,21 +974,29 @@ export class SpaceService {
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
 
-    let rootTemplatesManager = space.templatesManager;
-    let parentSpace = space.parentSpace;
-    while (!rootTemplatesManager && parentSpace) {
-      parentSpace = await this.getSpaceOrFail(parentSpace.id, {
+    // Need to know the Space L0 library to use
+    const levelZeroSpaceID = space.levelZeroSpaceID;
+    let levelZeroSpace = space;
+    if (levelZeroSpaceID !== space.id) {
+      levelZeroSpace = await this.getSpaceOrFail(levelZeroSpaceID, {
         relations: {
           templatesManager: true,
-          parentSpace: true,
         },
       });
-      rootTemplatesManager = parentSpace.templatesManager;
     }
 
-    subspaceData.templatesManagerParent = rootTemplatesManager;
     subspaceData.level = space.level + 1;
-    let subspace = await this.createSpace(subspaceData, agentInfo);
+    const templateContentSpaceID =
+      await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
+        subspaceData.level,
+        subspaceData.spaceTemplateID,
+        levelZeroSpace.templatesManager
+      );
+    let subspace = await this.createSpace(
+      subspaceData,
+      templateContentSpaceID,
+      agentInfo
+    );
 
     subspace = await this.addSubspaceToSpace(space, subspace);
     subspace = await this.save(subspace);
@@ -1027,6 +1059,42 @@ export class SpaceService {
     );
 
     return subspace;
+  }
+
+  private async getTemplateContentSpaceWithData(
+    templateContentSpaceID: string
+  ): Promise<ITemplateContentSpace> {
+    // Reload to get the data
+    const templateContentSpace =
+      await this.templateContentSpaceService.getTemplateContentSpaceOrFail(
+        templateContentSpaceID,
+        {
+          relations: {
+            collaboration: true,
+            about: {
+              profile: {
+                references: true,
+                visuals: true,
+                location: true,
+                tagsets: true,
+              },
+              guidelines: {
+                profile: {
+                  references: true,
+                },
+              },
+            },
+          },
+        }
+      );
+
+    if (!templateContentSpace.collaboration) {
+      throw new ValidationException(
+        `Unable to get template content space with data: ${templateContentSpaceID}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templateContentSpace;
   }
 
   async getSubspace(subspaceID: string, space: ISpace): Promise<ISpace> {
