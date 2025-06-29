@@ -36,6 +36,7 @@ export class CreateSpaceInput {
   storageAggregatorParent?: IStorageAggregator;
 
   level!: SpaceLevel;
+  levelZeroSpaceID!: string;
 
   @Field(() => UUID, {
     nullable: true,

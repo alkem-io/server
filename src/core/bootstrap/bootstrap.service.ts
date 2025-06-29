@@ -478,6 +478,7 @@ export class BootstrapService {
           },
         },
         level: SpaceLevel.L0,
+        levelZeroSpaceID: '',
         collaborationData: {
           calloutsSetData: {},
         },

@@ -180,7 +180,7 @@ export class SpaceService {
       storageAggregator
     );
 
-    space.levelZeroSpaceID = '';
+    space.levelZeroSpaceID = spaceData.levelZeroSpaceID;
     // save the collaboration and all it's template sets
     await this.save(space);
 
@@ -239,6 +239,7 @@ export class SpaceService {
       for (const subspaceContent of templateContentSpace.subspaces) {
         const subspaceData: CreateSubspaceInput = {
           spaceID: spaceUpdated.id,
+          levelZeroSpaceID: spaceUpdated.levelZeroSpaceID,
           storageAggregatorParent: spaceUpdated.storageAggregator,
           level: space.level + 1,
           about: {
@@ -353,7 +354,7 @@ export class SpaceService {
     await this.authorizationPolicyService.delete(space.authorization);
 
     if (space.level === SpaceLevel.L0) {
-      if (!space.templatesManager || !space.templatesManager) {
+      if (!space.templatesManager) {
         throw new RelationshipNotFoundException(
           `Unable to load entities to delete base subspace: ${space.id} `,
           LogContext.SPACES
@@ -995,6 +996,7 @@ export class SpaceService {
 
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
+    subspaceData.levelZeroSpaceID = space.levelZeroSpaceID;
 
     // Need to know the Space L0 library to use
     const levelZeroSpaceID = space.levelZeroSpaceID;
@@ -1095,7 +1097,11 @@ export class SpaceService {
         templateContentSpaceID,
         {
           relations: {
-            subspaces: true,
+            subspaces: {
+              about: {
+                profile: true,
+              },
+            },
             collaboration: true,
             about: {
               profile: {
