@@ -140,9 +140,24 @@ export class SpaceDefaultsService {
       }
     }
 
-    if (!templateWithSpaceContent || !templateWithSpaceContent.contentSpace) {
+    if (!templateWithSpaceContent) {
       throw new ValidationException(
-        `Unable to get platform template for type: ${spaceLevel}`,
+        `Unable to get template content space to use: ${spaceLevel}, templateID: ${spaceTemplateID}`,
+        LogContext.TEMPLATES
+      );
+    }
+    // Reload to ensure we have the content space
+    templateWithSpaceContent = await this.templateService.getTemplateOrFail(
+      templateWithSpaceContent.id,
+      {
+        relations: {
+          contentSpace: true,
+        },
+      }
+    );
+    if (!templateWithSpaceContent.contentSpace) {
+      throw new ValidationException(
+        `Have template without template content space to use: ${spaceLevel}, templateID: ${spaceTemplateID}`,
         LogContext.TEMPLATES
       );
     }
