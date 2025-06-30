@@ -20,6 +20,8 @@ export class TemplateContentSpaceResolverFields {
     private templateContentSpaceService: TemplateContentSpaceService
   ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('subspaces', () => [ITemplateContentSpace], {
     nullable: false,
     description: 'The template subspaces for the Template Content Space.',
