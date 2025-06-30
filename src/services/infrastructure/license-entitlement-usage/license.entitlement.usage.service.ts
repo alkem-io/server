@@ -95,10 +95,64 @@ export class LicenseEntitlementUsageService {
     spaces: ISpace[],
     entitlementType: LicenseEntitlementType
   ): number {
-    const matchingSpaces = spaces.filter(space =>
-      this.hasMatchingLicenseEntitlement(space, entitlementType)
-    );
-    return matchingSpaces.length;
+    let result = 0;
+    for (const space of spaces) {
+      switch (entitlementType) {
+        case LicenseEntitlementType.SPACE_PREMIUM:
+          if (
+            this.hasMatchingLicenseEntitlement(
+              space,
+              LicenseEntitlementType.SPACE_PREMIUM
+            )
+          ) {
+            result++;
+          }
+          break;
+        case LicenseEntitlementType.SPACE_PLUS: {
+          const hasPlusEntitlement = this.hasMatchingLicenseEntitlement(
+            space,
+            LicenseEntitlementType.SPACE_PLUS
+          );
+          const hasPremiumEntitlement = this.hasMatchingLicenseEntitlement(
+            space,
+            LicenseEntitlementType.SPACE_PREMIUM
+          );
+          if (hasPlusEntitlement && !hasPremiumEntitlement) {
+            result++;
+          }
+          break;
+        }
+        case LicenseEntitlementType.SPACE_FREE: {
+          const hasFreeEntitlement = this.hasMatchingLicenseEntitlement(
+            space,
+            LicenseEntitlementType.SPACE_FREE
+          );
+          const hasPlusEntitlement = this.hasMatchingLicenseEntitlement(
+            space,
+            LicenseEntitlementType.SPACE_PLUS
+          );
+          const hasPremiumEntitlement = this.hasMatchingLicenseEntitlement(
+            space,
+            LicenseEntitlementType.SPACE_PREMIUM
+          );
+          if (
+            hasFreeEntitlement &&
+            !hasPlusEntitlement &&
+            !hasPremiumEntitlement
+          ) {
+            result++;
+          }
+          break;
+        }
+        default:
+          throw new RelationshipNotFoundException(
+            `Unexpected entitlement type encountered: ${entitlementType}`,
+            LogContext.LICENSE
+          );
+      }
+    }
+
+    return result;
   }
 
   private hasMatchingLicenseEntitlement(
