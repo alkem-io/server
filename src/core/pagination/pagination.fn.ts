@@ -8,7 +8,7 @@ import {
 } from './';
 
 export const getPaginationResults = async <
-  T extends IBaseAlkemio & Paginationable
+  T extends IBaseAlkemio & Paginationable,
 >(
   query: SelectQueryBuilder<T>,
   paginationArgs: PaginationArgs,
