@@ -133,8 +133,20 @@ export class CalloutFramingService {
     }
 
     if (calloutFraming.type === CalloutFramingType.WHITEBOARD) {
-      if (!calloutFraming.whiteboard) {
-        this.createNewWhiteboardInCalloutFraming(
+      // if there is no content, we do anything with the whiteboard
+      if (!calloutFramingData.whiteboardContent) {
+        return calloutFraming;
+      }
+      // if there is content and a whiteboard, we update it
+      if (calloutFraming.whiteboard) {
+        calloutFraming.whiteboard =
+          await this.whiteboardService.updateWhiteboardContent(
+            calloutFraming.whiteboard.id,
+            calloutFramingData.whiteboardContent
+          );
+      } else {
+        // if there is content and no whiteboard, we create a new one
+        await this.createNewWhiteboardInCalloutFraming(
           calloutFraming,
           {
             profile: {
@@ -146,18 +158,13 @@ export class CalloutFramingService {
           userID
         );
       }
-      if (calloutFraming.whiteboard && calloutFramingData.whiteboardContent) {
-        calloutFraming.whiteboard =
-          await this.whiteboardService.updateWhiteboardContent(
-            calloutFraming.whiteboard.id,
-            calloutFramingData.whiteboardContent
-          );
-      }
     } else {
+      // if the type is not WHITEBOARD, we remove the whiteboard if it exists
       if (calloutFraming.whiteboard) {
         await this.whiteboardService.deleteWhiteboard(
           calloutFraming.whiteboard.id
         );
+        calloutFraming.whiteboard = undefined;
       }
     }
 
