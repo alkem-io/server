@@ -36,6 +36,7 @@ import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contr
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
+import { CalloutAuthorizationService } from './callout.service.authorization';
 import { ILink } from '../link/link.interface';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -55,6 +56,7 @@ export class CalloutResolverMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
+    private calloutAuthorizationService: CalloutAuthorizationService,
     private namingService: NamingService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutContributionService: CalloutContributionService,
@@ -94,11 +96,31 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    return await this.calloutService.updateCallout(
+
+    const updatedCallout = await this.calloutService.updateCallout(
       callout,
       calloutData,
       agentInfo.userID
     );
+
+    // Reset authorization policy for the callout and its child entities
+    // This is needed because updateCallout might create new entities (like comments room)
+    // that need proper authorization policies
+    const { roleSet, spaceSettings } =
+      await this.namingService.getRoleSetAndSettingsForCallout(
+        updatedCallout.id
+      );
+
+    const updatedAuthorizations =
+      await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        updatedCallout.id,
+        updatedCallout.authorization,
+        roleSet,
+        spaceSettings
+      );
+
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return updatedCallout;
   }
 
   @Mutation(() => ICallout, {
