@@ -446,7 +446,7 @@ platform:
   inspiration: ${PLATFORM_INSPIRATION}:https://alkemio.org/help/collaboration-tools/
 
   # Innovation library
-  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://www.alkemio.org/help/innovation-library
+  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://alkem.io/docs/features/templates
 
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
