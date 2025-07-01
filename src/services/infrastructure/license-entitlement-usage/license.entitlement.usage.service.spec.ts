@@ -11,10 +11,12 @@ import {
 } from '@common/exceptions';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { getEntityManagerToken } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 
 describe('LicenseEntitlementUsageService', () => {
   let service: LicenseEntitlementUsageService;
-  let entityManagerFindOne: jest.Mock;
+  let entityManager: jest.Mocked<EntityManager>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -26,10 +28,9 @@ describe('LicenseEntitlementUsageService', () => {
     service = module.get<LicenseEntitlementUsageService>(
       LicenseEntitlementUsageService
     );
-
-    // Get reference to the mocked EntityManager.findOne method
-    const entityManager = (service as any).entityManager;
-    entityManagerFindOne = entityManager.findOne;
+    entityManager = module.get<EntityManager>(
+      getEntityManagerToken('default')
+    ) as jest.Mocked<EntityManager>;
   });
 
   afterEach(() => {
@@ -47,12 +48,8 @@ describe('LicenseEntitlementUsageService', () => {
         innovationPacks: [],
       } as unknown as Account;
 
-      beforeEach(() => {
-        entityManagerFindOne.mockResolvedValue(mockAccount);
-      });
-
       it('should throw EntityNotFoundException when account is not found', async () => {
-        entityManagerFindOne.mockResolvedValue(null);
+        entityManager.findOne.mockResolvedValue(null);
 
         await expect(
           service.getEntitlementUsageForAccount(
@@ -61,7 +58,7 @@ describe('LicenseEntitlementUsageService', () => {
           )
         ).rejects.toThrow(EntityNotFoundException);
 
-        expect(entityManagerFindOne).toHaveBeenCalledWith(Account, {
+        expect(entityManager.findOne).toHaveBeenCalledWith(Account, {
           loadEagerRelations: false,
           where: { license: { id: licenseID } },
           relations: {
@@ -93,6 +90,7 @@ describe('LicenseEntitlementUsageService', () => {
           },
         ]);
         mockAccount.spaces = spaces as any;
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const result = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -121,6 +119,7 @@ describe('LicenseEntitlementUsageService', () => {
           },
         ]);
         mockAccount.spaces = spaces as any;
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const result = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -149,6 +148,7 @@ describe('LicenseEntitlementUsageService', () => {
           },
         ]);
         mockAccount.spaces = spaces as any;
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const result = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -180,6 +180,7 @@ describe('LicenseEntitlementUsageService', () => {
           },
         ]);
         mockAccount.spaces = spaces as any;
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const premiumResult = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -220,6 +221,7 @@ describe('LicenseEntitlementUsageService', () => {
           },
         ]);
         mockAccount.spaces = spaces as any;
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const plusResult = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -245,6 +247,7 @@ describe('LicenseEntitlementUsageService', () => {
           },
         ]);
         mockAccount.spaces = spaces as any;
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const result = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -260,7 +263,7 @@ describe('LicenseEntitlementUsageService', () => {
         const mockAccount = {
           virtualContributors: [{}, {}, {}], // 3 virtual contributors
         } as unknown as Account;
-        entityManagerFindOne.mockResolvedValue(mockAccount);
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const result = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -268,7 +271,7 @@ describe('LicenseEntitlementUsageService', () => {
         );
 
         expect(result).toBe(3);
-        expect(entityManagerFindOne).toHaveBeenCalledWith(Account, {
+        expect(entityManager.findOne).toHaveBeenCalledWith(Account, {
           loadEagerRelations: false,
           where: { license: { id: licenseID } },
           relations: { virtualContributors: true },
@@ -279,7 +282,7 @@ describe('LicenseEntitlementUsageService', () => {
         const mockAccount = {
           innovationHubs: [{}, {}], // 2 innovation hubs
         } as unknown as Account;
-        entityManagerFindOne.mockResolvedValue(mockAccount);
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const result = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -293,7 +296,7 @@ describe('LicenseEntitlementUsageService', () => {
         const mockAccount = {
           innovationPacks: [{}], // 1 innovation pack
         } as unknown as Account;
-        entityManagerFindOne.mockResolvedValue(mockAccount);
+        entityManager.findOne.mockResolvedValue(mockAccount);
 
         const result = await service.getEntitlementUsageForAccount(
           licenseID,
@@ -306,7 +309,7 @@ describe('LicenseEntitlementUsageService', () => {
 
     it('should throw RelationshipNotFoundException for unexpected entitlement type', async () => {
       const mockAccount = {} as Account;
-      entityManagerFindOne.mockResolvedValue(mockAccount);
+      entityManager.findOne.mockResolvedValue(mockAccount);
 
       await expect(
         service.getEntitlementUsageForAccount(
