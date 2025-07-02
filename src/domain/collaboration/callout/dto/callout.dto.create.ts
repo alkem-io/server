@@ -6,6 +6,7 @@ import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing
 import { CreateCalloutSettingsInput } from '@domain/collaboration/callout-settings/dto';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
 import { CreateClassificationInput } from '@domain/common/classification/dto/classification.dto.create';
+import { CreateCalloutContributionInput } from '@domain/collaboration/callout-contribution/dto';
 
 @InputType()
 @ObjectType('CreateCalloutData')
@@ -29,6 +30,13 @@ export class CreateCalloutInput {
   @ValidateNested({ each: true })
   @Type(() => CreateCalloutContributionDefaultsInput)
   contributionDefaults?: CreateCalloutContributionDefaultsInput;
+
+  @Field(() => [CreateCalloutContributionInput], {
+    nullable: true,
+    description: 'Contributions to be created with this Callout.',
+  })
+  @Type(() => CreateCalloutContributionInput)
+  contributions?: CreateCalloutContributionInput[];
 
   @Field(() => NameID, {
     nullable: true,

@@ -36,6 +36,27 @@ export class CalloutContributionService {
     private contributionRepository: Repository<CalloutContribution>
   ) {}
 
+  public async createCalloutContributions(
+    calloutContributionsData: CreateCalloutContributionInput[],
+    storageAggregator: IStorageAggregator,
+    contributionSettings: ICalloutSettingsContribution,
+    userID: string
+  ): Promise<ICalloutContribution[]> {
+    const contributions: ICalloutContribution[] = [];
+
+    for (const calloutContributionData of calloutContributionsData) {
+      const contribution = await this.createCalloutContribution(
+        calloutContributionData,
+        storageAggregator,
+        contributionSettings,
+        userID
+      );
+      contributions.push(contribution);
+    }
+
+    return contributions;
+  }
+
   public async createCalloutContribution(
     calloutContributionData: CreateCalloutContributionInput,
     storageAggregator: IStorageAggregator,

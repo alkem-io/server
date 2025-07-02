@@ -97,6 +97,16 @@ export class CalloutService {
         calloutData.contributionDefaults
       );
 
+    if (userID && calloutData.contributions && callout.settings.contribution) {
+      callout.contributions =
+        await this.contributionService.createCalloutContributions(
+          calloutData.contributions,
+          storageAggregator,
+          callout.settings.contribution,
+          userID
+        );
+    }
+
     if (callout.settings.framing.commentsEnabled) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
