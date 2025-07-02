@@ -127,10 +127,7 @@ export class CalloutContributionService {
     }
   }
 
-  async delete(
-    contributionInput: ICalloutContribution
-  ): Promise<ICalloutContribution> {
-    const contributionID = contributionInput.id;
+  async delete(contributionID: string): Promise<ICalloutContribution> {
     const contribution = await this.getCalloutContributionOrFail(
       contributionID,
       {

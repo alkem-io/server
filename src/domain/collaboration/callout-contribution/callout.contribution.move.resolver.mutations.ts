@@ -30,15 +30,34 @@ export class CalloutContributionMoveResolverMutations {
       await this.calloutContributionService.getCalloutContributionOrFail(
         moveContributionData.contributionID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       contribution.authorization,
       AuthorizationPrivilege.MOVE_CONTRIBUTION,
       `move contribution: ${contribution.id}`
     );
-    return await this.calloutContributionMoveService.moveContributionToCallout(
+    return this.calloutContributionMoveService.moveContributionToCallout(
       moveContributionData.contributionID,
       moveContributionData.calloutID
     );
+  }
+
+  public async deleteContribution(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('contributionID') contributionID: string
+  ): Promise<ICalloutContribution> {
+    const contribution =
+      await this.calloutContributionService.getCalloutContributionOrFail(
+        contributionID
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      contribution.authorization,
+      AuthorizationPrivilege.DELETE,
+      `move contribution: ${contribution.id}`
+    );
+
+    return this.calloutContributionService.delete(contribution.id);
   }
 }

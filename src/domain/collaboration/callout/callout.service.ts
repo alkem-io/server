@@ -315,7 +315,7 @@ export class CalloutService {
     await this.calloutFramingService.delete(callout.framing);
 
     for (const contribution of callout.contributions) {
-      await this.contributionService.delete(contribution);
+      await this.contributionService.delete(contribution.id);
     }
 
     if (callout.comments) {

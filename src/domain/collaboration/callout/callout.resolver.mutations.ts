@@ -73,7 +73,7 @@ export class CalloutResolverMutations {
     @Args('deleteData') deleteData: DeleteCalloutInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(deleteData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.DELETE,
@@ -188,13 +188,13 @@ export class CalloutResolverMutations {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER,
       `update publisher information on callout: ${callout.id}`
     );
-    return await this.calloutService.updateCalloutPublishInfo(
+    return this.calloutService.updateCalloutPublishInfo(
       callout,
       calloutData.publisherID,
       calloutData.publishDate
