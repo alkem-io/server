@@ -42,6 +42,9 @@ export class CalloutContributionMoveResolverMutations {
     );
   }
 
+  @Mutation(() => ICalloutContribution, {
+    description: 'Deletes a contribution.',
+  })
   public async deleteContribution(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('contributionID') contributionID: string
