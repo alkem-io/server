@@ -15,7 +15,7 @@ import { TypedSubscription } from '@common/decorators/typed.subscription/typed.s
 import { CalloutPostCreatedArgs } from './dto/callout.args.post.created';
 import { CalloutPostCreated, CalloutPostCreatedPayload } from './dto';
 import { UnableToSubscribeException } from '@src/common/exceptions';
-import { CalloutType } from '@common/enums/callout.type';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
@@ -85,9 +85,13 @@ export class CalloutResolverSubscriptions {
     );
     // Validate
     const callout = await this.calloutService.getCalloutOrFail(calloutID);
-    if (callout.type !== CalloutType.POST_COLLECTION) {
+    if (
+      !callout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.POST
+      )
+    ) {
       throw new UnableToSubscribeException(
-        `Unable to subscribe: Callout not of type Post Collection: ${calloutID}`,
+        `Unable to subscribe: Callout does not allow Post contributions: ${calloutID}`,
         LogContext.SUBSCRIPTIONS
       );
     }
