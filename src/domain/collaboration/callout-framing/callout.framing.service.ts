@@ -75,7 +75,7 @@ export class CalloutFramingService {
 
     if (calloutFraming.type === CalloutFramingType.WHITEBOARD) {
       if (calloutFramingData.whiteboard) {
-        this.createNewWhiteboardInCalloutFraming(
+        await this.createNewWhiteboardInCalloutFraming(
           calloutFraming,
           calloutFramingData.whiteboard,
           storageAggregator,
