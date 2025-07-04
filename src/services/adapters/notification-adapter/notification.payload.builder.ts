@@ -54,6 +54,7 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AlkemioConfig } from '@src/types';
+import { inferCalloutType } from '@domain/collaboration/callout/deprecated/callout.type.inference';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -252,7 +253,7 @@ export class NotificationPayloadBuilder {
         displayName: callout.framing.profile.displayName,
         description: callout.framing.profile.description ?? '',
         nameID: callout.nameID,
-        type: callout.type,
+        type: inferCalloutType(callout), // TODO: CalloutType is deprecated, remove it when possible
         url: calloutURL,
       },
       ...spacePayload,

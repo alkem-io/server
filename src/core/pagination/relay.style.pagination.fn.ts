@@ -63,7 +63,7 @@ const SORTING_COLUMN: keyof Paginationable = 'rowId';
  * @param cursorColumn
  */
 export const getRelayStylePaginationResults = async <
-  T extends IBaseAlkemio & Paginationable
+  T extends IBaseAlkemio & Paginationable,
 >(
   query: SelectQueryBuilder<T>,
   paginationArgs: PaginationArgs,

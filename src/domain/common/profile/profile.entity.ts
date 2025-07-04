@@ -7,7 +7,6 @@ import { Location } from '@domain/common/location/location.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 import { ProfileType } from '@common/enums';
-import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
@@ -38,7 +37,7 @@ export class Profile extends AuthorizableEntity implements IProfile {
   @Column('text', { nullable: true })
   description?: string;
 
-  @Column('varchar', { nullable: false, length: ENUM_LENGTH })
+  @Column({ type: 'enum', enum: ProfileType })
   type!: ProfileType;
 
   @OneToOne(() => Location, {

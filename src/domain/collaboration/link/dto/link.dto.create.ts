@@ -1,9 +1,11 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { MID_TEXT_LENGTH } from '@common/constants';
+
 @InputType()
+@ObjectType('CreateLinkData')
 export class CreateLinkInput {
   @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested({ each: true })
