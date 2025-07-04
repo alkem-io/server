@@ -224,9 +224,10 @@ export class WalletManagerAdapter {
         { cmd: WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION },
         credentialOfferInput
       );
-      const response = await firstValueFrom<WalletManagerOfferVcBeginResponse>(
-        credentialOffer
-      );
+      const response =
+        await firstValueFrom<WalletManagerOfferVcBeginResponse>(
+          credentialOffer
+        );
       this.logger.verbose?.(
         `[${WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION}] - Initiated for interactionId: ${response.interactionId}`,
         LogContext.SSI_WALLET_MANAGER

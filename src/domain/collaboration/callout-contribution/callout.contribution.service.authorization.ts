@@ -163,7 +163,7 @@ export class CalloutContributionAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     if (contribution.createdBy) {
-      const manageContributionPolicy =
+      const manageContributionSettings =
         this.authorizationPolicyService.createCredentialRule(
           [
             AuthorizationPrivilege.CREATE,
@@ -178,7 +178,7 @@ export class CalloutContributionAuthorizationService {
           ],
           CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY
         );
-      newRules.push(manageContributionPolicy);
+      newRules.push(manageContributionSettings);
 
       const manageContributionDeletePolicy =
         this.authorizationPolicyService.createCredentialRule(

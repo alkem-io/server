@@ -1,7 +1,6 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICalloutFraming } from './callout.framing.interface';
-import { Profiling } from '@common/decorators';
 import { Loader } from '@core/dataloader/decorators';
 import { CalloutFraming } from './callout.framing.entity';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
@@ -17,7 +16,6 @@ export class CalloutFramingResolverFields {
     nullable: false,
     description: 'The Profile for framing the associated Callout.',
   })
-  @Profiling.api
   async profile(
     @Parent() calloutFraming: ICalloutFraming,
     @Loader(ProfileLoaderCreator, { parentClassRef: CalloutFraming })
@@ -30,7 +28,6 @@ export class CalloutFramingResolverFields {
     nullable: true,
     description: 'The Whiteboard for framing the associated Callout.',
   })
-  @Profiling.api
   whiteboard(
     @Parent() calloutFraming: ICalloutFraming
   ): Promise<IWhiteboard | null> {
