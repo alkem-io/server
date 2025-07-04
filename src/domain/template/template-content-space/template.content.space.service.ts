@@ -49,6 +49,7 @@ export class TemplateContentSpaceService {
     templateContentSpace.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATE_CONTENT_SPACE
     );
+    templateContentSpace.subspaces = [];
 
     templateContentSpace.about = await this.spaceAboutService.createSpaceAbout(
       templateContentSpaceData.about,
@@ -62,6 +63,15 @@ export class TemplateContentSpaceService {
         storageAggregator,
         agentInfo
       );
+
+    for (const subspace of templateContentSpaceData.subspaces) {
+      const subspaceContent = await this.createTemplateContentSpace(
+        subspace,
+        storageAggregator,
+        agentInfo
+      );
+      templateContentSpace.subspaces.push(subspaceContent);
+    }
 
     return await this.save(templateContentSpace);
   }
@@ -106,6 +116,13 @@ export class TemplateContentSpaceService {
     await this.authorizationPolicyService.delete(
       templateContentSpace.authorization
     );
+
+    if (templateContentSpace.subspaces) {
+      for (const subspace of templateContentSpace.subspaces) {
+        // Recursively delete subspaces
+        await this.deleteTemplateContentSpaceOrFail(subspace.id);
+      }
+    }
 
     const result = await this.templateContentSpaceRepository.remove(
       templateContentSpace as TemplateContentSpace
@@ -239,5 +256,23 @@ export class TemplateContentSpaceService {
         LogContext.TEMPLATES
       );
     return about;
+  }
+
+  public async getSubspaces(
+    templateContentSpaceID: string
+  ): Promise<ITemplateContentSpace[]> {
+    const templateContentSpace = await this.getTemplateContentSpaceOrFail(
+      templateContentSpaceID,
+      {
+        relations: { subspaces: true },
+      }
+    );
+    const subspaces = templateContentSpace.subspaces;
+    if (!subspaces)
+      throw new RelationshipNotFoundException(
+        `Unable to load subspaces for TemplateContentSpace ${templateContentSpaceID} `,
+        LogContext.TEMPLATES
+      );
+    return subspaces;
   }
 }

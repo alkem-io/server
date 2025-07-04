@@ -32,13 +32,15 @@ export class TemplateContentSpaceAuthorizationService {
             about: {
               profile: true,
             },
+            subspaces: true,
           },
         }
       );
     if (
       !templateContentSpace.authorization ||
       !templateContentSpace.collaboration ||
-      !templateContentSpace.about
+      !templateContentSpace.about ||
+      !templateContentSpace.subspaces
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load TemplateContentSpace with entities at start of auth reset: ${templateContentSpace.id} `,
@@ -71,6 +73,15 @@ export class TemplateContentSpaceAuthorizationService {
         templateContentSpace.authorization
       );
     updatedAuthorizations.push(...aboutAuths);
+
+    for (const subspace of templateContentSpace.subspaces) {
+      // Cascade to subspaces
+      const subspaceAuths = await this.applyAuthorizationPolicy(
+        subspace.id,
+        templateContentSpace.authorization
+      );
+      updatedAuthorizations.push(...subspaceAuths);
+    }
 
     return updatedAuthorizations;
   }
