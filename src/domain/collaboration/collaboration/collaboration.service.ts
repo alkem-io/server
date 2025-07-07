@@ -17,7 +17,6 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CalloutType } from '@common/enums/callout.type';
 import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
@@ -343,7 +342,9 @@ export class CollaborationService {
       SELECT COUNT(*) as postsCount FROM \`callouts_set\`
       RIGHT JOIN \`callout\` ON \`callout\`.\`calloutsSetId\` = \`callouts_set\`.\`id\`
       RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}' AND \`callout\`.\`type\` = '${CalloutType.POST_COLLECTION}';
+      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}'
+        AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
+        AND NOT(ISNULL(\`callout_contribution\`.\`postId\`));
       `
     );
 
@@ -360,7 +361,7 @@ export class CollaborationService {
       RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
       WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}'
         AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
-        AND \`callout\`.\`type\` = '${CalloutType.WHITEBOARD_COLLECTION}';
+        AND NOT(ISNULL(\`callout_contribution\`.\`whiteboardId\`));
       `
     );
 

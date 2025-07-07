@@ -68,9 +68,8 @@ export class TimelineResolverService {
   public async getSpaceIdForCalendar(
     calendarID: string
   ): Promise<string | never> {
-    const collaborationID = await this.getCollaborationIdForCalendar(
-      calendarID
-    );
+    const collaborationID =
+      await this.getCollaborationIdForCalendar(calendarID);
 
     const space = await this.entityManager.findOne(Space, {
       where: [

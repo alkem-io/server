@@ -122,7 +122,6 @@ export class KnowledgeBaseService {
         LogContext.COLLABORATION
       );
     }
-    knowledgeBase.profile;
     await this.profileService.deleteProfile(knowledgeBase.profile.id);
 
     await this.calloutsSetService.deleteCalloutsSet(
