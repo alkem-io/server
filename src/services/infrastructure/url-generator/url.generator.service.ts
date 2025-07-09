@@ -12,7 +12,7 @@ import { EntityManager } from 'typeorm';
 import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceLevel } from '@common/enums/space.level';
+import { MAX_SPACE_DEPTH, SpaceLevel } from '@common/enums/space.level';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -33,6 +33,7 @@ import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -611,22 +612,54 @@ export class UrlGeneratorService {
       return this.generateUrlForSpaceAllLevels(space, spacePath);
     }
     // Check if part of a TemplateContentSpace
-    const templateContentSpace = await this.entityManager.findOne(Template, {
-      where: {
-        contentSpace: {
+    let templateContentSpace = await this.entityManager.findOne(
+      TemplateContentSpace,
+      {
+        where: {
           about: {
             id: spaceAboutID,
           },
+        },
+        relations: {
+          parentSpace: true,
+        },
+      }
+    );
+    // It's part of a template content space but we need to find the root space of that template:
+    let maxDepth = MAX_SPACE_DEPTH;
+    while (templateContentSpace && templateContentSpace.parentSpace) {
+      templateContentSpace = await this.entityManager.findOne(
+        TemplateContentSpace,
+        {
+          where: {
+            id: templateContentSpace.parentSpace.id,
+          },
+          relations: {
+            parentSpace: true,
+          },
+        }
+      );
+      maxDepth--;
+      if (maxDepth <= 0) {
+        throw new EntityNotFoundException(
+          `Unable to find root TemplateContentSpace for about with ID: ${spaceAboutID} too deep in hierarchy`,
+          LogContext.URL_GENERATOR
+        );
+      }
+    }
+
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        contentSpace: {
+          id: templateContentSpace?.id,
         },
       },
       relations: {
         profile: true,
       },
     });
-    if (templateContentSpace && templateContentSpace.profile) {
-      return await this.getTemplateUrlPathOrFail(
-        templateContentSpace.profile.id
-      );
+    if (template && template.profile) {
+      return await this.getTemplateUrlPathOrFail(template.profile.id);
     }
 
     throw new EntityNotFoundException(

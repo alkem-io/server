@@ -9,3 +9,5 @@ export enum SpaceLevel {
 registerEnumType(SpaceLevel, {
   name: 'SpaceLevel',
 });
+
+export const MAX_SPACE_DEPTH = 2;
