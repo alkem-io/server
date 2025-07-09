@@ -16,14 +16,10 @@ import { INestApplication } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
 import { renderGraphiQL } from 'graphql-helix';
 import { Request, Response } from 'express';
+import start from './hocuspocus';
 // this is used - it needs to start before the app
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { apmAgent } from './apm';
-import {
-  onAuthenticatePayload,
-  onConnectPayload,
-  Server,
-} from '@hocuspocus/server';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
@@ -92,24 +88,6 @@ const bootstrap = async () => {
   });
 
   await app.listen(port);
-  // houcuspocus server
-  const server = new Server({
-    address: 'localhost',
-    port: 1234,
-
-    onConnect(data: onConnectPayload): Promise<any> {
-      console.log('🔮');
-      return Promise.resolve();
-    },
-
-    onAuthenticate(data: onAuthenticatePayload): Promise<any> {
-      return Promise.resolve();
-    },
-  });
-
-  await server
-    .listen()
-    .catch(() => console.error('Failed to start Hocuspocus server'));
 
   const connectionOptions = configService.get(
     'microservices.rabbitmq.connection',
@@ -123,6 +101,8 @@ const bootstrap = async () => {
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
   await app.startAllMicroservices();
+
+  start();
 };
 
 const connectMicroservice = (
