@@ -234,7 +234,8 @@ export class SpaceService {
     // If template has child spaces, then create child spaces here
     if (
       templateContentSpace.subspaces &&
-      templateContentSpace.subspaces.length > 0
+      templateContentSpace.subspaces.length > 0 &&
+      space.level !== SpaceLevel.L2 // Do not go beyond L2 for now
     ) {
       for (const subspaceContent of templateContentSpace.subspaces) {
         const subspaceData: CreateSubspaceInput = {
