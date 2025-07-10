@@ -3,7 +3,7 @@ import { MaxLength, ValidateNested } from 'class-validator';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Type } from 'class-transformer';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
-import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto/innovation.flow.state.dto.update';
 
 @InputType()
 export class UpdateInnovationFlowSingleStateInput {

@@ -3,8 +3,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
-import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
+import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
+import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 
 @Injectable()

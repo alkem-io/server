@@ -23,8 +23,8 @@ import { InnovationFlowStatesService } from '../innovation-flow-states/innovatio
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CreateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.create';
-import { UpdateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
+import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
