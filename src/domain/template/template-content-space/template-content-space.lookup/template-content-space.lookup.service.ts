@@ -25,8 +25,9 @@ export class TemplateContentSpaceLookupService {
     );
     if (!space)
       throw new EntityNotFoundException(
-        `Unable to find TemplateContentSpace with ID: ${templateContentSpaceID}`,
-        LogContext.ACCOUNT
+        'Unable to find TemplateContentSpace',
+        LogContext.TEMPLATES,
+        { templateContentSpaceID }
       );
     return space;
   }

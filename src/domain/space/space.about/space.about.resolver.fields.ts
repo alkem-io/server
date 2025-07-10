@@ -82,8 +82,9 @@ export class SpaceAboutResolverFields {
       }
     }
     throw new EntityNotFoundException(
-      `Unable to find Space or TemplateContentSpace for the about with id: ${spaceAboutId}`,
-      LogContext.SPACES
+      'Unable to find Space or TemplateContentSpace for the about',
+      LogContext.SPACES,
+      { spaceAboutId }
     );
   }
 

@@ -634,8 +634,9 @@ export class UrlGeneratorService {
       templateContentSpace?.id;
     if (!rootTemplateContentSpaceId) {
       throw new EntityNotFoundException(
-        `Unable to find url for about with ID: ${spaceAboutID}`,
-        LogContext.URL_GENERATOR
+        'Unable to find url for about',
+        LogContext.URL_GENERATOR,
+        { spaceAboutID }
       );
     }
 
