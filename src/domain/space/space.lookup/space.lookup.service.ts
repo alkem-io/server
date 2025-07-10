@@ -106,7 +106,7 @@ export class SpaceLookupService {
     return subspace;
   }
 
-  private async getSpaceForSpaceAbout(
+  public async getSpaceForSpaceAbout(
     spaceAboutID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
