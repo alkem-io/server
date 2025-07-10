@@ -19,8 +19,6 @@ import { VisualType } from '@common/enums/visual.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
-import { InnovationFlowStatesService } from '../innovation-flow-states/innovation.flow.state.service';
-import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
@@ -28,6 +26,8 @@ import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/inn
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
+import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 
 @Injectable()
 export class InnovationFlowService {
@@ -35,7 +35,7 @@ export class InnovationFlowService {
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     private tagsetTemplateService: TagsetTemplateService,
-    private innovationFlowStatesService: InnovationFlowStatesService,
+    private innovationFlowStateService: InnovationFlowStateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -83,7 +83,7 @@ export class InnovationFlowService {
     );
 
     innovationFlow.states =
-      this.innovationFlowStatesService.convertInputsToStates(
+      this.innovationFlowStateService.convertInputsToStates(
         innovationFlowData.states
       );
     innovationFlow.currentState = innovationFlow.states[0];
@@ -111,13 +111,13 @@ export class InnovationFlowService {
       }
     );
 
-    this.innovationFlowStatesService.validateDefinition(
+    this.innovationFlowStateService.validateDefinition(
       innovationFlowData.states,
       innovationFlow.settings
     );
     innovationFlow = await this.updateInnovationFlowStates(
       innovationFlow,
-      this.innovationFlowStatesService.convertInputsToStates(
+      this.innovationFlowStateService.convertInputsToStates(
         innovationFlowData.states
       ),
       isTemplate
@@ -221,7 +221,7 @@ export class InnovationFlowService {
     );
     if (!newSelectedState) {
       throw new ValidationException(
-        `Unable to find selected state '${innovationFlowSelectedStateData.selectedState}' in existing set of state names: ${this.innovationFlowStatesService.getStateNames(
+        `Unable to find selected state '${innovationFlowSelectedStateData.selectedState}' in existing set of state names: ${this.innovationFlowStateService.getStateNames(
           innovationFlow.states
         )}`,
         LogContext.INNOVATION_FLOW
@@ -256,7 +256,7 @@ export class InnovationFlowService {
       throw new ValidationException(
         `Unable to find '${
           updateData.stateDisplayName
-        }' in existing set of state names: ${this.innovationFlowStatesService.getStateNames(
+        }' in existing set of state names: ${this.innovationFlowStateService.getStateNames(
           innovationFlow.states
         )}`,
         LogContext.INNOVATION_FLOW
@@ -356,6 +356,6 @@ export class InnovationFlowService {
   public validateInnovationFlowDefinition(
     states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[]
   ) {
-    this.innovationFlowStatesService.validateDefinition(states);
+    this.innovationFlowStateService.validateDefinition(states);
   }
 }
