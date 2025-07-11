@@ -19,7 +19,6 @@ import { VisualType } from '@common/enums/visual.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
-import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
@@ -28,6 +27,7 @@ import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-templ
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
+import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 
 @Injectable()
 export class InnovationFlowService {
@@ -70,6 +70,11 @@ export class InnovationFlowService {
       innovationFlow.flowStatesTagsetTemplate = flowTagsetTemplate;
     }
 
+    this.validateInnovationFlowDefinition(
+      innovationFlowData.states,
+      innovationFlowData.settings
+    );
+
     innovationFlow.profile = await this.profileService.createProfile(
       innovationFlowData.profile,
       ProfileType.INNOVATION_FLOW,
@@ -82,10 +87,15 @@ export class InnovationFlowService {
       [VisualType.CARD]
     );
 
-    innovationFlow.states =
-      this.innovationFlowStateService.convertInputsToStates(
-        innovationFlowData.states
-      );
+    innovationFlow.states = [];
+    for (const stateData of innovationFlowData.states) {
+      const state =
+        await this.innovationFlowStateService.createInnovationFlowState(
+          stateData
+        );
+      innovationFlow.states.push(state);
+    }
+
     innovationFlow.currentState = innovationFlow.states[0];
 
     return innovationFlow;
@@ -96,10 +106,9 @@ export class InnovationFlowService {
   }
 
   async updateInnovationFlow(
-    innovationFlowData: UpdateInnovationFlowEntityInput,
-    isTemplate: boolean = false
+    innovationFlowData: UpdateInnovationFlowEntityInput
   ): Promise<IInnovationFlow> {
-    let innovationFlow = await this.getInnovationFlowOrFail(
+    const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
       {
         relations: {
@@ -109,18 +118,6 @@ export class InnovationFlowService {
           },
         },
       }
-    );
-
-    this.innovationFlowStateService.validateDefinition(
-      innovationFlowData.states,
-      innovationFlow.settings
-    );
-    innovationFlow = await this.updateInnovationFlowStates(
-      innovationFlow,
-      this.innovationFlowStateService.convertInputsToStates(
-        innovationFlowData.states
-      ),
-      isTemplate
     );
 
     if (innovationFlowData.profileData) {
@@ -207,6 +204,50 @@ export class InnovationFlowService {
     );
   }
 
+  public validateInnovationFlowDefinition(
+    states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[],
+    settings?: IInnovationFlowSettings
+  ) {
+    if (states.length === 0) {
+      throw new ValidationException(
+        `At least one state must be defined: ${states}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    if (settings) {
+      if (states.length > settings.maximumNumberOfStates) {
+        throw new ValidationException(
+          `Innovation Flow can have a maximum of ${settings.maximumNumberOfStates} states; provided: ${states}`,
+          LogContext.INNOVATION_FLOW
+        );
+      }
+
+      if (states.length < settings.minimumNumberOfStates) {
+        throw new ValidationException(
+          `Innovation Flow must have a minimum of ${settings.minimumNumberOfStates} states; provided: ${states}`,
+          LogContext.INNOVATION_FLOW
+        );
+      }
+    }
+    const stateNames = states.map(state => state.displayName);
+    const uniqueStateNames = new Set(stateNames);
+    if (uniqueStateNames.size !== stateNames.length) {
+      throw new ValidationException(
+        `State names must be unique: ${stateNames}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    // Avoid commas in state names, because they are used to separate states in the database
+    // This validation is also performed on the client: domain/collaboration/InnovationFlow/InnovationFlowDragNDropEditor/InnovationFlowStateForm.tsx
+    // Keep them in sync consistently
+    if (stateNames.some(name => name.includes(','))) {
+      throw new ValidationException(
+        `Invalid characters found on flow state: ${stateNames}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+  }
+
   async updateSelectedState(
     innovationFlowSelectedStateData: UpdateInnovationFlowSelectedStateInput
   ): Promise<IInnovationFlow> {
@@ -230,51 +271,6 @@ export class InnovationFlowService {
     innovationFlow.currentState = newSelectedState;
 
     return await this.save(innovationFlow);
-  }
-
-  async updateSingleState(
-    updateData: UpdateInnovationFlowSingleStateInput,
-    isTemplate: boolean = false
-  ): Promise<IInnovationFlow> {
-    const innovationFlow = await this.getInnovationFlowOrFail(
-      updateData.innovationFlowID,
-      {
-        relations: {
-          profile: true,
-          flowStatesTagsetTemplate: {
-            tagsets: true,
-          },
-        },
-      }
-    );
-
-    // First update the states definition
-    const stateToUpdate = innovationFlow.states.find(
-      s => s.displayName === updateData.stateDisplayName
-    );
-    if (!stateToUpdate) {
-      throw new ValidationException(
-        `Unable to find '${
-          updateData.stateDisplayName
-        }' in existing set of state names: ${this.innovationFlowStateService.getStateNames(
-          innovationFlow.states
-        )}`,
-        LogContext.INNOVATION_FLOW
-      );
-    }
-    const newStates: IInnovationFlowState[] = [];
-    for (const state of innovationFlow.states) {
-      if (state.displayName === updateData.stateDisplayName) {
-        state.displayName = updateData.stateUpdatedData.displayName;
-        state.description = updateData.stateUpdatedData.description || '';
-      }
-      newStates.push(state);
-    }
-    return await this.updateInnovationFlowStates(
-      innovationFlow,
-      newStates,
-      isTemplate
-    );
   }
 
   async deleteInnovationFlow(
@@ -351,11 +347,5 @@ export class InnovationFlowService {
       );
 
     return innovationFlow.flowStatesTagsetTemplate;
-  }
-
-  public validateInnovationFlowDefinition(
-    states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[]
-  ) {
-    this.innovationFlowStateService.validateDefinition(states);
   }
 }

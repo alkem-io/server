@@ -12,7 +12,6 @@ import { SpaceService } from '@domain/space/space/space.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceLevel } from '@common/enums/space.level';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 import { PlatformService } from '@platform/platform/platform.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -27,6 +26,7 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
 
 export class ConversionService {
   constructor(

@@ -3,8 +3,8 @@ import { IInnovationFlow } from './innovation.flow.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
-import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 import { TagsetTemplate } from '@domain/common/tagset-template/tagset.template.entity';
+import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 
 @Entity()
 export class InnovationFlow

@@ -16,4 +16,7 @@ export class InnovationFlowState
 
   @Column('json', { nullable: false })
   settings!: IInnovationFlowStateSettings;
+
+  @Column('int', { nullable: false })
+  sortOrder!: number;
 }

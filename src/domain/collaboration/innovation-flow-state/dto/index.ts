@@ -1,2 +1,2 @@
-export * from './innovation.flow.dto.update';
-export * from './innovation.flow.dto.create';
+export * from './innovation.flow.state.dto.update';
+export * from './innovation.flow.state.dto.create';

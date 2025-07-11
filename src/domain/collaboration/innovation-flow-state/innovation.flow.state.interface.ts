@@ -22,4 +22,10 @@ export abstract class IInnovationFlowState extends IAuthorizable {
     description: 'The Settings associated with this InnovationFlowState.',
   })
   settings!: IInnovationFlowStateSettings;
+
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The sorting order for this State.',
+  })
+  sortOrder!: number;
 }
