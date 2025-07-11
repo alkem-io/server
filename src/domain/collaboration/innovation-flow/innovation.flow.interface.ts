@@ -9,10 +9,6 @@ import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.s
 export abstract class IInnovationFlow extends IAuthorizable {
   profile!: IProfile;
 
-  @Field(() => [IInnovationFlowState], {
-    nullable: false,
-    description: 'The set of States in use in this Flow.',
-  })
   states!: IInnovationFlowState[];
 
   @Field(() => IInnovationFlowState, {

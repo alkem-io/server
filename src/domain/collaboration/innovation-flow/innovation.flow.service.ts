@@ -10,7 +10,6 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
-import { UpdateInnovationFlowEntityInput } from './dto/innovation.flow.dto.update.entity';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -18,7 +17,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
+import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.state.select';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
@@ -28,6 +27,7 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
+import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
 
 @Injectable()
 export class InnovationFlowService {
@@ -106,7 +106,7 @@ export class InnovationFlowService {
   }
 
   async updateInnovationFlow(
-    innovationFlowData: UpdateInnovationFlowEntityInput
+    innovationFlowData: UpdateInnovationFlowInput
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
@@ -204,6 +204,31 @@ export class InnovationFlowService {
     );
   }
 
+  public async createStateOnInnovationFlow(
+    innovationFlow: IInnovationFlow,
+    stateData: CreateInnovationFlowStateInput
+  ): Promise<IInnovationFlowState> {
+    const maximumNumberOfStates = innovationFlow.settings.maximumNumberOfStates;
+    if (!innovationFlow.states) {
+      throw new RelationshipNotFoundException(
+        `Unable to find states on InnovationFlow: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    if (innovationFlow.states.length >= maximumNumberOfStates) {
+      throw new ValidationException(
+        `Innovation Flow can have a maximum of ${maximumNumberOfStates} states; provided: ${innovationFlow.states.length}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    const state =
+      await this.innovationFlowStateService.createInnovationFlowState(
+        stateData
+      );
+    state.innovationFlow = innovationFlow;
+    return await this.innovationFlowStateService.save(state);
+  }
+
   public validateInnovationFlowDefinition(
     states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[],
     settings?: IInnovationFlowSettings
@@ -257,17 +282,23 @@ export class InnovationFlowService {
         relations: { profile: true, flowStatesTagsetTemplate: true },
       }
     );
-    const newSelectedState = innovationFlow.states.find(
-      s => s.displayName === innovationFlowSelectedStateData.selectedState
-    );
-    if (!newSelectedState) {
+    const newSelectedState =
+      await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+        innovationFlowSelectedStateData.selectedStateID
+      );
+
+    // Check it is part of the current flow states!
+    if (
+      !innovationFlow.states.some(state => state.id === newSelectedState.id)
+    ) {
       throw new ValidationException(
-        `Unable to find selected state '${innovationFlowSelectedStateData.selectedState}' in existing set of state names: ${this.innovationFlowStateService.getStateNames(
-          innovationFlow.states
+        `Selected state '${newSelectedState.displayName}' is not part of the current flow states: ${innovationFlow.states.map(
+          state => state.displayName
         )}`,
         LogContext.INNOVATION_FLOW
       );
     }
+
     innovationFlow.currentState = newSelectedState;
 
     return await this.save(innovationFlow);

@@ -5,6 +5,7 @@ import { InnovationFlowStateService } from './innovation.flow.state.service';
 import { InnovationFlowStateResolverMutations } from './innovation.flow.state.resolver.mutations';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { InnovationFlowStateAuthorizationService } from './innovation.flow.state.service.authorization';
 
 @Module({
   imports: [
@@ -12,7 +13,14 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
     AuthorizationPolicyModule,
     TypeOrmModule.forFeature([InnovationFlowState]),
   ],
-  providers: [InnovationFlowStateService, InnovationFlowStateResolverMutations],
-  exports: [InnovationFlowStateService],
+  providers: [
+    InnovationFlowStateService,
+    InnovationFlowStateAuthorizationService,
+    InnovationFlowStateResolverMutations,
+  ],
+  exports: [
+    InnovationFlowStateService,
+    InnovationFlowStateAuthorizationService,
+  ],
 })
 export class InnovationFlowStateModule {}

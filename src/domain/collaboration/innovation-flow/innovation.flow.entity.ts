@@ -1,10 +1,11 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 import { TagsetTemplate } from '@domain/common/tagset-template/tagset.template.entity';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
+import { InnovationFlowState } from '../innovation-flow-state/innovation.flow.state.entity';
 
 @Entity()
 export class InnovationFlow
@@ -19,8 +20,11 @@ export class InnovationFlow
   @JoinColumn()
   profile!: Profile;
 
-  @Column('json', { nullable: false })
-  states!: IInnovationFlowState[];
+  @OneToMany(() => InnovationFlowState, state => state.innovationFlow, {
+    eager: false,
+    cascade: true,
+  })
+  states!: InnovationFlowState[];
 
   @Column('json', { nullable: false })
   currentState!: IInnovationFlowState;
