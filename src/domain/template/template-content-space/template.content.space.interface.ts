@@ -11,6 +11,9 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 export class ITemplateContentSpace extends IAuthorizable {
   rowId!: number;
 
+  subspaces?: ITemplateContentSpace[];
+  parentSpace?: ITemplateContentSpace;
+
   about!: ISpaceAbout;
 
   @Field(() => SpaceLevel, {

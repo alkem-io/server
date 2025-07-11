@@ -26,12 +26,14 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
+import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 
 @Module({
   imports: [
     AiServerModule,
     AiPersonaServiceModule,
     AgentModule,
+    AuthenticationAgentInfoModule,
     AuthorizationPolicyModule,
     LicenseModule,
     ContributorModule,

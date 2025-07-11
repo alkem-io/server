@@ -12,4 +12,10 @@ export class CreateTemplateFromSpaceOnTemplatesSetInput extends CreateTemplateBa
     description: 'The ID of the Space to use as the content for the Template.',
   })
   spaceID!: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Whether to reproduce the hierarchy or just the space.',
+  })
+  recursive?: boolean;
 }
