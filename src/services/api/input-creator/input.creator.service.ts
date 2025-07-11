@@ -38,6 +38,8 @@ import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
 
 @Injectable()
 export class InputCreatorService {
@@ -292,13 +294,15 @@ export class InputCreatorService {
           },
           innovationFlow: {
             profile: true,
+            states: true,
           },
         },
       });
     if (
       !collaboration.calloutsSet ||
       !collaboration.calloutsSet.callouts ||
-      !collaboration.innovationFlow
+      !collaboration.innovationFlow ||
+      !collaboration.innovationFlow.states
     ) {
       throw new RelationshipNotFoundException(
         `Collaboration ${collaboration.id} is missing a relation`,
@@ -341,8 +345,25 @@ export class InputCreatorService {
         displayName: innovationFlow.profile.displayName,
         description: innovationFlow.profile.description,
       },
-      states: innovationFlow.states,
+      states: this.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+        innovationFlow.states
+      ),
     };
+    return result;
+  }
+
+  public buildCreateInnovationFlowStateInputFromInnovationFlowState(
+    states: IInnovationFlowState[]
+  ): CreateInnovationFlowStateInput[] {
+    const result: CreateInnovationFlowStateInput[] = [];
+    for (const state of states) {
+      result.push({
+        displayName: state.displayName,
+        description: state.description,
+        settings: state.settings,
+        sortOrder: state.sortOrder,
+      });
+    }
     return result;
   }
 

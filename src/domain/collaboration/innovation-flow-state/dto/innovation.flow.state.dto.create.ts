@@ -17,10 +17,17 @@ export class CreateInnovationFlowStateInput {
 
   @Field(() => Markdown, {
     nullable: true,
-    description: 'The explation text to clarify the State.',
+    description: 'The explanation text to clarify the State.',
   })
   @MaxLength(LONG_TEXT_LENGTH)
   description?: string;
+
+  @Field(() => Number, {
+    nullable: true,
+    description:
+      'The sort order for the State; if not specified, it will be set to the next highest order.',
+  })
+  sortOrder?: number;
 
   @Field(() => CreateInnovationFlowStateSettingsInput, { nullable: true })
   @ValidateNested()

@@ -372,7 +372,10 @@ export class TemplateService {
     }
 
     // TODO: expand this to also take over the settings + the about
-    const newStates = space.collaboration.innovationFlow.states;
+    const newStates =
+      this.inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+        space.collaboration.innovationFlow.states
+      );
     templateContentSpace.collaboration.innovationFlow =
       await this.innovationFlowService.updateInnovationFlowStates(
         templateContentSpace.collaboration.innovationFlow,

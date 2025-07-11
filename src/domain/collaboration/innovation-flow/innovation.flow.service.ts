@@ -135,18 +135,35 @@ export class InnovationFlowService {
 
   public async updateInnovationFlowStates(
     innovationFlow: IInnovationFlow,
-    newStates: IInnovationFlowState[],
+    newStates: CreateInnovationFlowStateInput[],
     isTemplate: boolean = false
   ) {
-    // Update the innovation flow entity
-    const currentStateStillValid = newStates.some(
-      state => state.displayName === innovationFlow.currentState.displayName
-    );
-    if (!currentStateStillValid) {
-      // if the current state is not in the new states, set it to the first one
-      innovationFlow.currentState = newStates[0];
+    const selectedStateName = innovationFlow.currentState.displayName;
+    // delete the existing states
+    for (const state of innovationFlow.states) {
+      await this.innovationFlowStateService.delete(state);
     }
-    innovationFlow.states = newStates;
+    innovationFlow.states = [];
+    // create the new states
+    for (const stateData of newStates) {
+      const state =
+        await this.innovationFlowStateService.createInnovationFlowState(
+          stateData
+        );
+      state.innovationFlow = innovationFlow;
+      innovationFlow.states.push(state);
+    }
+    // Update the innovation flow entity
+    const currentStateStillValid = innovationFlow.states.find(
+      state => state.displayName === selectedStateName
+    );
+    if (currentStateStillValid) {
+      innovationFlow.currentState = currentStateStillValid;
+    } else {
+      // If the current state is not valid, set it to the first state
+      innovationFlow.currentState = innovationFlow.states[0];
+    }
+
     innovationFlow = await this.save(innovationFlow);
 
     if (!isTemplate) {
@@ -224,6 +241,14 @@ export class InnovationFlowService {
         LogContext.INNOVATION_FLOW
       );
     }
+    // If order is not specified, set it to the next highest
+    if (!stateData.sortOrder) {
+      stateData.sortOrder =
+        innovationFlow.states.length > 0
+          ? Math.max(...innovationFlow.states.map(state => state.sortOrder)) + 1
+          : 1;
+    }
+
     const state =
       await this.innovationFlowStateService.createInnovationFlowState(
         stateData
