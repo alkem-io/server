@@ -13,10 +13,13 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
                                                                           \`description\` text NULL,
                                                                           \`settings\` json NOT NULL,
                                                                           \`sortOrder\` int NOT NULL,
-                                                                          \`currentStateID\` char(36) NULL,
                                                                           \`authorizationId\` char(36) NULL,
                                                                           \`innovationFlowId\` char(36) NULL,
                                                                           UNIQUE INDEX \`REL_83d9f1d85d3ca51828168ea336\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
+
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD \`currentStateID\` char(36) NULL`
+    );
 
     // For all innovation flows, we need to create a new innovation_flow_state instance using the existing states
     const innovationFlows: {
