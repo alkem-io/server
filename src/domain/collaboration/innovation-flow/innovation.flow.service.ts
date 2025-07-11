@@ -398,6 +398,26 @@ export class InnovationFlowService {
     return innovationFlow.profile;
   }
 
+  public async getStates(
+    innovationFlowID: string
+  ): Promise<IInnovationFlowState[]> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowID,
+      {
+        relations: { states: true },
+      }
+    );
+    if (!innovationFlow.states) {
+      throw new EntityNotFoundException(
+        `InnovationFlow States not initialised: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+
+    // sort the states by sortOrder
+    return innovationFlow.states.sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
   public async getFlowTagsetTemplate(
     innovationFlowInput: IInnovationFlow,
     relations?: FindOptionsRelations<IInnovationFlow>
