@@ -13,6 +13,8 @@ import { CreateStateOnInnovationFlowInput } from './dto/innovation.flow.dto.stat
 import { InnovationFlowStateAuthorizationService } from '../innovation-flow-state/innovation.flow.state.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
+import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
+import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
 
 @InstrumentResolver()
 @Resolver()
@@ -66,6 +68,36 @@ export class InnovationFlowResolverMutations {
     );
   }
 
+  @Mutation(() => IInnovationFlowState, {
+    description: 'Delete a  State on the InnovationFlow.',
+  })
+  async deleteStateOnInnovationFlow(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('stateDate') stateData: DeleteStateOnInnovationFlowInput
+  ): Promise<IInnovationFlowState> {
+    const innovationFlow =
+      await this.innovationFlowService.getInnovationFlowOrFail(
+        stateData.innovationFlowID,
+        {
+          relations: {
+            states: true,
+          },
+        }
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationFlow.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete state on InnovationFlow: ${innovationFlow.id}`
+    );
+
+    return await this.innovationFlowService.deleteStateOnInnovationFlow(
+      innovationFlow,
+      stateData
+    );
+  }
+
   @Mutation(() => IInnovationFlow, {
     description: 'Updates the InnovationFlow.',
   })
@@ -111,6 +143,33 @@ export class InnovationFlowResolverMutations {
 
     return await this.innovationFlowService.updateSelectedState(
       innovationFlowStateData
+    );
+  }
+
+  @Mutation(() => [IInnovationFlowState], {
+    description:
+      'Update the sortOrder field of the supplied InnovationFlowStates to increase as per the order that they are provided in.',
+  })
+  async updateInnovationFlowStatesSortOrder(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('sortOrderData')
+    sortOrderData: UpdateInnovationFlowStatesSortOrderInput
+  ): Promise<IInnovationFlowState[]> {
+    const innovationFlow =
+      await this.innovationFlowService.getInnovationFlowOrFail(
+        sortOrderData.innovationFlowID
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationFlow.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update states sort order on innovation flow: ${innovationFlow.id}`
+    );
+
+    return this.innovationFlowService.updateStatesSortOrder(
+      innovationFlow.id,
+      sortOrderData
     );
   }
 }

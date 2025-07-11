@@ -28,6 +28,9 @@ import { InnovationFlowStateService } from '../innovation-flow-state/innovation.
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
+import { keyBy } from 'lodash';
+import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
 
 @Injectable()
 export class InnovationFlowService {
@@ -229,6 +232,30 @@ export class InnovationFlowService {
     return await this.innovationFlowStateService.save(state);
   }
 
+  public async deleteStateOnInnovationFlow(
+    innovationFlow: IInnovationFlow,
+    stateData: DeleteStateOnInnovationFlowInput
+  ): Promise<IInnovationFlowState> {
+    const minimum = innovationFlow.settings.minimumNumberOfStates;
+    if (!innovationFlow.states) {
+      throw new RelationshipNotFoundException(
+        `Unable to find states on InnovationFlow: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    if (innovationFlow.states.length <= minimum) {
+      throw new ValidationException(
+        `Innovation Flow must have a maximum of ${minimum} states; provided: ${innovationFlow.states.length}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    const state: IInnovationFlowState =
+      await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+        stateData.ID
+      );
+    return await this.innovationFlowStateService.delete(state);
+  }
+
   public validateInnovationFlowDefinition(
     states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[],
     settings?: IInnovationFlowSettings
@@ -388,5 +415,68 @@ export class InnovationFlowService {
       );
 
     return innovationFlow.flowStatesTagsetTemplate;
+  }
+
+  public async updateStatesSortOrder(
+    innovationFlowID: string,
+    sortOrderData: UpdateInnovationFlowStatesSortOrderInput
+  ): Promise<IInnovationFlowState[]> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowID,
+      {
+        relations: { states: true },
+      }
+    );
+    if (!innovationFlow.states) {
+      throw new EntityNotFoundException(
+        `InnovationFlow not initialised, no states: ${innovationFlowID}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    const allStates = innovationFlow.states;
+
+    const statesByID = {
+      ...keyBy(allStates, 'nameID'),
+      ...keyBy(allStates, 'id'),
+    };
+
+    const sortOrders = [
+      ...sortOrderData.stateIDs
+        .map(stateID => statesByID[stateID]?.sortOrder)
+        .filter(sortOrder => sortOrder !== undefined),
+    ];
+
+    const minimumSortOrder =
+      sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
+    const modifiedStates: IInnovationFlowState[] = [];
+
+    // Get the callouts specified
+    const statesInOrder: IInnovationFlowState[] = [];
+    let index = 1;
+    for (const stateID of sortOrderData.stateIDs) {
+      const state = statesByID[stateID];
+      if (!state) {
+        throw new EntityNotFoundException(
+          `State with requested ID (${stateID}) not located within current InnovationFlow: ${innovationFlowID}`,
+          LogContext.INNOVATION_FLOW
+        );
+      }
+      statesInOrder.push(state);
+      const newSortOrder = minimumSortOrder + index;
+      if (state.sortOrder !== newSortOrder) {
+        state.sortOrder = newSortOrder;
+        modifiedStates.push(state);
+      }
+      index++;
+    }
+
+    await Promise.all(
+      modifiedStates.map(
+        async state => await this.innovationFlowStateService.save(state)
+      )
+    );
+
+    return statesInOrder;
   }
 }
