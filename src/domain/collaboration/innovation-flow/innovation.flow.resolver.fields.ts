@@ -28,6 +28,20 @@ export class InnovationFlowResolverFields {
     return await this.innovationFlowService.getStates(innovationFlow.id);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('currentState', () => IInnovationFlowState, {
+    nullable: false,
+    description: 'The currently selected State in this Flow.',
+  })
+  async currentState(
+    @Parent() innovationFlow: IInnovationFlow
+  ): Promise<IInnovationFlowState> {
+    return await this.innovationFlowService.getCurrentState(
+      innovationFlow.currentStateID
+    );
+  }
+
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for this InnovationFlow.',

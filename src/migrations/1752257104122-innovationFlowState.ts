@@ -13,6 +13,7 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
                                                                           \`description\` text NULL,
                                                                           \`settings\` json NOT NULL,
                                                                           \`sortOrder\` int NOT NULL,
+                                                                          \`currentStateID\` char(36) NULL,
                                                                           \`authorizationId\` char(36) NULL,
                                                                           \`innovationFlowId\` char(36) NULL,
                                                                           UNIQUE INDEX \`REL_83d9f1d85d3ca51828168ea336\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
@@ -24,10 +25,14 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
         displayName: string;
         description: string;
       }[];
+      currentState: {
+        displayName: string;
+      };
     }[] = await queryRunner.query(`
-      SELECT id, states FROM innovation_flow
+      SELECT id, states, currentState FROM innovation_flow
     `);
     for (const flow of innovationFlows) {
+      const currentStateDisplayName = flow.currentState.displayName;
       let sortOrder = 1;
       for (const state of flow.states) {
         const authID = await this.createAuthorizationPolicy(queryRunner);
@@ -45,10 +50,20 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
           ]
         );
         sortOrder += 10;
+        // and update the current state ID if matching
+        if (state.displayName === currentStateDisplayName) {
+          await queryRunner.query(
+            `UPDATE innovation_flow SET currentStateID = ? WHERE id = ?`,
+            [stateID, flow.id]
+          );
+        }
       }
     }
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` DROP COLUMN \`states\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` DROP COLUMN \`currentState\``
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow_state\` ADD CONSTRAINT \`FK_83d9f1d85d3ca51828168ea3367\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`

@@ -99,7 +99,7 @@ export class InnovationFlowService {
       innovationFlow.states.push(state);
     }
 
-    innovationFlow.currentState = innovationFlow.states[0];
+    innovationFlow.currentStateID = innovationFlow.states[0].id;
 
     return innovationFlow;
   }
@@ -138,7 +138,10 @@ export class InnovationFlowService {
     newStates: CreateInnovationFlowStateInput[],
     isTemplate: boolean = false
   ) {
-    const selectedStateName = innovationFlow.currentState.displayName;
+    const previousCurrentState = await this.getCurrentState(
+      innovationFlow.currentStateID
+    );
+    const selectedStateName = previousCurrentState.displayName;
     // delete the existing states
     for (const state of innovationFlow.states) {
       await this.innovationFlowStateService.delete(state);
@@ -153,23 +156,22 @@ export class InnovationFlowService {
       state.innovationFlow = innovationFlow;
       innovationFlow.states.push(state);
     }
-    // Update the innovation flow entity
-    const currentStateStillValid = innovationFlow.states.find(
+
+    // Check if there is a matching name to update the current state ID
+    let currentState = innovationFlow.states.find(
       state => state.displayName === selectedStateName
     );
-    if (currentStateStillValid) {
-      innovationFlow.currentState = currentStateStillValid;
-    } else {
+    if (!currentState) {
       // If the current state is not valid, set it to the first state
-      innovationFlow.currentState = innovationFlow.states[0];
+      currentState = innovationFlow.states[0];
     }
+    innovationFlow.currentStateID = currentState.id;
 
     innovationFlow = await this.save(innovationFlow);
 
     if (!isTemplate) {
       const tagsetAllowedValues = newStates.map(state => state.displayName);
-      const tagsetDefaultSelectedValue =
-        innovationFlow.currentState.displayName;
+      const tagsetDefaultSelectedValue = currentState.displayName;
       await this.updateFlowStatesTagsetTemplate(
         innovationFlow.id,
         tagsetAllowedValues,
@@ -351,7 +353,7 @@ export class InnovationFlowService {
       );
     }
 
-    innovationFlow.currentState = newSelectedState;
+    innovationFlow.currentStateID = newSelectedState.id;
 
     return await this.save(innovationFlow);
   }
@@ -441,6 +443,14 @@ export class InnovationFlowService {
 
     // sort the states by sortOrder
     return innovationFlow.states.sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  public async getCurrentState(
+    innovationFlowStateID: string
+  ): Promise<IInnovationFlowState> {
+    return await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+      innovationFlowStateID
+    );
   }
 
   public async getFlowTagsetTemplate(

@@ -11,11 +11,7 @@ export abstract class IInnovationFlow extends IAuthorizable {
 
   states!: IInnovationFlowState[];
 
-  @Field(() => IInnovationFlowState, {
-    nullable: false,
-    description: 'The currently selected State in this Flow.',
-  })
-  currentState!: IInnovationFlowState;
+  currentStateID!: string;
 
   @Field(() => IInnovationFlowSettings, {
     nullable: false,

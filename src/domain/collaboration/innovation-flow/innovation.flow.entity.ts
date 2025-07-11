@@ -4,8 +4,8 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
 import { TagsetTemplate } from '@domain/common/tagset-template/tagset.template.entity';
-import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 import { InnovationFlowState } from '../innovation-flow-state/innovation.flow.state.entity';
+import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Entity()
 export class InnovationFlow
@@ -26,8 +26,8 @@ export class InnovationFlow
   })
   states!: InnovationFlowState[];
 
-  @Column('json', { nullable: false })
-  currentState!: IInnovationFlowState;
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  currentStateID!: string;
 
   @Column('json', { nullable: false })
   settings!: IInnovationFlowSettings;
