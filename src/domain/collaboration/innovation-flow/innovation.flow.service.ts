@@ -310,12 +310,22 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: { profile: true },
+        relations: {
+          profile: true,
+          states: true,
+        },
       }
     );
+    if (!innovationFlow.states || !innovationFlow.profile) {
+      throw new RelationshipNotFoundException(
+        `Unable to find states or profile on InnovationFlow: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
 
-    if (innovationFlow.profile) {
-      await this.profileService.deleteProfile(innovationFlow.profile.id);
+    await this.profileService.deleteProfile(innovationFlow.profile.id);
+    for (const state of innovationFlow.states) {
+      await this.innovationFlowStateService.delete(state);
     }
 
     const result = await this.innovationFlowRepository.remove(

@@ -160,7 +160,7 @@ export class CollaborationAuthorizationService {
 
     const flowAuthorizations =
       await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-        collaboration.innovationFlow,
+        collaboration.innovationFlow.id,
         collaboration.authorization
       );
     updatedAuthorizations.push(...flowAuthorizations);

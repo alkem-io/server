@@ -55,6 +55,14 @@ export class InnovationFlowStateService {
     return await this.save(innovationFlowState);
   }
 
+  async delete(state: IInnovationFlowState): Promise<IInnovationFlowState> {
+    const result = await this.innovationFlowStateRepository.remove(
+      state as InnovationFlowState
+    );
+    result.id = state.id; // Preserve the ID for consistency
+    return result;
+  }
+
   async getInnovationFlowStateOrFail(
     innovationFlowID: string,
     options?: FindOneOptions<InnovationFlowState>
