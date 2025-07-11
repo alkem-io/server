@@ -529,16 +529,7 @@ const getSubspacesMock = (
               ...getEntityMock<InnovationFlowState>(),
             },
           ],
-          currentState: {
-            displayName: 'prepare',
-            description: 'The innovation is being prepared.',
-            id: '',
-            settings: {
-              allowNewCallouts: true,
-            },
-            sortOrder: 1,
-            ...getEntityMock<InnovationFlowState>(),
-          },
+          currentStateID: '',
           profile: {
             id: '',
             displayName: `Challenge ${spaceId}.${i}`,
@@ -616,16 +607,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
             allowedValues: [],
             ...getEntityMock<TagsetTemplate>(),
           },
-          currentState: {
-            displayName: 'prepare',
-            description: 'The innovation is being prepared.',
-            id: '',
-            settings: {
-              allowNewCallouts: true,
-            },
-            sortOrder: 1,
-            ...getEntityMock<InnovationFlowState>(),
-          },
+          currentStateID: '',
           states: [
             {
               displayName: 'prepare',

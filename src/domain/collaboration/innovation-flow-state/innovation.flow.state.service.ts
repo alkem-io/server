@@ -29,6 +29,7 @@ export class InnovationFlowStateService {
     innovationFlowState.settings = {
       allowNewCallouts: true,
     };
+    innovationFlowState.sortOrder = stateData.sortOrder || 0;
     innovationFlowState.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.INNOVATION_FLOW_STATE
     );

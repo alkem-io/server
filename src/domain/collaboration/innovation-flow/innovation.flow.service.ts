@@ -91,12 +91,17 @@ export class InnovationFlowService {
     );
 
     innovationFlow.states = [];
+    let sortOrder = 0;
     for (const stateData of innovationFlowData.states) {
+      if (!stateData.sortOrder) {
+        stateData.sortOrder = sortOrder + 5;
+      }
       const state =
         await this.innovationFlowStateService.createInnovationFlowState(
           stateData
         );
       innovationFlow.states.push(state);
+      sortOrder = state.sortOrder;
     }
 
     innovationFlow.currentStateID = innovationFlow.states[0].id;
