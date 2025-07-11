@@ -19,9 +19,9 @@ export class InnovationFlowStateResolverMutations {
   @Mutation(() => IInnovationFlowState, {
     description: 'Updates the specified InnovationFlowState.',
   })
-  async updateInnovationFlowSingleState(
+  async updateInnovationFlowState(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowStateData')
+    @Args('stateData')
     innovationFlowStateData: UpdateInnovationFlowStateInput
   ): Promise<IInnovationFlowState> {
     const innovationFlowState =
@@ -32,7 +32,7 @@ export class InnovationFlowStateResolverMutations {
       agentInfo,
       innovationFlowState.authorization,
       AuthorizationPrivilege.UPDATE,
-      `updateInnovationFlow update specified state: ${innovationFlowState.id}`
+      `update InnovationFlowStat: ${innovationFlowState.id}`
     );
 
     return await this.innovationFlowStateService.update(
