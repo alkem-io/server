@@ -4,7 +4,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export abstract class IInnovationFlowStateSettings {
   @Field(() => Boolean, {
     nullable: false,
-    description: 'The flag to set.',
+    description: 'Whether new callouts can be added to this State.',
   })
-  someFlag!: boolean;
+  allowNewCallouts!: boolean;
 }

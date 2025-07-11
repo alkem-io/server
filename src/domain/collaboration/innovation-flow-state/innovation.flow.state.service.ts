@@ -27,7 +27,7 @@ export class InnovationFlowStateService {
     innovationFlowState.displayName = stateData.displayName;
     innovationFlowState.description = stateData.description || '';
     innovationFlowState.settings = {
-      someFlag: true,
+      allowNewCallouts: true,
     };
     innovationFlowState.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.INNOVATION_FLOW_STATE
@@ -49,7 +49,8 @@ export class InnovationFlowStateService {
     innovationFlowState.displayName = updateData.displayName;
     innovationFlowState.description = updateData.description || '';
     if (updateData.settings) {
-      innovationFlowState.settings.someFlag = updateData.settings.someFlag;
+      innovationFlowState.settings.allowNewCallouts =
+        updateData.settings.allowNewCallouts;
     }
 
     return await this.save(innovationFlowState);

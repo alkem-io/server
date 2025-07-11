@@ -6,5 +6,5 @@ export class UpdateInnovationFlowStateSettingsInput {
     nullable: false,
     description: 'The flag to set.',
   })
-  someFlag!: boolean;
+  allowNewCallouts!: boolean;
 }
