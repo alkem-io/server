@@ -32,7 +32,7 @@ export class InnovationFlowResolverMutations {
   })
   async createStateOnInnovationFlow(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('stateDate') stateData: CreateStateOnInnovationFlowInput
+    @Args('stateData') stateData: CreateStateOnInnovationFlowInput
   ): Promise<IInnovationFlowState> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(
@@ -73,7 +73,7 @@ export class InnovationFlowResolverMutations {
   })
   async deleteStateOnInnovationFlow(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('stateDate') stateData: DeleteStateOnInnovationFlowInput
+    @Args('stateData') stateData: DeleteStateOnInnovationFlowInput
   ): Promise<IInnovationFlowState> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(

@@ -44,7 +44,7 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
             flow.id,
           ]
         );
-        sortOrder++;
+        sortOrder += 10;
       }
     }
     await queryRunner.query(

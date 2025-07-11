@@ -498,7 +498,7 @@ export class InnovationFlowService {
 
     // Get the callouts specified
     const statesInOrder: IInnovationFlowState[] = [];
-    let index = 1;
+    let newSortOrder = minimumSortOrder + 10;
     for (const stateID of sortOrderData.stateIDs) {
       const state = statesByID[stateID];
       if (!state) {
@@ -508,12 +508,10 @@ export class InnovationFlowService {
         );
       }
       statesInOrder.push(state);
-      const newSortOrder = minimumSortOrder + index;
-      if (state.sortOrder !== newSortOrder) {
-        state.sortOrder = newSortOrder;
-        modifiedStates.push(state);
-      }
-      index++;
+      state.sortOrder = newSortOrder;
+      modifiedStates.push(state);
+
+      newSortOrder += 10; // Increment sort order for the next state
     }
 
     await Promise.all(
