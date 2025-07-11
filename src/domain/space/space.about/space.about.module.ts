@@ -8,6 +8,7 @@ import { SpaceAboutService } from './space.about.service';
 import { SpaceAboutResolverFields } from './space.about.resolver.fields';
 import { SpaceAbout } from './space.about.entity';
 import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
+import { TemplateContentSpaceLookupModule } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { SpaceAboutMembershipModule } from '../space.about.membership/space.about.membership.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
@@ -20,6 +21,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     CommunityGuidelinesModule,
     ProfileModule,
     SpaceLookupModule,
+    TemplateContentSpaceLookupModule,
     SpaceAboutMembershipModule,
     RoleSetModule,
     InputCreatorModule,
