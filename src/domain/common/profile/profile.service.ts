@@ -267,7 +267,8 @@ export class ProfileService {
           visual.uri = url;
         } else {
           this.logger.warn(
-            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
+            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`,
+            LogContext.PROFILE
           );
         }
       }
