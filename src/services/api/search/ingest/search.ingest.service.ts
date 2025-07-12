@@ -111,7 +111,6 @@ export class SearchIngestService {
     if (!elasticClient) {
       this.logger.verbose?.(
         'Elasticsearch client not initialized',
-        undefined,
         LogContext.SEARCH_INGEST
       );
       return;
