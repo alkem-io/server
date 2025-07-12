@@ -109,7 +109,7 @@ export class SearchIngestService {
     this.indexPattern = getIndexPattern(this.configService);
 
     if (!elasticClient) {
-      this.logger.error(
+      this.logger.verbose?.(
         'Elasticsearch client not initialized',
         undefined,
         LogContext.SEARCH_INGEST
@@ -965,7 +965,8 @@ const extractTextFromWhiteboardContent = (content: string): string => {
       .filter(isExcalidrawTextElement)
       .map(x => x.originalText)
       .join(' ');
-  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error: any) {
     return '';
   }
 };

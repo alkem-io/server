@@ -40,7 +40,7 @@ export const ApmApolloPlugin: ApolloServerPlugin<any> = {
       async didResolveOperation(
         requestContext: GraphQLRequestContextDidResolveOperation<PlainContext>
       ) {
-        if (!apmAgent.currentTransaction) {
+        if (!apmAgent?.currentTransaction) {
           // no active transaction
           return;
         }
@@ -73,7 +73,7 @@ export const ApmApolloPlugin: ApolloServerPlugin<any> = {
             any,
             PlainContext | IGraphQLContext
           >): GraphQLRequestListenerDidResolveField | void {
-            if (!apmAgent.currentTransaction) {
+            if (!apmAgent?.currentTransaction) {
               // no active transaction
               return;
             }
