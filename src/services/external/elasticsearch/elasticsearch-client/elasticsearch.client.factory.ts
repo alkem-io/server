@@ -44,14 +44,6 @@ export const elasticSearchClientFactory = async (
     };
   }
 
-  if (!host) {
-    logger.warn(
-      'Elasticsearch host URL not provided!',
-      LogContext.ELASTIC_SEARCH
-    );
-    return undefined;
-  }
-
   if (!api_key) {
     logger.error(
       'Elasticsearch API key not provided!',
