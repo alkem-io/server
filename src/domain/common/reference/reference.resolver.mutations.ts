@@ -1,4 +1,4 @@
-import { CurrentUser, Profiling } from '@common/decorators';
+import { CurrentUser } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IReference } from '@domain/common/reference/reference.interface';
@@ -75,7 +75,6 @@ export class ReferenceResolverMutations {
     description:
       'Create a new Document on the Storage and return the value as part of the returned Reference.',
   })
-  @Profiling.api
   async uploadFileOnReference(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('uploadData') uploadData: StorageBucketUploadFileOnReferenceInput,

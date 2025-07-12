@@ -126,7 +126,9 @@ export class AccountService {
     const spaceAgent = space.agent;
     const roleSet = space.community.roleSet;
 
-    await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+    if (!agentInfo.isAnonymous) {
+      await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+    }
 
     // Add in org as member + lead if applicable
     if (account.type === AccountType.ORGANIZATION) {

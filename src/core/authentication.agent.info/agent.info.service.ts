@@ -28,6 +28,7 @@ export class AgentInfoService {
       resourceID: '',
     };
     emptyAgentInfo.credentials = [anonymousCredential];
+    emptyAgentInfo.isAnonymous = true;
     return emptyAgentInfo;
   }
 
