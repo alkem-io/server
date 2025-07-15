@@ -16,4 +16,9 @@ export class CreateCollaborationOnSpaceInput extends CreateCollaborationInput {
       'Add callouts from the template to the Collaboration; defaults to true.',
   })
   addCallouts? = true;
+
+  innovationFlowRestrictions?: {
+    minimumNumberOfStates?: number;
+    maximumNumberOfStates?: number;
+  };
 }
