@@ -38,7 +38,8 @@ export class SpaceDefaultsService {
 
   public async createCollaborationInput(
     collaborationData: CreateCollaborationOnSpaceInput,
-    templateSpaceContent: ITemplateContentSpace
+    templateSpaceContent: ITemplateContentSpace,
+    maxNumberOfFlowStates: number | undefined = undefined
   ): Promise<CreateCollaborationOnSpaceInput> {
     const collaborationDataFromTemplate =
       await this.getCreateCollaborationInputFromContentSpace(
@@ -55,6 +56,17 @@ export class SpaceDefaultsService {
       if (collaborationDataFromTemplate) {
         collaborationData.innovationFlowData =
           collaborationDataFromTemplate.innovationFlowData;
+        if (
+          typeof maxNumberOfFlowStates !== 'undefined' &&
+          collaborationData.innovationFlowData
+        ) {
+          // If maxNumberOfFlowStates is provided, limit the number of flow states
+          collaborationData.innovationFlowData.states =
+            collaborationData.innovationFlowData.states.slice(
+              0,
+              maxNumberOfFlowStates
+            );
+        }
       } else {
         throw new ValidationException(
           'No innovation flow data provided',

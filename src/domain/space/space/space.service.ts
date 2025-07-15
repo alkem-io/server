@@ -125,7 +125,8 @@ export class SpaceService {
   private async createSpace(
     spaceData: CreateSpaceInput,
     templateContentSpaceID: string,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    maxNumberOfFlowStates: number | undefined = undefined
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
     // default to demo space
@@ -198,7 +199,8 @@ export class SpaceService {
     updatedCollaborationData =
       await this.spaceDefaultsService.createCollaborationInput(
         updatedCollaborationData,
-        templateContentSpace
+        templateContentSpace,
+        maxNumberOfFlowStates
       );
     if (spaceData.collaborationData.addTutorialCallouts) {
       updatedCollaborationData =
@@ -951,7 +953,12 @@ export class SpaceService {
         spaceData.spaceTemplateID
       );
 
-    return await this.createSpace(spaceData, templateContentSpaceID, agentInfo);
+    return await this.createSpace(
+      spaceData,
+      templateContentSpaceID,
+      agentInfo,
+      4
+    );
   }
 
   public async createSubspace(
