@@ -55,7 +55,9 @@ export class SpaceDefaultsService {
       if (collaborationDataFromTemplate) {
         collaborationData.innovationFlowData =
           collaborationDataFromTemplate.innovationFlowData;
-      } else {
+      }
+      // If still not present, throw an error
+      if (!collaborationData.innovationFlowData) {
         throw new ValidationException(
           'No innovation flow data provided',
           LogContext.SPACES
@@ -63,7 +65,25 @@ export class SpaceDefaultsService {
       }
     }
 
-    this.applyInnovationFlowRestrictions(collaborationData);
+    // Enforce innovation flow settings:
+    if (
+      collaborationData.innovationFlowData.states.length >
+      collaborationData.innovationFlowData.settings.maximumNumberOfStates
+    ) {
+      collaborationData.innovationFlowData.states.slice(
+        0,
+        collaborationData.innovationFlowData.settings.maximumNumberOfStates
+      );
+    }
+    if (
+      collaborationData.innovationFlowData.states.length <
+      collaborationData.innovationFlowData.settings.minimumNumberOfStates
+    ) {
+      throw new ValidationException(
+        `Innovation flow must have at least ${collaborationData.innovationFlowData.settings.minimumNumberOfStates} states.`,
+        LogContext.SPACES
+      );
+    }
 
     if (collaborationData.addCallouts) {
       if (!collaborationData.calloutsSetData.calloutsData) {
@@ -91,29 +111,6 @@ export class SpaceDefaultsService {
     );
 
     return collaborationData;
-  }
-
-  private applyInnovationFlowRestrictions(
-    collaborationData: CreateCollaborationOnSpaceInput
-  ): void {
-    const restrictions = collaborationData.innovationFlowRestrictions;
-    const innovationFlowData = collaborationData.innovationFlowData;
-    if (!restrictions || !innovationFlowData) {
-      return;
-    }
-    if (typeof restrictions.maximumNumberOfStates !== 'undefined') {
-      innovationFlowData.states.slice(0, restrictions.maximumNumberOfStates);
-    }
-    if (typeof restrictions.minimumNumberOfStates !== 'undefined') {
-      while (
-        innovationFlowData.states.length < restrictions.minimumNumberOfStates
-      ) {
-        innovationFlowData.states.push({
-          displayName: `Phase ${innovationFlowData.states.length + 1}`,
-          description: '',
-        });
-      }
-    }
   }
 
   public async getTemplateSpaceContentToAugmentFrom(

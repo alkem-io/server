@@ -124,7 +124,7 @@ export class SpaceService {
    */
   private async createSpace(
     spaceData: CreateSpaceInput,
-    templateContentSpaceID: string,
+    templateContentSpace: ITemplateContentSpace,
     agentInfo: AgentInfo
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
@@ -133,10 +133,6 @@ export class SpaceService {
 
     space.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.SPACE
-    );
-
-    const templateContentSpace = await this.getTemplateContentSpaceWithData(
-      templateContentSpaceID
     );
 
     space.settings = templateContentSpace.settings;
@@ -951,12 +947,27 @@ export class SpaceService {
         spaceData.spaceTemplateID
       );
 
-    spaceData.collaborationData.innovationFlowRestrictions = {
-      maximumNumberOfStates: 4,
-      minimumNumberOfStates: 4,
-    };
+    const templateContentSpace = await this.getTemplateContentSpaceWithData(
+      templateContentSpaceID
+    );
 
-    return await this.createSpace(spaceData, templateContentSpaceID, agentInfo);
+    // Force the innovation flow settings for L0
+    if (!templateContentSpace.collaboration?.innovationFlow) {
+      throw new EntityNotInitializedException(
+        `Template content space does not have innovation flow settings: ${templateContentSpaceID}`,
+        LogContext.SPACES
+      );
+    }
+    if (templateContentSpace.collaboration.innovationFlow.states.length < 4) {
+      throw new ValidationException(
+        `Template content space innovation flow states must have at least 4 states: ${templateContentSpaceID}`,
+        LogContext.SPACES
+      );
+    }
+    templateContentSpace.collaboration.innovationFlow.settings.minimumNumberOfStates = 4;
+    templateContentSpace.collaboration.innovationFlow.settings.maximumNumberOfStates = 4;
+
+    return await this.createSpace(spaceData, templateContentSpace, agentInfo);
   }
 
   public async createSubspace(
@@ -1025,9 +1036,24 @@ export class SpaceService {
           levelZeroSpace.templatesManager
         );
     }
+
+    const templateContentSubspace = await this.getTemplateContentSpaceWithData(
+      templateContentSubspaceID
+    );
+
+    // Overwrite Innovation Flow Restrictions:
+    if (!templateContentSubspace.collaboration?.innovationFlow) {
+      throw new EntityNotInitializedException(
+        `Template Content Space does not have Innovation Flow: ${templateContentSpaceID}`,
+        LogContext.TEMPLATES
+      );
+    }
+    templateContentSubspace.collaboration.innovationFlow.settings.maximumNumberOfStates = 8;
+    templateContentSubspace.collaboration.innovationFlow.settings.minimumNumberOfStates = 1;
+
     let subspace = await this.createSpace(
       subspaceData,
-      templateContentSubspaceID,
+      templateContentSubspace,
       agentInfo
     );
 
@@ -1108,7 +1134,9 @@ export class SpaceService {
                 profile: true,
               },
             },
-            collaboration: true,
+            collaboration: {
+              innovationFlow: true,
+            },
             about: {
               profile: {
                 references: true,
