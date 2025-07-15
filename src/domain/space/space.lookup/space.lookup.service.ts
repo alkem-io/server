@@ -13,6 +13,7 @@ import {
   FindManyOptions,
   FindOneOptions,
   In,
+  Not,
   Repository,
 } from 'typeorm';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -99,6 +100,7 @@ export class SpaceLookupService {
       where: {
         nameID: subspaceNameID,
         levelZeroSpaceID: levelZeroSpaceID,
+        level: Not(SpaceLevel.L0),
       },
       ...options,
     });
