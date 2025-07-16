@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://alkemio.org/" target="blank"><img src="https://alkemio.org/uploads/logos/alkemio-logo.svg" width="400" alt="Alkemio Logo" /></a>
+  <a href="https://alkemio.org/" target="blank"><img src="https://alkem.io/logo.png" width="400" alt="Alkemio Logo" /></a>
 </p>
 <p align="center"><i>Empowering society. The platform to succeed in working on challenges, together.</i></p>
 
@@ -9,7 +9,7 @@ Welcome to the Alkemio Server! This server is the heart of the Alkemio Platform,
 
 [![Build Status](https://api.travis-ci.com/alkem-io/server.svg?branch=develop)](https://travis-ci.com/github/alkem-io/server)
 [![Coverage Status](https://coveralls.io/repos/github/alkem-io/server/badge.svg?branch=develop)](https://coveralls.io/github/alkem-io/server?branch=develop)
-![Docker Image CI](https://github.com/alkem-io/Server/workflows/Docker%20Image%20CI/badge.svg?branch=develop)
+![Docker Image CI](https://github.com/alkem-io/server/actions/workflows/build-release-docker-hub.yml/badge.svg)
 
 A high level overview of the Design of the Alkemio Server is shown below.
 
