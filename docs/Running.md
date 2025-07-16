@@ -41,7 +41,12 @@ npm start
 - The docker compose script puts the server listening on port 4001 - to avoid conflict with the default port that is used by local development.
 - The server will be almost empty after initially being created. To populate the Server with some sample data please use the [Alkemio Populator](http://github.com/alkem-io/Populator) tool which allows easy population from a local file. Please remember to specify the correct port to connect to!
 - Once you set up the services and run the migrations, two alkemio users will be created. Find them in table `users`. You will need to register them in order to set up passwords once you run the web client. If you wish, configure the user needed for notifications via SERVICE_ACCOUNT_USERNAME & SERVICE_ACCOUNT_PASSWORD env variables in .env.docker. The profiles need to be Global Community Admin - you can find this out yourself: Do you see an administration menu item in your Alkemio profiles?
-- In order to use matrix synapse server, run from the root folder:
+- To start the Matrix Synapse service, run the following from the repository root:
+
+```bash
+sudo bash ./.scripts/bootstrap_synapse.sh
+```
+
 - If you are using Windows you must go to docker settings -> resources -> file sharing and add the paths to .build and .scripts dirs.
 - Finally, ports available on localhost:
   - 4000 (alkemio server),
@@ -53,10 +58,6 @@ npm start
   - 4437 (mailslurper API)
   - 5672 (rabbitMQ amqp)
   - 15672 (rabbitMQ management UI)
-
-```bash
-sudo bash ./.scripts/bootstrap_synapse.sh
-```
 
 It will use the SYNAPSE_XXX from env.docker, create a configuration in /var/lib/docker/volumes/synapse-data/\_data/, copy them to /var/docker_data/matrix and then map the latter to a volume used in docker-compose.
 
