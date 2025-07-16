@@ -246,6 +246,7 @@ export class SpaceService {
             },
           },
           collaborationData: {
+            addCallouts: spaceData.collaborationData.addCallouts,
             calloutsSetData: {},
           },
         };
