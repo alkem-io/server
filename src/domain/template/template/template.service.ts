@@ -3,6 +3,7 @@ import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -39,6 +40,7 @@ import { TemplateContentSpaceService } from '../template-content-space/template.
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 
 @Injectable()
 export class TemplateService {
@@ -305,11 +307,12 @@ export class TemplateService {
   public async updateTemplateFromSpace(
     templateInput: ITemplate,
     templateData: UpdateTemplateFromSpaceInput,
-    userID: string
+    agentInfo: AgentInfo
   ): Promise<ITemplate> {
     if (
       !templateInput.contentSpace ||
-      !templateInput.contentSpace.collaboration
+      !templateInput.contentSpace.collaboration ||
+      !templateInput.templatesSet
     ) {
       throw new RelationshipNotFoundException(
         `Unable to updateTemplate as not all entities are loaded: ${templateInput.id} `,
@@ -326,6 +329,27 @@ export class TemplateService {
               callouts: true,
             },
           },
+          storageAggregator: true,
+          ...(templateData.recursive
+            ? {
+                subspaces: {
+                  collaboration: {
+                    innovationFlow: true,
+                    calloutsSet: {
+                      callouts: true,
+                    },
+                  },
+                  subspaces: {
+                    collaboration: {
+                      innovationFlow: true,
+                      calloutsSet: {
+                        callouts: true,
+                      },
+                    },
+                  },
+                },
+              }
+            : undefined),
         },
       }
     );
@@ -342,14 +366,62 @@ export class TemplateService {
       templateInput.contentSpace.collaboration.calloutsSet.callouts = [];
     }
 
+    await this.updateTemplateContentSubspacesFromSpace(
+      templateInput,
+      sourceSpace.subspaces,
+      agentInfo
+    );
+
     templateInput.contentSpace = await this.updateTemplateContentSpaceFromSpace(
       sourceSpace,
       templateInput.contentSpace,
       true,
-      userID
+      agentInfo.userID
     );
 
     return await this.getTemplateOrFail(templateInput.id);
+  }
+
+  private async updateTemplateContentSubspacesFromSpace(
+    templateInput: ITemplate,
+    sourceSpaceSubspaces: ISpace[] | undefined,
+    agentInfo: AgentInfo
+  ): Promise<void> {
+    const currentSubspaces = templateInput.contentSpace?.subspaces ?? [];
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForTemplatesSet(
+        templateInput.templatesSet!.id // Ensured by caller
+      );
+
+    if (!storageAggregator) {
+      throw new EntityNotInitializedException(
+        'Could not resolve storage aggregator for template',
+        LogContext.TEMPLATES,
+        { contentSpaceID: templateInput.id }
+      );
+    }
+
+    // Delete all current subspaces
+    for (const currentSubspace of currentSubspaces) {
+      await this.templateContentSpaceService.deleteTemplateContentSpaceOrFail(
+        currentSubspace.id
+      );
+    }
+
+    // Create new subspaces from the source space
+    if (sourceSpaceSubspaces && sourceSpaceSubspaces.length > 0) {
+      for (const subspace of sourceSpaceSubspaces) {
+        const subspaceContent =
+          await this.templateContentSpaceService.createTemplateContentSpace(
+            await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
+              subspace.id
+            ),
+            storageAggregator,
+            agentInfo
+          );
+        templateInput.contentSpace?.subspaces?.push(subspaceContent);
+      }
+    }
   }
 
   public async updateTemplateContentSpaceFromSpace(
