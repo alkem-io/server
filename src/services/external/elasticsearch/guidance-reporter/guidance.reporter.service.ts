@@ -9,8 +9,6 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { isElasticError, isElasticResponseError } from '../utils';
 import { GuidanceUsage } from './guidance.usage';
 import { GuidanceUsageDocument } from './guidance.usage.document';
-import { UserService } from '@domain/community/user/user.service';
-// import { GuidanceEngineQueryResponse } from '@services/adapters/chat-guidance-adapter/dto/guidance.engine.dto.question.response';
 import { AlkemioConfig } from '@src/types';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
@@ -23,13 +21,12 @@ export class GuidanceReporterService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly userService: UserService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {
     if (!this.client) {
-      this.logger.warn(
+      this.logger.verbose?.(
         'Elastic client not initialized',
         LogContext.CHAT_GUIDANCE_REPORTER
       );

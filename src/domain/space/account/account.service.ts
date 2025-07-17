@@ -126,7 +126,7 @@ export class AccountService {
     const spaceAgent = space.agent;
     const roleSet = space.community.roleSet;
 
-    if (agentInfo) {
+    if (!agentInfo.isAnonymous) {
       await this.spaceService.assignUserToRoles(roleSet, agentInfo);
     }
 
