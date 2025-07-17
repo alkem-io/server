@@ -5,6 +5,7 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 
 export const agentInfoData: { agentInfo: AgentInfo } = {
   agentInfo: {
+    isAnonymous: false,
     userID: '91b7e044-61ff-468b-a705-1672b0bda510',
     email: 'admin@alkem.io',
     emailVerified: true,

@@ -33,7 +33,6 @@ import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.s
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { Space } from '@domain/space/space/space.entity';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IUser } from '@domain/community/user/user.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { TemplateDefaultService } from '@domain/template/template-default/template.default.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -382,21 +381,6 @@ export class BootstrapService {
     }
   }
 
-  private async createSystemAgentInfo(user: IUser): Promise<AgentInfo> {
-    return {
-      userID: user.id,
-      email: user.email,
-      emailVerified: true,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      avatarURL: '',
-      credentials: user.agent?.credentials || [],
-      agentID: user.agent?.id,
-      verifiedCredentials: [],
-      communicationID: user.communicationID,
-    };
-  }
-
   private async ensureOrganizationSingleton() {
     // create a default host org
     let hostOrganization =
@@ -446,7 +430,19 @@ export class BootstrapService {
         `Unable to load fixed admin user for creating organization: ${adminUserEmail}`
       );
     }
-    return this.createSystemAgentInfo(adminUser);
+    return {
+      isAnonymous: false,
+      userID: adminUser.id,
+      email: adminUser.email,
+      emailVerified: true,
+      firstName: adminUser.firstName,
+      lastName: adminUser.lastName,
+      avatarURL: '',
+      credentials: adminUser.agent?.credentials || [],
+      agentID: adminUser.agent?.id,
+      verifiedCredentials: [],
+      communicationID: adminUser.communicationID,
+    };
   }
 
   private async ensureSpaceSingleton(agentInfo: AgentInfo) {
