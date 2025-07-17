@@ -55,12 +55,37 @@ export class SpaceDefaultsService {
       if (collaborationDataFromTemplate) {
         collaborationData.innovationFlowData =
           collaborationDataFromTemplate.innovationFlowData;
-      } else {
+      }
+      // If still not present, throw an error
+      if (!collaborationData.innovationFlowData) {
         throw new ValidationException(
           'No innovation flow data provided',
           LogContext.SPACES
         );
       }
+    }
+
+    // Enforce innovation flow settings:
+    const maxNumberOfStates =
+      templateSpaceContent.collaboration?.innovationFlow?.settings
+        .maximumNumberOfStates ?? Number.MAX_SAFE_INTEGER;
+    const minNumberOfStates =
+      templateSpaceContent.collaboration?.innovationFlow?.settings
+        .minimumNumberOfStates ?? 0;
+
+    if (
+      collaborationData.innovationFlowData.states.length > maxNumberOfStates
+    ) {
+      collaborationData.innovationFlowData.states =
+        collaborationData.innovationFlowData.states.slice(0, maxNumberOfStates);
+    }
+    if (
+      collaborationData.innovationFlowData.states.length < minNumberOfStates
+    ) {
+      throw new ValidationException(
+        `Innovation flow must have at least ${collaborationData.innovationFlowData.settings.minimumNumberOfStates} states.`,
+        LogContext.SPACES
+      );
     }
 
     if (collaborationData.addCallouts) {
