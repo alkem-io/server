@@ -89,16 +89,43 @@ export class TemplateContentSpaceService {
       templateContentSpaceID,
       {
         relations: {
-          collaboration: true,
-          about: true,
+          collaboration: {
+            innovationFlow: true,
+            timeline: true,
+            calloutsSet: true,
+          },
+          about: {
+            profile: true,
+          },
+          subspaces: {
+            collaboration: {
+              innovationFlow: true,
+              timeline: true,
+              calloutsSet: true,
+            },
+            about: {
+              profile: true,
+            },
+            subspaces: {
+              collaboration: {
+                innovationFlow: true,
+                timeline: true,
+                calloutsSet: true,
+              },
+              about: {
+                profile: true,
+              },
+            },
+          },
+          authorization: true,
         },
       }
     );
 
     if (
-      !templateContentSpace.collaboration ||
+      !templateContentSpace.authorization ||
       !templateContentSpace.about ||
-      !templateContentSpace.authorization
+      !templateContentSpace.collaboration
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to delete TemplateContentSpace: ${templateContentSpace.id} `,
@@ -106,28 +133,42 @@ export class TemplateContentSpaceService {
       );
     }
 
-    await this.spaceAboutService.removeSpaceAbout(
-      templateContentSpace.about.id
-    );
-    await this.collaborationService.deleteCollaborationOrFail(
-      templateContentSpace.collaboration.id
-    );
-
-    await this.authorizationPolicyService.delete(
-      templateContentSpace.authorization
-    );
-
-    if (templateContentSpace.subspaces) {
+    // First, recursively delete all subspaces (including sub-subspaces)
+    // This needs to be done before deleting the parent to avoid foreign key constraints
+    if (
+      templateContentSpace.subspaces &&
+      templateContentSpace.subspaces.length > 0
+    ) {
       for (const subspace of templateContentSpace.subspaces) {
-        // Recursively delete subspaces
         await this.deleteTemplateContentSpaceOrFail(subspace.id);
       }
     }
 
+    // Delete collaboration and all its nested entities
+    if (templateContentSpace.collaboration) {
+      await this.collaborationService.deleteCollaborationOrFail(
+        templateContentSpace.collaboration.id
+      );
+    }
+
+    // Delete space about and its profile
+    if (templateContentSpace.about) {
+      await this.spaceAboutService.removeSpaceAbout(
+        templateContentSpace.about.id
+      );
+    }
+
+    // Delete authorization policy
+    await this.authorizationPolicyService.delete(
+      templateContentSpace.authorization
+    );
+
+    // Finally, delete the template content space itself
     const result = await this.templateContentSpaceRepository.remove(
       templateContentSpace as TemplateContentSpace
     );
     result.id = templateContentSpaceID;
+
     return result;
   }
 
