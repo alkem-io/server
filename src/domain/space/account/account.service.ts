@@ -23,7 +23,7 @@ import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { SpaceLevel } from '@common/enums/space.level';
+import { MAX_SPACE_LEVEL, SpaceLevel } from '@common/enums/space.level';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
@@ -106,7 +106,10 @@ export class AccountService {
     // will be set properly after saving to its own ID
     spaceData.levelZeroSpaceID = '';
 
-    let space = await this.spaceService.createSpaceL0(spaceData, agentInfo);
+    let space = await this.spaceService.createRootSpaceAndSubspaces(
+      spaceData,
+      agentInfo
+    );
     space.account = account;
     space = await this.spaceService.save(space);
 
@@ -170,9 +173,9 @@ export class AccountService {
 
   private findNestedRoleSets = (
     space: ISpace,
-    maxDepth: number = 2
+    spaceLevel: SpaceLevel = SpaceLevel.L0
   ): IRoleSet[] => {
-    if (maxDepth < 0) {
+    if (spaceLevel > MAX_SPACE_LEVEL) {
       return [];
     }
     const roleSets: IRoleSet[] = [];
@@ -181,7 +184,7 @@ export class AccountService {
     }
     if (space.subspaces) {
       for (const subspace of space.subspaces) {
-        roleSets.push(...this.findNestedRoleSets(subspace, maxDepth - 1));
+        roleSets.push(...this.findNestedRoleSets(subspace, spaceLevel + 1));
       }
     }
     return roleSets;
