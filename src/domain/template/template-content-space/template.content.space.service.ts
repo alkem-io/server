@@ -122,7 +122,11 @@ export class TemplateContentSpaceService {
       }
     );
 
-    if (!templateContentSpace.authorization) {
+    if (
+      !templateContentSpace.authorization ||
+      !templateContentSpace.about ||
+      !templateContentSpace.collaboration
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to load authorization policy to delete TemplateContentSpace: ${templateContentSpace.id} `,
         LogContext.SPACES
