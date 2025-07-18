@@ -170,9 +170,9 @@ export class AccountService {
 
   private findNestedRoleSets = (
     space: ISpace,
-    maxDepth: number = 3
+    maxDepth: number = 2
   ): IRoleSet[] => {
-    if (maxDepth <= 0 || !space) {
+    if (maxDepth < 0) {
       return [];
     }
     const roleSets: IRoleSet[] = [];
