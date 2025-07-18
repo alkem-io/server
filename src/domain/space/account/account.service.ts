@@ -42,6 +42,7 @@ import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { IRoleSet } from '@domain/access/role-set';
 
 @InstrumentService()
 @Injectable()
@@ -114,6 +115,16 @@ export class AccountService {
         community: {
           roleSet: true,
         },
+        subspaces: {
+          community: {
+            roleSet: true,
+          },
+          subspaces: {
+            community: {
+              roleSet: true,
+            },
+          },
+        },
         agent: true,
       },
     });
@@ -124,18 +135,22 @@ export class AccountService {
       );
     }
     const spaceAgent = space.agent;
-    const roleSet = space.community.roleSet;
+
+    const roleSets = this.findNestedRoleSets(space);
 
     if (!agentInfo.isAnonymous) {
-      await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+      for (const roleSet of roleSets) {
+        await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+      }
     }
 
     // Add in org as member + lead if applicable
     if (account.type === AccountType.ORGANIZATION) {
       const host = await this.accountLookupService.getHostOrFail(account);
       const organizationID = host.id;
+      const rootRoleSet = space.community.roleSet;
       await this.spaceService.assignOrganizationToMemberLeadRoles(
-        roleSet,
+        rootRoleSet,
         organizationID
       );
     }
@@ -152,6 +167,25 @@ export class AccountService {
       },
     });
   }
+
+  private findNestedRoleSets = (
+    space: ISpace,
+    maxDepth: number = 3
+  ): IRoleSet[] => {
+    if (maxDepth <= 0 || !space) {
+      return [];
+    }
+    const roleSets: IRoleSet[] = [];
+    if (space.community?.roleSet) {
+      roleSets.push(space.community.roleSet);
+    }
+    if (space.subspaces) {
+      for (const subspace of space.subspaces) {
+        roleSets.push(...this.findNestedRoleSets(subspace, maxDepth - 1));
+      }
+    }
+    return roleSets;
+  };
 
   async save(account: IAccount): Promise<IAccount> {
     return await this.accountRepository.save(account);
