@@ -23,7 +23,7 @@ import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { SpaceLevel } from '@common/enums/space.level';
+import { MAX_SPACE_LEVEL, SpaceLevel } from '@common/enums/space.level';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
@@ -42,6 +42,7 @@ import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { IRoleSet } from '@domain/access/role-set';
 
 @InstrumentService()
 @Injectable()
@@ -105,7 +106,10 @@ export class AccountService {
     // will be set properly after saving to its own ID
     spaceData.levelZeroSpaceID = '';
 
-    let space = await this.spaceService.createSpaceL0(spaceData, agentInfo);
+    let space = await this.spaceService.createRootSpaceAndSubspaces(
+      spaceData,
+      agentInfo
+    );
     space.account = account;
     space = await this.spaceService.save(space);
 
@@ -113,6 +117,16 @@ export class AccountService {
       relations: {
         community: {
           roleSet: true,
+        },
+        subspaces: {
+          community: {
+            roleSet: true,
+          },
+          subspaces: {
+            community: {
+              roleSet: true,
+            },
+          },
         },
         agent: true,
       },
@@ -124,18 +138,22 @@ export class AccountService {
       );
     }
     const spaceAgent = space.agent;
-    const roleSet = space.community.roleSet;
+
+    const roleSets = this.findNestedRoleSets(space);
 
     if (!agentInfo.isAnonymous) {
-      await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+      for (const roleSet of roleSets) {
+        await this.spaceService.assignUserToRoles(roleSet, agentInfo);
+      }
     }
 
     // Add in org as member + lead if applicable
     if (account.type === AccountType.ORGANIZATION) {
       const host = await this.accountLookupService.getHostOrFail(account);
       const organizationID = host.id;
+      const rootRoleSet = space.community.roleSet;
       await this.spaceService.assignOrganizationToMemberLeadRoles(
-        roleSet,
+        rootRoleSet,
         organizationID
       );
     }
@@ -152,6 +170,25 @@ export class AccountService {
       },
     });
   }
+
+  private findNestedRoleSets = (
+    space: ISpace,
+    spaceLevel: SpaceLevel = SpaceLevel.L0
+  ): IRoleSet[] => {
+    if (spaceLevel > MAX_SPACE_LEVEL) {
+      return [];
+    }
+    const roleSets: IRoleSet[] = [];
+    if (space.community?.roleSet) {
+      roleSets.push(space.community.roleSet);
+    }
+    if (space.subspaces) {
+      for (const subspace of space.subspaces) {
+        roleSets.push(...this.findNestedRoleSets(subspace, spaceLevel + 1));
+      }
+    }
+    return roleSets;
+  };
 
   async save(account: IAccount): Promise<IAccount> {
     return await this.accountRepository.save(account);

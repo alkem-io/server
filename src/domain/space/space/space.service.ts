@@ -938,7 +938,7 @@ export class SpaceService {
     return subscriptions;
   }
 
-  public async createSpaceL0(
+  public async createRootSpaceAndSubspaces(
     spaceData: CreateSpaceInput,
     agentInfo: AgentInfo
   ): Promise<ISpace> {
