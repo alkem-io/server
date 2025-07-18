@@ -128,7 +128,7 @@ export class TemplateContentSpaceService {
       !templateContentSpace.collaboration
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load authorization policy to delete TemplateContentSpace: ${templateContentSpace.id} `,
+        `Unable to load entities to delete TemplateContentSpace: ${templateContentSpace.id} `,
         LogContext.SPACES
       );
     }
