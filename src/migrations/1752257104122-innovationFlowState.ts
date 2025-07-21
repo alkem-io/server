@@ -1,6 +1,17 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+interface InnovationFlow {
+  id: string;
+  states: {
+    displayName: string;
+    description: string;
+  }[];
+  currentState: {
+    displayName: string;
+  } | null;
+}
+
 export class InnovationFlowState1752257104122 implements MigrationInterface {
   name = 'InnovationFlowState1752257104122';
 
@@ -22,45 +33,46 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
     );
 
     // For all innovation flows, we need to create a new innovation_flow_state instance using the existing states
-    const innovationFlows: {
-      id: string;
-      states: {
-        displayName: string;
-        description: string;
-      }[];
-      currentState: {
-        displayName: string;
-      };
-    }[] = await queryRunner.query(`
+    const innovationFlows: InnovationFlow[] = await queryRunner.query(`
       SELECT id, states, currentState FROM innovation_flow
     `);
     for (const flow of innovationFlows) {
-      const currentStateDisplayName = flow.currentState.displayName;
+      const currentStateDisplayName = flow.currentState?.displayName;
+      let currentStateId = undefined;
       let sortOrder = 1;
       for (const state of flow.states) {
         const authID = await this.createAuthorizationPolicy(queryRunner);
         const stateID = randomUUID();
+        if (!state.displayName) {
+          console.warn(
+            `Skipping state with no displayName for flow ${flow.id}`
+          );
+          continue;
+        }
+
+        if (currentStateId === undefined) {
+          currentStateId = stateID; // Store the first state ID in case we don't find a state with a displayName equal to the current state
+        }
         await queryRunner.query(
-          `INSERT INTO innovation_flow_state (id, version, displayName, description, settings, sortOrder, innovationFlowId) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO innovation_flow_state (id, version, displayName, description, settings, sortOrder, authorizationId, innovationFlowId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             stateID,
             1,
             state.displayName,
-            state.description,
+            state.description ?? '',
             JSON.stringify({ allowNewCallouts: true }),
             sortOrder,
+            authID,
             flow.id,
           ]
         );
         sortOrder += 10;
         // and update the current state ID if matching
         if (state.displayName === currentStateDisplayName) {
-          await queryRunner.query(
-            `UPDATE innovation_flow SET currentStateID = ? WHERE id = ?`,
-            [stateID, flow.id]
-          );
+          currentStateId = stateID;
         }
       }
+      await this.setCurrentState(queryRunner, flow.id, currentStateId!);
     }
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` DROP COLUMN \`states\``
@@ -102,5 +114,16 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
       [authID, 1, '[]', '[]', '[]', 'innovation-flow-state']
     );
     return authID;
+  }
+
+  private async setCurrentState(
+    queryRunner: QueryRunner,
+    flowID: string,
+    stateID: string
+  ): Promise<void> {
+    await queryRunner.query(
+      `UPDATE innovation_flow SET currentStateID = ? WHERE id = ?`,
+      [stateID, flowID]
+    );
   }
 }
