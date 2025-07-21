@@ -74,6 +74,24 @@ export class TemplateResolverMutations {
                 tagsetTemplateSet: true,
               },
             },
+            subspaces: {
+              collaboration: {
+                innovationFlow: true,
+                calloutsSet: {
+                  callouts: true,
+                  tagsetTemplateSet: true,
+                },
+              },
+              subspaces: {
+                collaboration: {
+                  innovationFlow: true,
+                  calloutsSet: {
+                    callouts: true,
+                    tagsetTemplateSet: true,
+                  },
+                },
+              },
+            },
           },
         },
       }
@@ -97,7 +115,7 @@ export class TemplateResolverMutations {
     const templateUpdated = await this.templateService.updateTemplateFromSpace(
       template,
       updateData,
-      agentInfo.userID
+      agentInfo
     );
 
     const authorizations =

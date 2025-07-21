@@ -251,7 +251,7 @@ export class ProfileService {
           );
       }
       const providedVisual = visualsData?.find(v => v.name === visualType);
-      if (providedVisual) {
+      if (providedVisual && providedVisual.uri.length > 0) {
         // Only allow external URL if we are creating an Avatar and if it comes from https://eu.ui-avatars.com
         const allowExternalUrl =
           visualType === VisualType.AVATAR &&
@@ -267,7 +267,8 @@ export class ProfileService {
           visual.uri = url;
         } else {
           this.logger.warn(
-            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
+            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`,
+            LogContext.PROFILE
           );
         }
       }
