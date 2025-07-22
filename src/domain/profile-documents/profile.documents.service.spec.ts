@@ -263,7 +263,7 @@ describe('ProfileDocumentsService', () => {
           .spyOn(documentService, 'getDocumentsBaseUrlPath')
           .mockReturnValue(ALKEMIO_DOCUMENT_URL);
 
-        const result = await service.reuploadDocumentsInMarkdownProfile(
+        const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
           markdown,
           storageBucketDestination
         );
@@ -299,7 +299,7 @@ describe('ProfileDocumentsService', () => {
           .spyOn(storageBucketService, 'addDocumentToStorageBucketOrFail')
           .mockResolvedValue(doc);
 
-        const result = await service.reuploadDocumentsInMarkdownProfile(
+        const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
           markdown,
           storageBucketDestination
         );
