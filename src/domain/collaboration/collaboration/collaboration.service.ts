@@ -130,6 +130,9 @@ export class CollaborationService {
       );
 
     if (collaborationData.calloutsSetData.calloutsData) {
+      collaborationData.calloutsSetData.calloutsData.forEach(
+        callout => (callout.isTemplate = collaboration.isTemplate)
+      );
       collaboration.calloutsSet.callouts =
         await this.calloutsSetService.addCallouts(
           collaboration.calloutsSet,

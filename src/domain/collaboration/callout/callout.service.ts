@@ -107,7 +107,7 @@ export class CalloutService {
         );
     }
 
-    if (callout.settings.framing.commentsEnabled) {
+    if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
@@ -274,7 +274,11 @@ export class CalloutService {
     }
 
     // Create the Matrix room for comments if it doesn't yet exist
-    if (callout.settings.framing.commentsEnabled && !callout.comments) {
+    if (
+      !callout.isTemplate &&
+      callout.settings.framing.commentsEnabled &&
+      !callout.comments
+    ) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
