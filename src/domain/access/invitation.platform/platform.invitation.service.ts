@@ -42,12 +42,14 @@ export class PlatformInvitationService {
   ): Promise<IPlatformInvitation> {
     // Only allow invitations to specific set of platform roles
     if (roleSet.type === RoleSetType.PLATFORM) {
-      const role = platformInvitationData.roleSetExtraRole;
-      if (role !== undefined && !this.acceptedPlatformRoles.includes(role)) {
-        throw new ValidationException(
-          `Unable to create invitation for platform role: ${role}, not in allowed invitation roles: ${this.acceptedPlatformRoles}`,
-          LogContext.PLATFORM
-        );
+      const roles = platformInvitationData.roleSetExtraRoles;
+      for (const role of roles) {
+        if (roles !== undefined && !this.acceptedPlatformRoles.includes(role)) {
+          throw new ValidationException(
+            `Unable to create invitation for platform role: ${role}, not in allowed invitation roles: ${this.acceptedPlatformRoles}`,
+            LogContext.PLATFORM
+          );
+        }
       }
     }
     const platformInvitation: IPlatformInvitation = PlatformInvitation.create(

@@ -289,7 +289,7 @@ export class RoleSetResolverMutationsMembership {
       contributors,
       agentInfo,
       authorizedToInviteToParentRoleSet,
-      invitationData.extraRole,
+      invitationData.extraRoles,
       invitationData.welcomeMessage
     );
 
@@ -299,7 +299,7 @@ export class RoleSetResolverMutationsMembership {
         newUserEmails,
         authorizedToInviteToParentRoleSet,
         invitationData.welcomeMessage,
-        invitationData.extraRole,
+        invitationData.extraRoles,
         agentInfo
       );
     invitationResults.push(...newUserInvitationResults);
@@ -335,7 +335,7 @@ export class RoleSetResolverMutationsMembership {
     newUserEmails: string[],
     authorizedToInviteToParentRoleSet: boolean,
     welcomeMessage: string | undefined,
-    extraRole: RoleName | undefined,
+    extraRoles: RoleName[],
     agentInfo: AgentInfo
   ): Promise<RoleSetInvitationResult[]> {
     const invitationResults: RoleSetInvitationResult[] = [];
@@ -376,7 +376,7 @@ export class RoleSetResolverMutationsMembership {
           email,
           welcomeMessage || '',
           inviteToParentRoleSet,
-          extraRole,
+          extraRoles,
           agentInfo
         );
       const result: RoleSetInvitationResult = {
@@ -595,7 +595,7 @@ export class RoleSetResolverMutationsMembership {
     contributors: IContributor[],
     agentInfo: AgentInfo,
     authorizedToInviteToParentRoleSet: boolean,
-    extraRole: RoleName | undefined,
+    extraRoles: RoleName[],
     welcomeMessage: string | undefined
   ): Promise<RoleSetInvitationResult[]> {
     const invitationResults: RoleSetInvitationResult[] = [];
@@ -630,7 +630,7 @@ export class RoleSetResolverMutationsMembership {
         invitedContributorID: contributor.id,
         createdBy: agentInfo.userID,
         invitedToParent: invitedToParent,
-        extraRole,
+        extraRoles: extraRoles,
         welcomeMessage,
       };
 

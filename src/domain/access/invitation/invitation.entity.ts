@@ -43,9 +43,6 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   })
   roleSet?: RoleSet;
 
-  @Column('varchar', {
-    length: ENUM_LENGTH,
-    nullable: true,
-  })
-  extraRole?: RoleName;
+  @Column('simple-array', { nullable: false })
+  extraRoles!: RoleName[];
 }
