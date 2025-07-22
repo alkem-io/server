@@ -93,8 +93,9 @@ export class CalloutService {
     );
 
     callout.contributionDefaults =
-      this.contributionDefaultsService.createCalloutContributionDefaults(
-        calloutData.contributionDefaults
+      await this.contributionDefaultsService.createCalloutContributionDefaults(
+        calloutData.contributionDefaults,
+        callout.framing.profile.storageBucket
       );
 
     if (userID && calloutData.contributions && callout.settings.contribution) {

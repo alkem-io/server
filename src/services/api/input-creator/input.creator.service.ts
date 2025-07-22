@@ -414,6 +414,7 @@ export class InputCreatorService {
       return undefined;
     }
     const result: CreateCalloutContributionDefaultsInput = {
+      defaultDisplayName: calloutContributionDefaults.defaultDisplayName,
       postDescription: calloutContributionDefaults.postDescription,
       whiteboardContent: calloutContributionDefaults.whiteboardContent,
     };
