@@ -32,7 +32,7 @@ export class InnovationFlowStateResolverMutations {
       agentInfo,
       innovationFlowState.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update InnovationFlowStat: ${innovationFlowState.id}`
+      `update InnovationFlowState: ${innovationFlowState.id}`
     );
 
     return await this.innovationFlowStateService.update(

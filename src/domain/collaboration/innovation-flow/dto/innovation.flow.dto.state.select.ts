@@ -3,7 +3,7 @@ import { IsOptional } from 'class-validator';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @InputType()
-export class UpdateInnovationFlowSelectedStateInput {
+export class UpdateInnovationFlowCurrentStateInput {
   @Field(() => UUID, {
     description: 'ID of the Innovation Flow',
   })
@@ -12,7 +12,8 @@ export class UpdateInnovationFlowSelectedStateInput {
 
   @Field(() => UUID, {
     nullable: false,
-    description: 'ID of the Innovation Flow State to be selected.',
+    description:
+      'ID of the Innovation Flow State to be selected as the current one.',
   })
-  selectedStateID!: string;
+  currentStateID!: string;
 }

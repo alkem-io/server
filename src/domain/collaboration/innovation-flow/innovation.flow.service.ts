@@ -17,7 +17,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.state.select';
+import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
@@ -285,7 +285,11 @@ export class InnovationFlowService {
       await this.innovationFlowStateService.getInnovationFlowStateOrFail(
         stateData.ID
       );
-    return await this.innovationFlowStateService.delete(state);
+    const deletedInnovationFlowState =
+      await this.innovationFlowStateService.delete(state);
+
+    deletedInnovationFlowState.id = stateData.ID;
+    return deletedInnovationFlowState;
   }
 
   public validateInnovationFlowDefinition(
@@ -332,33 +336,39 @@ export class InnovationFlowService {
     }
   }
 
-  async updateSelectedState(
-    innovationFlowSelectedStateData: UpdateInnovationFlowSelectedStateInput
+  async updateCurrentState(
+    innovationFlowSelectedStateData: UpdateInnovationFlowCurrentStateInput
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowSelectedStateData.innovationFlowID,
       {
-        relations: { profile: true, flowStatesTagsetTemplate: true },
+        relations: {
+          profile: true,
+          flowStatesTagsetTemplate: true,
+          states: true,
+        },
       }
     );
-    const newSelectedState =
+    const newSelectedCurrentState =
       await this.innovationFlowStateService.getInnovationFlowStateOrFail(
-        innovationFlowSelectedStateData.selectedStateID
+        innovationFlowSelectedStateData.currentStateID
       );
 
     // Check it is part of the current flow states!
     if (
-      !innovationFlow.states.some(state => state.id === newSelectedState.id)
+      !innovationFlow.states.some(
+        state => state.id === newSelectedCurrentState.id
+      )
     ) {
       throw new ValidationException(
-        `Selected state '${newSelectedState.displayName}' is not part of the current flow states: ${innovationFlow.states.map(
+        `Selected state '${newSelectedCurrentState.displayName}' is not part of the current flow states: ${innovationFlow.states.map(
           state => state.displayName
         )}`,
         LogContext.INNOVATION_FLOW
       );
     }
 
-    innovationFlow.currentStateID = newSelectedState.id;
+    innovationFlow.currentStateID = newSelectedCurrentState.id;
 
     return await this.save(innovationFlow);
   }
