@@ -66,20 +66,21 @@ export class InnovationFlowStateService {
   }
 
   async getInnovationFlowStateOrFail(
-    innovationFlowID: string,
+    innovationFlowStateID: string,
     options?: FindOneOptions<InnovationFlowState>
   ): Promise<IInnovationFlowState | never> {
-    const innovationFlow = await this.innovationFlowStateRepository.findOne({
-      where: { id: innovationFlowID },
-      ...options,
-    });
+    const innovationFlowState =
+      await this.innovationFlowStateRepository.findOne({
+        where: { id: innovationFlowStateID },
+        ...options,
+      });
 
-    if (!innovationFlow)
+    if (!innovationFlowState)
       throw new EntityNotFoundException(
-        `Unable to find InnovationFlowState with ID: ${innovationFlowID}`,
+        `Unable to find InnovationFlowState with ID: ${innovationFlowStateID}`,
         LogContext.INNOVATION_FLOW
       );
-    return innovationFlow;
+    return innovationFlowState;
   }
 
   public getStateNames(states: IInnovationFlowState[]): string[] {

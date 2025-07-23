@@ -13,10 +13,10 @@ export abstract class IInnovationFlowState extends IAuthorizable {
   displayName!: string;
 
   @Field(() => Markdown, {
-    nullable: false,
+    nullable: true,
     description: 'The explanation text to clarify the state.',
   })
-  description!: string;
+  description?: string;
 
   @Field(() => IInnovationFlowStateSettings, {
     nullable: false,

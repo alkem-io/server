@@ -277,7 +277,7 @@ export class InnovationFlowService {
     }
     if (innovationFlow.states.length <= minimum) {
       throw new ValidationException(
-        `Innovation Flow must have a maximum of ${minimum} states; provided: ${innovationFlow.states.length}`,
+        `Innovation Flow must have a minimum of ${minimum} states; current: ${innovationFlow.states.length}`,
         LogContext.INNOVATION_FLOW
       );
     }

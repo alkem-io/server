@@ -13,7 +13,7 @@ export class InnovationFlowState
   displayName!: string;
 
   @Column('text', { nullable: true })
-  description!: string;
+  description?: string;
 
   @Column('json', { nullable: false })
   settings!: IInnovationFlowStateSettings;

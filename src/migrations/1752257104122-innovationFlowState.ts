@@ -72,7 +72,9 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
           currentStateId = stateID;
         }
       }
-      await this.setCurrentState(queryRunner, flow.id, currentStateId!);
+      if (currentStateId) {
+        await this.setCurrentState(queryRunner, flow.id, currentStateId);
+      }
     }
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` DROP COLUMN \`states\``
