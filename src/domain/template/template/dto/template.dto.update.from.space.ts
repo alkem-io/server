@@ -14,4 +14,10 @@ export class UpdateTemplateFromSpaceInput {
     description: 'The Space whose content should be copied to this Template.',
   })
   spaceID!: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Whether to reproduce the hierarchy or just the space.',
+  })
+  recursive?: boolean;
 }

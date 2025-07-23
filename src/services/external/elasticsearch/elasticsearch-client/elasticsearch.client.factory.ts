@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Client } from '@elastic/elasticsearch';
 import fs from 'fs';
 import { AlkemioConfig } from '@src/types';
+import { LogContext } from '@common/enums';
 
 export const elasticSearchClientFactory = async (
   logger: LoggerService,
@@ -13,6 +14,13 @@ export const elasticSearchClientFactory = async (
   });
 
   const { host, retries, timeout, api_key, tls } = elasticsearch;
+  if (!host || host.length === 0) {
+    logger.verbose?.(
+      'Elasticsearch host URL not provided, not creating client.',
+      LogContext.ELASTIC_SEARCH
+    );
+    return undefined;
+  }
   const rejectUnauthorized = tls.rejectUnauthorized ?? false;
   let tlsOptions;
 
@@ -23,7 +31,10 @@ export const elasticSearchClientFactory = async (
     // This should match the mountPath in your Kubernetes deployment YAML
     const certPath = tls.ca_cert_path;
     if (!fs.existsSync(certPath)) {
-      logger.error(`Certificate not found at path: ${certPath}`);
+      logger.error(
+        `Certificate not found at path: ${certPath}`,
+        LogContext.ELASTIC_SEARCH
+      );
       return undefined;
     }
     const cert = fs.readFileSync(certPath);
@@ -33,13 +44,11 @@ export const elasticSearchClientFactory = async (
     };
   }
 
-  if (!host) {
-    logger.warn('Elasticsearch host URL not provided!');
-    return undefined;
-  }
-
   if (!api_key) {
-    logger.error('Elasticsearch API key not provided!');
+    logger.error(
+      'Elasticsearch API key not provided!',
+      LogContext.ELASTIC_SEARCH
+    );
     return undefined;
   }
 

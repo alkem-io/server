@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { ValidateNested } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
@@ -25,6 +25,12 @@ export class CreateTemplateContentSpaceInput {
   @ValidateNested()
   @Type(() => CreateCollaborationInput)
   collaborationData!: CreateCollaborationInput;
+
+  @Field(() => [CreateTemplateContentSpaceInput], { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateTemplateContentSpaceInput)
+  subspaces!: CreateTemplateContentSpaceInput[];
 
   @Field(() => SpaceLevel, { nullable: false })
   level!: SpaceLevel;

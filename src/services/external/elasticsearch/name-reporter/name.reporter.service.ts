@@ -34,7 +34,10 @@ export class NameReporterService {
     this.space_name_enrich_policy = policies?.space_name_enrich_policy;
 
     if (!this.client) {
-      this.logger.warn('Elastic client not initialized');
+      this.logger.verbose?.(
+        'Elastic client not initialized',
+        LogContext.NAME_REPORTER
+      );
     }
   }
 

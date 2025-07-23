@@ -33,6 +33,7 @@ import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -611,26 +612,49 @@ export class UrlGeneratorService {
       return this.generateUrlForSpaceAllLevels(space, spacePath);
     }
     // Check if part of a TemplateContentSpace
-    const templateContentSpace = await this.entityManager.findOne(Template, {
-      where: {
-        contentSpace: {
+    const templateContentSpace = await this.entityManager.findOne(
+      TemplateContentSpace,
+      {
+        where: {
           about: {
             id: spaceAboutID,
           },
+        },
+        relations: {
+          parentSpace: {
+            parentSpace: true,
+          },
+        },
+      }
+    );
+    // It's part of a template content space but we need to find the root space of that template:
+    const rootTemplateContentSpaceId =
+      templateContentSpace?.parentSpace?.parentSpace?.id ??
+      templateContentSpace?.parentSpace?.id ??
+      templateContentSpace?.id;
+    if (!rootTemplateContentSpaceId) {
+      throw new EntityNotFoundException(
+        'Unable to find url for about',
+        LogContext.URL_GENERATOR,
+        { spaceAboutID }
+      );
+    }
+
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        contentSpace: {
+          id: rootTemplateContentSpaceId,
         },
       },
       relations: {
         profile: true,
       },
     });
-    if (templateContentSpace && templateContentSpace.profile) {
-      return await this.getTemplateUrlPathOrFail(
-        templateContentSpace.profile.id
-      );
+    if (template && template.profile) {
+      return await this.getTemplateUrlPathOrFail(template.profile.id);
     }
-
     throw new EntityNotFoundException(
-      `Unable to find url for about with ID: ${spaceAboutID}`,
+      `Unable to find template url for about with ID: ${spaceAboutID}`,
       LogContext.URL_GENERATOR
     );
   }

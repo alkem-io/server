@@ -7,7 +7,7 @@ export const instrumentMethod = (
 ) => {
   return new Proxy(method, {
     apply(target: any, thisArg: any, argArray: any[]): any {
-      if (!apmAgent.currentTransaction) {
+      if (!apmAgent?.currentTransaction) {
         return Reflect.apply(target, thisArg, argArray);
       }
       // start span

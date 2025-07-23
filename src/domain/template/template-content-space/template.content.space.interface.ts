@@ -1,6 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ICollaboration } from '@domain/collaboration/collaboration';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
@@ -10,6 +9,9 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 @ObjectType('TemplateContentSpace')
 export class ITemplateContentSpace extends IAuthorizable {
   rowId!: number;
+
+  subspaces?: ITemplateContentSpace[];
+  parentSpace?: ITemplateContentSpace;
 
   about!: ISpaceAbout;
 
@@ -21,8 +23,6 @@ export class ITemplateContentSpace extends IAuthorizable {
   collaboration?: ICollaboration;
 
   settings!: ISpaceSettings;
-
-  storageAggregator?: IStorageAggregator;
 
   license?: ILicense;
 }
