@@ -10,6 +10,7 @@ import { IAgent } from '@domain/agent/agent';
 import { CreateSpaceInput, DeleteSpaceInput } from '@domain/space/space';
 import { ICommunity } from '@domain/community/community';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -77,6 +78,9 @@ import { TemplateType } from '@common/enums/template.type';
 import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
+import { Cache } from 'cache-manager';
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 
@@ -92,6 +96,8 @@ type SpaceSortingData = {
 
 @Injectable()
 export class SpaceService {
+  private readonly spacesCacheTTL: number;
+  private readonly spacesCacheKey: string;
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private spacesFilterService: SpaceFilterService,
@@ -110,10 +116,19 @@ export class SpaceService {
     private templateContentSpaceService: TemplateContentSpaceService,
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
+    private configService: ConfigService<AlkemioConfig, true>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+  ) {
+    this.spacesCacheTTL = this.configService.get(
+      'collaboration.membership.cache_ttl',
+      { infer: true }
+    );
+    this.spacesCacheKey = '@space:spacesList';
+  }
 
   /**
    * Create a new Space.
@@ -367,6 +382,7 @@ export class SpaceService {
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
+    await this.invalidateSpacesCache();
     return result;
   }
 
@@ -438,11 +454,21 @@ export class SpaceService {
     args: SpacesQueryArgs,
     options?: FindManyOptions<Space>
   ): Promise<ISpace[]> {
+    const cached = await this.cacheManager.get<ISpace[]>(this.spacesCacheKey);
+    if (cached) {
+      this.logger.verbose?.('Returning cached spaces list', LogContext.SPACES);
+      return cached;
+    }
+
     const spaces = await this.getSpacesUnsorted(args, options);
 
     if (spaces.length === 0) return spaces;
 
-    return await this.orderSpacesDefault(spaces);
+    const ordered = await this.orderSpacesDefault(spaces);
+    await this.cacheManager.set(this.spacesCacheKey, ordered, {
+      ttl: this.spacesCacheTTL,
+    });
+    return ordered;
   }
 
   async getSpacesUnsorted(
@@ -605,6 +631,10 @@ export class SpaceService {
       if (subspace.subspaces) subspacesCount += subspace.subspaces.length;
     }
     return subspacesCount;
+  }
+
+  private invalidateSpacesCache(): Promise<any> {
+    return this.cacheManager.del(this.spacesCacheKey);
   }
 
   public getSpacesByVisibilities(
@@ -782,7 +812,9 @@ export class SpaceService {
       }
     }
 
-    return await this.save(space);
+    const updated = await this.save(space);
+    await this.invalidateSpacesCache();
+    return updated;
   }
 
   private async updateSpaceVisibilityAllSubspaces(
@@ -968,7 +1000,13 @@ export class SpaceService {
     templateContentSpace.collaboration.innovationFlow.settings.minimumNumberOfStates = 4;
     templateContentSpace.collaboration.innovationFlow.settings.maximumNumberOfStates = 4;
 
-    return await this.createSpace(spaceData, templateContentSpace, agentInfo);
+    const created = await this.createSpace(
+      spaceData,
+      templateContentSpace,
+      agentInfo
+    );
+    await this.invalidateSpacesCache();
+    return created;
   }
 
   public async createSubspace(
@@ -1088,6 +1126,8 @@ export class SpaceService {
         await this.assignUserToRoles(roleSet, agentInfo);
       }
     }
+
+    await this.invalidateSpacesCache();
 
     return subspace;
   }
@@ -1238,7 +1278,9 @@ export class SpaceService {
       );
     }
 
-    return await this.save(space);
+    const updated = await this.save(space);
+    await this.invalidateSpacesCache();
+    return updated;
   }
 
   async getSubspaceInLevelZeroScopeOrFail(
@@ -1297,7 +1339,9 @@ export class SpaceService {
       settingsData
     );
     space.settings = updatedSettings;
-    return await this.save(space);
+    const updated = await this.save(space);
+    await this.invalidateSpacesCache();
+    return updated;
   }
 
   public async getAccountForLevelZeroSpaceOrFail(
