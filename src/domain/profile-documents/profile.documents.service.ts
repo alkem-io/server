@@ -97,10 +97,10 @@ export class ProfileDocumentsService {
   }
 
   /***
-   * Checks if a markdown profile has documents living under the storage bucket
-   * of a profile and re-uploads them if not there
+   * Checks if a markdown text has documents living under the
+   * specified storage bucket and re-uploads them if not there.
    */
-  public async reuploadDocumentsInMarkdownProfile(
+  public async reuploadDocumentsInMarkdownToStorageBucket(
     markdown: string,
     storageBucket: IStorageBucket
   ): Promise<string> {

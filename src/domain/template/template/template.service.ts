@@ -207,28 +207,8 @@ export class TemplateService {
     return await this.templateRepository.save(template);
   }
 
-  /**
-   * Ensures that the callout is marked as a template and that comments are disabled
-   * @param calloutData gets modified
-   * @returns (modifies the callout input)
-   */
   private overrideCalloutSettingsForTemplate(calloutData: CreateCalloutInput) {
-    calloutData.isTemplate = true; // Mark as a template callout
-    if (calloutData.settings) {
-      if (calloutData.settings.framing) {
-        calloutData.settings.framing.commentsEnabled = false;
-      } else {
-        calloutData.settings.framing = {
-          commentsEnabled: false, // Ensure no comments are created on the callout
-        };
-      }
-    } else {
-      calloutData.settings = {
-        framing: {
-          commentsEnabled: false, // Ensure no comments are created on the callout
-        },
-      };
-    }
+    calloutData.isTemplate = true;
   }
 
   async getTemplateOrFail(
