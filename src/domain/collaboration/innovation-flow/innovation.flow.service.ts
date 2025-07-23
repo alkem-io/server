@@ -143,10 +143,11 @@ export class InnovationFlowService {
     newStates: CreateInnovationFlowStateInput[],
     isTemplate: boolean = false
   ) {
-    const previousCurrentState = await this.getCurrentState(
-      innovationFlow.currentStateID
-    );
-    const selectedStateName = previousCurrentState.displayName;
+    // Get the name of the currently selected as current state
+    const selectedStateName = innovationFlow.currentStateID
+      ? (await this.getCurrentState(innovationFlow.currentStateID))?.displayName
+      : undefined;
+
     // delete the existing states
     for (const state of innovationFlow.states) {
       await this.innovationFlowStateService.delete(state);

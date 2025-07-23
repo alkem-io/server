@@ -31,12 +31,15 @@ export class InnovationFlowResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('currentState', () => IInnovationFlowState, {
-    nullable: false,
+    nullable: true,
     description: 'The currently selected State in this Flow.',
   })
   async currentState(
     @Parent() innovationFlow: IInnovationFlow
-  ): Promise<IInnovationFlowState> {
+  ): Promise<IInnovationFlowState | null> {
+    if (!innovationFlow.currentStateID) {
+      return null;
+    }
     return await this.innovationFlowService.getCurrentState(
       innovationFlow.currentStateID
     );

@@ -11,7 +11,7 @@ export abstract class IInnovationFlow extends IAuthorizable {
 
   states!: IInnovationFlowState[];
 
-  currentStateID!: string;
+  currentStateID?: string;
 
   @Field(() => IInnovationFlowSettings, {
     nullable: false,

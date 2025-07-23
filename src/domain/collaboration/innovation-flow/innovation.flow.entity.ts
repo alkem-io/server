@@ -26,8 +26,8 @@ export class InnovationFlow
   })
   states!: InnovationFlowState[];
 
-  @Column('char', { length: UUID_LENGTH, nullable: false })
-  currentStateID!: string;
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  currentStateID?: string;
 
   @Column('json', { nullable: false })
   settings!: IInnovationFlowSettings;
