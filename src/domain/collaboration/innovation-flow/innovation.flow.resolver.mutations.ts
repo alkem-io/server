@@ -15,6 +15,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
 import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
+import { ValidationException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @InstrumentResolver()
 @Resolver()
@@ -159,6 +161,21 @@ export class InnovationFlowResolverMutations {
       await this.innovationFlowService.getInnovationFlowOrFail(
         sortOrderData.innovationFlowID
       );
+
+    if (sortOrderData.stateIDs.length === 0) {
+      throw new ValidationException(
+        'No state IDs provided for sort order update.',
+        LogContext.INNOVATION_FLOW,
+        { innovationFlowID: innovationFlow.id }
+      );
+    }
+    if (sortOrderData.stateIDs.length !== innovationFlow.states.length) {
+      throw new ValidationException(
+        'The number of states provided for sorting does not match the number of states of the Innovation Flow.',
+        LogContext.INNOVATION_FLOW,
+        { innovationFlowID: innovationFlow.id }
+      );
+    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,

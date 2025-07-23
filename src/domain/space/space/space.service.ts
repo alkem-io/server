@@ -1137,7 +1137,9 @@ export class SpaceService {
               },
             },
             collaboration: {
-              innovationFlow: true,
+              innovationFlow: {
+                states: true,
+              },
             },
             about: {
               profile: {
