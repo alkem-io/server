@@ -4,12 +4,14 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 interface InnovationFlow {
   id: string;
   states: {
+    id: string; // Added missing 'id' property
     displayName: string;
     description: string;
   }[];
   currentState: {
     displayName: string;
   } | null;
+  currentStateID?: string; // Added missing 'currentStateID' property
 }
 
 export class InnovationFlowState1752257104122 implements MigrationInterface {
@@ -17,16 +19,16 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE TABLE \`innovation_flow_state\` (\`id\` char(36) NOT NULL,
-                                                                          \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                                                                          \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-                                                                          \`version\` int NOT NULL,
-                                                                          \`displayName\` text NOT NULL,
-                                                                          \`description\` text NULL,
-                                                                          \`settings\` json NOT NULL,
-                                                                          \`sortOrder\` int NOT NULL,
-                                                                          \`authorizationId\` char(36) NULL,
-                                                                          \`innovationFlowId\` char(36) NULL,
-                                                                          UNIQUE INDEX \`REL_83d9f1d85d3ca51828168ea336\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
+        \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        \`version\` int NOT NULL,
+        \`displayName\` text NOT NULL,
+        \`description\` text NULL,
+        \`settings\` json NOT NULL,
+        \`sortOrder\` int NOT NULL,
+        \`authorizationId\` char(36) NULL,
+        \`innovationFlowId\` char(36) NULL,
+        UNIQUE INDEX \`REL_83d9f1d85d3ca51828168ea336\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` ADD \`currentStateID\` char(36) NULL`
@@ -99,6 +101,28 @@ export class InnovationFlowState1752257104122 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` ADD \`states\` json NOT NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD \`currentState\` json NULL`
+    );
+    const innovationFlows: InnovationFlow[] = await queryRunner.query(
+      `SELECT id, currentStateID FROM innovation_flow`
+    );
+    for (const flow of innovationFlows) {
+      const states: InnovationFlow['states'] = await queryRunner.query(
+        `SELECT id, displayName, description, sortOrder FROM innovation_flow_state WHERE innovationFlowId = ? ORDER BY sortOrder ASC`,
+        [flow.id]
+      );
+      const currentState = states.find(
+        state => state.id === flow.currentStateID
+      );
+      await queryRunner.query(
+        `UPDATE innovation_flow SET states = ?, currentState = ? WHERE id = ?`,
+        [JSON.stringify(states), JSON.stringify(currentState), flow.id]
+      );
+    }
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` DROP COLUMN \`currentStateID\``
     );
     await queryRunner.query(
       `DROP INDEX \`REL_83d9f1d85d3ca51828168ea336\` ON \`innovation_flow_state\``
