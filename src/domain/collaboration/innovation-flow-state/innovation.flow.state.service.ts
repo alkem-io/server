@@ -29,7 +29,7 @@ export class InnovationFlowStateService {
     innovationFlowState.settings = {
       allowNewCallouts: true,
     };
-    innovationFlowState.sortOrder = stateData.sortOrder || 0;
+    innovationFlowState.sortOrder = stateData.sortOrder ?? 0;
     innovationFlowState.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.INNOVATION_FLOW_STATE
     );
@@ -41,6 +41,12 @@ export class InnovationFlowStateService {
     innovationFlowState: IInnovationFlowState
   ): Promise<IInnovationFlowState> {
     return await this.innovationFlowStateRepository.save(innovationFlowState);
+  }
+
+  saveAll(
+    innovationFlowStates: IInnovationFlowState[]
+  ): Promise<IInnovationFlowState[]> {
+    return this.innovationFlowStateRepository.save(innovationFlowStates);
   }
 
   async update(

@@ -71,7 +71,7 @@ export class InnovationFlowAuthorizationService {
 
     for (const state of innovationFlow.states) {
       const stateAuthorization =
-        await this.innovationFlowStateAuthorizationService.applyAuthorizationPolicy(
+        this.innovationFlowStateAuthorizationService.applyAuthorizationPolicy(
           state,
           innovationFlow.authorization
         );

@@ -1,6 +1,7 @@
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -499,24 +500,30 @@ export class InnovationFlowService {
       }
     );
     if (!innovationFlow.states) {
-      throw new EntityNotFoundException(
-        `InnovationFlow not initialised, no states: ${innovationFlowID}`,
-        LogContext.COLLABORATION
+      throw new EntityNotInitializedException(
+        'InnovationFlow not initialised, missing states',
+        LogContext.COLLABORATION,
+        { innovationFlowID }
       );
     }
 
     const allStates = innovationFlow.states;
 
     const statesByID = {
-      ...keyBy(allStates, 'nameID'),
       ...keyBy(allStates, 'id'),
     };
 
-    const sortOrders = [
-      ...sortOrderData.stateIDs
-        .map(stateID => statesByID[stateID]?.sortOrder)
-        .filter(sortOrder => sortOrder !== undefined),
-    ];
+    if (sortOrderData.stateIDs.some(stateID => !statesByID[stateID])) {
+      throw new EntityNotFoundException(
+        'One or more states with requested IDs not located in the specified InnovationFlow',
+        LogContext.INNOVATION_FLOW,
+        { innovationFlowID }
+      );
+    }
+
+    const sortOrders = sortOrderData.stateIDs.map(
+      stateID => statesByID[stateID].sortOrder
+    );
 
     const minimumSortOrder =
       sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
@@ -527,12 +534,7 @@ export class InnovationFlowService {
     let newSortOrder = minimumSortOrder + 10;
     for (const stateID of sortOrderData.stateIDs) {
       const state = statesByID[stateID];
-      if (!state) {
-        throw new EntityNotFoundException(
-          `State with requested ID (${stateID}) not located within current InnovationFlow: ${innovationFlowID}`,
-          LogContext.INNOVATION_FLOW
-        );
-      }
+
       statesInOrder.push(state);
       state.sortOrder = newSortOrder;
       modifiedStates.push(state);
@@ -540,11 +542,7 @@ export class InnovationFlowService {
       newSortOrder += 10; // Increment sort order for the next state
     }
 
-    await Promise.all(
-      modifiedStates.map(
-        async state => await this.innovationFlowStateService.save(state)
-      )
-    );
+    await this.innovationFlowStateService.saveAll(modifiedStates);
 
     return statesInOrder;
   }

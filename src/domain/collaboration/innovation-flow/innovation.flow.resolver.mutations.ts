@@ -57,7 +57,7 @@ export class InnovationFlowResolverMutations {
     );
 
     const authorization =
-      await this.innovationFlowStateAuthorizationService.applyAuthorizationPolicy(
+      this.innovationFlowStateAuthorizationService.applyAuthorizationPolicy(
         state,
         innovationFlow.authorization
       );
