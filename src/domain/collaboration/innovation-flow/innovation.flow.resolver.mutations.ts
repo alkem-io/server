@@ -159,7 +159,12 @@ export class InnovationFlowResolverMutations {
   ): Promise<IInnovationFlowState[]> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(
-        sortOrderData.innovationFlowID
+        sortOrderData.innovationFlowID,
+        {
+          relations: {
+            states: true,
+          },
+        }
       );
 
     if (sortOrderData.stateIDs.length === 0) {
