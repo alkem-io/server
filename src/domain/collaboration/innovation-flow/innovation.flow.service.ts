@@ -104,10 +104,20 @@ export class InnovationFlowService {
       innovationFlow.states.push(state);
       sortOrder = state.sortOrder;
     }
+    await this.save(innovationFlow);
 
     innovationFlow.currentStateID = innovationFlow.states[0].id;
+    if (innovationFlowData.currentStateDisplayName) {
+      const currentState = innovationFlow.states.find(
+        state =>
+          state.displayName === innovationFlowData.currentStateDisplayName
+      );
+      if (currentState) {
+        innovationFlow.currentStateID = currentState.id;
+      }
+    }
 
-    return innovationFlow;
+    return await this.save(innovationFlow);
   }
 
   async save(innovationFlow: IInnovationFlow): Promise<IInnovationFlow> {

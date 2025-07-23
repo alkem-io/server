@@ -338,6 +338,10 @@ export class InputCreatorService {
         LogContext.INPUT_CREATOR
       );
     }
+
+    const currentState = innovationFlow.states.find(
+      state => state.id === innovationFlow.currentStateID
+    );
     // Note: no profile currently present, so use the one from the template for now
     const result: CreateInnovationFlowInput = {
       settings: innovationFlow.settings,
@@ -348,6 +352,7 @@ export class InputCreatorService {
       states: this.buildCreateInnovationFlowStateInputFromInnovationFlowState(
         innovationFlow.states
       ),
+      currentStateDisplayName: currentState?.displayName ?? '',
     };
     return result;
   }

@@ -18,5 +18,7 @@ export class CreateInnovationFlowInput {
   @Type(() => CreateInnovationFlowStateInput)
   states!: CreateInnovationFlowStateInput[];
 
+  currentStateDisplayName?: string;
+
   settings!: IInnovationFlowSettings;
 }
