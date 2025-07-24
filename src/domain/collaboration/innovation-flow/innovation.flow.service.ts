@@ -1,6 +1,7 @@
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -10,7 +11,6 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
-import { UpdateInnovationFlowEntityInput } from './dto/innovation.flow.dto.update.entity';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -18,16 +18,20 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
-import { InnovationFlowStatesService } from '../innovation-flow-states/innovation.flow.state.service';
-import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
-import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
+import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CreateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.create';
-import { UpdateInnovationFlowStateInput } from '../innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.create';
+import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
+import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
+import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
+import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
+import { keyBy } from 'lodash';
+import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
 
 @Injectable()
 export class InnovationFlowService {
@@ -35,7 +39,7 @@ export class InnovationFlowService {
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     private tagsetTemplateService: TagsetTemplateService,
-    private innovationFlowStatesService: InnovationFlowStatesService,
+    private innovationFlowStateService: InnovationFlowStateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -70,6 +74,11 @@ export class InnovationFlowService {
       innovationFlow.flowStatesTagsetTemplate = flowTagsetTemplate;
     }
 
+    this.validateInnovationFlowDefinition(
+      innovationFlowData.states,
+      innovationFlowData.settings
+    );
+
     innovationFlow.profile = await this.profileService.createProfile(
       innovationFlowData.profile,
       ProfileType.INNOVATION_FLOW,
@@ -82,13 +91,33 @@ export class InnovationFlowService {
       [VisualType.CARD]
     );
 
-    innovationFlow.states =
-      this.innovationFlowStatesService.convertInputsToStates(
-        innovationFlowData.states
-      );
-    innovationFlow.currentState = innovationFlow.states[0];
+    innovationFlow.states = [];
+    let sortOrder = 0;
+    for (const stateData of innovationFlowData.states) {
+      if (!stateData.sortOrder) {
+        stateData.sortOrder = sortOrder + 5;
+      }
+      const state =
+        await this.innovationFlowStateService.createInnovationFlowState(
+          stateData
+        );
+      innovationFlow.states.push(state);
+      sortOrder = state.sortOrder;
+    }
+    await this.save(innovationFlow);
 
-    return innovationFlow;
+    innovationFlow.currentStateID = innovationFlow.states[0].id;
+    if (innovationFlowData.currentStateDisplayName) {
+      const currentState = innovationFlow.states.find(
+        state =>
+          state.displayName === innovationFlowData.currentStateDisplayName
+      );
+      if (currentState) {
+        innovationFlow.currentStateID = currentState.id;
+      }
+    }
+
+    return await this.save(innovationFlow);
   }
 
   async save(innovationFlow: IInnovationFlow): Promise<IInnovationFlow> {
@@ -96,10 +125,9 @@ export class InnovationFlowService {
   }
 
   async updateInnovationFlow(
-    innovationFlowData: UpdateInnovationFlowEntityInput,
-    isTemplate: boolean = false
+    innovationFlowData: UpdateInnovationFlowInput
   ): Promise<IInnovationFlow> {
-    let innovationFlow = await this.getInnovationFlowOrFail(
+    const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
       {
         relations: {
@@ -109,18 +137,6 @@ export class InnovationFlowService {
           },
         },
       }
-    );
-
-    this.innovationFlowStatesService.validateDefinition(
-      innovationFlowData.states,
-      innovationFlow.settings
-    );
-    innovationFlow = await this.updateInnovationFlowStates(
-      innovationFlow,
-      this.innovationFlowStatesService.convertInputsToStates(
-        innovationFlowData.states
-      ),
-      isTemplate
     );
 
     if (innovationFlowData.profileData) {
@@ -135,24 +151,44 @@ export class InnovationFlowService {
 
   public async updateInnovationFlowStates(
     innovationFlow: IInnovationFlow,
-    newStates: IInnovationFlowState[],
+    newStates: CreateInnovationFlowStateInput[],
     isTemplate: boolean = false
   ) {
-    // Update the innovation flow entity
-    const currentStateStillValid = newStates.some(
-      state => state.displayName === innovationFlow.currentState.displayName
-    );
-    if (!currentStateStillValid) {
-      // if the current state is not in the new states, set it to the first one
-      innovationFlow.currentState = newStates[0];
+    // Get the name of the currently selected as current state
+    const selectedStateName = innovationFlow.currentStateID
+      ? (await this.getCurrentState(innovationFlow.currentStateID))?.displayName
+      : undefined;
+
+    // delete the existing states
+    for (const state of innovationFlow.states) {
+      await this.innovationFlowStateService.delete(state);
     }
-    innovationFlow.states = newStates;
+    innovationFlow.states = [];
+    // create the new states
+    for (const stateData of newStates) {
+      const state =
+        await this.innovationFlowStateService.createInnovationFlowState(
+          stateData
+        );
+      state.innovationFlow = innovationFlow;
+      innovationFlow.states.push(state);
+    }
+
+    // Check if there is a matching name to update the current state ID
+    let currentState = innovationFlow.states.find(
+      state => state.displayName === selectedStateName
+    );
+    if (!currentState) {
+      // If the current state is not valid, set it to the first state
+      currentState = innovationFlow.states[0];
+    }
+    innovationFlow.currentStateID = currentState.id;
+
     innovationFlow = await this.save(innovationFlow);
 
     if (!isTemplate) {
       const tagsetAllowedValues = newStates.map(state => state.displayName);
-      const tagsetDefaultSelectedValue =
-        innovationFlow.currentState.displayName;
+      const tagsetDefaultSelectedValue = currentState.displayName;
       await this.updateFlowStatesTagsetTemplate(
         innovationFlow.id,
         tagsetAllowedValues,
@@ -207,74 +243,146 @@ export class InnovationFlowService {
     );
   }
 
-  async updateSelectedState(
-    innovationFlowSelectedStateData: UpdateInnovationFlowSelectedStateInput
+  public async createStateOnInnovationFlow(
+    innovationFlow: IInnovationFlow,
+    stateData: CreateInnovationFlowStateInput
+  ): Promise<IInnovationFlowState> {
+    const maximumNumberOfStates = innovationFlow.settings.maximumNumberOfStates;
+    if (!innovationFlow.states) {
+      throw new RelationshipNotFoundException(
+        `Unable to find states on InnovationFlow: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    if (innovationFlow.states.length >= maximumNumberOfStates) {
+      throw new ValidationException(
+        `Innovation Flow can have a maximum of ${maximumNumberOfStates} states; provided: ${innovationFlow.states.length}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    // If order is not specified, set it to the next highest
+    if (!stateData.sortOrder) {
+      stateData.sortOrder =
+        innovationFlow.states.length > 0
+          ? Math.max(...innovationFlow.states.map(state => state.sortOrder)) + 1
+          : 1;
+    }
+
+    const state =
+      await this.innovationFlowStateService.createInnovationFlowState(
+        stateData
+      );
+    state.innovationFlow = innovationFlow;
+    return await this.innovationFlowStateService.save(state);
+  }
+
+  public async deleteStateOnInnovationFlow(
+    innovationFlow: IInnovationFlow,
+    stateData: DeleteStateOnInnovationFlowInput
+  ): Promise<IInnovationFlowState> {
+    const minimum = innovationFlow.settings.minimumNumberOfStates;
+    if (!innovationFlow.states) {
+      throw new RelationshipNotFoundException(
+        `Unable to find states on InnovationFlow: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    if (innovationFlow.states.length <= minimum) {
+      throw new ValidationException(
+        `Innovation Flow must have a minimum of ${minimum} states; current: ${innovationFlow.states.length}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    const state: IInnovationFlowState =
+      await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+        stateData.ID
+      );
+    const deletedInnovationFlowState =
+      await this.innovationFlowStateService.delete(state);
+
+    deletedInnovationFlowState.id = stateData.ID;
+    return deletedInnovationFlowState;
+  }
+
+  public validateInnovationFlowDefinition(
+    states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[],
+    settings?: IInnovationFlowSettings
+  ) {
+    if (states.length === 0) {
+      throw new ValidationException(
+        `At least one state must be defined: ${states}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    if (settings) {
+      if (states.length > settings.maximumNumberOfStates) {
+        throw new ValidationException(
+          `Innovation Flow can have a maximum of ${settings.maximumNumberOfStates} states; provided: ${states}`,
+          LogContext.INNOVATION_FLOW
+        );
+      }
+
+      if (states.length < settings.minimumNumberOfStates) {
+        throw new ValidationException(
+          `Innovation Flow must have a minimum of ${settings.minimumNumberOfStates} states; provided: ${states}`,
+          LogContext.INNOVATION_FLOW
+        );
+      }
+    }
+    const stateNames = states.map(state => state.displayName);
+    const uniqueStateNames = new Set(stateNames);
+    if (uniqueStateNames.size !== stateNames.length) {
+      throw new ValidationException(
+        `State names must be unique: ${stateNames}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    // Avoid commas in state names, because they are used to separate states in the database
+    // This validation is also performed on the client: domain/collaboration/InnovationFlow/InnovationFlowDragNDropEditor/InnovationFlowStateForm.tsx
+    // Keep them in sync consistently
+    if (stateNames.some(name => name.includes(','))) {
+      throw new ValidationException(
+        `Invalid characters found on flow state: ${stateNames}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+  }
+
+  async updateCurrentState(
+    innovationFlowSelectedStateData: UpdateInnovationFlowCurrentStateInput
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowSelectedStateData.innovationFlowID,
       {
-        relations: { profile: true, flowStatesTagsetTemplate: true },
-      }
-    );
-    const newSelectedState = innovationFlow.states.find(
-      s => s.displayName === innovationFlowSelectedStateData.selectedState
-    );
-    if (!newSelectedState) {
-      throw new ValidationException(
-        `Unable to find selected state '${innovationFlowSelectedStateData.selectedState}' in existing set of state names: ${this.innovationFlowStatesService.getStateNames(
-          innovationFlow.states
-        )}`,
-        LogContext.INNOVATION_FLOW
-      );
-    }
-    innovationFlow.currentState = newSelectedState;
-
-    return await this.save(innovationFlow);
-  }
-
-  async updateSingleState(
-    updateData: UpdateInnovationFlowSingleStateInput,
-    isTemplate: boolean = false
-  ): Promise<IInnovationFlow> {
-    const innovationFlow = await this.getInnovationFlowOrFail(
-      updateData.innovationFlowID,
-      {
         relations: {
           profile: true,
-          flowStatesTagsetTemplate: {
-            tagsets: true,
-          },
+          flowStatesTagsetTemplate: true,
+          states: true,
         },
       }
     );
+    const newSelectedCurrentState =
+      await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+        innovationFlowSelectedStateData.currentStateID
+      );
 
-    // First update the states definition
-    const stateToUpdate = innovationFlow.states.find(
-      s => s.displayName === updateData.stateDisplayName
-    );
-    if (!stateToUpdate) {
+    // Check it is part of the current flow states!
+    if (
+      !innovationFlow.states.some(
+        state => state.id === newSelectedCurrentState.id
+      )
+    ) {
       throw new ValidationException(
-        `Unable to find '${
-          updateData.stateDisplayName
-        }' in existing set of state names: ${this.innovationFlowStatesService.getStateNames(
-          innovationFlow.states
+        `Selected state '${newSelectedCurrentState.displayName}' is not part of the current flow states: ${innovationFlow.states.map(
+          state => state.displayName
         )}`,
         LogContext.INNOVATION_FLOW
       );
     }
-    const newStates: IInnovationFlowState[] = [];
-    for (const state of innovationFlow.states) {
-      if (state.displayName === updateData.stateDisplayName) {
-        state.displayName = updateData.stateUpdatedData.displayName;
-        state.description = updateData.stateUpdatedData.description || '';
-      }
-      newStates.push(state);
-    }
-    return await this.updateInnovationFlowStates(
-      innovationFlow,
-      newStates,
-      isTemplate
-    );
+
+    innovationFlow.currentStateID = newSelectedCurrentState.id;
+
+    return await this.save(innovationFlow);
   }
 
   async deleteInnovationFlow(
@@ -283,12 +391,22 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: { profile: true },
+        relations: {
+          profile: true,
+          states: true,
+        },
       }
     );
+    if (!innovationFlow.states || !innovationFlow.profile) {
+      throw new RelationshipNotFoundException(
+        `Unable to find states or profile on InnovationFlow: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
 
-    if (innovationFlow.profile) {
-      await this.profileService.deleteProfile(innovationFlow.profile.id);
+    await this.profileService.deleteProfile(innovationFlow.profile.id);
+    for (const state of innovationFlow.states) {
+      await this.innovationFlowStateService.delete(state);
     }
 
     const result = await this.innovationFlowRepository.remove(
@@ -334,6 +452,34 @@ export class InnovationFlowService {
     return innovationFlow.profile;
   }
 
+  public async getStates(
+    innovationFlowID: string
+  ): Promise<IInnovationFlowState[]> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowID,
+      {
+        relations: { states: true },
+      }
+    );
+    if (!innovationFlow.states) {
+      throw new EntityNotFoundException(
+        `InnovationFlow States not initialised: ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+
+    // sort the states by sortOrder
+    return innovationFlow.states.sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  public async getCurrentState(
+    innovationFlowStateID: string
+  ): Promise<IInnovationFlowState> {
+    return await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+      innovationFlowStateID
+    );
+  }
+
   public async getFlowTagsetTemplate(
     innovationFlowInput: IInnovationFlow,
     relations?: FindOptionsRelations<IInnovationFlow>
@@ -353,9 +499,61 @@ export class InnovationFlowService {
     return innovationFlow.flowStatesTagsetTemplate;
   }
 
-  public validateInnovationFlowDefinition(
-    states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[]
-  ) {
-    this.innovationFlowStatesService.validateDefinition(states);
+  public async updateStatesSortOrder(
+    innovationFlowID: string,
+    sortOrderData: UpdateInnovationFlowStatesSortOrderInput
+  ): Promise<IInnovationFlowState[]> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowID,
+      {
+        relations: { states: true },
+      }
+    );
+    if (!innovationFlow.states) {
+      throw new EntityNotInitializedException(
+        'InnovationFlow not initialised, missing states',
+        LogContext.COLLABORATION,
+        { innovationFlowID }
+      );
+    }
+
+    const allStates = innovationFlow.states;
+
+    const statesByID = {
+      ...keyBy(allStates, 'id'),
+    };
+
+    if (sortOrderData.stateIDs.some(stateID => !statesByID[stateID])) {
+      throw new EntityNotFoundException(
+        'One or more states with requested IDs not located in the specified InnovationFlow',
+        LogContext.INNOVATION_FLOW,
+        { innovationFlowID }
+      );
+    }
+
+    const sortOrders = sortOrderData.stateIDs.map(
+      stateID => statesByID[stateID].sortOrder
+    );
+
+    const minimumSortOrder =
+      sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
+    const modifiedStates: IInnovationFlowState[] = [];
+
+    // Get the callouts specified
+    const statesInOrder: IInnovationFlowState[] = [];
+    let newSortOrder = minimumSortOrder + 10;
+    for (const stateID of sortOrderData.stateIDs) {
+      const state = statesByID[stateID];
+
+      statesInOrder.push(state);
+      state.sortOrder = newSortOrder;
+      modifiedStates.push(state);
+
+      newSortOrder += 10; // Increment sort order for the next state
+    }
+
+    await this.innovationFlowStateService.saveAll(modifiedStates);
+
+    return statesInOrder;
   }
 }

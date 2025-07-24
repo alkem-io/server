@@ -8,19 +8,33 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE } from '@common/constants/authorization/policy.rule.constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { InnovationFlowService } from './innovation.flow.service';
+import { InnovationFlowStateAuthorizationService } from '../innovation-flow-state/innovation.flow.state.service.authorization';
 
 @Injectable()
 export class InnovationFlowAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private innovationFlowService: InnovationFlowService,
+    private innovationFlowStateAuthorizationService: InnovationFlowStateAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    innovationFlow: IInnovationFlow,
+    innovationFlowID: string,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
-    if (!innovationFlow.profile) {
+    const innovationFlow: IInnovationFlow =
+      await this.innovationFlowService.getInnovationFlowOrFail(
+        innovationFlowID,
+        {
+          relations: {
+            profile: true,
+            states: true,
+          },
+        }
+      );
+    if (!innovationFlow.profile || !innovationFlow.states) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for innovationFlow ${innovationFlow.id} `,
         LogContext.INNOVATION_FLOW
@@ -54,6 +68,15 @@ export class InnovationFlowAuthorizationService {
         innovationFlow.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
+
+    for (const state of innovationFlow.states) {
+      const stateAuthorization =
+        this.innovationFlowStateAuthorizationService.applyAuthorizationPolicy(
+          state,
+          innovationFlow.authorization
+        );
+      updatedAuthorizations.push(stateAuthorization);
+    }
 
     return updatedAuthorizations;
   }
