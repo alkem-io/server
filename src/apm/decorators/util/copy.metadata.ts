@@ -7,7 +7,7 @@ import 'reflect-metadata';
  * attached metadata
  *
  * @param src object to copy metadata from
- * @param dest object to copy metadata to1
+ * @param dest object to copy metadata to
  */
 export function copyMetadata(src: any, dest: any) {
   const metadataKeys = Reflect.getMetadataKeys(src);
