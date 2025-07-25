@@ -49,7 +49,7 @@ export class SpaceAboutService {
     spaceAboutData: CreateSpaceAboutInput,
     storageAggregator: IStorageAggregator
   ): Promise<ISpaceAbout> {
-    const spaceAbout: ISpaceAbout = SpaceAbout.create({
+    let spaceAbout: ISpaceAbout = SpaceAbout.create({
       ...spaceAboutData,
       authorization: new AuthorizationPolicy(AuthorizationPolicyType.SPACE),
     });
@@ -77,13 +77,15 @@ export class SpaceAboutService {
         storageAggregator
       );
 
+    spaceAbout = await this.save(spaceAbout);
+
     // add the visuals
     await this.profileService.addVisualsOnProfile(
       spaceAbout.profile,
       spaceAboutData.profileData.visuals,
       [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
     );
-    return await this.spaceAboutRepository.save(spaceAbout);
+    return this.getSpaceAboutOrFail(spaceAbout.id);
   }
 
   async getSpaceAboutOrFail(
@@ -123,6 +125,10 @@ export class SpaceAboutService {
       );
     }
 
+    return await this.save(spaceAbout);
+  }
+
+  public async save(spaceAbout: ISpaceAbout): Promise<ISpaceAbout> {
     return await this.spaceAboutRepository.save(spaceAbout);
   }
 

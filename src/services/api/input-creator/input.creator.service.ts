@@ -38,6 +38,8 @@ import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
 
 @Injectable()
 export class InputCreatorService {
@@ -142,11 +144,13 @@ export class InputCreatorService {
   }
 
   public async buildCreateTemplateContentSpaceInputFromSpace(
-    spaceID: string
+    spaceID: string,
+    recursive: boolean = true
   ): Promise<CreateTemplateContentSpaceInput> {
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
         collaboration: true,
+        subspaces: true,
         about: {
           profile: {
             references: true,
@@ -162,7 +166,7 @@ export class InputCreatorService {
         },
       },
     });
-    if (!space.collaboration || !space.about) {
+    if (!space.collaboration || !space.about || !space.subspaces) {
       throw new RelationshipNotFoundException(
         `Space ${space.id} is missing a relation`,
         LogContext.INPUT_CREATOR
@@ -173,12 +177,27 @@ export class InputCreatorService {
       await this.buildCreateCollaborationInputFromCollaboration(
         space.collaboration.id
       );
+    const aboutInput = this.buildCreateSpaceAboutInputFromSpaceAbout(
+      space.about
+    );
+    const subspacesInput: CreateTemplateContentSpaceInput[] = [];
+    if (recursive) {
+      for (const subspace of space.subspaces) {
+        const subspaceInput =
+          await this.buildCreateTemplateContentSpaceInputFromSpace(
+            subspace.id,
+            recursive
+          );
+        subspacesInput.push(subspaceInput);
+      }
+    }
 
     const result: CreateTemplateContentSpaceInput = {
       collaborationData: collaborationInput,
-      about: this.buildCreateSpaceAboutInputFromSpaceAbout(space.about),
+      about: aboutInput,
       level: space.level,
       settings: space.settings,
+      subspaces: subspacesInput,
     };
 
     return result;
@@ -194,6 +213,7 @@ export class InputCreatorService {
           id: contentSpaceID,
         },
         relations: {
+          subspaces: true,
           collaboration: true,
           about: {
             profile: {
@@ -212,7 +232,11 @@ export class InputCreatorService {
       }
     );
 
-    if (!contentSpace.collaboration || !contentSpace.about) {
+    if (
+      !contentSpace.collaboration ||
+      !contentSpace.about ||
+      !contentSpace.subspaces
+    ) {
       throw new RelationshipNotFoundException(
         `ContentSpace ${contentSpace.id} is missing a relation`,
         LogContext.INPUT_CREATOR
@@ -223,12 +247,25 @@ export class InputCreatorService {
       await this.buildCreateCollaborationInputFromCollaboration(
         contentSpace.collaboration.id
       );
+    const aboutInput = this.buildCreateSpaceAboutInputFromSpaceAbout(
+      contentSpace.about
+    );
+
+    const subspacesInput: CreateTemplateContentSpaceInput[] = [];
+    for (const subspace of contentSpace.subspaces) {
+      const subspaceInput =
+        await this.buildCreateTemplateContentSpaceInputFromContentSpace(
+          subspace.id
+        );
+      subspacesInput.push(subspaceInput);
+    }
 
     const result: CreateTemplateContentSpaceInput = {
       collaborationData: collaborationInput,
-      about: this.buildCreateSpaceAboutInputFromSpaceAbout(contentSpace.about),
+      about: aboutInput,
       level: contentSpace.level,
       settings: contentSpace.settings,
+      subspaces: subspacesInput,
     };
 
     return result;
@@ -257,13 +294,15 @@ export class InputCreatorService {
           },
           innovationFlow: {
             profile: true,
+            states: true,
           },
         },
       });
     if (
       !collaboration.calloutsSet ||
       !collaboration.calloutsSet.callouts ||
-      !collaboration.innovationFlow
+      !collaboration.innovationFlow ||
+      !collaboration.innovationFlow.states
     ) {
       throw new RelationshipNotFoundException(
         `Collaboration ${collaboration.id} is missing a relation`,
@@ -299,6 +338,10 @@ export class InputCreatorService {
         LogContext.INPUT_CREATOR
       );
     }
+
+    const currentState = innovationFlow.states.find(
+      state => state.id === innovationFlow.currentStateID
+    );
     // Note: no profile currently present, so use the one from the template for now
     const result: CreateInnovationFlowInput = {
       settings: innovationFlow.settings,
@@ -306,8 +349,26 @@ export class InputCreatorService {
         displayName: innovationFlow.profile.displayName,
         description: innovationFlow.profile.description,
       },
-      states: innovationFlow.states,
+      states: this.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+        innovationFlow.states
+      ),
+      currentStateDisplayName: currentState?.displayName ?? '',
     };
+    return result;
+  }
+
+  public buildCreateInnovationFlowStateInputFromInnovationFlowState(
+    states: IInnovationFlowState[]
+  ): CreateInnovationFlowStateInput[] {
+    const result: CreateInnovationFlowStateInput[] = [];
+    for (const state of states) {
+      result.push({
+        displayName: state.displayName,
+        description: state.description,
+        settings: state.settings,
+        sortOrder: state.sortOrder,
+      });
+    }
     return result;
   }
 
@@ -379,6 +440,7 @@ export class InputCreatorService {
       return undefined;
     }
     const result: CreateCalloutContributionDefaultsInput = {
+      defaultDisplayName: calloutContributionDefaults.defaultDisplayName,
       postDescription: calloutContributionDefaults.postDescription,
       whiteboardContent: calloutContributionDefaults.whiteboardContent,
     };

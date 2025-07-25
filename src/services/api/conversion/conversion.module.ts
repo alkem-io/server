@@ -14,6 +14,7 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
+import { InputCreatorModule } from '../input-creator/input.creator.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     RoleSetModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InputCreatorModule,
     NamingModule,
     PlatformModule,
     TemplatesManagerModule,
