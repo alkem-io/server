@@ -77,14 +77,14 @@ export class SpaceAboutService {
         storageAggregator
       );
 
-    spaceAbout = await this.save(spaceAbout);
-
     // add the visuals
     await this.profileService.addVisualsOnProfile(
       spaceAbout.profile,
       spaceAboutData.profileData.visuals,
       [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
     );
+
+    spaceAbout = await this.save(spaceAbout);
     return this.getSpaceAboutOrFail(spaceAbout.id);
   }
 
