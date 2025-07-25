@@ -50,6 +50,9 @@ export class CalloutAuthorizationService {
           whiteboard: {
             profile: true,
           },
+          memo: {
+            profile: true,
+          },
         },
       },
     });

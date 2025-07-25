@@ -175,39 +175,85 @@ export class CalloutFramingService {
       calloutFraming.type = calloutFramingData.type;
     }
 
-    if (calloutFraming.type === CalloutFramingType.WHITEBOARD) {
-      // if there is no content, we do anything with the whiteboard
-      if (!calloutFramingData.whiteboardContent) {
-        return calloutFraming;
-      }
-      // if there is content and a whiteboard, we update it
-      if (calloutFraming.whiteboard) {
-        calloutFraming.whiteboard =
-          await this.whiteboardService.updateWhiteboardContent(
-            calloutFraming.whiteboard.id,
-            calloutFramingData.whiteboardContent
-          );
-      } else {
-        // if there is content and no whiteboard, we create a new one
-        await this.createNewWhiteboardInCalloutFraming(
-          calloutFraming,
-          {
-            profile: {
-              displayName: 'Callout Framing Whiteboard',
+    switch (calloutFraming.type) {
+      case CalloutFramingType.WHITEBOARD: {
+        // If there was a memo before, we delete it
+        if (calloutFraming.memo) {
+          await this.memoService.deleteMemo(calloutFraming.memo.id);
+          calloutFraming.memo = undefined;
+        }
+        // if there is no content coming with the mutation, we do nothing with the whiteboard
+        if (!calloutFramingData.whiteboardContent) {
+          return calloutFraming;
+        }
+        // if there is content and a whiteboard, we update it
+        if (calloutFraming.whiteboard) {
+          calloutFraming.whiteboard =
+            await this.whiteboardService.updateWhiteboardContent(
+              calloutFraming.whiteboard.id,
+              calloutFramingData.whiteboardContent
+            );
+        } else {
+          // if there is content and no whiteboard, we create a new one
+          await this.createNewWhiteboardInCalloutFraming(
+            calloutFraming,
+            {
+              profile: {
+                displayName: 'Callout Framing Whiteboard',
+              },
+              content: calloutFramingData.whiteboardContent,
             },
-            content: calloutFramingData.whiteboardContent,
-          },
-          storageAggregator,
-          userID
-        );
+            storageAggregator,
+            userID
+          );
+        }
       }
-    } else {
-      // if the type is not WHITEBOARD, we remove the whiteboard if it exists
-      if (calloutFraming.whiteboard) {
-        await this.whiteboardService.deleteWhiteboard(
-          calloutFraming.whiteboard.id
-        );
-        calloutFraming.whiteboard = undefined;
+      case CalloutFramingType.MEMO: {
+        // If there was a whiteboard before, we delete it
+        if (calloutFraming.whiteboard) {
+          await this.whiteboardService.deleteWhiteboard(
+            calloutFraming.whiteboard.id
+          );
+          calloutFraming.whiteboard = undefined;
+        }
+        // if there is no content coming with the mutation, we do nothing with the whiteboard
+        if (!calloutFramingData.memoContent) {
+          return calloutFraming;
+        }
+        // if there is content and a Memo, we update it
+        if (calloutFraming.memo) {
+          calloutFraming.memo = await this.memoService.updateMemoContent(
+            calloutFraming.memo.id,
+            calloutFramingData.memoContent
+          );
+        } else {
+          // if there is content and no Memo, we create a new one
+          await this.createNewMemoInCalloutFraming(
+            calloutFraming,
+            {
+              profile: {
+                displayName: 'Callout Framing Memo',
+              },
+              content: calloutFramingData.memoContent,
+            },
+            storageAggregator,
+            userID
+          );
+        }
+      }
+      case CalloutFramingType.NONE:
+      default: {
+        // if the type is NONE we remove any existing framing content
+        if (calloutFraming.whiteboard) {
+          await this.whiteboardService.deleteWhiteboard(
+            calloutFraming.whiteboard.id
+          );
+          calloutFraming.whiteboard = undefined;
+        }
+        if (calloutFraming.memo) {
+          await this.memoService.deleteMemo(calloutFraming.memo.id);
+          calloutFraming.memo = undefined;
+        }
       }
     }
 
@@ -222,6 +268,7 @@ export class CalloutFramingService {
         relations: {
           profile: true,
           whiteboard: true,
+          memo: true,
         },
       }
     );
@@ -233,6 +280,10 @@ export class CalloutFramingService {
       await this.whiteboardService.deleteWhiteboard(
         calloutFraming.whiteboard.id
       );
+    }
+
+    if (calloutFraming.memo) {
+      await this.memoService.deleteMemo(calloutFraming.memo.id);
     }
 
     if (calloutFraming.authorization) {
