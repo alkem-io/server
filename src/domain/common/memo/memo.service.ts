@@ -11,7 +11,6 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -85,7 +84,7 @@ export class MemoService {
     if (!memo)
       throw new EntityNotFoundException(
         `Not able to locate Memo with the specified ID: ${memoID}`,
-        LogContext.SPACES
+        LogContext.MEMOS
       );
     return memo;
   }
@@ -101,14 +100,14 @@ export class MemoService {
     if (!memo.profile) {
       throw new RelationshipNotFoundException(
         `Profile not found on memo: '${memo.id}'`,
-        LogContext.SPACES
+        LogContext.MEMOS
       );
     }
 
     if (!memo.authorization) {
       throw new RelationshipNotFoundException(
         `Authorization not found on memo: '${memo.id}'`,
-        LogContext.SPACES
+        LogContext.MEMOS
       );
     }
 
@@ -147,38 +146,34 @@ export class MemoService {
 
   async updateMemoContent(
     memoInputId: string,
-    updateMemoContent: string
+    updatedMemoContent: string
   ): Promise<IMemo> {
     const memo = await this.getMemoOrFail(memoInputId, {
       loadEagerRelations: false,
       relations: {
-        profile: true,
-      },
-      select: {
-        id: true,
         profile: {
-          id: true,
+          storageBucket: true,
         },
       },
     });
-    const newMemoContent = JSON.parse(updateMemoContent);
-
     if (!memo?.profile) {
       throw new EntityNotInitializedException(
         `Profile not initialized on memo: '${memo.id}'`,
-        LogContext.COLLABORATION
+        LogContext.MEMOS
       );
     }
 
-    // TODO: is this still needed? It is a lot of work to be doing on every
-    // memo content save. Plus I think it is an inherent risk.
-    const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
-      newMemoContent,
-      memo?.profile.id
-    );
+    let newMemoContent = updatedMemoContent;
+    const storageBucket = memo.profile.storageBucket;
+    if (storageBucket) {
+      newMemoContent =
+        await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+          updatedMemoContent,
+          storageBucket
+        );
+    }
 
-    memo.content = JSON.stringify(newContentWithFiles);
-
+    memo.content = newMemoContent;
     return this.save(memo);
   }
 
@@ -208,7 +203,7 @@ export class MemoService {
     if (!memoLoaded.profile)
       throw new EntityNotFoundException(
         `Memo profile not initialised: ${memoId}`,
-        LogContext.COLLABORATION
+        LogContext.MEMOS
       );
 
     return memoLoaded.profile;
@@ -216,84 +211,5 @@ export class MemoService {
 
   public save(memo: IMemo): Promise<IMemo> {
     return this.memoRepository.save(memo);
-  }
-  // todo: use one optimized query with a "where not exists"
-  // to return just the ones not in the bucket
-  // https://github.com/alkem-io/server/issues/4559
-  /**
-   * Re-uploads documents if not in the bucket.
-   * @throws {EntityNotInitializedException} if profile or storage bucket is not found.
-   */
-  private async reuploadDocumentsIfNotInBucket(
-    memoContent: ExcalidrawContent,
-    profileIdToCheck: string
-  ): Promise<ExcalidrawContent> {
-    if (!memoContent.files) {
-      return memoContent;
-    }
-
-    const files = Object.entries(memoContent.files);
-
-    if (!files.length) {
-      return memoContent;
-    }
-
-    const profile = await this.profileService.getProfileOrFail(
-      profileIdToCheck,
-      {
-        relations: {
-          storageBucket: {
-            documents: true,
-          },
-        },
-      }
-    );
-    if (!profile.storageBucket) {
-      throw new EntityNotInitializedException(
-        'Profile: no definition of StorageBucket',
-        LogContext.PROFILE
-      );
-    }
-
-    for (const [, file] of files) {
-      if (!file.url) {
-        continue;
-      }
-      let newDocUrl: string | undefined;
-      try {
-        newDocUrl =
-          await this.profileDocumentsService.reuploadFileOnStorageBucket(
-            file.url,
-            profile.storageBucket,
-            true
-          );
-      } catch (e: any) {
-        if (e instanceof EntityNotFoundException) {
-          this.logger.warn?.(
-            `Tried to re-upload file (${file.url}) but file was not found: ${e?.message}`,
-            LogContext.MEMOS
-          );
-        } else {
-          this.logger.warn?.(
-            `Tried to re-upload file (${file.url}) but an error occurred: ${e?.message}`,
-            LogContext.MEMOS
-          );
-        }
-
-        newDocUrl = undefined;
-      }
-
-      if (!newDocUrl || newDocUrl === file.url) {
-        continue;
-      }
-
-      // change the url to the new document
-      memoContent.files[file.id] = {
-        ...file,
-        url: newDocUrl,
-      };
-    }
-
-    return memoContent;
   }
 }

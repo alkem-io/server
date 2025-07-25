@@ -121,7 +121,7 @@ export class MemoAuthorizationService {
     switch (memo.contentUpdatePolicy) {
       case ContentUpdatePolicy.OWNER:
         break; // covered via dedicated rule above
-      case ContentUpdatePolicy.ADMINS:
+      case ContentUpdatePolicy.ADMINS: {
         const updateContentPrivilegeAdmins =
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.UPDATE_CONTENT],
@@ -130,7 +130,8 @@ export class MemoAuthorizationService {
           );
         privilegeRules.push(updateContentPrivilegeAdmins);
         break;
-      case ContentUpdatePolicy.CONTRIBUTORS:
+      }
+      case ContentUpdatePolicy.CONTRIBUTORS: {
         const updateContentPrivilegeContributors =
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.UPDATE_CONTENT],
@@ -139,6 +140,7 @@ export class MemoAuthorizationService {
           );
         privilegeRules.push(updateContentPrivilegeContributors);
         break;
+      }
     }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(

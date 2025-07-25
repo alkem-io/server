@@ -1,16 +1,14 @@
-import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateMemoInput {
   @Field(() => ContentUpdatePolicy, { nullable: true })
   @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
   contentUpdatePolicy?: ContentUpdatePolicy;
 
   @Field(() => NameID, {

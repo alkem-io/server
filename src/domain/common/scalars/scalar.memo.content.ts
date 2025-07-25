@@ -32,7 +32,7 @@ export class MemoContent implements CustomScalar<string, string> {
       );
     }
 
-    if (value.length >= MEMO_CONTENT_LENGTH) {
+    if (value.length > MEMO_CONTENT_LENGTH) {
       throw new ValidationException(
         `Memo content is too long: ${value.length}, allowed length: ${MEMO_CONTENT_LENGTH}`,
         LogContext.API
