@@ -8,6 +8,7 @@ export enum ProfileType {
   POST = 'post',
   CONTRIBUTION_LINK = 'contribution-link',
   WHITEBOARD = 'whiteboard',
+  MEMO = 'memo',
   DISCUSSION = 'discussion',
   ORGANIZATION = 'organization',
   USER_GROUP = 'user-group',
