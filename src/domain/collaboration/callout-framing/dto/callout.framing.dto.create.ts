@@ -3,6 +3,7 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
+import { CreateMemoInput } from '@domain/common/memo/types';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 
 @InputType()
@@ -26,6 +27,12 @@ export class CreateCalloutFramingInput {
   @ValidateNested({ each: true })
   @Type(() => CreateWhiteboardInput)
   whiteboard?: CreateWhiteboardInput;
+
+  @Field(() => CreateMemoInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreateMemoInput)
+  memo?: CreateMemoInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()
