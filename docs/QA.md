@@ -63,7 +63,7 @@ To run only one test from a test file
 
 ## Update user password secret for Travis CI
 
-In order to be able to update the user secret (used in automation tests) for Travi CI configuration, the following steps, should be perforemed:
+In order to be able to update the user secret (used in automation tests) for Travis CI configuration, the following steps, should be performed:
 
 - Install `ruby`
   ```sh
