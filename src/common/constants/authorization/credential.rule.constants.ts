@@ -34,6 +34,7 @@ export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY =
   'credentialRule-whiteboardCreatedBy';
 export const CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS =
   'credentialRule-whiteboardRtAccess'; // todo
+export const CREDENTIAL_RULE_MEMO_CREATED_BY = 'credentialRule-memoCreatedBy';
 export const CREDENTIAL_RULE_ROOM_MESSAGE_SENDER =
   'credentialRule-roomMessageSender';
 export const CREDENTIAL_RULE_ROOM_REACTION_SENDER =
