@@ -136,7 +136,7 @@ export class RegistrationService {
         invitedContributorID: user.id,
         roleSetID: roleSet.id,
         createdBy: platformInvitation.createdBy,
-        extraRole: platformInvitation.roleSetExtraRole,
+        extraRoles: platformInvitation.roleSetExtraRoles,
         invitedToParent: platformInvitation.roleSetInvitedToParent,
       };
       let invitation =

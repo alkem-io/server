@@ -2,7 +2,6 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import {
-  ENUM_LENGTH,
   LONGER_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
@@ -24,11 +23,8 @@ export class PlatformInvitation
   @Column('boolean', { default: false })
   roleSetInvitedToParent!: boolean;
 
-  @Column('varchar', {
-    length: ENUM_LENGTH,
-    nullable: true,
-  })
-  roleSetExtraRole?: RoleName;
+  @Column('simple-array', { nullable: false })
+  roleSetExtraRoles!: RoleName[];
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   email!: string;
