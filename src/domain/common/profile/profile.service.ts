@@ -69,7 +69,7 @@ export class ProfileService {
       storageAggregator: storageAggregator,
     });
     profile.description =
-      await this.profileDocumentsService.reuploadDocumentsInMarkdownProfile(
+      await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
         profile.description ?? '',
         profile.storageBucket
       );

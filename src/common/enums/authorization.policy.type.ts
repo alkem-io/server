@@ -8,6 +8,7 @@ export enum AuthorizationPolicyType {
   CALLOUT_FRAMING = 'callout-framing',
   COLLABORATION = 'collaboration',
   INNOVATION_FLOW = 'innovation-flow',
+  INNOVATION_FLOW_STATE = 'innovation-flow-state',
   INNOVATION_HUB = 'innovation-hub',
   INNOVATION_PACK = 'innovation-pack',
   LINK = 'link',

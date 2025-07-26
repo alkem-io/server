@@ -57,6 +57,7 @@ export class TemplateContentSpaceService {
     );
 
     //// Collaboration
+    templateContentSpaceData.collaborationData.isTemplate = true;
     templateContentSpace.collaboration =
       await this.collaborationService.createCollaboration(
         templateContentSpaceData.collaborationData,

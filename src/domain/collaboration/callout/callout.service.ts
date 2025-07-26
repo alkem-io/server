@@ -93,8 +93,9 @@ export class CalloutService {
     );
 
     callout.contributionDefaults =
-      this.contributionDefaultsService.createCalloutContributionDefaults(
-        calloutData.contributionDefaults
+      await this.contributionDefaultsService.createCalloutContributionDefaults(
+        calloutData.contributionDefaults,
+        callout.framing.profile.storageBucket
       );
 
     if (userID && calloutData.contributions && callout.settings.contribution) {
@@ -107,7 +108,7 @@ export class CalloutService {
         );
     }
 
-    if (callout.settings.framing.commentsEnabled) {
+    if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
@@ -274,7 +275,11 @@ export class CalloutService {
     }
 
     // Create the Matrix room for comments if it doesn't yet exist
-    if (callout.settings.framing.commentsEnabled && !callout.comments) {
+    if (
+      !callout.isTemplate &&
+      callout.settings.framing.commentsEnabled &&
+      !callout.comments
+    ) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT

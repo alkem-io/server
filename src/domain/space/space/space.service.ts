@@ -79,6 +79,7 @@ import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
+import { UUID_LENGTH } from '@common/constants';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -1136,7 +1137,9 @@ export class SpaceService {
               },
             },
             collaboration: {
-              innovationFlow: true,
+              innovationFlow: {
+                states: true,
+              },
             },
             about: {
               profile: {
@@ -1176,6 +1179,10 @@ export class SpaceService {
   }
 
   public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
+    if (!agentInfo.userID || agentInfo.userID.length !== UUID_LENGTH) {
+      // No userID to assign the role to
+      return;
+    }
     await this.roleSetService.assignUserToRole(
       roleSet,
       RoleName.MEMBER,

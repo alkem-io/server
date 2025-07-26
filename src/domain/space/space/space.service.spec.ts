@@ -29,6 +29,7 @@ import { TagsetTemplate } from '@domain/common/tagset-template';
 import { TagsetType } from '@common/enums/tagset.type';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -490,24 +491,45 @@ const getSubspacesMock = (
             {
               displayName: 'prepare',
               description: 'The innovation is being prepared.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'in progress',
               description: 'The innovation is in progress.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'summary',
               description: 'The summary of the flow results.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'done',
               description: 'The flow is completed.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
           ],
-          currentState: {
-            displayName: 'prepare',
-            description: 'The innovation is being prepared.',
-          },
+          currentStateID: '',
           profile: {
             id: '',
             displayName: `Challenge ${spaceId}.${i}`,
@@ -585,26 +607,47 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
             allowedValues: [],
             ...getEntityMock<TagsetTemplate>(),
           },
-          currentState: {
-            displayName: 'prepare',
-            description: 'The innovation is being prepared.',
-          },
+          currentStateID: '',
           states: [
             {
               displayName: 'prepare',
               description: 'The innovation is being prepared.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'in progress',
               description: 'The innovation is in progress.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'summary',
               description: 'The summary of the flow results.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'done',
               description: 'The flow is completed.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
           ],
           profile: {

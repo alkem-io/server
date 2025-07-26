@@ -10,6 +10,7 @@ import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto/innovation.flow.state.dto.create';
 
 @Injectable()
 export class TemplateApplierService {
@@ -79,10 +80,14 @@ export class TemplateApplierService {
     }
 
     const newStates = sourceCollaboration.innovationFlow.states;
+    const newStatesInput: CreateInnovationFlowStateInput[] =
+      this.inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+        newStates
+      );
     targetCollaboration.innovationFlow =
       await this.innovationFlowService.updateInnovationFlowStates(
         targetCollaboration.innovationFlow,
-        newStates
+        newStatesInput
       );
 
     const storageAggregator =
