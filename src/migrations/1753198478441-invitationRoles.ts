@@ -46,19 +46,19 @@ export class InvitationRoles1753198478441 implements MigrationInterface {
     }
 
     await queryRunner.query(
-      `ALTER TABLE \`platform_invitation\` DROP COLUMN \`roleSetExtraRoles\``
+      `ALTER TABLE \`platform_invitation\` DROP COLUMN \`roleSetExtraRole\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`invitation\` DROP COLUMN \`extraRoles\``
+      `ALTER TABLE \`invitation\` DROP COLUMN \`extraRole\``
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`platform_invitation\` ADD \`roleSetExtraRoles\` varchar(128) NULL`
+      `ALTER TABLE \`platform_invitation\` ADD \`roleSetExtraRole\` varchar(128) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`invitation\` ADD \`extraRoles\` varchar(128) NULL`
+      `ALTER TABLE \`invitation\` ADD \`extraRole\` varchar(128) NULL`
     );
 
     await queryRunner.query(
