@@ -32,7 +32,7 @@ export class IInvitation extends IAuthorizable {
   contributorType!: RoleSetContributorType;
 
   @Field(() => [RoleName], {
-    nullable: true,
+    nullable: false,
     description:
       'Additional roles to assign to the Contributor, in addition to the entry Role.',
   })
