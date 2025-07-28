@@ -4,7 +4,6 @@ import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 import {
   LONGER_TEXT_LENGTH,
   MID_TEXT_LENGTH,
-  SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
 import { RoleName } from '@common/enums/role.name';
@@ -33,11 +32,9 @@ export class InviteForEntryRoleOnRoleSetInput {
   @MaxLength(LONGER_TEXT_LENGTH)
   welcomeMessage?: string;
 
-  @Field(() => RoleName, {
-    nullable: true,
-    description: 'An additional role to assign in addition to the entry Role.',
+  @Field(() => [RoleName], {
+    nullable: false,
+    description: 'Additional roles to assign in addition to the entry Role.',
   })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  extraRole?: RoleName;
+  extraRoles!: RoleName[];
 }
