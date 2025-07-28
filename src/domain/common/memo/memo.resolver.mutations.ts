@@ -45,7 +45,7 @@ export class MemoResolverMutations {
       `update Memo: ${memo.id}`
     );
 
-    const updatedMemo = await this.memoService.updateMemo(memo, memoData);
+    const updatedMemo = await this.memoService.updateMemo(memo.id, memoData);
     if (updatedMemo.contentUpdatePolicy !== originalContentPolicy) {
       const framing = await this.entityManager.findOne(CalloutFraming, {
         where: {

@@ -119,11 +119,18 @@ export class MemoService {
     return deletedMemo;
   }
 
+  async saveContent(memoId: string, content: string): Promise<IMemo> {
+    const memo = await this.getMemoOrFail(memoId);
+    memo.content = content;
+
+    return this.save(memo);
+  }
+
   async updateMemo(
-    memoInput: IMemo,
+    memoId: string,
     updateMemoData: UpdateMemoInput
   ): Promise<IMemo> {
-    let memo = await this.getMemoOrFail(memoInput.id, {
+    let memo = await this.getMemoOrFail(memoId, {
       relations: {
         profile: true,
       },
