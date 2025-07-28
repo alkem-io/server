@@ -340,6 +340,59 @@ export class CommunityResolverService {
     return collaboration.license;
   }
 
+  public async getCollaborationLicenseFromMemoOrFail(
+    memoId: string
+  ): Promise<ILicense> {
+    // check for whiteboard in contributions
+    let collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        calloutsSet: {
+          callouts: {
+            contributions: {
+              memo: {
+                id: memoId,
+              },
+            },
+          },
+        },
+      },
+      relations: {
+        license: {
+          entitlements: true,
+        },
+      },
+    });
+    // check for memo in framing
+    if (!collaboration) {
+      collaboration = await this.entityManager.findOne(Collaboration, {
+        where: {
+          calloutsSet: {
+            callouts: {
+              framing: {
+                memo: {
+                  id: memoId,
+                },
+              },
+            },
+          },
+        },
+        relations: {
+          license: {
+            entitlements: true,
+          },
+        },
+      });
+    }
+    if (!collaboration || !collaboration.license) {
+      throw new EntityNotFoundException(
+        `Unable to find Collaboration with License for memo: ${memoId}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return collaboration.license;
+  }
+
   public async getCommunityFromCalendarEventOrFail(
     calendarEventId: string
   ): Promise<ICommunity> {

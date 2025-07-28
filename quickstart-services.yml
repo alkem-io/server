@@ -205,7 +205,7 @@ services:
     container_name: alkemio_dev_notifications
     hostname: notifications
     image: alkemio/notifications:v0.23.3
-    platform: linux/x86_64
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -244,7 +244,7 @@ services:
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
     image: alkemio/matrix-adapter:v0.6.0
-    platform: linux/x86_64
+    platform: linux/amd64
     depends_on:
       - rabbitmq
     environment:
@@ -295,7 +295,7 @@ services:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
     image: alkemio/whiteboard-collaboration-service:v0.6.0
-    platform: linux/x86_64
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -316,7 +316,7 @@ services:
     container_name: alkemio_dev_file_service
     hostname: file-service
     image: alkemio/file-service:v0.1.2
-    platform: linux/x86_64
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy

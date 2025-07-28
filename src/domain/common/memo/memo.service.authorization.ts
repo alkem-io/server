@@ -11,90 +11,84 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
-  POLICY_RULE_WHITEBOARD_CONTENT_UPDATE,
+  CREDENTIAL_RULE_MEMO_CREATED_BY,
+  POLICY_RULE_MEMO_CONTENT_UPDATE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
-import { IWhiteboard } from './whiteboard.interface';
+import { IMemo } from './memo.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { WhiteboardService } from './whiteboard.service';
+import { MemoService } from './memo.service';
 
 @Injectable()
-export class WhiteboardAuthorizationService {
+export class MemoAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private whiteboardService: WhiteboardService
+    private memoService: MemoService
   ) {}
 
   async applyAuthorizationPolicy(
-    whiteboardID: string,
+    memoID: string,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
-    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
-      whiteboardID,
-      {
-        loadEagerRelations: false,
-        relations: {
+    const memo = await this.memoService.getMemoOrFail(memoID, {
+      loadEagerRelations: false,
+      relations: {
+        authorization: true,
+        profile: {
           authorization: true,
-          profile: {
-            authorization: true,
-          },
         },
-        select: {
+      },
+      select: {
+        id: true,
+        createdBy: true,
+        contentUpdatePolicy: true,
+        authorization:
+          this.authorizationPolicyService.authorizationSelectOptions,
+        profile: {
           id: true,
-          createdBy: true,
-          contentUpdatePolicy: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-          profile: {
-            id: true,
-          },
         },
-      }
-    );
-    if (!whiteboard.profile) {
+      },
+    });
+    if (!memo.profile) {
       throw new RelationshipNotFoundException(
-        `Unable to load entities on whiteboard reset auth:  ${whiteboardID} `,
+        `Unable to load entities on memo reset auth:  ${memoID} `,
         LogContext.COLLABORATION
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
-    whiteboard.authorization =
+    memo.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        whiteboard.authorization,
+        memo.authorization,
         parentAuthorization
       );
 
-    whiteboard.authorization = this.appendCredentialRules(whiteboard);
-    whiteboard.authorization = this.appendPrivilegeRules(
-      whiteboard.authorization,
-      whiteboard
-    );
-    updatedAuthorizations.push(whiteboard.authorization);
+    memo.authorization = this.appendCredentialRules(memo);
+    memo.authorization = this.appendPrivilegeRules(memo.authorization, memo);
+    updatedAuthorizations.push(memo.authorization);
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        whiteboard.profile.id,
-        whiteboard.authorization
+        memo.profile.id,
+        memo.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
     return updatedAuthorizations;
   }
 
-  private appendCredentialRules(whiteboard: IWhiteboard): IAuthorizationPolicy {
-    const authorization = whiteboard.authorization;
+  private appendCredentialRules(memo: IMemo): IAuthorizationPolicy {
+    const authorization = memo.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for Whiteboard: ${whiteboard.id}`,
+        `Authorization definition not found for Memo: ${memo.id}`,
         LogContext.COLLABORATION
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    if (whiteboard.createdBy) {
-      const manageWhiteboardCreatedByPolicy =
+    if (memo.createdBy) {
+      const manageMemoCreatedByPolicy =
         this.authorizationPolicyService.createCredentialRule(
           [
             AuthorizationPrivilege.UPDATE_CONTENT,
@@ -104,12 +98,12 @@ export class WhiteboardAuthorizationService {
           [
             {
               type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-              resourceID: whiteboard.createdBy,
+              resourceID: memo.createdBy,
             },
           ],
-          CREDENTIAL_RULE_WHITEBOARD_CREATED_BY
+          CREDENTIAL_RULE_MEMO_CREATED_BY
         );
-      newRules.push(manageWhiteboardCreatedByPolicy);
+      newRules.push(manageMemoCreatedByPolicy);
     }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -120,11 +114,11 @@ export class WhiteboardAuthorizationService {
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
-    whiteboard: IWhiteboard
+    memo: IMemo
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    switch (whiteboard.contentUpdatePolicy) {
+    switch (memo.contentUpdatePolicy) {
       case ContentUpdatePolicy.OWNER:
         break; // covered via dedicated rule above
       case ContentUpdatePolicy.ADMINS: {
@@ -132,7 +126,7 @@ export class WhiteboardAuthorizationService {
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.UPDATE_CONTENT],
             AuthorizationPrivilege.UPDATE,
-            POLICY_RULE_WHITEBOARD_CONTENT_UPDATE
+            POLICY_RULE_MEMO_CONTENT_UPDATE
           );
         privilegeRules.push(updateContentPrivilegeAdmins);
         break;
@@ -142,7 +136,7 @@ export class WhiteboardAuthorizationService {
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.UPDATE_CONTENT],
             AuthorizationPrivilege.CONTRIBUTE,
-            POLICY_RULE_WHITEBOARD_CONTENT_UPDATE
+            POLICY_RULE_MEMO_CONTENT_UPDATE
           );
         privilegeRules.push(updateContentPrivilegeContributors);
         break;
