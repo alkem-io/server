@@ -3,8 +3,8 @@ import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
-import { MemoContent } from '@domain/common/scalars/scalar.memo.content';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class UpdateCalloutFramingInput {
@@ -32,7 +32,7 @@ export class UpdateCalloutFramingInput {
   @IsOptional()
   whiteboardContent?: string;
 
-  @Field(() => MemoContent, {
+  @Field(() => Markdown, {
     nullable: true,
     description: 'The new content to be used.',
   })

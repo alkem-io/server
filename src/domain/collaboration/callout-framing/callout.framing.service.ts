@@ -207,6 +207,7 @@ export class CalloutFramingService {
             userID
           );
         }
+        break;
       }
       case CalloutFramingType.MEMO: {
         // If there was a whiteboard before, we delete it
@@ -240,6 +241,7 @@ export class CalloutFramingService {
             userID
           );
         }
+        break;
       }
       case CalloutFramingType.NONE:
       default: {
@@ -254,6 +256,7 @@ export class CalloutFramingService {
           await this.memoService.deleteMemo(calloutFraming.memo.id);
           calloutFraming.memo = undefined;
         }
+        break;
       }
     }
 

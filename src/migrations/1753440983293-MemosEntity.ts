@@ -10,7 +10,7 @@ export class MemosEntity1753440983293 implements MigrationInterface {
             \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
             \`version\` int NOT NULL,
             \`nameID\` varchar(36) NOT NULL,
-            \`content\` longtext NOT NULL,
+            \`content\` longtext NULL,
             \`createdBy\` char(36) NULL,
             \`contentUpdatePolicy\` varchar(128) NOT NULL,
             \`authorizationId\` char(36) NULL,

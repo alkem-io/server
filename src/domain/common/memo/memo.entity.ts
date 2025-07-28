@@ -6,13 +6,8 @@ import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class Memo extends NameableEntity implements IMemo {
-  constructor(content?: string) {
-    super();
-    this.content = content || '';
-  }
-
-  @Column('longtext', { nullable: false })
-  content!: string;
+  @Column('longtext', { nullable: true })
+  content?: string;
 
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy?: string;

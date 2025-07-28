@@ -11,13 +11,6 @@ export class UpdateMemoInput {
   @IsOptional()
   contentUpdatePolicy?: ContentUpdatePolicy;
 
-  @Field(() => NameID, {
-    nullable: true,
-    description:
-      'A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.',
-  })
-  nameID?: string;
-
   @Field(() => UpdateProfileInput, {
     nullable: true,
     description: 'The Profile of this entity.',
