@@ -304,7 +304,9 @@ export class TemplateService {
       {
         relations: {
           collaboration: {
-            innovationFlow: true,
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: true,
             },
