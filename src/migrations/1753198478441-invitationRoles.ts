@@ -30,14 +30,14 @@ export class InvitationRoles1753198478441 implements MigrationInterface {
     // Iterate over all platform invitations + migrate the data
     const platformInvitations: {
       id: string;
-      extraRole: string | null;
+      roleSetExtraRole: string | null;
     }[] = await queryRunner.query(
       `SELECT id, roleSetExtraRole FROM \`platform_invitation\``
     );
     for (const platformInvitation of platformInvitations) {
       let extraRoles: string[] = [];
-      if (platformInvitation.extraRole) {
-        extraRoles = [platformInvitation.extraRole];
+      if (platformInvitation.roleSetExtraRole) {
+        extraRoles = [platformInvitation.roleSetExtraRole];
       }
       await queryRunner.query(
         `UPDATE \`platform_invitation\` SET \`roleSetExtraRoles\` = '${extraRoles}' WHERE \`id\` = ?`,
