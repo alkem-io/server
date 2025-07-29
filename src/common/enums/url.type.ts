@@ -22,6 +22,14 @@ export enum UrlType {
   UNKNOWN = 'unknown',
   NOT_AUTHORIZED = 'not-authorized',
   FLOW = 'flow',
+  LOGIN = 'login',
+  LOGOUT = 'logout',
+  REGISTRATION = 'registration',
+  SIGN_UP = 'sign_up',
+  VERIFY = 'verify',
+  RECOVERY = 'recovery',
+  REQUIRED = 'required',
+  ERROR = 'error',
 }
 
 registerEnumType(UrlType, {
