@@ -2,8 +2,8 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IMessage } from './message.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
@@ -12,7 +12,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 export class MessageResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
+    private readonly logger: WinstonLogger,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
@@ -55,7 +55,11 @@ export class MessageResolverFields {
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(
-          `sender '${senderID}' unable to be resolved when resolving message '${message.id}'`,
+          {
+            message: 'Sender unable to be resolved when resolving message.',
+            senderId: senderID,
+            messageId: message.id,
+          },
           LogContext.COMMUNICATION
         );
         return null;
