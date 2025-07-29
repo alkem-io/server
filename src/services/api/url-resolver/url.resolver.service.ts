@@ -98,11 +98,12 @@ export class UrlResolverService {
         );
       } catch (error: any) {
         throw new UrlResolverException(
-          `Unable to resolve URL: ${url}`,
+          'Unable to resolve URL',
           LogContext.URL_RESOLVER,
           {
             message: error?.message,
             originalException: error,
+            url,
           }
         );
       }
@@ -114,11 +115,12 @@ export class UrlResolverService {
       return await this.populateSpaceInternalResult(result, agentInfo);
     } catch (error: any) {
       throw new UrlResolverException(
-        `Unable to resolve URL: ${url}`,
+        'Unable to resolve URL',
         LogContext.URL_RESOLVER,
         {
           message: error?.message,
           originalException: error,
+          url,
         }
       );
     }
@@ -226,10 +228,46 @@ export class UrlResolverService {
         }
         return result;
       }
+      case UrlPathBase.LOGIN: {
+        result.type = UrlType.LOGIN;
+        return result;
+      }
+      case UrlPathBase.LOGOUT: {
+        result.type = UrlType.LOGOUT;
+        return result;
+      }
+      case UrlPathBase.REGISTRATION: {
+        result.type = UrlType.REGISTRATION;
+        return result;
+      }
+      case UrlPathBase.SIGN_UP: {
+        result.type = UrlType.SIGN_UP;
+        return result;
+      }
+      case UrlPathBase.VERIFY: {
+        result.type = UrlType.VERIFY;
+        return result;
+      }
+      case UrlPathBase.RECOVERY: {
+        result.type = UrlType.RECOVERY;
+        return result;
+      }
+      case UrlPathBase.REQUIRED: {
+        result.type = UrlType.REQUIRED;
+        return result;
+      }
+      case UrlPathBase.ERROR: {
+        result.type = UrlType.ERROR;
+        return result;
+      }
     }
     throw new ValidationException(
-      `Unknown base route (${baseRoute}), from URL: ${url}`,
-      LogContext.URL_RESOLVER
+      'Unknown base route',
+      LogContext.URL_RESOLVER,
+      {
+        baseRoute,
+        url,
+      }
     );
   }
 
@@ -340,8 +378,11 @@ export class UrlResolverService {
 
     if (!innovationHubNameID) {
       throw new ValidationException(
-        `Unable to resolve innovation hub from URL: ${urlPath}`,
-        LogContext.URL_RESOLVER
+        'Unable to resolve innovation hub from URL',
+        LogContext.URL_RESOLVER,
+        {
+          urlPath,
+        }
       );
     }
 
