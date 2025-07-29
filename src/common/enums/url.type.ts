@@ -30,6 +30,7 @@ export enum UrlType {
   RECOVERY = 'recovery',
   REQUIRED = 'required',
   ERROR = 'error',
+  RESTRICTED = 'restricted',
 }
 
 registerEnumType(UrlType, {

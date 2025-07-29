@@ -256,6 +256,10 @@ export class UrlResolverService {
         result.type = UrlType.REQUIRED;
         return result;
       }
+      case UrlPathBase.RESTRICTED: {
+        result.type = UrlType.RESTRICTED;
+        return result;
+      }
       case UrlPathBase.ERROR: {
         result.type = UrlType.ERROR;
         return result;
