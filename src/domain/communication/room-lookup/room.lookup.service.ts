@@ -1,5 +1,5 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IRoom } from '../room/room.interface';
@@ -30,7 +30,7 @@ export class RoomLookupService {
     @InjectRepository(Room)
     private roomRepository: Repository<Room>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: WinstonLogger
   ) {}
 
   async getMessagesInThread(
@@ -131,14 +131,17 @@ export class RoomLookupService {
       const matrixUserID = message.sender;
       let messageSender: MessageSender = { id: 'unknown', type: 'unknown' };
       try {
-        messageSender = await this.identitySender(
+        messageSender = await this.updateKnownSendersMap(
           knownSendersMap,
           matrixUserID
         );
       } catch (error) {
-        this.logger.error(
-          `Unable to identify sender for message with id ${message.id}`,
-          error,
+        this.logger.warn?.(
+          {
+            message: 'Unable to identify sender for message.',
+            messageId: message.id,
+            originalError: error,
+          },
           LogContext.COMMUNICATION
         );
       }
@@ -223,10 +226,23 @@ export class RoomLookupService {
     return message;
   }
 
-  private async identitySender(
+  /**
+   * Identifies and returns the message sender information for a given Matrix user ID.
+   *
+   * This method first checks if the sender is already known in the provided map. If not found,
+   * it attempts to resolve the Matrix user ID to either an Alkemio user or virtual contributor
+   * by querying the identity resolver service. Once identified, the sender information is cached
+   * in the known senders map for future lookups.
+   *
+   * @param knownSendersMap - A map cache containing previously identified message senders
+   * @param matrixUserID - The Matrix user ID to identify
+   * @returns A promise that resolves to the MessageSender object containing the sender's ID and type
+   * @throws {Error} When the Matrix user ID cannot be resolved to any known sender type
+   */
+  private async updateKnownSendersMap(
     knownSendersMap: Map<string, MessageSender>,
     matrixUserID: string
-  ): Promise<MessageSender> {
+  ): Promise<MessageSender> | never {
     let messageSender = knownSendersMap.get(matrixUserID);
     if (!messageSender) {
       const alkemioUserID =
@@ -255,7 +271,11 @@ export class RoomLookupService {
       }
     }
     if (!messageSender) {
-      throw new Error(`Unable to identify sender for ${matrixUserID}`);
+      throw new EntityNotFoundException(
+        'Unable to identify sender',
+        LogContext.COMMUNICATION,
+        { matrixUserID }
+      );
     }
     return messageSender;
   }
@@ -267,13 +287,13 @@ export class RoomLookupService {
     for (const reaction of reactions) {
       const matrixUserID = reaction.sender;
       try {
-        const reactionSender = await this.identitySender(
+        const reactionSender = await this.updateKnownSendersMap(
           knownSendersMap,
           matrixUserID
         );
 
         reaction.sender = reactionSender.id;
-      } catch (error) {
+      } catch {
         reaction.sender = 'unknown';
       }
     }
