@@ -1,9 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class UpdatePlatformSpaceTemplate1748729830000
+export class UpdatePlatformSpaceTemplate1753780215298
   implements MigrationInterface
 {
-  name = 'UpdatePlatformSpaceTemplate1748729830000';
+  name = 'UpdatePlatformSpaceTemplate1753780215298';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     console.log('Starting migration to update platform space templates...');
