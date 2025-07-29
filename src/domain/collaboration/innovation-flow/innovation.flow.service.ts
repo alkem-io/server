@@ -198,6 +198,8 @@ export class InnovationFlowService {
     );
 
     // Generate the new tagset template definition
+    // TODO: Maybe in the future we can run this code only if the state name has changed, but for now after seeing some inconsistencies
+    // in acc-db I think it's safer to re-generate the tagset template definition every time to be able to fix misbehaving spaces directly from the UI.
     if (innovationFlow.flowStatesTagsetTemplate) {
       const allowedValues = states.map(state => state.displayName);
       const defaultSelectedValue =
