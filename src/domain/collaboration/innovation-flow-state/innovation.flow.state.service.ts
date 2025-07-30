@@ -54,7 +54,7 @@ export class InnovationFlowStateService {
     updateData: UpdateInnovationFlowStateInput
   ): Promise<IInnovationFlowState> {
     innovationFlowState.displayName = updateData.displayName;
-    innovationFlowState.description = updateData.description || '';
+    innovationFlowState.description = updateData.description ?? '';
     if (updateData.settings) {
       innovationFlowState.settings.allowNewCallouts =
         updateData.settings.allowNewCallouts;
