@@ -61,7 +61,6 @@ import { AccountType } from '@common/enums/account.type';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomType } from '@common/enums/room.type';
-import { IUserSettings } from '../user-settings/user.settings.interface';
 import { UserSettingsService } from '../user-settings/user.settings.service';
 import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
 import { PreferenceType } from '@common/enums/preference.type';
@@ -72,6 +71,7 @@ import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@src/apm/decorators';
+import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
 
 @InstrumentService()
 @Injectable()
@@ -140,7 +140,9 @@ export class UserService {
       accountUpn: userData.accountUpn ?? userData.email,
     });
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
-    user.settings = this.getDefaultUserSettings();
+    user.settings = this.userSettingsService.createUserSettings(
+      this.getDefaultUserSettings()
+    );
 
     if (!user.serviceProfile) {
       user.serviceProfile = false;
@@ -234,8 +236,8 @@ export class UserService {
     return user;
   }
 
-  private getDefaultUserSettings(): IUserSettings {
-    const settings: IUserSettings = {
+  private getDefaultUserSettings(): CreateUserSettingsInput {
+    const settings: CreateUserSettingsInput = {
       communication: {
         allowOtherUsersToSendMessages: true,
       },
@@ -414,8 +416,23 @@ export class UserService {
         preferenceSet: true,
         storageAggregator: true,
         guidanceRoom: true,
+        settings: true,
       },
     });
+
+    if (
+      !user.profile ||
+      !user.preferenceSet ||
+      !user.storageAggregator ||
+      !user.agent ||
+      !user.authorization ||
+      !user.settings
+    ) {
+      throw new RelationshipNotFoundException(
+        `User entity missing required child entities when deleting: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
 
     // TODO: give additional feedback?
     const accountHasResources =
@@ -430,27 +447,17 @@ export class UserService {
 
     await this.clearUserCache(user);
 
-    if (user.profile) {
-      await this.profileService.deleteProfile(user.profile.id);
-    }
+    await this.profileService.deleteProfile(user.profile.id);
 
-    if (user.preferenceSet) {
-      await this.preferenceSetService.deletePreferenceSet(
-        user.preferenceSet.id
-      );
-    }
+    await this.preferenceSetService.deletePreferenceSet(user.preferenceSet.id);
 
-    if (user.agent) {
-      await this.agentService.deleteAgent(user.agent.id);
-    }
+    await this.agentService.deleteAgent(user.agent.id);
 
-    if (user.authorization) {
-      await this.authorizationPolicyService.delete(user.authorization);
-    }
+    await this.authorizationPolicyService.delete(user.authorization);
 
-    if (user.storageAggregator) {
-      await this.storageAggregatorService.delete(user.storageAggregator.id);
-    }
+    await this.storageAggregatorService.delete(user.storageAggregator.id);
+
+    await this.userSettingsService.deleteUserSettings(user.settings.id);
 
     if (user.guidanceRoom) {
       await this.roomService.deleteRoom(user.guidanceRoom);

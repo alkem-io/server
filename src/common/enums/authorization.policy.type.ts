@@ -36,6 +36,7 @@ export enum AuthorizationPolicyType {
   DISCUSSION = 'discussion',
   USER = 'user',
   USER_GROUP = 'user-group',
+  USER_SETTINGS = 'user-settings',
   ORGANIZATION = 'organization',
   ORGANIZATION_VERIFICATION = 'organization-verification',
   VIRTUAL_CONTRIBUTOR = 'virtual-contributor',

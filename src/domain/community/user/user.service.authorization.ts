@@ -31,6 +31,7 @@ import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-a
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
+import { UserSettingsAuthorizationService } from '../user-settings/user.settings.service.authorization';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -41,6 +42,7 @@ export class UserAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private userSettingsAuthorizationService: UserSettingsAuthorizationService,
     private agentService: AgentService,
     private userLookupService: UserLookupService
   ) {}
@@ -62,6 +64,7 @@ export class UserAuthorizationService {
           authorization: true,
           directStorage: { authorization: true },
         },
+        settings: true,
       },
       select: {
         id: true,
@@ -97,6 +100,11 @@ export class UserAuthorizationService {
               this.authorizationPolicyService.authorizationSelectOptions,
           },
         },
+        settings: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
       },
     });
     if (
@@ -104,7 +112,8 @@ export class UserAuthorizationService {
       !user.profile ||
       !user.preferenceSet ||
       !user.preferenceSet.preferences ||
-      !user.storageAggregator
+      !user.storageAggregator ||
+      !user.settings
     )
       throw new RelationshipNotFoundException(
         `Unable to load agent or profile or preferences or storage for User ${user.id} `,
@@ -156,6 +165,13 @@ export class UserAuthorizationService {
         user.authorization
       );
     updatedAuthorizations.push(agentAuthorization);
+
+    const settingsAuthorization =
+      this.userSettingsAuthorizationService.applyAuthorizationPolicy(
+        user.settings,
+        user.authorization
+      );
+    updatedAuthorizations.push(settingsAuthorization);
 
     const preferenceSetAuthorizations =
       this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
