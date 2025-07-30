@@ -51,6 +51,37 @@ export class UserSettingsService {
           updateData.communication.allowOtherUsersToSendMessages;
       }
     }
+    const platformData = updateData.notification?.platform;
+    if (platformData) {
+      if (platformData.forumDiscussionComment !== undefined) {
+        settings.notification.platform.forumDiscussionComment =
+          platformData.forumDiscussionComment;
+      }
+      if (platformData.forumDiscussionCreated !== undefined) {
+        settings.notification.platform.forumDiscussionCreated =
+          platformData.forumDiscussionCreated;
+      }
+      if (platformData.platformUserProfileRemoved !== undefined) {
+        settings.notification.platform.userProfileRemoved =
+          platformData.platformUserProfileRemoved;
+      }
+      if (platformData.platformUserSignUp !== undefined) {
+        settings.notification.platform.newUserSignUp =
+          platformData.platformUserSignUp;
+      }
+    }
+
+    const organizationData = updateData.notification?.organization;
+    if (organizationData) {
+      if (organizationData.mentioned !== undefined) {
+        settings.notification.organization.mentioned =
+          organizationData.mentioned;
+      }
+      if (organizationData.messageReceived !== undefined) {
+        settings.notification.organization.messageReceived =
+          organizationData.messageReceived;
+      }
+    }
     return settings;
   }
 

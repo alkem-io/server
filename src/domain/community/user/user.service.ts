@@ -245,6 +245,18 @@ export class UserService {
         // Note: not currently used but will be near term.
         contributionRolesPubliclyVisible: true,
       },
+      notification: {
+        organization: {
+          messageReceived: true,
+          mentioned: true,
+        },
+        platform: {
+          forumDiscussionCreated: false,
+          forumDiscussionComment: true,
+          platformUserSignUp: true,
+          platformUserProfileRemoved: true,
+        },
+      },
     };
     return settings;
   }

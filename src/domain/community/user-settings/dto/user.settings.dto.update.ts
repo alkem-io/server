@@ -3,6 +3,7 @@ import { UpdateUserSettingsPrivacyInput } from './user.settings.privacy.dto.upda
 import { UpdateUserSettingsCommunicationInput } from './user.settings.communications.dto.update';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { UpdateUserSettingsNotificationInput } from './user.settings.notification.dto.update';
 
 @InputType()
 export class UpdateUserSettingsEntityInput {
@@ -21,4 +22,12 @@ export class UpdateUserSettingsEntityInput {
   @ValidateNested()
   @Type(() => UpdateUserSettingsCommunicationInput)
   communication?: UpdateUserSettingsCommunicationInput;
+
+  @Field(() => UpdateUserSettingsNotificationInput, {
+    nullable: true,
+    description: 'Settings related to this users Notifications preferences.',
+  })
+  @ValidateNested()
+  @Type(() => UpdateUserSettingsNotificationInput)
+  notification?: UpdateUserSettingsNotificationInput;
 }
