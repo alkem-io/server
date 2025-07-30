@@ -270,7 +270,13 @@ export class UserSettingsEntity1753882078257 implements MigrationInterface {
     );
     // drop the preference tables
 
-    // TODO: delete all authorizations used in one of the three tables!
+    // Delete all authorizations where type = preference or preference-set
+    await queryRunner.query(
+      `Delete from authorization_policy where type = 'preference'`
+    );
+    await queryRunner.query(
+      `Delete from authorization_policy where type = 'preference-set'`
+    );
 
     await queryRunner.query(`DROP TABLE \`preference_definition\``);
     await queryRunner.query(`DROP TABLE \`preference\``);
