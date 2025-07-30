@@ -394,7 +394,7 @@ export class InputCreatorService {
     };
   }
 
-  private buildCreateSpaceAboutInputFromSpaceAbout(
+  public buildCreateSpaceAboutInputFromSpaceAbout(
     spaceAbout: ISpaceAbout
   ): CreateSpaceAboutInput {
     const result: CreateSpaceAboutInput = {
