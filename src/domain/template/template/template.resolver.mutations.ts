@@ -68,7 +68,9 @@ export class TemplateResolverMutations {
           templatesSet: true,
           contentSpace: {
             collaboration: {
-              innovationFlow: true,
+              innovationFlow: {
+                states: true,
+              },
               calloutsSet: {
                 callouts: true,
                 tagsetTemplateSet: true,
