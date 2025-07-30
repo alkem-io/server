@@ -465,7 +465,7 @@ export class TemplateService {
       templateContentSpace.collaboration
     );
 
-    this.templateContentSpaceService.updateAboutFromExistingSpace(
+    await this.templateContentSpaceService.updateAboutFromExistingSpace(
       templateContentSpace,
       this.inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout(
         space.about
