@@ -64,7 +64,9 @@ export class UserAuthorizationService {
           authorization: true,
           directStorage: { authorization: true },
         },
-        settings: true,
+        settings: {
+          authorization: true,
+        },
       },
       select: {
         id: true,
@@ -240,7 +242,7 @@ export class UserAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN
       );
-    globalAdminNotInherited.cascade = false;
+    globalAdminPlatformAdminNotInherited.cascade = false;
     newRules.push(globalAdminPlatformAdminNotInherited);
 
     const communityAdmin =
@@ -249,7 +251,7 @@ export class UserAuthorizationService {
         [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
         CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ
       );
-
+    communityAdmin.cascade = true;
     newRules.push(communityAdmin);
 
     const globalRegistered =
