@@ -258,6 +258,9 @@ export class InnovationFlowService {
       innovationFlow.states.push(state);
     }
 
+    // Needs to save the innovation flow to persist the states and be able to access their ids
+    innovationFlow = await this.save(innovationFlow);
+
     // Check if there is a matching name to update the current state ID
     let currentState = innovationFlow.states.find(
       state => state.displayName === selectedStateName
