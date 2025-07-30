@@ -11,5 +11,5 @@ export class CreateInvitationInput {
 
   invitedToParent!: boolean;
 
-  extraRole?: RoleName;
+  extraRoles?: RoleName[];
 }
