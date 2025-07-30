@@ -13,7 +13,6 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -40,7 +39,6 @@ export class UserAuthorizationService {
     private agentAuthorizationService: AgentAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private userSettingsAuthorizationService: UserSettingsAuthorizationService,
     private agentService: AgentService,
@@ -56,10 +54,6 @@ export class UserAuthorizationService {
         authorization: true,
         agent: { authorization: true },
         profile: { authorization: true },
-        preferenceSet: {
-          authorization: true,
-          preferences: { authorization: true },
-        },
         storageAggregator: {
           authorization: true,
           directStorage: { authorization: true },
@@ -82,16 +76,6 @@ export class UserAuthorizationService {
           authorization:
             this.authorizationPolicyService.authorizationSelectOptions,
         },
-        preferenceSet: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-          preferences: {
-            id: true,
-            authorization:
-              this.authorizationPolicyService.authorizationSelectOptions,
-          },
-        },
         storageAggregator: {
           id: true,
           authorization:
@@ -112,8 +96,6 @@ export class UserAuthorizationService {
     if (
       !user.agent ||
       !user.profile ||
-      !user.preferenceSet ||
-      !user.preferenceSet.preferences ||
       !user.storageAggregator ||
       !user.settings
     )
@@ -174,13 +156,6 @@ export class UserAuthorizationService {
         user.authorization
       );
     updatedAuthorizations.push(settingsAuthorization);
-
-    const preferenceSetAuthorizations =
-      this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-        user.preferenceSet,
-        user.authorization
-      );
-    updatedAuthorizations.push(...preferenceSetAuthorizations);
 
     const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(

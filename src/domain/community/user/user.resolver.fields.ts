@@ -10,8 +10,6 @@ import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IPreference } from '@domain/common/preference/preference.interface';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -39,7 +37,6 @@ export class UserResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private userService: UserService,
-    private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -90,30 +87,6 @@ export class UserResolverFields {
     loader: ILoader<IAuthorizationPolicy>
   ) {
     return loader.load(user.id);
-  }
-
-  @ResolveField('preferences', () => [IPreference], {
-    nullable: false,
-    description: 'The preferences for this user',
-  })
-  async preferences(
-    @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IPreference[]> {
-    // reject when a basic user reads other user's preferences
-    if (
-      !(await this.isAccessGranted(
-        user,
-        agentInfo,
-        AuthorizationPrivilege.READ_USER_SETTINGS
-      ))
-    ) {
-      return [];
-    }
-    const preferenceSet = await this.userService.getPreferenceSetOrFail(
-      user.id
-    );
-    return await this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 
   @ResolveField('communityRooms', () => [CommunicationRoomResult], {

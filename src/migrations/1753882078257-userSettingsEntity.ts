@@ -251,6 +251,27 @@ export class UserSettingsEntity1753882078257 implements MigrationInterface {
     }
 
     await queryRunner.query(`ALTER TABLE \`user\` DROP COLUMN \`settings\``);
+
+    await queryRunner.query(
+      `ALTER TABLE \`user\` DROP FOREIGN KEY \`FK_028322b763dc94242dc9f638f9b\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`preference\` DROP FOREIGN KEY \`FK_46d60bf133073f749b8f07e534c\``
+    );
+
+    await queryRunner.query(
+      `DROP INDEX \`IDX_390395c3d8592e3e8d8422ce85\` ON \`user\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`REL_028322b763dc94242dc9f638f9\` ON \`user\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`user\` DROP COLUMN \`preferenceSetId\``
+    );
+    // drop the preference tables
+    await queryRunner.query(`DROP TABLE \`preference_definition\``);
+    await queryRunner.query(`DROP TABLE \`preference\``);
+    await queryRunner.query(`DROP TABLE \`preference_set\``);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

@@ -8,7 +8,6 @@ import {
 } from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/access/application/application.entity';
-import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Room } from '@domain/communication/room/room.entity';
@@ -68,14 +67,6 @@ export class User extends ContributorBase implements IUser {
     cascade: false,
   })
   applications?: Application[];
-
-  @OneToOne(() => PreferenceSet, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  preferenceSet?: PreferenceSet;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,
