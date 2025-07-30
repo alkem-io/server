@@ -5,7 +5,7 @@ import { IOrganizationVerification } from '../organization-verification/organiza
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @ObjectType('Organization', {

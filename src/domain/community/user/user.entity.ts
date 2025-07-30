@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-inferrable-types */
 import {
   Column,
   Entity,
@@ -18,7 +17,7 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
-import { IUserSettings } from '../user.settings/user.settings.interface';
+import { IUserSettings } from '../user-settings/user.settings.interface';
 
 @Entity()
 export class User extends ContributorBase implements IUser {

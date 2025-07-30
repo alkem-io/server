@@ -1,4 +1,4 @@
-import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
+import { CurrentUser } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent';
@@ -30,7 +30,7 @@ import { AuthenticationType } from '@common/enums/authentication.type';
 import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { IUserSettings } from '../user.settings/user.settings.interface';
+import { IUserSettings } from '../user-settings/user.settings.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
