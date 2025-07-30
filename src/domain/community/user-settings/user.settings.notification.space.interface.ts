@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('UserSettingsNotificationSpace    ')
+@ObjectType('UserSettingsNotificationSpace')
 export abstract class IUserSettingsNotificationSpace {
   @Field(() => Boolean, {
     nullable: false,

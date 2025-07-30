@@ -267,7 +267,7 @@ export class UserSettingsEntity1753882078257 implements MigrationInterface {
     }
 
     const preference: {
-      value: boolean;
+      value: any;
     }[] = await queryRunner.query(
       `SELECT value FROM preference WHERE preferenceSetId = ? AND preferenceDefinitionId = ?`,
       [preferenceSetId, preferenceDefinitionId]
@@ -275,7 +275,28 @@ export class UserSettingsEntity1753882078257 implements MigrationInterface {
     if (preference.length === 0) {
       throw new Error(`Preference value for type ${type} not found`);
     }
-    return preference[0].value;
+    const result = preference[0].value;
+
+    // Convert to boolean - handle string and numeric representations
+    if (
+      result === 'true' ||
+      result === true ||
+      result === 1 ||
+      result === '1'
+    ) {
+      return true;
+    } else if (
+      result === 'false' ||
+      result === false ||
+      result === 0 ||
+      result === '0'
+    ) {
+      return false;
+    } else {
+      throw new Error(
+        `Preference value for type ${type} is not a valid boolean: ${result} (type: ${typeof result})`
+      );
+    }
   }
 
   private async createAuthorizationPolicy(
