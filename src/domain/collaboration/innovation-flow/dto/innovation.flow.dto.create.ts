@@ -1,5 +1,5 @@
 import { IInnovationFlowSettings } from '@domain/collaboration/innovation-flow-settings/innovation.flow.settings.interface';
-import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.create';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto/innovation.flow.state.dto.create';
 import { CreateProfileInput } from '@domain/common/profile/dto';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
@@ -17,6 +17,8 @@ export class CreateInnovationFlowInput {
   @ValidateNested({ each: true })
   @Type(() => CreateInnovationFlowStateInput)
   states!: CreateInnovationFlowStateInput[];
+
+  currentStateDisplayName?: string;
 
   settings!: IInnovationFlowSettings;
 }
