@@ -67,6 +67,9 @@ export class TemplateResolverMutations {
         relations: {
           templatesSet: true,
           contentSpace: {
+            about: {
+              profile: true,
+            },
             collaboration: {
               innovationFlow: {
                 states: true,
