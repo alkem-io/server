@@ -227,7 +227,10 @@ export class PlatformAuthorizationService {
     // platform role
     const platformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
+        [
+          AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
+        ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
@@ -244,6 +247,7 @@ export class PlatformAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
         ],
         [AuthorizationCredential.GLOBAL_SUPPORT],
         CREDENTIAL_RULE_TYPES_PLATFORM_MGMT
