@@ -256,6 +256,22 @@ export class UserService {
           platformUserSignUp: true,
           platformUserProfileRemoved: true,
         },
+        space: {
+          applicationReceived: true,
+          applicationSubmitted: true,
+          communicationUpdates: true,
+          communicationUpdatesAdmin: true,
+          communityNewMember: true,
+          communityNewMemberAdmin: true,
+          communityInvitationUser: true,
+          postCreatedAdmin: true,
+          postCreated: true,
+          postCommentCreated: true,
+          whiteboardCreated: true,
+          calloutPublished: true,
+          communicationMention: true,
+          commentReply: true,
+        },
       },
     };
     return settings;

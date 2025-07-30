@@ -1,6 +1,38 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+// Local type to mimic UserSettingsNotificationPlatform interface
+type UserSettingsNotificationPlatform = {
+  forumDiscussionCreated: boolean;
+  forumDiscussionComment: boolean;
+  newUserSignUp: boolean;
+  userProfileRemoved: boolean;
+};
+
+// Local type to mimic UserSettingsNotificationOrganization interface
+type UserSettingsNotificationOrganization = {
+  messageReceived: boolean;
+  mentioned: boolean;
+};
+
+// Local type to mimic UserSettingsNotificationSpace interface
+type UserSettingsNotificationSpace = {
+  applicationReceived: boolean;
+  applicationSubmitted: boolean;
+  communicationUpdates: boolean;
+  communicationUpdatesAdmin: boolean;
+  communityNewMember: boolean;
+  communityNewMemberAdmin: boolean;
+  communityInvitationUser: boolean;
+  postCreatedAdmin: boolean;
+  postCreated: boolean;
+  postCommentCreated: boolean;
+  whiteboardCreated: boolean;
+  calloutPublished: boolean;
+  communicationMention: boolean;
+  commentReply: boolean;
+};
+
 export class UserSettingsEntity1753882078257 implements MigrationInterface {
   name = 'UserSettingsEntity1753882078257';
 
@@ -11,6 +43,7 @@ export class UserSettingsEntity1753882078257 implements MigrationInterface {
                                 \`version\` int NOT NULL,
                                 \`communication\` json NOT NULL,
                                 \`privacy\` json NOT NULL,
+                                \`notification\` json NOT NULL,
                                 \`authorizationId\` char(36) NULL,
                                 UNIQUE INDEX \`REL_320cf6b7374f1204df6741bbb0\` (\`authorizationId\`),
                                 PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
@@ -46,6 +79,7 @@ export class UserSettingsEntity1753882078257 implements MigrationInterface {
           1,
           JSON.stringify(settings.communication),
           JSON.stringify(settings.privacy),
+          JSON.stringify(settings.notification),
           newSettingsAuthID,
         ]
       );

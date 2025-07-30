@@ -3,6 +3,7 @@ import { UpdateUserSettingsNotificationOrganizationInput } from './user.settings
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { UpdateUserSettingsNotificationPlatformInput } from './user.settings.notification.platform.dto.update';
+import { UpdateUserSettingsNotificationSpaceInput } from './user.settings.notification.space.dto.update';
 
 @InputType()
 export class UpdateUserSettingsNotificationInput {
@@ -21,4 +22,12 @@ export class UpdateUserSettingsNotificationInput {
   @ValidateNested()
   @Type(() => UpdateUserSettingsNotificationPlatformInput)
   platform?: UpdateUserSettingsNotificationPlatformInput;
+
+  @Field(() => UpdateUserSettingsNotificationSpaceInput, {
+    nullable: true,
+    description: 'Settings related to Space Notifications.',
+  })
+  @ValidateNested()
+  @Type(() => UpdateUserSettingsNotificationSpaceInput)
+  space?: UpdateUserSettingsNotificationSpaceInput;
 }
