@@ -49,7 +49,7 @@ export class InnovationFlowService {
   async createInnovationFlow(
     innovationFlowData: CreateInnovationFlowInput,
     storageAggregator: IStorageAggregator,
-    flowTagsetTemplate?: ITagsetTemplate
+    flowTagsetTemplate: ITagsetTemplate
   ): Promise<IInnovationFlow> {
     const innovationFlow: IInnovationFlow = InnovationFlow.create({
       settings: innovationFlowData.settings,
@@ -64,12 +64,6 @@ export class InnovationFlowService {
       );
     }
 
-    if (!flowTagsetTemplate) {
-      throw new ValidationException(
-        `Require flowTagsetTemplate on non-template InnovationFlow: ${innovationFlowData}`,
-        LogContext.INNOVATION_FLOW
-      );
-    }
     innovationFlow.flowStatesTagsetTemplate = flowTagsetTemplate;
 
     this.validateInnovationFlowDefinition(
