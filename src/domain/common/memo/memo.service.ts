@@ -119,7 +119,7 @@ export class MemoService {
     return deletedMemo;
   }
 
-  async saveContent(memoId: string, content: string): Promise<IMemo> {
+  async saveContent(memoId: string, content: Buffer): Promise<IMemo> {
     const memo = await this.getMemoOrFail(memoId);
     memo.content = content;
 
@@ -153,7 +153,7 @@ export class MemoService {
 
   async updateMemoContent(
     memoInputId: string,
-    updatedMemoContent: string
+    _updatedMemoContent: string
   ): Promise<IMemo> {
     const memo = await this.getMemoOrFail(memoInputId, {
       loadEagerRelations: false,
@@ -170,17 +170,17 @@ export class MemoService {
       );
     }
 
-    let newMemoContent = updatedMemoContent;
-    const storageBucket = memo.profile.storageBucket;
-    if (storageBucket) {
-      newMemoContent =
-        await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
-          updatedMemoContent,
-          storageBucket
-        );
-    }
-
-    memo.content = newMemoContent;
+    // let newMemoContent = updatedMemoContent;
+    // const storageBucket = memo.profile.storageBucket;
+    // if (storageBucket) {
+    //   newMemoContent =
+    //     await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+    //       updatedMemoContent,
+    //       storageBucket
+    //     );
+    // }
+    //
+    // memo.content = newMemoContent;
     return this.save(memo);
   }
 

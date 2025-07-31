@@ -94,11 +94,12 @@ export class CollaborativeDocumentIntegrationService {
 
   public async save({
     documentId,
-    content,
+    binaryStateInBase64,
   }: SaveInputData): Promise<SaveOutputData> {
+    const binaryState = Buffer.from(binaryStateInBase64, 'base64');
     // try saving
     try {
-      await this.memoService.saveContent(documentId, content);
+      await this.memoService.saveContent(documentId, binaryState);
     } catch (e: any) {
       const message = e?.message ?? JSON.stringify(e);
       this.logger.error(
@@ -119,7 +120,11 @@ export class CollaborativeDocumentIntegrationService {
         loadEagerRelations: false,
         select: { id: true, content: true },
       });
-      return new FetchOutputData(new FetchContentData(memo.content));
+
+      const contentBase64 =
+        memo.content != undefined ? memo.content.toString('base64') : undefined;
+
+      return new FetchOutputData(new FetchContentData(contentBase64));
     } catch (e: any) {
       this.logger.error(
         e?.message,
