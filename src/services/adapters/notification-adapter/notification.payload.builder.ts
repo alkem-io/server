@@ -459,7 +459,7 @@ export class NotificationPayloadBuilder {
       },
       message: lastMessage?.message,
       ...spacePayload,
-    } as CommunicationUpdateEventPayload & { message?: string };
+    } as CommunicationUpdateEventPayload;
 
     return payload;
   }
