@@ -797,8 +797,9 @@ export class UrlGeneratorService {
 
     if (!whiteboard) {
       throw new EntityNotFoundException(
-        `Unable to find whiteboard where profile: ${whiteboardProfileID}`,
-        LogContext.URL_GENERATOR
+        'Unable to find whiteboard where profile',
+        LogContext.URL_GENERATOR,
+        { whiteboardProfileID }
       );
     }
 
@@ -839,22 +840,23 @@ export class UrlGeneratorService {
     return this.getCalloutElementUrlPath({
       elementId: memoID,
       elementNameId: memoNameID,
-      elementType: UrlPathElement.WHITEBOARDS,
+      elementType: UrlPathElement.MEMOS,
       framingWhere: {
-        whiteboard: {
+        memo: {
           id: memoID,
         },
       },
       contributionWhere: {
-        whiteboard: {
+        memo: {
           id: memoID,
         },
       },
+      /* Not yet implemented
       templateWhere: {
-        whiteboard: {
+        memo: {
           id: memoID,
         },
-      },
+      },*/
     });
   }
 
@@ -875,8 +877,9 @@ export class UrlGeneratorService {
 
     if (!memo) {
       throw new EntityNotFoundException(
-        `Unable to find memo where profile: ${memoProfileID}`,
-        LogContext.URL_GENERATOR
+        'Unable to find memo where profile',
+        LogContext.URL_GENERATOR,
+        { memoProfileID }
       );
     }
 
@@ -900,7 +903,7 @@ export class UrlGeneratorService {
     elementType: UrlPathElement;
     framingWhere: FindOptionsWhere<CalloutFraming>;
     contributionWhere: FindOptionsWhere<CalloutContribution>;
-    templateWhere: FindOptionsWhere<Template>;
+    templateWhere?: FindOptionsWhere<Template>;
   }): Promise<string> {
     let callout = await this.entityManager.findOne(Callout, {
       where: {
@@ -924,7 +927,7 @@ export class UrlGeneratorService {
       const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
       return `${calloutUrlPath}/${elementType}/${elementNameId}`;
     }
-    if (!callout) {
+    if (!callout && templateWhere) {
       // Whiteboard can be also a direct template
       const template = await this.entityManager.findOne(Template, {
         where: {
