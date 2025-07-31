@@ -8,7 +8,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { EntityManager, FindOptionsWhere } from 'typeorm';
 import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -34,6 +34,8 @@ import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
+import { Memo } from '@domain/common/memo/memo.entity';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -118,6 +120,8 @@ export class UrlGeneratorService {
         );
       case ProfileType.WHITEBOARD:
         return await this.getWhiteboardUrlPathByProfileID(profile.id);
+      case ProfileType.MEMO:
+        return await this.getMemoUrlPathByProfileID(profile.id);
       case ProfileType.INNOVATION_FLOW:
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
       case ProfileType.TEMPLATE:
@@ -805,41 +809,126 @@ export class UrlGeneratorService {
     whiteboardID: string,
     whiteboardNameID: string
   ): Promise<string> {
+    return this.getCalloutElementUrlPath({
+      elementId: whiteboardID,
+      elementNameId: whiteboardNameID,
+      elementType: UrlPathElement.WHITEBOARDS,
+      framingWhere: {
+        whiteboard: {
+          id: whiteboardID,
+        },
+      },
+      contributionWhere: {
+        whiteboard: {
+          id: whiteboardID,
+        },
+      },
+      templateWhere: {
+        whiteboard: {
+          id: whiteboardID,
+        },
+      },
+    });
+  }
+
+  // TODO: public Not used outside here for now, but notifications use these
+  public async getMemoUrlPath(
+    memoID: string,
+    memoNameID: string
+  ): Promise<string> {
+    return this.getCalloutElementUrlPath({
+      elementId: memoID,
+      elementNameId: memoNameID,
+      elementType: UrlPathElement.WHITEBOARDS,
+      framingWhere: {
+        whiteboard: {
+          id: memoID,
+        },
+      },
+      contributionWhere: {
+        whiteboard: {
+          id: memoID,
+        },
+      },
+      templateWhere: {
+        whiteboard: {
+          id: memoID,
+        },
+      },
+    });
+  }
+
+  private async getMemoUrlPathByProfileID(
+    memoProfileID: string
+  ): Promise<string> {
+    const memo = await this.entityManager.findOne(Memo, {
+      where: {
+        profile: {
+          id: memoProfileID,
+        },
+      },
+      select: {
+        id: true,
+        nameID: true,
+      },
+    });
+
+    if (!memo) {
+      throw new EntityNotFoundException(
+        `Unable to find memo where profile: ${memoProfileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    return await this.getWhiteboardUrlPath(memo.id, memo.nameID);
+  }
+
+  /**
+   * Find urls for whiteboards, memos...
+   * Either as CalloutFraming, or CalloutContribution, or inside a Callout Template
+   */
+  public async getCalloutElementUrlPath({
+    elementId,
+    elementNameId,
+    elementType,
+    framingWhere,
+    contributionWhere,
+    templateWhere,
+  }: {
+    elementId: string;
+    elementNameId: string;
+    elementType: UrlPathElement;
+    framingWhere: FindOptionsWhere<CalloutFraming>;
+    contributionWhere: FindOptionsWhere<CalloutContribution>;
+    templateWhere: FindOptionsWhere<Template>;
+  }): Promise<string> {
     let callout = await this.entityManager.findOne(Callout, {
       where: {
         framing: {
-          whiteboard: {
-            id: whiteboardID,
-          },
+          ...framingWhere,
         },
       },
     });
     if (callout) {
       const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
-      return `${calloutUrlPath}/${whiteboardNameID}`;
+      return `${calloutUrlPath}/${elementNameId}`;
     }
-    if (!callout) {
-      callout = await this.entityManager.findOne(Callout, {
-        where: {
-          contributions: {
-            whiteboard: {
-              id: whiteboardID,
-            },
-          },
+    callout = await this.entityManager.findOne(Callout, {
+      where: {
+        contributions: {
+          ...contributionWhere,
         },
-      });
-    }
+      },
+    });
     if (callout) {
       const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
-      return `${calloutUrlPath}/${UrlPathElement.WHITEBOARDS}/${whiteboardNameID}`;
+      return `${calloutUrlPath}/${elementType}/${elementNameId}`;
     }
     if (!callout) {
       // Whiteboard can be also a direct template
       const template = await this.entityManager.findOne(Template, {
         where: {
-          whiteboard: {
-            id: whiteboardID,
-          },
+          ...templateWhere,
         },
         relations: {
           profile: true,
@@ -851,8 +940,9 @@ export class UrlGeneratorService {
     }
 
     throw new EntityNotFoundException(
-      `Unable to find url for whiteboardId: ${whiteboardID}`,
-      LogContext.URL_GENERATOR
+      `Unable to find url for ${elementType}`,
+      LogContext.URL_GENERATOR,
+      { elementId }
     );
   }
 
