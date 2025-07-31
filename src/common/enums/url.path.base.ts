@@ -20,6 +20,16 @@ export enum UrlPathBase {
   // Flow routes
   CREATE_SPACE = 'create-space',
 
+  // Identity routes
+  LOGIN = 'login',
+  LOGOUT = 'logout',
+  REGISTRATION = 'registration',
+  SIGN_UP = 'sign_up',
+  VERIFY = 'verify',
+  RECOVERY = 'recovery',
+  REQUIRED = 'required',
+  ERROR = 'error',
+
   // Legacy routes
   LANDING = 'landing', // Legacy route that redirects to Welcome site
   IDENTITY = 'identity', // Legacy route that's not used anymore but is decided to be reserved
