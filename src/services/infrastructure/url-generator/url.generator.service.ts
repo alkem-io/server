@@ -883,7 +883,7 @@ export class UrlGeneratorService {
       );
     }
 
-    return await this.getWhiteboardUrlPath(memo.id, memo.nameID);
+    return await this.getMemoUrlPath(memo.id, memo.nameID);
   }
 
   /**
