@@ -191,17 +191,7 @@ export class CalloutFramingService {
     } else if (calloutFraming.type === CalloutFramingType.LINK) {
       // Handle LINK type updates
       if (calloutFramingData.link) {
-        // Delete existing link if it exists
-        if (calloutFraming.link) {
-          await this.linkService.deleteLink(calloutFraming.link.id);
-          calloutFraming.link = undefined;
-        }
-        // Create new link
-        await this.createNewLinkInCalloutFraming(
-          calloutFraming,
-          calloutFramingData.link,
-          storageAggregator
-        );
+        await this.linkService.updateLink(calloutFramingData.link);
       }
       // if the type is LINK, we remove the whiteboard if it exists
       if (calloutFraming.whiteboard) {
