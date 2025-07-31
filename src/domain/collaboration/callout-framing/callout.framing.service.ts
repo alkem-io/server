@@ -12,7 +12,9 @@ import { LogContext } from '@common/enums/logging.context';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { LinkService } from '@domain/collaboration/link/link.service';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { ILink } from '@domain/collaboration/link/link.interface';
 import { VisualType } from '@common/enums/visual.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
@@ -24,6 +26,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
+import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { ValidationException } from '@common/exceptions';
 
 @Injectable()
@@ -32,6 +35,7 @@ export class CalloutFramingService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
+    private linkService: LinkService,
     private namingService: NamingService,
     private tagsetService: TagsetService,
     @InjectRepository(CalloutFraming)
@@ -89,6 +93,21 @@ export class CalloutFramingService {
       }
     }
 
+    if (calloutFraming.type === CalloutFramingType.LINK) {
+      if (calloutFramingData.link) {
+        await this.createNewLinkInCalloutFraming(
+          calloutFraming,
+          calloutFramingData.link,
+          storageAggregator
+        );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type LINK requires link data.',
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
     return calloutFraming;
   }
 
@@ -113,6 +132,17 @@ export class CalloutFramingService {
       calloutFraming.whiteboard.profile,
       whiteboardData.profile?.visuals,
       [VisualType.BANNER]
+    );
+  }
+
+  private async createNewLinkInCalloutFraming(
+    calloutFraming: ICalloutFraming,
+    linkData: CreateLinkInput,
+    storageAggregator: IStorageAggregator
+  ) {
+    calloutFraming.link = await this.linkService.createLink(
+      linkData,
+      storageAggregator
     );
   }
 
@@ -158,13 +188,39 @@ export class CalloutFramingService {
           userID
         );
       }
-    } else {
-      // if the type is not WHITEBOARD, we remove the whiteboard if it exists
+    } else if (calloutFraming.type === CalloutFramingType.LINK) {
+      // Handle LINK type updates
+      if (calloutFramingData.link) {
+        // Delete existing link if it exists
+        if (calloutFraming.link) {
+          await this.linkService.deleteLink(calloutFraming.link.id);
+          calloutFraming.link = undefined;
+        }
+        // Create new link
+        await this.createNewLinkInCalloutFraming(
+          calloutFraming,
+          calloutFramingData.link,
+          storageAggregator
+        );
+      }
+      // if the type is LINK, we remove the whiteboard if it exists
       if (calloutFraming.whiteboard) {
         await this.whiteboardService.deleteWhiteboard(
           calloutFraming.whiteboard.id
         );
         calloutFraming.whiteboard = undefined;
+      }
+    } else {
+      // if the type is NONE, we remove both whiteboard and link if they exist
+      if (calloutFraming.whiteboard) {
+        await this.whiteboardService.deleteWhiteboard(
+          calloutFraming.whiteboard.id
+        );
+        calloutFraming.whiteboard = undefined;
+      }
+      if (calloutFraming.link) {
+        await this.linkService.deleteLink(calloutFraming.link.id);
+        calloutFraming.link = undefined;
       }
     }
 
@@ -179,6 +235,7 @@ export class CalloutFramingService {
         relations: {
           profile: true,
           whiteboard: true,
+          link: true,
         },
       }
     );
@@ -190,6 +247,10 @@ export class CalloutFramingService {
       await this.whiteboardService.deleteWhiteboard(
         calloutFraming.whiteboard.id
       );
+    }
+
+    if (calloutFraming.link) {
+      await this.linkService.deleteLink(calloutFraming.link.id);
     }
 
     if (calloutFraming.authorization) {
@@ -260,5 +321,22 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.whiteboard;
+  }
+
+  public async getLink(
+    calloutFramingInput: ICalloutFraming,
+    relations?: FindOptionsRelations<ICalloutFraming>
+  ): Promise<ILink | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { link: true, ...relations },
+      }
+    );
+    if (!calloutFraming.link) {
+      return null;
+    }
+
+    return calloutFraming.link;
   }
 }
