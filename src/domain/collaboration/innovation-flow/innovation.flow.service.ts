@@ -32,6 +32,7 @@ import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
 import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
 import { keyBy } from 'lodash';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
+import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 
 @Injectable()
 export class InnovationFlowService {
@@ -48,8 +49,7 @@ export class InnovationFlowService {
   async createInnovationFlow(
     innovationFlowData: CreateInnovationFlowInput,
     storageAggregator: IStorageAggregator,
-    flowTagsetTemplate?: ITagsetTemplate,
-    isTemplate: boolean = false
+    flowTagsetTemplate: ITagsetTemplate
   ): Promise<IInnovationFlow> {
     const innovationFlow: IInnovationFlow = InnovationFlow.create({
       settings: innovationFlowData.settings,
@@ -64,15 +64,7 @@ export class InnovationFlowService {
       );
     }
 
-    if (!isTemplate) {
-      if (!flowTagsetTemplate) {
-        throw new ValidationException(
-          `Require flowTagsetTemplate on non-template InnovationFlow: ${innovationFlowData}`,
-          LogContext.INNOVATION_FLOW
-        );
-      }
-      innovationFlow.flowStatesTagsetTemplate = flowTagsetTemplate;
-    }
+    innovationFlow.flowStatesTagsetTemplate = flowTagsetTemplate;
 
     this.validateInnovationFlowDefinition(
       innovationFlowData.states,
@@ -124,6 +116,9 @@ export class InnovationFlowService {
     return await this.innovationFlowRepository.save(innovationFlow);
   }
 
+  /**
+   * Updates the profile information of the InnovationFlow.
+   */
   async updateInnovationFlow(
     innovationFlowData: UpdateInnovationFlowInput
   ): Promise<IInnovationFlow> {
@@ -132,9 +127,6 @@ export class InnovationFlowService {
       {
         relations: {
           profile: true,
-          flowStatesTagsetTemplate: {
-            tagsets: true,
-          },
         },
       }
     );
@@ -149,10 +141,96 @@ export class InnovationFlowService {
     return await this.innovationFlowRepository.save(innovationFlow);
   }
 
+  /**
+   * Updates a single state of the InnovationFlow.
+   * Updates the tagset template for the flow states.
+   * Updates also the callouts classification if the flow states tagset template is used.
+   * @param innovationFlow
+   * @param stateUpdatedData
+   */
+  public async updateInnovationFlowState(
+    innovationFlowId: string,
+    stateUpdatedData: UpdateInnovationFlowStateInput
+  ): Promise<IInnovationFlowState> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowId,
+      {
+        relations: {
+          flowStatesTagsetTemplate: {
+            tagsets: true,
+          },
+          states: true,
+        },
+      }
+    );
+
+    const states = innovationFlow.states.sort(sortBySortOrder);
+    const currentStateID = innovationFlow.currentStateID;
+
+    let updatedState = states.find(
+      state => state.id === stateUpdatedData.innovationFlowStateID
+    );
+    if (!updatedState) {
+      throw new EntityNotFoundException(
+        'Unable to find InnovationFlowState in InnovationFlow',
+        LogContext.INNOVATION_FLOW,
+        {
+          innovationFlowID: innovationFlow.id,
+          innovationFlowStateID: stateUpdatedData.innovationFlowStateID,
+        }
+      );
+    }
+    const renamedState =
+      updatedState.displayName !== stateUpdatedData.displayName
+        ? { old: updatedState.displayName, new: stateUpdatedData.displayName }
+        : undefined;
+
+    // Update the state with the new data
+    updatedState = await this.innovationFlowStateService.update(
+      updatedState,
+      stateUpdatedData
+    );
+
+    // Generate the new tagset template definition
+    if (renamedState && innovationFlow.flowStatesTagsetTemplate) {
+      const allowedValues = states.map(state => state.displayName);
+      const defaultSelectedValue =
+        states.find(state => state.id === currentStateID)?.displayName ??
+        states[0]?.displayName ??
+        '';
+
+      await this.tagsetTemplateService.updateTagsetTemplateDefinition(
+        innovationFlow.flowStatesTagsetTemplate,
+        {
+          allowedValues,
+          defaultSelectedValue,
+        }
+      );
+      if (innovationFlow.flowStatesTagsetTemplate.tagsets) {
+        await this.tagsetService.updateTagsetsSelectedValue(
+          innovationFlow.flowStatesTagsetTemplate.tagsets,
+          allowedValues,
+          defaultSelectedValue,
+          renamedState
+        );
+      }
+    }
+    await this.save(innovationFlow);
+
+    return updatedState;
+  }
+
+  /**
+   * Warning: Drops all the existing states and creates new ones.
+   *    This is normally used when applying a template
+   *    Updates the tagset template for the flow states and updates the callouts classification??
+   * @param innovationFlow
+   * @param newStates
+   * @returns
+   */
   public async updateInnovationFlowStates(
     innovationFlow: IInnovationFlow,
-    newStates: CreateInnovationFlowStateInput[],
-    isTemplate: boolean = false
+    newStates: CreateInnovationFlowStateInput[]
   ) {
     // Get the name of the currently selected as current state
     const selectedStateName = innovationFlow.currentStateID
@@ -174,6 +252,9 @@ export class InnovationFlowService {
       innovationFlow.states.push(state);
     }
 
+    // Needs to save the innovation flow to persist the states and be able to access their ids
+    innovationFlow = await this.save(innovationFlow);
+
     // Check if there is a matching name to update the current state ID
     let currentState = innovationFlow.states.find(
       state => state.displayName === selectedStateName
@@ -186,15 +267,16 @@ export class InnovationFlowService {
 
     innovationFlow = await this.save(innovationFlow);
 
-    if (!isTemplate) {
-      const tagsetAllowedValues = newStates.map(state => state.displayName);
-      const tagsetDefaultSelectedValue = currentState.displayName;
-      await this.updateFlowStatesTagsetTemplate(
-        innovationFlow.id,
-        tagsetAllowedValues,
-        tagsetDefaultSelectedValue
-      );
-    }
+    const tagsetAllowedValues = newStates
+      .sort(sortBySortOrder)
+      .map(state => state.displayName);
+
+    const tagsetDefaultSelectedValue = currentState.displayName;
+    await this.updateFlowStatesTagsetTemplate(
+      innovationFlow.id,
+      tagsetAllowedValues,
+      tagsetDefaultSelectedValue
+    );
 
     return innovationFlow;
   }
@@ -469,7 +551,7 @@ export class InnovationFlowService {
     }
 
     // sort the states by sortOrder
-    return innovationFlow.states.sort((a, b) => a.sortOrder - b.sortOrder);
+    return innovationFlow.states.sort(sortBySortOrder);
   }
 
   public async getCurrentState(

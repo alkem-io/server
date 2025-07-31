@@ -171,11 +171,13 @@ export class RoomServiceEvents {
 
   public async processNotificationUpdateSent(
     updates: IRoom,
+    lastMessage: IMessage,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputUpdateSent = {
       triggeredBy: agentInfo.userID,
       updates: updates,
+      lastMessage: lastMessage,
     };
     await this.notificationAdapter.updateSent(notificationInput);
   }

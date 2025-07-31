@@ -41,6 +41,7 @@ import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.serv
 import { ISpace } from '@domain/space/space/space.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { merge } from 'lodash';
 
 @Injectable()
 export class TemplateService {
@@ -303,8 +304,13 @@ export class TemplateService {
       templateData.spaceID,
       {
         relations: {
+          about: {
+            profile: true,
+          },
           collaboration: {
-            innovationFlow: true,
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: true,
             },
@@ -404,7 +410,7 @@ export class TemplateService {
     }
   }
 
-  public async updateTemplateContentSpaceFromSpace(
+  private async updateTemplateContentSpaceFromSpace(
     space: ISpace,
     templateContentSpace: ITemplateContentSpace,
     addCallouts: boolean,
@@ -457,6 +463,19 @@ export class TemplateService {
 
     this.ensureCalloutsInValidGroupsAndStates(
       templateContentSpace.collaboration
+    );
+
+    await this.templateContentSpaceService.updateAboutFromExistingSpace(
+      templateContentSpace,
+      this.inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout(
+        space.about
+      ),
+      storageAggregator
+    );
+
+    templateContentSpace.settings = merge(
+      templateContentSpace.settings,
+      space.settings
     );
 
     // Need to save before applying authorization policy to get the callout ids

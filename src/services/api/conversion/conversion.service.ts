@@ -56,7 +56,9 @@ export class ConversionService {
             roleSet: true,
           },
           collaboration: {
-            innovationFlow: true,
+            innovationFlow: {
+              states: true,
+            },
           },
           storageAggregator: true,
           subspaces: true,
@@ -69,6 +71,7 @@ export class ConversionService {
       !spaceL1.community.roleSet ||
       !spaceL1.collaboration ||
       !spaceL1.collaboration.innovationFlow ||
+      !spaceL1.collaboration.innovationFlow.states ||
       !spaceL1.storageAggregator ||
       !spaceL1.subspaces ||
       !spaceL1.agent
@@ -247,7 +250,9 @@ export class ConversionService {
         relations: {
           contentSpace: {
             collaboration: {
-              innovationFlow: true,
+              innovationFlow: {
+                states: true,
+              },
             },
           },
         },

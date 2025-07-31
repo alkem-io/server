@@ -176,7 +176,11 @@ export class RoomResolverMutations {
         );
         break;
       case RoomType.UPDATES:
-        this.roomServiceEvents.processNotificationUpdateSent(room, agentInfo);
+        this.roomServiceEvents.processNotificationUpdateSent(
+          room,
+          message,
+          agentInfo
+        );
         this.roomServiceEvents.processActivityUpdateSent(
           room,
           message,
