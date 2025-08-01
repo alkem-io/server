@@ -64,10 +64,6 @@ export class CollaborativeDocumentIntegrationController {
     Transport.RMQ
   )
   public health(@Ctx() context: RmqContext): HealthCheckOutputData {
-    this.logger.verbose?.(
-      'Received HEALTH request',
-      LogContext.COLLAB_DOCUMENT_INTEGRATION
-    );
     ack(context);
     // can be tight to more complex health check in the future
     // for now just return true

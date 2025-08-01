@@ -1,7 +1,7 @@
 export enum CollaborativeDocumentMessagePattern {
-  WHO = 'who',
-  INFO = 'info',
-  HEALTH_CHECK = 'health-check',
-  SAVE = 'save',
-  FETCH = 'fetch',
+  WHO = 'collaboration-document-who',
+  INFO = 'collaboration-document-info',
+  HEALTH_CHECK = 'collaboration-document-health-check',
+  SAVE = 'collaboration-document-save',
+  FETCH = 'collaboration-document-fetch',
 }
