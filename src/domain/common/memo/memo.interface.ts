@@ -5,10 +5,6 @@ import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 
 @ObjectType('Memo')
 export abstract class IMemo extends INameable {
-  // @Field(() => Markdown, {
-  //   nullable: true,
-  //   description: 'The content of the Memo.',
-  // })
   content?: Buffer;
 
   @Field(() => ContentUpdatePolicy, {

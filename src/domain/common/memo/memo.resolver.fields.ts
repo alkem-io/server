@@ -22,6 +22,19 @@ export class MemoResolverFields {
     private readonly logger: LoggerService
   ) {}
 
+  @ResolveField(() => String, {
+    nullable: true,
+    description:
+      'The binary state V2 of the Yjs document, used to collaborate on the Memo, represented in base64.',
+  })
+  public content(@Parent() memo: IMemo): string | null {
+    if (!memo.content) {
+      return null;
+    }
+
+    return memo.content.toString('base64');
+  }
+
   @ResolveField(() => Boolean, {
     nullable: false,
     description: 'Whether the Memo is multi-user enabled on Space level.',
