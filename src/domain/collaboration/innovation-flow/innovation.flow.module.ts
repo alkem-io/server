@@ -11,11 +11,13 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { InnovationFlowStateModule } from '../innovation-flow-state/innovation.flow.state.module';
+import { CalloutsSetModule } from '../callouts-set/callouts.set.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    CalloutsSetModule,
     InnovationFlowStateModule,
     ProfileModule,
     TagsetTemplateModule,
