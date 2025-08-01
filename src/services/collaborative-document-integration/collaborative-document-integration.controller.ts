@@ -1,4 +1,5 @@
-import { Controller } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
+import { Controller, Inject } from '@nestjs/common';
 import {
   Ctx,
   MessagePattern,
@@ -21,10 +22,12 @@ import {
   InfoOutputData,
   SaveOutputData,
 } from './outputs';
+import { LogContext } from '@common/enums';
 
-@Controller('collaborative-document-integration')
+@Controller()
 export class CollaborativeDocumentIntegrationController {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger,
     private readonly integrationService: CollaborativeDocumentIntegrationService
   ) {}
 
@@ -33,6 +36,10 @@ export class CollaborativeDocumentIntegrationController {
     @Payload() data: InfoInputData,
     @Ctx() context: RmqContext
   ): Promise<InfoOutputData> {
+    this.logger.verbose?.(
+      `Received INFO request for document: ${data.documentId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
     ack(context);
     return this.integrationService.info(data);
   }
@@ -42,6 +49,10 @@ export class CollaborativeDocumentIntegrationController {
     @Payload() data: WhoInputData,
     @Ctx() context: RmqContext
   ): Promise<UserInfo> {
+    this.logger.verbose?.(
+      'Received WHO request',
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
     ack(context);
     return this.integrationService
       .who(data)
@@ -53,6 +64,10 @@ export class CollaborativeDocumentIntegrationController {
     Transport.RMQ
   )
   public health(@Ctx() context: RmqContext): HealthCheckOutputData {
+    this.logger.verbose?.(
+      'Received HEALTH request',
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
     ack(context);
     // can be tight to more complex health check in the future
     // for now just return true
@@ -64,6 +79,10 @@ export class CollaborativeDocumentIntegrationController {
     @Payload() data: SaveInputData,
     @Ctx() context: RmqContext
   ): Promise<SaveOutputData> {
+    this.logger.verbose?.(
+      `Received SAVE request for document: ${data.documentId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
     ack(context);
     return this.integrationService.save(data);
   }
@@ -73,6 +92,10 @@ export class CollaborativeDocumentIntegrationController {
     @Payload() data: FetchInputData,
     @Ctx() context: RmqContext
   ): Promise<FetchOutputData> {
+    this.logger.verbose?.(
+      `Received FETCH request for document: ${data.documentId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
     ack(context);
     return this.integrationService.fetch(data);
   }
