@@ -24,7 +24,7 @@ export class UpdateUserSettingsNotificationPlatformInput {
     description: '[Admin] Receive notification when a new user signs up',
   })
   @IsBoolean()
-  platformUserSignUp!: boolean;
+  newUserSignUp!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
@@ -32,5 +32,5 @@ export class UpdateUserSettingsNotificationPlatformInput {
       '[Admin] Receive a notification when a user profile is removed',
   })
   @IsBoolean()
-  platformUserProfileRemoved!: boolean;
+  userProfileRemoved!: boolean;
 }

@@ -242,8 +242,8 @@ export class UserService {
         platform: {
           forumDiscussionCreated: false,
           forumDiscussionComment: true,
-          platformUserSignUp: true,
-          platformUserProfileRemoved: true,
+          newUserSignUp: true,
+          userProfileRemoved: true,
         },
         space: {
           applicationReceived: true,

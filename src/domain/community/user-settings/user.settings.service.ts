@@ -61,13 +61,13 @@ export class UserSettingsService {
         settings.notification.platform.forumDiscussionCreated =
           platformData.forumDiscussionCreated;
       }
-      if (platformData.platformUserProfileRemoved !== undefined) {
+      if (platformData.userProfileRemoved !== undefined) {
         settings.notification.platform.userProfileRemoved =
-          platformData.platformUserProfileRemoved;
+          platformData.userProfileRemoved;
       }
-      if (platformData.platformUserSignUp !== undefined) {
+      if (platformData.newUserSignUp !== undefined) {
         settings.notification.platform.newUserSignUp =
-          platformData.platformUserSignUp;
+          platformData.newUserSignUp;
       }
     }
 
