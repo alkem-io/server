@@ -244,7 +244,7 @@ export class UserGroupService {
   }
 
   async getMembers(groupID: string): Promise<IUser[]> {
-    return await this.userLookupService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredential({
       type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: groupID,
     });

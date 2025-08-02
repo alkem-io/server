@@ -88,22 +88,35 @@ export class UserLookupService {
     return user;
   }
 
-  async usersWithCredentials(
+  async usersWithCredential(
     credentialCriteria: CredentialsSearchInput,
     limit?: number,
     options?: FindManyOptions<User>
   ): Promise<IUser[]> {
-    const credResourceID = credentialCriteria.resourceID || '';
+    return this.usersWithCredentials([credentialCriteria], limit, options);
+  }
 
-    const findOptions: FindManyOptions<User> = {
-      where: {
-        agent: {
-          credentials: {
-            type: credentialCriteria.type,
-            resourceID: credResourceID,
-          },
+  async usersWithCredentials(
+    credentialCriteriaArray: CredentialsSearchInput[],
+    limit?: number,
+    options?: FindManyOptions<User>
+  ): Promise<IUser[]> {
+    if (credentialCriteriaArray.length === 0) {
+      return [];
+    }
+
+    // Build OR conditions for multiple credential criteria
+    const whereConditions = credentialCriteriaArray.map(criteria => ({
+      agent: {
+        credentials: {
+          type: criteria.type,
+          resourceID: criteria.resourceID || '',
         },
       },
+    }));
+
+    const findOptions: FindManyOptions<User> = {
+      where: whereConditions,
       relations: {
         agent: {
           credentials: true,

@@ -6,6 +6,7 @@ export enum UserNotificationEvent {
   PLATFORM_FORUM_DISCUSSION_COMMENT = 'platform-forumDiscussionComment',
   PLATFORM_NEW_USER_SIGN_UP = 'platform-newUserSignUp',
   PLATFORM_USER_PROFILE_REMOVED = 'platform-userProfileRemoved',
+  PLATFORM_SPACE_CREATED = 'platform-spaceCreated',
 
   // Organization notifications
   ORGANIZATION_MESSAGE_RECEIVED = 'organization-messageReceived',

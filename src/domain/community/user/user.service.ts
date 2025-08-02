@@ -548,7 +548,7 @@ export class UserService {
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const currentEntryRoleUsers =
-      await this.userLookupService.usersWithCredentials(
+      await this.userLookupService.usersWithCredential(
         entryRoleCredentials.role
       );
     const qb = this.userRepository.createQueryBuilder('user').select();
@@ -589,7 +589,7 @@ export class UserService {
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const currentElevatedRoleUsers =
-      await this.userLookupService.usersWithCredentials(
+      await this.userLookupService.usersWithCredential(
         roleSetCredentials.elevatedRole
       );
     const qb = this.userRepository
