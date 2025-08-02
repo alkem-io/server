@@ -1,11 +1,17 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { SpaceLevel } from '@common/enums/space.level';
+import { IUser } from '@domain/community/user/user.interface';
 
 @ObjectType()
 export class NotificationRecipientResult {
-  @Field(() => SpaceLevel, {
+  @Field(() => [IUser], {
     nullable: false,
-    description: 'The level of the Space e.g. L0/L1/L2.',
+    description: 'The email recipients for the notification.',
   })
-  level!: SpaceLevel;
+  emailRecipients!: IUser[];
+
+  @Field(() => [IUser], {
+    nullable: false,
+    description: 'The in-app recipients for the notification.',
+  })
+  inAppRecipients!: IUser[];
 }

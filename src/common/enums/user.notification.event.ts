@@ -1,6 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum UserNotificationSetting {
+export enum UserNotificationEvent {
   // Platform notifications
   PLATFORM_FORUM_DISCUSSION_CREATED = 'platform-forumDiscussionCreated',
   PLATFORM_FORUM_DISCUSSION_COMMENT = 'platform-forumDiscussionComment',
@@ -28,6 +28,6 @@ export enum UserNotificationSetting {
   SPACE_COMMENT_REPLY = 'space-commentReply',
 }
 
-registerEnumType(UserNotificationSetting, {
-  name: 'UserNotificationSetting',
+registerEnumType(UserNotificationEvent, {
+  name: 'UserNotificationEvent',
 });

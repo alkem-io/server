@@ -20,12 +20,13 @@ export class NotificationRecipientsResolverQueries {
 
   @Query(() => NotificationRecipientsInput, {
     nullable: false,
-    description: 'The notificationRecipients that that the specified User has.',
+    description:
+      'The notificationRecipients for the provided event on the given entity.',
   })
   async notificationRecipients(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('notificationRecipientsData')
-    notificationRecipientsData: NotificationRecipientsInput
+    @Args('eventData')
+    eventData: NotificationRecipientsInput
   ): Promise<NotificationRecipientResult> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -33,8 +34,6 @@ export class NotificationRecipientsResolverQueries {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `notificationRecipients query: ${agentInfo.email}`
     );
-    return this.notificationRecipientsServices.getRecipients(
-      notificationRecipientsData
-    );
+    return this.notificationRecipientsServices.getRecipients(eventData);
   }
 }

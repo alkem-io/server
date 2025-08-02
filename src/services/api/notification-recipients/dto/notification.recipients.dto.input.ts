@@ -1,18 +1,19 @@
-import { UserNotificationSetting } from '@common/enums/user.notification.setting';
+import { UserNotificationEvent } from '@common/enums/user.notification.event';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class NotificationRecipientsInput {
-  @Field(() => UserNotificationSetting, {
+  @Field(() => UserNotificationEvent, {
     nullable: false,
     description: 'The type of notification setting to look up recipients for.',
   })
-  notificationSetting!: UserNotificationSetting;
+  notificationSetting!: UserNotificationEvent;
 
   @Field(() => UUID, {
     nullable: true,
-    description: 'The ID of the entity to retrieve the recipients for.',
+    description:
+      'The ID of the entity to retrieve the recipients for. This could be a Space, Organization etc, and is specific to the event type.',
   })
   entityID?: string;
 }
