@@ -39,151 +39,11 @@ export class NotificationRecipientsService {
     );
 
     const inAppEnabled = this.isInAppEnabled(eventData.eventType);
-
-    // 1. Depending on the event type, get a) the candidate list of recipients b) the privilege required per recipient c) whether inApp is enabled or not
-    // 2. Filter the candidate list based on the privilege required
-    let privilegeRequired: AuthorizationPrivilege | undefined = undefined;
-    let credentialCriteria: CredentialsSearchInput[] = [];
-    switch (eventData.eventType) {
-      case UserNotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT: {
-        credentialCriteria = this.getUserSelfCriteria(eventData.entityID);
-        break;
-      }
-      case UserNotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED: {
-        // All users can receive these notifications
-        credentialCriteria = [
-          {
-            type: AuthorizationCredential.GLOBAL_REGISTERED,
-            resourceID: '',
-          },
-        ];
-        break;
-      }
-      case UserNotificationEvent.PLATFORM_NEW_USER_SIGN_UP: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getGlobalAdminCriteria();
-        break;
-      }
-      case UserNotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getGlobalAdminCriteria();
-        break;
-      }
-      case UserNotificationEvent.PLATFORM_SPACE_CREATED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = [
-          {
-            type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-            resourceID: '',
-          },
-        ];
-        break;
-      }
-      case UserNotificationEvent.ORGANIZATION_MESSAGE_RECEIVED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getOrganizationCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.ORGANIZATION_MENTIONED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getOrganizationCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_APPLICATION_RECEIVED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-
-      case UserNotificationEvent.SPACE_APPLICATION_SUBMITTED: {
-        credentialCriteria = this.getUserSelfCriteria(eventData.entityID);
-        break;
-      }
-      case UserNotificationEvent.SPACE_COMMUNICATION_UPDATES: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_COMMUNICATION_UPDATES_ADMIN: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_COMMUNITY_NEW_MEMBER: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_POST_CREATED_ADMIN: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_POST_CREATED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_POST_COMMENT_CREATED: {
-        // Post creator can receive these notifications
-        credentialCriteria = this.getUserSelfCriteria(eventData.entityID);
-        break;
-      }
-      case UserNotificationEvent.SPACE_WHITEBOARD_CREATED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_CALLOUT_PUBLISHED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getSpaceCredentialCriteria(
-          eventData.entityID
-        );
-        break;
-      }
-      case UserNotificationEvent.SPACE_COMMUNICATION_MENTION: {
-        // Mentioned user can receive these notifications
-        credentialCriteria = this.getUserSelfCriteria(eventData.entityID);
-        break;
-      }
-      case UserNotificationEvent.SPACE_COMMENT_REPLY: {
-        // Comment creator can receive these notifications
-        credentialCriteria = this.getUserSelfCriteria(eventData.entityID);
-        break;
-      }
-    }
+    const { privilegeRequired, credentialCriteria } =
+      this.getPrivilegeRequiredCredentialCriteria(
+        eventData.eventType,
+        eventData.entityID
+      );
 
     // Note: the candidate recipients are set to a level that is greater than or equal to the end set of receipients
     // The final list of recipients will be filtered based on the privilege required
@@ -225,6 +85,80 @@ export class NotificationRecipientsService {
       emailRecipients: recipientsWithPrivilege,
       inAppRecipients: inAppParticipants,
     };
+  }
+
+  private getPrivilegeRequiredCredentialCriteria(
+    eventType: UserNotificationEvent,
+    entityID?: string
+  ): {
+    privilegeRequired: AuthorizationPrivilege | undefined;
+    credentialCriteria: CredentialsSearchInput[];
+  } {
+    // 1. Depending on the event type, get a) the candidate list of recipients b) the privilege required per recipient c) whether inApp is enabled or not
+    // 2. Filter the candidate list based on the privilege required
+    let privilegeRequired: AuthorizationPrivilege | undefined = undefined;
+    let credentialCriteria: CredentialsSearchInput[] = [];
+    switch (eventType) {
+      case UserNotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED: {
+        // All users can receive these notifications
+        credentialCriteria = [
+          {
+            type: AuthorizationCredential.GLOBAL_REGISTERED,
+            resourceID: '',
+          },
+        ];
+        break;
+      }
+      case UserNotificationEvent.PLATFORM_NEW_USER_SIGN_UP:
+      case UserNotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getGlobalAdminCriteria();
+        break;
+      }
+      case UserNotificationEvent.PLATFORM_SPACE_CREATED: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = [
+          {
+            type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+            resourceID: '',
+          },
+        ];
+        break;
+      }
+      case UserNotificationEvent.ORGANIZATION_MESSAGE_RECEIVED:
+      case UserNotificationEvent.ORGANIZATION_MENTIONED: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getOrganizationCredentialCriteria(entityID);
+        break;
+      }
+      case UserNotificationEvent.SPACE_APPLICATION_RECEIVED:
+      case UserNotificationEvent.SPACE_COMMUNICATION_UPDATES_ADMIN:
+      case UserNotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
+      case UserNotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
+      case UserNotificationEvent.SPACE_POST_CREATED_ADMIN: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getSpaceCredentialCriteria(entityID);
+        break;
+      }
+      case UserNotificationEvent.SPACE_COMMUNICATION_UPDATES:
+      case UserNotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
+      case UserNotificationEvent.SPACE_POST_CREATED:
+      case UserNotificationEvent.SPACE_WHITEBOARD_CREATED:
+      case UserNotificationEvent.SPACE_CALLOUT_PUBLISHED: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
+        credentialCriteria = this.getSpaceCredentialCriteria(entityID);
+        break;
+      }
+      case UserNotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
+      case UserNotificationEvent.SPACE_APPLICATION_SUBMITTED:
+      case UserNotificationEvent.SPACE_COMMUNICATION_MENTION:
+      case UserNotificationEvent.SPACE_COMMENT_REPLY:
+      case UserNotificationEvent.SPACE_POST_COMMENT_CREATED: {
+        credentialCriteria = this.getUserSelfCriteria(entityID);
+        break;
+      }
+    }
+    return { privilegeRequired, credentialCriteria };
   }
 
   private isInAppEnabled(eventType: UserNotificationEvent): boolean {
