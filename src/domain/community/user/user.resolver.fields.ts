@@ -18,6 +18,7 @@ import {
   AgentLoaderCreator,
   AuthorizationLoaderCreator,
   ProfileLoaderCreator,
+  UserSettingsLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
@@ -55,14 +56,6 @@ export class UserResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(user.id);
-  }
-
-  @ResolveField('settings', () => IUserSettings, {
-    nullable: false,
-    description: 'The settings for this User.',
-  })
-  settings(@Parent() user: IUser): IUserSettings {
-    return user.settings;
   }
 
   @ResolveField('agent', () => IAgent, {
@@ -168,22 +161,36 @@ export class UserResolverFields {
     return undefined;
   }
 
+  @ResolveField('settings', () => IUserSettings, {
+    nullable: false,
+    description: 'The settings for this User.',
+  })
+  settings(
+    @Parent() user: IUser,
+    @Loader(UserSettingsLoaderCreator, {
+      parentClassRef: User,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
+    loader: ILoader<IUserSettings>
+  ): Promise<IUserSettings> {
+    return loader.load(user.id);
+  }
+
   @ResolveField('isContactable', () => Boolean, {
     nullable: false,
     description: 'Can a message be sent to this User.',
   })
   async isContactable(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
+    @Loader(UserSettingsLoaderCreator, {
+      parentClassRef: User,
+      checkParentPrivilege: AuthorizationPrivilege.READ_USERS,
+    })
+    loader: ILoader<IUserSettings>
   ): Promise<boolean> {
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS,
-      `user: ${agentInfo.email} can contact user: ${user.email}`
-    );
+    const userSettings = await loader.load(user.id);
 
-    return user.settings.communication.allowOtherUsersToSendMessages;
+    return userSettings.communication.allowOtherUsersToSendMessages;
   }
 
   @ResolveField('storageAggregator', () => IStorageAggregator, {

@@ -18,7 +18,7 @@ export class NotificationRecipientsResolverQueries {
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
-  @Query(() => NotificationRecipientsInput, {
+  @Query(() => NotificationRecipientResult, {
     nullable: false,
     description:
       'The notificationRecipients for the provided event on the given entity.',

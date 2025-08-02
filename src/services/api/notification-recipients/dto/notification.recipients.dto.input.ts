@@ -8,7 +8,7 @@ export class NotificationRecipientsInput {
     nullable: false,
     description: 'The type of notification setting to look up recipients for.',
   })
-  notificationSetting!: UserNotificationEvent;
+  eventType!: UserNotificationEvent;
 
   @Field(() => UUID, {
     nullable: true,

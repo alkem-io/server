@@ -54,7 +54,11 @@ export class UserResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('settingsData') settingsData: UpdateUserSettingsInput
   ): Promise<IUser> {
-    let user = await this.userService.getUserOrFail(settingsData.userID);
+    let user = await this.userService.getUserOrFail(settingsData.userID, {
+      relations: {
+        settings: true,
+      },
+    });
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,

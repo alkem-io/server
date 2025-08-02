@@ -1,4 +1,4 @@
-import { EntityManager, FindOneOptions, In } from 'typeorm';
+import { EntityManager, FindOneOptions, In, FindManyOptions } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -90,11 +90,12 @@ export class UserLookupService {
 
   async usersWithCredentials(
     credentialCriteria: CredentialsSearchInput,
-    limit?: number
+    limit?: number,
+    options?: FindManyOptions<User>
   ): Promise<IUser[]> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    const users = await this.entityManager.find(User, {
+    const findOptions: FindManyOptions<User> = {
       where: {
         agent: {
           credentials: {
@@ -107,9 +108,25 @@ export class UserLookupService {
         agent: {
           credentials: true,
         },
+        ...options?.relations,
       },
       take: limit,
-    });
+      ...options,
+    };
+
+    // Merge relations properly to avoid overriding the agent.credentials relation
+    if (options?.relations) {
+      findOptions.relations = {
+        ...findOptions.relations,
+        ...options.relations,
+        agent: {
+          credentials: true,
+          ...(options.relations as any)?.agent,
+        },
+      };
+    }
+
+    const users = await this.entityManager.find(User, findOptions);
 
     return users;
   }

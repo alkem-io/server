@@ -93,6 +93,7 @@ import { SearchModule } from '@services/api/search/search.module';
 import { ApmApolloPlugin } from './apm/plugins';
 import { AuthInterceptor } from '@core/interceptors';
 import { AdminGeoLocationModule } from '@platform/admin/geolocation/admin.geolocation.module';
+import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 
 @Module({
   imports: [
@@ -281,6 +282,7 @@ import { AdminGeoLocationModule } from '@platform/admin/geolocation/admin.geoloc
     AgentModule,
     MessageModule,
     MessageReactionModule,
+    NotificationRecipientsModule,
     RegistrationModule,
     ConversionModule,
     LibraryModule,

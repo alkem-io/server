@@ -12,6 +12,7 @@ export * from './license.loader.creator';
 export * from './agent.loader.creator';
 export * from './authorization.loader.creator';
 export * from './user.loader.creator';
+export * from './user/user.settings.loader.creator';
 export * from './visual.loader.creator';
 
 export * from './account/account.spaces.loader.creator';

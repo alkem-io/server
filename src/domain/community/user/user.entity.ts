@@ -29,14 +29,6 @@ export class User extends ContributorBase implements IUser {
   @Generated('increment')
   rowId!: number;
 
-  @OneToOne(() => UserSettings, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  settings!: UserSettings;
-
   @Column('varchar', {
     length: SMALL_TEXT_LENGTH,
     nullable: false,
@@ -67,6 +59,14 @@ export class User extends ContributorBase implements IUser {
     cascade: false,
   })
   applications?: Application[];
+
+  @OneToOne(() => UserSettings, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  settings!: UserSettings;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,
