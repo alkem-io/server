@@ -72,19 +72,20 @@ export class NotificationRecipientsService {
 
     // Filter out recipients who do not have the required privilege
     let recipientsWithPrivilege = recipientsWithNotificationEnabled;
-    if (privilegeRequired) {
+    if (privilegeRequired && recipientsWithNotificationEnabled.length > 0) {
       const privilege = privilegeRequired;
       const authorizationPolicy = await this.getAuthorizationPolicy(
         eventData.eventType,
         eventData.entityID
       );
-      recipientsWithPrivilege = candidateRecipients.filter(recipient =>
-        this.authorizationService.isAccessGrantedForCredentials(
-          recipient.agent.credentials || [],
-          [],
-          authorizationPolicy,
-          privilege
-        )
+      recipientsWithPrivilege = recipientsWithNotificationEnabled.filter(
+        recipient =>
+          this.authorizationService.isAccessGrantedForCredentials(
+            recipient.agent.credentials || [],
+            [],
+            authorizationPolicy,
+            privilege
+          )
       );
     }
     const inAppParticipants = inAppEnabled ? recipientsWithPrivilege : [];

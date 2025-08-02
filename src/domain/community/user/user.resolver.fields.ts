@@ -169,7 +169,7 @@ export class UserResolverFields {
     @Parent() user: IUser,
     @Loader(UserSettingsLoaderCreator, {
       parentClassRef: User,
-      checkParentPrivilege: AuthorizationPrivilege.READ,
+      checkParentPrivilege: AuthorizationPrivilege.READ_USER_SETTINGS,
     })
     loader: ILoader<IUserSettings>
   ): Promise<IUserSettings> {
@@ -184,7 +184,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @Loader(UserSettingsLoaderCreator, {
       parentClassRef: User,
-      checkParentPrivilege: AuthorizationPrivilege.READ_USERS,
+      checkParentPrivilege: AuthorizationPrivilege.READ_USER_SETTINGS,
     })
     loader: ILoader<IUserSettings>
   ): Promise<boolean> {
