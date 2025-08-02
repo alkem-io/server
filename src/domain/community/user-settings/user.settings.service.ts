@@ -51,35 +51,95 @@ export class UserSettingsService {
           updateData.communication.allowOtherUsersToSendMessages;
       }
     }
-    const platformData = updateData.notification?.platform;
-    if (platformData) {
-      if (platformData.forumDiscussionComment !== undefined) {
+    const notificationPlatformData = updateData.notification?.platform;
+    if (notificationPlatformData) {
+      if (notificationPlatformData.forumDiscussionComment !== undefined) {
         settings.notification.platform.forumDiscussionComment =
-          platformData.forumDiscussionComment;
+          notificationPlatformData.forumDiscussionComment;
       }
-      if (platformData.forumDiscussionCreated !== undefined) {
+      if (notificationPlatformData.forumDiscussionCreated !== undefined) {
         settings.notification.platform.forumDiscussionCreated =
-          platformData.forumDiscussionCreated;
+          notificationPlatformData.forumDiscussionCreated;
       }
-      if (platformData.userProfileRemoved !== undefined) {
+      if (notificationPlatformData.userProfileRemoved !== undefined) {
         settings.notification.platform.userProfileRemoved =
-          platformData.userProfileRemoved;
+          notificationPlatformData.userProfileRemoved;
       }
-      if (platformData.newUserSignUp !== undefined) {
+      if (notificationPlatformData.newUserSignUp !== undefined) {
         settings.notification.platform.newUserSignUp =
-          platformData.newUserSignUp;
+          notificationPlatformData.newUserSignUp;
       }
     }
 
-    const organizationData = updateData.notification?.organization;
-    if (organizationData) {
-      if (organizationData.mentioned !== undefined) {
+    const notificationOrganizationData = updateData.notification?.organization;
+    if (notificationOrganizationData) {
+      if (notificationOrganizationData.mentioned !== undefined) {
         settings.notification.organization.mentioned =
-          organizationData.mentioned;
+          notificationOrganizationData.mentioned;
       }
-      if (organizationData.messageReceived !== undefined) {
+      if (notificationOrganizationData.messageReceived !== undefined) {
         settings.notification.organization.messageReceived =
-          organizationData.messageReceived;
+          notificationOrganizationData.messageReceived;
+      }
+    }
+
+    const notificationSpaceData = updateData.notification?.space;
+    if (notificationSpaceData) {
+      if (notificationSpaceData.applicationReceived !== undefined) {
+        settings.notification.space.applicationReceived =
+          notificationSpaceData.applicationReceived;
+      }
+      if (notificationSpaceData.applicationSubmitted !== undefined) {
+        settings.notification.space.applicationSubmitted =
+          notificationSpaceData.applicationSubmitted;
+      }
+      if (notificationSpaceData.communicationUpdates !== undefined) {
+        settings.notification.space.communicationUpdates =
+          notificationSpaceData.communicationUpdates;
+      }
+      if (notificationSpaceData.communicationUpdatesAdmin !== undefined) {
+        settings.notification.space.communicationUpdatesAdmin =
+          notificationSpaceData.communicationUpdatesAdmin;
+      }
+      if (notificationSpaceData.communityNewMember !== undefined) {
+        settings.notification.space.communityNewMember =
+          notificationSpaceData.communityNewMember;
+      }
+      if (notificationSpaceData.communityNewMemberAdmin !== undefined) {
+        settings.notification.space.communityNewMemberAdmin =
+          notificationSpaceData.communityNewMemberAdmin;
+      }
+      if (notificationSpaceData.communityInvitationUser !== undefined) {
+        settings.notification.space.communityInvitationUser =
+          notificationSpaceData.communityInvitationUser;
+      }
+      if (notificationSpaceData.postCreatedAdmin !== undefined) {
+        settings.notification.space.postCreatedAdmin =
+          notificationSpaceData.postCreatedAdmin;
+      }
+      if (notificationSpaceData.postCreated !== undefined) {
+        settings.notification.space.postCreated =
+          notificationSpaceData.postCreated;
+      }
+      if (notificationSpaceData.postCommentCreated !== undefined) {
+        settings.notification.space.postCommentCreated =
+          notificationSpaceData.postCommentCreated;
+      }
+      if (notificationSpaceData.whiteboardCreated !== undefined) {
+        settings.notification.space.whiteboardCreated =
+          notificationSpaceData.whiteboardCreated;
+      }
+      if (notificationSpaceData.calloutPublished !== undefined) {
+        settings.notification.space.calloutPublished =
+          notificationSpaceData.calloutPublished;
+      }
+      if (notificationSpaceData.communicationMention !== undefined) {
+        settings.notification.space.communicationMention =
+          notificationSpaceData.communicationMention;
+      }
+      if (notificationSpaceData.commentReply !== undefined) {
+        settings.notification.space.commentReply =
+          notificationSpaceData.commentReply;
       }
     }
     return settings;

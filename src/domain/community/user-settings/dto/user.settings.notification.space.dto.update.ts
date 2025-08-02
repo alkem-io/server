@@ -4,101 +4,101 @@ import { IsBoolean } from 'class-validator';
 @InputType()
 export class UpdateUserSettingsNotificationSpaceInput {
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when an application is received',
   })
   @IsBoolean()
-  applicationReceived!: boolean;
+  applicationReceived?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when an application is submitted',
   })
   @IsBoolean()
-  applicationSubmitted!: boolean;
+  applicationSubmitted?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification for community updates',
   })
   @IsBoolean()
-  communicationUpdates!: boolean;
+  communicationUpdates?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification for community updates',
   })
   @IsBoolean()
-  communicationUpdatesAdmin!: boolean;
+  communicationUpdatesAdmin?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when a new member joins the community',
   })
   @IsBoolean()
-  communityNewMember!: boolean;
+  communityNewMember?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Receive a notification when a new member joins the community (admin)',
   })
   @IsBoolean()
-  communityNewMemberAdmin!: boolean;
+  communityNewMemberAdmin?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification for community invitation',
   })
   @IsBoolean()
-  communityInvitationUser!: boolean;
+  communityInvitationUser?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when a post is created (admin)',
   })
   @IsBoolean()
-  postCreatedAdmin!: boolean;
+  postCreatedAdmin?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when a post is created',
   })
   @IsBoolean()
-  postCreated!: boolean;
+  postCreated?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when a comment is created on a post',
   })
   @IsBoolean()
-  postCommentCreated!: boolean;
+  postCommentCreated?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when a whiteboard is created',
   })
   @IsBoolean()
-  whiteboardCreated!: boolean;
+  whiteboardCreated?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when a callout is published',
   })
   @IsBoolean()
-  calloutPublished!: boolean;
+  calloutPublished?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when mentioned in communication',
   })
   @IsBoolean()
-  communicationMention!: boolean;
+  communicationMention?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Receive a notification when someone replies to your comment',
   })
   @IsBoolean()
-  commentReply!: boolean;
+  commentReply?: boolean;
 }

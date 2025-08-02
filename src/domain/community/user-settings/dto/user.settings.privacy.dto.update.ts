@@ -4,10 +4,10 @@ import { IsBoolean } from 'class-validator';
 @InputType()
 export class UpdateUserSettingsPrivacyInput {
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Allow contribution roles (communication, lead etc) in Spaces to be visible.',
   })
   @IsBoolean()
-  contributionRolesPubliclyVisible!: boolean;
+  contributionRolesPubliclyVisible?: boolean;
 }

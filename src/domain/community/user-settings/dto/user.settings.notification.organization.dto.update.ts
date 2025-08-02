@@ -4,18 +4,18 @@ import { IsBoolean } from 'class-validator';
 @InputType()
 export class UpdateUserSettingsNotificationOrganizationInput {
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Receive notification when the organization you are admin of is messaged',
   })
   @IsBoolean()
-  messageReceived!: boolean;
+  messageReceived?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Receive a notification when the organization you are admin of is mentioned',
   })
   @IsBoolean()
-  mentioned!: boolean;
+  mentioned?: boolean;
 }

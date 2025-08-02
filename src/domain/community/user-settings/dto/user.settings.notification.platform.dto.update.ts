@@ -4,33 +4,33 @@ import { IsBoolean } from 'class-validator';
 @InputType()
 export class UpdateUserSettingsNotificationPlatformInput {
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Receive a notification when a new Discussion is created in the Forum',
   })
   @IsBoolean()
-  forumDiscussionCreated!: boolean;
+  forumDiscussionCreated?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Receive a notification when a new comment is added to a Discussion I created in the Forum',
   })
   @IsBoolean()
-  forumDiscussionComment!: boolean;
+  forumDiscussionComment?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: '[Admin] Receive notification when a new user signs up',
   })
   @IsBoolean()
-  newUserSignUp!: boolean;
+  newUserSignUp?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       '[Admin] Receive a notification when a user profile is removed',
   })
   @IsBoolean()
-  userProfileRemoved!: boolean;
+  userProfileRemoved?: boolean;
 }
