@@ -162,7 +162,8 @@ export class NotificationAdapter {
     const notificationsPayload =
       await this.notificationPayloadBuilder.buildCommunicationUpdateSentNotificationPayload(
         eventData.triggeredBy,
-        eventData.updates
+        eventData.updates,
+        eventData.lastMessage
       );
     this.notificationsClient.emit<number>(event, notificationsPayload);
   }

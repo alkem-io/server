@@ -439,7 +439,8 @@ export class NotificationPayloadBuilder {
 
   async buildCommunicationUpdateSentNotificationPayload(
     updateCreatorId: string,
-    updates: IRoom
+    updates: IRoom,
+    lastMessage?: IMessage
   ): Promise<CommunicationUpdateEventPayload> {
     const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
@@ -450,14 +451,15 @@ export class NotificationPayloadBuilder {
       community,
       updateCreatorId
     );
-    const payload: CommunicationUpdateEventPayload = {
+    const payload = {
       update: {
         id: updates.id,
         createdBy: updateCreatorId,
         url: 'not used',
       },
+      message: lastMessage?.message,
       ...spacePayload,
-    };
+    } as CommunicationUpdateEventPayload;
 
     return payload;
   }
