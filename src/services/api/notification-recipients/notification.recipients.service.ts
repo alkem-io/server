@@ -19,6 +19,7 @@ import {
 } from '@common/exceptions';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
 
 export class NotificationRecipientsService {
   constructor(
@@ -45,7 +46,7 @@ export class NotificationRecipientsService {
         eventData.entityID
       );
 
-    // Note: the candidate recipients are set to a level that is greater than or equal to the end set of receipients
+    // Note: the candidate recipients are set to a level that is greater than or equal to the end set of recipients
     // The final list of recipients will be filtered based on the privilege required
     const candidateRecipients =
       await this.userLookupService.usersWithCredentials(
@@ -61,8 +62,16 @@ export class NotificationRecipientsService {
         }
       );
 
+    const recipientsWithNotificationEnabled = candidateRecipients.filter(
+      recipient =>
+        this.isNotificationEnabled(
+          eventData.eventType,
+          recipient.settings?.notification
+        )
+    );
+
     // Filter out recipients who do not have the required privilege
-    let recipientsWithPrivilege = candidateRecipients;
+    let recipientsWithPrivilege = recipientsWithNotificationEnabled;
     if (privilegeRequired) {
       const privilege = privilegeRequired;
       const authorizationPolicy = await this.getAuthorizationPolicy(
@@ -85,6 +94,59 @@ export class NotificationRecipientsService {
       emailRecipients: recipientsWithPrivilege,
       inAppRecipients: inAppParticipants,
     };
+  }
+
+  private isNotificationEnabled(
+    eventType: UserNotificationEvent,
+    notificationSettings: IUserSettingsNotification
+  ): boolean {
+    switch (eventType) {
+      case UserNotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED:
+        return notificationSettings.platform.forumDiscussionCreated;
+      case UserNotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
+        return notificationSettings.platform.forumDiscussionComment;
+      case UserNotificationEvent.PLATFORM_NEW_USER_SIGN_UP:
+        return notificationSettings.platform.newUserSignUp;
+      case UserNotificationEvent.PLATFORM_USER_PROFILE_REMOVED:
+        return notificationSettings.platform.userProfileRemoved;
+      case UserNotificationEvent.ORGANIZATION_MESSAGE_RECEIVED:
+        return notificationSettings.organization.messageReceived;
+      case UserNotificationEvent.ORGANIZATION_MENTIONED:
+        return notificationSettings.organization.mentioned;
+      case UserNotificationEvent.SPACE_APPLICATION_RECEIVED:
+        return notificationSettings.space.applicationReceived;
+      case UserNotificationEvent.SPACE_APPLICATION_SUBMITTED:
+        return notificationSettings.space.applicationSubmitted;
+      case UserNotificationEvent.SPACE_COMMUNICATION_UPDATES:
+        return notificationSettings.space.communicationUpdates;
+      case UserNotificationEvent.SPACE_COMMUNICATION_UPDATES_ADMIN:
+        return notificationSettings.space.communicationUpdatesAdmin;
+      case UserNotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
+        return notificationSettings.space.communityNewMember;
+      case UserNotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
+        return notificationSettings.space.communityNewMemberAdmin;
+      case UserNotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
+        return notificationSettings.space.communityInvitationUser;
+      case UserNotificationEvent.SPACE_POST_CREATED_ADMIN:
+        return notificationSettings.space.postCreatedAdmin;
+      case UserNotificationEvent.SPACE_POST_CREATED:
+        return notificationSettings.space.postCreated;
+      case UserNotificationEvent.SPACE_POST_COMMENT_CREATED:
+        return notificationSettings.space.postCommentCreated;
+      case UserNotificationEvent.SPACE_WHITEBOARD_CREATED:
+        return notificationSettings.space.whiteboardCreated;
+      case UserNotificationEvent.SPACE_CALLOUT_PUBLISHED:
+        return notificationSettings.space.calloutPublished;
+      case UserNotificationEvent.SPACE_COMMUNICATION_MENTION:
+        return notificationSettings.space.communicationMention;
+      case UserNotificationEvent.SPACE_COMMENT_REPLY:
+        return notificationSettings.space.commentReply;
+      default:
+        throw new ValidationException(
+          `Unknown notification event type: ${eventType}`,
+          LogContext.NOTIFICATIONS
+        );
+    }
   }
 
   private getPrivilegeRequiredCredentialCriteria(
@@ -131,7 +193,15 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getOrganizationCredentialCriteria(entityID);
         break;
       }
-      case UserNotificationEvent.SPACE_APPLICATION_RECEIVED:
+      case UserNotificationEvent.SPACE_APPLICATION_RECEIVED: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getSpaceCredentialCriteria(entityID);
+        credentialCriteria.push({
+          type: AuthorizationCredential.GLOBAL_ADMIN,
+          resourceID: '',
+        });
+        break;
+      }
       case UserNotificationEvent.SPACE_COMMUNICATION_UPDATES_ADMIN:
       case UserNotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
       case UserNotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
@@ -158,6 +228,12 @@ export class NotificationRecipientsService {
         break;
       }
     }
+    this.logger.verbose?.(
+      `event: ${eventType}, Privilege required: ${privilegeRequired}, Credential criteria: ${JSON.stringify(
+        credentialCriteria
+      )}`,
+      LogContext.NOTIFICATIONS
+    );
     return { privilegeRequired, credentialCriteria };
   }
 
