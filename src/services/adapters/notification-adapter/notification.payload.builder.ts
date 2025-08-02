@@ -16,11 +16,11 @@ import {
   CollaborationWhiteboardCreatedEventPayload,
   CommentReplyEventPayload,
   CommunicationCommunityLeadsMessageEventPayload,
-  CommunicationOrganizationMentionEventPayload,
-  CommunicationOrganizationMessageEventPayload,
+  OrganizationMentionEventPayload,
+  OrganizationMessageEventPayload,
   CommunicationUpdateEventPayload,
   CommunicationUserMentionEventPayload,
-  CommunicationUserMessageEventPayload,
+  UserMessageEventPayload,
   CommunityApplicationCreatedEventPayload,
   CommunityInvitationCreatedEventPayload,
   CommunityInvitationVirtualContributorCreatedEventPayload,
@@ -34,7 +34,7 @@ import {
   PlatformUserRemovedEventPayload,
   RoleChangeType,
   SpaceBaseEventPayload,
-  SpaceCreatedEventPayload,
+  PlatformSpaceCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -420,10 +420,10 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildSpaceCreatedPayload(
+  async buildPlatformSpaceCreatedPayload(
     triggeredBy: string,
     community: ICommunity
-  ): Promise<SpaceCreatedEventPayload> {
+  ): Promise<PlatformSpaceCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(community, triggeredBy);
     const sender = await this.getContributorPayloadOrFail(triggeredBy);
 
@@ -529,14 +529,14 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildCommunicationUserMessageNotificationPayload(
+  async buildUserMessageNotificationPayload(
     senderID: string,
     receiverID: string,
     message: string
-  ): Promise<CommunicationUserMessageEventPayload> {
+  ): Promise<UserMessageEventPayload> {
     const basePayload = this.buildBaseEventPayload(senderID);
     const receiverPayload = await this.getContributorPayloadOrFail(receiverID);
-    const payload: CommunicationUserMessageEventPayload = {
+    const payload: UserMessageEventPayload = {
       messageReceiver: receiverPayload,
       message,
       ...basePayload,
@@ -579,15 +579,15 @@ export class NotificationPayloadBuilder {
     return result;
   }
 
-  async buildCommunicationOrganizationMessageNotificationPayload(
+  async buildOrganizationMessageNotificationPayload(
     senderID: string,
     message: string,
     organizationID: string
-  ): Promise<CommunicationOrganizationMessageEventPayload> {
+  ): Promise<OrganizationMessageEventPayload> {
     const basePayload = this.buildBaseEventPayload(senderID);
     const orgContributor =
       await this.getContributorPayloadOrFail(organizationID);
-    const payload: CommunicationOrganizationMessageEventPayload = {
+    const payload: OrganizationMessageEventPayload = {
       message,
       organization: orgContributor,
       ...basePayload,
@@ -642,14 +642,14 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildCommunicationOrganizationMentionNotificationPayload(
+  async buildOrganizationMentionNotificationPayload(
     senderID: string,
     mentionedOrgUUID: string,
     comment: string,
     originEntityId: string,
     originEntityDisplayName: string,
     commentType: RoomType
-  ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
+  ): Promise<OrganizationMentionEventPayload | undefined> {
     const orgData = await this.getContributorPayloadOrFail(mentionedOrgUUID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
@@ -658,7 +658,7 @@ export class NotificationPayloadBuilder {
     );
 
     const basePayload = this.buildBaseEventPayload(senderID);
-    const payload: CommunicationOrganizationMentionEventPayload = {
+    const payload: OrganizationMentionEventPayload = {
       mentionedOrganization: orgData,
       comment,
       commentOrigin: {

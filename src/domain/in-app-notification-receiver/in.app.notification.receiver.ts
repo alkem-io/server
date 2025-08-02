@@ -2,10 +2,7 @@ import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import {
-  CompressedInAppNotificationPayload,
-  InAppNotificationPayload,
-} from '@alkemio/notifications-lib';
+import { InAppNotificationPayloadBase } from '@alkemio/notifications-lib';
 import { LogContext } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
@@ -27,29 +24,26 @@ export class InAppNotificationReceiver {
   ) {}
 
   public async decompressStoreNotify(
-    compressedPayload: CompressedInAppNotificationPayload<InAppNotificationPayload>[]
+    notification: InAppNotificationPayloadBase
   ) {
+    const receiverIDs = notification.receiverIDs;
     this.logger.verbose?.(
-      `Received ${compressedPayload.length} compressed in-app notifications`,
+      `Received ${receiverIDs.length} compressed in-app notifications`,
       LogContext.IN_APP_NOTIFICATION
     );
-    // decompress
-    const notifications = compressedPayload.flatMap(x =>
-      decompressInAppNotifications(x)
-    );
-    this.logger.verbose?.(
-      `Decompressed ${notifications.length} in-app notifications`,
-      LogContext.IN_APP_NOTIFICATION
-    );
+
     // filter out notifications that are not for beta users
-    const notificationsForBetaUsers =
-      await this.filterOutNotificationsForBetaUsers(notifications);
+    const receiversBetaUsers =
+      await this.filterOutNotificationsForBetaUsers(receiverIDs);
     // store
     this.logger.verbose?.(
-      `Storing ${notificationsForBetaUsers.length} in-app notifications for beta users only`,
+      `Storing ${receiversBetaUsers.length} in-app notifications for beta users only`,
       LogContext.IN_APP_NOTIFICATION
     );
-    const savedNotifications = await this.store(notificationsForBetaUsers);
+    const savedNotifications = await this.store(
+      notification,
+      receiversBetaUsers
+    );
     // notify
     this.logger.verbose?.(
       'Notifying beta users about the received in-app notifications',
@@ -61,15 +55,16 @@ export class InAppNotificationReceiver {
   }
 
   private async store(
-    notifications: InAppNotificationPayload[]
+    notification: InAppNotificationPayloadBase,
+    receiverIDs: string[]
   ): Promise<InAppNotificationEntity[]> {
-    const entities = notifications.map(notification =>
+    const entities = receiverIDs.map(receiverID =>
       InAppNotificationEntity.create({
         triggeredAt: notification.triggeredAt,
         type: notification.type,
         state: InAppNotificationState.UNREAD,
         category: notification.category,
-        receiverID: notification.receiverID,
+        receiverID: receiverID,
         triggeredByID: notification.triggeredByID,
         payload: notification,
       })
@@ -80,17 +75,14 @@ export class InAppNotificationReceiver {
   }
 
   private async filterOutNotificationsForBetaUsers(
-    notifications: InAppNotificationPayload[]
-  ): Promise<InAppNotificationPayload[]> {
-    const receiverSet = new Set(
-      notifications.map(({ receiverID }) => receiverID)
-    );
+    receiverIDs: string[]
+  ): Promise<string[]> {
     // get all beta tester receivers
     const betaTesterReceivers: string[] = [];
     const platformRoleSet = await this.platformService.getRoleSetOrFail();
     const usersWithRoles = await this.roleSetService.getRolesForUsers(
       platformRoleSet,
-      Array.from(receiverSet)
+      Array.from(receiverIDs)
     );
     for (const userID in usersWithRoles) {
       const roles = usersWithRoles[userID];
@@ -98,19 +90,6 @@ export class InAppNotificationReceiver {
         betaTesterReceivers.push(userID);
       }
     }
-    return notifications.filter(x =>
-      betaTesterReceivers.includes(x.receiverID)
-    );
+    return receiverIDs.filter(x => betaTesterReceivers.includes(x));
   }
 }
-
-const decompressInAppNotifications = (
-  data: CompressedInAppNotificationPayload<InAppNotificationPayload>
-): InAppNotificationPayload[] => {
-  const { receiverIDs, triggeredAt, ...rest } = data;
-  return receiverIDs.map(receiverID => ({
-    ...rest,
-    triggeredAt: new Date(triggeredAt),
-    receiverID,
-  }));
-};

@@ -3,7 +3,7 @@ import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
-import { InAppNotification } from './in.app.notification.interface';
+import { IInAppNotification } from '../in-app-notification/in.app.notification.interface';
 import { InAppNotificationReader } from './in.app.notification.reader';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -12,7 +12,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 export class InAppNotificationResolverQueries {
   constructor(private inAppNotificationReader: InAppNotificationReader) {}
 
-  @Query(() => [InAppNotification], {
+  @Query(() => [IInAppNotification], {
     nullable: false,
     description: 'Get all notifications for the logged in user.',
   })

@@ -12,11 +12,8 @@ export enum NotificationEventType {
   COMMUNITY_PLATFORM_INVITATION_CREATED = 'communityPlatformInvitationCreated',
   COMMUNICATION_COMMENT_SENT = 'communicationCommentSent',
   COMMUNICATION_UPDATE_SENT = 'communicationUpdateSent',
-  COMMUNICATION_USER_MESSAGE = 'communicationUserMessage',
-  COMMUNICATION_ORGANIZATION_MESSAGE = 'communicationOrganizationMessage',
   COMMUNICATION_COMMUNITY_MESSAGE = 'communicationCommunityMessage',
   COMMUNICATION_USER_MENTION = 'communicationUserMention',
-  COMMUNICATION_ORGANIZATION_MENTION = 'communicationOrganizationMention',
   COLLABORATION_WHITEBOARD_CREATED = 'collaborationWhiteboardCreated',
   COLLABORATION_POST_CREATED = 'collaborationPostCreated',
   COLLABORATION_POST_COMMENT = 'collaborationPostComment',
@@ -28,9 +25,12 @@ export enum NotificationEventType {
   PLATFORM_GLOBAL_ROLE_CHANGE = 'platformGlobalRoleChange',
   PLATFORM_FORUM_DISCUSSION_COMMENT = 'platformForumDiscussionComment',
   PLATFORM_FORUM_DISCUSSION_CREATED = 'platformForumDiscussionCreated',
+  PLATFORM_SPACE_CREATED = 'platformSpaceCreated',
   COMMENT_REPLY = 'commentReply',
   COMMUNITY_INVITATION_CREATED_VC = 'communityInvitationCreatedVC',
-  SPACE_CREATED = 'spaceCreated',
+  ORGANIZATION_MESSAGE = 'organizationMessage',
+  ORGANIZATION_MENTION = 'organizationMention',
+  USER_MESSAGE = 'userMessage',
 }
 
 if (!compareEnums(NotificationEventType, libEnum)) {

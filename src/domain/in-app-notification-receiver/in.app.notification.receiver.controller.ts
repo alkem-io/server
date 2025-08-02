@@ -1,7 +1,4 @@
-import {
-  CompressedInAppNotificationPayload,
-  InAppNotificationPayload,
-} from '@alkemio/notifications-lib';
+import { InAppNotificationPayloadBase } from '@alkemio/notifications-lib';
 import { Controller, Inject, LoggerService } from '@nestjs/common';
 import {
   Ctx,
@@ -24,11 +21,11 @@ export class InAppNotificationReceiverController {
   @EventPattern('in-app-notification-incoming', Transport.RMQ)
   public receive(
     @Payload()
-    data: CompressedInAppNotificationPayload<InAppNotificationPayload>[],
+    data: InAppNotificationPayloadBase,
     @Ctx() context: RmqContext
   ) {
     this.logger.verbose?.(
-      `Received ${data.length} compressed in-app notifications of types: ${data.map(d => d.type).join(', ')}`
+      `Received ${data.receiverIDs.length} compressed in-app notifications`
     );
     ack(context);
     this.inAppNotificationReceiver.decompressStoreNotify(data);

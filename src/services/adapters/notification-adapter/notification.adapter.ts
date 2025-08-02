@@ -183,11 +183,11 @@ export class NotificationAdapter {
   public async sendUserMessage(
     eventData: NotificationInputUserMessage
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_USER_MESSAGE;
+    const event = NotificationEventType.USER_MESSAGE;
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildCommunicationUserMessageNotificationPayload(
+      await this.notificationPayloadBuilder.buildUserMessageNotificationPayload(
         eventData.triggeredBy,
         eventData.receiverID,
         eventData.message
@@ -198,11 +198,11 @@ export class NotificationAdapter {
   public async sendOrganizationMessage(
     eventData: NotificationInputOrganizationMessage
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_ORGANIZATION_MESSAGE;
+    const event = NotificationEventType.ORGANIZATION_MESSAGE;
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildCommunicationOrganizationMessageNotificationPayload(
+      await this.notificationPayloadBuilder.buildOrganizationMessageNotificationPayload(
         eventData.triggeredBy,
         eventData.message,
         eventData.organizationID
@@ -249,11 +249,11 @@ export class NotificationAdapter {
   public async organizationMention(
     eventData: NotificationInputEntityMention
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_ORGANIZATION_MENTION;
+    const event = NotificationEventType.ORGANIZATION_MENTION;
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildCommunicationOrganizationMentionNotificationPayload(
+      await this.notificationPayloadBuilder.buildOrganizationMentionNotificationPayload(
         eventData.triggeredBy,
         eventData.mentionedEntityID,
         eventData.comment,
@@ -357,14 +357,14 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(event, payload);
   }
 
-  public async spaceCreated(
+  public async platformSpaceCreated(
     eventData: NotificationInputSpaceCreated
   ): Promise<void> {
-    const event = NotificationEventType.SPACE_CREATED;
+    const event = NotificationEventType.PLATFORM_SPACE_CREATED;
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildSpaceCreatedPayload(
+      await this.notificationPayloadBuilder.buildPlatformSpaceCreatedPayload(
         eventData.triggeredBy,
         eventData.community
       );

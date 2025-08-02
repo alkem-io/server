@@ -21,7 +21,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { TypedPubSubEngine } from '@services/subscriptions/subscription-service/typed.pub.sub.engine';
-import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
+import { IInAppNotification } from '@domain/in-app-notification/in.app.notification.interface';
 
 @Injectable()
 export class SubscriptionPublishService {
@@ -33,7 +33,7 @@ export class SubscriptionPublishService {
     @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
     private virtualContributorUpdatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
-    private inAppNotificationReceivedSubscription: TypedPubSubEngine<InAppNotification>,
+    private inAppNotificationReceivedSubscription: TypedPubSubEngine<IInAppNotification>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -104,7 +104,7 @@ export class SubscriptionPublishService {
     );
   }
 
-  public publishInAppNotificationReceived(notification: InAppNotification) {
+  public publishInAppNotificationReceived(notification: IInAppNotification) {
     return this.inAppNotificationReceivedSubscription.publish(
       SubscriptionType.IN_APP_NOTIFICATION_RECEIVED,
       {

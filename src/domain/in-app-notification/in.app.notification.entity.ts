@@ -1,15 +1,19 @@
 import { Column, Entity } from 'typeorm';
 import {
   InAppNotificationCategory,
-  InAppNotificationPayload,
+  InAppNotificationPayloadBase,
   NotificationEventType,
 } from '@alkemio/notifications-lib';
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../common/entity/base-entity/base.alkemio.entity';
 import { InAppNotificationState } from './in.app.notification.state';
+import { IInAppNotification } from './in.app.notification.interface';
 
 @Entity('in_app_notification')
-export class InAppNotificationEntity extends BaseAlkemioEntity {
+export class InAppNotificationEntity
+  extends BaseAlkemioEntity
+  implements IInAppNotification
+{
   @Column({ type: 'datetime', comment: 'UTC', nullable: false })
   triggeredAt!: Date;
 
@@ -44,5 +48,5 @@ export class InAppNotificationEntity extends BaseAlkemioEntity {
     nullable: false,
     comment: 'Holds the original notification payload as it was received',
   })
-  payload!: InAppNotificationPayload;
+  payload!: InAppNotificationPayloadBase;
 }

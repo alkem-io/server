@@ -2,7 +2,7 @@ import { Repository, In, UpdateResult } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationEntity } from '@domain/in-app-notification/in.app.notification.entity';
-import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
+import { IInAppNotification } from '@domain/in-app-notification/in.app.notification.interface';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -33,7 +33,7 @@ export class InAppNotificationReader {
     return notification;
   }
 
-  public getNotifications(receiverID?: string): Promise<InAppNotification[]> {
+  public getNotifications(receiverID?: string): Promise<IInAppNotification[]> {
     return this.getRawNotifications(receiverID);
   }
 

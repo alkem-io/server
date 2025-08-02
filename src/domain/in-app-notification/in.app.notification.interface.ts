@@ -1,20 +1,20 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
-import { InAppNotificationPayload } from '@alkemio/notifications-lib';
-import { UUID } from '@domain/common/scalars';
+import { InAppNotificationPayloadBase } from '@alkemio/notifications-lib';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
 import { NotificationEventType } from '@domain/in-app-notification/notification.event.type';
 import { InAppNotificationCategory } from '@domain/in-app-notification/in.app.notification.category';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
-import { InAppNotificationCalloutPublished } from './dto/in.app.notification.callout.published';
-import { InAppNotificationUserMentioned } from './dto/in.app.notification.user.mentioned';
-import { InAppNotificationCommunityNewMember } from './dto/in.app.notification.community.new.member';
+import { InAppNotificationCalloutPublished } from '../in-app-notification-reader/dto/in.app.notification.callout.published';
+import { InAppNotificationUserMentioned } from '../in-app-notification-reader/dto/in.app.notification.user.mentioned';
+import { InAppNotificationCommunityNewMember } from '../in-app-notification-reader/dto/in.app.notification.community.new.member';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 
 @InterfaceType('InAppNotification', {
   isAbstract: true,
   description: 'An in-app notification type. To not be queried directly',
-  resolveType(inAppNotification: InAppNotification) {
+  resolveType(inAppNotification: IInAppNotification) {
     switch (inAppNotification.type) {
       case NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED:
         return InAppNotificationCalloutPublished;
@@ -32,12 +32,7 @@ import { InAppNotificationCommunityNewMember } from './dto/in.app.notification.c
     );
   },
 })
-export class InAppNotification {
-  @Field(() => UUID, {
-    nullable: false,
-  })
-  id!: string;
-
+export class IInAppNotification extends IBaseAlkemio {
   @Field(() => NotificationEventType, {
     nullable: false,
     description: 'The type of the notification',
@@ -64,6 +59,7 @@ export class InAppNotification {
   // exposed via the interface field resolver
   triggeredBy?: IContributor;
   receiver?: IContributor;
+  receiverID!: string;
   //
-  payload!: InAppNotificationPayload;
+  payload!: InAppNotificationPayloadBase;
 }

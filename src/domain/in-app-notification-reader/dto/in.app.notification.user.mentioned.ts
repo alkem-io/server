@@ -4,13 +4,13 @@ import {
   NotificationEventType,
 } from '@alkemio/notifications-lib';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { InAppNotification } from '../in.app.notification.interface';
-import { InAppNotificationBase } from '@domain/in-app-notification-reader/dto/in.app.notification.base';
+import { IInAppNotification } from '../../in-app-notification/in.app.notification.interface';
+import { IInAppNotificationEntryBase } from './in.app.notification.base';
 
 @ObjectType('InAppNotificationUserMentioned', {
-  implements: () => InAppNotification,
+  implements: () => IInAppNotification,
 })
-export class InAppNotificationUserMentioned extends InAppNotificationBase() {
+export class InAppNotificationUserMentioned extends IInAppNotificationEntryBase {
   declare type: NotificationEventType.COMMUNICATION_USER_MENTION;
   declare payload: InAppNotificationContributorMentionedPayload;
   // fields resolved by a concrete resolver

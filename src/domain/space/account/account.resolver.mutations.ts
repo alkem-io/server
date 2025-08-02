@@ -135,7 +135,7 @@ export class AccountResolverMutations {
       triggeredBy: agentInfo.userID,
       community: space.community,
     };
-    await this.notificationAdapter.spaceCreated(notificationInput);
+    await this.notificationAdapter.platformSpaceCreated(notificationInput);
 
     return space;
   }

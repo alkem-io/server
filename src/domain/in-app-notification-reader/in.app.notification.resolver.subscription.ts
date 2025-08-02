@@ -4,7 +4,7 @@ import { CurrentUser, TypedSubscription } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { InAppNotificationReceivedSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
-import { InAppNotification } from '@domain/in-app-notification-reader/in.app.notification.interface';
+import { IInAppNotification } from '@domain/in-app-notification/in.app.notification.interface';
 import { ForbiddenException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 
@@ -14,7 +14,7 @@ export class InAppNotificationResolverSubscription {
   constructor(private subscriptionService: SubscriptionReadService) {}
 
   @TypedSubscription<InAppNotificationReceivedSubscriptionPayload, never>(
-    () => InAppNotification,
+    () => IInAppNotification,
     {
       description:
         'New in-app notification received for the currently authenticated user.',

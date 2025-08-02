@@ -14,4 +14,10 @@ export class NotificationRecipientResult {
     description: 'The in-app recipients for the notification.',
   })
   inAppRecipients!: IUser[];
+
+  @Field(() => IUser, {
+    nullable: true,
+    description: 'The user that triggered the event.',
+  })
+  triggeredBy?: IUser;
 }

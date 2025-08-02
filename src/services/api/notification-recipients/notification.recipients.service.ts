@@ -88,12 +88,19 @@ export class NotificationRecipientsService {
           )
       );
     }
+
+    // TODO: check checkIsUserMessagingAllowed??
+
     const inAppParticipants = inAppEnabled ? recipientsWithPrivilege : [];
+    const triggeredBy = eventData.triggeredBy
+      ? await this.userLookupService.getUserOrFail(eventData.triggeredBy)
+      : undefined;
 
     // Implement your logic to retrieve notification recipients here
     return {
       emailRecipients: recipientsWithPrivilege,
       inAppRecipients: inAppParticipants,
+      triggeredBy,
     };
   }
 
