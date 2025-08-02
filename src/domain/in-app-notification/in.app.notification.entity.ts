@@ -6,7 +6,7 @@ import {
 } from '@alkemio/notifications-lib';
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../common/entity/base-entity/base.alkemio.entity';
-import { InAppNotificationState } from './in.app.notification.state';
+import { InAppNotificationState } from './enums/in.app.notification.state';
 import { IInAppNotification } from './in.app.notification.interface';
 
 @Entity('in_app_notification')

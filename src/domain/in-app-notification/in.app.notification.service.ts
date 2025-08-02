@@ -3,13 +3,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationEntity } from '@domain/in-app-notification/in.app.notification.entity';
 import { IInAppNotification } from '@domain/in-app-notification/in.app.notification.interface';
-import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
+import { InAppNotificationState } from '@domain/in-app-notification/enums/in.app.notification.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 
 @Injectable()
-// Note: This class is subject to a rename in the future, as it will likely handle all notification operations, not just reading.
-export class InAppNotificationReader {
+export class InAppNotificationService {
   constructor(
     @InjectRepository(InAppNotificationEntity)
     private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>

@@ -1,18 +1,18 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { InAppNotificationState } from '@domain/in-app-notification/in.app.notification.state';
+import { InAppNotificationState } from '@domain/in-app-notification/enums/in.app.notification.state';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
-import { InAppNotificationReader } from './in.app.notification.reader';
 import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { InAppNotificationService } from './in.app.notification.service';
 
 @InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverMutations {
   constructor(
-    private readonly inAppNotificationReader: InAppNotificationReader
+    private readonly inAppNotificationService: InAppNotificationService
   ) {}
 
   @Mutation(() => InAppNotificationState, {
@@ -23,7 +23,7 @@ export class InAppNotificationResolverMutations {
     @Args('notificationData') notificationData: UpdateNotificationStateInput
   ): Promise<InAppNotificationState> {
     const notification =
-      await this.inAppNotificationReader.getRawNotificationOrFail(
+      await this.inAppNotificationService.getRawNotificationOrFail(
         notificationData.ID
       );
     if (notification.receiverID !== agentInfo.userID) {
@@ -34,7 +34,7 @@ export class InAppNotificationResolverMutations {
       );
     }
 
-    await this.inAppNotificationReader.updateNotificationState(
+    await this.inAppNotificationService.updateNotificationState(
       notificationData.ID,
       notificationData.state
     );
@@ -80,7 +80,7 @@ export class InAppNotificationResolverMutations {
     }
 
     const result =
-      await this.inAppNotificationReader.bulkUpdateNotificationState(
+      await this.inAppNotificationService.bulkUpdateNotificationState(
         notificationIds,
         agentInfo.userID,
         state

@@ -1,5 +1,5 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { InAppNotificationCalloutPublished } from '@domain/in-app-notification-reader/dto/in.app.notification.callout.published';
+import { InAppNotificationEntryCalloutPublished } from '@domain/in-app-notification-reader/dto/in.app.notification.entry.callout.published';
 import { ISpace } from '@domain/space/space/space.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Loader } from '@core/dataloader/decorators';
@@ -9,14 +9,14 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 
-@Resolver(() => InAppNotificationCalloutPublished)
+@Resolver(() => InAppNotificationEntryCalloutPublished)
 export class InAppNotificationCalloutPublishedResolverFields {
   @ResolveField(() => ICallout, {
     nullable: true,
     description: 'The Callout that was published.',
   })
   public callout(
-    @Parent() { payload }: InAppNotificationCalloutPublished,
+    @Parent() { payload }: InAppNotificationEntryCalloutPublished,
     @Loader(CalloutLoaderCreator, { resolveToNull: true })
     loader: ILoader<ICallout>
   ) {
@@ -28,7 +28,7 @@ export class InAppNotificationCalloutPublishedResolverFields {
     description: 'Where the callout is located.',
   })
   public space(
-    @Parent() { payload }: InAppNotificationCalloutPublished,
+    @Parent() { payload }: InAppNotificationEntryCalloutPublished,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
     loader: ILoader<ISpace>
   ) {

@@ -5,13 +5,13 @@ import {
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { IInAppNotification } from '../../in-app-notification/in.app.notification.interface';
-import { IInAppNotificationEntryBase } from './in.app.notification.base';
+import { IInAppNotificationEntryBase } from './in.app.notification.entry.base';
+import { IInAppNotificationEntry } from './in.app.notification.entry.interface';
 
 @ObjectType('InAppNotificationCalloutPublished', {
-  implements: () => IInAppNotification,
+  implements: () => IInAppNotificationEntry,
 })
-export abstract class InAppNotificationCalloutPublished extends IInAppNotificationEntryBase {
+export abstract class InAppNotificationEntryCalloutPublished extends IInAppNotificationEntryBase {
   declare type: NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED;
   declare payload: InAppNotificationCalloutPublishedPayload;
   // fields resolved by a concrete resolver

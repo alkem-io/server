@@ -6,13 +6,13 @@ import {
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ISpace } from '@domain/space/space/space.interface';
-import { IInAppNotification } from '../../in-app-notification/in.app.notification.interface';
-import { IInAppNotificationEntryBase } from './in.app.notification.base';
+import { IInAppNotificationEntryBase } from './in.app.notification.entry.base';
+import { IInAppNotificationEntry } from './in.app.notification.entry.interface';
 
 @ObjectType('InAppNotificationCommunityNewMember', {
-  implements: () => IInAppNotification,
+  implements: () => IInAppNotificationEntry,
 })
-export class InAppNotificationCommunityNewMember extends IInAppNotificationEntryBase {
+export class InAppNotificationEntryCommunityNewMember extends IInAppNotificationEntryBase {
   declare type: NotificationEventType.COMMUNITY_NEW_MEMBER;
   declare payload: InAppNotificationCommunityNewMemberPayload;
   // fields resolved by a concrete resolver

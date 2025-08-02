@@ -1,15 +1,15 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { InAppNotificationUserMentioned } from '../dto/in.app.notification.user.mentioned';
+import { InAppNotificationEntryUserMentioned } from '../dto/in.app.notification.entry.user.mentioned';
 
-@Resolver(() => InAppNotificationUserMentioned)
+@Resolver(() => InAppNotificationEntryUserMentioned)
 export class InAppNotificationUserMentionedResolverFields {
   @ResolveField(() => RoleSetContributorType, {
     nullable: false,
     description: 'The type of the Contributor that joined.',
   })
   public contributorType(
-    @Parent() { payload }: InAppNotificationUserMentioned
+    @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): RoleSetContributorType {
     return payload.contributorType as unknown as RoleSetContributorType; // todo this might be wrong - the types dont match
   }
@@ -19,7 +19,7 @@ export class InAppNotificationUserMentionedResolverFields {
     description: 'The comment that the contributor was mentioned in.',
   })
   public comment(
-    @Parent() { payload }: InAppNotificationUserMentioned
+    @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): string {
     return payload.comment;
   }
@@ -29,7 +29,7 @@ export class InAppNotificationUserMentionedResolverFields {
     description: 'The url of the resource where the comment was created.',
   })
   public commentUrl(
-    @Parent() { payload }: InAppNotificationUserMentioned
+    @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): string {
     return payload.commentOrigin.url;
   }
@@ -40,7 +40,7 @@ export class InAppNotificationUserMentionedResolverFields {
       'The display name of the resource where the comment was created.',
   })
   public commentOriginName(
-    @Parent() { payload }: InAppNotificationUserMentioned
+    @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): string {
     return payload.commentOrigin.displayName;
   }

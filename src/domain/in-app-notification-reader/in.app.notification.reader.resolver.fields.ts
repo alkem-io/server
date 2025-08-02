@@ -1,18 +1,18 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { IInAppNotification } from '../in-app-notification/in.app.notification.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IInAppNotificationEntry } from './dto/in.app.notification.entry.interface';
 
-@Resolver(() => IInAppNotification)
+@Resolver(() => IInAppNotificationEntry)
 export class InAppNotificationResolverFields {
   @ResolveField(() => IContributor, {
     nullable: false,
     description: 'The receiver of the notification.',
   })
   public receiver(
-    @Parent() { receiverID }: IInAppNotification,
+    @Parent() { receiverID }: IInAppNotificationEntry,
     @Loader(ContributorLoaderCreator) loader: ILoader<IContributor>
   ) {
     return loader.load(receiverID);
@@ -23,7 +23,7 @@ export class InAppNotificationResolverFields {
     description: 'The Contributor who triggered the notification.',
   })
   public triggeredBy(
-    @Parent() { payload }: IInAppNotification,
+    @Parent() { payload }: IInAppNotificationEntry,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {

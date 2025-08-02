@@ -25,7 +25,7 @@ export class InAppNotificationReceiverController {
     @Ctx() context: RmqContext
   ) {
     this.logger.verbose?.(
-      `Received ${data.receiverIDs.length} compressed in-app notifications`
+      `Received ${data.receiverIDs?.length} compressed in-app notifications`
     );
     ack(context);
     this.inAppNotificationReceiver.decompressStoreNotify(data);

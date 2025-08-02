@@ -6,7 +6,7 @@ import { InAppNotificationPayloadBase } from '@alkemio/notifications-lib';
 import { LogContext } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
 import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
-import { InAppNotificationState } from '../in-app-notification/in.app.notification.state';
+import { InAppNotificationState } from '../in-app-notification/enums/in.app.notification.state';
 import { PlatformService } from '@platform/platform/platform.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
@@ -26,9 +26,16 @@ export class InAppNotificationReceiver {
   public async decompressStoreNotify(
     notification: InAppNotificationPayloadBase
   ) {
+    if (!notification.receiverIDs || notification.receiverIDs.length === 0) {
+      this.logger.error(
+        'Received in-app notification with no receiver IDs, skipping storage.',
+        LogContext.IN_APP_NOTIFICATION
+      );
+      return;
+    }
     const receiverIDs = notification.receiverIDs;
     this.logger.verbose?.(
-      `Received ${receiverIDs.length} compressed in-app notifications`,
+      `Received ${receiverIDs?.length} compressed in-app notifications`,
       LogContext.IN_APP_NOTIFICATION
     );
 
@@ -37,7 +44,7 @@ export class InAppNotificationReceiver {
       await this.filterOutNotificationsForBetaUsers(receiverIDs);
     // store
     this.logger.verbose?.(
-      `Storing ${receiversBetaUsers.length} in-app notifications for beta users only`,
+      `Storing ${receiversBetaUsers?.length} in-app notifications for beta users only`,
       LogContext.IN_APP_NOTIFICATION
     );
     const savedNotifications = await this.store(
