@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { InAppNotificationState } from '@domain/in-app-notification/enums/in.app.notification.state';
+import { InAppNotificationState } from '@platform/in-app-notification/enums/in.app.notification.state';
 import { UUID } from '@domain/common/scalars';
 
 @InputType()

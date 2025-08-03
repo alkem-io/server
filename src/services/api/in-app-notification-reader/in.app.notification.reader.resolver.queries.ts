@@ -4,7 +4,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { InAppNotificationService } from '@domain/in-app-notification/in.app.notification.service';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { IInAppNotificationEntry } from './dto/in.app.notification.entry.interface';
 
 @InstrumentResolver()

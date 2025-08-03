@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { InAppNotificationState } from '@domain/in-app-notification/enums/in.app.notification.state';
+import { InAppNotificationState } from '@platform/in-app-notification/enums/in.app.notification.state';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';

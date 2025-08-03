@@ -3,7 +3,7 @@ import {
   InAppNotificationPayloadBase,
   NotificationEventType,
 } from '@alkemio/notifications-lib';
-import { InAppNotificationState } from '@domain/in-app-notification/enums/in.app.notification.state';
+import { InAppNotificationState } from '@platform/in-app-notification/enums/in.app.notification.state';
 import { Field } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 

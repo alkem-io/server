@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { InAppNotificationEntity } from '../in-app-notification/in.app.notification.entity';
+import { InAppNotificationEntity } from '../../../platform/in-app-notification/in.app.notification.entity';
 import { InAppNotificationReceiver } from './in.app.notification.receiver';
 import { InAppNotificationReceiverController } from './in.app.notification.receiver.controller';
 import { PlatformModule } from '@platform/platform/platform.module';

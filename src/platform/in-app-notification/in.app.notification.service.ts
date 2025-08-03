@@ -1,9 +1,9 @@
 import { Repository, In, UpdateResult } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { InAppNotificationEntity } from '@domain/in-app-notification/in.app.notification.entity';
-import { IInAppNotification } from '@domain/in-app-notification/in.app.notification.interface';
-import { InAppNotificationState } from '@domain/in-app-notification/enums/in.app.notification.state';
+import { InAppNotificationEntity } from '@platform/in-app-notification/in.app.notification.entity';
+import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
+import { InAppNotificationState } from '@platform/in-app-notification/enums/in.app.notification.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 

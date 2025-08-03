@@ -21,7 +21,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { TypedPubSubEngine } from '@services/subscriptions/subscription-service/typed.pub.sub.engine';
-import { IInAppNotification } from '@domain/in-app-notification/in.app.notification.interface';
+import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
 
 @Injectable()
 export class SubscriptionPublishService {

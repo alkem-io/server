@@ -1,5 +1,5 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { InAppNotificationEntryCalloutPublished } from '@domain/in-app-notification-reader/dto/in.app.notification.entry.callout.published';
+import { InAppNotificationEntryCalloutPublished } from '@services/api/in-app-notification-reader/dto/in.app.notification.entry.callout.published';
 import { ISpace } from '@domain/space/space/space.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Loader } from '@core/dataloader/decorators';
