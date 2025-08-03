@@ -23,9 +23,9 @@ export class CreateUserSettingsInput {
   @Type(() => CreateUserSettingsCommunicationInput)
   communication?: CreateUserSettingsCommunicationInput;
 
-  @Field(() => CreateUserSettingsCommunicationInput, {
+  @Field(() => CreateUserSettingsNotificationInput, {
     nullable: true,
-    description: 'Settings related to this users Communication preferences.',
+    description: 'Settings related to this users Notification preferences.',
   })
   @ValidateNested()
   @Type(() => CreateUserSettingsNotificationInput)

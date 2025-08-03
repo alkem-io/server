@@ -86,6 +86,11 @@ import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/
 import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 import { CreateSpaceAboutInput } from '@domain/space/space.about';
 import { UpdateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.update';
+import { CreateUserSettingsNotificationInput } from '@domain/community/user-settings/dto/user.settings.notification.dto.create';
+import { CreateUserSettingsInput } from '@domain/community/user-settings/dto/user.settings.dto.create';
+import { CreateUserSettingsPrivacyInput } from '@domain/community/user-settings/dto/user.settings.privacy.dto.create';
+import { CreateUserSettingsCommunicationInput } from '@domain/community/user-settings/dto/user.settings.communications.dto.create';
+import { UpdateUserSettingsNotificationInput } from '@domain/community/user-settings/dto/user.settings.notification.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -125,6 +130,12 @@ export class BaseHandler extends AbstractHandler {
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
+      CreateUserSettingsNotificationInput,
+      CreateUserSettingsPrivacyInput,
+      CreateUserSettingsCommunicationInput,
+      CreateUserSettingsInput,
+      UpdateInnovationFlowStateInput,
+      CreateCalloutOnCalloutsSetInput,
       DeleteDocumentInput,
       UpdateSpaceAboutInput,
       UpdatePostInput,
@@ -159,10 +170,10 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserSettingsInput,
       UpdateUserSettingsCommunicationInput,
       UpdateUserSettingsPrivacyInput,
+      UpdateUserSettingsNotificationInput,
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
-      CreateCalloutOnCalloutsSetInput,
     ];
 
     if (types.includes(metatype)) {

@@ -26,7 +26,7 @@ export class UpdateUserSettingsNotificationSpaceInput {
 
   @Field(() => Boolean, {
     nullable: true,
-    description: 'Receive a notification for community updates',
+    description: 'Receive a notification for community updates as admin',
   })
   @IsBoolean()
   communicationUpdatesAdmin?: boolean;
