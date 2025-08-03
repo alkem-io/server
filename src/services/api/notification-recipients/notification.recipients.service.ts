@@ -39,7 +39,7 @@ export class NotificationRecipientsService {
       LogContext.NOTIFICATIONS
     );
 
-    const inAppEnabled = this.isInAppEnabled(eventData.eventType);
+    const inAppEnabledForEventType = this.isInAppEnabled(eventData.eventType);
     const { privilegeRequired, credentialCriteria } =
       this.getPrivilegeRequiredCredentialCriteria(
         eventData.eventType,
@@ -91,15 +91,28 @@ export class NotificationRecipientsService {
 
     // TODO: check checkIsUserMessagingAllowed??
 
-    const inAppParticipants = inAppEnabled ? recipientsWithPrivilege : [];
+    const inAppParticipantCandidates = inAppEnabledForEventType
+      ? recipientsWithPrivilege
+      : [];
+    // Filter by whether they have the InApp privilege on platform level
+    const authorizationPolicyForInApp =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    const inAppRecipientsWithPrivilege = inAppParticipantCandidates.filter(
+      recipient =>
+        this.authorizationService.isAccessGrantedForCredentials(
+          recipient.agent.credentials || [],
+          [],
+          authorizationPolicyForInApp,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_IN_APP
+        )
+    );
     const triggeredBy = eventData.triggeredBy
       ? await this.userLookupService.getUserOrFail(eventData.triggeredBy)
       : undefined;
 
-    // Implement your logic to retrieve notification recipients here
     return {
       emailRecipients: recipientsWithPrivilege,
-      inAppRecipients: inAppParticipants,
+      inAppRecipients: inAppRecipientsWithPrivilege,
       triggeredBy,
     };
   }
