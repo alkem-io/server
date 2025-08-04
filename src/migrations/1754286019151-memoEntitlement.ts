@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class MemoEntitlement1754286019151 implements MigrationInterface {
@@ -75,6 +76,55 @@ export class MemoEntitlement1754286019151 implements MigrationInterface {
       console.error('Failed to parse credential rules:', error);
       return;
     }
+
+    // Finally add in a new license plan entry so it is there for all environments
+    const licenseFrameworks: { id: string }[] = await queryRunner.query(`
+      SELECT id FROM license_framework
+    `);
+
+    if (licenseFrameworks.length === 0) {
+      console.error('No license framework found.');
+      return;
+    }
+    const licenseFrameworkID = licenseFrameworks[0].id;
+    const licensePlanID = randomUUID();
+    await queryRunner.query(
+      `INSERT INTO license_plan (id,
+                                createdDate,
+                                updatedDate,
+                                version,
+                                name,
+                                enabled,
+                                sortOrder,
+                                pricePerMonth,
+                                isFree,
+                                trialEnabled,
+                                requiresPaymentMethod,
+                                requiresContactSupport,
+                                licenseCredential,
+                                type,
+                                assignToNewOrganizationAccounts,
+                                assignToNewUserAccounts,
+                                licensingFrameworkId)
+                  VALUES (?, NOW(6), NOW(6), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        licensePlanID,
+        1,
+        'SPACE_FEATURE_MEMO_MULTI_USER',
+        1,
+        55, // after whiteboard multi-user
+        0.0,
+        1,
+        0,
+        0,
+        0,
+        'space-feature-memo-multi-user',
+        'space-feature-flag',
+        0,
+        0,
+        licenseFrameworkID,
+      ]
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
