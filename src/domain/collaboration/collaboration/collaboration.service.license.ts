@@ -83,6 +83,13 @@ export class CollaborationLicenseService {
           );
           break;
 
+        case LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER:
+          this.licenseService.findAndCopyParentEntitlement(
+            entitlement,
+            parentEntitlements
+          );
+          break;
+
         default:
           throw new EntityNotInitializedException(
             `Unknown entitlement type for Collaboration: ${entitlement.type}`,
