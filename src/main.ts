@@ -100,6 +100,11 @@ const bootstrap = async () => {
   connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
+  connectMicroservice(
+    app,
+    amqpEndpoint,
+    MessagingQueue.COLLABORATION_DOCUMENT_SERVICE
+  );
   await app.startAllMicroservices();
 };
 

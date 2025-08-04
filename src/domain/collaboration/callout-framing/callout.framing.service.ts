@@ -235,7 +235,7 @@ export class CalloutFramingService {
               profile: {
                 displayName: 'Callout Framing Memo',
               },
-              content: calloutFramingData.memoContent,
+              // content: calloutFramingData.memoContent,
             },
             storageAggregator,
             userID

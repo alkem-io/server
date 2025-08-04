@@ -335,3 +335,24 @@ services:
       - alkemio_dev_net
     ports:
       - 4003
+
+  collaborative-document:
+    container_name: alkemio_dev_collaborative-document
+    hostname: collaborative-document
+    image: svetoslavpetkov23/collaborative-document-service:v0.0.1
+    platform: linux/amd64
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
+      - ENVIRONMENT=dev
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4004

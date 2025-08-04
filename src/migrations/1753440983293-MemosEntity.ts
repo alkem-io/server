@@ -10,7 +10,7 @@ export class MemosEntity1753440983293 implements MigrationInterface {
             \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
             \`version\` int NOT NULL,
             \`nameID\` varchar(36) NOT NULL,
-            \`content\` longtext NULL,
+            \`content\` mediumblob NULL,
             \`createdBy\` char(36) NULL,
             \`contentUpdatePolicy\` varchar(128) NOT NULL,
             \`authorizationId\` char(36) NULL,
@@ -66,6 +66,11 @@ export class MemosEntity1753440983293 implements MigrationInterface {
     );
     await queryRunner.query(
       `DROP INDEX \`REL_7c71c36a3eba63b8b52b30eb25\` ON \`callout_framing\``
+    );
+    // the 'memo' value from the type enum cannot be dropped until the value is removed from the database
+    // modify the type to an existing value and remove it in the next couple of statements
+    await queryRunner.query(
+      `UPDATE profile SET type = 'post' where type = 'memo'`
     );
     await queryRunner.query(
       `ALTER TABLE \`profile\` CHANGE \`type\` \`type\` enum ('space-about', 'innovation-flow', 'callout-framing', 'knowledge-base', 'post', 'contribution-link', 'whiteboard', 'discussion', 'organization', 'user-group', 'user', 'innovation-hub', 'calendar-event', 'innovation-pack', 'template', 'community-guidelines', 'virtual-contributor', 'virtual-persona') NOT NULL`

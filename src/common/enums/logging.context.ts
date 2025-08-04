@@ -52,6 +52,7 @@ export enum LogContext {
   TAGSET = 'tagset',
   EXCALIDRAW_SERVER = 'excalidraw-server',
   WHITEBOARD_INTEGRATION = 'whiteboard-integration',
+  COLLAB_DOCUMENT_INTEGRATION = 'collaborative-document-integration',
   WHITEBOARDS = 'whiteboards',
   MEMOS = 'memos',
   RESOLVER_FIELD = 'resolver-field',

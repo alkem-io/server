@@ -60,6 +60,11 @@ http:
         servers:
           - url: 'http://whiteboard-collaboration:4002/'
 
+    collaborative-document:
+      loadBalancer:
+        servers:
+          - url: 'http://collaborative-document:4004/'
+
     file-service:
       loadBalancer:
         servers:
@@ -168,6 +173,15 @@ http:
         - strip-api-private-prefix-socket-io
       entryPoints:
         - 'web'
+
+    collaborative-document:
+      rule: 'PathPrefix(`/api/private/hocuspocus`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+
     # more specific than 'api-private-rest'
     file-service:
       rule: 'PathPrefix(`/api/private/rest/storage`)'

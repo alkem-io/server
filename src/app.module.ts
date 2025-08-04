@@ -72,6 +72,7 @@ import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.mod
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { DomainPlatformSettingsModule } from '@platform/domain-settings/domain.platform.settings.module';
 import { FileIntegrationModule } from '@services/file-integration';
+import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
 import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
@@ -304,6 +305,7 @@ import { AdminGeoLocationModule } from '@platform/admin/geolocation/admin.geoloc
     EventBusModule,
     WhiteboardIntegrationModule,
     FileIntegrationModule,
+    CollaborativeDocumentIntegrationModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,
     TemplateApplierModule,
