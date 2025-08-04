@@ -67,8 +67,13 @@ export class TemplateResolverMutations {
         relations: {
           templatesSet: true,
           contentSpace: {
+            about: {
+              profile: true,
+            },
             collaboration: {
-              innovationFlow: true,
+              innovationFlow: {
+                states: true,
+              },
               calloutsSet: {
                 callouts: true,
                 tagsetTemplateSet: true,
