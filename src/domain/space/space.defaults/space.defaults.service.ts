@@ -55,12 +55,37 @@ export class SpaceDefaultsService {
       if (collaborationDataFromTemplate) {
         collaborationData.innovationFlowData =
           collaborationDataFromTemplate.innovationFlowData;
-      } else {
+      }
+      // If still not present, throw an error
+      if (!collaborationData.innovationFlowData) {
         throw new ValidationException(
           'No innovation flow data provided',
           LogContext.SPACES
         );
       }
+    }
+
+    // Enforce innovation flow settings:
+    const maxNumberOfStates =
+      templateSpaceContent.collaboration?.innovationFlow?.settings
+        .maximumNumberOfStates ?? Number.MAX_SAFE_INTEGER;
+    const minNumberOfStates =
+      templateSpaceContent.collaboration?.innovationFlow?.settings
+        .minimumNumberOfStates ?? 0;
+
+    if (
+      collaborationData.innovationFlowData.states.length > maxNumberOfStates
+    ) {
+      collaborationData.innovationFlowData.states =
+        collaborationData.innovationFlowData.states.slice(0, maxNumberOfStates);
+    }
+    if (
+      collaborationData.innovationFlowData.states.length < minNumberOfStates
+    ) {
+      throw new ValidationException(
+        `Innovation flow must have at least ${collaborationData.innovationFlowData.settings.minimumNumberOfStates} states.`,
+        LogContext.SPACES
+      );
     }
 
     if (collaborationData.addCallouts) {
@@ -94,20 +119,14 @@ export class SpaceDefaultsService {
   public async getTemplateSpaceContentToAugmentFrom(
     spaceLevel: SpaceLevel,
     spaceTemplateID?: string,
-    platformTemplateType?: TemplateDefaultType,
     spaceL0TemplatesManager?: ITemplatesManager
-  ): Promise<ITemplateContentSpace> {
+  ): Promise<string> {
     // First get the template to augment the provided data with
     let templateWithSpaceContent: ITemplate | undefined = undefined;
 
     if (spaceTemplateID) {
       templateWithSpaceContent =
         await this.templateService.getTemplateOrFail(spaceTemplateID);
-    } else if (platformTemplateType) {
-      templateWithSpaceContent =
-        await this.platformTemplatesService.getPlatformDefaultTemplateByType(
-          platformTemplateType
-        );
     } else {
       switch (spaceLevel) {
         case SpaceLevel.L0:
@@ -148,36 +167,27 @@ export class SpaceDefaultsService {
 
     if (!templateWithSpaceContent) {
       throw new ValidationException(
-        `Unable to get platform template for type: ${platformTemplateType}`,
+        `Unable to get template content space to use: ${spaceLevel}, templateID: ${spaceTemplateID}`,
         LogContext.TEMPLATES
       );
     }
-    // Reload to get the data
-    const templateWithSpaceContentReloaded =
-      await this.templateService.getTemplateOrFail(
-        templateWithSpaceContent.id,
-        {
-          relations: {
-            contentSpace: {
-              collaboration: true,
-              about: {
-                profile: true,
-              },
-            },
-          },
-        }
-      );
-
-    if (
-      !templateWithSpaceContentReloaded.contentSpace ||
-      !templateWithSpaceContentReloaded.contentSpace.collaboration
-    ) {
+    // Reload to ensure we have the content space
+    templateWithSpaceContent = await this.templateService.getTemplateOrFail(
+      templateWithSpaceContent.id,
+      {
+        relations: {
+          contentSpace: true,
+        },
+      }
+    );
+    if (!templateWithSpaceContent.contentSpace) {
       throw new ValidationException(
-        `Unable to get platform template with space content for type: ${platformTemplateType}`,
+        `Have template without template content space to use: ${spaceLevel}, templateID: ${spaceTemplateID}`,
         LogContext.TEMPLATES
       );
     }
-    return templateWithSpaceContentReloaded.contentSpace;
+
+    return templateWithSpaceContent.contentSpace.id;
   }
 
   public async addTutorialCalloutsFromTemplate(

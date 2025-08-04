@@ -545,6 +545,36 @@ export class RoleSetService {
     });
   }
 
+  public async getVirtualContributorsInRoleInHierarchy(
+    roleSet: IRoleSet,
+    roleType: RoleName
+  ): Promise<IVirtualContributor[]> {
+    const roleDefinition = await this.getRoleDefinition(roleSet, roleType);
+
+    const membershipCredentials: ICredentialDefinition[] = [
+      roleDefinition.credential,
+    ];
+    const parentMembershipCredentials = roleDefinition.parentCredentials;
+    if (parentMembershipCredentials.length !== 0) {
+      // First one will be the top level roleSet credential for VC
+      membershipCredentials.push(...parentMembershipCredentials);
+    }
+    const eligibleVirtualContributors: IVirtualContributor[] = [];
+    for (const membershipCredential of membershipCredentials) {
+      const vcsForCredential =
+        await this.virtualContributorLookupService.virtualContributorsWithCredentials(
+          {
+            type: membershipCredential.type,
+            resourceID: membershipCredential.resourceID,
+          }
+        );
+      if (vcsForCredential.length > 0) {
+        eligibleVirtualContributors.push(...vcsForCredential);
+      }
+    }
+    return eligibleVirtualContributors;
+  }
+
   public async getVirtualContributorsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName
@@ -812,11 +842,11 @@ export class RoleSetService {
         // Remove the credential for being an invitee
         await this.removeSpaceInviteeCredential(agent, roleSet);
       }
-      if (invitation.extraRole) {
+      for (const extraRole of invitation.extraRoles) {
         try {
           await this.assignContributorToRole(
             roleSet,
-            invitation.extraRole,
+            extraRole,
             contributorID,
             invitation.contributorType,
             agentInfo,
@@ -825,7 +855,7 @@ export class RoleSetService {
         } catch (e: any) {
           // Do not throw an exception further as there might not be entitlements to grant the extra role
           this.logger.warn?.(
-            `Unable to add contributor (${contributorID}) to extra role (${invitation.extraRole}) in community: ${e}`,
+            `Unable to add contributor (${contributorID}) to extra roles (${invitation.extraRoles}) in community: ${e}`,
             LogContext.COMMUNITY
           );
         }
@@ -1601,7 +1631,7 @@ export class RoleSetService {
     email: string,
     welcomeMessage: string,
     roleSetInvitedToParent: boolean,
-    extraRole: RoleName | undefined,
+    extraRoles: RoleName[],
     agentInfo: AgentInfo
   ): Promise<IPlatformInvitation> {
     const externalInvitationInput: CreatePlatformInvitationInput = {
@@ -1609,7 +1639,7 @@ export class RoleSetService {
       welcomeMessage,
       email,
       roleSetInvitedToParent,
-      roleSetExtraRole: extraRole,
+      roleSetExtraRoles: extraRoles,
       createdBy: agentInfo.userID,
     };
     const externalInvitation =
@@ -1833,7 +1863,7 @@ export class RoleSetService {
         roleDefinition.name
       );
       const parentDirectCredential = parentRoleDefinition.credential;
-      const parentParentCredentials = roleDefinition.parentCredentials;
+      const parentParentCredentials = parentRoleDefinition.parentCredentials;
 
       parentCredentials.push(parentDirectCredential);
       parentParentCredentials.forEach(c => parentCredentials?.push(c));

@@ -2,9 +2,6 @@ import { CreateTemplateContentSpaceInput } from '@domain/template/template-conte
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CalloutState } from '@common/enums/callout.state';
-import { CalloutType } from '@common/enums/callout.type';
 
 export enum FlowState {
   EXPLORE = 'Explore',
@@ -17,6 +14,7 @@ export enum FlowState {
 export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceInput =
   {
     level: 1,
+    subspaces: [],
     collaborationData: {
       innovationFlowData: {
         profile: {
@@ -58,10 +56,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
         calloutsData: [
           {
             nameID: 'welcome',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -71,7 +65,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '👋 Welcome to your subspace!',
@@ -83,10 +76,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
           },
           {
             nameID: 'collaboration-tools',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 2,
             classification: {
               tagsets: [
@@ -96,7 +85,6 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName:

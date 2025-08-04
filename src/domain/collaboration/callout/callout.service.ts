@@ -15,34 +15,34 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
 import { limitAndShuffle } from '@common/utils';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
+import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
-import { CalloutContributionPolicyService } from '../callout-contribution-policy/callout.contribution.policy.service';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreatePostInput } from '../post/dto/post.dto.create';
-import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { UpdateCalloutInput } from './dto/callout.dto.update';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
-import { keyBy } from 'lodash';
+import { cloneDeep, keyBy, merge } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
 
 @Injectable()
 export class CalloutService {
@@ -53,7 +53,6 @@ export class CalloutService {
     private userLookupService: UserLookupService,
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
-    private contributionPolicyService: CalloutContributionPolicyService,
     private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
@@ -78,7 +77,6 @@ export class CalloutService {
       AuthorizationPolicyType.CALLOUT
     );
     callout.createdBy = userID ?? undefined;
-    callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
     callout.contributions = [];
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
@@ -87,27 +85,30 @@ export class CalloutService {
       userID
     );
 
+    callout.settings = this.createCalloutSettings(calloutData.settings);
+
     callout.classification = this.classificationService.createClassification(
       classificationTagsetTemplates,
       calloutData.classification
     );
 
     callout.contributionDefaults =
-      this.contributionDefaultsService.createCalloutContributionDefaults(
-        calloutData.contributionDefaults
+      await this.contributionDefaultsService.createCalloutContributionDefaults(
+        calloutData.contributionDefaults,
+        callout.framing.profile.storageBucket
       );
 
-    const policyData =
-      this.contributionPolicyService.updateContributionPolicyInput(
-        calloutData.type,
-        calloutData.contributionPolicy
-      );
-    callout.contributionPolicy =
-      this.contributionPolicyService.createCalloutContributionPolicy(
-        policyData
-      );
+    if (userID && calloutData.contributions && callout.settings.contribution) {
+      callout.contributions =
+        await this.contributionService.createCalloutContributions(
+          calloutData.contributions,
+          storageAggregator,
+          callout.settings.contribution,
+          userID
+        );
+    }
 
-    if (calloutData.type === CalloutType.POST && calloutData.enableComments) {
+    if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
@@ -117,9 +118,22 @@ export class CalloutService {
     return callout;
   }
 
+  private createCalloutSettings(
+    settingsData?: CreateCalloutInput['settings']
+  ): ICalloutSettings {
+    const calloutSettings = cloneDeep(DefaultCalloutSettings);
+    if (settingsData) {
+      merge(calloutSettings, settingsData);
+    }
+    return calloutSettings;
+  }
+
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {
     if (
-      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
+      // If can contribute with whiteboard
+      (calloutData.settings?.contribution?.allowedTypes ?? []).includes(
+        CalloutContributionType.WHITEBOARD
+      ) && //  but no whiteboard template provided
       !calloutData.contributionDefaults?.whiteboardContent
     ) {
       throw new ValidationException(
@@ -129,11 +143,19 @@ export class CalloutService {
     }
 
     if (
-      calloutData.type == CalloutType.WHITEBOARD &&
+      calloutData.framing.type == CalloutFramingType.WHITEBOARD &&
       !calloutData.framing.whiteboard
     ) {
       throw new ValidationException(
         'Please provide a whiteboard',
+        LogContext.COLLABORATION
+      );
+    } else if (
+      calloutData.framing.type !== CalloutFramingType.WHITEBOARD &&
+      calloutData.framing.whiteboard
+    ) {
+      throw new ValidationException(
+        'Whiteboard framing can only be used with whiteboard framing type',
         LogContext.COLLABORATION
       );
     }
@@ -167,12 +189,14 @@ export class CalloutService {
   }
 
   public async updateCalloutVisibility(
-    calloutUpdateData: UpdateCalloutVisibilityInput
+    calloutVisibilityUpdateData: UpdateCalloutVisibilityInput
   ): Promise<ICallout> {
-    const callout = await this.getCalloutOrFail(calloutUpdateData.calloutID);
+    const callout = await this.getCalloutOrFail(
+      calloutVisibilityUpdateData.calloutID
+    );
 
-    if (calloutUpdateData.visibility)
-      callout.visibility = calloutUpdateData.visibility;
+    if (calloutVisibilityUpdateData.visibility)
+      callout.settings.visibility = calloutVisibilityUpdateData.visibility;
 
     return await this.calloutRepository.save(callout);
   }
@@ -197,12 +221,12 @@ export class CalloutService {
 
   public async updateCallout(
     calloutInput: ICallout,
-    calloutUpdateData: UpdateCalloutInput
+    calloutUpdateData: UpdateCalloutInput,
+    userID?: string
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutInput.id, {
       relations: {
         contributionDefaults: true,
-        contributionPolicy: true,
         framing: {
           profile: true,
           whiteboard: true,
@@ -210,10 +234,12 @@ export class CalloutService {
         classification: {
           tagsets: true,
         },
+        calloutsSet: true,
       },
     });
+    const storageAggregator = await this.getStorageAggregator(callout.id);
 
-    if (!callout.contributionDefaults || !callout.contributionPolicy) {
+    if (!callout.contributionDefaults || !callout.settings.contribution) {
       throw new EntityNotInitializedException(
         `Unable to load callout: ${callout.id}`,
         LogContext.COLLABORATION
@@ -223,8 +249,14 @@ export class CalloutService {
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
-        calloutUpdateData.framing
+        calloutUpdateData.framing,
+        storageAggregator,
+        userID
       );
+    }
+
+    if (calloutUpdateData.settings) {
+      callout.settings = merge(callout.settings, calloutUpdateData.settings);
     }
 
     if (calloutUpdateData.classification) {
@@ -234,20 +266,24 @@ export class CalloutService {
       );
     }
 
-    if (calloutUpdateData.contributionPolicy) {
-      callout.contributionPolicy =
-        this.contributionPolicyService.updateCalloutContributionPolicy(
-          callout.contributionPolicy,
-          calloutUpdateData.contributionPolicy
-        );
-    }
-
     if (calloutUpdateData.contributionDefaults) {
       callout.contributionDefaults =
         this.contributionDefaultsService.updateCalloutContributionDefaults(
           callout.contributionDefaults,
           calloutUpdateData.contributionDefaults
         );
+    }
+
+    // Create the Matrix room for comments if it doesn't yet exist
+    if (
+      !callout.isTemplate &&
+      callout.settings.framing.commentsEnabled &&
+      !callout.comments
+    ) {
+      callout.comments = await this.roomService.createRoom(
+        `callout-comments-${callout.nameID}`,
+        RoomType.CALLOUT
+      );
     }
 
     if (calloutUpdateData.sortOrder)
@@ -266,14 +302,13 @@ export class CalloutService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
-        contributionPolicy: true,
         framing: true,
       },
     });
 
     if (
       !callout.contributionDefaults ||
-      !callout.contributionPolicy ||
+      !callout.settings ||
       !callout.contributions
     ) {
       throw new EntityNotInitializedException(
@@ -283,8 +318,9 @@ export class CalloutService {
     }
 
     await this.calloutFramingService.delete(callout.framing);
+
     for (const contribution of callout.contributions) {
-      await this.contributionService.delete(contribution);
+      await this.contributionService.delete(contribution.id);
     }
 
     if (callout.comments) {
@@ -292,7 +328,6 @@ export class CalloutService {
     }
 
     await this.contributionDefaultsService.delete(callout.contributionDefaults);
-    await this.contributionPolicyService.delete(callout.contributionPolicy);
 
     if (callout.authorization)
       await this.authorizationPolicyService.delete(callout.authorization);
@@ -307,23 +342,19 @@ export class CalloutService {
     return this.calloutRepository.find(options);
   }
 
+  /**
+   *
+   * @param callout
+   * @returns a number, the number of messages or the number of contributions if the callout allows contributions
+   */
   public async getActivityCount(callout: ICallout): Promise<number> {
-    const result = 0;
-    switch (callout.type) {
-      case CalloutType.POST_COLLECTION:
-      case CalloutType.WHITEBOARD_COLLECTION:
-      case CalloutType.LINK_COLLECTION:
-        return await this.contributionService.getContributionsInCalloutCount(
-          callout.id
-        );
+    if (callout.settings.contribution.allowedTypes.length > 0) {
+      return this.contributionService.getContributionsInCalloutCount(
+        callout.id
+      );
+    } else {
+      return this.getCommentsCount(callout.id);
     }
-
-    const comments = await this.getComments(callout.id);
-    if (comments) {
-      return comments.messagesCount;
-    }
-
-    return result;
   }
 
   private async setNameIdOnPostData(
@@ -357,20 +388,6 @@ export class CalloutService {
       );
   }
 
-  public async getContributionPolicy(
-    calloutID: string
-  ): Promise<ICalloutContributionPolicy> {
-    const callout = await this.getCalloutOrFail(calloutID, {
-      relations: { contributionPolicy: true },
-    });
-    if (!callout.contributionPolicy)
-      throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised as it does not have contribution policy`,
-        LogContext.COLLABORATION
-      );
-    return callout.contributionPolicy;
-  }
-
   public async getContributionDefaults(
     calloutID: string
   ): Promise<ICalloutContributionDefaults> {
@@ -390,6 +407,12 @@ export class CalloutService {
       relations: { comments: true },
     });
     return callout.comments;
+  }
+
+  private async getCommentsCount(calloutID: string): Promise<number> {
+    const comments = await this.getComments(calloutID);
+    if (!comments) return 0;
+    return comments.messagesCount;
   }
 
   private async setNameIdOnWhiteboardData(
@@ -418,9 +441,11 @@ export class CalloutService {
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: { contributions: true },
+      relations: {
+        contributions: true,
+      },
     });
-    if (!callout.contributionPolicy)
+    if (!callout.settings.contribution)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised as no contributions`,
         LogContext.COLLABORATION
@@ -470,7 +495,7 @@ export class CalloutService {
       await this.contributionService.createCalloutContribution(
         contributionData,
         storageAggregator,
-        callout.contributionPolicy,
+        callout.settings.contribution,
         userID
       );
     contribution.callout = callout;
@@ -519,7 +544,9 @@ export class CalloutService {
     sortOrderData: UpdateContributionCalloutsSortOrderInput
   ): Promise<ICalloutContribution[]> {
     const callout = await this.getCalloutOrFail(calloutId, {
-      relations: { contributionPolicy: true, contributions: true },
+      relations: {
+        contributions: true,
+      },
     });
 
     if (!callout.contributions)

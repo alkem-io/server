@@ -27,12 +27,16 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SpaceAbout } from '../space.about';
 import { TagsetTemplate } from '@domain/common/tagset-template';
 import { TagsetType } from '@common/enums/tagset.type';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
 
 const moduleMocker = new ModuleMocker(global);
 
 describe('SpaceService', () => {
   let service: SpaceService;
   let spaceRepository: Repository<Space>;
+  let urlGeneratorCacheService: UrlGeneratorCacheService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -48,10 +52,177 @@ describe('SpaceService', () => {
 
     service = module.get<SpaceService>(SpaceService);
     spaceRepository = module.get<Repository<Space>>(getRepositoryToken(Space));
+    urlGeneratorCacheService = module.get<UrlGeneratorCacheService>(
+      UrlGeneratorCacheService
+    );
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('updateSpacePlatformSettings', () => {
+    it('should invalidate URL cache when nameID is updated for L0 space', async () => {
+      // Arrange
+      const spaceId = 'space-1';
+      const oldNameID = 'old-space-name';
+      const newNameID = 'new-space-name';
+      const subspaceId = 'subspace-1';
+
+      const mockSpace = {
+        id: spaceId,
+        nameID: oldNameID,
+        level: SpaceLevel.L0,
+        levelZeroSpaceID: spaceId,
+        about: {
+          profile: {
+            id: `profile-${spaceId}`,
+          },
+        },
+      } as Space;
+
+      const mockSubspace = {
+        id: subspaceId,
+        nameID: 'subspace-name',
+        level: SpaceLevel.L1,
+        levelZeroSpaceID: spaceId,
+        about: {
+          profile: {
+            id: `profile-${subspaceId}`,
+          },
+        },
+      } as Space;
+
+      const updateData: UpdateSpacePlatformSettingsInput = {
+        spaceID: spaceId,
+        nameID: newNameID,
+      };
+
+      // Mock the naming service to return empty reserved nameIDs
+      const mockNamingService = {
+        getReservedNameIDsLevelZeroSpaces: jest.fn().mockResolvedValue([]),
+      };
+      service['namingService'] = mockNamingService as any;
+
+      // Mock the repository to return subspaces
+      jest.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
+      jest.spyOn(service, 'save').mockResolvedValue(mockSpace);
+
+      // Mock the URL cache service
+      const revokeUrlCacheSpy = jest
+        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
+        .mockResolvedValue();
+
+      // Act
+      await service.updateSpacePlatformSettings(mockSpace, updateData);
+
+      // Assert
+      expect(mockSpace.nameID).toBe(newNameID);
+      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${spaceId}`); // Main space cache invalidated
+      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${subspaceId}`); // Subspace cache invalidated
+      expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should invalidate URL cache when nameID is updated for subspace', async () => {
+      // Arrange
+      const parentSpaceId = 'parent-space-1';
+      const subspaceId = 'subspace-1';
+      const childSubspaceId = 'child-subspace-1';
+      const oldNameID = 'old-subspace-name';
+      const newNameID = 'new-subspace-name';
+
+      const mockSubspace = {
+        id: subspaceId,
+        nameID: oldNameID,
+        level: SpaceLevel.L1,
+        levelZeroSpaceID: parentSpaceId,
+        about: {
+          profile: {
+            id: `profile-${subspaceId}`,
+          },
+        },
+      } as Space;
+
+      const mockChildSubspace = {
+        id: childSubspaceId,
+        nameID: 'child-subspace-name',
+        level: SpaceLevel.L2,
+        levelZeroSpaceID: parentSpaceId,
+        about: {
+          profile: {
+            id: `profile-${childSubspaceId}`,
+          },
+        },
+      } as Space;
+
+      const updateData: UpdateSpacePlatformSettingsInput = {
+        spaceID: subspaceId,
+        nameID: newNameID,
+      };
+
+      // Mock the naming service to return empty reserved nameIDs
+      const mockNamingService = {
+        getReservedNameIDsInLevelZeroSpace: jest.fn().mockResolvedValue([]),
+      };
+      service['namingService'] = mockNamingService as any;
+
+      // Mock the repository to return child subspaces
+      jest
+        .spyOn(spaceRepository, 'find')
+        .mockResolvedValue([mockChildSubspace]);
+      jest.spyOn(service, 'save').mockResolvedValue(mockSubspace);
+
+      // Mock the URL cache service
+      const revokeUrlCacheSpy = jest
+        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
+        .mockResolvedValue();
+
+      // Act
+      await service.updateSpacePlatformSettings(mockSubspace, updateData);
+
+      // Assert
+      expect(mockSubspace.nameID).toBe(newNameID);
+      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${subspaceId}`); // Main subspace cache invalidated
+      expect(revokeUrlCacheSpy).toHaveBeenCalledWith(
+        `profile-${childSubspaceId}`
+      ); // Child subspace cache invalidated
+      expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not invalidate URL cache when nameID is not changed', async () => {
+      // Arrange
+      const spaceId = 'space-1';
+      const nameID = 'same-space-name';
+
+      const mockSpace = {
+        id: spaceId,
+        nameID: nameID,
+        level: SpaceLevel.L0,
+        levelZeroSpaceID: spaceId,
+        visibility: SpaceVisibility.ACTIVE,
+      } as Space;
+
+      const updateData: UpdateSpacePlatformSettingsInput = {
+        spaceID: spaceId,
+        visibility: SpaceVisibility.DEMO, // Only changing visibility, not nameID
+      };
+
+      jest.spyOn(service, 'save').mockResolvedValue(mockSpace);
+      jest
+        .spyOn(service, 'updateSpaceVisibilityAllSubspaces' as any)
+        .mockResolvedValue(undefined);
+
+      // Mock the URL cache service
+      const revokeUrlCacheSpy = jest
+        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
+        .mockResolvedValue();
+
+      // Act
+      await service.updateSpacePlatformSettings(mockSpace, updateData);
+
+      // Assert
+      expect(revokeUrlCacheSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('shouldUpdateAuthorizationPolicy', () => {
@@ -320,24 +491,45 @@ const getSubspacesMock = (
             {
               displayName: 'prepare',
               description: 'The innovation is being prepared.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'in progress',
               description: 'The innovation is in progress.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'summary',
               description: 'The summary of the flow results.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'done',
               description: 'The flow is completed.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
           ],
-          currentState: {
-            displayName: 'prepare',
-            description: 'The innovation is being prepared.',
-          },
+          currentStateID: '',
           profile: {
             id: '',
             displayName: `Challenge ${spaceId}.${i}`,
@@ -415,26 +607,47 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
             allowedValues: [],
             ...getEntityMock<TagsetTemplate>(),
           },
-          currentState: {
-            displayName: 'prepare',
-            description: 'The innovation is being prepared.',
-          },
+          currentStateID: '',
           states: [
             {
               displayName: 'prepare',
               description: 'The innovation is being prepared.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'in progress',
               description: 'The innovation is in progress.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'summary',
               description: 'The summary of the flow results.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
             {
               displayName: 'done',
               description: 'The flow is completed.',
+              id: '',
+              settings: {
+                allowNewCallouts: true,
+              },
+              sortOrder: 1,
+              ...getEntityMock<InnovationFlowState>(),
             },
           ],
           profile: {

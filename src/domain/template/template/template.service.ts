@@ -3,6 +3,7 @@ import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -28,7 +29,6 @@ import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { randomUUID } from 'crypto';
 import { ICollaboration } from '@domain/collaboration/collaboration';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TemplateDefault } from '../template-default/template.default.entity';
 import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
@@ -39,6 +39,9 @@ import { ITemplateContentSpace } from '../template-content-space/template.conten
 import { TemplateContentSpaceService } from '../template-content-space/template.content.space.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { merge } from 'lodash';
 
 @Injectable()
 export class TemplateService {
@@ -75,7 +78,7 @@ export class TemplateService {
       ProfileType.TEMPLATE,
       storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(template.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(template.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
@@ -149,10 +152,9 @@ export class TemplateService {
           };
         }
         // Ensure no comments are created on the callouts, and that all callouts are marked as Templates
-        collaborationData.calloutsSetData.calloutsData.forEach(calloutData => {
-          calloutData.isTemplate = true;
-          calloutData.enableComments = false;
-        });
+        collaborationData.calloutsSetData.calloutsData.forEach(
+          this.overrideCalloutSettingsForTemplate
+        );
         template.contentSpace =
           await this.templateContentSpaceService.createTemplateContentSpace(
             spaceData!,
@@ -187,10 +189,7 @@ export class TemplateService {
             LogContext.TEMPLATES
           );
         }
-        // Ensure no comments are created on the callout
-        templateData.calloutData.enableComments = false;
-        templateData.calloutData.visibility = CalloutVisibility.DRAFT;
-        templateData.calloutData.isTemplate = true;
+        this.overrideCalloutSettingsForTemplate(templateData.calloutData);
         templateData.calloutData.nameID = `template-${randomUUID().slice(0, 8)}`;
         template.callout = await this.calloutService.createCallout(
           templateData.calloutData!,
@@ -207,6 +206,10 @@ export class TemplateService {
     }
 
     return await this.templateRepository.save(template);
+  }
+
+  private overrideCalloutSettingsForTemplate(calloutData: CreateCalloutInput) {
+    calloutData.isTemplate = true;
   }
 
   async getTemplateOrFail(
@@ -285,11 +288,12 @@ export class TemplateService {
   public async updateTemplateFromSpace(
     templateInput: ITemplate,
     templateData: UpdateTemplateFromSpaceInput,
-    userID: string
+    agentInfo: AgentInfo
   ): Promise<ITemplate> {
     if (
       !templateInput.contentSpace ||
-      !templateInput.contentSpace.collaboration
+      !templateInput.contentSpace.collaboration ||
+      !templateInput.templatesSet
     ) {
       throw new RelationshipNotFoundException(
         `Unable to updateTemplate as not all entities are loaded: ${templateInput.id} `,
@@ -300,12 +304,43 @@ export class TemplateService {
       templateData.spaceID,
       {
         relations: {
+          about: {
+            profile: {
+              location: true,
+              references: true,
+              tagsets: true,
+              visuals: true,
+            },
+          },
           collaboration: {
-            innovationFlow: true,
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: true,
             },
           },
+          storageAggregator: true,
+          ...(templateData.recursive
+            ? {
+                subspaces: {
+                  collaboration: {
+                    innovationFlow: true,
+                    calloutsSet: {
+                      callouts: true,
+                    },
+                  },
+                  subspaces: {
+                    collaboration: {
+                      innovationFlow: true,
+                      calloutsSet: {
+                        callouts: true,
+                      },
+                    },
+                  },
+                },
+              }
+            : undefined),
         },
       }
     );
@@ -322,17 +357,65 @@ export class TemplateService {
       templateInput.contentSpace.collaboration.calloutsSet.callouts = [];
     }
 
+    await this.updateTemplateContentSubspacesFromSpace(
+      templateInput,
+      sourceSpace.subspaces,
+      agentInfo
+    );
+
     templateInput.contentSpace = await this.updateTemplateContentSpaceFromSpace(
       sourceSpace,
       templateInput.contentSpace,
       true,
-      userID
+      agentInfo.userID
     );
 
     return await this.getTemplateOrFail(templateInput.id);
   }
 
-  public async updateTemplateContentSpaceFromSpace(
+  private async updateTemplateContentSubspacesFromSpace(
+    templateInput: ITemplate,
+    sourceSpaceSubspaces: ISpace[] | undefined,
+    agentInfo: AgentInfo
+  ): Promise<void> {
+    const currentSubspaces = templateInput.contentSpace?.subspaces ?? [];
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForTemplatesSet(
+        templateInput.templatesSet!.id // Ensured by caller
+      );
+
+    if (!storageAggregator) {
+      throw new EntityNotInitializedException(
+        'Could not resolve storage aggregator for template',
+        LogContext.TEMPLATES,
+        { contentSpaceID: templateInput.id }
+      );
+    }
+
+    // Delete all current subspaces
+    for (const currentSubspace of currentSubspaces) {
+      await this.templateContentSpaceService.deleteTemplateContentSpaceOrFail(
+        currentSubspace.id
+      );
+    }
+
+    // Create new subspaces from the source space
+    if (sourceSpaceSubspaces && sourceSpaceSubspaces.length > 0) {
+      for (const subspace of sourceSpaceSubspaces) {
+        const subspaceContent =
+          await this.templateContentSpaceService.createTemplateContentSpace(
+            await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
+              subspace.id
+            ),
+            storageAggregator,
+            agentInfo
+          );
+        templateInput.contentSpace?.subspaces?.push(subspaceContent);
+      }
+    }
+  }
+
+  private async updateTemplateContentSpaceFromSpace(
     space: ISpace,
     templateContentSpace: ITemplateContentSpace,
     addCallouts: boolean,
@@ -352,7 +435,10 @@ export class TemplateService {
     }
 
     // TODO: expand this to also take over the settings + the about
-    const newStates = space.collaboration.innovationFlow.states;
+    const newStates =
+      this.inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+        space.collaboration.innovationFlow.states
+      );
     templateContentSpace.collaboration.innovationFlow =
       await this.innovationFlowService.updateInnovationFlowStates(
         templateContentSpace.collaboration.innovationFlow,
@@ -382,6 +468,19 @@ export class TemplateService {
 
     this.ensureCalloutsInValidGroupsAndStates(
       templateContentSpace.collaboration
+    );
+
+    await this.templateContentSpaceService.updateAboutFromExistingSpace(
+      templateContentSpace,
+      this.inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout(
+        space.about
+      ),
+      storageAggregator
+    );
+
+    templateContentSpace.settings = merge(
+      templateContentSpace.settings,
+      space.settings
     );
 
     // Need to save before applying authorization policy to get the callout ids

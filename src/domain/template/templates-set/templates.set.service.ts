@@ -19,7 +19,8 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateType } from '@common/enums/template.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { CreateTemplateFromSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.collaboration';
+import { CreateTemplateFromSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.space';
+import { CreateTemplateFromContentSpaceOnTemplatesSetInput } from './dto/templates.set.dto.create.template.from.space.content';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 
 @Injectable()
@@ -148,12 +149,30 @@ export class TemplatesSetService {
   ): Promise<ITemplate> {
     const createSpaceContentInput =
       await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
-        templateSpaceInput.spaceID
+        templateSpaceInput.spaceID,
+        templateSpaceInput.recursive
       );
     const templateInput: CreateTemplateInput = {
       ...templateSpaceInput,
       type: TemplateType.SPACE,
       contentSpaceData: createSpaceContentInput,
+    };
+    return await this.createTemplate(templatesSet, templateInput);
+  }
+
+  async createTemplateFromContentSpace(
+    templatesSet: ITemplatesSet,
+    templateSpaceInput: CreateTemplateFromContentSpaceOnTemplatesSetInput
+  ): Promise<ITemplate> {
+    const createContentSpaceInput =
+      await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromContentSpace(
+        templateSpaceInput.contentSpaceID
+      );
+
+    const templateInput: CreateTemplateInput = {
+      ...templateSpaceInput,
+      type: TemplateType.SPACE,
+      contentSpaceData: createContentSpaceInput,
     };
     return await this.createTemplate(templatesSet, templateInput);
   }

@@ -132,9 +132,8 @@ export class SearchExtractService {
     });
 
     if (!client) {
-      this.logger.error(
+      this.logger.verbose?.(
         'Elasticsearch client not initialized',
-        undefined,
         LogContext.SEARCH_EXTRACT
       );
       return;

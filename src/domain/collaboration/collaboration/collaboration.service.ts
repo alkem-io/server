@@ -17,7 +17,6 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CalloutType } from '@common/enums/callout.type';
 import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
@@ -34,6 +33,7 @@ import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 
 @Injectable()
 export class CollaborationService {
@@ -131,6 +131,9 @@ export class CollaborationService {
       );
 
     if (collaborationData.calloutsSetData.calloutsData) {
+      collaborationData.calloutsSetData.calloutsData.forEach(
+        callout => (callout.isTemplate = collaboration.isTemplate)
+      );
       collaboration.calloutsSet.callouts =
         await this.calloutsSetService.addCallouts(
           collaboration.calloutsSet,
@@ -154,15 +157,22 @@ export class CollaborationService {
     this.innovationFlowService.validateInnovationFlowDefinition(
       innovationFlowData.states
     );
-    const allowedStates = innovationFlowData.states.map(
-      state => state.displayName
-    );
+    const allowedValues = innovationFlowData.states
+      .sort(sortBySortOrder)
+      .map(state => state.displayName);
+    let defaultSelectedValue = innovationFlowData.currentStateDisplayName;
+    if (
+      !defaultSelectedValue ||
+      allowedValues.indexOf(defaultSelectedValue) === -1
+    ) {
+      defaultSelectedValue = allowedValues[0];
+    }
+
     const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
       name: TagsetReservedName.FLOW_STATE,
       type: TagsetType.SELECT_ONE,
-      allowedValues: allowedStates,
-      defaultSelectedValue:
-        allowedStates.length > 0 ? allowedStates[0] : undefined,
+      allowedValues,
+      defaultSelectedValue,
     };
     return tagsetTemplateDataStates;
   }
@@ -343,7 +353,9 @@ export class CollaborationService {
       SELECT COUNT(*) as postsCount FROM \`callouts_set\`
       RIGHT JOIN \`callout\` ON \`callout\`.\`calloutsSetId\` = \`callouts_set\`.\`id\`
       RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}' AND \`callout\`.\`type\` = '${CalloutType.POST_COLLECTION}';
+      WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}'
+        AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
+        AND NOT(ISNULL(\`callout_contribution\`.\`postId\`));
       `
     );
 
@@ -360,7 +372,7 @@ export class CollaborationService {
       RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
       WHERE \`callouts_set\`.\`id\` = '${calloutsSet.id}'
         AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
-        AND \`callout\`.\`type\` = '${CalloutType.WHITEBOARD_COLLECTION}';
+        AND NOT(ISNULL(\`callout_contribution\`.\`whiteboardId\`));
       `
     );
 

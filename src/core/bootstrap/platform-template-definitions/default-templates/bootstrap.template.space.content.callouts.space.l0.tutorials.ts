@@ -3,9 +3,6 @@ import { CreateTemplateContentSpaceInput } from '@domain/template/template-conte
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CalloutState } from '@common/enums/callout.state';
-import { CalloutType } from '@common/enums/callout.type';
 
 export enum FlowState {
   HOME = 'Home',
@@ -17,6 +14,7 @@ export enum FlowState {
 export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTemplateContentSpaceInput =
   {
     level: 0,
+    subspaces: [],
     collaborationData: {
       innovationFlowData: {
         profile: {
@@ -38,10 +36,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
         calloutsData: [
           {
             nameID: 'welcome',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -51,7 +45,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '👋 Welcome to your space!',
@@ -62,10 +55,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
           },
           {
             nameID: 'space-setup',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 2,
             classification: {
               tagsets: [
@@ -75,7 +64,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '⚙️ Set it up your way!',
@@ -86,10 +74,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
           },
           {
             nameID: 'collaboration-tools',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 3,
             classification: {
               tagsets: [
@@ -99,7 +83,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '🧩 Collaboration tools',
@@ -110,10 +93,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
           },
           {
             nameID: 'cleaning-up',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 4,
             classification: {
               tagsets: [
@@ -123,7 +102,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '🧹 Cleaning up',
@@ -134,10 +112,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
           },
           {
             nameID: 'community-setup',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -147,7 +121,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '🤝 Set up your Community',
@@ -158,10 +131,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
           },
           {
             nameID: 'about-subspaces',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -171,7 +140,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '↪️ Subspaces',
@@ -182,10 +150,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
           },
           {
             nameID: 'about-knowledge-base',
-            type: CalloutType.POST,
-            contributionPolicy: {
-              state: CalloutState.OPEN,
-            },
             sortOrder: 1,
             classification: {
               tagsets: [
@@ -195,7 +159,6 @@ export const bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials: CreateTempla
                 },
               ],
             },
-            visibility: CalloutVisibility.PUBLISHED,
             framing: {
               profile: {
                 displayName: '📚 The Knowledge Base',

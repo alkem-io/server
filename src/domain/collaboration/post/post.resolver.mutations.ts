@@ -25,13 +25,13 @@ export class PostResolverMutations {
     @Args('deleteData') deleteData: DeletePostInput
   ): Promise<IPost> {
     const post = await this.postService.getPostOrFail(deleteData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       post.authorization,
       AuthorizationPrivilege.DELETE,
       `delete post: ${post.id}`
     );
-    return await this.postService.deletePost(deleteData.ID);
+    return this.postService.deletePost(deleteData.ID);
   }
 
   @Mutation(() => IPost, {

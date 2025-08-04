@@ -33,6 +33,8 @@ import { SpaceLicenseService } from './space.service.license';
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { SpaceAboutModule } from '../space.about/space.about.module';
 import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
+import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 
 @Module({
   imports: [
@@ -49,6 +51,7 @@ import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
     NamingModule,
     PlatformAuthorizationPolicyModule,
     TemplatesManagerModule,
+    TemplateContentSpaceModule,
     SpaceSettingsModule,
     StorageAggregatorModule,
     ContributionReporterModule,
@@ -61,6 +64,7 @@ import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
     SpaceDefaultsModule,
     SpaceLookupModule,
     LicenseModule,
+    UrlGeneratorModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [

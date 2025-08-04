@@ -25,6 +25,7 @@ import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.da
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
+import { CreateSpaceAboutInput } from '@domain/space/space.about';
 
 @Injectable()
 export class TemplateContentSpaceService {
@@ -49,6 +50,7 @@ export class TemplateContentSpaceService {
     templateContentSpace.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATE_CONTENT_SPACE
     );
+    templateContentSpace.subspaces = [];
 
     templateContentSpace.about = await this.spaceAboutService.createSpaceAbout(
       templateContentSpaceData.about,
@@ -56,12 +58,22 @@ export class TemplateContentSpaceService {
     );
 
     //// Collaboration
+    templateContentSpaceData.collaborationData.isTemplate = true;
     templateContentSpace.collaboration =
       await this.collaborationService.createCollaboration(
         templateContentSpaceData.collaborationData,
         storageAggregator,
         agentInfo
       );
+
+    for (const subspace of templateContentSpaceData.subspaces) {
+      const subspaceContent = await this.createTemplateContentSpace(
+        subspace,
+        storageAggregator,
+        agentInfo
+      );
+      templateContentSpace.subspaces.push(subspaceContent);
+    }
 
     return await this.save(templateContentSpace);
   }
@@ -79,16 +91,43 @@ export class TemplateContentSpaceService {
       templateContentSpaceID,
       {
         relations: {
-          collaboration: true,
-          about: true,
+          collaboration: {
+            innovationFlow: true,
+            timeline: true,
+            calloutsSet: true,
+          },
+          about: {
+            profile: true,
+          },
+          subspaces: {
+            collaboration: {
+              innovationFlow: true,
+              timeline: true,
+              calloutsSet: true,
+            },
+            about: {
+              profile: true,
+            },
+            subspaces: {
+              collaboration: {
+                innovationFlow: true,
+                timeline: true,
+                calloutsSet: true,
+              },
+              about: {
+                profile: true,
+              },
+            },
+          },
+          authorization: true,
         },
       }
     );
 
     if (
-      !templateContentSpace.collaboration ||
+      !templateContentSpace.authorization ||
       !templateContentSpace.about ||
-      !templateContentSpace.authorization
+      !templateContentSpace.collaboration
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to delete TemplateContentSpace: ${templateContentSpace.id} `,
@@ -96,21 +135,42 @@ export class TemplateContentSpaceService {
       );
     }
 
-    await this.spaceAboutService.removeSpaceAbout(
-      templateContentSpace.about.id
-    );
-    await this.collaborationService.deleteCollaborationOrFail(
-      templateContentSpace.collaboration.id
-    );
+    // First, recursively delete all subspaces (including sub-subspaces)
+    // This needs to be done before deleting the parent to avoid foreign key constraints
+    if (
+      templateContentSpace.subspaces &&
+      templateContentSpace.subspaces.length > 0
+    ) {
+      for (const subspace of templateContentSpace.subspaces) {
+        await this.deleteTemplateContentSpaceOrFail(subspace.id);
+      }
+    }
 
+    // Delete collaboration and all its nested entities
+    if (templateContentSpace.collaboration) {
+      await this.collaborationService.deleteCollaborationOrFail(
+        templateContentSpace.collaboration.id
+      );
+    }
+
+    // Delete space about and its profile
+    if (templateContentSpace.about) {
+      await this.spaceAboutService.removeSpaceAbout(
+        templateContentSpace.about.id
+      );
+    }
+
+    // Delete authorization policy
     await this.authorizationPolicyService.delete(
       templateContentSpace.authorization
     );
 
+    // Finally, delete the template content space itself
     const result = await this.templateContentSpaceRepository.remove(
       templateContentSpace as TemplateContentSpace
     );
     result.id = templateContentSpaceID;
+
     return result;
   }
 
@@ -179,6 +239,31 @@ export class TemplateContentSpaceService {
     return await this.save(templateContentSpace);
   }
 
+  public async updateAboutFromExistingSpace(
+    templateContentSpace: ITemplateContentSpace,
+    spaceAbout: CreateSpaceAboutInput,
+    storageAggregator: IStorageAggregator
+  ): Promise<ITemplateContentSpace> {
+    if (!templateContentSpace.about) {
+      throw new EntityNotInitializedException(
+        'TemplateContentSpace not initialized',
+        LogContext.TEMPLATES,
+        { templateContentSpaceId: templateContentSpace.id }
+      );
+    }
+    // Delete space about and its profile and create a new one
+    await this.spaceAboutService.removeSpaceAbout(
+      templateContentSpace.about.id
+    );
+
+    templateContentSpace.about = await this.spaceAboutService.createSpaceAbout(
+      spaceAbout,
+      storageAggregator
+    );
+
+    return templateContentSpace;
+  }
+
   public createLicenseTemplateContentSpace(): ILicense {
     return this.licenseService.createLicense({
       type: LicenseType.TEMPLATE_CONTENT_SPACE,
@@ -239,5 +324,23 @@ export class TemplateContentSpaceService {
         LogContext.TEMPLATES
       );
     return about;
+  }
+
+  public async getSubspaces(
+    templateContentSpaceID: string
+  ): Promise<ITemplateContentSpace[]> {
+    const templateContentSpace = await this.getTemplateContentSpaceOrFail(
+      templateContentSpaceID,
+      {
+        relations: { subspaces: true },
+      }
+    );
+    const subspaces = templateContentSpace.subspaces;
+    if (!subspaces)
+      throw new RelationshipNotFoundException(
+        `Unable to load subspaces for TemplateContentSpace ${templateContentSpaceID} `,
+        LogContext.TEMPLATES
+      );
+    return subspaces;
   }
 }

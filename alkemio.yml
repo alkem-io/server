@@ -448,7 +448,7 @@ platform:
   inspiration: ${PLATFORM_INSPIRATION}:https://alkemio.org/help/collaboration-tools/
 
   # Innovation library
-  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://www.alkemio.org/help/innovation-library
+  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://alkem.io/docs/features/templates
 
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
@@ -478,9 +478,10 @@ platform:
   tips: ${PLATFORM_TIPS}:https://alkemio.org/post/
 
   # Acceptable Usage Policy
-  aup: ${PLATFORM_AUP}:https://www.alkemio.org/legal/hub/#aup
+  aup:
+    ${PLATFORM_AUP}:https://www.alkemio.org/legal/hub/#aup
 
-   # Documentation site path, endpoint is endpoint_cluster + documentation_path
+    # Documentation site path, endpoint is endpoint_cluster + documentation_path
   documentation_path: ${PLATFORM_DOCUMENTATION_PATH}:/documentation
 
   # Client can optionally work with a landing page, to give additional information
@@ -497,7 +498,7 @@ platform:
     credentials: ${VECTOR_DB_CREDENTIALS}:root\:toor
 
   virtual_contributors:
-    history_length: ${VC_HISTORY_LENGTH}:10
+    history_length: ${VC_HISTORY_LENGTH}:30
 
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.

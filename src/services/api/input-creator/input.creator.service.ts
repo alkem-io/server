@@ -4,8 +4,6 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
-import { ICalloutContributionPolicy } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.interface';
-import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -35,10 +33,13 @@ import { Injectable } from '@nestjs/common';
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { CreateClassificationInput } from '@domain/common/classification/dto/classification.dto.create';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { CreateSpaceInput } from '@domain/space';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
-import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
+import { EntityManager } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
 
 @Injectable()
 export class InputCreatorService {
@@ -46,7 +47,8 @@ export class InputCreatorService {
     private collaborationService: CollaborationService,
     private spaceLookupService: SpaceLookupService,
     private calloutService: CalloutService,
-    private templateContentSpaceService: TemplateContentSpaceService
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   public async buildCreateCalloutInputsFromCallouts(
@@ -65,7 +67,6 @@ export class InputCreatorService {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
         contributionDefaults: true,
-        contributionPolicy: true,
         classification: {
           tagsets: true,
         },
@@ -88,7 +89,7 @@ export class InputCreatorService {
       !callout.framing.profile ||
       !callout.framing.profile.tagsets ||
       !callout.contributionDefaults ||
-      !callout.contributionPolicy ||
+      !callout.settings ||
       !callout.classification
     ) {
       throw new EntityNotInitializedException(
@@ -103,21 +104,16 @@ export class InputCreatorService {
 
     return {
       nameID: callout.nameID,
-      type: callout.type,
-      visibility: callout.visibility,
       classification: this.buildCreateClassificationInputFromClassification(
         callout.classification
       ),
       framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
         callout.framing
       ),
+      settings: callout.settings,
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
           callout.contributionDefaults
-        ),
-      contributionPolicy:
-        this.buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          callout.contributionPolicy
         ),
       sortOrder: callout.sortOrder,
     };
@@ -148,17 +144,29 @@ export class InputCreatorService {
   }
 
   public async buildCreateTemplateContentSpaceInputFromSpace(
-    spaceID: string
+    spaceID: string,
+    recursive: boolean = true
   ): Promise<CreateTemplateContentSpaceInput> {
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
         collaboration: true,
+        subspaces: true,
         about: {
-          profile: true,
+          profile: {
+            references: true,
+            visuals: true,
+            location: true,
+            tagsets: true,
+          },
+          guidelines: {
+            profile: {
+              references: true,
+            },
+          },
         },
       },
     });
-    if (!space.collaboration || !space.about) {
+    if (!space.collaboration || !space.about || !space.subspaces) {
       throw new RelationshipNotFoundException(
         `Space ${space.id} is missing a relation`,
         LogContext.INPUT_CREATOR
@@ -169,55 +177,95 @@ export class InputCreatorService {
       await this.buildCreateCollaborationInputFromCollaboration(
         space.collaboration.id
       );
+    const aboutInput = this.buildCreateSpaceAboutInputFromSpaceAbout(
+      space.about
+    );
+    const subspacesInput: CreateTemplateContentSpaceInput[] = [];
+    if (recursive) {
+      for (const subspace of space.subspaces) {
+        const subspaceInput =
+          await this.buildCreateTemplateContentSpaceInputFromSpace(
+            subspace.id,
+            recursive
+          );
+        subspacesInput.push(subspaceInput);
+      }
+    }
 
     const result: CreateTemplateContentSpaceInput = {
       collaborationData: collaborationInput,
-      about: this.buildCreateSpaceAboutInputFromSpaceAbout(space.about),
+      about: aboutInput,
       level: space.level,
       settings: space.settings,
+      subspaces: subspacesInput,
     };
 
     return result;
   }
 
-  public async buildCreateSpaceInputFromTemplateContentSpace(
-    templateContentSpaceID: string
-  ): Promise<CreateSpaceInput> {
-    const templateSpaceContent =
-      await this.templateContentSpaceService.getTemplateContentSpaceOrFail(
-        templateContentSpaceID,
-        {
-          relations: {
-            collaboration: true,
-            about: {
-              profile: true,
+  public async buildCreateTemplateContentSpaceInputFromContentSpace(
+    contentSpaceID: string
+  ): Promise<CreateTemplateContentSpaceInput> {
+    const contentSpace = await this.entityManager.findOneOrFail(
+      TemplateContentSpace,
+      {
+        where: {
+          id: contentSpaceID,
+        },
+        relations: {
+          subspaces: true,
+          collaboration: true,
+          about: {
+            profile: {
+              references: true,
+              visuals: true,
+              location: true,
+              tagsets: true,
+            },
+            guidelines: {
+              profile: {
+                references: true,
+              },
             },
           },
-        }
-      );
-    if (!templateSpaceContent.collaboration || !templateSpaceContent.about) {
+        },
+      }
+    );
+
+    if (
+      !contentSpace.collaboration ||
+      !contentSpace.about ||
+      !contentSpace.subspaces
+    ) {
       throw new RelationshipNotFoundException(
-        `Template Content Space ${templateSpaceContent.id} is missing a relation`,
+        `ContentSpace ${contentSpace.id} is missing a relation`,
         LogContext.INPUT_CREATOR
       );
     }
 
-    const collaborationData =
+    const collaborationInput =
       await this.buildCreateCollaborationInputFromCollaboration(
-        templateSpaceContent.collaboration.id
+        contentSpace.collaboration.id
       );
+    const aboutInput = this.buildCreateSpaceAboutInputFromSpaceAbout(
+      contentSpace.about
+    );
 
-    const result: CreateSpaceInput = {
-      collaborationData,
-      level: templateSpaceContent.level,
-      about: {
-        profileData: this.buildCreateProfileInputFromProfile(
-          templateSpaceContent.about.profile
-        ),
-        who: templateSpaceContent.about.who,
-        why: templateSpaceContent.about.why,
-      },
-      settings: templateSpaceContent.settings,
+    const subspacesInput: CreateTemplateContentSpaceInput[] = [];
+    for (const subspace of contentSpace.subspaces) {
+      const subspaceInput =
+        await this.buildCreateTemplateContentSpaceInputFromContentSpace(
+          subspace.id
+        );
+      subspacesInput.push(subspaceInput);
+    }
+
+    const result: CreateTemplateContentSpaceInput = {
+      collaborationData: collaborationInput,
+      about: aboutInput,
+      level: contentSpace.level,
+      settings: contentSpace.settings,
+      subspaces: subspacesInput,
     };
 
     return result;
@@ -246,13 +294,15 @@ export class InputCreatorService {
           },
           innovationFlow: {
             profile: true,
+            states: true,
           },
         },
       });
     if (
       !collaboration.calloutsSet ||
       !collaboration.calloutsSet.callouts ||
-      !collaboration.innovationFlow
+      !collaboration.innovationFlow ||
+      !collaboration.innovationFlow.states
     ) {
       throw new RelationshipNotFoundException(
         `Collaboration ${collaboration.id} is missing a relation`,
@@ -288,6 +338,10 @@ export class InputCreatorService {
         LogContext.INPUT_CREATOR
       );
     }
+
+    const currentState = innovationFlow.states.find(
+      state => state.id === innovationFlow.currentStateID
+    );
     // Note: no profile currently present, so use the one from the template for now
     const result: CreateInnovationFlowInput = {
       settings: innovationFlow.settings,
@@ -295,14 +349,32 @@ export class InputCreatorService {
         displayName: innovationFlow.profile.displayName,
         description: innovationFlow.profile.description,
       },
-      states: innovationFlow.states,
+      states: this.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+        innovationFlow.states
+      ),
+      currentStateDisplayName: currentState?.displayName ?? '',
     };
     return result;
   }
 
-  public async buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+  public buildCreateInnovationFlowStateInputFromInnovationFlowState(
+    states: IInnovationFlowState[]
+  ): CreateInnovationFlowStateInput[] {
+    const result: CreateInnovationFlowStateInput[] = [];
+    for (const state of states) {
+      result.push({
+        displayName: state.displayName,
+        description: state.description,
+        settings: state.settings,
+        sortOrder: state.sortOrder,
+      });
+    }
+    return result;
+  }
+
+  public buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
     communityGuidelines: ICommunityGuidelines
-  ): Promise<CreateCommunityGuidelinesInput> {
+  ): CreateCommunityGuidelinesInput {
     const result: CreateCommunityGuidelinesInput = {
       profile: this.buildCreateProfileInputFromProfile(
         communityGuidelines.profile
@@ -322,13 +394,18 @@ export class InputCreatorService {
     };
   }
 
-  private buildCreateSpaceAboutInputFromSpaceAbout(
+  public buildCreateSpaceAboutInputFromSpaceAbout(
     spaceAbout: ISpaceAbout
   ): CreateSpaceAboutInput {
     const result: CreateSpaceAboutInput = {
       profileData: this.buildCreateProfileInputFromProfile(spaceAbout.profile),
       who: spaceAbout.who,
       why: spaceAbout.why,
+      guidelines: spaceAbout.guidelines
+        ? this.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+            spaceAbout.guidelines
+          )
+        : undefined,
     };
 
     return result;
@@ -348,6 +425,7 @@ export class InputCreatorService {
       );
     }
     return {
+      type: calloutFraming.type,
       profile: this.buildCreateProfileInputFromProfile(calloutFraming.profile),
       whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
@@ -362,20 +440,11 @@ export class InputCreatorService {
       return undefined;
     }
     const result: CreateCalloutContributionDefaultsInput = {
+      defaultDisplayName: calloutContributionDefaults.defaultDisplayName,
       postDescription: calloutContributionDefaults.postDescription,
       whiteboardContent: calloutContributionDefaults.whiteboardContent,
     };
     return result;
-  }
-
-  private buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
-    calloutContributionPolicy: ICalloutContributionPolicy
-  ): CreateCalloutContributionPolicyInput {
-    return {
-      state: calloutContributionPolicy.state,
-      allowedContributionTypes:
-        calloutContributionPolicy.allowedContributionTypes,
-    };
   }
 
   private buildCreateClassificationInputFromClassification(
@@ -386,7 +455,7 @@ export class InputCreatorService {
     };
   }
 
-  private buildCreateProfileInputFromProfile(
+  public buildCreateProfileInputFromProfile(
     profile: IProfile
   ): CreateProfileInput {
     if (!profile) {

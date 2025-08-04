@@ -36,7 +36,6 @@ import { compact, keyBy } from 'lodash';
 import { CreateCalloutsSetInput } from './dto/callouts.set.dto.create';
 import { Callout } from '../callout/callout.entity';
 import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
-import { CalloutType } from '@common/enums/callout.type';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.interface';
@@ -205,12 +204,7 @@ export class CalloutsSetService {
           );
         calloutNameIds.push(calloutDefault.nameID);
       }
-      if (
-        !calloutDefault.isTemplate &&
-        calloutDefault.type === CalloutType.POST
-      ) {
-        calloutDefault.enableComments = true;
-      }
+
       const callout = await this.calloutService.createCallout(
         calloutDefault,
         calloutsSet.tagsetTemplateSet.tagsetTemplates,
@@ -465,8 +459,13 @@ export class CalloutsSetService {
       const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
       if (!hasAccess) return false;
 
-      // Filter by Callout types
-      if (args.types && !args.types.includes(callout.type)) {
+      // Filter by Contribution types
+      if (
+        args.withContributionTypes?.length &&
+        !callout.settings.contribution.allowedTypes.some(allowedType =>
+          args.withContributionTypes!.includes(allowedType)
+        )
+      ) {
         return false;
       }
 
@@ -558,7 +557,7 @@ export class CalloutsSetService {
     callout: ICallout,
     agentInfo: AgentInfo
   ): boolean {
-    switch (callout.visibility) {
+    switch (callout.settings.visibility) {
       case CalloutVisibility.PUBLISHED:
         return this.authorizationService.isAccessGranted(
           agentInfo,
