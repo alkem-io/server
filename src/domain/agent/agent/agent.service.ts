@@ -182,6 +182,11 @@ export class AgentService {
     return { agent: agent, credentials: agent.credentials };
   }
 
+  /**
+   *
+   * @param grantCredentialData
+   * @throws ValidationException If the agent already has a credential of the same type AND resourceID
+   */
   async grantCredential(
     grantCredentialData: GrantCredentialToAgentInput
   ): Promise<IAgent> {
@@ -198,8 +203,13 @@ export class AgentService {
         credential.resourceID === grantCredentialData.resourceID
       ) {
         throw new ValidationException(
-          `Agent (${agent.id}) already has assigned credential: ${grantCredentialData.type}`,
-          LogContext.AUTH
+          'Agent already has credential of this type on this resource',
+          LogContext.AUTH,
+          {
+            agentId: agent.id,
+            credentialType: grantCredentialData.type,
+            resourceID: grantCredentialData.resourceID,
+          }
         );
       }
     }

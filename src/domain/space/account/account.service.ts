@@ -43,6 +43,7 @@ import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dt
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { IRoleSet } from '@domain/access/role-set';
+import { IAgent } from '@domain/agent';
 
 @InstrumentService()
 @Injectable()
@@ -331,6 +332,24 @@ export class AccountService {
     if (!accounts) return [];
 
     return accounts;
+  }
+
+  public async getAgentOrFail(accountID: string): Promise<IAgent> {
+    const account = await this.getAccountOrFail(accountID, {
+      relations: {
+        agent: true,
+      },
+    });
+
+    if (!account.agent) {
+      throw new EntityNotInitializedException(
+        'Unable to load Agent for Account',
+        LogContext.ACCOUNT,
+        { accountId: accountID }
+      );
+    }
+
+    return account.agent;
   }
 
   public async createVirtualContributorOnAccount(

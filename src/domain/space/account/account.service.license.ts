@@ -17,12 +17,15 @@ import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingba
 import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class AccountLicenseService {
   constructor(
     private licenseService: LicenseService,
     private accountService: AccountService,
+    private agentService: AgentService,
     private spaceLicenseService: SpaceLicenseService,
     private licensingCredentialBasedService: LicensingCredentialBasedService,
     private licensingWingbackSubscriptionService: LicensingWingbackSubscriptionService,
@@ -75,6 +78,10 @@ export class AccountLicenseService {
     return updatedLicenses;
   }
 
+  /**
+   * Creates a Wingback account for the given Alkemio account AND assigns ACCOUNT_LICENSE_PLUS
+   * @param accountID
+   */
   public async createWingbackAccount(accountID: string) {
     const accountDetails =
       await this.accountService.getAccountAndDetails(accountID);
@@ -112,6 +119,15 @@ export class AccountLicenseService {
       accountID,
       wingbackCustomerID
     );
+    // grant ACCOUNT_LICENSE_PLUS entitlement to the account agent
+    const accountAgent = await this.accountService.getAgentOrFail(accountID);
+    await this.agentService.grantCredential({
+      agentID: accountAgent.id,
+      type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+      resourceID: accountID,
+    });
+    // populate the license entitlements
+    await this.applyLicensePolicy(accountID);
 
     return wingbackCustomerID;
   }
@@ -123,16 +139,17 @@ export class AccountLicenseService {
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
-        `License with entitielements not found for account with agent ${accountAgent.id}`,
-        LogContext.LICENSE
+        'License with entitlements not found for account with agent',
+        LogContext.LICENSE,
+        { accountAgentID: accountAgent.id }
       );
     }
 
     // First check the credential based licensing based on the Agent held credentials
+    // This sets the defaults, granted by the credentials
     for (const entitlement of license.entitlements) {
       await this.checkAndAssignGrantedEntitlement(entitlement, accountAgent);
     }
-
     // Then check the Wingback subscription service for any granted entitlements
     if (account.externalSubscriptionID) {
       const wingbackGrantedLicenseEntitlements: LicensingGrantedEntitlement[] =
@@ -145,12 +162,31 @@ export class AccountLicenseService {
           );
         wingbackGrantedLicenseEntitlements.push(...result);
       } catch (e: any) {
-        this.logger.warn?.(
-          `Skipping Wingback entitlements for account ${account.id} since it returned with an error: ${e}`,
+        this.logger.error?.(
+          {
+            message:
+              'Skipping Wingback entitlements for Account, since it returned with an error',
+            accountId: account.id,
+            error: e,
+          },
+          e?.stack,
           LogContext.ACCOUNT
         );
+        return license;
       }
-
+      // early exit if no wingback entitlements were found`
+      if (!wingbackGrantedLicenseEntitlements.length) {
+        this.logger.warn?.(
+          {
+            message: 'No Wingback granted entitlements found for Account',
+            accountId: account.id,
+            wingbackCustomerId: account.externalSubscriptionID,
+          },
+          LogContext.ACCOUNT
+        );
+        return license;
+      }
+      // apply any wingback granted entitlements to the existing entitlements license
       for (const entitlement of license.entitlements) {
         const wingbackGrantedEntitlement =
           wingbackGrantedLicenseEntitlements.find(
