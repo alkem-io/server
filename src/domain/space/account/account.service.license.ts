@@ -129,13 +129,25 @@ export class AccountLicenseService {
     );
     // grant ACCOUNT_LICENSE_PLUS entitlement to the account agent
     const accountAgent = await this.accountService.getAgentOrFail(accountID);
-    await this.agentService.grantCredentialOrFail({
-      agentID: accountAgent.id,
-      type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
-      resourceID: accountID,
-    });
-    // populate the license entitlements
-    await this.applyLicensePolicy(accountID);
+    try {
+      await this.agentService.grantCredentialOrFail({
+        agentID: accountAgent.id,
+        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+        resourceID: accountID,
+      });
+      // only populate the license entitlements if the credential was granted successfully
+      await this.applyLicensePolicy(accountID);
+    } catch {
+      // failing is perfectly fine; we have to make sure the credential is granted
+      this.logger.verbose?.(
+        {
+          message: 'Account already has ACCOUNT_LICENSE_PLUS credential',
+          accountId: accountID,
+          agentId: accountAgent.id,
+        },
+        LogContext.ACCOUNT
+      );
+    }
 
     return wingbackCustomerID;
   }
