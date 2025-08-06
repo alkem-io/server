@@ -33,6 +33,9 @@ import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.
 import { keyBy } from 'lodash';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
+import { CalloutsSetService } from '../callouts-set/callouts.set.service';
+import { Collaboration } from '../collaboration/collaboration.entity';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class InnovationFlowService {
@@ -41,6 +44,7 @@ export class InnovationFlowService {
     private tagsetService: TagsetService,
     private tagsetTemplateService: TagsetTemplateService,
     private innovationFlowStateService: InnovationFlowStateService,
+    private calloutsSetService: CalloutsSetService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -375,10 +379,95 @@ export class InnovationFlowService {
         LogContext.INNOVATION_FLOW
       );
     }
+
+    const stateBeingDeleted = innovationFlow.states.find(
+      s => s.id === stateData.ID
+    );
+    if (!stateBeingDeleted) {
+      throw new EntityNotInitializedException(
+        `Unable to find state with ID ${stateData.ID} in innovation flow ${innovationFlow.id}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+
+    try {
+      const collaboration = await this.getCollaborationByInnovationFlowId(
+        innovationFlow.id
+      );
+
+      if (collaboration.calloutsSet) {
+        const calloutsSetWithCallouts =
+          await this.calloutsSetService.getCalloutsSetOrFail(
+            collaboration.calloutsSet.id,
+            {
+              relations: {
+                callouts: {
+                  classification: {
+                    tagsets: true,
+                  },
+                },
+              },
+            }
+          );
+
+        const callouts = calloutsSetWithCallouts.callouts || [];
+
+        // Get only the callouts that are assigned to this specific state.displayName
+        const calloutsInDeletedState = callouts.filter(callout => {
+          if (!callout.classification || !callout.classification.tagsets) {
+            return false;
+          }
+
+          const flowStateTagset = callout.classification.tagsets.find(
+            tagset => tagset.name === TagsetReservedName.FLOW_STATE
+          );
+
+          if (
+            !flowStateTagset ||
+            !flowStateTagset.tags ||
+            flowStateTagset.tags.length !== 1
+          ) {
+            return false;
+          }
+
+          const currentFlowState = flowStateTagset.tags[0];
+
+          // Match callouts assigned to the state being deleted
+          return currentFlowState === stateBeingDeleted.displayName;
+        });
+
+        // Get the remaining valid flow state names (excluding the one being deleted)
+        const validFlowStateNames = innovationFlow.states
+          .filter(s => s.id !== stateData.ID)
+          .sort(sortBySortOrder)
+          .map(s => s.displayName);
+
+        if (
+          validFlowStateNames.length > 0 &&
+          calloutsInDeletedState.length > 0
+        ) {
+          this.calloutsSetService.moveCalloutsToDefaultFlowState(
+            validFlowStateNames,
+            calloutsInDeletedState
+          );
+
+          // Save the entire callouts set to persist all callout changes
+          await this.calloutsSetService.save(calloutsSetWithCallouts);
+        }
+      }
+    } catch (error) {
+      throw new ValidationException(
+        `Failed to move all posts, try again or move them manually. ${error}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+
+    // Delete the state AFTER moving callouts
     const state: IInnovationFlowState =
       await this.innovationFlowStateService.getInnovationFlowStateOrFail(
         stateData.ID
       );
+
     const deletedInnovationFlowState =
       await this.innovationFlowStateService.delete(state);
 
@@ -637,5 +726,30 @@ export class InnovationFlowService {
     await this.innovationFlowStateService.saveAll(modifiedStates);
 
     return statesInOrder;
+  }
+
+  private async getCollaborationByInnovationFlowId(innovationFlowId: string) {
+    // Query to find collaboration that contains this innovation flow
+    const collaborationRepository =
+      this.innovationFlowRepository.manager.getRepository(Collaboration);
+
+    const collaborationResult = await collaborationRepository.findOne({
+      where: {
+        innovationFlow: { id: innovationFlowId },
+      },
+      relations: {
+        calloutsSet: true,
+        innovationFlow: true,
+      },
+    });
+
+    if (!collaborationResult) {
+      throw new RelationshipNotFoundException(
+        `Unable to find collaboration for InnovationFlow: ${innovationFlowId}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+
+    return collaborationResult;
   }
 }
