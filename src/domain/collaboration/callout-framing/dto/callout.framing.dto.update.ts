@@ -4,6 +4,7 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { UpdateLinkInput } from '@domain/collaboration/link/dto';
 
 @InputType()
 export class UpdateCalloutFramingInput {
@@ -30,4 +31,10 @@ export class UpdateCalloutFramingInput {
   })
   @IsOptional()
   whiteboardContent?: string;
+
+  @Field(() => UpdateLinkInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateLinkInput)
+  link?: UpdateLinkInput;
 }
