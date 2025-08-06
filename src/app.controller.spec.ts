@@ -1,9 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  MockWinstonProvider,
-  MockGeoLocationService,
-  MockSsiCredentialFlowService,
-} from '@test/mocks';
+import { defaultMockerFactory } from '@test/utils';
 import { AppController } from './app.controller';
 
 describe('AppController', () => {
@@ -12,12 +8,9 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [
-        MockWinstonProvider,
-        MockSsiCredentialFlowService,
-        MockGeoLocationService,
-      ],
-    }).compile();
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
     appController = app.get<AppController>(AppController);
   });
