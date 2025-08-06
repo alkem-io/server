@@ -121,7 +121,7 @@ export class AccountLicenseService {
     );
     // grant ACCOUNT_LICENSE_PLUS entitlement to the account agent
     const accountAgent = await this.accountService.getAgentOrFail(accountID);
-    await this.agentService.grantCredential({
+    await this.agentService.grantCredentialOrFail({
       agentID: accountAgent.id,
       type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
       resourceID: accountID,
