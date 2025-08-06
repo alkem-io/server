@@ -187,7 +187,7 @@ export class AgentService {
    * @param grantCredentialData
    * @throws ValidationException If the agent already has a credential of the same type AND resourceID
    */
-  async grantCredential(
+  async grantCredentialOrFail(
     grantCredentialData: GrantCredentialToAgentInput
   ): Promise<IAgent> {
     const { agent, credentials } = await this.getAgentCredentials(
