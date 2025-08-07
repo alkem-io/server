@@ -237,22 +237,29 @@ export class AccountLicenseService {
           continue;
       }
 
-      if (baselineValue > entitlement.limit) {
-        // Apply baseline value as it's higher than current limit
-        entitlement.limit = baselineValue;
-        entitlement.enabled = baselineValue > 0;
-        this.logger.verbose?.(
-          `Applied baseline ${entitlementName} value ${baselineValue} for account ${account.id} (was ${entitlement.limit})`,
-          LogContext.LICENSE
-        );
-      } else if (baselineValue < entitlement.limit) {
-        // Log warning when baseline is lower than current value
-        this.logger.warn?.(
-          `Baseline ${entitlementName} value ${baselineValue} is lower than current entitlement limit ${entitlement.limit} for account ${account.id}. Keeping current value.`,
-          LogContext.LICENSE
-        );
+      if (
+        entitlement.type ===
+          LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR ||
+        entitlement.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK ||
+        entitlement.type === LicenseEntitlementType.ACCOUNT_INNOVATION_HUB
+      ) {
+        if (baselineValue > entitlement.limit) {
+          // Apply baseline value as it's higher than current limit
+          entitlement.limit = baselineValue;
+          entitlement.enabled = baselineValue > 0;
+          this.logger.verbose?.(
+            `Applied baseline ${entitlementName} value ${baselineValue} for account ${account.id} (was ${entitlement.limit})`,
+            LogContext.LICENSE
+          );
+        } else if (baselineValue < entitlement.limit) {
+          // Log warning when baseline is lower than current value
+          this.logger.warn?.(
+            `Baseline ${entitlementName} value ${baselineValue} is lower than current entitlement limit ${entitlement.limit} for account ${account.id}. Keeping current value.`,
+            LogContext.LICENSE
+          );
+        }
+        // If baseline equals current value, do nothing (no logging needed)
       }
-      // If baseline equals current value, do nothing (no logging needed)
     }
 
     return license;
