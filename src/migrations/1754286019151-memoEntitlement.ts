@@ -60,7 +60,7 @@ export class MemoEntitlement1754286019151 implements MigrationInterface {
           credentialType: 'space-feature-memo-multi-user',
           grantedEntitlements: [
             {
-              type: 'space-flag-whiteboard-multi-user',
+              type: 'space-flag-memo-multi-user',
               limit: 1,
             },
           ],
