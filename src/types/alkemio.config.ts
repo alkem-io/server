@@ -158,6 +158,7 @@ export type AlkemioConfig = {
   };
   integrations: {
     geo: {
+      header: string;
       rest_endpoint: string;
       service_endpoint: string;
       cache_entry_ttl: number;
