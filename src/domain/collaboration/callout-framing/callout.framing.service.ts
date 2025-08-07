@@ -211,6 +211,13 @@ export class CalloutFramingService {
           await this.memoService.deleteMemo(calloutFraming.memo.id);
           calloutFraming.memo = undefined;
         }
+
+        // If there was a link before, we delete it
+        if (calloutFraming.link) {
+          await this.linkService.deleteLink(calloutFraming.link.id);
+          calloutFraming.link = undefined;
+        }
+
         // if there is no content coming with the mutation, we do nothing with the whiteboard
         if (!calloutFramingData.whiteboardContent) {
           return calloutFraming;
@@ -246,10 +253,18 @@ export class CalloutFramingService {
           );
           calloutFraming.whiteboard = undefined;
         }
+
+        // If there was a link before, we delete it
+        if (calloutFraming.link) {
+          await this.linkService.deleteLink(calloutFraming.link.id);
+          calloutFraming.link = undefined;
+        }
+
         // if there is no content coming with the mutation, we do nothing with the whiteboard
         if (!calloutFramingData.memoContent) {
           return calloutFraming;
         }
+
         // if there is content and a Memo, we update it
         if (calloutFraming.memo) {
           calloutFraming.memo = await this.memoService.updateMemoContent(
@@ -273,16 +288,28 @@ export class CalloutFramingService {
         break;
       }
       case CalloutFramingType.LINK: {
-        // Handle LINK type updates
-        if (calloutFramingData.link) {
-          await this.linkService.updateLink(calloutFramingData.link);
-        }
-        // if the type is LINK, we remove the whiteboard if it exists
+        // If there was a whiteboard before, we delete it
         if (calloutFraming.whiteboard) {
           await this.whiteboardService.deleteWhiteboard(
             calloutFraming.whiteboard.id
           );
           calloutFraming.whiteboard = undefined;
+        }
+
+        // If there was a memo before, we delete it
+        if (calloutFraming.memo) {
+          await this.memoService.deleteMemo(calloutFraming.memo.id);
+          calloutFraming.memo = undefined;
+        }
+
+        // Handle LINK type updates
+        if (calloutFraming.link && calloutFramingData.link) {
+          await this.linkService.updateLink(calloutFramingData.link);
+        } else if (calloutFramingData.link) {
+          calloutFraming.link = await this.linkService.createLink(
+            calloutFramingData.link as CreateLinkInput,
+            storageAggregator
+          );
         }
         break;
       }
