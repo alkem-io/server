@@ -304,7 +304,9 @@ export class CalloutFramingService {
 
         // Handle LINK type updates
         if (calloutFraming.link && calloutFramingData.link) {
-          await this.linkService.updateLink(calloutFramingData.link);
+          calloutFraming.link = await this.linkService.updateLink(
+            calloutFramingData.link
+          );
         } else if (calloutFramingData.link) {
           calloutFraming.link = await this.linkService.createLink(
             calloutFramingData.link as CreateLinkInput,
