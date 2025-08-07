@@ -15,8 +15,6 @@ export * from './notification.payload.builder.mock';
 export * from './notifications.service.mock';
 export * from './organization.service.mock';
 export * from './platform.authorization.service.mock';
-export * from './preference.set.service.mock';
-export * from './preference.service.mock';
 export * from './user.authorization.service.mock';
 export * from './user.group.service.mock';
 export * from './user.service.mock';

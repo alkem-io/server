@@ -4,6 +4,7 @@ import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { userSettingsData } from './user.settings.mock';
 
 export const userData: { user: IUser } = {
   user: {
@@ -16,14 +17,7 @@ export const userData: { user: IUser } = {
     serviceProfile: false,
     id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
     accountID: '777f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-    settings: {
-      privacy: {
-        contributionRolesPubliclyVisible: true,
-      },
-      communication: {
-        allowOtherUsersToSendMessages: true,
-      },
-    },
+    settings: userSettingsData.userSettings,
     profile: {
       id: '08c6ec54-524a-4d7f-9f58-a4c50f0c0496',
       tagline: '',

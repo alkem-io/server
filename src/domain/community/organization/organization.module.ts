@@ -19,7 +19,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
-import { OrganizationSettingsModule } from '../organization.settings/organization.settings.module';
+import { OrganizationSettingsModule } from '../organization-settings/organization.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { OrganizationLicenseService } from './organization.service.license';

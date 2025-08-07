@@ -82,8 +82,8 @@ import { TemplateApplierModule } from '@domain/template/template-applier/templat
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { AdminUsersModule } from '@platform/admin/users/admin.users.module';
-import { InAppNotificationReaderModule } from '@domain/in-app-notification-reader/in.app.notification.reader.module';
-import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
+import { InAppNotificationReaderModule } from '@services/api/in-app-notification-reader/in.app.notification.reader.module';
+import { InAppNotificationReceiverModule } from '@services/cluster/in-app-notification-receiver';
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
@@ -94,6 +94,7 @@ import { SearchModule } from '@services/api/search/search.module';
 import { ApmApolloPlugin } from './apm/plugins';
 import { AuthInterceptor } from '@core/interceptors';
 import { AdminGeoLocationModule } from '@platform/admin/geolocation/admin.geolocation.module';
+import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 
 @Module({
   imports: [
@@ -282,6 +283,7 @@ import { AdminGeoLocationModule } from '@platform/admin/geolocation/admin.geoloc
     AgentModule,
     MessageModule,
     MessageReactionModule,
+    NotificationRecipientsModule,
     RegistrationModule,
     ConversionModule,
     LibraryModule,

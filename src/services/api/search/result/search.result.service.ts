@@ -802,13 +802,13 @@ export class SearchResultService {
   private async getUsersInSpace(spaceId: string): Promise<string[]> {
     const usersFilter = [];
 
-    const membersInSpace = await this.userLookupService.usersWithCredentials({
+    const membersInSpace = await this.userLookupService.usersWithCredential({
       type: AuthorizationCredential.SPACE_MEMBER,
       resourceID: spaceId,
     });
     usersFilter.push(...membersInSpace.map(user => user.id));
 
-    const adminsInSpace = await this.userLookupService.usersWithCredentials({
+    const adminsInSpace = await this.userLookupService.usersWithCredential({
       type: AuthorizationCredential.SPACE_ADMIN,
       resourceID: spaceId,
     });

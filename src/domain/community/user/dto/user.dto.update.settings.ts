@@ -1,5 +1,5 @@
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { UpdateUserSettingsEntityInput } from '@domain/community/user.settings/dto/user.settings.dto.update';
+import { UpdateUserSettingsEntityInput } from '@domain/community/user-settings/dto/user.settings.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
