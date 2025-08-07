@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "sourceMap": true,
+    "outDir": "./dist",
+    "removeComments": true,
+    "strict": true,
+    "baseUrl": ".",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "downlevelIteration": true,
+    "paths": {
+      "@interfaces/*": ["src/common/interfaces/*"],
+      "@domain/*": ["src/domain/*"],
+      "@config/*": ["src/config/*"],
+      "@common/*": ["src/common/*"],
+      "@core/*": ["src/core/*"],
+      "@platform/*": ["src/platform/*"],
+      "@library/*": ["src/library/*"],
+      "@services/*": ["src/services/*"],
+      "@constants/*": ["src/common/constants/*"],
+      "@templates/*": ["src/platform/configuration/templates/*"],
+      "@src/*": ["src/*"],
+      "@test/*": ["test/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".build/synapse"]
+}

@@ -19,6 +19,7 @@ import { LicenseType } from '@common/enums/license.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
+import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
 
 @Injectable()
 export class AccountHostService {
@@ -39,6 +40,7 @@ export class AccountHostService {
     account.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ACCOUNT
     );
+    account.baselineLicensePlan = this.getBaselineAccountLicensePlan();
     account.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.ACCOUNT
@@ -91,6 +93,17 @@ export class AccountHostService {
     });
 
     return await this.accountRepository.save(account);
+  }
+
+  private getBaselineAccountLicensePlan(): IAccountLicensePlan {
+    return {
+      spaceFree: 1,
+      spacePlus: 0,
+      spacePremium: 0,
+      virtualContributor: 0,
+      innovationPacks: 0,
+      startingPages: 0,
+    };
   }
 
   public async assignLicensePlansToSpace(
