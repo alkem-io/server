@@ -23,7 +23,7 @@ export class MemoEntitlement1754286019151 implements MigrationInterface {
         );
 
       // check if Memo entitlement exists
-      const memoEntitlement = entitlements.find(e => e.type === 'Memo');
+      const memoEntitlement = entitlements.find(e => e.type === 'space-flag-memo-multi-user');
       if (!memoEntitlement) {
         // create a new Memo entitlement
         await queryRunner.query(
