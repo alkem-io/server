@@ -12,7 +12,7 @@ export class CollaborationCalloutsSetLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ICalloutsSet[]>) {
+  create(options: DataLoaderCreatorOptions<ICalloutsSet[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Collaboration,

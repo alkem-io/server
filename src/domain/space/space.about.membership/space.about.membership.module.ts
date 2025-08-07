@@ -9,10 +9,10 @@ import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
+    CommunityModule,
+    RoleSetModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    RoleSetModule,
-    CommunityModule,
   ],
   providers: [
     SpaceAboutMembershipResolverFields,

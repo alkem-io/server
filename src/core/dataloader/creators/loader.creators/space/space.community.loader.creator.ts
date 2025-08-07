@@ -12,7 +12,7 @@ export class SpaceCommunityLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ICommunity>) {
+  create(options: DataLoaderCreatorOptions<ICommunity>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`

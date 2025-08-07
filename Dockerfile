@@ -14,6 +14,7 @@ ARG ENV_ARG=production
 COPY package*.json ./
 
 RUN npm i -g npm@10.1.0
+RUN npm install -g rimraf
 RUN npm install
 
 # If you are building your code for production

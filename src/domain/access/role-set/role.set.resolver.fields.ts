@@ -273,7 +273,8 @@ export class RoleSetResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
     nullable: false,
-    description: 'All virtuals that have the specified Role in this Community.',
+    description:
+      'All Virtual Contributors that have the specified Role in this Community.',
   })
   async virtualContributorsInRole(
     @Parent() roleSet: IRoleSet,
@@ -281,6 +282,28 @@ export class RoleSetResolverFields {
     role: RoleName
   ) {
     return await this.roleSetService.getVirtualContributorsWithRole(
+      roleSet,
+      role
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'virtualContributorsInRoleInHierarchy',
+    () => [IVirtualContributor],
+    {
+      nullable: false,
+      description:
+        'All Virtual Contributors that are available from the current or parent RoleSets.',
+    }
+  )
+  async virtualContributorsInRoleInHierarchy(
+    @Parent() roleSet: IRoleSet,
+    @Args('role', { type: () => RoleName, nullable: false })
+    role: RoleName
+  ) {
+    return await this.roleSetService.getVirtualContributorsInRoleInHierarchy(
       roleSet,
       role
     );
@@ -348,15 +371,16 @@ export class RoleSetResolverFields {
     return apps || [];
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('license', () => ILicense, {
     nullable: false,
     description: 'The License operating on this RoleSet.',
   })
   async license(
     @Parent() roleSet: IRoleSet,
-    @Loader(LicenseLoaderCreator, { parentClassRef: RoleSet })
+    @Loader(LicenseLoaderCreator, {
+      parentClassRef: RoleSet,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<ILicense>
   ): Promise<ILicense> {
     return loader.load(roleSet.id);

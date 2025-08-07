@@ -143,7 +143,7 @@ services:
 
   synapse:
     container_name: alkemio_dev_synapse
-    image: matrixdotorg/synapse:v1.98.0
+    image: matrixdotorg/synapse:v1.132.0
     depends_on:
       - postgres
     restart: always
@@ -164,7 +164,7 @@ services:
 
   postgres:
     container_name: alkemio_dev_postgres
-    image: postgres:12
+    image: postgres:17.5
     networks:
       - alkemio_dev_net
     environment:
@@ -221,7 +221,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.19.0
+    image: alkemio/notifications:v0.23.2
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -253,7 +253,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.3.1
+    image: alkemio/matrix-adapter:v0.6.1
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER

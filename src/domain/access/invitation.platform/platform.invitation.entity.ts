@@ -2,8 +2,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import {
-  ENUM_LENGTH,
-  MID_TEXT_LENGTH,
+  LONGER_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
@@ -24,11 +23,8 @@ export class PlatformInvitation
   @Column('boolean', { default: false })
   roleSetInvitedToParent!: boolean;
 
-  @Column('varchar', {
-    length: ENUM_LENGTH,
-    nullable: true,
-  })
-  roleSetExtraRole?: RoleName;
+  @Column('simple-array', { nullable: false })
+  roleSetExtraRoles!: RoleName[];
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   email!: string;
@@ -42,7 +38,7 @@ export class PlatformInvitation
   @Column('char', { length: UUID_LENGTH, nullable: false })
   createdBy!: string;
 
-  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
+  @Column('varchar', { length: LONGER_TEXT_LENGTH, nullable: true })
   welcomeMessage?: string;
 
   @Column('boolean', { default: false })

@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { UpdateSpaceInput } from '@domain/space/space/dto/space.dto.update';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
@@ -44,10 +43,6 @@ import {
   UpdateCalloutFramingInput,
 } from '@domain/collaboration/callout-framing/dto';
 import {
-  CreateCalloutContributionPolicyInput,
-  UpdateCalloutContributionPolicyInput,
-} from '@domain/collaboration/callout-contribution-policy/dto';
-import {
   CreateCalloutContributionDefaultsInput,
   UpdateCalloutContributionDefaultsInput,
 } from '@domain/collaboration/callout-contribution-defaults/dto';
@@ -57,7 +52,7 @@ import {
   UpdateLinkInput,
 } from '@domain/collaboration/link/dto';
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
-import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto/innovation.flow.state.dto.update';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { UpdateSpaceSettingsEntityInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
 import { UpdateSpaceSettingsInput } from '@domain/space/space/dto/space.dto.update.settings';
@@ -115,7 +110,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
       CreateCalloutFramingInput,
-      CreateCalloutContributionPolicyInput,
       CreateCalloutContributionDefaultsInput,
       CreateSpaceAboutInput,
       CreateContributionOnCalloutInput,
@@ -137,7 +131,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateDocumentInput,
       UpdateCalloutFramingInput,
       UpdateCalloutContributionDefaultsInput,
-      UpdateCalloutContributionPolicyInput,
       UpdateTemplateInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,

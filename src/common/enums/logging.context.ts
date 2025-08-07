@@ -52,7 +52,9 @@ export enum LogContext {
   TAGSET = 'tagset',
   EXCALIDRAW_SERVER = 'excalidraw-server',
   WHITEBOARD_INTEGRATION = 'whiteboard-integration',
+  COLLAB_DOCUMENT_INTEGRATION = 'collaborative-document-integration',
   WHITEBOARDS = 'whiteboards',
+  MEMOS = 'memos',
   RESOLVER_FIELD = 'resolver-field',
   RESOLVER_QUERY = 'resolver-query',
   MUTATION = 'mutation',
@@ -80,6 +82,7 @@ export enum LogContext {
   KRATOS = 'kratos',
   WINGBACK = 'wingback',
   WINGBACK_HOOKS = 'wingback-hooks',
+  ELASTIC_SEARCH = 'elasticsearch',
   //
   AUTH_GUARD = 'auth-guard',
   CODE_ERRORS = 'code-errors', // This is a special context for logging code errors with potential high impact

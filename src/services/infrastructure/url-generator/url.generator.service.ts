@@ -8,7 +8,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { EntityManager, FindOptionsWhere } from 'typeorm';
 import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -20,7 +20,6 @@ import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { AlkemioConfig } from '@src/types';
 import { Template } from '@domain/template/template/template.entity';
-import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
@@ -33,6 +32,10 @@ import { UrlGeneratorCacheService } from './url.generator.service.cache';
 import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
+import { Memo } from '@domain/common/memo/memo.entity';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -81,7 +84,7 @@ export class UrlGeneratorService {
   ): Promise<string> {
     switch (profile.type) {
       case ProfileType.SPACE_ABOUT:
-        return await this.getSpaceUrlPathByAboutProfileID(profile.id);
+        return await this.getUrlPathByAboutProfileID(profile.id);
       case ProfileType.USER: {
         const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'user',
@@ -117,6 +120,8 @@ export class UrlGeneratorService {
         );
       case ProfileType.WHITEBOARD:
         return await this.getWhiteboardUrlPathByProfileID(profile.id);
+      case ProfileType.MEMO:
+        return await this.getMemoUrlPathByProfileID(profile.id);
       case ProfileType.INNOVATION_FLOW:
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
       case ProfileType.TEMPLATE:
@@ -327,25 +332,12 @@ export class UrlGeneratorService {
   private async getInnovationFlowUrlPathOrFail(
     profileID: string
   ): Promise<string> {
-    const innovationFlow = await this.entityManager.findOne(InnovationFlow, {
-      where: {
-        profile: {
-          id: profileID,
-        },
-      },
-    });
-
-    if (!innovationFlow) {
-      throw new EntityNotFoundException(
-        `Unable to find innovationFlow for profile: ${profileID}`,
-        LogContext.URL_GENERATOR
-      );
-    }
-
     const collaboration = await this.entityManager.findOne(Collaboration, {
       where: {
         innovationFlow: {
-          id: innovationFlow.id,
+          profile: {
+            id: profileID,
+          },
         },
       },
     });
@@ -356,17 +348,19 @@ export class UrlGeneratorService {
       );
     }
     if (collaboration.isTemplate) {
-      return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+      return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
     }
 
     return this.getSpaceUrlPathByCollaborationID(collaboration.id);
   }
 
-  private async getCollaborationTemplateUrlPathOrFail(collaborationId: string) {
+  private async getSpaceTemplateUrlPathOrFail(collaborationId: string) {
     const template = await this.entityManager.findOne(Template, {
       where: {
-        collaboration: {
-          id: collaborationId,
+        contentSpace: {
+          collaboration: {
+            id: collaborationId,
+          },
         },
       },
       relations: {
@@ -497,7 +491,7 @@ export class UrlGeneratorService {
         }
 
         if (collaboration.isTemplate) {
-          return this.getCollaborationTemplateUrlPathOrFail(collaboration.id);
+          return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
         }
 
         const collaborationJourneyUrlPath =
@@ -578,22 +572,38 @@ export class UrlGeneratorService {
     return this.generateUrlForSpaceAllLevels(space, spacePath);
   }
 
-  private async getSpaceUrlPathByAboutProfileID(
-    profileID: string,
-    spacePath?: UrlPathElementSpace
-  ): Promise<string> {
+  private async getSpaceAboutByProfileID(profileID: string): Promise<string> {
     if (!profileID || profileID === 'null') {
       throw new EntityNotFoundException(
-        `Unable to find Space with provided collaborationID: ${profileID}`,
+        `Unable to find SpaceAbout with provided profileID: ${profileID}`,
         LogContext.URL_GENERATOR
       );
     }
+    const spaceAbout = await this.entityManager.findOne(SpaceAbout, {
+      where: {
+        profile: {
+          id: profileID,
+        },
+      },
+    });
+    if (!spaceAbout) {
+      throw new EntityNotFoundException(
+        `Unable to find SpaceAbout with provided about profileID: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return spaceAbout.id;
+  }
+
+  private async getUrlPathByAboutProfileID(
+    profileID: string,
+    spacePath?: UrlPathElementSpace
+  ): Promise<string> {
+    const spaceAboutID = await this.getSpaceAboutByProfileID(profileID);
     const space = await this.entityManager.findOne(Space, {
       where: {
         about: {
-          profile: {
-            id: profileID,
-          },
+          id: spaceAboutID,
         },
       },
       relations: {
@@ -602,13 +612,55 @@ export class UrlGeneratorService {
         },
       },
     });
-    if (!space) {
+    if (space) {
+      return this.generateUrlForSpaceAllLevels(space, spacePath);
+    }
+    // Check if part of a TemplateContentSpace
+    const templateContentSpace = await this.entityManager.findOne(
+      TemplateContentSpace,
+      {
+        where: {
+          about: {
+            id: spaceAboutID,
+          },
+        },
+        relations: {
+          parentSpace: {
+            parentSpace: true,
+          },
+        },
+      }
+    );
+    // It's part of a template content space but we need to find the root space of that template:
+    const rootTemplateContentSpaceId =
+      templateContentSpace?.parentSpace?.parentSpace?.id ??
+      templateContentSpace?.parentSpace?.id ??
+      templateContentSpace?.id;
+    if (!rootTemplateContentSpaceId) {
       throw new EntityNotFoundException(
-        `Unable to find Space with provided about profileID: ${profileID}`,
-        LogContext.URL_GENERATOR
+        'Unable to find url for about',
+        LogContext.URL_GENERATOR,
+        { spaceAboutID }
       );
     }
-    return this.generateUrlForSpaceAllLevels(space, spacePath);
+
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        contentSpace: {
+          id: rootTemplateContentSpaceId,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (template && template.profile) {
+      return await this.getTemplateUrlPathOrFail(template.profile.id);
+    }
+    throw new EntityNotFoundException(
+      `Unable to find template url for about with ID: ${spaceAboutID}`,
+      LogContext.URL_GENERATOR
+    );
   }
 
   private async getSpaceUrlPathByCommunityID(
@@ -745,8 +797,9 @@ export class UrlGeneratorService {
 
     if (!whiteboard) {
       throw new EntityNotFoundException(
-        `Unable to find whiteboard where profile: ${whiteboardProfileID}`,
-        LogContext.URL_GENERATOR
+        'Unable to find whiteboard where profile',
+        LogContext.URL_GENERATOR,
+        { whiteboardProfileID }
       );
     }
 
@@ -757,41 +810,128 @@ export class UrlGeneratorService {
     whiteboardID: string,
     whiteboardNameID: string
   ): Promise<string> {
+    return this.getCalloutElementUrlPath({
+      elementId: whiteboardID,
+      elementNameId: whiteboardNameID,
+      elementType: UrlPathElement.WHITEBOARDS,
+      framingWhere: {
+        whiteboard: {
+          id: whiteboardID,
+        },
+      },
+      contributionWhere: {
+        whiteboard: {
+          id: whiteboardID,
+        },
+      },
+      templateWhere: {
+        whiteboard: {
+          id: whiteboardID,
+        },
+      },
+    });
+  }
+
+  // TODO: public Not used outside here for now, but notifications use these
+  public async getMemoUrlPath(
+    memoID: string,
+    memoNameID: string
+  ): Promise<string> {
+    return this.getCalloutElementUrlPath({
+      elementId: memoID,
+      elementNameId: memoNameID,
+      elementType: UrlPathElement.MEMOS,
+      framingWhere: {
+        memo: {
+          id: memoID,
+        },
+      },
+      contributionWhere: {
+        memo: {
+          id: memoID,
+        },
+      },
+      /* Not yet implemented
+      templateWhere: {
+        memo: {
+          id: memoID,
+        },
+      },*/
+    });
+  }
+
+  private async getMemoUrlPathByProfileID(
+    memoProfileID: string
+  ): Promise<string> {
+    const memo = await this.entityManager.findOne(Memo, {
+      where: {
+        profile: {
+          id: memoProfileID,
+        },
+      },
+      select: {
+        id: true,
+        nameID: true,
+      },
+    });
+
+    if (!memo) {
+      throw new EntityNotFoundException(
+        'Unable to find memo where profile',
+        LogContext.URL_GENERATOR,
+        { memoProfileID }
+      );
+    }
+
+    return await this.getMemoUrlPath(memo.id, memo.nameID);
+  }
+
+  /**
+   * Find urls for whiteboards, memos...
+   * Either as CalloutFraming, or CalloutContribution, or inside a Callout Template
+   */
+  public async getCalloutElementUrlPath({
+    elementId,
+    elementNameId,
+    elementType,
+    framingWhere,
+    contributionWhere,
+    templateWhere,
+  }: {
+    elementId: string;
+    elementNameId: string;
+    elementType: UrlPathElement;
+    framingWhere: FindOptionsWhere<CalloutFraming>;
+    contributionWhere: FindOptionsWhere<CalloutContribution>;
+    templateWhere?: FindOptionsWhere<Template>;
+  }): Promise<string> {
     let callout = await this.entityManager.findOne(Callout, {
       where: {
         framing: {
-          whiteboard: {
-            id: whiteboardID,
-          },
+          ...framingWhere,
         },
       },
     });
     if (callout) {
       const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
-      return `${calloutUrlPath}/${whiteboardNameID}`;
+      return `${calloutUrlPath}/${elementNameId}`;
     }
-    if (!callout) {
-      callout = await this.entityManager.findOne(Callout, {
-        where: {
-          contributions: {
-            whiteboard: {
-              id: whiteboardID,
-            },
-          },
+    callout = await this.entityManager.findOne(Callout, {
+      where: {
+        contributions: {
+          ...contributionWhere,
         },
-      });
-    }
+      },
+    });
     if (callout) {
       const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
-      return `${calloutUrlPath}/${UrlPathElement.WHITEBOARDS}/${whiteboardNameID}`;
+      return `${calloutUrlPath}/${elementType}/${elementNameId}`;
     }
-    if (!callout) {
+    if (!callout && templateWhere) {
       // Whiteboard can be also a direct template
       const template = await this.entityManager.findOne(Template, {
         where: {
-          whiteboard: {
-            id: whiteboardID,
-          },
+          ...templateWhere,
         },
         relations: {
           profile: true,
@@ -803,8 +943,9 @@ export class UrlGeneratorService {
     }
 
     throw new EntityNotFoundException(
-      `Unable to find url for whiteboardId: ${whiteboardID}`,
-      LogContext.URL_GENERATOR
+      `Unable to find url for ${elementType}`,
+      LogContext.URL_GENERATOR,
+      { elementId }
     );
   }
 

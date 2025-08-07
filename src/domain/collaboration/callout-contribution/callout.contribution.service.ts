@@ -12,7 +12,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { PostService } from '../post/post.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPost } from '../post';
-import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
+import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import {
   RelationshipNotFoundException,
@@ -36,10 +36,31 @@ export class CalloutContributionService {
     private contributionRepository: Repository<CalloutContribution>
   ) {}
 
+  public async createCalloutContributions(
+    calloutContributionsData: CreateCalloutContributionInput[],
+    storageAggregator: IStorageAggregator,
+    contributionSettings: ICalloutSettingsContribution,
+    userID: string
+  ): Promise<ICalloutContribution[]> {
+    const contributions: ICalloutContribution[] = [];
+
+    for (const calloutContributionData of calloutContributionsData) {
+      const contribution = await this.createCalloutContribution(
+        calloutContributionData,
+        storageAggregator,
+        contributionSettings,
+        userID
+      );
+      contributions.push(contribution);
+    }
+
+    return contributions;
+  }
+
   public async createCalloutContribution(
     calloutContributionData: CreateCalloutContributionInput,
     storageAggregator: IStorageAggregator,
-    contributionPolicy: ICalloutContributionPolicy,
+    contributionSettings: ICalloutSettingsContribution,
     userID: string
   ): Promise<ICalloutContribution> {
     const contribution: ICalloutContribution = CalloutContribution.create(
@@ -56,7 +77,7 @@ export class CalloutContributionService {
 
     if (whiteboard) {
       this.validateContributionType(
-        contributionPolicy,
+        contributionSettings,
         CalloutContributionType.WHITEBOARD
       );
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -68,7 +89,7 @@ export class CalloutContributionService {
 
     if (post) {
       this.validateContributionType(
-        contributionPolicy,
+        contributionSettings,
         CalloutContributionType.POST
       );
 
@@ -81,7 +102,7 @@ export class CalloutContributionService {
 
     if (link) {
       this.validateContributionType(
-        contributionPolicy,
+        contributionSettings,
         CalloutContributionType.LINK
       );
 
@@ -95,23 +116,18 @@ export class CalloutContributionService {
   }
 
   private validateContributionType(
-    contributionPolicy: ICalloutContributionPolicy,
+    contributionSettings: ICalloutSettingsContribution,
     contributionType: CalloutContributionType
   ) {
-    if (
-      !contributionPolicy.allowedContributionTypes.includes(contributionType)
-    ) {
+    if (!contributionSettings.allowedTypes?.includes(contributionType)) {
       throw new ValidationException(
-        `Attemtped to create a contribution of type '${contributionType}', which is not in the allowed types: ${contributionPolicy.allowedContributionTypes}`,
+        `Attemtped to create a contribution of type '${contributionType}', which is not in the allowed types: ${contributionSettings.allowedTypes}`,
         LogContext.COLLABORATION
       );
     }
   }
 
-  async delete(
-    contributionInput: ICalloutContribution
-  ): Promise<ICalloutContribution> {
-    const contributionID = contributionInput.id;
+  async delete(contributionID: string): Promise<ICalloutContribution> {
     const contribution = await this.getCalloutContributionOrFail(
       contributionID,
       {

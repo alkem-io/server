@@ -16,7 +16,7 @@ import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
 import { IProfile } from '@domain/common/profile';
@@ -171,11 +171,13 @@ export class RoomServiceEvents {
 
   public async processNotificationUpdateSent(
     updates: IRoom,
+    lastMessage: IMessage,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputUpdateSent = {
       triggeredBy: agentInfo.userID,
       updates: updates,
+      lastMessage: lastMessage,
     };
     await this.notificationAdapter.updateSent(notificationInput);
   }

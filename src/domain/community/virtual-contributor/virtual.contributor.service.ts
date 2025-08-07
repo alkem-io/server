@@ -45,6 +45,7 @@ import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.k
 import { virtualContributorSettingsDefault } from './definition/virtual.contributor.settings.default';
 import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
 import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
 @Injectable()
 export class VirtualContributorService {
@@ -71,6 +72,7 @@ export class VirtualContributorService {
 
   public async createVirtualContributor(
     virtualContributorData: CreateVirtualContributorInput,
+    knowledgeBaseDefaultCallouts: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,
     agentInfo?: AgentInfo
   ): Promise<IVirtualContributor> {
@@ -96,12 +98,14 @@ export class VirtualContributorService {
     virtualContributor.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
     );
+
     // Pull the settings from a defaults file
     virtualContributor.settings = virtualContributorSettingsDefault;
 
     const knowledgeBaseData =
       await this.virtualContributorDefaultsService.createKnowledgeBaseInput(
         virtualContributorData.knowledgeBaseData,
+        knowledgeBaseDefaultCallouts,
         virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType
       );
 
@@ -144,14 +148,20 @@ export class VirtualContributorService {
       ProfileType.VIRTUAL_CONTRIBUTOR,
       storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(virtualContributor.profile, {
-      name: TagsetReservedName.KEYWORDS,
-      tags: [],
-    });
-    await this.profileService.addTagsetOnProfile(virtualContributor.profile, {
-      name: TagsetReservedName.CAPABILITIES,
-      tags: [],
-    });
+    await this.profileService.addOrUpdateTagsetOnProfile(
+      virtualContributor.profile,
+      {
+        name: TagsetReservedName.KEYWORDS,
+        tags: [],
+      }
+    );
+    await this.profileService.addOrUpdateTagsetOnProfile(
+      virtualContributor.profile,
+      {
+        name: TagsetReservedName.CAPABILITIES,
+        tags: [],
+      }
+    );
 
     this.contributorService.addAvatarVisualToContributorProfile(
       virtualContributor.profile,

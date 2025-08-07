@@ -5,12 +5,12 @@ import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { ICollaboration } from '@domain/collaboration/collaboration';
 import { IProfile } from '@domain/common/profile';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Template } from './template.entity';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
@@ -65,16 +65,16 @@ export class TemplateResolverFields {
     return this.templateService.getWhiteboard(template.id);
   }
 
-  @ResolveField('collaboration', () => ICollaboration, {
+  @ResolveField('contentSpace', () => ITemplateContentSpace, {
     nullable: true,
-    description: 'The Collaboration for this Template.',
+    description: 'The Space for this Template.',
   })
-  async collaboration(
+  async contentSpace(
     @Parent() template: ITemplate
-  ): Promise<ICollaboration | undefined> {
-    if (template.type !== TemplateType.COLLABORATION) {
+  ): Promise<ITemplateContentSpace | undefined> {
+    if (template.type !== TemplateType.SPACE) {
       return undefined;
     }
-    return this.templateService.getCollaboration(template.id);
+    return this.templateService.getSpaceContent(template.id);
   }
 }

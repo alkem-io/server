@@ -5,7 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { UpdateCollaborationFromTemplateInput } from './dto/template.applier.dto.update.collaboration';
+import { UpdateCollaborationFromSpaceTemplateInput } from './dto/template.applier.dto.update.collaboration';
 import { TemplateApplierService } from './template.applier.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration';
@@ -30,12 +30,12 @@ export class TemplateApplierResolverMutations {
 
   @Mutation(() => ICollaboration, {
     description:
-      'Updates the Collaboration, including InnovationFlow states, from the specified Collaboration Template.',
+      'Updates a Collaboration, including InnovationFlow states, using the Space content from the specified Template.',
   })
-  async updateCollaborationFromTemplate(
+  async updateCollaborationFromSpaceTemplate(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData')
-    updateData: UpdateCollaborationFromTemplateInput
+    updateData: UpdateCollaborationFromSpaceTemplateInput
   ): Promise<ICollaboration> {
     let targetCollaboration =
       await this.collaborationService.getCollaborationOrFail(
@@ -51,13 +51,14 @@ export class TemplateApplierResolverMutations {
               },
             },
             innovationFlow: {
+              states: true,
               flowStatesTagsetTemplate: true,
             },
           },
         }
       );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       targetCollaboration.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -65,7 +66,7 @@ export class TemplateApplierResolverMutations {
     );
 
     targetCollaboration =
-      await this.templateApplierService.updateCollaborationFromTemplate(
+      await this.templateApplierService.updateCollaborationFromSpaceTemplate(
         updateData,
         targetCollaboration,
         agentInfo.userID

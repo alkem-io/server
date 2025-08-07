@@ -4,6 +4,7 @@ import { VERY_LONG_TEXT_LENGTH } from '@src/common/constants';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { Type } from 'class-transformer';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
 
 @InputType()
 export class CreateSpaceAboutInput {
@@ -22,8 +23,10 @@ export class CreateSpaceAboutInput {
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   who?: string;
 
-  @Field(() => Markdown, { nullable: true })
+  @Field(() => CreateCommunityGuidelinesInput, {
+    nullable: true,
+    description: 'The CommunityGuidelines for the Space',
+  })
   @IsOptional()
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
-  when?: string;
+  guidelines?: CreateCommunityGuidelinesInput;
 }

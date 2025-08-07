@@ -6,23 +6,41 @@ import { CreateCalloutContributionDefaultsInput } from './dto';
 import { UpdateCalloutContributionDefaultsInput } from './dto';
 import { ICalloutContributionDefaults } from './callout.contribution.defaults.interface';
 import { CalloutContributionDefaults } from './callout.contribution.defaults.entity';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 
 @Injectable()
 export class CalloutContributionDefaultsService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    private profileDocumentsService: ProfileDocumentsService,
     @InjectRepository(CalloutContributionDefaults)
     private calloutContributionDefaultsRepository: Repository<CalloutContributionDefaults>
   ) {}
 
-  public createCalloutContributionDefaults(
-    calloutContributionDefaultsData?: CreateCalloutContributionDefaultsInput
-  ): ICalloutContributionDefaults {
+  public async createCalloutContributionDefaults(
+    calloutContributionDefaultsData:
+      | CreateCalloutContributionDefaultsInput
+      | undefined,
+    storageBucket: IStorageBucket | undefined
+  ): Promise<ICalloutContributionDefaults> {
     const calloutContributionDefaults = new CalloutContributionDefaults();
     if (calloutContributionDefaultsData) {
-      calloutContributionDefaults.postDescription =
-        calloutContributionDefaultsData.postDescription;
+      calloutContributionDefaults.defaultDisplayName =
+        calloutContributionDefaultsData.defaultDisplayName;
+
+      // Reupload documents in markdown if the storage bucket is provided
+      if (storageBucket) {
+        calloutContributionDefaults.postDescription =
+          await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+            calloutContributionDefaultsData.postDescription ?? '',
+            storageBucket
+          );
+      } else {
+        calloutContributionDefaults.postDescription =
+          calloutContributionDefaultsData.postDescription;
+      }
 
       calloutContributionDefaults.whiteboardContent =
         calloutContributionDefaultsData.whiteboardContent;
@@ -35,6 +53,11 @@ export class CalloutContributionDefaultsService {
     calloutContributionDefaults: ICalloutContributionDefaults,
     calloutContributionDefaultsData: UpdateCalloutContributionDefaultsInput
   ): ICalloutContributionDefaults {
+    if (calloutContributionDefaultsData.defaultDisplayName) {
+      calloutContributionDefaults.defaultDisplayName =
+        calloutContributionDefaultsData.defaultDisplayName;
+    }
+
     if (calloutContributionDefaultsData.postDescription) {
       calloutContributionDefaults.postDescription =
         calloutContributionDefaultsData.postDescription;

@@ -3,8 +3,6 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockWinstonProvider } from '@test/mocks';
 import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 import { testData } from '@test/utils/test-data';
-import { IUser } from '@domain/community/user/user.interface';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
@@ -112,10 +110,9 @@ describe('RoomServiceMentions', () => {
       ],
     ],
   ])('%s -> %j', async (text, expected) => {
-    const user = testData.user as IUser;
-    const organization = testData.organization as any;
-    const virtualContributor =
-      testData.virtualContributor as IVirtualContributor;
+    const user = testData.user;
+    const organization = testData.organization;
+    const virtualContributor = testData.virtualContributor;
     jest
       .spyOn(userLookupService, 'getUserByNameIdOrFail')
       .mockResolvedValue(user);

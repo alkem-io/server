@@ -11,11 +11,11 @@ import { DeleteTemplateInput } from './dto/template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { UpdateTemplateFromCollaborationInput } from './dto/template.dto.update.from.collaboration';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
 import { TemplateAuthorizationService } from './template.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -23,7 +23,7 @@ export class TemplateResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private collaborationService: CollaborationService,
+    private spaceLookupService: SpaceLookupService,
     private templateAuthorizationService: TemplateAuthorizationService,
     private templateService: TemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -54,23 +54,48 @@ export class TemplateResolverMutations {
 
   @Mutation(() => ITemplate, {
     description:
-      'Updates the specified Collaboration Template using the provided Collaboration.',
+      'Updates the specified Space Content Template using the provided Space.',
   })
-  async updateTemplateFromCollaboration(
+  async updateTemplateFromSpace(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData')
-    updateData: UpdateTemplateFromCollaborationInput
+    updateData: UpdateTemplateFromSpaceInput
   ): Promise<ITemplate> {
     const template = await this.templateService.getTemplateOrFail(
       updateData.templateID,
       {
         relations: {
           templatesSet: true,
-          collaboration: {
-            innovationFlow: true,
-            calloutsSet: {
-              callouts: true,
-              tagsetTemplateSet: true,
+          contentSpace: {
+            about: {
+              profile: true,
+            },
+            collaboration: {
+              innovationFlow: {
+                states: true,
+              },
+              calloutsSet: {
+                callouts: true,
+                tagsetTemplateSet: true,
+              },
+            },
+            subspaces: {
+              collaboration: {
+                innovationFlow: true,
+                calloutsSet: {
+                  callouts: true,
+                  tagsetTemplateSet: true,
+                },
+              },
+              subspaces: {
+                collaboration: {
+                  innovationFlow: true,
+                  calloutsSet: {
+                    callouts: true,
+                    tagsetTemplateSet: true,
+                  },
+                },
+              },
             },
           },
         },
@@ -83,22 +108,20 @@ export class TemplateResolverMutations {
       `update template: ${template.id}`
     );
 
-    const sourceCollaboration =
-      await this.collaborationService.getCollaborationOrFail(
-        updateData.collaborationID
-      );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      sourceCollaboration.authorization,
-      AuthorizationPrivilege.READ,
-      `read source collaboration for template: ${sourceCollaboration.id}`
+    const space = await this.spaceLookupService.getSpaceOrFail(
+      updateData.spaceID
     );
-    const templateUpdated =
-      await this.templateService.updateTemplateFromCollaboration(
-        template,
-        updateData,
-        agentInfo.userID
-      );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ,
+      `read source Space for template: ${space.id}`
+    );
+    const templateUpdated = await this.templateService.updateTemplateFromSpace(
+      template,
+      updateData,
+      agentInfo
+    );
 
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(

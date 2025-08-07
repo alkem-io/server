@@ -19,6 +19,7 @@ import { UpdateClassificationSelectTagsetValueInput } from './dto/classification
 import { LogContext } from '@common/enums/logging.context';
 import { UpdateClassificationInput } from './dto/classification.dto.update';
 import { CreateClassificationInput } from './dto/classification.dto.create';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class ClassificationService {
@@ -45,10 +46,17 @@ export class ClassificationService {
         tagsetTemplates
       );
     if (classificationData) {
+      const classificationTagsets = classificationData.tagsets.map(tagset => ({
+        ...tagset,
+        name: Object.keys(TagsetReservedName).includes(tagset.name)
+          ? TagsetReservedName[tagset.name as keyof typeof TagsetReservedName]
+          : tagset.name,
+      }));
+
       // Ensure any supplied values in tags are used
       tagsetsData = this.tagsetService.updatedTagsetInputUsingProvidedData(
         tagsetsData,
-        classificationData.tagsets
+        classificationTagsets
       );
     }
     classification.tagsets = tagsetsData.map(tagsetData =>
@@ -99,7 +107,7 @@ export class ClassificationService {
     tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
     if (!classification.tagsets) {
-      classification.tagsets = await this.getTagsets(classification);
+      classification.tagsets = await this.getTagsets(classification.id);
     }
 
     const tagset = this.tagsetService.createTagsetWithName(
@@ -126,9 +134,9 @@ export class ClassificationService {
     return classification;
   }
 
-  async getTagsets(classificationInput: IClassification): Promise<ITagset[]> {
+  async getTagsets(classificationID: string): Promise<ITagset[]> {
     const classification = await this.getClassificationOrFail(
-      classificationInput.id,
+      classificationID,
       {
         relations: { tagsets: true },
       }
@@ -146,7 +154,7 @@ export class ClassificationService {
     classificationID: string,
     tagsetName: string
   ): Promise<ITagset> {
-    const tagsets = await this.getTagsets({ id: classificationID });
+    const tagsets = await this.getTagsets(classificationID);
     return this.tagsetService.getTagsetByNameOrFail(tagsets, tagsetName);
   }
 
@@ -155,9 +163,15 @@ export class ClassificationService {
     updateData: UpdateClassificationInput
   ): IClassification {
     if (updateData.tagsets) {
+      const classificationTagsets = updateData.tagsets.map(tagset => ({
+        ...tagset,
+        name: Object.keys(TagsetReservedName).includes(tagset.name ?? '')
+          ? TagsetReservedName[tagset.name as keyof typeof TagsetReservedName]
+          : tagset.name,
+      }));
       classification.tagsets = this.tagsetService.updateTagsets(
         classification.tagsets,
-        updateData.tagsets
+        classificationTagsets
       );
     }
     return classification;

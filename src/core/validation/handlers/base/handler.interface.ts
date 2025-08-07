@@ -1,8 +1,7 @@
 import { ValidationError } from 'class-validator';
 
-/* eslint-disable @typescript-eslint/ban-types */
 export interface Handler {
   setNext(handler: Handler): Handler;
-
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   handle(value: any, metatype: Function): Promise<ValidationError[]>;
 }

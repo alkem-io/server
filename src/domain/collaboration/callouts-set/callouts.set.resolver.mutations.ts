@@ -101,7 +101,7 @@ export class CalloutsSetResolverMutations {
     await this.authorizationPolicyService.saveAll(authorizations);
 
     if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
         if (calloutData.sendNotification) {
           const notificationInput: NotificationInputCalloutPublished = {
             triggeredBy: agentInfo.userID,

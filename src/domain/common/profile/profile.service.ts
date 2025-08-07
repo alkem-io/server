@@ -69,12 +69,12 @@ export class ProfileService {
       storageAggregator: storageAggregator,
     });
     profile.description =
-      await this.profileDocumentsService.reuploadDocumentsInMarkdownProfile(
+      await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
         profile.description ?? '',
         profile.storageBucket
       );
     profile.visuals = [];
-    profile.location = this.locationService.createLocation(
+    profile.location = await this.locationService.createLocation(
       profileData?.location
     );
     await this.createReferencesOnProfile(profileData?.referencesData, profile);
@@ -154,8 +154,8 @@ export class ProfileService {
       );
     }
 
-    if (profileData.location) {
-      this.locationService.updateLocationValues(
+    if (profileData.location && profile.location) {
+      profile.location = await this.locationService.updateLocation(
         profile.location,
         profileData.location
       );
@@ -251,7 +251,7 @@ export class ProfileService {
           );
       }
       const providedVisual = visualsData?.find(v => v.name === visualType);
-      if (providedVisual) {
+      if (providedVisual && providedVisual.uri.length > 0) {
         // Only allow external URL if we are creating an Avatar and if it comes from https://eu.ui-avatars.com
         const allowExternalUrl =
           visualType === VisualType.AVATAR &&
@@ -267,7 +267,8 @@ export class ProfileService {
           visual.uri = url;
         } else {
           this.logger.warn(
-            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`
+            `Visual with URL '${providedVisual.uri}' ignored when creating profile ${profile.id}`,
+            LogContext.PROFILE
           );
         }
       }
@@ -276,7 +277,7 @@ export class ProfileService {
     return profile;
   }
 
-  async addTagsetOnProfile(
+  async addOrUpdateTagsetOnProfile(
     profile: IProfile,
     tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
@@ -284,13 +285,26 @@ export class ProfileService {
       profile.tagsets = await this.getTagsets(profile);
     }
 
-    const tagset = this.tagsetService.createTagsetWithName(
-      profile.tagsets,
-      tagsetData
+    const index = profile.tagsets.findIndex(
+      tagset => tagset.name === tagsetData.name
     );
-    profile.tagsets.push(tagset);
 
-    return tagset;
+    if (index !== -1) {
+      const newTags = tagsetData.tags ?? [];
+      profile.tagsets[index].tags = Array.from(
+        new Set([...profile.tagsets[index].tags, ...newTags])
+      );
+
+      return profile.tagsets[index];
+    } else {
+      const tagset = this.tagsetService.createTagsetWithName(
+        profile.tagsets,
+        tagsetData
+      );
+      profile.tagsets.push(tagset);
+
+      return tagset;
+    }
   }
 
   async createReference(

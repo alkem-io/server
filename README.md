@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://alkemio.org/" target="blank"><img src="https://alkemio.org/uploads/logos/alkemio-logo.svg" width="400" alt="Alkemio Logo" /></a>
+  <a href="https://alkemio.org/" target="blank"><img src="https://alkem.io/logo.png" width="400" alt="Alkemio Logo" /></a>
 </p>
 <p align="center"><i>Empowering society. The platform to succeed in working on challenges, together.</i></p>
 
@@ -9,7 +9,7 @@ Welcome to the Alkemio Server! This server is the heart of the Alkemio Platform,
 
 [![Build Status](https://api.travis-ci.com/alkem-io/server.svg?branch=develop)](https://travis-ci.com/github/alkem-io/server)
 [![Coverage Status](https://coveralls.io/repos/github/alkem-io/server/badge.svg?branch=develop)](https://coveralls.io/github/alkem-io/server?branch=develop)
-![Docker Image CI](https://github.com/alkem-io/Server/workflows/Docker%20Image%20CI/badge.svg?branch=develop)
+![Docker Image CI](https://github.com/alkem-io/server/actions/workflows/build-release-docker-hub.yml/badge.svg)
 
 A high level overview of the Design of the Alkemio Server is shown below.
 
@@ -30,7 +30,7 @@ The key takeaway is that the Alkemio server is designed to be integrated, so tha
 - [Developing - How to setup the Server for developing](docs/Developing.md)
 - [Data Management - How data representing the domain model used by Alkemio Platform is managed, including database migrations](docs/DataManagement.md)
 - [Quality Assurance - Details of the test harness around the server and how to execute the test suites](docs/QA.md).
-- [Pushing - How new docker images are published to Dockerhub](docs/Publishing.md)
-- [Database defnitions - Guidelines for creating TypeORM entity definitions](docs/database-defnitions.md)
+- [Pushing - How new docker images are published to Dockerhub](docs/PublishingImages.md)
+- [Database definitions - Guidelines for creating TypeORM entity definitions](docs/database-definitions.md)
 
 For other questions / comments please feel free to reach out via the channels listed in the [Alkemio Repo](http://github.com/alkem-io/alkemio) or via [Alkemio organization](https://alkemio.org).

@@ -158,11 +158,17 @@ export type AlkemioConfig = {
   };
   integrations: {
     geo: {
+      header: string;
       rest_endpoint: string;
       service_endpoint: string;
       cache_entry_ttl: number;
       allowed_calls_to_service: number;
       allowed_calls_to_service_window: number;
+    };
+    geoapify: {
+      enabled: boolean;
+      geocode_rest_endpoint: string;
+      api_key: string;
     };
     elasticsearch: {
       host: string;

@@ -1,18 +1,12 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Organization } from './organization.entity';
 import { OrganizationService } from './organization.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { GraphqlGuard } from '@core/authorization';
+
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IProfile } from '@domain/common/profile';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@common/decorators';
+import { CurrentUser } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -45,7 +39,6 @@ export class OrganizationResolverFields {
     nullable: true,
     description: 'Groups defined on this organization.',
   })
-  @Profiling.api
   async groups(
     @Parent() parent: Organization,
     @CurrentUser() agentInfo: AgentInfo
@@ -77,7 +70,6 @@ export class OrganizationResolverFields {
     nullable: true,
     description: 'Group defined on this organization.',
   })
-  @Profiling.api
   async group(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() parent: Organization,
@@ -157,27 +149,19 @@ export class OrganizationResolverFields {
   })
   async profile(
     @Parent() organization: Organization,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Loader(ProfileLoaderCreator, { parentClassRef: Organization })
+    @Loader(ProfileLoaderCreator, {
+      parentClassRef: Organization,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IProfile>
   ) {
-    const profile = await loader.load(organization.id);
-    // Note: the Organization profile is public.
-    // Check if the user can read the profile entity, not the actual Organization entity
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on Organization: ${profile.displayName}`
-    );
-    return profile;
+    return loader.load(organization.id);
   }
 
   @ResolveField('verification', () => IOrganizationVerification, {
     nullable: false,
     description: 'The verification handler for this organization.',
   })
-  @Profiling.api
   async verification(@Parent() organization: Organization) {
     return await this.organizationService.getVerification(organization);
   }
@@ -194,8 +178,6 @@ export class OrganizationResolverFields {
     return loader.load(organization.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description:
@@ -203,7 +185,9 @@ export class OrganizationResolverFields {
   })
   async storageAggregator(
     @Parent() organization: Organization,
-    @Loader(OrganizationStorageAggregatorLoaderCreator)
+    @Loader(OrganizationStorageAggregatorLoaderCreator, {
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(organization.id);
@@ -213,7 +197,6 @@ export class OrganizationResolverFields {
     nullable: true,
     description: 'Metrics about the activity within this Organization.',
   })
-  @Profiling.api
   async metrics(@Parent() organization: Organization) {
     return await this.organizationService.getMetrics(organization);
   }

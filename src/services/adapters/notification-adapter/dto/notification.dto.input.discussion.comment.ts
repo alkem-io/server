@@ -1,4 +1,4 @@
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { NotificationInputBase } from './notification.dto.input.base';
 import { IRoom } from '@domain/communication/room/room.interface';

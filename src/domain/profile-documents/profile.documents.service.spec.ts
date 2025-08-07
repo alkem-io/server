@@ -24,6 +24,8 @@ const mockAuth = (
   verifiedCredentialRules: [],
   privilegeRules: [],
   id: uniqueId(),
+  createdDate: new Date(),
+  updatedDate: new Date(),
   ...props,
   type,
 });
@@ -34,6 +36,8 @@ const mockStorageBucket = (props?: Partial<IStorageBucket>): IStorageBucket => {
     documents: [],
     allowedMimeTypes: [],
     maxFileSize: 2000,
+    createdDate: new Date(),
+    updatedDate: new Date(),
     ...props,
   };
 };
@@ -54,12 +58,16 @@ const mockDocument = (
       id: 'tagset1',
       name: 'default',
       type: TagsetType.FREEFORM,
+      createdDate: new Date(),
+      updatedDate: new Date(),
       tags: [],
     },
     authorization: mockAuth(AuthorizationPolicyType.DOCUMENT),
     temporaryLocation: false,
     ...props,
     storageBucket,
+    createdDate: new Date(),
+    updatedDate: new Date(),
   };
   if (addToStorageBucket) {
     storageBucket.documents.push(doc);
@@ -255,7 +263,7 @@ describe('ProfileDocumentsService', () => {
           .spyOn(documentService, 'getDocumentsBaseUrlPath')
           .mockReturnValue(ALKEMIO_DOCUMENT_URL);
 
-        const result = await service.reuploadDocumentsInMarkdownProfile(
+        const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
           markdown,
           storageBucketDestination
         );
@@ -291,7 +299,7 @@ describe('ProfileDocumentsService', () => {
           .spyOn(storageBucketService, 'addDocumentToStorageBucketOrFail')
           .mockResolvedValue(doc);
 
-        const result = await service.reuploadDocumentsInMarkdownProfile(
+        const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
           markdown,
           storageBucketDestination
         );

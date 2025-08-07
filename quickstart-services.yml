@@ -126,7 +126,7 @@ services:
 
   synapse:
     container_name: alkemio_dev_synapse
-    image: matrixdotorg/synapse:v1.98.0
+    image: matrixdotorg/synapse:v1.132.0
     depends_on:
       - postgres
     restart: always
@@ -147,7 +147,7 @@ services:
 
   postgres:
     container_name: alkemio_dev_postgres
-    image: postgres:12
+    image: postgres:17.5
     networks:
       - alkemio_dev_net
     environment:
@@ -204,8 +204,8 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.21.1
-    platform: linux/x86_64
+    image: alkemio/notifications:v0.23.3
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -231,6 +231,8 @@ services:
       - WAIT_HOSTS_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
+      - EMAIL_FROM
+      - EMAIL_FROM_NAME
     restart: always
     networks:
       - alkemio_dev_net
@@ -241,8 +243,8 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.4.6
-    platform: linux/x86_64
+    image: alkemio/matrix-adapter:v0.6.1
+    platform: linux/amd64
     depends_on:
       - rabbitmq
     environment:
@@ -293,7 +295,7 @@ services:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
     image: alkemio/whiteboard-collaboration-service:v0.6.0
-    platform: linux/x86_64
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -314,7 +316,7 @@ services:
     container_name: alkemio_dev_file_service
     hostname: file-service
     image: alkemio/file-service:v0.1.2
-    platform: linux/x86_64
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -333,3 +335,24 @@ services:
       - alkemio_dev_net
     ports:
       - 4003
+
+  collaborative-document:
+    container_name: alkemio_dev_collaborative-document
+    hostname: collaborative-document
+    image: svetoslavpetkov23/collaborative-document-service:v0.0.3
+    platform: linux/amd64
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
+      - ENVIRONMENT=dev
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4004

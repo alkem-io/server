@@ -1,7 +1,6 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { LogContext } from '@common/enums/logging.context';
-import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { BaseException } from '@common/exceptions/base.exception';
 import { AlkemioErrorStatus } from '@common/enums';
 import { SearchResultType } from '../../search.result.type';
@@ -10,6 +9,7 @@ import { ISearchResultUser } from './search.result.user';
 import { ISearchResultOrganization } from './search.result.organization';
 import { ISearchResultPost } from './search.result.post';
 import { ISearchResultCallout } from './search.result.callout';
+import { BaseSearchHit } from '@services/api/search/dto/results/base.search.hit';
 
 @InterfaceType('SearchResult', {
   resolveType(searchResult) {
@@ -66,5 +66,5 @@ export abstract class ISearchResult {
   type!: SearchResultType;
   // used to store the result object
   // to not be exposed by the API
-  result!: IBaseAlkemio;
+  result!: BaseSearchHit;
 }

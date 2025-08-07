@@ -5,6 +5,7 @@ export enum UrlPathElement {
   CONTRIBUTE = 'contribute',
   POSTS = 'posts',
   WHITEBOARDS = 'whiteboards',
+  MEMOS = 'memos',
   DISCUSSION = 'discussion',
   CALENDAR = 'calendar',
   KNOWLEDGE_BASE = 'knowledge-base',

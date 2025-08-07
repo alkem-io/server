@@ -12,7 +12,9 @@ import { LogContext } from '@common/enums/logging.context';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { LinkService } from '@domain/collaboration/link/link.service';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { MemoService } from '@domain/common/memo/memo.service';
 import { VisualType } from '@common/enums/visual.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
@@ -22,6 +24,12 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
+import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
+import { ValidationException } from '@common/exceptions';
+import { CreateMemoInput, IMemo } from '@domain/common/memo/types';
+import { ILink } from '../link/link.interface';
 
 @Injectable()
 export class CalloutFramingService {
@@ -29,6 +37,8 @@ export class CalloutFramingService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
+    private linkService: LinkService,
+    private memoService: MemoService,
     private namingService: NamingService,
     private tagsetService: TagsetService,
     @InjectRepository(CalloutFraming)
@@ -47,7 +57,7 @@ export class CalloutFramingService {
       AuthorizationPolicyType.CALLOUT_FRAMING
     );
 
-    const { profile: profileData, whiteboard, tags } = calloutFramingData;
+    const { profile: profileData, tags } = calloutFramingData;
 
     const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
@@ -68,31 +78,121 @@ export class CalloutFramingService {
       storageAggregator
     );
 
-    if (whiteboard) {
-      const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
-      whiteboard.nameID =
-        this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${whiteboard.profile?.displayName ?? 'whiteboard'}`,
-          reservedNameIDs
+    calloutFraming.type = calloutFramingData.type ?? CalloutFramingType.NONE;
+
+    if (calloutFraming.type === CalloutFramingType.WHITEBOARD) {
+      if (calloutFramingData.whiteboard) {
+        await this.createNewWhiteboardInCalloutFraming(
+          calloutFraming,
+          calloutFramingData.whiteboard,
+          storageAggregator,
+          userID
         );
-      calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
-        whiteboard,
-        storageAggregator,
-        userID
-      );
-      await this.profileService.addVisualsOnProfile(
-        calloutFraming.whiteboard.profile,
-        whiteboard.profile?.visuals,
-        [VisualType.BANNER]
-      );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type WHITEBOARD requires whiteboard data.',
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
+    if (calloutFraming.type === CalloutFramingType.LINK) {
+      if (calloutFramingData.link) {
+        await this.createNewLinkInCalloutFraming(
+          calloutFraming,
+          calloutFramingData.link,
+          storageAggregator
+        );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type LINK requires link data.',
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
+    if (calloutFraming.type === CalloutFramingType.MEMO) {
+      if (calloutFramingData.memo) {
+        await this.createNewMemoInCalloutFraming(
+          calloutFraming,
+          calloutFramingData.memo,
+          storageAggregator,
+          userID
+        );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type MEMO requires memo data.',
+          LogContext.COLLABORATION
+        );
+      }
     }
 
     return calloutFraming;
   }
 
+  private async createNewWhiteboardInCalloutFraming(
+    calloutFraming: ICalloutFraming,
+    whiteboardData: CreateWhiteboardInput,
+    storageAggregator: IStorageAggregator,
+    userID?: string
+  ) {
+    const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
+    whiteboardData.nameID =
+      this.namingService.createNameIdAvoidingReservedNameIDs(
+        `${whiteboardData.profile?.displayName ?? 'whiteboard'}`,
+        reservedNameIDs
+      );
+    calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
+      whiteboardData,
+      storageAggregator,
+      userID
+    );
+    await this.profileService.addVisualsOnProfile(
+      calloutFraming.whiteboard.profile,
+      whiteboardData.profile?.visuals,
+      [VisualType.BANNER]
+    );
+  }
+
+  private async createNewMemoInCalloutFraming(
+    calloutFraming: ICalloutFraming,
+    memoData: CreateMemoInput,
+    storageAggregator: IStorageAggregator,
+    userID?: string
+  ) {
+    const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
+    memoData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
+      `${memoData.profile?.displayName ?? 'memo'}`,
+      reservedNameIDs
+    );
+    calloutFraming.memo = await this.memoService.createMemo(
+      memoData,
+      storageAggregator,
+      userID
+    );
+    await this.profileService.addVisualsOnProfile(
+      calloutFraming.memo.profile,
+      memoData.profile?.visuals,
+      [VisualType.BANNER]
+    );
+  }
+
+  private async createNewLinkInCalloutFraming(
+    calloutFraming: ICalloutFraming,
+    linkData: CreateLinkInput,
+    storageAggregator: IStorageAggregator
+  ) {
+    calloutFraming.link = await this.linkService.createLink(
+      linkData,
+      storageAggregator
+    );
+  }
+
   public async updateCalloutFraming(
     calloutFraming: ICalloutFraming,
-    calloutFramingData: UpdateCalloutFramingInput
+    calloutFramingData: UpdateCalloutFramingInput,
+    storageAggregator: IStorageAggregator,
+    userID?: string
   ): Promise<ICalloutFraming> {
     if (calloutFramingData.profile) {
       calloutFraming.profile = await this.profileService.updateProfile(
@@ -100,13 +200,140 @@ export class CalloutFramingService {
         calloutFramingData.profile
       );
     }
+    if (calloutFramingData.type) {
+      calloutFraming.type = calloutFramingData.type;
+    }
 
-    if (calloutFraming.whiteboard && calloutFramingData.whiteboardContent) {
-      calloutFraming.whiteboard =
-        await this.whiteboardService.updateWhiteboardContent(
-          calloutFraming.whiteboard.id,
-          calloutFramingData.whiteboardContent
-        );
+    switch (calloutFraming.type) {
+      case CalloutFramingType.WHITEBOARD: {
+        // If there was a memo before, we delete it
+        if (calloutFraming.memo) {
+          await this.memoService.deleteMemo(calloutFraming.memo.id);
+          calloutFraming.memo = undefined;
+        }
+
+        // If there was a link before, we delete it
+        if (calloutFraming.link) {
+          await this.linkService.deleteLink(calloutFraming.link.id);
+          calloutFraming.link = undefined;
+        }
+
+        // if there is no content coming with the mutation, we do nothing with the whiteboard
+        if (!calloutFramingData.whiteboardContent) {
+          return calloutFraming;
+        }
+        // if there is content and a whiteboard, we update it
+        if (calloutFraming.whiteboard) {
+          calloutFraming.whiteboard =
+            await this.whiteboardService.updateWhiteboardContent(
+              calloutFraming.whiteboard.id,
+              calloutFramingData.whiteboardContent
+            );
+        } else {
+          // if there is content and no whiteboard, we create a new one
+          await this.createNewWhiteboardInCalloutFraming(
+            calloutFraming,
+            {
+              profile: {
+                displayName: 'Callout Framing Whiteboard',
+              },
+              content: calloutFramingData.whiteboardContent,
+            },
+            storageAggregator,
+            userID
+          );
+        }
+        break;
+      }
+      case CalloutFramingType.MEMO: {
+        // If there was a whiteboard before, we delete it
+        if (calloutFraming.whiteboard) {
+          await this.whiteboardService.deleteWhiteboard(
+            calloutFraming.whiteboard.id
+          );
+          calloutFraming.whiteboard = undefined;
+        }
+
+        // If there was a link before, we delete it
+        if (calloutFraming.link) {
+          await this.linkService.deleteLink(calloutFraming.link.id);
+          calloutFraming.link = undefined;
+        }
+
+        // if there is no content coming with the mutation, we do nothing with the whiteboard
+        if (!calloutFramingData.memoContent) {
+          return calloutFraming;
+        }
+
+        // if there is content and a Memo, we update it
+        if (calloutFraming.memo) {
+          calloutFraming.memo = await this.memoService.updateMemoContent(
+            calloutFraming.memo.id,
+            calloutFramingData.memoContent
+          );
+        } else {
+          // if there is content and no Memo, we create a new one
+          await this.createNewMemoInCalloutFraming(
+            calloutFraming,
+            {
+              profile: {
+                displayName: 'Callout Framing Memo',
+              },
+              // content: calloutFramingData.memoContent,
+            },
+            storageAggregator,
+            userID
+          );
+        }
+        break;
+      }
+      case CalloutFramingType.LINK: {
+        // If there was a whiteboard before, we delete it
+        if (calloutFraming.whiteboard) {
+          await this.whiteboardService.deleteWhiteboard(
+            calloutFraming.whiteboard.id
+          );
+          calloutFraming.whiteboard = undefined;
+        }
+
+        // If there was a memo before, we delete it
+        if (calloutFraming.memo) {
+          await this.memoService.deleteMemo(calloutFraming.memo.id);
+          calloutFraming.memo = undefined;
+        }
+
+        // Handle LINK type updates
+        if (calloutFraming.link && calloutFramingData.link) {
+          calloutFraming.link = await this.linkService.updateLink(
+            calloutFramingData.link
+          );
+        } else if (calloutFramingData.link) {
+          calloutFraming.link = await this.linkService.createLink(
+            calloutFramingData.link as CreateLinkInput,
+            storageAggregator
+          );
+        }
+        break;
+      }
+      case CalloutFramingType.NONE:
+      default: {
+        // if the type is NONE we remove any existing framing content
+        if (calloutFraming.whiteboard) {
+          await this.whiteboardService.deleteWhiteboard(
+            calloutFraming.whiteboard.id
+          );
+          calloutFraming.whiteboard = undefined;
+        }
+        if (calloutFraming.memo) {
+          await this.memoService.deleteMemo(calloutFraming.memo.id);
+          calloutFraming.memo = undefined;
+        }
+        if (calloutFraming.link) {
+          await this.linkService.deleteLink(calloutFraming.link.id);
+          calloutFraming.link = undefined;
+        }
+        break;
+      }
     }
 
     return calloutFraming;
@@ -120,6 +347,8 @@ export class CalloutFramingService {
         relations: {
           profile: true,
           whiteboard: true,
+          link: true,
+          memo: true,
         },
       }
     );
@@ -131,6 +360,14 @@ export class CalloutFramingService {
       await this.whiteboardService.deleteWhiteboard(
         calloutFraming.whiteboard.id
       );
+    }
+
+    if (calloutFraming.link) {
+      await this.linkService.deleteLink(calloutFraming.link.id);
+    }
+
+    if (calloutFraming.memo) {
+      await this.memoService.deleteMemo(calloutFraming.memo.id);
     }
 
     if (calloutFraming.authorization) {
@@ -201,5 +438,39 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.whiteboard;
+  }
+
+  public async getLink(
+    calloutFramingInput: ICalloutFraming,
+    relations?: FindOptionsRelations<ICalloutFraming>
+  ): Promise<ILink | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { link: true, ...relations },
+      }
+    );
+    if (!calloutFraming.link) {
+      return null;
+    }
+
+    return calloutFraming.link;
+  }
+
+  public async getMemo(
+    calloutFramingInput: ICalloutFraming,
+    relations?: FindOptionsRelations<ICalloutFraming>
+  ): Promise<IMemo | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { memo: true, ...relations },
+      }
+    );
+    if (!calloutFraming.memo) {
+      return null;
+    }
+
+    return calloutFraming.memo;
   }
 }

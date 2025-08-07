@@ -101,9 +101,10 @@ export class AccountResolverMutations {
     );
     space = await this.spaceService.save(space);
 
-    const spaceAuthorizations =
+    const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
-    await this.authorizationPolicyService.saveAll(spaceAuthorizations);
+
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
       space.id

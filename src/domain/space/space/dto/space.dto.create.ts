@@ -4,10 +4,10 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateCollaborationOnSpaceInput } from './space.dto.create.collaboration';
 import { SpaceLevel } from '@common/enums/space.level';
-import { ITemplatesManager } from '@domain/template/templates-manager';
 import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { CreateSpaceSettingsInput } from '@domain/space/space.settings';
 
 @InputType()
 export class CreateSpaceInput {
@@ -27,17 +27,21 @@ export class CreateSpaceInput {
   @Type(() => CreateCollaborationOnSpaceInput)
   collaborationData!: CreateCollaborationOnSpaceInput;
 
+  @Field(() => CreateSpaceSettingsInput, { nullable: true })
+  @ValidateNested()
+  @Type(() => CreateSpaceSettingsInput)
+  settings?: CreateSpaceSettingsInput;
+
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;
-  // For accessing the default templates of the parent space
-  templatesManagerParent?: ITemplatesManager;
 
   level!: SpaceLevel;
+  levelZeroSpaceID!: string;
 
-  @Field(() => TemplateDefaultType, {
+  @Field(() => UUID, {
     nullable: true,
-    description: 'Pick up a different platform template.',
+    description: 'The Template to use for instantiating the Collaboration.',
   })
   @IsOptional()
-  platformTemplate?: TemplateDefaultType;
+  spaceTemplateID?: string;
 }

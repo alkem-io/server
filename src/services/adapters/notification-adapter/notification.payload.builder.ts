@@ -54,6 +54,7 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AlkemioConfig } from '@src/types';
+import { inferCalloutType } from '@domain/collaboration/callout/deprecated/callout.type.inference';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -252,7 +253,7 @@ export class NotificationPayloadBuilder {
         displayName: callout.framing.profile.displayName,
         description: callout.framing.profile.description ?? '',
         nameID: callout.nameID,
-        type: callout.type,
+        type: inferCalloutType(callout), // TODO: CalloutType is deprecated, remove it when possible
         url: calloutURL,
       },
       ...spacePayload,
@@ -438,7 +439,8 @@ export class NotificationPayloadBuilder {
 
   async buildCommunicationUpdateSentNotificationPayload(
     updateCreatorId: string,
-    updates: IRoom
+    updates: IRoom,
+    lastMessage?: IMessage
   ): Promise<CommunicationUpdateEventPayload> {
     const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
@@ -449,14 +451,15 @@ export class NotificationPayloadBuilder {
       community,
       updateCreatorId
     );
-    const payload: CommunicationUpdateEventPayload = {
+    const payload = {
       update: {
         id: updates.id,
         createdBy: updateCreatorId,
         url: 'not used',
       },
+      message: lastMessage?.message,
       ...spacePayload,
-    };
+    } as CommunicationUpdateEventPayload;
 
     return payload;
   }

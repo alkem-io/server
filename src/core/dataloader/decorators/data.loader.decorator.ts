@@ -3,11 +3,14 @@ import { GraphQLResolveInfo } from 'graphql/type/definition';
 import { createParamDecorator, ExecutionContext, Type } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorInitOptions,
+} from '../creators/base';
 
 export function Loader<TParent, TReturn>(
   creatorRef: Type<DataLoaderCreator<TReturn>>,
-  options: DataLoaderCreatorOptions<TReturn, TParent> = {}
+  options: DataLoaderCreatorInitOptions<TReturn, TParent> = {}
 ): ParameterDecorator {
   return createParamDecorator(
     (

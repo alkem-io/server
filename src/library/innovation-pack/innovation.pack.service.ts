@@ -85,10 +85,13 @@ export class InnovationPackService {
     innovationPack.listedInStore = true;
     innovationPack.searchVisibility = SearchVisibility.ACCOUNT;
 
-    await this.profileService.addTagsetOnProfile(innovationPack.profile, {
-      name: TagsetReservedName.DEFAULT,
-      tags: innovationPackData.tags ?? [],
-    });
+    await this.profileService.addOrUpdateTagsetOnProfile(
+      innovationPack.profile,
+      {
+        name: TagsetReservedName.DEFAULT,
+        tags: innovationPackData.tags ?? [],
+      }
+    );
 
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet();

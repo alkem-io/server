@@ -12,7 +12,6 @@ import { SpaceService } from '@domain/space/space/space.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceLevel } from '@common/enums/space.level';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 import { PlatformService } from '@platform/platform/platform.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -27,6 +26,9 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
+import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
+import { InputCreatorService } from '../input-creator/input.creator.service';
 
 export class ConversionService {
   constructor(
@@ -36,6 +38,7 @@ export class ConversionService {
     private platformService: PlatformService,
     private templateService: TemplateService,
     private templatesManagerService: TemplatesManagerService,
+    private inputCreatorService: InputCreatorService,
     private innovationFlowService: InnovationFlowService,
     private accountHostService: AccountHostService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -53,7 +56,9 @@ export class ConversionService {
             roleSet: true,
           },
           collaboration: {
-            innovationFlow: true,
+            innovationFlow: {
+              states: true,
+            },
           },
           storageAggregator: true,
           subspaces: true,
@@ -66,6 +71,7 @@ export class ConversionService {
       !spaceL1.community.roleSet ||
       !spaceL1.collaboration ||
       !spaceL1.collaboration.innovationFlow ||
+      !spaceL1.collaboration.innovationFlow.states ||
       !spaceL1.storageAggregator ||
       !spaceL1.subspaces ||
       !spaceL1.agent
@@ -143,10 +149,14 @@ export class ConversionService {
 
     // reset to default Space L0 innovation flow
     const resetInnovationFlowStates = await this.getInnovationFlowForSpaceL0();
+    const newStatesInput: CreateInnovationFlowStateInput[] =
+      this.inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+        resetInnovationFlowStates
+      );
     spaceL1.collaboration.innovationFlow =
       await this.innovationFlowService.updateInnovationFlowStates(
         spaceL1.collaboration.innovationFlow,
-        resetInnovationFlowStates
+        newStatesInput
       );
 
     spaceL1 = await this.spaceService.save(spaceL1);
@@ -238,22 +248,27 @@ export class ConversionService {
     const templateWithInnovationFlow =
       await this.templateService.getTemplateOrFail(levelZeroTemplate.id, {
         relations: {
-          collaboration: {
-            innovationFlow: true,
+          contentSpace: {
+            collaboration: {
+              innovationFlow: {
+                states: true,
+              },
+            },
           },
         },
       });
 
     if (
-      !templateWithInnovationFlow.collaboration ||
-      !templateWithInnovationFlow.collaboration.innovationFlow
+      !templateWithInnovationFlow.contentSpace?.collaboration ||
+      !templateWithInnovationFlow.contentSpace.collaboration.innovationFlow
     ) {
       throw new RelationshipNotFoundException(
         `Unable to retrieve Space L0 innovation flow template: ${levelZeroTemplate.id} is missing a relation`,
         LogContext.CONVERSION
       );
     }
-    return templateWithInnovationFlow.collaboration.innovationFlow.states;
+    return templateWithInnovationFlow.contentSpace.collaboration.innovationFlow
+      .states;
   }
 
   async convertSpaceL2ToSpaceL1OrFail(

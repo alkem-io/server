@@ -17,7 +17,6 @@ import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { Space } from '@domain/space/space/space.entity';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
-import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { AiPersonaServiceModule } from '@services/ai-server/ai-persona-service/ai.persona.service.module';
@@ -25,12 +24,16 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
 import { LicensePlanModule } from '@platform/licensing/credential-based/license-plan/license.plan.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
+import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
+import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 
 @Module({
   imports: [
     AiServerModule,
     AiPersonaServiceModule,
     AgentModule,
+    AuthenticationAgentInfoModule,
     AuthorizationPolicyModule,
     LicenseModule,
     ContributorModule,
@@ -50,6 +53,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
     SearchIngestModule,
     TemplatesSetModule,
     TemplatesManagerModule,
+    PlatformTemplatesModule,
     TemplateDefaultModule,
     LicensingFrameworkModule,
     LicensePlanModule,

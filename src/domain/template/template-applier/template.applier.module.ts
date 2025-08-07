@@ -6,6 +6,9 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
+import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 
 @Module({
   imports: [
@@ -14,6 +17,9 @@ import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.s
     TemplateModule,
     CollaborationModule,
     CalloutsSetModule,
+    StorageAggregatorResolverModule,
+    InnovationFlowModule,
+    InputCreatorModule,
   ],
   providers: [TemplateApplierService, TemplateApplierResolverMutations],
   exports: [],

@@ -202,7 +202,8 @@ export class TagsetService {
   public async updateTagsetsSelectedValue(
     tagsets: ITagset[],
     allowedValues: string[],
-    newDefaultValue: string
+    newDefaultValue: string,
+    valueRenamed?: { old: string; new: string }
   ): Promise<void> {
     // Finally update
     const isDefaultValueAllowed = allowedValues.some(
@@ -220,6 +221,10 @@ export class TagsetService {
         allowedValue => tagsetSelectedValue === allowedValue
       );
       if (isNameAllowed) {
+        continue;
+      }
+      if (valueRenamed && tagsetSelectedValue === valueRenamed.old) {
+        tagset.tags = [valueRenamed.new];
         continue;
       }
       tagset.tags = [newDefaultValue];

@@ -1,5 +1,4 @@
 import { LogContext } from '@common/enums';
-import { CalloutType } from '@common/enums/callout.type';
 import {
   EntityNotFoundException,
   NotSupportedException,
@@ -7,12 +6,12 @@ import {
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Callout } from '../callout';
+import { Callout } from '../callout/callout.entity';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @Injectable()
 export class CalloutContributionMoveService {
@@ -22,7 +21,6 @@ export class CalloutContributionMoveService {
     @InjectRepository(CalloutContribution)
     private calloutContributionRepository: Repository<CalloutContribution>,
     private calloutContributionService: CalloutContributionService,
-    private urlGeneratorService: UrlGeneratorService,
     private urlGeneratorCacheService: UrlGeneratorCacheService
   ) {}
 
@@ -50,7 +48,9 @@ export class CalloutContributionMoveService {
     const sourceCallout = contribution.callout;
     const targetCallout = await this.calloutRepository.findOne({
       where: { id: calloutID },
-      relations: { calloutsSet: true },
+      relations: {
+        calloutsSet: true,
+      },
     });
 
     if (!targetCallout) {
@@ -62,28 +62,34 @@ export class CalloutContributionMoveService {
 
     if (
       contribution.post &&
-      targetCallout.type !== CalloutType.POST_COLLECTION
+      !targetCallout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.POST
+      )
     ) {
       throw new NotSupportedException(
-        'A Post can be moved to a callout of type POST_COLLECTION only.',
+        'The destination callout does not allow contributions of type POST.',
         LogContext.COLLABORATION
       );
     }
     if (
       contribution.whiteboard &&
-      targetCallout.type !== CalloutType.WHITEBOARD_COLLECTION
+      !targetCallout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.WHITEBOARD
+      )
     ) {
       throw new NotSupportedException(
-        'A Whiteboard can be moved to a callout of type WHITEBOARD_COLLECTION only.',
+        'The destination callout does not allow contributions of type WHITEBOARD.',
         LogContext.COLLABORATION
       );
     }
     if (
       contribution.link &&
-      targetCallout.type !== CalloutType.LINK_COLLECTION
+      !targetCallout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.LINK
+      )
     ) {
       throw new NotSupportedException(
-        'A Link can be moved to a callout of type LINK_COLLECTION only.',
+        'The destination callout does not allow contributions of type LINK.',
         LogContext.COLLABORATION
       );
     }

@@ -4,6 +4,7 @@ export * from './authentication.exception';
 export * from './entity.not.found.exception';
 export * from './entity.not.initialized.exception';
 export * from './forbidden.exception';
+export * from './forbidden.authorization.policy.exception';
 export * from './group.not.initialized.exception';
 export * from './not.supported.exception';
 export * from './relationship.not.found.exception';

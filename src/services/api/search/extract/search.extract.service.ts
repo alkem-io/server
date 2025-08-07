@@ -4,9 +4,8 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
-import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { LogContext } from '@common/enums';
-import { ISearchResult } from '../dto/results';
+import { ISearchResult, BaseSearchHit } from '../dto/results';
 import { SearchInput } from '../dto/inputs';
 import { buildSearchQuery } from './build.search.query';
 import { SearchResultType } from '../search.result.type';
@@ -133,9 +132,8 @@ export class SearchExtractService {
     });
 
     if (!client) {
-      this.logger.error(
+      this.logger.verbose?.(
         'Elasticsearch client not initialized',
-        undefined,
         LogContext.SEARCH_EXTRACT
       );
       return;
@@ -234,7 +232,7 @@ export class SearchExtractService {
       filters?: SearchFilterInput[];
       sizeMultiplier: number;
     }
-  ): Promise<MsearchResponse<IBaseAlkemio>> {
+  ): Promise<MsearchResponse<BaseSearchHit>> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
@@ -265,17 +263,17 @@ export class SearchExtractService {
       }
     );
 
-    return this.client.msearch<IBaseAlkemio>({
+    return this.client.msearch<BaseSearchHit>({
       searches: searchRequests,
       // other msearch config goes here
     });
   }
 
   private processMultiSearchResponses(
-    responses: MsearchResponseItem<IBaseAlkemio>[]
+    responses: MsearchResponseItem<BaseSearchHit>[]
   ): ISearchResult[] {
     const results = responses.flatMap(
-      (response: MsearchMultiSearchItem<IBaseAlkemio> | ErrorResponseBase) => {
+      (response: MsearchMultiSearchItem<BaseSearchHit> | ErrorResponseBase) => {
         if (isElasticError(response)) {
           this.processMultiSearchError(response);
           return undefined;
@@ -289,7 +287,7 @@ export class SearchExtractService {
   }
 
   private processMultiSearchItem(
-    item: MsearchMultiSearchItem
+    item: MsearchMultiSearchItem<BaseSearchHit>
   ): ISearchResult[] {
     return item.hits.hits.map<ISearchResult>(hit => {
       const entityId = hit.fields?.id?.[0];
@@ -317,7 +315,9 @@ export class SearchExtractService {
         score: hit._score ?? -1,
         type,
         terms: [], // todo - https://github.com/alkem-io/server/issues/3702
-        result: { id: entityId ?? 'N/A' },
+        result: {
+          id: entityId ?? 'N/A',
+        },
       };
     });
   }

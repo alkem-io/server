@@ -25,7 +25,6 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     UserGroupModule,
     RoleSetModule,
     CommunicationModule,
-    AgentModule,
     StorageAggregatorResolverModule,
     VirtualContributorModule,
     TypeOrmModule.forFeature([Community]),

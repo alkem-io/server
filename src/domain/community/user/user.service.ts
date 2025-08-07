@@ -44,7 +44,7 @@ import { validateEmail } from '@common/utils';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { userDefaults } from './user.defaults';
+import { contributorDefaults } from '../contributor/contributor.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -161,11 +161,11 @@ export class UserService {
       user.storageAggregator
     );
 
-    await this.profileService.addTagsetOnProfile(user.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
       name: TagsetReservedName.SKILLS,
       tags: [],
     });
-    await this.profileService.addTagsetOnProfile(user.profile, {
+    await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
@@ -274,7 +274,7 @@ export class UserService {
       result.referencesData = [];
     }
     // Get the template to populate with
-    const referenceTemplates = userDefaults.references;
+    const referenceTemplates = contributorDefaults.references;
     if (referenceTemplates) {
       for (const referenceTemplate of referenceTemplates) {
         const existingRef = result.referencesData?.find(

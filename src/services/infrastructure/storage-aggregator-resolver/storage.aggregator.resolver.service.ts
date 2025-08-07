@@ -27,6 +27,7 @@ import { TemplatesManager } from '@domain/template/templates-manager';
 import { Template } from '@domain/template/template/template.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
+import { TemplatesSet } from '@domain/template/templates-set';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -353,8 +354,10 @@ export class StorageAggregatorResolverService {
     // If not found on Space, try with Collaboration templates
     const template = await this.entityManager.findOne(Template, {
       where: {
-        collaboration: {
-          id: collaborationID,
+        contentSpace: {
+          collaboration: {
+            id: collaborationID,
+          },
         },
       },
       relations: {
@@ -463,11 +466,32 @@ export class StorageAggregatorResolverService {
       knowledgeBase?.virtualContributor?.account?.storageAggregator;
 
     if (!storageAggregator) {
+      // Try to find the callout in a callout template:
+      return this.getStorageAggregatorIdForCalloutTemplate(calloutId);
+    }
+    return storageAggregator.id;
+  }
+
+  private async getStorageAggregatorIdForCalloutTemplate(
+    calloutId: string
+  ): Promise<string> {
+    const templatesSet = await this.entityManager.findOne(TemplatesSet, {
+      where: {
+        templates: {
+          callout: {
+            id: calloutId,
+          },
+        },
+      },
+      select: { id: true },
+    });
+    if (!templatesSet) {
       throw new EntityNotFoundException(
         `Unable to retrieve storage aggregator for calloutID: ${calloutId} `,
         LogContext.STORAGE_AGGREGATOR
       );
     }
-    return storageAggregator.id;
+    // TODO: probably this file needs a refactor. I don't understand why we have some getSAIdFor... and some direct getSAFor
+    return (await this.getStorageAggregatorForTemplatesSet(templatesSet.id)).id;
   }
 }
