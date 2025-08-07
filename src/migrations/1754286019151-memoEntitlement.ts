@@ -4,9 +4,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class MemoEntitlement1754286019151 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Rename + migrate type of credential rules str to be json on licence_policy
-    // await queryRunner.query(
-    //   'ALTER TABLE `license_policy` CHANGE `credentialRulesStr` `credentialRules` json NOT NULL'
-    // );
+    await queryRunner.query(
+      'ALTER TABLE `license_policy` CHANGE `credentialRulesStr` `credentialRules` json NOT NULL'
+    );
 
     // a) add an entitlement to all Collaboration + Space Licenses for Memo entitlement
     // get all licenses with type Collaboration or Space
@@ -27,7 +27,7 @@ export class MemoEntitlement1754286019151 implements MigrationInterface {
       if (!memoEntitlement) {
         // create a new Memo entitlement
         await queryRunner.query(
-          `INSERT INTO license_entitlement (id, version, type, dataType, \`limit\`, enabled, licenseId) VALUES (?, ?, 'Memo', 'flag', ?, ?, ?)`,
+          `INSERT INTO license_entitlement (id, version, type, dataType, \`limit\`, enabled, licenseId) VALUES (?, ?, 'space-flag-memo-multi-user', 'flag', ?, ?, ?)`,
           [randomUUID(), 1, 1, 1, license.id]
         );
       }
