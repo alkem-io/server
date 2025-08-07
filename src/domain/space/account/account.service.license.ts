@@ -15,6 +15,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceLicenseService } from '../space/space.service.license';
 import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
 import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
 import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 
@@ -45,7 +46,8 @@ export class AccountLicenseService {
       !account.spaces ||
       !account.agent ||
       !account.license ||
-      !account.license.entitlements
+      !account.license.entitlements ||
+      !account.baselineLicensePlan
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of license reset: ${account.id} `,
@@ -56,6 +58,12 @@ export class AccountLicenseService {
 
     // Ensure always applying from a clean state
     account.license = this.licenseService.reset(account.license);
+
+    // Apply baseline license plan entitlements
+    account.license = await this.applyBaselineLicensePlan(
+      account.license,
+      account
+    );
 
     account.license = await this.extendLicensePolicy(
       account.license,
@@ -179,5 +187,74 @@ export class AccountLicenseService {
       entitlement.limit = grantedEntitlement.limit;
       entitlement.enabled = true;
     }
+  }
+
+  private async applyBaselineLicensePlan(
+    license: ILicense | undefined,
+    account: IAccount
+  ): Promise<ILicense> {
+    if (!license || !license.entitlements) {
+      throw new EntityNotInitializedException(
+        `License with entitlements not found for account ${account.id}`,
+        LogContext.LICENSE
+      );
+    }
+
+    const baselinePlan = account.baselineLicensePlan;
+
+    // Apply baseline entitlements to the license only if they are higher than current values
+    for (const entitlement of license.entitlements) {
+      let baselineValue: number;
+      let entitlementName: string;
+
+      switch (entitlement.type) {
+        case LicenseEntitlementType.ACCOUNT_SPACE_FREE:
+          baselineValue = baselinePlan.spaceFree;
+          entitlementName = 'spaceFree';
+          break;
+        case LicenseEntitlementType.ACCOUNT_SPACE_PLUS:
+          baselineValue = baselinePlan.spacePlus;
+          entitlementName = 'spacePlus';
+          break;
+        case LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM:
+          baselineValue = baselinePlan.spacePremium;
+          entitlementName = 'spacePremium';
+          break;
+        case LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR:
+          baselineValue = baselinePlan.virtualContributor;
+          entitlementName = 'virtualContributor';
+          break;
+        case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
+          baselineValue = baselinePlan.innovationPacks;
+          entitlementName = 'innovationPacks';
+          break;
+        case LicenseEntitlementType.ACCOUNT_INNOVATION_HUB:
+          baselineValue = baselinePlan.startingPages;
+          entitlementName = 'startingPages';
+          break;
+        default:
+          // Keep default values for other entitlement types
+          continue;
+      }
+
+      if (baselineValue > entitlement.limit) {
+        // Apply baseline value as it's higher than current limit
+        entitlement.limit = baselineValue;
+        entitlement.enabled = baselineValue > 0;
+        this.logger.verbose?.(
+          `Applied baseline ${entitlementName} value ${baselineValue} for account ${account.id} (was ${entitlement.limit})`,
+          LogContext.LICENSE
+        );
+      } else if (baselineValue < entitlement.limit) {
+        // Log warning when baseline is lower than current value
+        this.logger.warn?.(
+          `Baseline ${entitlementName} value ${baselineValue} is lower than current entitlement limit ${entitlement.limit} for account ${account.id}. Keeping current value.`,
+          LogContext.LICENSE
+        );
+      }
+      // If baseline equals current value, do nothing (no logging needed)
+    }
+
+    return license;
   }
 }
