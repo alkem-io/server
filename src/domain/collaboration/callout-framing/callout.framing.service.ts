@@ -28,7 +28,8 @@ import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { ValidationException } from '@common/exceptions';
-import { CreateMemoInput } from '@domain/common/memo/types';
+import { CreateMemoInput, IMemo } from '@domain/common/memo/types';
+import { ILink } from '../link/link.interface';
 
 @Injectable()
 export class CalloutFramingService {
