@@ -89,7 +89,7 @@ export class PlatformRoleResolverMutations {
         type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
-      await this.agentService.grantCredential({
+      await this.agentService.grantCredentialOrFail({
         agentID: accountAgent.id,
         ...accountLicenseCredential,
       });

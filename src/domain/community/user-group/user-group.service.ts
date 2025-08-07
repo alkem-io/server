@@ -167,7 +167,7 @@ export class UserGroupService {
       membershipData.userID
     );
 
-    user.agent = await this.agentService.grantCredential({
+    user.agent = await this.agentService.grantCredentialOrFail({
       agentID: agent.id,
       type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: membershipData.groupID,
