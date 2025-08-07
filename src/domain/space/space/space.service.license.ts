@@ -169,12 +169,24 @@ export class SpaceLicenseService {
           }
           break;
         case LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER:
-          const createInnovationHub =
+          const createWhiteboard =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
               levelZeroSpaceAgent
             );
-          if (createInnovationHub) {
+          if (createWhiteboard) {
+            entitlement.limit = 1;
+            entitlement.enabled = true;
+          }
+          break;
+
+        case LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER:
+          const createMemo =
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER,
+              levelZeroSpaceAgent
+            );
+          if (createMemo) {
             entitlement.limit = 1;
             entitlement.enabled = true;
           }
