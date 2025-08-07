@@ -12,8 +12,4 @@ export class CreateMemoInput {
   profile?: CreateProfileInput;
 
   nameID?: string;
-
-  // @Field(() => Markdown, { nullable: true })
-  // @IsOptional()
-  // content?: string;
 }

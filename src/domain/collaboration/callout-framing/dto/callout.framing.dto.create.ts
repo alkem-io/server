@@ -11,7 +11,7 @@ import { CalloutFramingType } from '@common/enums/callout.framing.type';
 @ObjectType('CreateCalloutFramingData')
 export class CreateCalloutFramingInput {
   @Field(() => CreateProfileInput, { nullable: false })
-  @ValidateNested({ each: true })
+  @ValidateNested()
   @Type(() => CreateProfileInput)
   profile!: CreateProfileInput;
 
@@ -25,19 +25,19 @@ export class CreateCalloutFramingInput {
 
   @Field(() => CreateWhiteboardInput, { nullable: true })
   @IsOptional()
-  @ValidateNested({ each: true })
+  @ValidateNested()
   @Type(() => CreateWhiteboardInput)
   whiteboard?: CreateWhiteboardInput;
 
   @Field(() => CreateLinkInput, { nullable: true })
   @IsOptional()
-  @ValidateNested({ each: true })
+  @ValidateNested()
   @Type(() => CreateLinkInput)
   link?: CreateLinkInput;
 
   @Field(() => CreateMemoInput, { nullable: true })
   @IsOptional()
-  @ValidateNested({ each: true })
+  @ValidateNested()
   @Type(() => CreateMemoInput)
   memo?: CreateMemoInput;
 

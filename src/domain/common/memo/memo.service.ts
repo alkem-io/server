@@ -192,7 +192,7 @@ export class MemoService {
 
     return this.licenseService.isEntitlementEnabled(
       license,
-      LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER //!! TODO: Entitlement for memos too?
+      LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER
     );
   }
 
