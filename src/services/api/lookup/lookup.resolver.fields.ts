@@ -32,6 +32,8 @@ import { IInvitation } from '@domain/access/invitation';
 import { IPlatformInvitation } from '@domain/access/invitation.platform';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
+import { MemoService } from '@domain/common/memo';
+import { IMemo } from '@domain/common/memo/types';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IDocument } from '@domain/storage/document';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -91,6 +93,7 @@ export class LookupResolverFields {
     private collaborationService: CollaborationService,
     private spaceAboutService: SpaceAboutService,
     private whiteboardService: WhiteboardService,
+    private memoService: MemoService,
     private innovationPackService: InnovationPackService,
     private organizationLookupService: OrganizationLookupService,
     private profileService: ProfileService,
@@ -569,6 +572,25 @@ export class LookupResolverFields {
     );
 
     return whiteboard;
+  }
+
+  @ResolveField(() => IMemo, {
+    nullable: true,
+    description: 'Lookup the specified Memo',
+  })
+  async memo(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IMemo> {
+    const memo = await this.memoService.getMemoOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      memo.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Memo: ${memo.id}`
+    );
+
+    return memo;
   }
 
   @ResolveField(() => IProfile, {

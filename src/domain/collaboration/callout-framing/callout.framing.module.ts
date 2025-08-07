@@ -9,6 +9,7 @@ import { CalloutFramingResolverFields } from './callout.framing.resolver.fields'
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { LinkModule } from '@domain/collaboration/link/link.module';
+import { MemoModule } from '@domain/common/memo';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 
@@ -20,6 +21,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
     TagsetModule,
     WhiteboardModule,
     LinkModule,
+    MemoModule,
     NamingModule,
     TypeOrmModule.forFeature([CalloutFraming]),
   ],

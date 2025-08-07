@@ -4,13 +4,14 @@ import { Type } from 'class-transformer';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
+import { CreateMemoInput } from '@domain/common/memo/types';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 
 @InputType()
 @ObjectType('CreateCalloutFramingData')
 export class CreateCalloutFramingInput {
   @Field(() => CreateProfileInput, { nullable: false })
-  @ValidateNested({ each: true })
+  @ValidateNested()
   @Type(() => CreateProfileInput)
   profile!: CreateProfileInput;
 
@@ -24,15 +25,21 @@ export class CreateCalloutFramingInput {
 
   @Field(() => CreateWhiteboardInput, { nullable: true })
   @IsOptional()
-  @ValidateNested({ each: true })
+  @ValidateNested()
   @Type(() => CreateWhiteboardInput)
   whiteboard?: CreateWhiteboardInput;
 
   @Field(() => CreateLinkInput, { nullable: true })
   @IsOptional()
-  @ValidateNested({ each: true })
+  @ValidateNested()
   @Type(() => CreateLinkInput)
   link?: CreateLinkInput;
+
+  @Field(() => CreateMemoInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateMemoInput)
+  memo?: CreateMemoInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()
