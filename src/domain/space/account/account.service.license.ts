@@ -250,6 +250,7 @@ export class AccountLicenseService {
       ) {
         if (baselineValue > entitlement.limit) {
           // Apply baseline value as it's higher than current limit
+          const previousLimit = entitlement.limit;
           entitlement.limit = baselineValue;
           entitlement.enabled = baselineValue > 0;
           this.logger.verbose?.(
@@ -258,7 +259,8 @@ export class AccountLicenseService {
               entitlementName,
               baselineValue,
               accountId: account.id,
-              oldEntitlementLimit: entitlement.limit,
+              oldEntitlementLimit: previousLimit,
+              newEntitlementLimit: entitlement.limit,
             },
             LogContext.LICENSE
           );
@@ -279,6 +281,7 @@ export class AccountLicenseService {
         }
         // If baseline equals current value, do nothing (no logging needed)
       } else {
+        const previousLimit = entitlement.limit;
         entitlement.limit = baselineValue;
         entitlement.enabled = baselineValue > 0;
         this.logger.verbose?.(
@@ -287,7 +290,8 @@ export class AccountLicenseService {
             entitlementName,
             baselineValue,
             accountId: account.id,
-            oldEntitlementLimit: entitlement.limit,
+            oldEntitlementLimit: previousLimit,
+            newEntitlementLimit: entitlement.limit,
           },
           LogContext.LICENSE
         );
