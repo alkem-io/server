@@ -104,24 +104,24 @@ describe('AccountLicenseService', () => {
       // Assert
       expect(result.entitlements).toHaveLength(5);
 
-      // Space entitlements should remain unchanged (NOT processed by current logic)
+      // Space entitlements should be updated to baseline values (processed in else branch)
       const spaceFreeEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
       );
-      expect(spaceFreeEntitlement?.limit).toBe(1); // Unchanged
-      expect(spaceFreeEntitlement?.enabled).toBe(false); // Unchanged
+      expect(spaceFreeEntitlement?.limit).toBe(2); // Updated to baseline
+      expect(spaceFreeEntitlement?.enabled).toBe(true); // Enabled since baseline > 0
 
       const spacePlusEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_PLUS
       );
-      expect(spacePlusEntitlement?.limit).toBe(0); // Unchanged
-      expect(spacePlusEntitlement?.enabled).toBe(false); // Unchanged
+      expect(spacePlusEntitlement?.limit).toBe(1); // Updated to baseline
+      expect(spacePlusEntitlement?.enabled).toBe(true); // Enabled since baseline > 0
 
       const spacePremiumEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM
       );
-      expect(spacePremiumEntitlement?.limit).toBe(0); // Unchanged
-      expect(spacePremiumEntitlement?.enabled).toBe(false); // Unchanged
+      expect(spacePremiumEntitlement?.limit).toBe(0); // Updated to baseline
+      expect(spacePremiumEntitlement?.enabled).toBe(false); // Disabled since baseline = 0
 
       // Non-space entitlements should be updated when baseline is higher
       const virtualContributorEntitlement = result.entitlements!.find(
@@ -182,9 +182,14 @@ describe('AccountLicenseService', () => {
 
       // Assert - only virtualContributor should generate a warning since space entitlements are not processed
       expect(loggerSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Baseline virtualContributor value 2 is lower than current entitlement limit 5'
-        ),
+        expect.objectContaining({
+          message:
+            'Baseline entitlement value is lower than current entitlement limit for account. Keeping current value.',
+          entitlementName: 'virtualContributor',
+          baselineValue: 2,
+          accountId: 'test-account',
+          currentEntitlementLimit: 5,
+        }),
         LogContext.LICENSE
       );
       // Should only be called once (for virtualContributor, not for spaceFree)
@@ -193,7 +198,6 @@ describe('AccountLicenseService', () => {
 
     it('should handle equal baseline and current values without changes or warnings', async () => {
       // Arrange
-      const loggerWarnSpy = jest.spyOn(service['logger'], 'warn');
       const loggerVerboseSpy = jest.spyOn(service['logger'], 'verbose');
 
       const baselineLicensePlan: IAccountLicensePlan = {
@@ -237,22 +241,40 @@ describe('AccountLicenseService', () => {
         mockAccount
       );
 
-      // Assert - values should remain unchanged
+      // Assert - space entitlements should be updated to baseline values
       const spaceFreeEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
       );
-      expect(spaceFreeEntitlement?.limit).toBe(2);
-      expect(spaceFreeEntitlement?.enabled).toBe(true);
+      expect(spaceFreeEntitlement?.limit).toBe(2); // Updated to baseline
+      expect(spaceFreeEntitlement?.enabled).toBe(true); // Enabled since baseline > 0
 
       const spacePlusEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_PLUS
       );
-      expect(spacePlusEntitlement?.limit).toBe(0);
-      expect(spacePlusEntitlement?.enabled).toBe(false);
+      expect(spacePlusEntitlement?.limit).toBe(0); // Updated to baseline
+      expect(spacePlusEntitlement?.enabled).toBe(false); // Disabled since baseline = 0
 
-      // Should not log warnings or verbose messages for equal values
-      expect(loggerWarnSpy).not.toHaveBeenCalled();
-      expect(loggerVerboseSpy).not.toHaveBeenCalled();
+      // Should log verbose messages for space entitlements that are processed
+      expect(loggerVerboseSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Applied baseline license plan for account.',
+          entitlementName: 'spaceFree',
+          baselineValue: 2,
+          accountId: 'test-account',
+          oldEntitlementLimit: 2,
+        }),
+        LogContext.LICENSE
+      );
+      expect(loggerVerboseSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Applied baseline license plan for account.',
+          entitlementName: 'spacePlus',
+          baselineValue: 0,
+          accountId: 'test-account',
+          oldEntitlementLimit: 0,
+        }),
+        LogContext.LICENSE
+      );
     });
   });
 
@@ -457,9 +479,12 @@ describe('AccountLicenseService', () => {
 
       // Assert
       expect(loggerSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Skipping Wingback entitlements for account test-account'
-        ),
+        expect.objectContaining({
+          message:
+            'Skipping Wingback entitlements for account since it returned with an error',
+          accountId: 'test-account',
+          error: 'Wingback service unavailable',
+        }),
         LogContext.ACCOUNT
       );
 
