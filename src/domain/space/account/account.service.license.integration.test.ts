@@ -12,30 +12,36 @@ import { IAccount } from './account.interface';
  *
  * The licensing flow has 3 stages:
  * 1. RESET to defaults (clean slate)
- * 2. BASELINE LICENSE PLAN: Applied only to non-space entitlements (virtualContributor, innovationPacks, startingPages)
- *    - Baseline values are only applied if they are HIGHER than current entitlement limits
- *    - If baseline values are LOWER than current limits, a warning is logged and current values are kept
- *    - If baseline values EQUAL current limits, no changes are made (no logging)
+ * 2. BASELINE LICENSE PLAN: Applied differently based on entitlement type
+ *    - NON-SPACE entitlements (virtualContributor, innovationPacks, startingPages):
+ *      * Baseline values are only applied if they are HIGHER than current entitlement limits
+ *      * If baseline values are LOWER than current limits, a warning is logged and current values are kept
+ *      * If baseline values EQUAL current limits, no changes are made (no logging)
+ *    - SPACE entitlements (spaceFree, spacePlus, spacePremium):
+ *      * Baseline values are ALWAYS applied directly (overwrites current values)
+ *      * Verbose logging occurs when baseline is applied
  * 3. EXTERNAL LICENSING: Overrides everything if available
  *    - Credential-based licensing (from agent credentials)
  *    - Wingback subscription licensing (if externalSubscriptionID exists)
  *
- * Space entitlements (spaceFree, spacePlus, spacePremium) are NOT affected by baseline licensing
- * but CAN be affected by external licensing.
- *
  * Examples:
  *
- * Scenario 1: Baseline higher than current (non-space entitlements only)
+ * Scenario 1: Non-space entitlements - Baseline higher than current
  * - Current: virtualContributor = 1
  * - Baseline: virtualContributor = 3
- * - Result: virtualContributor = 3 (baseline applied)
+ * - Result: virtualContributor = 3 (baseline applied, verbose logged)
  *
- * Scenario 2: Baseline lower than current (non-space entitlements only)
+ * Scenario 2: Non-space entitlements - Baseline lower than current
  * - Current: virtualContributor = 5
  * - Baseline: virtualContributor = 2
  * - Result: virtualContributor = 5 (current kept, warning logged)
  *
- * Scenario 3: External licensing overrides everything
+ * Scenario 3: Space entitlements - Baseline always applied
+ * - Current: spaceFree = 5
+ * - Baseline: spaceFree = 2
+ * - Result: spaceFree = 2 (baseline applied directly, verbose logged)
+ *
+ * Scenario 4: External licensing overrides everything
  * - Current: virtualContributor = 1, Baseline: virtualContributor = 3
  * - External: virtualContributor = 10
  * - Result: virtualContributor = 10 (external licensing wins)
@@ -63,21 +69,21 @@ export const exampleLicenseWithMixedValues: ILicense = {
       id: '1',
       type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
       dataType: LicenseEntitlementDataType.LIMIT,
-      limit: 1, // Space entitlements are NOT affected by baseline licensing
+      limit: 1, // Space entitlements ALWAYS get baseline values applied (will become 2)
       enabled: false,
     },
     {
       id: '2',
       type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
       dataType: LicenseEntitlementDataType.LIMIT,
-      limit: 3, // Space entitlements are NOT affected by baseline licensing
+      limit: 3, // Space entitlements ALWAYS get baseline values applied (will become 1)
       enabled: true,
     },
     {
       id: '3',
       type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
       dataType: LicenseEntitlementDataType.LIMIT,
-      limit: 0, // Space entitlements are NOT affected by baseline licensing
+      limit: 0, // Space entitlements ALWAYS get baseline values applied (will stay 0)
       enabled: false,
     },
     {
@@ -99,11 +105,11 @@ export const exampleLicenseWithMixedValues: ILicense = {
 
 /**
  * Expected results after applying baseline licensing only:
- * - spaceFree: 1 → 1 (no change - space entitlements not affected by baseline)
- * - spacePlus: 3 → 3 (no change - space entitlements not affected by baseline)
- * - spacePremium: 0 → 0 (no change - space entitlements not affected by baseline)
- * - virtualContributor: 0 → 3 (baseline applied, enabled = true)
- * - innovationPacks: 5 → 5 (current kept, warning logged)
+ * - spaceFree: 1 → 2 (baseline applied directly - space entitlements always get baseline)
+ * - spacePlus: 3 → 1 (baseline applied directly - space entitlements always get baseline)
+ * - spacePremium: 0 → 0 (baseline applied directly - space entitlements always get baseline)
+ * - virtualContributor: 0 → 3 (baseline applied since 3 > 0, enabled = true)
+ * - innovationPacks: 5 → 5 (current kept since 5 > 2, warning logged)
  */
 
 // Example external licensing scenarios
@@ -137,9 +143,9 @@ export const exampleWingbackLicensing = [
  * Expected results after applying external licensing:
  * If credential-based licensing is available:
  * - virtualContributor: 3 → 10 (credential-based override)
- * - spaceFree: 1 → 5 (credential-based override)
+ * - spaceFree: 2 → 5 (credential-based override)
  *
  * If Wingback licensing is available:
  * - innovationPacks: 5 → 15 (Wingback override)
- * - spacePlus: 3 → 8 (Wingback override)
+ * - spacePlus: 1 → 8 (Wingback override)
  */

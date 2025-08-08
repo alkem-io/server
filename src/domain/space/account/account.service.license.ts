@@ -131,7 +131,7 @@ export class AccountLicenseService {
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
-        `License with entitielements not found for account with agent ${accountAgent.id}`,
+        `License with entitlements not found for account with agent ${accountAgent.id}`,
         LogContext.LICENSE
       );
     }

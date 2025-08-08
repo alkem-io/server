@@ -37,7 +37,7 @@ describe('AccountLicenseService', () => {
   });
 
   describe('applyBaselineLicensePlan', () => {
-    it('should apply baseline license plan entitlements only when higher than current values', async () => {
+    it('should apply baseline license plan with different behavior for space vs non-space entitlements', async () => {
       // Arrange
       const baselineLicensePlan: IAccountLicensePlan = {
         spaceFree: 2,
@@ -61,35 +61,35 @@ describe('AccountLicenseService', () => {
             id: '1',
             type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Lower than baseline (2) - but space entitlements are NOT processed
+            limit: 1, // Lower than baseline (2) - space entitlements always get baseline applied
             enabled: false,
           },
           {
             id: '2',
             type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Lower than baseline (1) - but space entitlements are NOT processed
+            limit: 0, // Lower than baseline (1) - space entitlements always get baseline applied
             enabled: false,
           },
           {
             id: '3',
             type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Equal to baseline (0) - but space entitlements are NOT processed
+            limit: 0, // Equal to baseline (0) - space entitlements always get baseline applied
             enabled: false,
           },
           {
             id: '4',
             type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Lower than baseline (3) - should be updated
+            limit: 1, // Lower than baseline (3) - non-space entitlement should be updated
             enabled: false,
           },
           {
             id: '5',
             type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Lower than baseline (2) - should be updated
+            limit: 0, // Lower than baseline (2) - non-space entitlement should be updated
             enabled: false,
           },
         ],
@@ -104,7 +104,7 @@ describe('AccountLicenseService', () => {
       // Assert
       expect(result.entitlements).toHaveLength(5);
 
-      // Space entitlements should be updated to baseline values (processed in else branch)
+      // Space entitlements should be updated to baseline values (always applied directly)
       const spaceFreeEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
       );
@@ -123,22 +123,22 @@ describe('AccountLicenseService', () => {
       expect(spacePremiumEntitlement?.limit).toBe(0); // Updated to baseline
       expect(spacePremiumEntitlement?.enabled).toBe(false); // Disabled since baseline = 0
 
-      // Non-space entitlements should be updated when baseline is higher
+      // Non-space entitlements should be updated only when baseline is higher
       const virtualContributorEntitlement = result.entitlements!.find(
         (e: any) =>
           e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
       );
-      expect(virtualContributorEntitlement?.limit).toBe(3); // Updated to baseline
+      expect(virtualContributorEntitlement?.limit).toBe(3); // Updated to baseline since 3 > 1
       expect(virtualContributorEntitlement?.enabled).toBe(true); // Enabled
 
       const innovationPackEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
       );
-      expect(innovationPackEntitlement?.limit).toBe(2); // Updated to baseline
+      expect(innovationPackEntitlement?.limit).toBe(2); // Updated to baseline since 2 > 0
       expect(innovationPackEntitlement?.enabled).toBe(true); // Enabled
     });
 
-    it('should log warning when baseline values are lower than current entitlement limits', async () => {
+    it('should log warning when baseline values are lower than current entitlement limits for non-space entitlements', async () => {
       // Arrange
       const loggerSpy = jest.spyOn(service['logger'], 'warn');
 
@@ -164,14 +164,14 @@ describe('AccountLicenseService', () => {
             id: '1',
             type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 3, // Higher than baseline (1) - but space entitlements are NOT processed, so no warning
+            limit: 3, // Higher than baseline (1) - space entitlements always get baseline applied, no warning
             enabled: true,
           },
           {
             id: '2',
             type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 5, // Higher than baseline (2) - should generate warning
+            limit: 5, // Higher than baseline (2) - non-space entitlement should generate warning
             enabled: true,
           },
         ],
@@ -180,7 +180,7 @@ describe('AccountLicenseService', () => {
       // Act
       await (service as any).applyBaselineLicensePlan(mockLicense, mockAccount);
 
-      // Assert - only virtualContributor should generate a warning since space entitlements are not processed
+      // Assert - only virtualContributor should generate a warning since it's a non-space entitlement
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           message:
@@ -192,11 +192,11 @@ describe('AccountLicenseService', () => {
         }),
         LogContext.LICENSE
       );
-      // Should only be called once (for virtualContributor, not for spaceFree)
+      // Should only be called once (for virtualContributor, not for spaceFree which gets baseline applied directly)
       expect(loggerSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle equal baseline and current values without changes or warnings', async () => {
+    it('should apply baseline values to space entitlements and log verbose messages', async () => {
       // Arrange
       const loggerVerboseSpy = jest.spyOn(service['logger'], 'verbose');
 
@@ -572,7 +572,7 @@ describe('AccountLicenseService', () => {
       // Act & Assert
       await expect(
         (service as any).extendLicensePolicy(undefined, mockAgent, mockAccount)
-      ).rejects.toThrow('License with entitielements not found');
+      ).rejects.toThrow('License with entitlements not found');
     });
 
     it('should throw error when license has no entitlements', async () => {
@@ -590,7 +590,7 @@ describe('AccountLicenseService', () => {
           mockAgent,
           mockAccount
         )
-      ).rejects.toThrow('License with entitielements not found');
+      ).rejects.toThrow('License with entitlements not found');
     });
   });
 });
