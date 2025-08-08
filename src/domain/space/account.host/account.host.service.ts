@@ -20,6 +20,7 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { DEFAULT_BASELINE_LICENSE_PLAN } from '../account/constants';
 
 @Injectable()
 export class AccountHostService {
@@ -96,14 +97,7 @@ export class AccountHostService {
   }
 
   private getBaselineAccountLicensePlan(): IAccountLicensePlan {
-    return {
-      spaceFree: 1,
-      spacePlus: 0,
-      spacePremium: 0,
-      virtualContributor: 0,
-      innovationPacks: 0,
-      startingPages: 0,
-    };
+    return DEFAULT_BASELINE_LICENSE_PLAN;
   }
 
   public async assignLicensePlansToSpace(

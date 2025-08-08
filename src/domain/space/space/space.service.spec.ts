@@ -30,6 +30,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
+import { DEFAULT_BASELINE_LICENSE_PLAN } from '../account/constants';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -462,14 +463,7 @@ const getSubspacesMock = (
         externalSubscriptionID: '',
         type: AccountType.ORGANIZATION,
         ...getEntityMock<Account>(),
-        baselineLicensePlan: {
-          spaceFree: 1,
-          spacePlus: 0,
-          spacePremium: 0,
-          virtualContributor: 0,
-          innovationPacks: 0,
-          startingPages: 0,
-        },
+        baselineLicensePlan: DEFAULT_BASELINE_LICENSE_PLAN,
       },
       level: SpaceLevel.L1,
       visibility: SpaceVisibility.ACTIVE,
@@ -590,14 +584,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         externalSubscriptionID: '',
         type: AccountType.ORGANIZATION,
         ...getEntityMock<Account>(),
-        baselineLicensePlan: {
-          spaceFree: 1,
-          spacePlus: 0,
-          spacePremium: 0,
-          virtualContributor: 0,
-          innovationPacks: 0,
-          startingPages: 0,
-        },
+        baselineLicensePlan: DEFAULT_BASELINE_LICENSE_PLAN,
       },
       level: SpaceLevel.L2,
       visibility: SpaceVisibility.ACTIVE,
@@ -738,14 +725,7 @@ const getSpaceMock = ({
       externalSubscriptionID: '',
       type: AccountType.ORGANIZATION,
       ...getEntityMock<Account>(),
-      baselineLicensePlan: {
-        spaceFree: 1,
-        spacePlus: 0,
-        spacePremium: 0,
-        virtualContributor: 0,
-        innovationPacks: 0,
-        startingPages: 0,
-      },
+      baselineLicensePlan: DEFAULT_BASELINE_LICENSE_PLAN,
     },
     authorization: getAuthorizationPolicyMock(`auth-${id}`),
     subspaces: getSubspacesMock(id, challengesCount, opportunitiesCounts),
