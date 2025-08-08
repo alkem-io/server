@@ -1,4 +1,5 @@
 import { Field, ObjectType, Int } from '@nestjs/graphql';
+
 @ObjectType('AccountLicensePlan')
 export abstract class IAccountLicensePlan {
   @Field(() => Int, {
