@@ -59,15 +59,15 @@ export class AccountLicenseService {
     // Ensure always applying from a clean state
     account.license = this.licenseService.reset(account.license);
 
-    // Apply baseline license plan entitlements
-    account.license = await this.applyBaselineLicensePlan(
-      account.license,
-      account
-    );
-
     account.license = await this.extendLicensePolicy(
       account.license,
       account.agent,
+      account
+    );
+
+    // Apply baseline license plan entitlements
+    account.license = await this.applyBaselineLicensePlan(
+      account.license,
       account
     );
 
