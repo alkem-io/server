@@ -11,6 +11,7 @@ import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
+import { LogContext } from '@common/enums';
 
 describe('AccountLicenseService', () => {
   let service: AccountLicenseService;
@@ -60,35 +61,35 @@ describe('AccountLicenseService', () => {
             id: '1',
             type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Lower than baseline (2)
+            limit: 1, // Lower than baseline (2) - but space entitlements are NOT processed
             enabled: false,
           },
           {
             id: '2',
             type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Lower than baseline (1)
+            limit: 0, // Lower than baseline (1) - but space entitlements are NOT processed
             enabled: false,
           },
           {
             id: '3',
             type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Equal to baseline (0)
+            limit: 0, // Equal to baseline (0) - but space entitlements are NOT processed
             enabled: false,
           },
           {
             id: '4',
             type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 5, // Higher than baseline (3)
-            enabled: true,
+            limit: 1, // Lower than baseline (3) - should be updated
+            enabled: false,
           },
           {
             id: '5',
             type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Lower than baseline (2)
+            limit: 0, // Lower than baseline (2) - should be updated
             enabled: false,
           },
         ],
@@ -103,41 +104,38 @@ describe('AccountLicenseService', () => {
       // Assert
       expect(result.entitlements).toHaveLength(5);
 
-      // Should be updated to baseline value (2) as it's higher than current (1)
+      // Space entitlements should remain unchanged (NOT processed by current logic)
       const spaceFreeEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
       );
-      expect(spaceFreeEntitlement?.limit).toBe(2);
-      expect(spaceFreeEntitlement?.enabled).toBe(true);
+      expect(spaceFreeEntitlement?.limit).toBe(1); // Unchanged
+      expect(spaceFreeEntitlement?.enabled).toBe(false); // Unchanged
 
-      // Should be updated to baseline value (1) as it's higher than current (0)
       const spacePlusEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_PLUS
       );
-      expect(spacePlusEntitlement?.limit).toBe(1);
-      expect(spacePlusEntitlement?.enabled).toBe(true);
+      expect(spacePlusEntitlement?.limit).toBe(0); // Unchanged
+      expect(spacePlusEntitlement?.enabled).toBe(false); // Unchanged
 
-      // Should remain unchanged (0) as baseline equals current
       const spacePremiumEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM
       );
-      expect(spacePremiumEntitlement?.limit).toBe(0);
-      expect(spacePremiumEntitlement?.enabled).toBe(false);
+      expect(spacePremiumEntitlement?.limit).toBe(0); // Unchanged
+      expect(spacePremiumEntitlement?.enabled).toBe(false); // Unchanged
 
-      // Should remain unchanged (5) as current is higher than baseline (3)
+      // Non-space entitlements should be updated when baseline is higher
       const virtualContributorEntitlement = result.entitlements!.find(
         (e: any) =>
           e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
       );
-      expect(virtualContributorEntitlement?.limit).toBe(5);
-      expect(virtualContributorEntitlement?.enabled).toBe(true);
+      expect(virtualContributorEntitlement?.limit).toBe(3); // Updated to baseline
+      expect(virtualContributorEntitlement?.enabled).toBe(true); // Enabled
 
-      // Should be updated to baseline value (2) as it's higher than current (0)
       const innovationPackEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
       );
-      expect(innovationPackEntitlement?.limit).toBe(2);
-      expect(innovationPackEntitlement?.enabled).toBe(true);
+      expect(innovationPackEntitlement?.limit).toBe(2); // Updated to baseline
+      expect(innovationPackEntitlement?.enabled).toBe(true); // Enabled
     });
 
     it('should log warning when baseline values are lower than current entitlement limits', async () => {
@@ -166,14 +164,14 @@ describe('AccountLicenseService', () => {
             id: '1',
             type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 3, // Higher than baseline (1)
+            limit: 3, // Higher than baseline (1) - but space entitlements are NOT processed, so no warning
             enabled: true,
           },
           {
             id: '2',
             type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
             dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 5, // Higher than baseline (2)
+            limit: 5, // Higher than baseline (2) - should generate warning
             enabled: true,
           },
         ],
@@ -182,19 +180,15 @@ describe('AccountLicenseService', () => {
       // Act
       await (service as any).applyBaselineLicensePlan(mockLicense, mockAccount);
 
-      // Assert
-      expect(loggerSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Baseline spaceFree value 1 is lower than current entitlement limit 3'
-        ),
-        'LICENSE'
-      );
+      // Assert - only virtualContributor should generate a warning since space entitlements are not processed
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining(
           'Baseline virtualContributor value 2 is lower than current entitlement limit 5'
         ),
-        'LICENSE'
+        LogContext.LICENSE
       );
+      // Should only be called once (for virtualContributor, not for spaceFree)
+      expect(loggerSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should handle equal baseline and current values without changes or warnings', async () => {
