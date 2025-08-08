@@ -10,6 +10,7 @@ import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity'
 import { AccountType } from '@common/enums/account.type';
 import { License } from '@domain/common/license/license.entity';
 import { ENUM_LENGTH } from '@common/constants';
+import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
   @Column('varchar', { length: ENUM_LENGTH, nullable: true })
@@ -23,6 +24,9 @@ export class Account extends AuthorizableEntity implements IAccount {
     cascade: false, // important: each space looks after saving itself! Same as space.subspaces field
   })
   spaces!: Space[];
+
+  @Column('json', { nullable: false })
+  baselineLicensePlan!: IAccountLicensePlan;
 
   @OneToOne(() => Agent, {
     eager: false,
