@@ -1,4 +1,4 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { AccountService } from './account.service';
 import {
@@ -11,7 +11,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
 import { IAccount } from './account.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { SpaceLicenseService } from '../space/space.service.license';
 import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
 import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
@@ -27,7 +27,7 @@ export class AccountLicenseService {
     private spaceLicenseService: SpaceLicenseService,
     private licensingCredentialBasedService: LicensingCredentialBasedService,
     private licensingWingbackSubscriptionService: LicensingWingbackSubscriptionService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: WinstonLogger
   ) {}
 
   async applyLicensePolicy(accountID: string): Promise<ILicense[]> {
@@ -154,7 +154,12 @@ export class AccountLicenseService {
         wingbackGrantedLicenseEntitlements.push(...result);
       } catch (e: any) {
         this.logger.warn?.(
-          `Skipping Wingback entitlements for account ${account.id} since it returned with an error: ${e}`,
+          {
+            message:
+              'Skipping Wingback entitlements for account since it returned with an error',
+            accountId: account.id,
+            error: e.message,
+          },
           LogContext.ACCOUNT
         );
       }
@@ -248,17 +253,44 @@ export class AccountLicenseService {
           entitlement.limit = baselineValue;
           entitlement.enabled = baselineValue > 0;
           this.logger.verbose?.(
-            `Applied baseline ${entitlementName} value ${baselineValue} for account ${account.id} (was ${entitlement.limit})`,
+            {
+              message: 'Applied baseline license plan for account.',
+              entitlementName,
+              baselineValue,
+              accountId: account.id,
+              oldEntitlementLimit: entitlement.limit,
+            },
             LogContext.LICENSE
           );
         } else if (baselineValue < entitlement.limit) {
           // Log warning when baseline is lower than current value
           this.logger.warn?.(
-            `Baseline ${entitlementName} value ${baselineValue} is lower than current entitlement limit ${entitlement.limit} for account ${account.id}. Keeping current value.`,
+            {
+              message:
+                'Baseline entitlement value is lower than current entitlement limit for account. Keeping current value.',
+              entitlementName,
+              baselineValue,
+              accountId: account.id,
+              currentEntitlementLimit: entitlement.limit,
+            },
+            // `Baseline ${entitlementName} value ${baselineValue} is lower than current entitlement limit ${entitlement.limit} for account ${account.id}. Keeping current value.`,
             LogContext.LICENSE
           );
         }
         // If baseline equals current value, do nothing (no logging needed)
+      } else {
+        entitlement.limit = baselineValue;
+        entitlement.enabled = baselineValue > 0;
+        this.logger.verbose?.(
+          {
+            message: 'Applied baseline license plan for account.',
+            entitlementName,
+            baselineValue,
+            accountId: account.id,
+            oldEntitlementLimit: entitlement.limit,
+          },
+          LogContext.LICENSE
+        );
       }
     }
 
