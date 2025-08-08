@@ -39,7 +39,7 @@ import { MockContributorLookupService } from '@test/mocks/contributor.lookup.ser
 import { SpaceAbout } from '@domain/space/space.about';
 import { Account } from '@domain/space/account/account.entity';
 import { Organization } from '@domain/community/organization';
-import { DEFAULT_BASELINE_LICENSE_PLAN } from '@domain/space/account/constants';
+import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '@domain/space/account/constants';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -279,7 +279,7 @@ const getSpaceRoleResultMock = ({
         spaces: [],
         type: AccountType.ORGANIZATION,
         ...getEntityMock<Account>(),
-        baselineLicensePlan: DEFAULT_BASELINE_LICENSE_PLAN,
+        baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       },
       ...getEntityMock<Space>(),
     },
