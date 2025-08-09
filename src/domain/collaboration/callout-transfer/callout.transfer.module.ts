@@ -9,6 +9,7 @@ import { CalloutModule } from '../callout/callout.module';
 import { CalloutTransferResolverMutations } from './callout.transfer.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     StorageBucketModule,
     ProfileModule,
     TagsetModule,
+    NamingModule,
   ],
   providers: [CalloutTransferService, CalloutTransferResolverMutations],
   exports: [CalloutTransferService],

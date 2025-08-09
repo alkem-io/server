@@ -14,7 +14,6 @@ import { RoleName } from '@common/enums/role.name';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -203,8 +202,7 @@ export class CollaborationAuthorizationService {
   private async appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     platformRolesAccess: IPlatformRolesAccess,
-    roleSet?: IRoleSet,
-    spaceAgent?: IAgent
+    roleSet?: IRoleSet
   ): Promise<IAuthorizationPolicy> {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -217,7 +215,7 @@ export class CollaborationAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // For templates these will not be available
-    if (!roleSet || !spaceAgent) {
+    if (!roleSet) {
       return authorization;
     }
 

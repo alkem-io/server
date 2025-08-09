@@ -652,7 +652,7 @@ export class SpaceAuthorizationService {
     const globalRolesReadAboutCredentials =
       this.platformRolesAccessService.getCredentialsForRolesWithAccess(
         space.platformRolesAccess.roles,
-        [AuthorizationPrivilege.READ_LICENSE]
+        [AuthorizationPrivilege.READ_ABOUT]
       );
     if (globalRolesReadAboutCredentials.length > 0) {
       const globalRolesReadAbout =

@@ -173,7 +173,7 @@ export class AdminAuthorizationResolverMutations {
     return this.authResetService.publishResetAll();
   }
 
-  @Mutation(() => String, {
+  @Mutation(() => Boolean, {
     description:
       'Ensure all access privileges for the platform roles are re-calculated',
   })
