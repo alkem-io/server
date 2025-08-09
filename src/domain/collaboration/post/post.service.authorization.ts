@@ -133,14 +133,16 @@ export class PostAuthorizationService {
         );
       credentials.push(...roleSetCredentials);
     }
-    const adminsMovePostRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.MOVE_POST],
-        credentials,
-        CREDENTIAL_RULE_POST_ADMINS_MOVE
-      );
-    adminsMovePostRule.cascade = false;
-    newRules.push(adminsMovePostRule);
+    if (credentials.length > 0) {
+      const adminsMovePostRule =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.MOVE_POST],
+          credentials,
+          CREDENTIAL_RULE_POST_ADMINS_MOVE
+        );
+      adminsMovePostRule.cascade = false;
+      newRules.push(adminsMovePostRule);
+    }
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

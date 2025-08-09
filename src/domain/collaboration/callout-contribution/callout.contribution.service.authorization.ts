@@ -219,14 +219,16 @@ export class CalloutContributionAuthorizationService {
       );
     credentials.push(...platformRoleCredentials);
 
-    const adminsMoveContributionRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.MOVE_CONTRIBUTION],
-        credentials,
-        CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE
-      );
-    adminsMoveContributionRule.cascade = false;
-    newRules.push(adminsMoveContributionRule);
+    if (credentials.length > 0) {
+      const adminsMoveContributionRule =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.MOVE_CONTRIBUTION],
+          credentials,
+          CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE
+        );
+      adminsMoveContributionRule.cascade = false;
+      newRules.push(adminsMoveContributionRule);
+    }
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

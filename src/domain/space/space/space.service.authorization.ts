@@ -118,7 +118,7 @@ export class SpaceAuthorizationService {
 
     // Warn if space does not have a valid platformRolesAccess
     if (space.platformRolesAccess.roles.length === 0) {
-      this.logger.warn(
+      throw new RelationshipNotFoundException(
         `Space ${space.id} has no platform roles access defined`,
         LogContext.AUTH
       );
@@ -545,30 +545,34 @@ export class SpaceAuthorizationService {
     );
     newRules.push(spaceMember);
 
-    const spaceAdminCriterias =
+    const spaceAdminCriterias: ICredentialDefinition[] = [];
+    const roleSetAdminCriterias =
       await this.roleSetService.getCredentialsForRoleWithParents(
         roleSet,
         RoleName.ADMIN
       );
-    // add in the platform roles that are as admins
-    spaceAdminCriterias.push(
-      ...this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+    const platformRolesAdminCriterias =
+      this.platformRolesAccessService.getCredentialsForRolesWithAccess(
         platformRolesWithAccess.roles,
         [AuthorizationPrivilege.UPDATE]
-      )
-    );
-    const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-      ],
-      spaceAdminCriterias,
-      CREDENTIAL_RULE_SPACE_ADMINS
-    );
-    newRules.push(spaceAdmin);
+      );
+    spaceAdminCriterias.push(...roleSetAdminCriterias);
+    spaceAdminCriterias.push(...platformRolesAdminCriterias);
+
+    if (spaceAdminCriterias.length > 0) {
+      const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
+        ],
+        spaceAdminCriterias,
+        CREDENTIAL_RULE_SPACE_ADMINS
+      );
+      newRules.push(spaceAdmin);
+    }
 
     const collaborationSettings = spaceSettings.collaboration;
     if (collaborationSettings.allowMembersToCreateSubspaces) {
@@ -650,26 +654,35 @@ export class SpaceAuthorizationService {
         space.platformRolesAccess.roles,
         [AuthorizationPrivilege.READ_LICENSE]
       );
-    const globalRolesReadAbout =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.READ_ABOUT],
-        globalRolesReadAboutCredentials,
-        CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
-      );
-    globalRolesReadAbout.cascade = false;
-    newRules.push(globalRolesReadAbout);
+    if (globalRolesReadAboutCredentials.length > 0) {
+      const globalRolesReadAbout =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.READ_ABOUT],
+          globalRolesReadAboutCredentials,
+          CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
+        );
+      globalRolesReadAbout.cascade = false;
+      newRules.push(globalRolesReadAbout);
+    }
 
     // Allow Global Spaces Read to view Spaces
-    const globalSpacesReader =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        this.platformRolesAccessService.getPrivilegesForRole(
-          space.platformRolesAccess.roles,
-          RoleName.GLOBAL_SPACES_READER
-        ),
-        [AuthorizationCredential.GLOBAL_SPACES_READER],
-        CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+    const privilegesForGlobalSpacesRead =
+      this.platformRolesAccessService.getPrivilegesForRole(
+        space.platformRolesAccess.roles,
+        RoleName.GLOBAL_SPACES_READER
       );
-    newRules.push(globalSpacesReader);
+    if (privilegesForGlobalSpacesRead.length > 0) {
+      const globalSpacesReader =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          this.platformRolesAccessService.getPrivilegesForRole(
+            space.platformRolesAccess.roles,
+            RoleName.GLOBAL_SPACES_READER
+          ),
+          [AuthorizationCredential.GLOBAL_SPACES_READER],
+          CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+        );
+      newRules.push(globalSpacesReader);
+    }
 
     //
     if (space.level === SpaceLevel.L0) {

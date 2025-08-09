@@ -196,17 +196,19 @@ export class CommunityAuthorizationService {
         AuthorizationCredential.SPACE_SUBSPACE_ADMIN;
       inviteMembersCriterias.push(subspaceAdminCredential);
     }
-    const spaceAdminsInvite =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
-          AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT,
-        ],
-        inviteMembersCriterias,
-        CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE
-      );
-    spaceAdminsInvite.cascade = false;
-    newRules.push(spaceAdminsInvite);
+    if (inviteMembersCriterias.length > 0) {
+      const spaceAdminsInvite =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
+            AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT,
+          ],
+          inviteMembersCriterias,
+          CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE
+        );
+      spaceAdminsInvite.cascade = false;
+      newRules.push(spaceAdminsInvite);
+    }
 
     if (entryRoleAllowed) {
       newRules.push(
@@ -278,13 +280,15 @@ export class CommunityAuthorizationService {
       );
     adminCredentials.push(...platformRolesWithGrantCredentials);
 
-    const addMembers = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
-      adminCredentials,
-      CREDENTIAL_RULE_ROLESET_ASSIGN
-    );
-    addMembers.cascade = false;
-    newRules.push(addMembers);
+    if (adminCredentials.length > 0) {
+      const addMembers = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
+        adminCredentials,
+        CREDENTIAL_RULE_ROLESET_ASSIGN
+      );
+      addMembers.cascade = false;
+      newRules.push(addMembers);
+    }
 
     return newRules;
   }

@@ -235,6 +235,15 @@ export class CollaborationAuthorizationService {
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
+    if (adminCriterias.length > 0) {
+      const adminsRule = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.UPDATE],
+        adminCriterias,
+        CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS
+      );
+      adminsRule.cascade = true;
+      newRules.push(adminsRule);
+    }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
