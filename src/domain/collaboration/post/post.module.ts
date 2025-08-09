@@ -12,6 +12,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     VisualModule,
     UserLookupModule,
     ProfileModule,
+    PlatformRolesAccessModule,
     TypeOrmModule.forFeature([Post]),
   ],
   providers: [

@@ -9,6 +9,10 @@ export class SpacePlatformRolesAccess1754728506065
     await queryRunner.query(
       `ALTER TABLE \`space\` ADD \`platformRolesAccess\` json NOT NULL`
     );
+    // create a default value for all existing spaces of platformRolesAccess
+    await queryRunner.query(
+      `UPDATE \`space\` SET \`platformRolesAccess\` = '{"roles": []}'`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
