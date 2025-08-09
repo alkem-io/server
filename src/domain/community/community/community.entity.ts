@@ -6,6 +6,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { UUID_LENGTH } from '@src/common/constants/entity.field.length.constants';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { IPlatformAccess } from '@domain/access/platform-access/platform.access.interface';
 
 @Entity()
 export class Community
@@ -33,6 +34,10 @@ export class Community
   })
   @JoinColumn()
   roleSet!: RoleSet;
+
+  // Calculated field to make the authorization logic clearer
+  @Column('json', { nullable: false })
+  platformAccess!: IPlatformAccess;
 
   @Column({
     length: UUID_LENGTH,
