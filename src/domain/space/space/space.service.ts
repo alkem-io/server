@@ -43,7 +43,6 @@ import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.sett
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
-import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
@@ -80,6 +79,7 @@ import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { UUID_LENGTH } from '@common/constants';
+import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -111,6 +111,7 @@ export class SpaceService {
     private templateContentSpaceService: TemplateContentSpaceService,
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
+    private spacePlatformRolesAccessService: SpacePlatformRolesAccessService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -807,13 +808,6 @@ export class SpaceService {
     }
   }
 
-  public async updateSpaceSettings(
-    space: ISpace,
-    settingsData: UpdateSpaceSettingsInput
-  ): Promise<ISpace> {
-    return await this.updateSettings(space, settingsData.settings);
-  }
-
   /**
    * Should the authorization policy be updated based on the update settings.
    * Some setting do not require an update to the authorization policy.
@@ -1301,16 +1295,43 @@ export class SpaceService {
   }
 
   public async updateSettings(
-    space: ISpace,
+    spaceID: string,
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
+    const space = await this.getSpaceOrFail(spaceID, {
+      relations: {
+        parentSpace: true,
+        subspaces: true,
+      },
+    });
     const settings = space.settings;
     const updatedSettings = this.spaceSettingsService.updateSettings(
       settings,
       settingsData
     );
     space.settings = updatedSettings;
-    return await this.save(space);
+
+    // always recalulate the platform access
+    space.platformRolesAccess =
+      this.spacePlatformRolesAccessService.createPlatformRolesAccess(
+        space,
+        space.settings,
+        space.parentSpace?.platformRolesAccess
+      );
+    const savedSpace = await this.save(space);
+    // cascade the platform roles access to all subspaces
+    if (space.subspaces && space.subspaces.length > 0) {
+      for (const subspace of space.subspaces) {
+        subspace.platformRolesAccess =
+          this.spacePlatformRolesAccessService.createPlatformRolesAccess(
+            subspace,
+            subspace.settings,
+            space.platformRolesAccess
+          );
+        await this.save(subspace);
+      }
+    }
+    return savedSpace;
   }
 
   public async getAccountForLevelZeroSpaceOrFail(

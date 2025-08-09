@@ -38,6 +38,9 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { SpaceAboutAuthorizationService } from '../space.about/space.about.service.authorization';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { IPlatformAccessRole } from '@domain/access/platform-roles-access/platform.roles.access.role.interface';
+import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -53,6 +56,7 @@ export class SpaceAuthorizationService {
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceLookupService: SpaceLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
+    private platformAccessService: PlatformRolesAccessService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -684,18 +688,22 @@ export class SpaceAuthorizationService {
 
     //
     if (space.level === SpaceLevel.L0) {
-      // Additional rules so that global roles can see the license information.
-      const globalRolesReadAccessLicense =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          [AuthorizationPrivilege.READ_LICENSE],
-          [
-            AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-            AuthorizationCredential.GLOBAL_SUPPORT,
-          ],
-          'Read access to License for global roles'
+      // Add the global roles can see the license information.
+      const globalRolesReadLicense =
+        this.platformAccessService.getCredentialsForRolesWithAccess(
+          space.platformRolesAccess.roles,
+          [AuthorizationPrivilege.READ_LICENSE]
         );
-      globalRolesReadAccessLicense.cascade = false;
-      newRules.push(globalRolesReadAccessLicense);
+      if (globalRolesReadLicense.length !== 0) {
+        const globalRolesReadAccessLicense =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.READ_LICENSE],
+            globalRolesReadLicense,
+            'Read access to License for global roles'
+          );
+        globalRolesReadAccessLicense.cascade = false;
+        newRules.push(globalRolesReadAccessLicense);
+      }
 
       const accountAdminCredential =
         this.getAccountAdminCredentialForSpaceL0OrFail(space);
@@ -716,5 +724,187 @@ export class SpaceAuthorizationService {
       updatedAuthorization,
       newRules
     );
+  }
+
+  public createPlatformAccess(
+    space: ISpace,
+    spaceSettings: ISpaceSettings,
+    parentPlatformAccess?: IPlatformRolesAccess
+  ): IPlatformRolesAccess {
+    const platformAccessRoles: IPlatformAccessRole[] = [];
+
+    platformAccessRoles.push({
+      roleName: RoleName.ANONYMOUS,
+      grantedPrivileges: this.getAccessPrivilegesForAnonymousUsers(
+        space,
+        spaceSettings,
+        parentPlatformAccess
+      ),
+    });
+
+    platformAccessRoles.push({
+      roleName: RoleName.REGISTERED,
+      grantedPrivileges: this.getAccessPrivilegesForRegisteredUsers(
+        space,
+        spaceSettings,
+        parentPlatformAccess
+      ),
+    });
+
+    platformAccessRoles.push({
+      roleName: RoleName.GLOBAL_LICENSE_MANAGER,
+      grantedPrivileges: this.getAccessPrivilegesForLicenseManagers(space),
+    });
+
+    platformAccessRoles.push({
+      roleName: RoleName.GLOBAL_SUPPORT,
+      grantedPrivileges: this.getAccessPrivilegesForSupport(
+        space,
+        spaceSettings,
+        parentPlatformAccess
+      ),
+    });
+
+    platformAccessRoles.push({
+      roleName: RoleName.GLOBAL_SPACES_READER,
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+    });
+
+    return { roles: platformAccessRoles };
+  }
+
+  private getAccessPrivilegesForSupport(
+    space: ISpace,
+    spaceSettings: ISpaceSettings,
+    parentPlatformAccess?: IPlatformRolesAccess
+  ): AuthorizationPrivilege[] {
+    const privileges: AuthorizationPrivilege[] = [];
+
+    if (space.level === SpaceLevel.L0) {
+      privileges.push(
+        AuthorizationPrivilege.READ_LICENSE,
+        AuthorizationPrivilege.READ_ABOUT,
+        AuthorizationPrivilege.PLATFORM_ADMIN
+      );
+
+      // Setting only valid on L0 spaces
+      if (spaceSettings.privacy.allowPlatformSupportAsAdmin) {
+        privileges.push(
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT
+        );
+      }
+    } else {
+      if (!parentPlatformAccess) {
+        throw new EntityNotFoundException(
+          `Parent platform access not found for space ${space.id}`,
+          LogContext.SPACES
+        );
+      }
+      const hasUpdateOnParent = this.platformAccessService.hasRolePrivilege(
+        parentPlatformAccess.roles,
+        RoleName.GLOBAL_SUPPORT,
+        AuthorizationPrivilege.UPDATE
+      );
+      if (hasUpdateOnParent) {
+        privileges.push(
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT
+        );
+      }
+    }
+
+    return privileges;
+  }
+
+  private getAccessPrivilegesForLicenseManagers(
+    space: ISpace
+  ): AuthorizationPrivilege[] {
+    const privileges: AuthorizationPrivilege[] = [];
+
+    if (space.level === SpaceLevel.L0) {
+      privileges.push(
+        AuthorizationPrivilege.READ_LICENSE,
+        AuthorizationPrivilege.READ_ABOUT
+      );
+    }
+
+    return privileges;
+  }
+
+  private getAccessPrivilegesForAnonymousUsers(
+    space: ISpace,
+    spaceSettings: ISpaceSettings,
+    parentPlatformAccess?: IPlatformRolesAccess
+  ): AuthorizationPrivilege[] {
+    const privileges: AuthorizationPrivilege[] = [];
+
+    if (space.level === SpaceLevel.L0) {
+      privileges.push(AuthorizationPrivilege.READ_ABOUT);
+      if (spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC) {
+        privileges.push(AuthorizationPrivilege.READ);
+      }
+    } else {
+      if (!parentPlatformAccess) {
+        throw new EntityNotFoundException(
+          `Parent platform access not found for space ${space.id}`,
+          LogContext.SPACES
+        );
+      }
+      const hasReadOnParent = this.platformAccessService.hasRolePrivilege(
+        parentPlatformAccess.roles,
+        RoleName.ANONYMOUS,
+        AuthorizationPrivilege.READ
+      );
+      if (hasReadOnParent) {
+        privileges.push(AuthorizationPrivilege.READ_ABOUT);
+        if (spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC) {
+          privileges.push(AuthorizationPrivilege.READ);
+        }
+      }
+    }
+
+    return privileges;
+  }
+
+  private getAccessPrivilegesForRegisteredUsers(
+    space: ISpace,
+    spaceSettings: ISpaceSettings,
+    parentPlatformAccess?: IPlatformRolesAccess
+  ): AuthorizationPrivilege[] {
+    const privileges: AuthorizationPrivilege[] = [];
+
+    if (space.level === SpaceLevel.L0) {
+      privileges.push(AuthorizationPrivilege.READ_ABOUT);
+      if (spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC) {
+        privileges.push(AuthorizationPrivilege.READ);
+      }
+    } else {
+      if (!parentPlatformAccess) {
+        throw new EntityNotFoundException(
+          `Parent platform access not found for space ${space.id}`,
+          LogContext.SPACES
+        );
+      }
+      const hasReadOnParent = this.platformAccessService.hasRolePrivilege(
+        parentPlatformAccess.roles,
+        RoleName.REGISTERED,
+        AuthorizationPrivilege.READ
+      );
+      if (hasReadOnParent) {
+        privileges.push(AuthorizationPrivilege.READ_ABOUT);
+        if (spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC) {
+          privileges.push(AuthorizationPrivilege.READ);
+        }
+      }
+    }
+
+    return privileges;
   }
 }
