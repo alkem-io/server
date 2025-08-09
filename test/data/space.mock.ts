@@ -124,6 +124,9 @@ export const spaceData: { space: ISpace } = {
     rowId: 1,
     about: mockAbout,
     agent: mockAgent,
+    platformRolesAccess: {
+      roles: [],
+    },
     community: mockCommunity,
     authorization: mockAuthorization,
     // Tagset is not a direct ISpace property, but included here for completeness if needed in tests

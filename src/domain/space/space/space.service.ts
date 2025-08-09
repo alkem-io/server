@@ -43,7 +43,6 @@ import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.sett
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
-import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
@@ -80,6 +79,8 @@ import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { UUID_LENGTH } from '@common/constants';
+import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -111,6 +112,7 @@ export class SpaceService {
     private templateContentSpaceService: TemplateContentSpaceService,
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
+    private spacePlatformRolesAccessService: SpacePlatformRolesAccessService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -686,6 +688,30 @@ export class SpaceService {
     return this.spaceRepository.find(options);
   }
 
+  public async updatePlatformRolesAccessRecursively(
+    space: ISpace,
+    parentPlatformRolesAccess?: IPlatformRolesAccess
+  ): Promise<ISpace> {
+    space.platformRolesAccess =
+      this.spacePlatformRolesAccessService.createPlatformRolesAccess(
+        space,
+        space.settings,
+        parentPlatformRolesAccess
+      );
+    const result = await this.save(space);
+
+    // If the space has subspaces, update their platform roles access recursively
+    if (space.subspaces && space.subspaces.length > 0) {
+      for (const subspace of space.subspaces) {
+        await this.updatePlatformRolesAccessRecursively(
+          subspace,
+          space.platformRolesAccess
+        );
+      }
+    }
+    return result;
+  }
+
   public async updateSpacePlatformSettings(
     space: ISpace,
     updateData: UpdateSpacePlatformSettingsInput
@@ -698,12 +724,14 @@ export class SpaceService {
           LogContext.SPACES
         );
       }
+
       await this.updateSpaceVisibilityAllSubspaces(
         space.id,
         updateData.visibility
       );
 
       space.visibility = updateData.visibility;
+      await this.updatePlatformRolesAccessRecursively(space);
     }
 
     if (updateData.nameID && updateData.nameID !== space.nameID) {
@@ -805,13 +833,6 @@ export class SpaceService {
       space.visibility = visibility;
       await this.save(space);
     }
-  }
-
-  public async updateSpaceSettings(
-    space: ISpace,
-    settingsData: UpdateSpaceSettingsInput
-  ): Promise<ISpace> {
-    return await this.updateSettings(space, settingsData.settings);
   }
 
   /**
@@ -1301,16 +1322,23 @@ export class SpaceService {
   }
 
   public async updateSettings(
-    space: ISpace,
+    spaceID: string,
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
+    const space = await this.getSpaceOrFail(spaceID, {
+      relations: {
+        parentSpace: true,
+        subspaces: true,
+      },
+    });
     const settings = space.settings;
     const updatedSettings = this.spaceSettingsService.updateSettings(
       settings,
       settingsData
     );
     space.settings = updatedSettings;
-    return await this.save(space);
+
+    return await this.updatePlatformRolesAccessRecursively(space);
   }
 
   public async getAccountForLevelZeroSpaceOrFail(

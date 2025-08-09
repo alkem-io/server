@@ -106,8 +106,8 @@ export class CalloutResolverMutations {
     // Reset authorization policy for the callout and its child entities
     // This is needed because updateCallout might create new entities (like comments room)
     // that need proper authorization policies
-    const { roleSet, spaceSettings } =
-      await this.namingService.getRoleSetAndSettingsForCallout(
+    const { roleSet, platformRolesAccess } =
+      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
         updatedCallout.id
       );
 
@@ -115,8 +115,8 @@ export class CalloutResolverMutations {
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         updatedCallout.id,
         updatedCallout.authorization,
-        roleSet,
-        spaceSettings
+        platformRolesAccess,
+        roleSet
       );
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
@@ -262,8 +262,10 @@ export class CalloutResolverMutations {
       agentInfo.userID
     );
 
-    const { roleSet, spaceSettings } =
-      await this.namingService.getRoleSetAndSettingsForCallout(callout.id);
+    const { roleSet, platformRolesAccess } =
+      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+        callout.id
+      );
 
     contribution = await this.calloutContributionService.save(contribution);
 
@@ -282,8 +284,8 @@ export class CalloutResolverMutations {
       await this.contributionAuthorizationService.applyAuthorizationPolicy(
         contribution.id,
         callout.authorization,
-        roleSet,
-        spaceSettings
+        platformRolesAccess,
+        roleSet
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 

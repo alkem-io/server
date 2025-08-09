@@ -12,6 +12,7 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { AiPersonaModule } from '@domain/community/ai-persona/ai.persona.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
     NotificationAdapterModule,
     AuthResetModule,
     AiPersonaModule,
+    SpaceModule,
   ],
   providers: [
     AdminAuthorizationService,

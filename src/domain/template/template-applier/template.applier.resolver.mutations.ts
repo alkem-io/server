@@ -93,7 +93,10 @@ export class TemplateApplierResolverMutations {
     const updatedAuthorizations: IAuthorizationPolicy[] =
       await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(
         targetCollaboration.calloutsSet,
-        targetCollaboration.authorization
+        targetCollaboration.authorization,
+        {
+          roles: [],
+        }
       );
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);

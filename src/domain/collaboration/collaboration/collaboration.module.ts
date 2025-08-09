@@ -13,6 +13,7 @@ import { LicenseModule } from '@domain/common/license/license.module';
 import { CollaborationLicenseService } from './collaboration.service.license';
 import { CalloutsSetModule } from '../callouts-set/callouts.set.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     InnovationFlowModule,
     LicenseModule,
     CalloutsSetModule,
+    PlatformRolesAccessModule,
     NamingModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],

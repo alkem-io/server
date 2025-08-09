@@ -23,6 +23,11 @@ import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/no
 import { RoleChangeType } from '@alkemio/notifications-lib';
 import { AiPersonaService } from '@domain/community/ai-persona/ai.persona.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { EntityManager } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { SpaceService } from '@domain/space/space/space.service';
+import { Space } from '@domain/space/space/space.entity';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @InstrumentResolver()
 @Resolver()
@@ -38,7 +43,10 @@ export class AdminAuthorizationResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private authResetService: AuthResetService,
-    private aiPersonaService: AiPersonaService
+    private aiPersonaService: AiPersonaService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
+    private spaceService: SpaceService
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
@@ -51,7 +59,6 @@ export class AdminAuthorizationResolverMutations {
   @Mutation(() => IUser, {
     description: 'Grants an authorization credential to a User.',
   })
-  @Profiling.api
   async grantCredentialToUser(
     @Args('grantCredentialData')
     grantCredentialData: GrantAuthorizationCredentialInput,
@@ -164,6 +171,37 @@ export class AdminAuthorizationResolverMutations {
     );
 
     return this.authResetService.publishResetAll();
+  }
+
+  @Mutation(() => String, {
+    description:
+      'Ensure all access privileges for the platform roles are re-calculated',
+  })
+  public async authorizationPlatformRolesAccessReset(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      `reset platformRolesAccess on all Spaces: ${agentInfo.email}`
+    );
+
+    const spaces = await this.entityManager.find(Space, {
+      where: {
+        level: SpaceLevel.L0,
+      },
+      relations: {
+        subspaces: true,
+      },
+    });
+    for (const space of spaces) {
+      await this.spaceService.updatePlatformRolesAccessRecursively(space);
+    }
+    return true;
   }
 
   @Mutation(() => IAuthorizationPolicy, {

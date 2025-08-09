@@ -15,6 +15,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     RoleSetModule,
     CommunicationModule,
     StorageAggregatorResolverModule,
+    PlatformRolesAccessModule,
     VirtualContributorModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,

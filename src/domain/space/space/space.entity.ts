@@ -25,6 +25,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { SpaceAbout } from '../space.about';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 @Entity()
 export class Space extends AuthorizableEntity implements ISpace {
   @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
@@ -85,6 +86,10 @@ export class Space extends AuthorizableEntity implements ISpace {
 
   @Column('json', { nullable: false })
   settings: ISpaceSettings;
+
+  // Calculated field to make the authorization logic clearer
+  @Column('json', { nullable: false })
+  platformRolesAccess!: IPlatformRolesAccess;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,

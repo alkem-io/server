@@ -104,7 +104,10 @@ export class TemplateAuthorizationService {
         const calloutAuthorizations =
           await this.calloutAuthorizationService.applyAuthorizationPolicy(
             template.callout.id,
-            template.authorization
+            template.authorization,
+            {
+              roles: [],
+            }
           );
         updatedAuthorizations.push(...calloutAuthorizations);
         break;

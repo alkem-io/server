@@ -62,7 +62,10 @@ export class TemplateContentSpaceAuthorizationService {
     const collaborationAuths =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         templateContentSpace.collaboration,
-        templateContentSpace.authorization
+        templateContentSpace.authorization,
+        {
+          roles: [],
+        }
       );
     updatedAuthorizations.push(...collaborationAuths);
 

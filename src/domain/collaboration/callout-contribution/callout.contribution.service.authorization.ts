@@ -16,10 +16,11 @@ import {
   CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE,
 } from '@common/constants';
 import { LinkAuthorizationService } from '../link/link.service.authorization';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -29,14 +30,15 @@ export class CalloutContributionAuthorizationService {
     private postAuthorizationService: PostAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private linkAuthorizationService: LinkAuthorizationService,
+    private platformRolesAccessService: PlatformRolesAccessService,
     private roleSetService: RoleSetService
   ) {}
 
   public async applyAuthorizationPolicy(
     contributionID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    roleSet?: IRoleSet,
-    spaceSettings?: ISpaceSettings
+    platformRolesAccess: IPlatformRolesAccess,
+    roleSet?: IRoleSet
   ): Promise<IAuthorizationPolicy[]> {
     const contribution =
       await this.contributionService.getCalloutContributionOrFail(
@@ -111,8 +113,8 @@ export class CalloutContributionAuthorizationService {
     // Extend to give the user creating the contribution more rights
     contribution.authorization = await this.appendCredentialRules(
       contribution,
-      roleSet,
-      spaceSettings
+      platformRolesAccess,
+      roleSet
     );
     updatedAuthorizations.push(contribution.authorization);
 
@@ -121,8 +123,8 @@ export class CalloutContributionAuthorizationService {
         await this.postAuthorizationService.applyAuthorizationPolicy(
           contribution.post,
           contribution.authorization,
-          roleSet,
-          spaceSettings
+          platformRolesAccess,
+          roleSet
         );
       updatedAuthorizations.push(...postAuthorizations);
     }
@@ -150,8 +152,8 @@ export class CalloutContributionAuthorizationService {
 
   private async appendCredentialRules(
     contribution: ICalloutContribution,
-    communityPolicy?: IRoleSet,
-    spaceSettings?: ISpaceSettings
+    platformRolesAccess: IPlatformRolesAccess,
+    roleSet?: IRoleSet
   ): Promise<IAuthorizationPolicy> {
     const authorization = contribution.authorization;
     if (!authorization)
@@ -202,23 +204,31 @@ export class CalloutContributionAuthorizationService {
         resourceID: '',
       },
     ];
-    if (communityPolicy && spaceSettings) {
-      const roleCredentials =
+    if (roleSet) {
+      const roleSetCredentials =
         await this.roleSetService.getCredentialsForRoleWithParents(
-          communityPolicy,
-          RoleName.ADMIN,
-          spaceSettings
+          roleSet,
+          RoleName.ADMIN
         );
-      credentials.push(...roleCredentials);
+      credentials.push(...roleSetCredentials);
     }
-    const adminsMoveContributionRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.MOVE_CONTRIBUTION],
-        credentials,
-        CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE
+    const platformRoleCredentials =
+      this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        platformRolesAccess.roles,
+        [AuthorizationPrivilege.UPDATE]
       );
-    adminsMoveContributionRule.cascade = false;
-    newRules.push(adminsMoveContributionRule);
+    credentials.push(...platformRoleCredentials);
+
+    if (credentials.length > 0) {
+      const adminsMoveContributionRule =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.MOVE_CONTRIBUTION],
+          credentials,
+          CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE
+        );
+      adminsMoveContributionRule.cascade = false;
+      newRules.push(adminsMoveContributionRule);
+    }
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

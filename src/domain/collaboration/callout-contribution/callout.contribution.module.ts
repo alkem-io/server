@@ -12,6 +12,7 @@ import { PostModule } from '../post/post.module';
 import { LinkModule } from '../link/link.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     LinkModule,
     UserLookupModule,
     RoleSetModule,
+    PlatformRolesAccessModule,
     TypeOrmModule.forFeature([CalloutContribution]),
   ],
   providers: [

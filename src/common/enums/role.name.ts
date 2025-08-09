@@ -15,6 +15,8 @@ export enum RoleName {
   GLOBAL_SUPPORT_MANAGER = 'global-support-manager',
   PLATFORM_BETA_TESTER = 'platform-beta-tester',
   PLATFORM_VC_CAMPAIGN = 'platform-vc-campaign',
+  REGISTERED = 'registered',
+  ANONYMOUS = 'anonymous',
 }
 
 registerEnumType(RoleName, {

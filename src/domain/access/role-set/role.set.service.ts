@@ -26,7 +26,6 @@ import { RoleService } from '../role/role.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IRole } from '../role/role.interface';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IInvitation } from '../invitation/invitation.interface';
@@ -1930,14 +1929,9 @@ export class RoleSetService {
 
   public async getCredentialsForRoleWithParents(
     roleSet: IRoleSet,
-    roleName: RoleName,
-    spaceSettings: ISpaceSettings
+    roleName: RoleName
   ): Promise<ICredentialDefinition[]> {
-    const result = await this.getCredentialsForRole(
-      roleSet,
-      roleName,
-      spaceSettings
-    );
+    const result = await this.getCredentialsForRole(roleSet, roleName);
     const parentCredentials = await this.getParentCredentialsForRole(
       roleSet,
       roleName
@@ -1947,19 +1941,9 @@ export class RoleSetService {
 
   public async getCredentialsForRole(
     roleSet: IRoleSet,
-    roleName: RoleName,
-    spaceSettings: ISpaceSettings // TODO: would like not to have this here; for later
+    roleName: RoleName
   ): Promise<ICredentialDefinition[]> {
     const result = [await this.getCredentialForRole(roleSet, roleName)];
-    if (
-      roleName === RoleName.ADMIN &&
-      spaceSettings.privacy.allowPlatformSupportAsAdmin
-    ) {
-      result.push({
-        type: AuthorizationCredential.GLOBAL_SUPPORT,
-        resourceID: '',
-      });
-    }
     return result;
   }
 
