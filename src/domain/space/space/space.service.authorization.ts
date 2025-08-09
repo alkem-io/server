@@ -116,6 +116,14 @@ export class SpaceAuthorizationService {
         providedParentAuthorization;
     }
 
+    // Warn if space does not have a valid platformRolesAccess
+    if (space.platformRolesAccess.roles.length === 0) {
+      this.logger.warn(
+        `Space ${space.id} has no platform roles access defined`,
+        LogContext.AUTH
+      );
+    }
+
     // Key: what are the credentials that should be able to reach this Space, either as a top level space,
     // or subspace in public space, or members in a private space who can see subspaces there etc
     const credentialCriteriasWithAccess =

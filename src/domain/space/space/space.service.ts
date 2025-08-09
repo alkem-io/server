@@ -80,6 +80,7 @@ import { ITemplateContentSpace } from '@domain/template/template-content-space/t
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { UUID_LENGTH } from '@common/constants';
 import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -687,6 +688,30 @@ export class SpaceService {
     return this.spaceRepository.find(options);
   }
 
+  public async updatePlatformRolesAccessRecursively(
+    space: ISpace,
+    parentPlatformRolesAccess?: IPlatformRolesAccess
+  ): Promise<ISpace> {
+    space.platformRolesAccess =
+      this.spacePlatformRolesAccessService.createPlatformRolesAccess(
+        space,
+        space.settings,
+        parentPlatformRolesAccess
+      );
+    const result = await this.save(space);
+
+    // If the space has subspaces, update their platform roles access recursively
+    if (space.subspaces && space.subspaces.length > 0) {
+      for (const subspace of space.subspaces) {
+        await this.updatePlatformRolesAccessRecursively(
+          subspace,
+          space.platformRolesAccess
+        );
+      }
+    }
+    return result;
+  }
+
   public async updateSpacePlatformSettings(
     space: ISpace,
     updateData: UpdateSpacePlatformSettingsInput
@@ -706,13 +731,7 @@ export class SpaceService {
       );
 
       space.visibility = updateData.visibility;
-      // always recalulate the platform access
-      space.platformRolesAccess =
-        this.spacePlatformRolesAccessService.createPlatformRolesAccess(
-          space,
-          space.settings,
-          space.parentSpace?.platformRolesAccess
-        );
+      await this.updatePlatformRolesAccessRecursively(space);
     }
 
     if (updateData.nameID && updateData.nameID !== space.nameID) {
@@ -1319,27 +1338,7 @@ export class SpaceService {
     );
     space.settings = updatedSettings;
 
-    // always recalulate the platform access
-    space.platformRolesAccess =
-      this.spacePlatformRolesAccessService.createPlatformRolesAccess(
-        space,
-        space.settings,
-        space.parentSpace?.platformRolesAccess
-      );
-    const savedSpace = await this.save(space);
-    // cascade the platform roles access to all subspaces
-    if (space.subspaces && space.subspaces.length > 0) {
-      for (const subspace of space.subspaces) {
-        subspace.platformRolesAccess =
-          this.spacePlatformRolesAccessService.createPlatformRolesAccess(
-            subspace,
-            subspace.settings,
-            space.platformRolesAccess
-          );
-        await this.save(subspace);
-      }
-    }
-    return savedSpace;
+    return await this.updatePlatformRolesAccessRecursively(space);
   }
 
   public async getAccountForLevelZeroSpaceOrFail(
