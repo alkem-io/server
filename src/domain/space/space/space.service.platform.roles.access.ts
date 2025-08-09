@@ -10,6 +10,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IPlatformAccessRole } from '@domain/access/platform-roles-access/platform.roles.access.role.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 
 @Injectable()
 export class SpacePlatformRolesAccessService {
@@ -41,6 +42,11 @@ export class SpacePlatformRolesAccessService {
         spaceSettings,
         parentPlatformAccess
       ),
+    });
+
+    platformAccessRoles.push({
+      roleName: RoleName.GLOBAL_ADMIN,
+      grantedPrivileges: this.getAccessPrivilegesForGlobalAdmin(),
     });
 
     platformAccessRoles.push({
@@ -115,6 +121,16 @@ export class SpacePlatformRolesAccessService {
     return privileges;
   }
 
+  private getAccessPrivilegesForGlobalAdmin(): AuthorizationPrivilege[] {
+    return [
+      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.DELETE,
+      AuthorizationPrivilege.GRANT,
+    ];
+  }
+
   private getAccessPrivilegesForLicenseManagers(
     space: ISpace
   ): AuthorizationPrivilege[] {
@@ -136,6 +152,9 @@ export class SpacePlatformRolesAccessService {
     parentPlatformAccess?: IPlatformRolesAccess
   ): AuthorizationPrivilege[] {
     const privileges: AuthorizationPrivilege[] = [];
+    if (space.visibility === SpaceVisibility.ARCHIVED) {
+      return privileges; // No access for anonymous users on archived spaces
+    }
 
     if (space.level === SpaceLevel.L0) {
       privileges.push(AuthorizationPrivilege.READ_ABOUT);
@@ -171,6 +190,9 @@ export class SpacePlatformRolesAccessService {
     parentPlatformAccess?: IPlatformRolesAccess
   ): AuthorizationPrivilege[] {
     const privileges: AuthorizationPrivilege[] = [];
+    if (space.visibility === SpaceVisibility.ARCHIVED) {
+      return privileges; // No access for registered users on archived spaces
+    }
 
     if (space.level === SpaceLevel.L0) {
       privileges.push(AuthorizationPrivilege.READ_ABOUT);

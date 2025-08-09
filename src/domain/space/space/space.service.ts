@@ -699,12 +699,20 @@ export class SpaceService {
           LogContext.SPACES
         );
       }
+
       await this.updateSpaceVisibilityAllSubspaces(
         space.id,
         updateData.visibility
       );
 
       space.visibility = updateData.visibility;
+      // always recalulate the platform access
+      space.platformRolesAccess =
+        this.spacePlatformRolesAccessService.createPlatformRolesAccess(
+          space,
+          space.settings,
+          space.parentSpace?.platformRolesAccess
+        );
     }
 
     if (updateData.nameID && updateData.nameID !== space.nameID) {

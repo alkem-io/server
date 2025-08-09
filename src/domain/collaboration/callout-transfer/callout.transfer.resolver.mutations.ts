@@ -90,7 +90,10 @@ export class CalloutTransferResolverMutations {
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,
-        sourceCalloutsSet.authorization
+        sourceCalloutsSet.authorization,
+        {
+          roles: [],
+        }
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);

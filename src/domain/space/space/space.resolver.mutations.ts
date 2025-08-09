@@ -165,11 +165,7 @@ export class SpaceResolverMutations {
       space,
       updateData
     );
-    space.platformRolesAccess =
-      this.spaceAuthorizationService.createPlatformAccess(
-        space,
-        space.settings
-      );
+
     space = await this.spaceService.save(space);
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);

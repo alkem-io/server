@@ -17,10 +17,10 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { RoleName } from '@common/enums/role.name';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 
 @Injectable()
 export class PostAuthorizationService {
@@ -28,14 +28,15 @@ export class PostAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roleSetService: RoleSetService,
-    private profileAuthorizationService: ProfileAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private platformRolesAccessService: PlatformRolesAccessService
   ) {}
 
   async applyAuthorizationPolicy(
     post: IPost,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    roleSet?: IRoleSet,
-    spaceSettings?: ISpaceSettings
+    platformRolesAccess: IPlatformRolesAccess,
+    roleSet?: IRoleSet
   ): Promise<IAuthorizationPolicy[]> {
     if (!post.profile) {
       throw new RelationshipNotFoundException(
@@ -73,8 +74,8 @@ export class PostAuthorizationService {
     // Extend to give the user creating the post more rights
     post.authorization = await this.appendCredentialRules(
       post,
-      roleSet,
-      spaceSettings
+      platformRolesAccess,
+      roleSet
     );
     updatedAuthorizations.push(post.authorization);
 
@@ -91,8 +92,8 @@ export class PostAuthorizationService {
 
   private async appendCredentialRules(
     post: IPost,
-    roleSet?: IRoleSet,
-    spaceSettings?: ISpaceSettings
+    platformRolesAccess: IPlatformRolesAccess,
+    roleSet?: IRoleSet
   ): Promise<IAuthorizationPolicy> {
     const authorization = post.authorization;
     if (!authorization)
@@ -117,21 +118,20 @@ export class PostAuthorizationService {
     newRules.push(manageCreatedPostPolicy);
 
     // Allow space admins to move post
-    const credentials: ICredentialDefinition[] = [
-      {
-        type: AuthorizationCredential.GLOBAL_ADMIN,
-        resourceID: '',
-      },
-    ];
 
-    if (roleSet && spaceSettings) {
-      const roleCredentials =
+    const credentials =
+      this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        platformRolesAccess.roles,
+        [AuthorizationPrivilege.UPDATE]
+      );
+
+    if (roleSet) {
+      const roleSetCredentials =
         await this.roleSetService.getCredentialsForRoleWithParents(
           roleSet,
-          RoleName.ADMIN,
-          spaceSettings
+          RoleName.ADMIN
         );
-      credentials.push(...roleCredentials);
+      credentials.push(...roleSetCredentials);
     }
     const adminsMovePostRule =
       this.authorizationPolicyService.createCredentialRule(

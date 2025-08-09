@@ -32,6 +32,8 @@ import { RoleName } from '@common/enums/role.name';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -41,14 +43,16 @@ export class CommunityAuthorizationService {
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
-    private roleSetService: RoleSetService
+    private roleSetService: RoleSetService,
+    private platformRolesAccessService: PlatformRolesAccessService
   ) {}
 
   async applyAuthorizationPolicy(
     communityID: string,
     parentAuthorization: IAuthorizationPolicy,
-    spaceSettings: ISpaceSettings,
+    platformRolesAccess: IPlatformRolesAccess,
     spaceMembershipAllowed: boolean,
+    spaceSettings: ISpaceSettings,
     isSubspace: boolean
   ): Promise<IAuthorizationPolicy[]> {
     const community = await this.communityService.getCommunityOrFail(
@@ -111,6 +115,7 @@ export class CommunityAuthorizationService {
         community.roleSet,
         spaceMembershipAllowed,
         isSubspace,
+        platformRolesAccess,
         spaceSettings
       );
 
@@ -157,6 +162,7 @@ export class CommunityAuthorizationService {
     roleSet: IRoleSet,
     entryRoleAllowed: boolean,
     isSubspace: boolean,
+    platformRolesWithAccess: IPlatformRolesAccess,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicyRuleCredential[]> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -170,9 +176,15 @@ export class CommunityAuthorizationService {
     const inviteMembersCriterias: ICredentialDefinition[] =
       await this.roleSetService.getCredentialsForRoleWithParents(
         roleSet,
-        RoleName.ADMIN,
-        spaceSettings
+        RoleName.ADMIN
       );
+    const platformRolesWithGrant =
+      this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        platformRolesWithAccess.roles,
+        [AuthorizationPrivilege.GRANT]
+      );
+    inviteMembersCriterias.push(...platformRolesWithGrant);
+
     if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
       // use the member credential to create subspace admin credential
       const subspaceAdminCredential: ICredentialDefinition =
@@ -205,7 +217,8 @@ export class CommunityAuthorizationService {
       newRules.push(
         ...(await this.extendAuthorizationPolicySubspace(
           roleSet,
-          spaceSettings
+          spaceSettings,
+          platformRolesWithAccess
         ))
       );
     }
@@ -215,7 +228,8 @@ export class CommunityAuthorizationService {
 
   private async extendAuthorizationPolicySubspace(
     roleSet: IRoleSet,
-    spaceSettings: ISpaceSettings
+    spaceSettings: ISpaceSettings,
+    platformRolesWithAccess: IPlatformRolesAccess
   ): Promise<IAuthorizationPolicyRuleCredential[]> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -255,9 +269,14 @@ export class CommunityAuthorizationService {
     const adminCredentials =
       await this.roleSetService.getCredentialsForRoleWithParents(
         roleSet,
-        RoleName.ADMIN,
-        spaceSettings
+        RoleName.ADMIN
       );
+    const platformRolesWithGrantCredentials =
+      this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        platformRolesWithAccess.roles,
+        [AuthorizationPrivilege.GRANT]
+      );
+    adminCredentials.push(...platformRolesWithGrantCredentials);
 
     const addMembers = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
