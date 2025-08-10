@@ -12,6 +12,7 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
 import { LogContext } from '@common/enums';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 describe('AccountLicenseService', () => {
   let service: AccountLicenseService;
@@ -35,6 +36,7 @@ describe('AccountLicenseService', () => {
         AccountLicenseService,
         { provide: LicenseService, useValue: mockLicenseService },
         { provide: AccountService, useValue: {} },
+        { provide: AgentService, useValue: {} },
         { provide: SpaceLicenseService, useValue: {} },
         { provide: LicensingCredentialBasedService, useValue: {} },
         { provide: LicensingWingbackSubscriptionService, useValue: {} },
@@ -484,13 +486,14 @@ describe('AccountLicenseService', () => {
       );
 
       // Assert
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
           message:
-            'Skipping Wingback entitlements for account since it returned with an error',
+            'Skipping Wingback entitlements for Account, since it returned with an error',
           accountId: 'test-account',
-          error: 'Wingback service unavailable',
+          error: expect.any(Error),
         }),
+        expect.anything(),
         LogContext.ACCOUNT
       );
 
