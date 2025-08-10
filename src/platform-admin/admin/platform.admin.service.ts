@@ -60,28 +60,31 @@ export class PlatformAdminService {
   }
 
   public async getAllUsers(
-    paginationArgs: PaginationArgs,
+    paginationArgs?: PaginationArgs,
     withTags?: boolean,
     filter?: UserFilterInput
   ): Promise<PaginatedUsers> {
-    return this.userService.getPaginatedUsers(paginationArgs, withTags, filter);
+    const query = paginationArgs ?? new PaginationArgs();
+    return this.userService.getPaginatedUsers(query, withTags, filter);
   }
 
   public async getAllOrganizations(
-    paginationArgs: PaginationArgs,
+    paginationArgs?: PaginationArgs,
     filter?: OrganizationFilterInput,
     status?: OrganizationVerificationEnum
   ): Promise<PaginatedOrganization> {
+    const query = paginationArgs ?? new PaginationArgs();
     return await this.organizationService.getPaginatedOrganizations(
-      paginationArgs,
+      query,
       filter,
       status
     );
   }
 
   public async getAllVirtualContributors(
-    args: ContributorQueryArgs
+    args?: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {
-    return await this.virtualContributorService.getVirtualContributors(args);
+    const query = args ?? new ContributorQueryArgs();
+    return await this.virtualContributorService.getVirtualContributors(query);
   }
 }

@@ -75,7 +75,7 @@ export class PlatformAdminResolverFields {
   })
   async spaces(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true }) args: SpacesQueryArgs
+    @Args() args: SpacesQueryArgs
   ): Promise<ISpace[]> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -94,7 +94,7 @@ export class PlatformAdminResolverFields {
   })
   async users(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true }) pagination: PaginationArgs,
+    @Args() pagination: PaginationArgs,
     @Args({
       name: 'withTags',
       nullable: true,
@@ -149,7 +149,7 @@ export class PlatformAdminResolverFields {
   })
   async virtualContributors(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true }) args: ContributorQueryArgs
+    @Args() args: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -165,7 +165,15 @@ export class PlatformAdminResolverFields {
     nullable: false,
     description: 'Lookup Communication related information.',
   })
-  communication(): PlatformAdminCommunicationQueryResults {
+  async communication(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<PlatformAdminCommunicationQueryResults> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      'platformAdmin Communication'
+    );
     return {} as PlatformAdminCommunicationQueryResults;
   }
 }
