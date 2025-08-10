@@ -5,10 +5,9 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ActivityModule } from '@src/platform/activity/activity.module';
-import { NotificationAdapter } from './notification.adapter';
+import { NotificationExternalAdapter } from './notification.external.adapter';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
-import { NotificationExternalAdapterModule } from '../notification-external-adapter/notification.external.adapter.module';
 
 @Module({
   imports: [
@@ -17,9 +16,8 @@ import { NotificationExternalAdapterModule } from '../notification-external-adap
     UrlGeneratorModule,
     TypeOrmModule.forFeature([Post, Whiteboard, Community]),
     ContributorLookupModule,
-    NotificationExternalAdapterModule,
   ],
-  providers: [NotificationAdapter],
-  exports: [NotificationAdapter],
+  providers: [NotificationExternalAdapter],
+  exports: [NotificationExternalAdapter],
 })
-export class NotificationAdapterModule {}
+export class NotificationExternalAdapterModule {}

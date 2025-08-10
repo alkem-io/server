@@ -35,6 +35,7 @@ import {
   RoleChangeType,
   SpaceBaseEventPayload,
   PlatformSpaceCreatedEventPayload,
+  NotificationEventType,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -44,10 +45,6 @@ import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
-import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input.whiteboard.created';
-import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
-import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
@@ -55,9 +52,15 @@ import { ContributorLookupService } from '@services/infrastructure/contributor-l
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AlkemioConfig } from '@src/types';
 import { inferCalloutType } from '@domain/collaboration/callout/deprecated/callout.type.inference';
+import { ClientProxy } from '@nestjs/microservices';
+import { NotificationInputPostCreated } from '../notification-adapter/dto/notification.dto.input.post.created';
+import { NotificationInputWhiteboardCreated } from '../notification-adapter/dto/notification.dto.input.whiteboard.created';
+import { NotificationInputPostComment } from '../notification-adapter/dto/notification.dto.input.post.comment';
+import { NotificationInputCommentReply } from '../notification-adapter/dto/notification.dto.input.comment.reply';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 
 @Injectable()
-export class NotificationPayloadBuilder {
+export class NotificationExternalAdapter {
   constructor(
     private contributorLookupService: ContributorLookupService,
     private communityResolverService: CommunityResolverService,
@@ -69,8 +72,16 @@ export class NotificationPayloadBuilder {
     private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
     private contributionResolverService: ContributionResolverService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
+
+  public async sendExternalNotification(
+    event: NotificationEventType,
+    payload: any
+  ): Promise<void> {
+    this.notificationsClient.emit<number>(event, payload);
+  }
 
   async buildApplicationCreatedNotificationPayload(
     applicationCreatorID: string,

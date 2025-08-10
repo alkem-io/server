@@ -4,9 +4,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
 import { NotificationInputCalloutPublished } from './dto/notification.dto.input.callout.published';
 import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
-import { NotificationPayloadBuilder } from './notification.payload.builder';
-import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
-import { ClientProxy } from '@nestjs/microservices';
 import { NotificationEventType } from '@alkemio/notifications-lib';
 import { NotificationInputUpdateSent } from './dto/notification.dto.input.update.sent';
 import { NotificationInputForumDiscussionCreated } from './dto/notification.dto.input.discussion.created';
@@ -31,14 +28,14 @@ import { NotificationInputPlatformInvitation } from './dto/notification.dto.inpu
 import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/notification.dto.input.community.invitation.vc';
 import { NotificationInputSpaceCreated } from './dto/notification.dto.input.space.created';
+import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 
 @Injectable()
 export class NotificationAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private notificationPayloadBuilder: NotificationPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private notificationExternalAdapter: NotificationExternalAdapter
   ) {}
 
   public async calloutPublished(
@@ -48,12 +45,12 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildCalloutPublishedPayload(
+      await this.notificationExternalAdapter.buildCalloutPublishedPayload(
         eventData.triggeredBy,
         eventData.callout
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async postCreated(
@@ -63,9 +60,9 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildPostCreatedPayload(eventData);
+      await this.notificationExternalAdapter.buildPostCreatedPayload(eventData);
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async whiteboardCreated(
@@ -75,11 +72,11 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildWhiteboardCreatedPayload(
+      await this.notificationExternalAdapter.buildWhiteboardCreatedPayload(
         eventData
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async postComment(
@@ -89,11 +86,11 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
     // build notification payload
     const payload =
-      await this.notificationPayloadBuilder.buildCommentCreatedOnPostPayload(
+      await this.notificationExternalAdapter.buildCommentCreatedOnPostPayload(
         eventData
       );
     // send notification event
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async discussionComment(
@@ -104,13 +101,13 @@ export class NotificationAdapter {
 
     // build notification payload
     const payload =
-      await this.notificationPayloadBuilder.buildCommentCreatedOnDiscussionPayload(
+      await this.notificationExternalAdapter.buildCommentCreatedOnDiscussionPayload(
         eventData.callout,
         eventData.comments.id,
         eventData.commentSent
       );
     // send notification event
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async forumDiscussionComment(
@@ -121,12 +118,12 @@ export class NotificationAdapter {
 
     // build notification payload
     const payload =
-      await this.notificationPayloadBuilder.buildCommentCreatedOnForumDiscussionPayload(
+      await this.notificationExternalAdapter.buildCommentCreatedOnForumDiscussionPayload(
         eventData.discussion,
         eventData.commentSent
       );
     // send notification event
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async commentReply(
@@ -138,11 +135,11 @@ export class NotificationAdapter {
     try {
       // build notification payload
       const payload =
-        await this.notificationPayloadBuilder.buildCommentReplyPayload(
+        await this.notificationExternalAdapter.buildCommentReplyPayload(
           eventData
         );
       // send notification event
-      this.notificationsClient.emit<number>(event, payload);
+      this.notificationExternalAdapter.sendExternalNotification(event, payload);
     } catch (error: any) {
       this.logger.error(
         `Error while building comment reply notification payload ${error?.message}`,
@@ -160,12 +157,15 @@ export class NotificationAdapter {
 
     // Send the notifications event
     const notificationsPayload =
-      await this.notificationPayloadBuilder.buildCommunicationUpdateSentNotificationPayload(
+      await this.notificationExternalAdapter.buildCommunicationUpdateSentNotificationPayload(
         eventData.triggeredBy,
         eventData.updates,
         eventData.lastMessage
       );
-    this.notificationsClient.emit<number>(event, notificationsPayload);
+    this.notificationExternalAdapter.sendExternalNotification(
+      event,
+      notificationsPayload
+    );
   }
 
   public async forumDiscussionCreated(
@@ -175,10 +175,10 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildPlatformForumDiscussionCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildPlatformForumDiscussionCreatedNotificationPayload(
         eventData.discussion
       );
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async sendUserMessage(
@@ -188,12 +188,12 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildUserMessageNotificationPayload(
+      await this.notificationExternalAdapter.buildUserMessageNotificationPayload(
         eventData.triggeredBy,
         eventData.receiverID,
         eventData.message
       );
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async sendOrganizationMessage(
@@ -203,12 +203,12 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildOrganizationMessageNotificationPayload(
+      await this.notificationExternalAdapter.buildOrganizationMessageNotificationPayload(
         eventData.triggeredBy,
         eventData.message,
         eventData.organizationID
       );
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async sendCommunityLeadsMessage(
@@ -218,12 +218,12 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildCommunicationCommunityLeadsMessageNotificationPayload(
+      await this.notificationExternalAdapter.buildCommunicationCommunityLeadsMessageNotificationPayload(
         eventData.triggeredBy,
         eventData.message,
         eventData.communityID
       );
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async userMention(
@@ -233,7 +233,7 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildCommunicationUserMentionNotificationPayload(
+      await this.notificationExternalAdapter.buildCommunicationUserMentionNotificationPayload(
         eventData.triggeredBy,
         eventData.mentionedEntityID,
         eventData.comment,
@@ -243,7 +243,7 @@ export class NotificationAdapter {
       );
 
     if (payload) {
-      this.notificationsClient.emit<number>(event, payload);
+      this.notificationExternalAdapter.sendExternalNotification(event, payload);
     }
   }
 
@@ -254,7 +254,7 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildOrganizationMentionNotificationPayload(
+      await this.notificationExternalAdapter.buildOrganizationMentionNotificationPayload(
         eventData.triggeredBy,
         eventData.mentionedEntityID,
         eventData.comment,
@@ -264,7 +264,7 @@ export class NotificationAdapter {
       );
 
     if (payload) {
-      this.notificationsClient.emit<number>(event, payload);
+      this.notificationExternalAdapter.sendExternalNotification(event, payload);
     }
   }
 
@@ -297,13 +297,13 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildApplicationCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildApplicationCreatedNotificationPayload(
         eventData.triggeredBy,
         eventData.triggeredBy,
         eventData.community
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async invitationCreated(
@@ -313,14 +313,14 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildInvitationCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildInvitationCreatedNotificationPayload(
         eventData.triggeredBy,
         eventData.invitedContributorID,
         eventData.community,
         eventData.welcomeMessage
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async invitationVirtualContributorCreated(
@@ -330,7 +330,7 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildInvitationVirtualContributorCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildInvitationVirtualContributorCreatedNotificationPayload(
         eventData.triggeredBy,
         eventData.invitedContributorID,
         eventData.accountHost,
@@ -338,7 +338,7 @@ export class NotificationAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async platformInvitationCreated(
@@ -348,14 +348,14 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildExternalInvitationCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildExternalInvitationCreatedNotificationPayload(
         eventData.triggeredBy,
         eventData.invitedUser,
         eventData.community,
         eventData.welcomeMessage
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async platformSpaceCreated(
@@ -365,11 +365,11 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildPlatformSpaceCreatedPayload(
+      await this.notificationExternalAdapter.buildPlatformSpaceCreatedPayload(
         eventData.triggeredBy,
         eventData.community
       );
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async communityNewMember(
@@ -379,12 +379,12 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildCommunityNewMemberPayload(
+      await this.notificationExternalAdapter.buildCommunityNewMemberPayload(
         eventData.triggeredBy,
         eventData.contributorID,
         eventData.community
       );
-    this.notificationsClient.emit(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async platformGlobalRoleChanged(
@@ -394,14 +394,14 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildGlobalRoleChangedNotificationPayload(
+      await this.notificationExternalAdapter.buildGlobalRoleChangedNotificationPayload(
         eventData.triggeredBy,
         eventData.userID,
         eventData.type,
         eventData.role
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async userRegistered(
@@ -411,12 +411,12 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildUserRegisteredNotificationPayload(
+      await this.notificationExternalAdapter.buildUserRegisteredNotificationPayload(
         eventData.triggeredBy,
         eventData.userID
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   public async userRemoved(
@@ -426,12 +426,12 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      this.notificationPayloadBuilder.buildUserRemovedNotificationPayload(
+      this.notificationExternalAdapter.buildUserRemovedNotificationPayload(
         eventData.triggeredBy,
         eventData.user
       );
 
-    this.notificationsClient.emit<number>(event, payload);
+    this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
 
   private logEventTriggered(
