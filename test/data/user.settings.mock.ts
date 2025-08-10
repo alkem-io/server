@@ -33,6 +33,7 @@ export const userSettingsData: { userSettings: IUserSettings } = {
         newUserSignUp: true,
         forumDiscussionComment: true,
         forumDiscussionCreated: true,
+        spaceCreated: true,
       },
       organization: {
         mentioned: true,
