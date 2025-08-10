@@ -9,9 +9,9 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { PlatformAdminCommunicationResolverFields } from './platform.admin.resolver.communication.fields';
 import { AdminCommunicationModule } from '../domain/communication/admin.communication.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { AdminCommunicationModule } from '../domain/communication/admin.communic
     OrganizationLookupModule,
     VirtualContributorLookupModule,
     PlatformAuthorizationPolicyModule,
-    SpaceLookupModule,
+    SpaceModule,
     AdminCommunicationModule,
   ],
   providers: [

@@ -1,4 +1,4 @@
-import { Resolver } from '@nestjs/graphql';
+import { Args, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -14,6 +14,7 @@ import { IOrganization } from '@domain/community/organization';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { PlatformAdminService } from './platform.admin.service';
 import { PlatformAdminCommunicationQueryResults } from './dto/platform.admin.query.communication.results';
+import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 
 @Resolver(() => PlatformAdminQueryResults)
 export class PlatformAdminResolverFields {
@@ -64,7 +65,10 @@ export class PlatformAdminResolverFields {
     description:
       'Retrieve all Spaces on the Platform. This is only available to Platform Admins.',
   })
-  async spaces(@CurrentUser() agentInfo: AgentInfo): Promise<ISpace[]> {
+  async spaces(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({ nullable: true }) args: SpacesQueryArgs
+  ): Promise<ISpace[]> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
@@ -72,7 +76,7 @@ export class PlatformAdminResolverFields {
       'platformAdmin Spaces'
     );
 
-    return this.platformAdminService.getAllSpaces();
+    return this.platformAdminService.getAllSpaces(args);
   }
 
   @ResolveField(() => [IUser], {
