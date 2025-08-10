@@ -201,7 +201,6 @@ export class AccountLicenseService {
             message: 'No Wingback granted entitlements found for Account',
             accountId: account.id,
             wingbackCustomerId: account.externalSubscriptionID,
-            error: e.message,
           },
           LogContext.ACCOUNT
         );
