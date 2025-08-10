@@ -9,12 +9,18 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { ISpace } from '@domain/space/space/space.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { IOrganization } from '@domain/community/organization';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { PlatformAdminService } from './platform.admin.service';
 import { PlatformAdminCommunicationQueryResults } from './dto/platform.admin.query.communication.results';
 import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { PaginationArgs } from '@core/pagination/pagination.args';
+import { OrganizationFilterInput } from '@core/filtering/input-types/organization.filter.input';
+import { PaginatedOrganization } from '@core/pagination/paginated.organization';
+import { UserFilterInput } from '@core/filtering/input-types/user.filter.input';
+import { PaginatedUsers } from '@core/pagination/paginated.user';
+import { ContributorQueryArgs } from '@domain/community/contributor/dto/contributor.query.args';
+import { InnovationPacksInput } from '@library/library/dto/library.dto.innovationPacks.input';
 
 @Resolver(() => PlatformAdminQueryResults)
 export class PlatformAdminResolverFields {
@@ -25,7 +31,7 @@ export class PlatformAdminResolverFields {
   ) {}
 
   @ResolveField(() => [IInnovationHub], {
-    nullable: true,
+    nullable: false,
     description:
       'Retrieve all Innovation Hubs on the Platform. This is only available to Platform Admins.',
   })
@@ -43,12 +49,14 @@ export class PlatformAdminResolverFields {
   }
 
   @ResolveField(() => [IInnovationPack], {
-    nullable: true,
+    nullable: false,
     description:
       'Retrieve all Innovation Packs on the Platform. This is only available to Platform Admins.',
   })
   async innovationPacks(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('queryData', { type: () => InnovationPacksInput, nullable: true })
+    args?: InnovationPacksInput
   ): Promise<IInnovationPack[]> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -57,11 +65,11 @@ export class PlatformAdminResolverFields {
       'platformAdmin InnovationPacks'
     );
 
-    return this.platformAdminService.getAllInnovationPacks();
+    return this.platformAdminService.getAllInnovationPacks(args);
   }
 
   @ResolveField(() => [ISpace], {
-    nullable: true,
+    nullable: false,
     description:
       'Retrieve all Spaces on the Platform. This is only available to Platform Admins.',
   })
@@ -79,12 +87,22 @@ export class PlatformAdminResolverFields {
     return this.platformAdminService.getAllSpaces(args);
   }
 
-  @ResolveField(() => [IUser], {
-    nullable: true,
+  @ResolveField(() => PaginatedUsers, {
+    nullable: false,
     description:
       'Retrieve all Users on the Platform. This is only available to Platform Admins.',
   })
-  async users(@CurrentUser() agentInfo: AgentInfo): Promise<IUser[]> {
+  async users(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({ nullable: true }) pagination: PaginationArgs,
+    @Args({
+      name: 'withTags',
+      nullable: true,
+      description: 'Return only users with tags',
+    })
+    withTags?: boolean,
+    @Args('filter', { nullable: true }) filter?: UserFilterInput
+  ): Promise<PaginatedUsers> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
@@ -92,33 +110,46 @@ export class PlatformAdminResolverFields {
       'platformAdmin Users'
     );
 
-    return this.platformAdminService.getAllUsers();
+    return this.platformAdminService.getAllUsers(pagination, withTags, filter);
   }
 
-  @ResolveField(() => [IOrganization], {
-    nullable: true,
+  @ResolveField(() => PaginatedOrganization, {
+    nullable: false,
     description:
       'Retrieve all Organizations on the Platform. This is only available to Platform Admins.',
   })
   async organizations(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IOrganization[]> {
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args() pagination: PaginationArgs,
+    @Args('status', {
+      nullable: true,
+      description: 'Return only Organizations with this verification status',
+      type: () => OrganizationVerificationEnum,
+    })
+    status?: OrganizationVerificationEnum,
+    @Args('filter', { nullable: true }) filter?: OrganizationFilterInput
+  ): Promise<PaginatedOrganization> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin Organizations'
     );
-    return this.platformAdminService.getAllOrganizations();
+    return this.platformAdminService.getAllOrganizations(
+      pagination,
+      filter,
+      status
+    );
   }
 
   @ResolveField(() => [IVirtualContributor], {
-    nullable: true,
+    nullable: false,
     description:
       'Retrieve all Virtual Contributors on the Platform. This is only available to Platform Admins.',
   })
   async virtualContributors(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({ nullable: true }) args: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -127,14 +158,14 @@ export class PlatformAdminResolverFields {
       'platformAdmin Virtual Contributors'
     );
 
-    return this.platformAdminService.getAllVirtualContributors();
+    return this.platformAdminService.getAllVirtualContributors(args);
   }
 
   @ResolveField(() => PlatformAdminCommunicationQueryResults, {
-    nullable: true,
+    nullable: false,
     description: 'Lookup Communication related information.',
   })
-  myPrivileges(): PlatformAdminCommunicationQueryResults {
+  communication(): PlatformAdminCommunicationQueryResults {
     return {} as PlatformAdminCommunicationQueryResults;
   }
 }
