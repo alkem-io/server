@@ -33,4 +33,12 @@ export class CreateUserSettingsNotificationPlatformInput {
   })
   @IsBoolean()
   userProfileRemoved!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      '[Admin] Receive a notification when a new L0 Space is created',
+  })
+  @IsBoolean()
+  spaceCreated!: boolean;
 }

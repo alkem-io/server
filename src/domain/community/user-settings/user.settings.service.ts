@@ -26,6 +26,7 @@ export class UserSettingsService {
     const settings = UserSettings.create({
       communication: settingsData.communication,
       privacy: settingsData.privacy,
+      notification: settingsData.notification,
     });
     settings.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_SETTINGS
@@ -68,6 +69,10 @@ export class UserSettingsService {
       if (notificationPlatformData.newUserSignUp !== undefined) {
         settings.notification.platform.newUserSignUp =
           notificationPlatformData.newUserSignUp;
+      }
+      if (notificationPlatformData.spaceCreated !== undefined) {
+        settings.notification.platform.spaceCreated =
+          notificationPlatformData.spaceCreated;
       }
     }
 
