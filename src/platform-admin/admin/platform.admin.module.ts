@@ -10,6 +10,8 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
 import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { PlatformAdminCommunicationResolverFields } from './platform.admin.resolver.communication.fields';
+import { AdminCommunicationModule } from '../domain/communication/admin.communication.module';
 
 @Module({
   imports: [
@@ -21,11 +23,13 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
     VirtualContributorLookupModule,
     PlatformAuthorizationPolicyModule,
     SpaceLookupModule,
+    AdminCommunicationModule,
   ],
   providers: [
     PlatformAdminService,
     PlatformAdminResolverQueries,
     PlatformAdminResolverFields,
+    PlatformAdminCommunicationResolverFields,
   ],
   exports: [PlatformAdminService],
 })

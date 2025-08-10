@@ -5,32 +5,21 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { PlatformAdminQueryResults } from './dto/platform.admin.query.results';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization } from '@domain/community/organization';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { PlatformAdminService } from './platform.admin.service';
+import { PlatformAdminCommunicationQueryResults } from './dto/platform.admin.query.communication.results';
 
 @Resolver(() => PlatformAdminQueryResults)
 export class PlatformAdminResolverFields {
   constructor(
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private innovationHubService: InnovationHubService,
-    private innovationPackService: InnovationPackService,
-    private userLookupService: UserLookupService,
-    private spaceLookupService: SpaceLookupService,
-    private organizationLookupService: OrganizationLookupService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
     private platformAdminService: PlatformAdminService
   ) {}
 
@@ -135,5 +124,13 @@ export class PlatformAdminResolverFields {
     );
 
     return this.platformAdminService.getAllVirtualContributors();
+  }
+
+  @ResolveField(() => PlatformAdminCommunicationQueryResults, {
+    nullable: true,
+    description: 'Lookup Communication related information.',
+  })
+  myPrivileges(): PlatformAdminCommunicationQueryResults {
+    return {} as PlatformAdminCommunicationQueryResults;
   }
 }
