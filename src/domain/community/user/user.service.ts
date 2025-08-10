@@ -244,6 +244,7 @@ export class UserService {
           forumDiscussionComment: true,
           newUserSignUp: true,
           userProfileRemoved: true,
+          spaceCreated: true,
         },
         space: {
           applicationReceived: true,
