@@ -128,9 +128,14 @@ export class InputCreatorService {
         LogContext.INPUT_CREATOR
       );
     }
+    // we do not support having memo callouts in the template
+    // https://github.com/alkem-io/collaborative-document-service/issues/4
+    const filteredCallouts = calloutsSet.callouts.filter(
+      callout => callout.framing.type !== 'memo'
+    );
 
     const calloutInputs: CreateCalloutInput[] = [];
-    for (const callout of calloutsSet.callouts) {
+    for (const callout of filteredCallouts) {
       calloutInputs.push(
         await this.buildCreateCalloutInputFromCallout(callout.id)
       );
