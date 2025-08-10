@@ -11,7 +11,7 @@ export class InAppNotificationUserMentionedResolverFields {
   public contributorType(
     @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): RoleSetContributorType {
-    return payload.contributorType as unknown as RoleSetContributorType; // todo this might be wrong - the types dont match
+    return payload.contributorType as RoleSetContributorType;
   }
 
   @ResolveField(() => String, {
