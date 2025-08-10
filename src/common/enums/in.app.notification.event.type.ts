@@ -1,11 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
-import { NotificationEventType as libEnum } from '@alkemio/notifications-lib';
-import { compareEnums } from '@common/utils';
 
-/**
- * When using the enum as a resolve value in GraphQL, you have to use the decorated value instead of the export by the lib type
- */
-export enum NotificationEventType {
+export enum InAppNotificationEventType {
   COMMUNITY_APPLICATION_CREATED = 'communityApplicationCreated',
   COMMUNITY_NEW_MEMBER = 'communityNewMember',
   COMMUNITY_INVITATION_CREATED = 'communityInvitationCreated',
@@ -33,11 +28,7 @@ export enum NotificationEventType {
   USER_MESSAGE = 'userMessage',
 }
 
-if (!compareEnums(NotificationEventType, libEnum)) {
-  throw new Error('NotificationEventType enums mismatch');
-}
-
-registerEnumType(NotificationEventType, {
-  name: 'NotificationEventType',
+registerEnumType(InAppNotificationEventType, {
+  name: 'InAppNotificationEventType',
   description: 'The type of the notification',
 });

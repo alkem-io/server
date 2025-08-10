@@ -27,6 +27,6 @@ export class InAppNotificationResolverQueries {
       );
     }
 
-    return this.inAppNotificationService.getNotifications(agentInfo.userID);
+    return this.inAppNotificationService.getRawNotifications(agentInfo.userID);
   }
 }

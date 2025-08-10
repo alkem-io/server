@@ -1,6 +1,5 @@
-import { InAppNotificationPayloadBase } from '@alkemio/notifications-lib';
 import { LogContext } from '@common/enums/logging.context';
-import { InAppNotificationState } from '@platform/in-app-notification/enums/in.app.notification.state';
+import { InAppNotificationState } from '@common/enums/in.app.notification.state';
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
@@ -8,19 +7,20 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { InAppNotificationEntryCalloutPublished } from './in.app.notification.entry.callout.published';
 import { InAppNotificationEntryUserMentioned } from './in.app.notification.entry.user.mentioned';
 import { InAppNotificationEntryCommunityNewMember } from './in.app.notification.entry.community.new.member';
-import { NotificationEventType } from '@platform/in-app-notification/enums/notification.event.type';
-import { InAppNotificationCategory } from '@platform/in-app-notification/enums/in.app.notification.category';
+import { InAppNotificationEventType } from '@common/enums/in.app.notification.event.type';
+import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
+import { InAppNotificationPayloadBase } from '@services/cluster/in-app-notification-receiver/dto/in.app.notification.receiver.payload.base';
 
 @InterfaceType('InAppNotification', {
   isAbstract: true,
   description: 'An in-app notification type. To not be queried directly',
   resolveType(inAppNotification) {
     switch (inAppNotification.type) {
-      case NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED:
+      case InAppNotificationEventType.COLLABORATION_CALLOUT_PUBLISHED:
         return InAppNotificationEntryCalloutPublished;
-      case NotificationEventType.COMMUNICATION_USER_MENTION:
+      case InAppNotificationEventType.COMMUNICATION_USER_MENTION:
         return InAppNotificationEntryUserMentioned;
-      case NotificationEventType.COMMUNITY_NEW_MEMBER:
+      case InAppNotificationEventType.COMMUNITY_NEW_MEMBER:
         return InAppNotificationEntryCommunityNewMember;
     }
 
@@ -38,11 +38,11 @@ export abstract class IInAppNotificationEntry {
   })
   id!: string;
 
-  @Field(() => NotificationEventType, {
+  @Field(() => InAppNotificationEventType, {
     nullable: false,
     description: 'The type of the notification',
   })
-  type!: NotificationEventType;
+  type!: InAppNotificationEventType;
 
   @Field(() => Date, {
     nullable: false,

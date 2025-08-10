@@ -1,13 +1,11 @@
 import { Column, Entity } from 'typeorm';
-import {
-  InAppNotificationCategory,
-  InAppNotificationPayloadBase,
-  NotificationEventType,
-} from '@alkemio/notifications-lib';
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../../domain/common/entity/base-entity/base.alkemio.entity';
-import { InAppNotificationState } from './enums/in.app.notification.state';
+import { InAppNotificationState } from '../../common/enums/in.app.notification.state';
 import { IInAppNotification } from './in.app.notification.interface';
+import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
+import { InAppNotificationPayloadBase } from '@services/cluster/in-app-notification-receiver/dto/in.app.notification.receiver.payload.base';
+import { InAppNotificationEventType } from '@common/enums/in.app.notification.event.type';
 
 @Entity('in_app_notification')
 export class InAppNotificationEntity
@@ -18,7 +16,7 @@ export class InAppNotificationEntity
   triggeredAt!: Date;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  type!: NotificationEventType;
+  type!: InAppNotificationEventType;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   state!: InAppNotificationState;

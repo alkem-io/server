@@ -1,4 +1,3 @@
-import { InAppNotificationPayloadBase } from '@alkemio/notifications-lib';
 import { Controller, Inject, LoggerService } from '@nestjs/common';
 import {
   Ctx,
@@ -10,6 +9,7 @@ import {
 import { ack } from '@services/util';
 import { InAppNotificationReceiver } from './in.app.notification.receiver';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { InAppNotificationPayloadBase } from './dto/in.app.notification.receiver.payload.base';
 
 @Controller()
 export class InAppNotificationReceiverController {

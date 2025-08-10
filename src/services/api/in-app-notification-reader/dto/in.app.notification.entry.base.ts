@@ -1,11 +1,9 @@
-import {
-  InAppNotificationCategory,
-  InAppNotificationPayloadBase,
-  NotificationEventType,
-} from '@alkemio/notifications-lib';
-import { InAppNotificationState } from '@platform/in-app-notification/enums/in.app.notification.state';
+import { InAppNotificationState } from '@common/enums/in.app.notification.state';
 import { Field } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { InAppNotificationEventType } from '@common/enums/in.app.notification.event.type';
+import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
+import { InAppNotificationPayloadBase } from '@services/cluster/in-app-notification-receiver/dto/in.app.notification.receiver.payload.base';
 
 export abstract class IInAppNotificationEntryBase {
   @Field(() => UUID, {
@@ -13,11 +11,11 @@ export abstract class IInAppNotificationEntryBase {
   })
   id!: string;
 
-  @Field(() => NotificationEventType, {
+  @Field(() => InAppNotificationEventType, {
     nullable: false,
     description: 'The type of the notification',
   })
-  type!: NotificationEventType;
+  type!: InAppNotificationEventType;
 
   @Field(() => Date, {
     nullable: false,

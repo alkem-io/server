@@ -2,11 +2,11 @@ import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InAppNotificationPayloadBase } from '@alkemio/notifications-lib';
 import { LogContext } from '@common/enums';
-import { InAppNotificationEntity } from '../../../platform/in-app-notification/in.app.notification.entity';
-import { InAppNotificationState } from '../../../platform/in-app-notification/enums/in.app.notification.state';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { InAppNotificationEntity } from '@platform/in-app-notification/in.app.notification.entity';
+import { InAppNotificationState } from '@common/enums/in.app.notification.state';
+import { InAppNotificationPayloadBase } from './dto/in.app.notification.receiver.payload.base';
 
 @Injectable()
 export class InAppNotificationReceiver {
