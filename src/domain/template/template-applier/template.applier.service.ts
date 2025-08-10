@@ -33,7 +33,9 @@ export class TemplateApplierService {
         relations: {
           contentSpace: {
             collaboration: {
-              innovationFlow: true,
+              innovationFlow: {
+                states: true,
+              },
               calloutsSet: {
                 callouts: true,
               },

@@ -25,4 +25,5 @@ export enum MessagingQueue {
   WHITEBOARDS = 'alkemio-whiteboards',
   FILES = 'alkemio-files',
   IN_APP_NOTIFICATIONS = 'alkemio-in-app-notifications',
+  COLLABORATION_DOCUMENT_SERVICE = 'collaboration-document-service',
 }

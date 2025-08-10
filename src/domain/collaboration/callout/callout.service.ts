@@ -230,6 +230,8 @@ export class CalloutService {
         framing: {
           profile: true,
           whiteboard: true,
+          link: true,
+          memo: true,
         },
         classification: {
           tagsets: true,

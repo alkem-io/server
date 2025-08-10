@@ -54,7 +54,7 @@ export class LinkService {
 
     if (linkData.uri) link.uri = linkData.uri;
 
-    return await this.save(link);
+    return this.save(link);
   }
 
   async deleteLink(linkId: string): Promise<ILink> {

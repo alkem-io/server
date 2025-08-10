@@ -305,7 +305,12 @@ export class TemplateService {
       {
         relations: {
           about: {
-            profile: true,
+            profile: {
+              location: true,
+              references: true,
+              tagsets: true,
+              visuals: true,
+            },
           },
           collaboration: {
             innovationFlow: {

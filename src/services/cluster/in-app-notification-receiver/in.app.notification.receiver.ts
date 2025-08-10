@@ -51,6 +51,8 @@ export class InAppNotificationReceiver {
     notification: InAppNotificationPayloadBase,
     receiverIDs: string[]
   ): Promise<InAppNotificationEntity[]> {
+    // Remove receiverIDs from the payload stored per entity to avoid duplication
+    const { receiverIDs: _omit, ...payloadSansReceivers } = notification as any;
     const entities = receiverIDs.map(receiverID =>
       InAppNotificationEntity.create({
         triggeredAt: notification.triggeredAt,
@@ -59,11 +61,12 @@ export class InAppNotificationReceiver {
         category: notification.category,
         receiverID: receiverID,
         triggeredByID: notification.triggeredByID,
-        payload: notification,
+        payload: payloadSansReceivers,
       })
     );
     return this.inAppNotificationRepo.save(entities, {
       chunk: 100,
     });
+  }
   }
 }
