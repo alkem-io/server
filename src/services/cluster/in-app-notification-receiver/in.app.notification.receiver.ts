@@ -30,30 +30,34 @@ export class InAppNotificationReceiver {
     }
     const receiverIDs = notification.receiverIDs;
     this.logger.verbose?.(
-      `Received ${receiverIDs?.length} compressed in-app notifications`,
+      `Received ${receiverIDs?.length} in-app notifications with receiver IDs: ${receiverIDs.join(', ')}`,
       LogContext.IN_APP_NOTIFICATION
     );
 
     // filtering out notifications that are not for beta users now done by platform privilege
-    const savedNotifications = await this.store(notification, receiverIDs);
+    const savedNotifications = await this.store(notification);
 
     // notify
     this.logger.verbose?.(
       'Notifying users about the received in-app notifications',
       LogContext.IN_APP_NOTIFICATION
     );
-    savedNotifications.forEach(x =>
-      this.subscriptionPublishService.publishInAppNotificationReceived(x)
+    await Promise.all(
+      savedNotifications.map(x =>
+        this.subscriptionPublishService.publishInAppNotificationReceived(x)
+      )
     );
   }
 
   private async store(
-    notification: InAppNotificationPayloadBase,
-    receiverIDs: string[]
+    notification: InAppNotificationPayloadBase
   ): Promise<InAppNotificationEntity[]> {
     // Remove receiverIDs from the payload stored per entity to avoid duplication
-    const { receiverIDs: _omit, ...payloadSansReceivers } = notification as any;
-    const entities = receiverIDs.map(receiverID =>
+    const {
+      receiverIDs: receiverIDsFromNotification,
+      ...payloadSansReceivers
+    } = notification;
+    const entities = receiverIDsFromNotification.map(receiverID =>
       InAppNotificationEntity.create({
         triggeredAt: notification.triggeredAt,
         type: notification.type,
@@ -67,6 +71,5 @@ export class InAppNotificationReceiver {
     return this.inAppNotificationRepo.save(entities, {
       chunk: 100,
     });
-  }
   }
 }

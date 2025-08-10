@@ -130,6 +130,8 @@ export class NotificationRecipientsService {
         return notificationSettings.platform.newUserSignUp;
       case UserNotificationEvent.PLATFORM_USER_PROFILE_REMOVED:
         return notificationSettings.platform.userProfileRemoved;
+      case UserNotificationEvent.PLATFORM_SPACE_CREATED:
+        return notificationSettings.platform.spaceCreated;
       case UserNotificationEvent.ORGANIZATION_MESSAGE_RECEIVED:
         return notificationSettings.organization.messageReceived;
       case UserNotificationEvent.ORGANIZATION_MENTIONED:

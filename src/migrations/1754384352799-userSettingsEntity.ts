@@ -7,6 +7,7 @@ type UserSettingsNotificationPlatform = {
   forumDiscussionComment: boolean;
   newUserSignUp: boolean;
   userProfileRemoved: boolean;
+  spaceCreated: boolean;
 };
 
 // Local type to mimic UserSettingsNotificationOrganization interface
@@ -39,8 +40,8 @@ type UserSettingsNotification = {
   space: UserSettingsNotificationSpace;
 };
 
-export class UserSettingsEntity1753882078257 implements MigrationInterface {
-  name = 'UserSettingsEntity1753882078257';
+export class UserSettingsEntity1754384352799 implements MigrationInterface {
+  name = 'UserSettingsEntity1754384352799';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE TABLE \`user_settings\` (\`id\` char(36) NOT NULL,
@@ -106,6 +107,7 @@ export class UserSettingsEntity1753882078257 implements MigrationInterface {
       // Get all the preferences, and find the right one to update each of the fields in the notification object
       const notification: UserSettingsNotification = {
         platform: {
+          spaceCreated: true,
           forumDiscussionCreated: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,

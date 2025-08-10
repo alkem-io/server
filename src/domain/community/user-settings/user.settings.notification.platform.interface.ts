@@ -27,4 +27,10 @@ export abstract class IUserSettingsNotificationPlatform {
     description: 'Receive a notification when a user profile is removed',
   })
   userProfileRemoved!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Receive a notification when a new L0 Space is created',
+  })
+  spaceCreated!: boolean;
 }
