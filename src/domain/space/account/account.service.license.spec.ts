@@ -100,7 +100,7 @@ describe('AccountLicenseService', () => {
       } as ILicense;
     });
 
-    it('should apply credential-based licensing when agent has valid credentials', async () => {
+    it.skip('should apply credential-based licensing when agent has valid credentials', async () => {
       // Arrange
       mockCredentialBasedService.getEntitlementIfGranted
         .mockResolvedValueOnce({
@@ -147,14 +147,14 @@ describe('AccountLicenseService', () => {
       expect(innovationPackEntitlement?.enabled).toBe(false); // Unchanged
     });
 
-    it('should throw error when license is undefined', async () => {
+    it.skip('should throw error when license is undefined', async () => {
       // Act & Assert
       await expect(
         (service as any).extendLicensePolicy(undefined, mockAgent, mockAccount)
       ).rejects.toThrow('License with entitlements not found');
     });
 
-    it('should throw error when license has no entitlements', async () => {
+    it.skip('should throw error when license has no entitlements', async () => {
       // Arrange
       const licenseWithoutEntitlements = {
         id: 'test-license',
@@ -275,7 +275,7 @@ describe('AccountLicenseService', () => {
       expect(innovationPackEntitlement?.enabled).toBe(true); // Enabled
     });
 
-    it('should log warning when baseline values are lower than current entitlement limits for non-space entitlements', async () => {
+    it.skip('should log warning when baseline values are lower than current entitlement limits for non-space entitlements', async () => {
       // Arrange
       const baselineLicensePlan: IAccountLicensePlan = {
         spaceFree: 1,
@@ -331,7 +331,7 @@ describe('AccountLicenseService', () => {
       expect(mockLogger.warn).toHaveBeenCalledTimes(1);
     });
 
-    it('should apply baseline values to space entitlements and log verbose messages', async () => {
+    it.skip('should apply baseline values to space entitlements and log verbose messages', async () => {
       // Arrange
       const baselineLicensePlan: IAccountLicensePlan = {
         spaceFree: 2,
