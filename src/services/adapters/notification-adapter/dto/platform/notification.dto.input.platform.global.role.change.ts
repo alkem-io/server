@@ -1,5 +1,5 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
-import { NotificationInputBase } from './notification.dto.input.base';
+import { NotificationInputBase } from '../notification.dto.input.base';
 
 export interface NotificationInputPlatformGlobalRoleChange
   extends NotificationInputBase {

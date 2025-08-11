@@ -16,7 +16,7 @@ import { ForumDiscussionUpdated } from './dto/forum.dto.event.discussion.updated
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputForumDiscussionCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.created';
+import { NotificationInputPlatformForumDiscussionCreated } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.forum.discussion.created';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -93,11 +93,13 @@ export class ForumResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedDiscussions);
 
     // Send the notification
-    const notificationInput: NotificationInputForumDiscussionCreated = {
+    const notificationInput: NotificationInputPlatformForumDiscussionCreated = {
       triggeredBy: agentInfo.userID,
       discussion: discussion,
     };
-    await this.notificationAdapter.forumDiscussionCreated(notificationInput);
+    await this.notificationAdapter.platformForumDiscussionCreated(
+      notificationInput
+    );
 
     // Send out the subscription event
     const eventID = `discussion-message-updated-${Math.floor(

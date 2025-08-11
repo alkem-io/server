@@ -3,22 +3,21 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessage } from '../message/message.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.comment';
-import { NotificationInputPostComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.comment';
+import { NotificationInputPostComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.post.comment';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from './room.interface';
-import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
+import { NotificationInputPlatformForumDiscussionComment } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.forum.discussion.comment';
 import { IDiscussion } from '../../../platform/forum-discussion/discussion.interface';
-import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/notification.dto.input.update.sent';
+import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.update.sent';
 import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
-import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
+import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.comment.reply';
 import { IProfile } from '@domain/common/profile';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
@@ -55,7 +54,7 @@ export class RoomServiceEvents {
       },
       commentType: room.type as RoomType,
     };
-    await this.notificationAdapter.commentReply(notificationInput);
+    await this.notificationAdapter.userCommentReply(notificationInput);
   }
 
   public async processNotificationPostComment(
@@ -71,7 +70,9 @@ export class RoomServiceEvents {
       room: room,
       commentSent: message,
     };
-    await this.notificationAdapter.postComment(notificationInput);
+    await this.notificationAdapter.spaceCollaborationPostComment(
+      notificationInput
+    );
   }
 
   public async processNotificationForumDiscussionComment(
@@ -79,13 +80,13 @@ export class RoomServiceEvents {
     message: IMessage,
     agentInfo: AgentInfo
   ) {
-    const forumDiscussionCommentNotificationInput: NotificationInputForumDiscussionComment =
+    const forumDiscussionCommentNotificationInput: NotificationInputPlatformForumDiscussionComment =
       {
         triggeredBy: agentInfo.userID,
         discussion,
         commentSent: message,
       };
-    this.notificationAdapter.forumDiscussionComment(
+    this.notificationAdapter.platformForumDiscussionComment(
       forumDiscussionCommentNotificationInput
     );
   }
@@ -179,7 +180,9 @@ export class RoomServiceEvents {
       updates: updates,
       lastMessage: lastMessage,
     };
-    await this.notificationAdapter.updateSent(notificationInput);
+    await this.notificationAdapter.spaceCommunicationUpdateSent(
+      notificationInput
+    );
   }
 
   public async processActivityCalloutCommentCreated(
@@ -214,20 +217,5 @@ export class RoomServiceEvents {
         email: agentInfo.email,
       }
     );
-  }
-
-  public async processNotificationDiscussionComment(
-    callout: ICallout,
-    room: IRoom,
-    message: IMessage,
-    agentInfo: AgentInfo
-  ) {
-    const notificationInput: NotificationInputDiscussionComment = {
-      callout: callout,
-      triggeredBy: agentInfo.userID,
-      comments: room,
-      commentSent: message,
-    };
-    await this.notificationAdapter.discussionComment(notificationInput);
   }
 }

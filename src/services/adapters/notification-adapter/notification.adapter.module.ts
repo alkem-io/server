@@ -9,6 +9,8 @@ import { NotificationAdapter } from './notification.adapter';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { NotificationExternalAdapterModule } from '../notification-external-adapter/notification.external.adapter.module';
+import { NotificationInAppAdapterModule } from '../notification-in-app-adapter/notification.in.app.adapter.module';
+import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 
 @Module({
   imports: [
@@ -17,7 +19,9 @@ import { NotificationExternalAdapterModule } from '../notification-external-adap
     UrlGeneratorModule,
     TypeOrmModule.forFeature([Post, Whiteboard, Community]),
     ContributorLookupModule,
+    NotificationRecipientsModule,
     NotificationExternalAdapterModule,
+    NotificationInAppAdapterModule,
   ],
   providers: [NotificationAdapter],
   exports: [NotificationAdapter],

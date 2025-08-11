@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
+import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.community.new.member';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -59,7 +59,7 @@ export class RoleSetEventsService {
       triggeredBy: agentInfo.userID,
       community,
     };
-    await this.notificationAdapter.communityNewMember(notificationInput);
+    await this.notificationAdapter.spaceCommunityNewMember(notificationInput);
 
     // Record the contribution events
     switch (space.level) {

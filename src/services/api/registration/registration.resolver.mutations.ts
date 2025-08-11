@@ -6,12 +6,12 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { RegistrationService } from './registration.service';
-import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
+import { NotificationInputPlatformUserRegistered } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.registered';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { NotificationInputUserRemoved } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.removed';
+import { NotificationInputPlatformUserRemoved } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.removed';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { CreateUserInput } from '@domain/community/user/dto/user.dto.create';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -139,11 +139,11 @@ export class RegistrationResolverMutations {
 
   private async userCreatedEvents(user: IUser, agentInfo: AgentInfo) {
     // Send the notification
-    const notificationInput: NotificationInputUserRegistered = {
+    const notificationInput: NotificationInputPlatformUserRegistered = {
       triggeredBy: agentInfo.userID,
       userID: user.id,
     };
-    await this.notificationAdapter.userRegistered(notificationInput);
+    await this.notificationAdapter.platfromUserRegistered(notificationInput);
   }
 
   @Mutation(() => IUser, {
@@ -168,11 +168,11 @@ export class RegistrationResolverMutations {
         deleteData
       );
     // Send the notification
-    const notificationInput: NotificationInputUserRemoved = {
+    const notificationInput: NotificationInputPlatformUserRemoved = {
       triggeredBy: agentInfo.userID,
       user,
     };
-    await this.notificationAdapter.userRemoved(notificationInput);
+    await this.notificationAdapter.platformUserRemoved(notificationInput);
     return userDeleted;
   }
 

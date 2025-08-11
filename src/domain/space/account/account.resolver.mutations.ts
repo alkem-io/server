@@ -13,7 +13,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
+import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.created';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';

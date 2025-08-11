@@ -19,7 +19,7 @@ import { IOrganization } from '@domain/community/organization';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
+import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { RoleChangeType } from '@alkemio/notifications-lib';
 import { AiPersonaService } from '@domain/community/ai-persona/ai.persona.service';
 import { InstrumentResolver } from '@src/apm/decorators';

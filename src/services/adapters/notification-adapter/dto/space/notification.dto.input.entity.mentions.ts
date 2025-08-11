@@ -1,6 +1,6 @@
 import { RoomType } from '@common/enums/room.type';
 import { Mention } from '@domain/communication/messaging/mention.interface';
-import { NotificationInputBase } from './notification.dto.input.base';
+import { NotificationInputBase } from '../notification.dto.input.base';
 
 export interface NotificationInputEntityMentions extends NotificationInputBase {
   comment: string;

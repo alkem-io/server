@@ -4,6 +4,7 @@ import { CreateUserSettingsNotificationOrganizationInput } from './user.settings
 import { Type } from 'class-transformer';
 import { CreateUserSettingsNotificationPlatformInput } from './user.settings.notification.platform.dto.create';
 import { CreateUserSettingsNotificationSpaceInput } from './user.settings.notification.space.dto.create';
+import { CreateUserSettingsNotificationUserInput } from './user.settings.notification.user.dto.create';
 
 @InputType()
 export class CreateUserSettingsNotificationInput {
@@ -14,6 +15,14 @@ export class CreateUserSettingsNotificationInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsNotificationOrganizationInput)
   organization?: CreateUserSettingsNotificationOrganizationInput;
+
+  @Field(() => CreateUserSettingsNotificationUserInput, {
+    nullable: true,
+    description: 'Settings related to User Notifications.',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationUserInput)
+  user?: CreateUserSettingsNotificationUserInput;
 
   @Field(() => CreateUserSettingsNotificationPlatformInput, {
     nullable: true,

@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IUserSettingsNotificationPlatform } from './user.settings.notification.platform.interface';
 import { IUserSettingsNotificationOrganization } from './user.settings.notification.organization.interface';
 import { IUserSettingsNotificationSpace } from './user.settings.notification.space.interface';
+import { IUserSettingsNotificationUser } from './user.settings.notification.user.interface';
 
 @ObjectType('UserSettingsNotification')
 export abstract class IUserSettingsNotification {
@@ -17,6 +18,12 @@ export abstract class IUserSettingsNotification {
       'The notifications settings for Organization events for this User',
   })
   organization!: IUserSettingsNotificationOrganization;
+
+  @Field(() => IUserSettingsNotificationUser, {
+    nullable: false,
+    description: 'The notifications settings for User events for this User',
+  })
+  user!: IUserSettingsNotificationUser;
 
   @Field(() => IUserSettingsNotificationSpace, {
     nullable: false,

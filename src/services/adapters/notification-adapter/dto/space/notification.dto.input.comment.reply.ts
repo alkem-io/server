@@ -1,5 +1,5 @@
 import { RoomType } from '@common/enums/room.type';
-import { NotificationInputBase } from './notification.dto.input.base';
+import { NotificationInputBase } from '../notification.dto.input.base';
 
 export interface NotificationInputCommentReply extends NotificationInputBase {
   reply: string;

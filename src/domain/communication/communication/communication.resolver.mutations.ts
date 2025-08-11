@@ -7,12 +7,12 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.message';
+import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.message';
 import { CommunicationSendMessageToUserInput } from './dto/communication.dto.send.message.user';
-import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/notification.input.organization.message';
+import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/organization/notification.input.organization.message';
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
-import { NotificationInputCommunityLeadsMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.leads.message';
+import { NotificationInputCommunityLeadsMessage } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.community.leads.message';
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { InstrumentResolver } from '@src/apm/decorators';
 
@@ -46,7 +46,7 @@ export class CommunicationResolverMutations {
         receiverID: receiverId,
         message: messageData.message,
       };
-      await this.notificationAdapter.sendUserMessage(notificationInput);
+      await this.notificationAdapter.userMessageSend(notificationInput);
     }
 
     return true;
@@ -72,7 +72,7 @@ export class CommunicationResolverMutations {
       message: messageData.message,
       organizationID: messageData.organizationId,
     };
-    await this.notificationAdapter.sendOrganizationMessage(notificationInput);
+    await this.notificationAdapter.organizationSendMessage(notificationInput);
 
     return true;
   }
@@ -97,7 +97,7 @@ export class CommunicationResolverMutations {
       communityID: messageData.communityId,
       message: messageData.message,
     };
-    await this.notificationAdapter.sendCommunityLeadsMessage(notificationInput);
+    await this.notificationAdapter.spaceContactLeadsMessage(notificationInput);
     return true;
   }
 }

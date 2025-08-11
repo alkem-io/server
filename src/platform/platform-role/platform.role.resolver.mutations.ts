@@ -5,7 +5,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleChangeType } from '@alkemio/notifications-lib';
 import { IUser } from '@domain/community/user/user.interface';
-import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
+import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { RoleName } from '@common/enums/role.name';
 import { AccountService } from '@domain/space/account/account.service';
