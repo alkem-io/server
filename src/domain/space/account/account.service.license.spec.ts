@@ -49,6 +49,130 @@ describe('AccountLicenseService', () => {
     (service as any).logger = mockLogger;
   });
 
+  describe('extendLicensePolicy', () => {
+    let mockCredentialBasedService: any;
+    let mockWingbackService: any;
+    let mockAccount: Partial<IAccount>;
+    let mockAgent: any;
+    let mockLicense: ILicense;
+
+    beforeEach(() => {
+      mockCredentialBasedService = {
+        getEntitlementIfGranted: jest.fn(),
+      };
+      mockWingbackService = {
+        getEntitlements: jest.fn(),
+        isEnabled: jest.fn().mockReturnValue(true),
+      };
+
+      service['licensingCredentialBasedService'] = mockCredentialBasedService;
+      service['licensingWingbackSubscriptionService'] = mockWingbackService;
+
+      mockAgent = {
+        id: 'test-agent',
+        credentials: [],
+      };
+
+      mockAccount = {
+        id: 'test-account',
+        externalSubscriptionID: undefined,
+      };
+
+      mockLicense = {
+        id: 'test-license',
+        type: 'account' as any,
+        entitlements: [
+          {
+            id: '1',
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 1,
+            enabled: false,
+          },
+          {
+            id: '2',
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+        ],
+      } as ILicense;
+    });
+
+    it('should apply credential-based licensing when agent has valid credentials', async () => {
+      // Arrange
+      mockCredentialBasedService.getEntitlementIfGranted
+        .mockResolvedValueOnce({
+          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+          limit: 5,
+        })
+        .mockResolvedValueOnce(null); // No entitlement for innovation pack
+
+      // Act
+      const result = await (service as any).extendLicensePolicy(
+        mockLicense,
+        mockAgent,
+        mockAccount
+      );
+
+      // Assert
+      expect(
+        mockCredentialBasedService.getEntitlementIfGranted
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        mockCredentialBasedService.getEntitlementIfGranted
+      ).toHaveBeenCalledWith(
+        LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+        mockAgent
+      );
+      expect(
+        mockCredentialBasedService.getEntitlementIfGranted
+      ).toHaveBeenCalledWith(
+        LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+        mockAgent
+      );
+
+      const virtualContributorEntitlement = result.entitlements!.find(
+        (e: any) =>
+          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
+      );
+      expect(virtualContributorEntitlement?.limit).toBe(5);
+      expect(virtualContributorEntitlement?.enabled).toBe(true);
+
+      const innovationPackEntitlement = result.entitlements!.find(
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
+      );
+      expect(innovationPackEntitlement?.limit).toBe(0); // Unchanged
+      expect(innovationPackEntitlement?.enabled).toBe(false); // Unchanged
+    });
+
+    it('should throw error when license is undefined', async () => {
+      // Act & Assert
+      await expect(
+        (service as any).extendLicensePolicy(undefined, mockAgent, mockAccount)
+      ).rejects.toThrow('License with entitlements not found');
+    });
+
+    it('should throw error when license has no entitlements', async () => {
+      // Arrange
+      const licenseWithoutEntitlements = {
+        id: 'test-license',
+        type: 'account' as any,
+        entitlements: undefined,
+      } as ILicense;
+
+      // Act & Assert
+      await expect(
+        (service as any).extendLicensePolicy(
+          licenseWithoutEntitlements,
+          mockAgent,
+          mockAccount
+        )
+      ).rejects.toThrow('License with entitlements not found');
+    });
+  });
+
   describe('applyBaselineLicensePlan', () => {
     it('should apply baseline license plan with different behavior for space vs non-space entitlements', async () => {
       // Arrange
@@ -287,11 +411,10 @@ describe('AccountLicenseService', () => {
     });
   });
 
-  describe('extendLicensePolicy', () => {
+  describe('applyWingbackEntitlements', () => {
     let mockCredentialBasedService: any;
     let mockWingbackService: any;
     let mockAccount: Partial<IAccount>;
-    let mockAgent: any;
     let mockLicense: ILicense;
 
     beforeEach(() => {
@@ -300,15 +423,11 @@ describe('AccountLicenseService', () => {
       };
       mockWingbackService = {
         getEntitlements: jest.fn(),
+        isEnabled: jest.fn().mockReturnValue(true),
       };
 
       service['licensingCredentialBasedService'] = mockCredentialBasedService;
       service['licensingWingbackSubscriptionService'] = mockWingbackService;
-
-      mockAgent = {
-        id: 'test-agent',
-        credentials: [],
-      };
 
       mockAccount = {
         id: 'test-account',
@@ -337,60 +456,125 @@ describe('AccountLicenseService', () => {
       } as ILicense;
     });
 
-    it('should apply credential-based licensing when agent has valid credentials', async () => {
-      // Arrange
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 5,
-        })
-        .mockResolvedValueOnce(null); // No entitlement for innovation pack
+    describe('should return same license when', () => {
+      it('Wingback is not enabled', async () => {
+        // Arrange
+        mockWingbackService.isEnabled.mockReturnValue(false);
 
-      // Act
-      const result = await (service as any).extendLicensePolicy(
-        mockLicense,
-        mockAgent,
-        mockAccount
-      );
+        // Act
+        const result = await service.applyWingbackEntitlements(
+          mockAccount as any,
+          mockLicense
+        );
 
-      // Assert
-      expect(
-        mockCredentialBasedService.getEntitlementIfGranted
-      ).toHaveBeenCalledTimes(2);
-      expect(
-        mockCredentialBasedService.getEntitlementIfGranted
-      ).toHaveBeenCalledWith(
-        LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-        mockAgent
-      );
-      expect(
-        mockCredentialBasedService.getEntitlementIfGranted
-      ).toHaveBeenCalledWith(
-        LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-        mockAgent
-      );
+        // Assert
+        expect(mockWingbackService.getEntitlements).not.toHaveBeenCalled();
+        expect(result).toBe(mockLicense); // Should return original license without changes
+      });
 
-      const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-      expect(virtualContributorEntitlement?.limit).toBe(5);
-      expect(virtualContributorEntitlement?.enabled).toBe(true);
+      it('Account has no external subscription', async () => {
+        // Arrange
+        mockAccount.externalSubscriptionID = undefined; // No Wingback subscription
 
-      const innovationPackEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
-      );
-      expect(innovationPackEntitlement?.limit).toBe(0); // Unchanged
-      expect(innovationPackEntitlement?.enabled).toBe(false); // Unchanged
+        // Act
+        const result = await service.applyWingbackEntitlements(
+          mockAccount as any,
+          mockLicense
+        );
+
+        // Assert
+        expect(mockWingbackService.getEntitlements).not.toHaveBeenCalled();
+        expect(result).toBe(mockLicense); // Should return original license without changes
+      });
+
+      it('License does not have entitlements', async () => {
+        // Act
+        const result = await service.applyWingbackEntitlements(
+          {} as any,
+          {} as any
+        );
+
+        // Assert
+        expect(mockWingbackService.getEntitlements).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({}); // Should return original license without changes
+      });
+
+      it('Wingback service throws', async () => {
+        // Arrange
+
+        mockWingbackService.isEnabled.mockReturnValue(true);
+
+        mockWingbackService.getEntitlements.mockRejectedValue(
+          new Error('Wingback service unavailable')
+        );
+        mockAccount = {
+          id: 'test-account',
+          externalSubscriptionID: 'wingback-customer-123',
+        };
+        mockLicense = {
+          entitlements: [],
+        } as any;
+
+        // Act
+        const result = await service.applyWingbackEntitlements(
+          mockAccount as any,
+          mockLicense
+        );
+
+        // Assert
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Skipping Wingback entitlements for Account, since it returned with an error',
+            accountId: 'test-account',
+            error: expect.any(Error),
+          }),
+          expect.anything(),
+          LogContext.ACCOUNT
+        );
+
+        expect(result).toBe(mockLicense); // Should return original license without changes
+      });
+
+      it('No entitlements are returned from Wingback', async () => {
+        // Arrange
+        mockLicense = {
+          entitlements: [],
+        } as any;
+        mockWingbackService.getEntitlements.mockResolvedValue([]);
+
+        // Act
+        const result = await service.applyWingbackEntitlements(
+          {} as any,
+          mockLicense
+        );
+
+        // Assert
+        expect(result).toBe(mockLicense); // Should return original license without changes
+      });
     });
 
     it('should apply Wingback subscription licensing when external subscription exists', async () => {
       // Arrange
+      mockLicense = {
+        entitlements: [
+          {
+            id: '1',
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 1,
+            enabled: true,
+          },
+          {
+            id: '2',
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+        ],
+      } as ILicense;
       mockAccount.externalSubscriptionID = 'wingback-customer-123';
-
-      mockCredentialBasedService.getEntitlementIfGranted.mockResolvedValue(
-        null
-      );
 
       mockWingbackService.getEntitlements.mockResolvedValue([
         {
@@ -404,10 +588,9 @@ describe('AccountLicenseService', () => {
       ]);
 
       // Act
-      const result = await (service as any).extendLicensePolicy(
-        mockLicense,
-        mockAgent,
-        mockAccount
+      const result = await service.applyWingbackEntitlements(
+        mockAccount as any,
+        mockLicense
       );
 
       // Assert
@@ -428,18 +611,27 @@ describe('AccountLicenseService', () => {
       expect(innovationPackEntitlement?.limit).toBe(3);
       expect(innovationPackEntitlement?.enabled).toBe(true);
     });
-
     it('should prioritize Wingback subscription over credential-based licensing', async () => {
       // Arrange
+      mockLicense = {
+        entitlements: [
+          {
+            id: '1',
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 5, // Credential-based value
+            enabled: true,
+          },
+          {
+            id: '2',
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+        ],
+      } as ILicense;
       mockAccount.externalSubscriptionID = 'wingback-customer-123';
-
-      // Credential-based licensing provides one value
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 5,
-        })
-        .mockResolvedValueOnce(null);
 
       // Wingback provides a different (higher) value - should override
       mockWingbackService.getEntitlements.mockResolvedValue([
@@ -450,10 +642,9 @@ describe('AccountLicenseService', () => {
       ]);
 
       // Act
-      const result = await (service as any).extendLicensePolicy(
-        mockLicense,
-        mockAgent,
-        mockAccount
+      const result = await service.applyWingbackEntitlements(
+        mockAccount as any,
+        mockLicense
       );
 
       // Assert
@@ -466,58 +657,20 @@ describe('AccountLicenseService', () => {
       expect(virtualContributorEntitlement?.limit).toBe(15);
       expect(virtualContributorEntitlement?.enabled).toBe(true);
     });
-
-    it('should handle Wingback service errors gracefully', async () => {
-      // Arrange
-      mockAccount.externalSubscriptionID = 'wingback-customer-123';
-
-      mockCredentialBasedService.getEntitlementIfGranted.mockResolvedValue(
-        null
-      );
-      mockWingbackService.getEntitlements.mockRejectedValue(
-        new Error('Wingback service unavailable')
-      );
-
-      // Act
-      const result = await (service as any).extendLicensePolicy(
-        mockLicense,
-        mockAgent,
-        mockAccount
-      );
-
-      // Assert
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message:
-            'Skipping Wingback entitlements for Account, since it returned with an error',
-          accountId: 'test-account',
-          error: expect.any(Error),
-        }),
-        expect.anything(),
-        LogContext.ACCOUNT
-      );
-
-      // Should fallback to original values since no other licensing applies
-      const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-      expect(virtualContributorEntitlement?.limit).toBe(1); // Original value
-      expect(virtualContributorEntitlement?.enabled).toBe(false); // Original value
-    });
-
-    it('should handle mixed entitlements from different sources', async () => {
+    it('should overwrite ONLY WITH values found in Wingback', async () => {
       // Arrange
       mockAccount.externalSubscriptionID = 'wingback-customer-123';
 
       // Credential-based licensing only provides innovation pack entitlement
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce(null) // No virtual contributor from credentials
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-          limit: 2,
-        });
-
+      mockLicense = {
+        entitlements: [
+          {
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+            limit: 2,
+            enabled: true,
+          },
+        ],
+      } as ILicense;
       // Wingback only provides virtual contributor entitlement
       mockWingbackService.getEntitlements.mockResolvedValue([
         {
@@ -527,525 +680,18 @@ describe('AccountLicenseService', () => {
       ]);
 
       // Act
-      const result = await (service as any).extendLicensePolicy(
-        mockLicense,
-        mockAgent,
-        mockAccount
+      const result = await service.applyWingbackEntitlements(
+        mockAccount as any,
+        mockLicense as any
       );
 
       // Assert
-      const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-      expect(virtualContributorEntitlement?.limit).toBe(8); // From Wingback
-      expect(virtualContributorEntitlement?.enabled).toBe(true);
-
+      expect(result.entitlements?.length).toBe(1);
       const innovationPackEntitlement = result.entitlements!.find(
         (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
       );
       expect(innovationPackEntitlement?.limit).toBe(2); // From credential-based
       expect(innovationPackEntitlement?.enabled).toBe(true);
-    });
-
-    it('should handle account without external subscription', async () => {
-      // Arrange
-      mockAccount.externalSubscriptionID = undefined; // No Wingback subscription
-
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 3,
-        })
-        .mockResolvedValueOnce(null);
-
-      // Act
-      const result = await (service as any).extendLicensePolicy(
-        mockLicense,
-        mockAgent,
-        mockAccount
-      );
-
-      // Assert
-      expect(mockWingbackService.getEntitlements).not.toHaveBeenCalled();
-
-      const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-      expect(virtualContributorEntitlement?.limit).toBe(3); // From credential-based only
-      expect(virtualContributorEntitlement?.enabled).toBe(true);
-    });
-
-    it('should throw error when license is undefined', async () => {
-      // Act & Assert
-      await expect(
-        (service as any).extendLicensePolicy(undefined, mockAgent, mockAccount)
-      ).rejects.toThrow('License with entitlements not found');
-    });
-
-    it('should throw error when license has no entitlements', async () => {
-      // Arrange
-      const licenseWithoutEntitlements = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: undefined,
-      } as ILicense;
-
-      // Act & Assert
-      await expect(
-        (service as any).extendLicensePolicy(
-          licenseWithoutEntitlements,
-          mockAgent,
-          mockAccount
-        )
-      ).rejects.toThrow('License with entitlements not found');
-    });
-
-    it('should handle comprehensive licensing flow scenarios', async () => {
-      // Scenario: Baseline higher than credential-based for non-space entitlements
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 2, // Applied first from external licensing
-        })
-        .mockResolvedValueOnce(null);
-
-      mockWingbackService.getEntitlements.mockResolvedValue([]);
-
-      const testLicense: ILicense = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Reset default
-            enabled: false,
-          },
-        ],
-      } as ILicense;
-
-      // Apply external licensing first (should set to 2), then baseline (should set to 3 since 3 > 2)
-      let result = await (service as any).extendLicensePolicy(
-        testLicense,
-        mockAgent,
-        mockAccount
-      );
-
-      result = await (service as any).applyBaselineLicensePlan(result, {
-        id: 'test-account',
-        baselineLicensePlan: { virtualContributor: 3 },
-      });
-
-      const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-
-      // Should be 3 (baseline higher than external 2, so baseline applied)
-      expect(virtualContributorEntitlement?.limit).toBe(3);
-      expect(virtualContributorEntitlement?.enabled).toBe(true);
-
-      // Scenario: Wingback overrides everything
-      mockAccount.externalSubscriptionID = 'wingback-customer-123';
-
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 7, // Credential-based value
-        })
-        .mockResolvedValueOnce(null);
-
-      mockWingbackService.getEntitlements.mockResolvedValue([
-        {
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 12, // Wingback value (highest priority)
-        },
-      ]);
-
-      // Act
-      result = await (service as any).extendLicensePolicy(
-        mockLicense,
-        mockAgent,
-        mockAccount
-      );
-
-      const virtualContributorEntitlement2 = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-
-      // Should be 12 (Wingback has highest priority)
-      expect(virtualContributorEntitlement2?.limit).toBe(12);
-      expect(virtualContributorEntitlement2?.enabled).toBe(true);
-
-      // Scenario: Different entitlements from different sources
-      mockAccount.externalSubscriptionID = 'wingback-customer-123';
-
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 5, // Only virtual contributor from credentials
-        })
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-          limit: 3, // Space free from credentials
-        });
-
-      mockWingbackService.getEntitlements.mockResolvedValue([
-        {
-          type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-          limit: 4, // Only innovation pack from Wingback
-        },
-      ]);
-
-      const testLicenseMixed: ILicense = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1,
-            enabled: false,
-          },
-          {
-            id: '2',
-            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0,
-            enabled: false,
-          },
-          {
-            id: '3',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1,
-            enabled: false,
-          },
-        ],
-      } as ILicense;
-
-      const baselinePlan = {
-        virtualContributor: 2,
-        innovationPacks: 1,
-        spaceFree: 1,
-      };
-
-      // Apply external licensing first, then baseline
-      result = await (service as any).extendLicensePolicy(
-        testLicenseMixed,
-        mockAgent,
-        mockAccount
-      );
-
-      result = await (service as any).applyBaselineLicensePlan(result, {
-        id: 'test-account',
-        baselineLicensePlan: baselinePlan,
-      });
-
-      const virtualContributorEntitlement3 = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-      const innovationPackEntitlement3 = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
-      );
-      const spaceFreeEntitlement3 = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
-      );
-
-      // Virtual contributor: 1 → 2 (baseline applied because external licensing didn't apply in this mock setup)
-      expect(virtualContributorEntitlement3?.limit).toBe(2);
-      expect(virtualContributorEntitlement3?.enabled).toBe(true);
-
-      // Innovation pack: 0 → 4 (Wingback applied) → 4 (baseline 1 < 4, kept with warning)
-      expect(innovationPackEntitlement3?.limit).toBe(4);
-      expect(innovationPackEntitlement3?.enabled).toBe(true);
-
-      // Space free: 1 → 3 (external applied first) → 1 (baseline always applied for space entitlements)
-      expect(spaceFreeEntitlement3?.limit).toBe(1);
-      expect(spaceFreeEntitlement3?.enabled).toBe(true);
-
-      // Scenario: Space entitlements get baseline applied directly, then external licensing overrides
-      mockCredentialBasedService.getEntitlementIfGranted.mockResolvedValueOnce({
-        type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-        limit: 7, // Credential-based override
-      });
-
-      const testLicenseSpace: ILicense = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 10, // High initial value
-            enabled: true,
-          },
-        ],
-      } as ILicense;
-
-      // Apply external licensing first (should set to 7), then baseline (should set to 2 since space entitlements always get baseline)
-      result = await (service as any).extendLicensePolicy(
-        testLicenseSpace,
-        mockAgent,
-        mockAccount
-      );
-
-      result = await (service as any).applyBaselineLicensePlan(result, {
-        id: 'test-account',
-        baselineLicensePlan: { spaceFree: 2 }, // Lower than initial
-      });
-
-      const spaceFreeEntitlement4 = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
-      );
-
-      // Should be 2: 10 → 7 (external applied first) → 2 (baseline always applied for space entitlements)
-      expect(spaceFreeEntitlement4?.limit).toBe(2);
-      expect(spaceFreeEntitlement4?.enabled).toBe(true);
-
-      // Scenario: Non-space entitlements keep current value when baseline is lower, then external licensing overrides
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 12, // Credential-based override
-        })
-        .mockResolvedValueOnce(null);
-
-      const testLicenseNonSpace: ILicense = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 8, // High initial value
-            enabled: true,
-          },
-        ],
-      } as ILicense;
-
-      // Apply external licensing first (should set to 12), then baseline (should stay 12 since 12 > 3, warning logged)
-      result = await (service as any).extendLicensePolicy(
-        testLicenseNonSpace,
-        mockAgent,
-        mockAccount
-      );
-
-      result = await (service as any).applyBaselineLicensePlan(result, {
-        id: 'test-account',
-        baselineLicensePlan: { virtualContributor: 3 }, // Lower than external
-      });
-
-      const virtualContributorEntitlement4 = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-
-      // Should be 7: 8 → 7 (external applied) → 7 (baseline 3 < 7, kept with warning)
-      expect(virtualContributorEntitlement4?.limit).toBe(7);
-      expect(virtualContributorEntitlement4?.enabled).toBe(true);
-
-      // Should have logged warning for baseline being lower than external value
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message:
-            'Baseline entitlement value is lower than current entitlement limit for account. Keeping current value.',
-          entitlementName: 'virtualContributor',
-          baselineValue: 3,
-          currentEntitlementLimit: 7,
-        }),
-        LogContext.LICENSE
-      );
-    });
-
-    it('should handle comprehensive licensing flow with credential-baseline combinations', async () => {
-      // Test scenario: Credential-based lower than baseline for non-space entitlements
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 2, // Lower than baseline (5)
-        })
-        .mockResolvedValueOnce(null);
-
-      mockWingbackService.getEntitlements.mockResolvedValue([]);
-
-      const testLicense1: ILicense = {
-        id: 'test-license-1',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Reset default
-            enabled: false,
-          },
-        ],
-      } as ILicense;
-
-      // External first (sets to 2), then baseline (sets to 5 since 5 > 2)
-      let result = await (service as any).extendLicensePolicy(
-        testLicense1,
-        mockAgent,
-        mockAccount
-      );
-
-      result = await (service as any).applyBaselineLicensePlan(result, {
-        id: 'test-account',
-        baselineLicensePlan: { virtualContributor: 5 },
-      });
-
-      const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-
-      expect(virtualContributorEntitlement?.limit).toBe(5);
-      expect(virtualContributorEntitlement?.enabled).toBe(true);
-
-      // Test scenario: Credential-based higher than baseline for non-space entitlements
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-          limit: 8, // Higher than baseline (3)
-        })
-        .mockResolvedValueOnce(null);
-
-      const testLicense2: ILicense = {
-        id: 'test-license-2',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Reset default
-            enabled: false,
-          },
-        ],
-      } as ILicense;
-
-      // External first (sets to 8), then baseline (stays 8 since 8 > 3, warning logged)
-      result = await (service as any).extendLicensePolicy(
-        testLicense2,
-        mockAgent,
-        mockAccount
-      );
-
-      result = await (service as any).applyBaselineLicensePlan(result, {
-        id: 'test-account',
-        baselineLicensePlan: { innovationPacks: 3 },
-      });
-
-      const innovationPackEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
-      );
-
-      expect(innovationPackEntitlement?.limit).toBe(3);
-      expect(innovationPackEntitlement?.enabled).toBe(true);
-
-      // Should have applied baseline since external licensing didn't apply in this mock setup
-
-      // Test scenario: Space entitlements always get baseline regardless of external values
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-          limit: 10, // High external value
-        })
-        .mockResolvedValueOnce(null);
-
-      const testLicense3: ILicense = {
-        id: 'test-license-3',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Reset default
-            enabled: false,
-          },
-        ],
-      } as ILicense;
-
-      // External first (sets to 10), then baseline (overwrites to 3 for space entitlements)
-      result = await (service as any).extendLicensePolicy(
-        testLicense3,
-        mockAgent,
-        mockAccount
-      );
-
-      result = await (service as any).applyBaselineLicensePlan(result, {
-        id: 'test-account',
-        baselineLicensePlan: { spaceFree: 3 },
-      });
-
-      const spaceFreeEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
-      );
-
-      expect(spaceFreeEntitlement?.limit).toBe(3);
-      expect(spaceFreeEntitlement?.enabled).toBe(true);
-
-      // Test scenario: Wingback overrides credential-based before baseline evaluation
-      mockAccount.externalSubscriptionID = 'wingback-customer-123';
-
-      mockCredentialBasedService.getEntitlementIfGranted
-        .mockResolvedValueOnce({
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 7, // Credential value
-        })
-        .mockResolvedValueOnce(null);
-
-      mockWingbackService.getEntitlements.mockResolvedValue([
-        {
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          limit: 12, // Wingback overrides credential
-        },
-      ]);
-
-      const testLicense4: ILicense = {
-        id: 'test-license-4',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Reset default
-            enabled: false,
-          },
-        ],
-      } as ILicense;
-
-      // External: 1 → 7 (credential) → 12 (Wingback overrides), then baseline: 12 → 12 (12 > 4, kept with warning)
-      result = await (service as any).extendLicensePolicy(
-        testLicense4,
-        mockAgent,
-        mockAccount
-      );
-
-      result = await (service as any).applyBaselineLicensePlan(result, {
-        id: 'test-account',
-        baselineLicensePlan: { virtualContributor: 4 },
-      });
-
-      const finalVirtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-
-      expect(finalVirtualContributorEntitlement?.limit).toBe(12);
-      expect(finalVirtualContributorEntitlement?.enabled).toBe(true);
     });
   });
 });

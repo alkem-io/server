@@ -61,17 +61,20 @@ export class AccountLicenseService {
 
     // Ensure always applying from a clean state
     account.license = this.licenseService.reset(account.license);
-
+    // extend the policy with the entitlements from credentials of the account agent
     account.license = await this.extendLicensePolicy(
       account.license,
-      account.agent,
-      account
+      account.agent
     );
-
     // Apply baseline license plan entitlements
     account.license = await this.applyBaselineLicensePlan(
       account.license,
       account
+    );
+    // Apply Wingback entitlements with the highest priority
+    account.license = await this.applyWingbackEntitlements(
+      account,
+      account.license
     );
 
     updatedLicenses.push(account.license);
@@ -154,8 +157,7 @@ export class AccountLicenseService {
 
   private async extendLicensePolicy(
     license: ILicense | undefined,
-    accountAgent: IAgent,
-    account: IAccount
+    accountAgent: IAgent
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
@@ -170,52 +172,79 @@ export class AccountLicenseService {
     for (const entitlement of license.entitlements) {
       await this.checkAndAssignGrantedEntitlement(entitlement, accountAgent);
     }
-    // Then check the Wingback subscription service for any granted entitlements
-    if (account.externalSubscriptionID) {
-      const wingbackGrantedLicenseEntitlements: LicensingGrantedEntitlement[] =
-        [];
 
-      try {
-        const result =
-          await this.licensingWingbackSubscriptionService.getEntitlements(
-            account.externalSubscriptionID
-          );
-        wingbackGrantedLicenseEntitlements.push(...result);
-      } catch (e: any) {
-        this.logger.error?.(
-          {
-            message:
-              'Skipping Wingback entitlements for Account, since it returned with an error',
-            accountId: account.id,
-            error: e,
-          },
-          e?.stack,
-          LogContext.ACCOUNT
+    return license;
+  }
+
+  /**
+   * @throws {EntityNotInitializedException} if the license entitlements are not initialized
+   */
+  public async applyWingbackEntitlements(account: IAccount, license: ILicense) {
+    if (!this.licensingWingbackSubscriptionService.isEnabled()) {
+      return license;
+    }
+
+    if (!account.externalSubscriptionID) {
+      return license;
+    }
+
+    if (!license.entitlements) {
+      this.logger.error(
+        {
+          message: 'Entitlements not initialized for License entity',
+          accountId: account.id,
+          licenseId: license.id,
+        },
+        undefined,
+        LogContext.ACCOUNT
+      );
+      return license;
+    }
+
+    // Then check the Wingback subscription service for any granted entitlements
+    const wingbackGrantedLicenseEntitlements: LicensingGrantedEntitlement[] =
+      [];
+
+    try {
+      const result =
+        await this.licensingWingbackSubscriptionService.getEntitlements(
+          account.externalSubscriptionID
         );
-        return license;
-      }
-      // early exit if no wingback entitlements were found`
-      if (!wingbackGrantedLicenseEntitlements.length) {
-        this.logger.warn?.(
-          {
-            message: 'No Wingback granted entitlements found for Account',
-            accountId: account.id,
-            wingbackCustomerId: account.externalSubscriptionID,
-          },
-          LogContext.ACCOUNT
+      wingbackGrantedLicenseEntitlements.push(...result);
+    } catch (e: any) {
+      this.logger.error?.(
+        {
+          message:
+            'Skipping Wingback entitlements for Account, since it returned with an error',
+          accountId: account.id,
+          error: e,
+        },
+        e?.stack,
+        LogContext.ACCOUNT
+      );
+      return license;
+    }
+    // early exit if no wingback entitlements were found`
+    if (!wingbackGrantedLicenseEntitlements.length) {
+      this.logger.warn?.(
+        {
+          message: 'No Wingback granted entitlements found for Account',
+          accountId: account.id,
+          wingbackCustomerId: account.externalSubscriptionID,
+        },
+        LogContext.ACCOUNT
+      );
+      return license;
+    }
+    // apply any wingback granted entitlements to the existing entitlements license
+    for (const entitlement of license.entitlements) {
+      const wingbackGrantedEntitlement =
+        wingbackGrantedLicenseEntitlements.find(
+          e => e.type === entitlement.type
         );
-        return license;
-      }
-      // apply any wingback granted entitlements to the existing entitlements license
-      for (const entitlement of license.entitlements) {
-        const wingbackGrantedEntitlement =
-          wingbackGrantedLicenseEntitlements.find(
-            e => e.type === entitlement.type
-          );
-        if (wingbackGrantedEntitlement) {
-          entitlement.limit = wingbackGrantedEntitlement.limit;
-          entitlement.enabled = true;
-        }
+      if (wingbackGrantedEntitlement) {
+        entitlement.limit = wingbackGrantedEntitlement.limit;
+        entitlement.enabled = true;
       }
     }
 
