@@ -36,7 +36,6 @@ import {
   UserMentionEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { Community } from '@domain/community/community/community.entity';
@@ -57,12 +56,12 @@ import { NotificationInputCommentReply } from '../notification-adapter/dto/space
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class NotificationExternalAdapter {
   constructor(
     private contributorLookupService: ContributorLookupService,
-    private communityResolverService: CommunityResolverService,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     @InjectRepository(Community)
@@ -82,17 +81,17 @@ export class NotificationExternalAdapter {
     this.notificationsClient.emit<number>(event, payload);
   }
 
-  async buildApplicationCreatedNotificationPayload(
+  async buildSpaceCommunityApplicationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    community: ICommunity
+    space: ISpace
   ): Promise<SpaceCommunityApplicationCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const applicantPayload =
       await this.getContributorPayloadOrFail(triggeredBy);
@@ -104,19 +103,19 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildInvitationCreatedNotificationPayload(
+  async buildSpaceCommunityInvitationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
     invitedUserID: string,
-    community: ICommunity,
+    space: ISpace,
     welcomeMessage?: string
   ): Promise<SpaceCommunityInvitationCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const inviteePayload =
       await this.getContributorPayloadOrFail(invitedUserID);
@@ -129,20 +128,20 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildInvitationVirtualContributorCreatedNotificationPayload(
+  async buildSpaceCommunityInvitationVirtualContributorCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
     virtualContributorID: string,
     accountHost: IContributor,
-    community: ICommunity,
+    space: ISpace,
     welcomeMessage?: string
   ): Promise<SpaceCommunityInvitationVirtualContributorCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
 
     const hostPayload = await this.getContributorPayloadOrFail(accountHost.id);
@@ -159,19 +158,19 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  async buildExternalInvitationCreatedNotificationPayload(
+  async buildSpaceCommunityExternalInvitationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
     invitedUserEmail: string,
-    community: ICommunity,
+    space: ISpace,
     message?: string
   ): Promise<SpaceCommunityPlatformInvitationCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const payload: SpaceCommunityPlatformInvitationCreatedEventPayload = {
       invitees: [{ email: invitedUserEmail }],
@@ -182,25 +181,21 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildSpacePostCreatedPayload(
+  async buildSpaceCollaborationPostCreatedPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
+    space: ISpace,
     eventData: NotificationInputPostCreated
   ): Promise<SpaceCollaborationPostCreatedEventPayload> {
     const callout = eventData.callout;
     const post = eventData.post;
 
-    const community =
-      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-        callout.id
-      );
-
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
       callout.id
@@ -225,24 +220,21 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildSpaceWhiteboardCreatedPayload(
+  async buildSpaceCollaborationWhiteboardCreatedPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
+    space: ISpace,
     eventData: NotificationInputWhiteboardCreated
   ): Promise<SpaceCollaborationWhiteboardCreatedEventPayload> {
     const callout = eventData.callout;
     const whiteboard = eventData.whiteboard;
-    const community =
-      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-        callout.id
-      );
 
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
       callout.id
@@ -277,18 +269,14 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
+    space: ISpace,
     callout: ICallout
   ): Promise<SpaceCollaborationCalloutPublishedEventPayload> {
-    const community =
-      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-        callout.id
-      );
-
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
       callout.id
@@ -300,6 +288,7 @@ export class NotificationExternalAdapter {
         description: callout.framing.profile.description ?? '',
         nameID: callout.nameID,
         url: calloutURL,
+        type: 'deprecated',
       },
       ...spacePayload,
     };
@@ -307,36 +296,26 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildCommentCreatedOnPostPayload(
+  async buildSpaceCollaborationCommentCreatedOnPostPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
+    space: ISpace,
     eventData: NotificationInputPostComment
   ): Promise<SpaceCollaborationPostCommentEventPayload> {
-    const commentsId = eventData.room.id;
     const post = eventData.post;
     const callout =
       await this.contributionResolverService.getCalloutForPostContribution(
         post.id
       );
-    const messageResult = eventData.commentSent;
-    const community =
-      await this.communityResolverService.getCommunityFromPostRoomOrFail(
-        commentsId
-      );
 
-    if (!community) {
-      throw new NotificationEventException(
-        `Could not acquire community from comments with id: ${commentsId}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
+    const messageResult = eventData.commentSent;
 
     const spacePayload = await this.buildSpacePayload(
       eventType,
-      post.createdBy,
+      triggeredBy,
       recipients,
-      community
+      space
     );
     const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
       callout.id
@@ -364,81 +343,18 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildUserCommentReplyPayload(
+  async buildSpaceCommunityNewMemberPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    data: NotificationInputCommentReply
-  ): Promise<UserCommentReplyEventPayload> {
-    const user = await this.getContributorPayloadOrFail(data.commentOwnerID);
-
-    const commentOriginUrl = await this.buildCommentOriginUrl(
-      data.commentType,
-      data.originEntity.id
-    );
-
-    const basePayload = await this.buildBaseEventPayload(
-      eventType,
-      triggeredBy,
-      recipients
-    );
-    const payload: UserCommentReplyEventPayload = {
-      user,
-      reply: data.reply,
-      comment: {
-        commentUrl: commentOriginUrl,
-        commentOrigin: data.originEntity.displayName,
-        commentOwnerId: user.id,
-      },
-      ...basePayload,
-    };
-
-    return payload;
-  }
-
-  async buildPlatformForumCommentCreatedOnDiscussionPayload(
-    eventType: NotificationEvent,
-    triggeredBy: string,
-    recipients: IUser[],
-    discussion: IDiscussion,
-    message: IMessage
-  ): Promise<PlatformForumDiscussionCommentEventPayload> {
-    const basePayload = await this.buildBaseEventPayload(
-      eventType,
-      triggeredBy,
-      recipients
-    );
-    const discussionURL =
-      await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
-    const payload: PlatformForumDiscussionCommentEventPayload = {
-      discussion: {
-        displayName: discussion.profile.displayName,
-        createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
-        url: discussionURL,
-      },
-      comment: {
-        message: message.message,
-        createdBy: await this.getContributorPayloadOrFail(message.sender),
-        url: '',
-      },
-      ...basePayload,
-    };
-
-    return payload;
-  }
-
-  async buildCommunityNewMemberPayload(
-    eventType: NotificationEvent,
-    triggeredBy: string,
-    recipients: IUser[],
-    contributorID: string,
-    community: ICommunity
+    space: ISpace,
+    contributorID: string
   ): Promise<SpaceCommunityNewMemberPayload> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const memberPayload = await this.getContributorPayloadOrFail(contributorID);
     const payload: SpaceCommunityNewMemberPayload = {
@@ -449,47 +365,19 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildPlatformSpaceCreatedPayload(
+  async buildSpaceCommunicationUpdateSentNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    community: ICommunity
-  ): Promise<PlatformSpaceCreatedEventPayload> {
-    const spacePayload = await this.buildSpacePayload(
-      eventType,
-      triggeredBy,
-      recipients,
-      community
-    );
-    const sender = await this.getContributorPayloadOrFail(triggeredBy);
-
-    return {
-      sender: {
-        name: sender.profile.displayName,
-        url: sender.profile.url,
-      },
-      created: Date.now(),
-      ...spacePayload,
-    };
-  }
-
-  async buildCommunicationUpdateSentNotificationPayload(
-    eventType: NotificationEvent,
-    triggeredBy: string,
-    recipients: IUser[],
+    space: ISpace,
     updates: IRoom,
     lastMessage?: IMessage
   ): Promise<SpaceCommunicationUpdateEventPayload> {
-    const community =
-      await this.communityResolverService.getCommunityFromUpdatesOrFail(
-        updates.id
-      );
-
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const payload: SpaceCommunicationUpdateEventPayload = {
       update: {
@@ -504,7 +392,31 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildGlobalRoleChangedNotificationPayload(
+  async buildPlatformSpaceCreatedPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace
+  ): Promise<PlatformSpaceCreatedEventPayload> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const sender = await this.getContributorPayloadOrFail(triggeredBy);
+
+    return {
+      sender: {
+        name: sender.profile.displayName,
+        url: sender.profile.url,
+      },
+      created: Date.now(),
+      ...spacePayload,
+    };
+  }
+
+  async buildPlatformGlobalRoleChangedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
@@ -529,7 +441,7 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  async buildUserRegisteredNotificationPayload(
+  async buildPlatformUserRegisteredNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
@@ -568,6 +480,37 @@ export class NotificationExternalAdapter {
       ...basePayload,
     };
     return result;
+  }
+
+  async buildPlatformForumCommentCreatedOnDiscussionPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    discussion: IDiscussion,
+    message: IMessage
+  ): Promise<PlatformForumDiscussionCommentEventPayload> {
+    const basePayload = await this.buildBaseEventPayload(
+      eventType,
+      triggeredBy,
+      recipients
+    );
+    const discussionURL =
+      await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
+    const payload: PlatformForumDiscussionCommentEventPayload = {
+      discussion: {
+        displayName: discussion.profile.displayName,
+        createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
+        url: discussionURL,
+      },
+      comment: {
+        message: message.message,
+        createdBy: await this.getContributorPayloadOrFail(message.sender),
+        url: '',
+      },
+      ...basePayload,
+    };
+
+    return payload;
   }
 
   async buildPlatformForumDiscussionCreatedNotificationPayload(
@@ -618,6 +561,41 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
+  async buildOrganizationMentionNotificationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    mentionedOrgUUID: string,
+    comment: string,
+    originEntityId: string,
+    originEntityDisplayName: string,
+    commentType: RoomType
+  ): Promise<OrganizationMentionEventPayload | undefined> {
+    const orgData = await this.getContributorPayloadOrFail(mentionedOrgUUID);
+
+    const commentOriginUrl = await this.buildCommentOriginUrl(
+      commentType,
+      originEntityId
+    );
+
+    const basePayload = await this.buildBaseEventPayload(
+      eventType,
+      triggeredBy,
+      recipients
+    );
+    const payload: OrganizationMentionEventPayload = {
+      organization: orgData,
+      comment,
+      commentOrigin: {
+        url: commentOriginUrl,
+        displayName: originEntityDisplayName,
+      },
+      ...basePayload,
+    };
+
+    return payload;
+  }
+
   async buildOrganizationMessageNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
@@ -645,19 +623,50 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    message: string,
-    communityID: string
+    space: ISpace,
+    message: string
   ): Promise<SpaceCommunicationLeadsMessageEventPayload> {
-    const community = await this.getCommunityOrFail(communityID);
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
-      community
+      space
     );
     const payload: SpaceCommunicationLeadsMessageEventPayload = {
       message,
       ...spacePayload,
+    };
+
+    return payload;
+  }
+
+  async buildUserCommentReplyPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    data: NotificationInputCommentReply
+  ): Promise<UserCommentReplyEventPayload> {
+    const user = await this.getContributorPayloadOrFail(data.commentOwnerID);
+
+    const commentOriginUrl = await this.buildCommentOriginUrl(
+      data.commentType,
+      data.originEntity.id
+    );
+
+    const basePayload = await this.buildBaseEventPayload(
+      eventType,
+      triggeredBy,
+      recipients
+    );
+    const payload: UserCommentReplyEventPayload = {
+      user,
+      reply: data.reply,
+      comment: {
+        commentUrl: commentOriginUrl,
+        commentOrigin: data.originEntity.displayName,
+        commentOwnerId: user.id,
+      },
+      ...basePayload,
     };
 
     return payload;
@@ -689,41 +698,6 @@ export class NotificationExternalAdapter {
     //const userURL = await this.urlGeneratorService.
     const payload: UserMentionEventPayload = {
       user: userContributor,
-      comment,
-      commentOrigin: {
-        url: commentOriginUrl,
-        displayName: originEntityDisplayName,
-      },
-      ...basePayload,
-    };
-
-    return payload;
-  }
-
-  async buildOrganizationMentionNotificationPayload(
-    eventType: NotificationEvent,
-    triggeredBy: string,
-    recipients: IUser[],
-    mentionedOrgUUID: string,
-    comment: string,
-    originEntityId: string,
-    originEntityDisplayName: string,
-    commentType: RoomType
-  ): Promise<OrganizationMentionEventPayload | undefined> {
-    const orgData = await this.getContributorPayloadOrFail(mentionedOrgUUID);
-
-    const commentOriginUrl = await this.buildCommentOriginUrl(
-      commentType,
-      originEntityId
-    );
-
-    const basePayload = await this.buildBaseEventPayload(
-      eventType,
-      triggeredBy,
-      recipients
-    );
-    const payload: OrganizationMentionEventPayload = {
-      organization: orgData,
       comment,
       commentOrigin: {
         url: commentOriginUrl,
@@ -782,17 +756,14 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    community: ICommunity
+    space: ISpace
   ): Promise<SpaceBaseEventPayload> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
       recipients
     );
-    const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
-        community.id
-      );
+
     const url = await this.urlGeneratorService.generateUrlForProfile(
       space.about.profile
     );

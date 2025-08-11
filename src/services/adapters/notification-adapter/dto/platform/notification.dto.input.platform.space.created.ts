@@ -1,6 +1,6 @@
-import { ICommunity } from '@domain/community/community';
 import { NotificationInputBase } from '../notification.dto.input.base';
+import { ISpace } from '@domain/space/space/space.interface';
 
 export interface NotificationInputSpaceCreated extends NotificationInputBase {
-  community: ICommunity;
+  space: ISpace;
 }

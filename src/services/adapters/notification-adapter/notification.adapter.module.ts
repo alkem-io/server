@@ -15,10 +15,10 @@ import { NotificationRecipientsModule } from '@services/api/notification-recipie
 @Module({
   imports: [
     ActivityModule,
-    EntityResolverModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([Post, Whiteboard, Community]),
     ContributorLookupModule,
+    EntityResolverModule,
     NotificationRecipientsModule,
     NotificationExternalAdapterModule,
     NotificationInAppAdapterModule,

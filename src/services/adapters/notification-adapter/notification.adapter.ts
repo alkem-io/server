@@ -25,7 +25,7 @@ import { NotificationInputCommentReply } from './dto/space/notification.dto.inpu
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.platform.invitation';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.community.invitation.vc';
-import { NotificationInputSpaceCreated } from './dto/space/notification.dto.input.space.created';
+import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.input.platform.space.created';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
 import { NotificationRecipientsService } from '@services/api/notification-recipients/notification.recipients.service';
@@ -33,7 +33,7 @@ import { InAppNotificationCalloutPublishedPayload } from '../notification-in-app
 import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
-
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 @Injectable()
 export class NotificationAdapter {
   constructor(
@@ -41,7 +41,8 @@ export class NotificationAdapter {
     private readonly logger: LoggerService,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationsRecipientsService: NotificationRecipientsService,
-    private notificationInAppAdapter: NotificationInAppAdapter
+    private notificationInAppAdapter: NotificationInAppAdapter,
+    private communityResolverService: CommunityResolverService
   ) {}
 
   public async SpaceCollaborationCalloutPublished(
@@ -54,11 +55,22 @@ export class NotificationAdapter {
       eventData.callout.id
     );
 
+    const community =
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+        eventData.callout.id
+      );
+
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+
     const payload =
       await this.notificationExternalAdapter.buildSpaceCollaborationCalloutPublishedPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
+        space,
         eventData.callout
       );
     this.notificationExternalAdapter.sendExternalNotification(event, payload);
@@ -87,11 +99,22 @@ export class NotificationAdapter {
       eventData.callout.id
     );
 
+    const community =
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+        eventData.callout.id
+      );
+
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+
     const payload =
-      await this.notificationExternalAdapter.buildSpacePostCreatedPayload(
+      await this.notificationExternalAdapter.buildSpaceCollaborationPostCreatedPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
+        space,
         eventData
       );
 
@@ -102,17 +125,26 @@ export class NotificationAdapter {
     eventData: NotificationInputWhiteboardCreated
   ): Promise<void> {
     const event = NotificationEvent.SPACE_WHITEBOARD_CREATED;
+    const community =
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+        eventData.callout.id
+      );
+    const space =
+      await this.communityResolverService.getSpaceForCollaborationOrFail(
+        community.id
+      );
     const recipients = await this.getNotificationRecipients(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
 
     const payload =
-      await this.notificationExternalAdapter.buildSpaceWhiteboardCreatedPayload(
+      await this.notificationExternalAdapter.buildSpaceCollaborationWhiteboardCreatedPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
+        space,
         eventData
       );
 
@@ -123,19 +155,23 @@ export class NotificationAdapter {
     eventData: NotificationInputCommunityNewMember
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER;
-    const recipients = await this.getNotificationRecipients(
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        eventData.community.id
+      );
+    const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
 
     const payload =
-      await this.notificationExternalAdapter.buildCommunityNewMemberPayload(
+      await this.notificationExternalAdapter.buildSpaceCommunityNewMemberPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
-        eventData.contributorID,
-        eventData.community
+        space,
+        eventData.contributorID
       );
     this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
@@ -144,18 +180,22 @@ export class NotificationAdapter {
     eventData: NotificationInputCommunityApplication
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT;
-    const recipients = await this.getNotificationRecipients(
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        eventData.community.id
+      );
+    const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
 
     const payload =
-      await this.notificationExternalAdapter.buildApplicationCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildSpaceCommunityApplicationCreatedNotificationPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
-        eventData.community
+        space
       );
 
     this.notificationExternalAdapter.sendExternalNotification(event, payload);
@@ -165,19 +205,24 @@ export class NotificationAdapter {
     eventData: NotificationInputCommunityInvitation
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNITY_INVITATION_USER;
-    const recipients = await this.getNotificationRecipients(
+
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        eventData.community.id
+      );
+    const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
 
     const payload =
-      await this.notificationExternalAdapter.buildInvitationCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildSpaceCommunityInvitationCreatedNotificationPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
         eventData.invitedContributorID,
-        eventData.community,
+        space,
         eventData.welcomeMessage
       );
 
@@ -188,20 +233,24 @@ export class NotificationAdapter {
     eventData: NotificationInputCommunityInvitationVirtualContributor
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNITY_INVITATION_VC;
-    const recipients = await this.getNotificationRecipients(
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        eventData.community.id
+      );
+    const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
 
     const payload =
-      await this.notificationExternalAdapter.buildInvitationVirtualContributorCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildSpaceCommunityInvitationVirtualContributorCreatedNotificationPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
         eventData.invitedContributorID,
         eventData.accountHost,
-        eventData.community,
+        space,
         eventData.welcomeMessage
       );
 
@@ -212,10 +261,14 @@ export class NotificationAdapter {
     eventData: NotificationInputCommunityLeadsMessage
   ): Promise<void> {
     const event = NotificationEvent.SPACE_CONTACT_MESSAGE_RECIPIENT;
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        eventData.communityID
+      );
     const recipients = await this.getNotificationRecipients(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
     // Emit the events to notify others
     const payload =
@@ -223,8 +276,8 @@ export class NotificationAdapter {
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
-        eventData.message,
-        eventData.communityID
+        space,
+        eventData.message
       );
     this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
@@ -233,17 +286,28 @@ export class NotificationAdapter {
     eventData: NotificationInputPostComment
   ): Promise<void> {
     const event = NotificationEvent.SPACE_POST_COMMENT_CREATED;
+
+    const community =
+      await this.communityResolverService.getCommunityFromPostRoomOrFail(
+        eventData.room.id
+      );
+
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
     const recipients = await this.getNotificationRecipients(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
     // build notification payload
     const payload =
-      await this.notificationExternalAdapter.buildCommentCreatedOnPostPayload(
+      await this.notificationExternalAdapter.buildSpaceCollaborationCommentCreatedOnPostPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
+        space,
         eventData
       );
     // send notification event
@@ -254,18 +318,27 @@ export class NotificationAdapter {
     eventData: NotificationInputUpdateSent
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNICATION_UPDATE;
-    const recipients = await this.getNotificationRecipients(
+    const community =
+      await this.communityResolverService.getCommunityFromUpdatesOrFail(
+        eventData.updates.id
+      );
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+    const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
 
     // Send the notifications event
     const notificationsPayload =
-      await this.notificationExternalAdapter.buildCommunicationUpdateSentNotificationPayload(
+      await this.notificationExternalAdapter.buildSpaceCommunicationUpdateSentNotificationPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
+        space,
         eventData.updates,
         eventData.lastMessage
       );
@@ -279,10 +352,10 @@ export class NotificationAdapter {
     eventData: NotificationInputEntityMention
   ): Promise<void> {
     const event = NotificationEvent.ORGANIZATION_MENTIONED;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsOrganization(
       event,
       eventData,
-      eventData.callout.id
+      eventData.originEntity.id
     );
     // Emit the events to notify others
     const payload =
@@ -306,10 +379,10 @@ export class NotificationAdapter {
     eventData: NotificationInputOrganizationMessage
   ): Promise<void> {
     const event = NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsOrganization(
       event,
       eventData,
-      eventData.callout.id
+      eventData.organizationID
     );
     // Emit the events to notify others
     const payload =
@@ -327,10 +400,9 @@ export class NotificationAdapter {
     eventData: NotificationInputCommentReply
   ): Promise<void> {
     const event = NotificationEvent.USER_COMMENT_REPLY;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsUser(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
 
     try {
@@ -357,10 +429,9 @@ export class NotificationAdapter {
     eventData: NotificationInputUserMessage
   ): Promise<void> {
     const event = NotificationEvent.USER_MESSAGE_RECIPIENT;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsUser(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
     // Emit the events to notify others
     const payload =
@@ -378,10 +449,9 @@ export class NotificationAdapter {
     eventData: NotificationInputEntityMention
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNICATION_MENTION;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsUser(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
     // Emit the events to notify others
     const payload =
@@ -405,14 +475,13 @@ export class NotificationAdapter {
     eventData: NotificationInputPlatformGlobalRoleChange
   ): Promise<void> {
     const event = NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
 
     const payload =
-      await this.notificationExternalAdapter.buildGlobalRoleChangedNotificationPayload(
+      await this.notificationExternalAdapter.buildPlatformGlobalRoleChangedNotificationPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
@@ -428,10 +497,9 @@ export class NotificationAdapter {
     eventData: NotificationInputPlatformForumDiscussionCreated
   ): Promise<void> {
     const event = NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
     // Emit the events to notify others
     const payload =
@@ -448,10 +516,9 @@ export class NotificationAdapter {
     eventData: NotificationInputPlatformForumDiscussionComment
   ): Promise<void> {
     const event = NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
 
     // build notification payload
@@ -471,19 +538,23 @@ export class NotificationAdapter {
     eventData: NotificationInputPlatformInvitation
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
 
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        eventData.community.id
+      );
+
     const payload =
-      await this.notificationExternalAdapter.buildExternalInvitationCreatedNotificationPayload(
+      await this.notificationExternalAdapter.buildSpaceCommunityExternalInvitationCreatedNotificationPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
         eventData.invitedUser,
-        eventData.community,
+        space,
         eventData.welcomeMessage
       );
 
@@ -494,10 +565,9 @@ export class NotificationAdapter {
     eventData: NotificationInputSpaceCreated
   ): Promise<void> {
     const event = NotificationEvent.PLATFORM_SPACE_CREATED;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
 
     const payload =
@@ -505,7 +575,7 @@ export class NotificationAdapter {
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
-        eventData.community
+        eventData.space
       );
     this.notificationExternalAdapter.sendExternalNotification(event, payload);
   }
@@ -514,14 +584,13 @@ export class NotificationAdapter {
     eventData: NotificationInputPlatformUserRegistered
   ): Promise<void> {
     const event = NotificationEvent.PLATFORM_USER_PROFILE_CREATED;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
 
     const payload =
-      await this.notificationExternalAdapter.buildUserRegisteredNotificationPayload(
+      await this.notificationExternalAdapter.buildPlatformUserRegisteredNotificationPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
@@ -535,17 +604,17 @@ export class NotificationAdapter {
     eventData: NotificationInputPlatformUserRemoved
   ): Promise<void> {
     const event = NotificationEvent.PLATFORM_USER_PROFILE_REMOVED;
-    const recipients = await this.getNotificationRecipients(
+    const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData,
-      eventData.callout.id
+      eventData
     );
 
     const payload =
       this.notificationExternalAdapter.buildPlatformUserRemovedNotificationPayload(
+        event,
         eventData.triggeredBy,
-        eventData.user,
-        recipients.emailRecipients
+        recipients.emailRecipients,
+        eventData.user
       );
 
     this.notificationExternalAdapter.sendExternalNotification(event, payload);
@@ -573,10 +642,40 @@ export class NotificationAdapter {
     }
   }
 
+  private async getNotificationRecipientsPlatform(
+    event: NotificationEvent,
+    eventData: NotificationInputBase
+  ): Promise<NotificationRecipientResult> {
+    return this.getNotificationRecipients(event, eventData);
+  }
+
+  private async getNotificationRecipientsUser(
+    event: NotificationEvent,
+    eventData: NotificationInputBase
+  ): Promise<NotificationRecipientResult> {
+    return this.getNotificationRecipients(event, eventData);
+  }
+
+  private async getNotificationRecipientsOrganization(
+    event: NotificationEvent,
+    eventData: NotificationInputBase,
+    organizationID: string
+  ): Promise<NotificationRecipientResult> {
+    return this.getNotificationRecipients(event, eventData, organizationID);
+  }
+
+  private async getNotificationRecipientsSpace(
+    event: NotificationEvent,
+    eventData: NotificationInputBase,
+    spaceID: string
+  ): Promise<NotificationRecipientResult> {
+    return this.getNotificationRecipients(event, eventData, spaceID);
+  }
+
   private async getNotificationRecipients(
     event: NotificationEvent,
     eventData: NotificationInputBase,
-    entityID: string
+    entityID?: string
   ): Promise<NotificationRecipientResult> {
     this.logEventTriggered(eventData, event);
 
