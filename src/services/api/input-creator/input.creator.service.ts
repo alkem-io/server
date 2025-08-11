@@ -81,6 +81,9 @@ export class InputCreatorService {
               visuals: true,
             },
           },
+          link: {
+            profile: true,
+          },
         },
       },
     });
@@ -294,6 +297,9 @@ export class InputCreatorService {
                     visuals: true,
                   },
                 },
+                link: {
+                  profile: true,
+                },
               },
             },
           },
@@ -435,6 +441,14 @@ export class InputCreatorService {
       whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
       ),
+      link: calloutFraming?.link?.profile
+        ? {
+            profile: this.buildCreateProfileInputFromProfile(
+              calloutFraming.link.profile
+            ),
+            uri: calloutFraming.link?.uri,
+          }
+        : undefined,
     };
   }
 
