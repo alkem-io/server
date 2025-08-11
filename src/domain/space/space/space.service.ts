@@ -128,7 +128,8 @@ export class SpaceService {
   private async createSpace(
     spaceData: CreateSpaceInput,
     templateContentSpace: ITemplateContentSpace,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
     // default to demo space
@@ -139,6 +140,12 @@ export class SpaceService {
     );
 
     space.settings = templateContentSpace.settings;
+    space.platformRolesAccess =
+      this.spacePlatformRolesAccessService.createPlatformRolesAccess(
+        space,
+        space.settings,
+        parentPlatformRolesAccess
+      );
 
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -1083,7 +1090,8 @@ export class SpaceService {
     let subspace = await this.createSpace(
       subspaceData,
       templateContentSubspace,
-      agentInfo
+      agentInfo,
+      space.platformRolesAccess
     );
 
     subspace = await this.addSubspaceToSpace(space, subspace);

@@ -6,7 +6,10 @@ import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IPlatformAccessRole } from '@domain/access/platform-roles-access/platform.roles.access.role.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
@@ -25,6 +28,12 @@ export class SpacePlatformRolesAccessService {
     parentPlatformAccess?: IPlatformRolesAccess
   ): IPlatformRolesAccess {
     const platformAccessRoles: IPlatformAccessRole[] = [];
+    if (space.level !== SpaceLevel.L0 && !parentPlatformAccess) {
+      throw new RelationshipNotFoundException(
+        `Parent platform access not found for space ${space.id}`,
+        LogContext.SPACES
+      );
+    }
 
     platformAccessRoles.push({
       roleName: RoleName.ANONYMOUS,
