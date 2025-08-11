@@ -1,11 +1,8 @@
 # How is the license applied
 
 1. The License entity is reset
-2. The License is extended by assigning granted entitlements via the Agent credentials on the Account
-3. The License is further extended `conditionally` by individual set of entitlements for each Account, called a `baseline`.
-   The conditions are as follows:
-   - IF the entitlement is related to VC, Innovation Pack or Innovation Hub AND the baseline value is higher than the entitlement from step 2 - it is overwritten by the baseline value
-   - All other entitlements are directly overwritten by the baseline value
+2. The License is initialized with the entitlements' baseline. This is the minimum set of entitlements for this account.
+3. The License is extended by assigning granted entitlements via the Agent credentials on the Account. The result is a sum of the baseline and granted entitlements.
 4. If the Wingback integration is enabled and the Account has a Wingback customer ID assigned, Wingback is queried for the entitlements of the customer and the values are used to overwrite the entitlements from step 3.
    > Note:
    >

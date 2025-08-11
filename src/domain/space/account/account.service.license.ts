@@ -71,7 +71,6 @@ export class AccountLicenseService {
       account.license,
       account.agent
     );
-
     // Apply Wingback entitlements with the highest priority
     account.license = await this.applyWingbackEntitlements(
       account,
@@ -156,6 +155,10 @@ export class AccountLicenseService {
     return wingbackCustomerID;
   }
 
+  /**
+   * Adds (sums) entitlements to the license, based on the credentials of the account agent.
+   * @throws {EntityNotInitializedException} if the license entitlements are not initialized
+   */
   private async addEntitlementsFromCredentials(
     license: ILicense | undefined,
     accountAgent: IAgent
@@ -168,8 +171,7 @@ export class AccountLicenseService {
       );
     }
 
-    // First check the credential based licensing based on the Agent held credentials
-    // This sets the defaults, granted by the credentials
+    // Adds any credential based licensing based on the Agent held credentials
     for (const entitlement of license.entitlements) {
       await this.checkAndAssignGrantedEntitlement(entitlement, accountAgent);
     }
@@ -263,7 +265,7 @@ export class AccountLicenseService {
       );
     if (grantedEntitlement) {
       entitlement.limit += grantedEntitlement.limit;
-      entitlement.enabled = true;
+      entitlement.enabled = entitlement.limit > 0;
     }
   }
 
