@@ -448,7 +448,7 @@ export class NotificationAdapter {
   public async userMention(
     eventData: NotificationInputEntityMention
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_COMMUNICATION_MENTION;
+    const event = NotificationEvent.USER_MENTION;
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData

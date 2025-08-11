@@ -1,12 +1,12 @@
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { InAppNotificationState } from '@common/enums/in.app.notification.state';
-import { InAppNotificationEventType } from '@common/enums/in.app.notification.event.type';
 import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { InAppNotificationPayloadBase } from '@services/cluster/in-app-notification-receiver/dto/in.app.notification.receiver.payload.base';
+import { NotificationEvent } from '@common/enums/notification.event';
 
 export class IInAppNotification extends IBaseAlkemio {
-  type!: InAppNotificationEventType;
+  type!: NotificationEvent;
 
   triggeredAt!: Date;
 

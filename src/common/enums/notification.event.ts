@@ -27,7 +27,6 @@ export enum NotificationEvent {
   SPACE_CONTACT_MESSAGE_SENDER = 'space-contactMessageSender',
   SPACE_COMMUNICATION_UPDATE = 'space-communicationUpdate',
   SPACE_COMMUNICATION_UPDATE_ADMIN = 'space-communicationUpdateAdmin',
-  SPACE_COMMUNICATION_MENTION = 'space-communicationMention',
   SPACE_POST_CREATED_ADMIN = 'space-postCreatedAdmin',
   SPACE_POST_CREATED = 'space-postCreated',
   SPACE_POST_COMMENT_CREATED = 'space-postCommentCreated',
@@ -35,6 +34,7 @@ export enum NotificationEvent {
   SPACE_CALLOUT_PUBLISHED = 'space-calloutPublished',
 
   // User notifications
+  USER_MENTION = 'user-mention',
   USER_MESSAGE_SENDER = 'user-messageSender',
   USER_MESSAGE_RECIPIENT = 'user-messageRecipient',
   USER_COMMENT_REPLY = 'user-commentReply',

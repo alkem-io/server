@@ -143,7 +143,7 @@ export class RegistrationResolverMutations {
       triggeredBy: agentInfo.userID,
       userID: user.id,
     };
-    await this.notificationAdapter.platfromUserRegistered(notificationInput);
+    await this.notificationAdapter.platformUserRegistered(notificationInput);
   }
 
   @Mutation(() => IUser, {

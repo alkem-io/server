@@ -137,7 +137,13 @@ export class NotificationRecipientsService {
       case NotificationEvent.ORGANIZATION_MENTIONED:
         return notificationSettings.organization.mentioned;
       case NotificationEvent.USER_COMMENT_REPLY:
-        return notificationSettings.space.commentReply;
+        return notificationSettings.user.commentReply;
+      case NotificationEvent.USER_MENTION:
+        return notificationSettings.user.mentioned;
+      case NotificationEvent.USER_MESSAGE_RECIPIENT:
+        return notificationSettings.user.messageReceived;
+      case NotificationEvent.USER_MESSAGE_SENDER:
+        return notificationSettings.user.messageSent;
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_RECIPIENT:
         return notificationSettings.space.applicationReceived;
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
@@ -162,8 +168,7 @@ export class NotificationRecipientsService {
         return notificationSettings.space.whiteboardCreated;
       case NotificationEvent.SPACE_CALLOUT_PUBLISHED:
         return notificationSettings.space.calloutPublished;
-      case NotificationEvent.SPACE_COMMUNICATION_MENTION:
-        return notificationSettings.space.communicationMention;
+
       default:
         throw new ValidationException(
           `Unknown notification event type: ${eventType}`,
@@ -227,7 +232,6 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
       case NotificationEvent.SPACE_POST_CREATED_ADMIN: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceCredentialCriteria(entityID);
@@ -243,8 +247,9 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
-      case NotificationEvent.SPACE_COMMUNICATION_MENTION:
+      case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.SPACE_POST_COMMENT_CREATED: {
         credentialCriteria = this.getUserSelfCriteria(entityID);
@@ -263,7 +268,7 @@ export class NotificationRecipientsService {
   private isInAppEnabled(eventType: NotificationEvent): boolean {
     switch (eventType) {
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
-      case NotificationEvent.SPACE_COMMUNICATION_MENTION:
+      case NotificationEvent.USER_MENTION:
       case NotificationEvent.SPACE_CALLOUT_PUBLISHED:
         return true;
       default:
@@ -311,7 +316,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_POST_COMMENT_CREATED:
       case NotificationEvent.SPACE_WHITEBOARD_CREATED:
       case NotificationEvent.SPACE_CALLOUT_PUBLISHED:
-      case NotificationEvent.SPACE_COMMUNICATION_MENTION:
+      case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY: {
         // get the space authorization policy
         if (!entityID) {

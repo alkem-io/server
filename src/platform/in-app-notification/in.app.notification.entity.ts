@@ -5,7 +5,7 @@ import { InAppNotificationState } from '../../common/enums/in.app.notification.s
 import { IInAppNotification } from './in.app.notification.interface';
 import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
 import { InAppNotificationPayloadBase } from '@services/cluster/in-app-notification-receiver/dto/in.app.notification.receiver.payload.base';
-import { InAppNotificationEventType } from '@common/enums/in.app.notification.event.type';
+import { NotificationEvent } from '@common/enums/notification.event';
 
 @Entity('in_app_notification')
 export class InAppNotificationEntity
@@ -16,7 +16,7 @@ export class InAppNotificationEntity
   triggeredAt!: Date;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  type!: InAppNotificationEventType;
+  type!: NotificationEvent;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   state!: InAppNotificationState;

@@ -3,7 +3,7 @@ import { NotificationEvent } from '@common/enums/notification.event';
 
 export interface InAppNotificationContributorMentionedPayload
   extends InAppNotificationPayloadBase {
-  type: NotificationEvent.SPACE_COMMUNICATION_MENTION;
+  type: NotificationEvent.USER_MENTION;
   comment: string; // probably will be removed; can be too large; can be replaced with roomID, commentID
   contributorType: string;
   commentOrigin: {

@@ -720,7 +720,7 @@ export class RoleSetResolverMutationsMembership {
           }
           const notificationInput: NotificationInputPlatformInvitation = {
             triggeredBy: agentInfo.userID,
-            space: community,
+            community,
             invitedUser: platformInvitation.email,
             welcomeMessage: platformInvitation.welcomeMessage,
           };

@@ -7,20 +7,20 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { InAppNotificationEntryCalloutPublished } from './in.app.notification.entry.callout.published';
 import { InAppNotificationEntryUserMentioned } from './in.app.notification.entry.user.mentioned';
 import { InAppNotificationEntryCommunityNewMember } from './in.app.notification.entry.community.new.member';
-import { InAppNotificationEventType } from '@common/enums/in.app.notification.event.type';
 import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
 import { InAppNotificationPayloadBase } from '@services/cluster/in-app-notification-receiver/dto/in.app.notification.receiver.payload.base';
+import { NotificationEvent } from '@common/enums/notification.event';
 
 @InterfaceType('InAppNotification', {
   isAbstract: true,
   description: 'An in-app notification type. To not be queried directly',
   resolveType(inAppNotification) {
     switch (inAppNotification.type) {
-      case InAppNotificationEventType.COLLABORATION_CALLOUT_PUBLISHED:
+      case NotificationEvent.SPACE_CALLOUT_PUBLISHED:
         return InAppNotificationEntryCalloutPublished;
-      case InAppNotificationEventType.COMMUNICATION_USER_MENTION:
+      case NotificationEvent.USER_MENTION:
         return InAppNotificationEntryUserMentioned;
-      case InAppNotificationEventType.COMMUNITY_NEW_MEMBER:
+      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
         return InAppNotificationEntryCommunityNewMember;
     }
 
@@ -38,11 +38,11 @@ export abstract class IInAppNotificationEntry {
   })
   id!: string;
 
-  @Field(() => InAppNotificationEventType, {
+  @Field(() => NotificationEvent, {
     nullable: false,
     description: 'The type of the notification',
   })
-  type!: InAppNotificationEventType;
+  type!: NotificationEvent;
 
   @Field(() => Date, {
     nullable: false,

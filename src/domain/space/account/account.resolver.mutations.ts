@@ -133,7 +133,7 @@ export class AccountResolverMutations {
 
     const notificationInput: NotificationInputSpaceCreated = {
       triggeredBy: agentInfo.userID,
-      space: space.community,
+      space,
     };
     await this.notificationAdapter.platformSpaceCreated(notificationInput);
 
