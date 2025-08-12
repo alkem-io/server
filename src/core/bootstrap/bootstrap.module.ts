@@ -4,7 +4,6 @@ import { SpaceModule } from '@domain/space/space/space.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { AdminAuthorizationModule } from '@platform/admin/authorization/admin.authorization.module';
 import { BootstrapService } from './bootstrap.service';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { PlatformModule } from '@platform/platform/platform.module';
@@ -27,6 +26,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
 import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
 
 @Module({
   imports: [
