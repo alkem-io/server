@@ -20,7 +20,6 @@ import {
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
 import { PlatformService } from '@platform/platform/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
@@ -54,6 +53,7 @@ import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platfor
 import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base';
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
 
 @Injectable()
 export class BootstrapService {
