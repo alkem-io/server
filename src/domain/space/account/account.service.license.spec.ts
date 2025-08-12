@@ -49,7 +49,343 @@ describe('AccountLicenseService', () => {
     (service as any).logger = mockLogger;
   });
 
-  describe('extendLicensePolicy', () => {
+  describe('applyBaselineLicensePlan', () => {
+    it('should fail when license is undefined', async () => {
+      // Act & Assert
+      await expect(
+        (service as any).applyBaselineLicensePlan(undefined, {} as any)
+      ).rejects.toThrow('License with entitlements not found');
+    });
+
+    it('should fail when license has no entitlements', async () => {
+      // Arrange
+      const mockAccount: Partial<IAccount> = {
+        id: 'test-account',
+        baselineLicensePlan: {} as IAccountLicensePlan,
+      };
+
+      // Act & Assert
+      await expect(
+        (service as any).applyBaselineLicensePlan(
+          { id: 'test-license', type: 'account' } as ILicense,
+          mockAccount
+        )
+      ).rejects.toThrow('License with entitlements not found');
+    });
+    // Unknown entitlement types test
+    it('should skip unknown entitlement types and leave them unchanged', async () => {
+      // Arrange
+      const baselineLicensePlan: IAccountLicensePlan = {
+        spaceFree: 1,
+        spacePlus: 0,
+        spacePremium: 0,
+        virtualContributor: 2,
+        innovationPacks: 0,
+        startingPages: 0,
+      };
+
+      const mockAccount: Partial<IAccount> = {
+        id: 'test-account',
+        baselineLicensePlan,
+      };
+
+      const unknownEntitlementType =
+        'UNKNOWN_ENTITLEMENT_TYPE' as LicenseEntitlementType;
+
+      const mockLicense: ILicense = {
+        id: 'test-license',
+        type: 'account' as any,
+        entitlements: [
+          {
+            id: '1',
+            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 5, // Will be updated to baseline (1)
+            enabled: true,
+          },
+          {
+            id: '2',
+            type: unknownEntitlementType,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 10, // Should remain unchanged
+            enabled: true, // Should remain unchanged
+          },
+        ],
+      } as ILicense;
+
+      // Act
+      const result = await (service as any).applyBaselineLicensePlan(
+        mockLicense,
+        mockAccount
+      );
+
+      // Assert
+      expect(result.entitlements).toHaveLength(2);
+
+      // Known entitlement should be updated
+      const spaceFreeEntitlement = result.entitlements!.find(
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
+      );
+      expect(spaceFreeEntitlement?.limit).toBe(1); // Updated to baseline
+      expect(spaceFreeEntitlement?.enabled).toBe(true);
+
+      // Unknown entitlement should remain unchanged
+      const unknownEntitlement = result.entitlements!.find(
+        (e: any) => e.type === unknownEntitlementType
+      );
+      expect(unknownEntitlement?.limit).toBe(10); // Unchanged
+      expect(unknownEntitlement?.enabled).toBe(true); // Unchanged
+    });
+
+    it('should apply correctly the baseline ', async () => {
+      // Arrange
+      const baselineLicensePlan: IAccountLicensePlan = {
+        spaceFree: 1,
+        spacePlus: 0,
+        spacePremium: 0,
+        virtualContributor: 0,
+        innovationPacks: 0,
+        startingPages: 5, // This maps to ACCOUNT_INNOVATION_HUB
+      };
+
+      const mockAccount: Partial<IAccount> = {
+        id: 'test-account',
+        baselineLicensePlan,
+      };
+
+      const mockLicense = {
+        entitlements: [
+          {
+            id: '2',
+            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0, // Will be updated to baseline (1)
+            enabled: false,
+          },
+          {
+            id: '3',
+            type: LicenseEntitlementType.SPACE_PLUS,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0, // Will be disabled
+            enabled: false,
+          },
+          {
+            id: '4',
+            type: LicenseEntitlementType.SPACE_PREMIUM,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0, // Will be disabled
+            enabled: false,
+          },
+          {
+            id: '1',
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0, // Will be updated to baseline (5)
+            enabled: false,
+          },
+          {
+            id: '5',
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0, // Will be disabled
+            enabled: false,
+          },
+          {
+            id: '6',
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0, // Will be disabled
+            enabled: false,
+          },
+        ],
+      } as any;
+
+      // Act
+      const result = await (service as any).applyBaselineLicensePlan(
+        mockLicense,
+        mockAccount
+      );
+
+      // Assert
+      expect(result.entitlements).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
+            limit: 5,
+            enabled: true,
+          }),
+          expect.objectContaining({
+            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+            limit: 1,
+            enabled: true,
+          }),
+          expect.objectContaining({
+            type: LicenseEntitlementType.SPACE_PLUS,
+            limit: 0,
+            enabled: false,
+          }),
+          expect.objectContaining({
+            type: LicenseEntitlementType.SPACE_PREMIUM,
+            limit: 0,
+            enabled: false,
+          }),
+          expect.objectContaining({
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+            limit: 0,
+            enabled: false,
+          }),
+          expect.objectContaining({
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            limit: 0,
+            enabled: false,
+          }),
+        ])
+      );
+    });
+
+    // Empty entitlements array test
+    it('should handle empty entitlements array and return license unchanged', async () => {
+      // Arrange
+      const baselineLicensePlan: IAccountLicensePlan = {
+        spaceFree: 2,
+        spacePlus: 1,
+        spacePremium: 0,
+        virtualContributor: 3,
+        innovationPacks: 2,
+        startingPages: 5,
+      };
+
+      const mockAccount: Partial<IAccount> = {
+        id: 'test-account',
+        baselineLicensePlan,
+      };
+
+      const mockLicense: ILicense = {
+        id: 'test-license',
+        type: 'account' as any,
+        entitlements: [], // Empty array
+      } as any;
+
+      // Act
+      const result = await (service as any).applyBaselineLicensePlan(
+        mockLicense,
+        mockAccount
+      );
+
+      // Assert
+      expect(result.entitlements).toHaveLength(0);
+      expect(result).toBe(mockLicense); // Should return the same license object
+    });
+
+    // Mixed known and unknown entitlement types test
+    it('should process known entitlements and skip unknown ones in mixed scenario', async () => {
+      // Arrange
+      const baselineLicensePlan: IAccountLicensePlan = {
+        spaceFree: 3,
+        spacePlus: 1,
+        spacePremium: 0,
+        virtualContributor: 5,
+        innovationPacks: 2,
+        startingPages: 4,
+      };
+
+      const mockAccount: Partial<IAccount> = {
+        id: 'test-account',
+        baselineLicensePlan,
+      };
+
+      const unknownEntitlementType1 =
+        'UNKNOWN_TYPE_1' as LicenseEntitlementType;
+      const unknownEntitlementType2 =
+        'UNKNOWN_TYPE_2' as LicenseEntitlementType;
+
+      const mockLicense: ILicense = {
+        id: 'test-license',
+        type: 'account' as any,
+        entitlements: [
+          {
+            id: '1',
+            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 1,
+            enabled: false,
+          },
+          {
+            id: '2',
+            type: unknownEntitlementType1,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 99,
+            enabled: true,
+          },
+          {
+            id: '3',
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 2,
+            enabled: false,
+          },
+          {
+            id: '4',
+            type: unknownEntitlementType2,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 88,
+            enabled: false,
+          },
+          {
+            id: '5',
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 1,
+            enabled: false,
+          },
+        ],
+      } as ILicense;
+
+      // Act
+      const result = await (service as any).applyBaselineLicensePlan(
+        mockLicense,
+        mockAccount
+      );
+
+      // Assert
+      expect(result.entitlements).toHaveLength(5);
+
+      // Known entitlements should be updated to baseline values
+      const spaceFreeEntitlement = result.entitlements!.find(
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
+      );
+      expect(spaceFreeEntitlement?.limit).toBe(3); // Updated to baseline
+      expect(spaceFreeEntitlement?.enabled).toBe(true);
+
+      const virtualContributorEntitlement = result.entitlements!.find(
+        (e: any) =>
+          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
+      );
+      expect(virtualContributorEntitlement?.limit).toBe(5); // Updated to baseline
+      expect(virtualContributorEntitlement?.enabled).toBe(true);
+
+      const innovationHubEntitlement = result.entitlements!.find(
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_HUB
+      );
+      expect(innovationHubEntitlement?.limit).toBe(4); // Updated to baseline
+      expect(innovationHubEntitlement?.enabled).toBe(true);
+
+      // Unknown entitlements should remain unchanged
+      const unknownEntitlement1 = result.entitlements!.find(
+        (e: any) => e.type === unknownEntitlementType1
+      );
+      expect(unknownEntitlement1?.limit).toBe(99); // Unchanged
+      expect(unknownEntitlement1?.enabled).toBe(true); // Unchanged
+
+      const unknownEntitlement2 = result.entitlements!.find(
+        (e: any) => e.type === unknownEntitlementType2
+      );
+      expect(unknownEntitlement2?.limit).toBe(88); // Unchanged
+      expect(unknownEntitlement2?.enabled).toBe(false); // Unchanged
+    });
+  });
+
+  describe('addEntitlementsFromCredentials', () => {
     let mockCredentialBasedService: any;
     let mockWingbackService: any;
     let mockAccount: Partial<IAccount>;
@@ -100,20 +436,63 @@ describe('AccountLicenseService', () => {
       } as ILicense;
     });
 
-    it.skip('should apply credential-based licensing when agent has valid credentials', async () => {
+    it('should fail when license is undefined', async () => {
+      // Act & Assert
+      await expect(
+        (service as any).addEntitlementsFromCredentials(
+          undefined,
+          mockAgent,
+          mockAccount
+        )
+      ).rejects.toThrow('License with entitlements not found');
+    });
+
+    it('should fail when license has no entitlements', async () => {
       // Arrange
+      const licenseWithoutEntitlements = {
+        id: 'test-license',
+        type: 'account' as any,
+        entitlements: undefined,
+      } as ILicense;
+
+      // Act & Assert
+      await expect(
+        (service as any).addEntitlementsFromCredentials(
+          licenseWithoutEntitlements,
+          mockAgent,
+          mockAccount
+        )
+      ).rejects.toThrow('License with entitlements not found');
+    });
+
+    it('should return the correct sum of entitlements, matched by type', async () => {
+      // Arrange
+      mockLicense = {
+        entitlements: [
+          {
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            limit: 1,
+            enabled: true,
+          },
+          {
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
+            limit: 0,
+            enabled: false,
+          },
+        ],
+      } as any;
+
       mockCredentialBasedService.getEntitlementIfGranted
         .mockResolvedValueOnce({
           type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
           limit: 5,
         })
-        .mockResolvedValueOnce(null); // No entitlement for innovation pack
+        .mockResolvedValueOnce(undefined);
 
       // Act
-      const result = await (service as any).extendLicensePolicy(
+      const result = await (service as any).addEntitlementsFromCredentials(
         mockLicense,
-        mockAgent,
-        mockAccount
+        mockAgent
       );
 
       // Assert
@@ -129,7 +508,7 @@ describe('AccountLicenseService', () => {
       expect(
         mockCredentialBasedService.getEntitlementIfGranted
       ).toHaveBeenCalledWith(
-        LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+        LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
         mockAgent
       );
 
@@ -137,277 +516,14 @@ describe('AccountLicenseService', () => {
         (e: any) =>
           e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
       );
-      expect(virtualContributorEntitlement?.limit).toBe(5);
+      expect(virtualContributorEntitlement?.limit).toBe(6);
       expect(virtualContributorEntitlement?.enabled).toBe(true);
 
-      const innovationPackEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
+      const innovationHubEntitlement = result.entitlements!.find(
+        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_HUB
       );
-      expect(innovationPackEntitlement?.limit).toBe(0); // Unchanged
-      expect(innovationPackEntitlement?.enabled).toBe(false); // Unchanged
-    });
-
-    it.skip('should throw error when license is undefined', async () => {
-      // Act & Assert
-      await expect(
-        (service as any).extendLicensePolicy(undefined, mockAgent, mockAccount)
-      ).rejects.toThrow('License with entitlements not found');
-    });
-
-    it.skip('should throw error when license has no entitlements', async () => {
-      // Arrange
-      const licenseWithoutEntitlements = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: undefined,
-      } as ILicense;
-
-      // Act & Assert
-      await expect(
-        (service as any).extendLicensePolicy(
-          licenseWithoutEntitlements,
-          mockAgent,
-          mockAccount
-        )
-      ).rejects.toThrow('License with entitlements not found');
-    });
-  });
-
-  describe('applyBaselineLicensePlan', () => {
-    it('should apply baseline license plan with different behavior for space vs non-space entitlements', async () => {
-      // Arrange
-      const baselineLicensePlan: IAccountLicensePlan = {
-        spaceFree: 2,
-        spacePlus: 1,
-        spacePremium: 0,
-        virtualContributor: 3,
-        innovationPacks: 2,
-        startingPages: 5,
-      };
-
-      const mockAccount: Partial<IAccount> = {
-        id: 'test-account',
-        baselineLicensePlan,
-      };
-
-      const mockLicense: ILicense = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Lower than baseline (2) - space entitlements always get baseline applied
-            enabled: false,
-          },
-          {
-            id: '2',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Lower than baseline (1) - space entitlements always get baseline applied
-            enabled: false,
-          },
-          {
-            id: '3',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Equal to baseline (0) - space entitlements always get baseline applied
-            enabled: false,
-          },
-          {
-            id: '4',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 1, // Lower than baseline (3) - non-space entitlement should be updated
-            enabled: false,
-          },
-          {
-            id: '5',
-            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Lower than baseline (2) - non-space entitlement should be updated
-            enabled: false,
-          },
-        ],
-      } as ILicense;
-
-      // Act
-      const result = await (service as any).applyBaselineLicensePlan(
-        mockLicense,
-        mockAccount
-      );
-
-      // Assert
-      expect(result.entitlements).toHaveLength(5);
-
-      // Space entitlements should be updated to baseline values (always applied directly)
-      const spaceFreeEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
-      );
-      expect(spaceFreeEntitlement?.limit).toBe(2); // Updated to baseline
-      expect(spaceFreeEntitlement?.enabled).toBe(true); // Enabled since baseline > 0
-
-      const spacePlusEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_PLUS
-      );
-      expect(spacePlusEntitlement?.limit).toBe(1); // Updated to baseline
-      expect(spacePlusEntitlement?.enabled).toBe(true); // Enabled since baseline > 0
-
-      const spacePremiumEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM
-      );
-      expect(spacePremiumEntitlement?.limit).toBe(0); // Updated to baseline
-      expect(spacePremiumEntitlement?.enabled).toBe(false); // Disabled since baseline = 0
-
-      // Non-space entitlements should be updated only when baseline is higher
-      const virtualContributorEntitlement = result.entitlements!.find(
-        (e: any) =>
-          e.type === LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR
-      );
-      expect(virtualContributorEntitlement?.limit).toBe(3); // Updated to baseline since 3 > 1
-      expect(virtualContributorEntitlement?.enabled).toBe(true); // Enabled
-
-      const innovationPackEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_INNOVATION_PACK
-      );
-      expect(innovationPackEntitlement?.limit).toBe(2); // Updated to baseline since 2 > 0
-      expect(innovationPackEntitlement?.enabled).toBe(true); // Enabled
-    });
-
-    it.skip('should log warning when baseline values are lower than current entitlement limits for non-space entitlements', async () => {
-      // Arrange
-      const baselineLicensePlan: IAccountLicensePlan = {
-        spaceFree: 1,
-        spacePlus: 0,
-        spacePremium: 0,
-        virtualContributor: 2,
-        innovationPacks: 1,
-        startingPages: 0,
-      };
-
-      const mockAccount: Partial<IAccount> = {
-        id: 'test-account',
-        baselineLicensePlan,
-      };
-
-      const mockLicense: ILicense = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 3, // Higher than baseline (1) - space entitlements always get baseline applied, no warning
-            enabled: true,
-          },
-          {
-            id: '2',
-            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 5, // Higher than baseline (2) - non-space entitlement should generate warning
-            enabled: true,
-          },
-        ],
-      } as ILicense;
-
-      // Act
-      await (service as any).applyBaselineLicensePlan(mockLicense, mockAccount);
-
-      // Assert - only virtualContributor should generate a warning since it's a non-space entitlement
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message:
-            'Baseline entitlement value is lower than current entitlement limit for account. Keeping current value.',
-          entitlementName: 'virtualContributor',
-          baselineValue: 2,
-          accountId: 'test-account',
-          currentEntitlementLimit: 5,
-        }),
-        LogContext.LICENSE
-      );
-      // Should only be called once (for virtualContributor, not for spaceFree which gets baseline applied directly)
-      expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-    });
-
-    it.skip('should apply baseline values to space entitlements and log verbose messages', async () => {
-      // Arrange
-      const baselineLicensePlan: IAccountLicensePlan = {
-        spaceFree: 2,
-        spacePlus: 0,
-        spacePremium: 1,
-        virtualContributor: 0,
-        innovationPacks: 0,
-        startingPages: 0,
-      };
-
-      const mockAccount: Partial<IAccount> = {
-        id: 'test-account',
-        baselineLicensePlan,
-      };
-
-      const mockLicense: ILicense = {
-        id: 'test-license',
-        type: 'account' as any,
-        entitlements: [
-          {
-            id: '1',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 2, // Equal to baseline
-            enabled: true,
-          },
-          {
-            id: '2',
-            type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
-            dataType: LicenseEntitlementDataType.LIMIT,
-            limit: 0, // Equal to baseline
-            enabled: false,
-          },
-        ],
-      } as ILicense;
-
-      // Act
-      const result = await (service as any).applyBaselineLicensePlan(
-        mockLicense,
-        mockAccount
-      );
-
-      // Assert - space entitlements should be updated to baseline values
-      const spaceFreeEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_FREE
-      );
-      expect(spaceFreeEntitlement?.limit).toBe(2); // Updated to baseline
-      expect(spaceFreeEntitlement?.enabled).toBe(true); // Enabled since baseline > 0
-
-      const spacePlusEntitlement = result.entitlements!.find(
-        (e: any) => e.type === LicenseEntitlementType.ACCOUNT_SPACE_PLUS
-      );
-      expect(spacePlusEntitlement?.limit).toBe(0); // Updated to baseline
-      expect(spacePlusEntitlement?.enabled).toBe(false); // Disabled since baseline = 0
-
-      // Should log verbose messages for space entitlements that are processed
-      expect(mockLogger.verbose).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Applied baseline license plan for account.',
-          entitlementName: 'spaceFree',
-          baselineValue: 2,
-          accountId: 'test-account',
-          oldEntitlementLimit: 2,
-        }),
-        LogContext.LICENSE
-      );
-      expect(mockLogger.verbose).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Applied baseline license plan for account.',
-          entitlementName: 'spacePlus',
-          baselineValue: 0,
-          accountId: 'test-account',
-          oldEntitlementLimit: 0,
-        }),
-        LogContext.LICENSE
-      );
+      expect(innovationHubEntitlement?.limit).toBe(0);
+      expect(innovationHubEntitlement?.enabled).toBe(false);
     });
   });
 
@@ -462,7 +578,7 @@ describe('AccountLicenseService', () => {
         mockWingbackService.isEnabled.mockReturnValue(false);
 
         // Act
-        const result = await service.applyWingbackEntitlements(
+        const result = await (service as any).applyWingbackEntitlements(
           mockAccount as any,
           mockLicense
         );
@@ -477,7 +593,7 @@ describe('AccountLicenseService', () => {
         mockAccount.externalSubscriptionID = undefined; // No Wingback subscription
 
         // Act
-        const result = await service.applyWingbackEntitlements(
+        const result = await (service as any).applyWingbackEntitlements(
           mockAccount as any,
           mockLicense
         );
@@ -489,7 +605,7 @@ describe('AccountLicenseService', () => {
 
       it('License does not have entitlements', async () => {
         // Act
-        const result = await service.applyWingbackEntitlements(
+        const result = await (service as any).applyWingbackEntitlements(
           {} as any,
           {} as any
         );
@@ -516,7 +632,7 @@ describe('AccountLicenseService', () => {
         } as any;
 
         // Act
-        const result = await service.applyWingbackEntitlements(
+        const result = await (service as any).applyWingbackEntitlements(
           mockAccount as any,
           mockLicense
         );
@@ -544,7 +660,7 @@ describe('AccountLicenseService', () => {
         mockWingbackService.getEntitlements.mockResolvedValue([]);
 
         // Act
-        const result = await service.applyWingbackEntitlements(
+        const result = await (service as any).applyWingbackEntitlements(
           {} as any,
           mockLicense
         );
@@ -588,7 +704,7 @@ describe('AccountLicenseService', () => {
       ]);
 
       // Act
-      const result = await service.applyWingbackEntitlements(
+      const result = await (service as any).applyWingbackEntitlements(
         mockAccount as any,
         mockLicense
       );
@@ -642,7 +758,7 @@ describe('AccountLicenseService', () => {
       ]);
 
       // Act
-      const result = await service.applyWingbackEntitlements(
+      const result = await (service as any).applyWingbackEntitlements(
         mockAccount as any,
         mockLicense
       );
@@ -680,7 +796,7 @@ describe('AccountLicenseService', () => {
       ]);
 
       // Act
-      const result = await service.applyWingbackEntitlements(
+      const result = await (service as any).applyWingbackEntitlements(
         mockAccount as any,
         mockLicense as any
       );
