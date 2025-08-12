@@ -8,6 +8,7 @@ import { ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {
@@ -77,6 +78,7 @@ const createTestSpace = (id: string): ISpace => {
       externalSubscriptionID: '',
       spaces: [],
       type: AccountType.ORGANIZATION,
+      baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       createdDate: new Date(),
       updatedDate: new Date(),
     },
