@@ -76,6 +76,7 @@ export class CollaborativeDocumentIntegrationService {
       return {
         read: false,
         update: false,
+        isMultiUser: false,
       };
     }
 
@@ -85,7 +86,9 @@ export class CollaborativeDocumentIntegrationService {
       privilege: AuthorizationPrivilege.UPDATE_CONTENT,
     });
 
-    return { read, update };
+    const isMultiUser = await this.memoService.isMultiUser(documentId);
+
+    return { read, update, isMultiUser };
   }
 
   public who(data: WhoInputData): Promise<AgentInfo> {
