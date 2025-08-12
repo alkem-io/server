@@ -44,6 +44,8 @@ import { SpaceLicenseService } from '../space/space.service.license';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.baseline.license.plan';
+import { AccountLicensePlanService } from '../account.license.plan/account.license.plan.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -67,7 +69,8 @@ export class AccountResolverMutations {
     private spaceLicenseService: SpaceLicenseService,
     private notificationAdapter: NotificationAdapter,
     private temporaryStorageService: TemporaryStorageService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private accountLicensePlanService: AccountLicensePlanService
   ) {}
 
   @Mutation(() => ISpace, {
@@ -332,6 +335,31 @@ export class AccountResolverMutations {
     );
     await this.licenseService.saveAll(accountLicenses);
     return await this.accountService.getAccountOrFail(account.id);
+  }
+
+  @Mutation(() => IAccount, {
+    description: 'Update the baseline License Plan on the specified Account.',
+  })
+  async updateBaselineLicensePlanOnAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('updateData')
+    updateData: UpdateBaselineLicensePlanOnAccount
+  ): Promise<IAccount> {
+    const account = await this.accountService.getAccountOrFail(
+      updateData.accountID
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+      `update baseline license plan on Account: ${agentInfo.userID}`
+    );
+    account.baselineLicensePlan =
+      this.accountLicensePlanService.updateLicensePlan(
+        account.baselineLicensePlan,
+        updateData
+      );
+    return await this.accountService.save(account);
   }
 
   @Mutation(() => IInnovationHub, {

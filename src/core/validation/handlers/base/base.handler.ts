@@ -91,6 +91,7 @@ import { CreateUserSettingsInput } from '@domain/community/user-settings/dto/use
 import { CreateUserSettingsPrivacyInput } from '@domain/community/user-settings/dto/user.settings.privacy.dto.create';
 import { CreateUserSettingsCommunicationInput } from '@domain/community/user-settings/dto/user.settings.communications.dto.create';
 import { UpdateUserSettingsNotificationInput } from '@domain/community/user-settings/dto/user.settings.notification.dto.update';
+import { UpdateBaselineLicensePlanOnAccount } from '@domain/space/account/dto/account.dto.update.baseline.license.plan';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -174,6 +175,8 @@ export class BaseHandler extends AbstractHandler {
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
+      CreateCalloutOnCalloutsSetInput,
+      UpdateBaselineLicensePlanOnAccount,
     ];
 
     if (types.includes(metatype)) {

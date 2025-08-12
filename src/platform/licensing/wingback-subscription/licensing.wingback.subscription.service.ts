@@ -25,6 +25,10 @@ export class LicensingWingbackSubscriptionService {
     private readonly logger: LoggerService
   ) {}
 
+  public isEnabled(): boolean {
+    return this.wingbackManager.isEnabled();
+  }
+
   /**
    * Create a new customer
    * @param data

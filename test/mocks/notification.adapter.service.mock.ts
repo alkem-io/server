@@ -11,9 +11,9 @@ export const MockNotificationAdapter: ValueProvider<
     spaceCollaborationPostCreated: jest.fn(),
     spaceCollaborationPostComment: jest.fn(),
     spaceCommunicationUpdateSent: jest.fn(),
-    platformForumDiscussionCreated: jest.fn(),
     spaceCommunityApplicationCreated: jest.fn(),
     spaceCommunityNewMember: jest.fn(),
-    platfromUserRegistered: jest.fn(),
+    platformForumDiscussionCreated: jest.fn(),
+    platformUserRegistered: jest.fn(),
   },
 };

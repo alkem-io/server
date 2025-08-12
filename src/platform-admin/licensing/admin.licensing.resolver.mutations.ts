@@ -37,7 +37,6 @@ export class AdminLicensingResolverMutations {
   @Mutation(() => String, {
     description: 'Creates an account in Wingback',
   })
-  @Profiling.api
   async createWingbackAccount(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('accountID', { type: () => UUID }) accountID: string
@@ -57,7 +56,6 @@ export class AdminLicensingResolverMutations {
   @Mutation(() => IAccount, {
     description: 'Assign the specified LicensePlan to an Account.',
   })
-  @Profiling.api
   async assignLicensePlanToAccount(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: AssignLicensePlanToAccount

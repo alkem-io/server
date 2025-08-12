@@ -171,16 +171,16 @@ export class UserAuthorizationService {
     const { user, agent } =
       await this.userLookupService.getUserAndAgent(userID);
 
-    await this.agentService.grantCredential({
+    await this.agentService.grantCredentialOrFail({
       type: AuthorizationCredential.GLOBAL_REGISTERED,
       agentID: agent.id,
     });
-    await this.agentService.grantCredential({
+    await this.agentService.grantCredentialOrFail({
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,
       agentID: agent.id,
       resourceID: userID,
     });
-    await this.agentService.grantCredential({
+    await this.agentService.grantCredentialOrFail({
       type: AuthorizationCredential.ACCOUNT_ADMIN,
       agentID: agent.id,
       resourceID: user.accountID,
