@@ -8,6 +8,7 @@ import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface'
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { AccountType } from '@common/enums/account.type';
 import { ILicense } from '@domain/common/license/license.interface';
+import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
 
 @ObjectType('Account')
 export class IAccount extends IAuthorizable {
@@ -16,6 +17,13 @@ export class IAccount extends IAuthorizable {
     description: 'A type of entity that this Account is being used with.',
   })
   type!: AccountType;
+
+  @Field(() => IAccountLicensePlan, {
+    nullable: false,
+    description:
+      'The base license plan assigned to this Account. Additional entitlements may be added via other means.',
+  })
+  baselineLicensePlan!: IAccountLicensePlan;
 
   agent?: IAgent;
 

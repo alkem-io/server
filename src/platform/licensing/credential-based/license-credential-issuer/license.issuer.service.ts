@@ -31,7 +31,7 @@ export class LicenseIssuerService {
     }
     let updatedAgent: IAgent = agent;
     try {
-      updatedAgent = await this.agentService.grantCredential({
+      updatedAgent = await this.agentService.grantCredentialOrFail({
         agentID: agent.id,
         type: licensePlan.licenseCredential,
         resourceID: resourceID,

@@ -87,7 +87,7 @@ export class AdminAuthorizationService {
       grantCredentialData.userID
     );
 
-    user.agent = await this.agentService.grantCredential({
+    user.agent = await this.agentService.grantCredentialOrFail({
       agentID: agent.id,
       type: grantCredentialData.type,
       resourceID: grantCredentialData.resourceID,
@@ -136,7 +136,7 @@ export class AdminAuthorizationService {
         grantCredentialData.organizationID
       );
 
-    organization.agent = await this.agentService.grantCredential({
+    organization.agent = await this.agentService.grantCredentialOrFail({
       agentID: agent.id,
       type: grantCredentialData.type,
       resourceID: grantCredentialData.resourceID,
