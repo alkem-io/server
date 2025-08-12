@@ -388,7 +388,6 @@ describe('AccountLicenseService', () => {
   describe('addEntitlementsFromCredentials', () => {
     let mockCredentialBasedService: any;
     let mockWingbackService: any;
-    let mockAccount: Partial<IAccount>;
     let mockAgent: any;
     let mockLicense: ILicense;
 
@@ -407,11 +406,6 @@ describe('AccountLicenseService', () => {
       mockAgent = {
         id: 'test-agent',
         credentials: [],
-      };
-
-      mockAccount = {
-        id: 'test-account',
-        externalSubscriptionID: undefined,
       };
 
       mockLicense = {
@@ -439,11 +433,7 @@ describe('AccountLicenseService', () => {
     it('should fail when license is undefined', async () => {
       // Act & Assert
       await expect(
-        (service as any).addEntitlementsFromCredentials(
-          undefined,
-          mockAgent,
-          mockAccount
-        )
+        (service as any).addEntitlementsFromCredentials(undefined, mockAgent)
       ).rejects.toThrow('License with entitlements not found');
     });
 
@@ -459,8 +449,7 @@ describe('AccountLicenseService', () => {
       await expect(
         (service as any).addEntitlementsFromCredentials(
           licenseWithoutEntitlements,
-          mockAgent,
-          mockAccount
+          mockAgent
         )
       ).rejects.toThrow('License with entitlements not found');
     });
