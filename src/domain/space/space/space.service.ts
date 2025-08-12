@@ -738,7 +738,6 @@ export class SpaceService {
       );
 
       space.visibility = updateData.visibility;
-      await this.updatePlatformRolesAccessRecursively(space);
     }
 
     if (updateData.nameID && updateData.nameID !== space.nameID) {
@@ -824,7 +823,39 @@ export class SpaceService {
       }
     }
 
-    return await this.save(space);
+    await this.save(space);
+
+    // Update the platform roles access for the space
+    const parentPlatformRolesAccess =
+      await this.getParentSpacePlatformRolesAccess(space);
+    return await this.updatePlatformRolesAccessRecursively(
+      space,
+      parentPlatformRolesAccess
+    );
+  }
+
+  private async getParentSpacePlatformRolesAccess(
+    space: ISpace
+  ): Promise<IPlatformRolesAccess | undefined> {
+    if (space.level === SpaceLevel.L0) {
+      return undefined;
+    }
+
+    const parentSpace = await this.spaceRepository.findOne({
+      where: { id: space.id },
+      relations: {
+        parentSpace: true,
+      },
+    });
+
+    if (!parentSpace || !parentSpace.platformRolesAccess) {
+      throw new EntityNotFoundException(
+        `Unable to find parent space platform roles access for subspace ${space.id}`,
+        LogContext.SPACES
+      );
+    }
+
+    return parentSpace.platformRolesAccess;
   }
 
   private async updateSpaceVisibilityAllSubspaces(
@@ -1333,7 +1364,7 @@ export class SpaceService {
     spaceID: string,
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
-    const space = await this.getSpaceOrFail(spaceID, {
+    let space = await this.getSpaceOrFail(spaceID, {
       relations: {
         parentSpace: true,
         subspaces: true,
@@ -1345,8 +1376,12 @@ export class SpaceService {
       settingsData
     );
     space.settings = updatedSettings;
+    space = await this.save(space);
 
-    return await this.updatePlatformRolesAccessRecursively(space);
+    return await this.updatePlatformRolesAccessRecursively(
+      space,
+      space.parentSpace?.platformRolesAccess
+    );
   }
 
   public async getAccountForLevelZeroSpaceOrFail(

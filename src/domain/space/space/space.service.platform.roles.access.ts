@@ -107,7 +107,7 @@ export class SpacePlatformRolesAccessService {
     } else {
       if (!parentPlatformAccess) {
         throw new EntityNotFoundException(
-          `Parent platform access not found for space ${space.id}`,
+          `Support access: Parent platform access not found for space ${space.id}`,
           LogContext.SPACES
         );
       }
@@ -173,7 +173,7 @@ export class SpacePlatformRolesAccessService {
     } else {
       if (!parentPlatformAccess) {
         throw new EntityNotFoundException(
-          `Parent platform access not found for space ${space.id}`,
+          `Anonymous users: Parent platform access not found for space ${space.id}`,
           LogContext.SPACES
         );
       }
@@ -211,7 +211,7 @@ export class SpacePlatformRolesAccessService {
     } else {
       if (!parentPlatformAccess) {
         throw new EntityNotFoundException(
-          `Parent platform access not found for space ${space.id}`,
+          `Registered users: Parent platform access not found for space ${space.id}`,
           LogContext.SPACES
         );
       }
