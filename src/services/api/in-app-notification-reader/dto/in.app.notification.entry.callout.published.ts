@@ -10,7 +10,7 @@ import { InAppNotificationCalloutPublishedPayload } from '@services/adapters/not
   implements: () => IInAppNotificationEntry,
 })
 export abstract class InAppNotificationEntryCalloutPublished extends IInAppNotificationEntryBase {
-  declare type: NotificationEvent.SPACE_CALLOUT_PUBLISHED;
+  declare type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED;
   declare payload: InAppNotificationCalloutPublishedPayload;
   // fields resolved by a concrete resolver
   callout?: ICallout;

@@ -8,14 +8,14 @@ export class CreateUserSettingsNotificationSpaceInput {
     description: 'Receive a notification when an application is received',
   })
   @IsBoolean()
-  applicationReceived!: boolean;
+  communityApplicationReceived!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when an application is submitted',
   })
   @IsBoolean()
-  applicationSubmitted!: boolean;
+  communityApplicationSubmitted!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
@@ -58,47 +58,48 @@ export class CreateUserSettingsNotificationSpaceInput {
     description: 'Receive a notification when a post is created (admin)',
   })
   @IsBoolean()
-  postCreatedAdmin!: boolean;
+  collaborationPostCreatedAdmin!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a post is created',
   })
   @IsBoolean()
-  postCreated!: boolean;
+  collaborationPostCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a comment is created on a post',
   })
   @IsBoolean()
-  postCommentCreated!: boolean;
+  collaborationPostCommentCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a whiteboard is created',
   })
   @IsBoolean()
-  whiteboardCreated!: boolean;
+  collaborationWhiteboardCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a callout is published',
   })
   @IsBoolean()
-  calloutPublished!: boolean;
+  collaborationCalloutPublished!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Receive a notification when mentioned in communication',
+    description: 'Receive a copy of messages that I send to a Space',
   })
   @IsBoolean()
-  communicationMention!: boolean;
+  communicationMessage!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Receive a notification when someone replies to your comment',
+    description:
+      'Receive a notification when a message is sent to a Space I lead',
   })
   @IsBoolean()
-  commentReply!: boolean;
+  communicationMessageAdmin!: boolean;
 }

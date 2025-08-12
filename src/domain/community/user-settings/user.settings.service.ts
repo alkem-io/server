@@ -90,13 +90,13 @@ export class UserSettingsService {
 
     const notificationSpaceData = updateData.notification?.space;
     if (notificationSpaceData) {
-      if (notificationSpaceData.applicationReceived !== undefined) {
-        settings.notification.space.applicationReceived =
-          notificationSpaceData.applicationReceived;
+      if (notificationSpaceData.communityApplicationReceived !== undefined) {
+        settings.notification.space.communityApplicationReceived =
+          notificationSpaceData.communityApplicationReceived;
       }
-      if (notificationSpaceData.applicationSubmitted !== undefined) {
-        settings.notification.space.applicationSubmitted =
-          notificationSpaceData.applicationSubmitted;
+      if (notificationSpaceData.communityApplicationSubmitted !== undefined) {
+        settings.notification.space.communityApplicationSubmitted =
+          notificationSpaceData.communityApplicationSubmitted;
       }
       if (notificationSpaceData.communicationUpdates !== undefined) {
         settings.notification.space.communicationUpdates =
@@ -118,33 +118,52 @@ export class UserSettingsService {
         settings.notification.space.communityInvitationUser =
           notificationSpaceData.communityInvitationUser;
       }
-      if (notificationSpaceData.postCreatedAdmin !== undefined) {
-        settings.notification.space.postCreatedAdmin =
-          notificationSpaceData.postCreatedAdmin;
+      if (notificationSpaceData.collaborationPostCreatedAdmin !== undefined) {
+        settings.notification.space.collaborationPostCreatedAdmin =
+          notificationSpaceData.collaborationPostCreatedAdmin;
       }
-      if (notificationSpaceData.postCreated !== undefined) {
-        settings.notification.space.postCreated =
-          notificationSpaceData.postCreated;
+      if (notificationSpaceData.collaborationPostCreated !== undefined) {
+        settings.notification.space.collaborationPostCreated =
+          notificationSpaceData.collaborationPostCreated;
       }
-      if (notificationSpaceData.postCommentCreated !== undefined) {
-        settings.notification.space.postCommentCreated =
-          notificationSpaceData.postCommentCreated;
+      if (notificationSpaceData.collaborationPostCommentCreated !== undefined) {
+        settings.notification.space.collaborationPostCommentCreated =
+          notificationSpaceData.collaborationPostCommentCreated;
       }
-      if (notificationSpaceData.whiteboardCreated !== undefined) {
-        settings.notification.space.whiteboardCreated =
-          notificationSpaceData.whiteboardCreated;
+      if (notificationSpaceData.collaborationWhiteboardCreated !== undefined) {
+        settings.notification.space.collaborationWhiteboardCreated =
+          notificationSpaceData.collaborationWhiteboardCreated;
       }
-      if (notificationSpaceData.calloutPublished !== undefined) {
-        settings.notification.space.calloutPublished =
-          notificationSpaceData.calloutPublished;
+      if (notificationSpaceData.collaborationCalloutPublished !== undefined) {
+        settings.notification.space.collaborationCalloutPublished =
+          notificationSpaceData.collaborationCalloutPublished;
       }
-      if (notificationSpaceData.communicationMention !== undefined) {
-        settings.notification.space.communicationMention =
-          notificationSpaceData.communicationMention;
+      if (notificationSpaceData.communicationMessage !== undefined) {
+        settings.notification.space.communicationMessage =
+          notificationSpaceData.communicationMessage;
       }
-      if (notificationSpaceData.commentReply !== undefined) {
-        settings.notification.space.commentReply =
-          notificationSpaceData.commentReply;
+      if (notificationSpaceData.communicationMessageAdmin !== undefined) {
+        settings.notification.space.communicationMessageAdmin =
+          notificationSpaceData.communicationMessageAdmin;
+      }
+    }
+
+    const notificationUserData = updateData.notification?.user;
+    if (notificationUserData) {
+      if (notificationUserData.messageReceived !== undefined) {
+        settings.notification.user.messageReceived =
+          notificationUserData.messageReceived;
+      }
+      if (notificationUserData.messageSent !== undefined) {
+        settings.notification.user.messageSent =
+          notificationUserData.messageSent;
+      }
+      if (notificationUserData.mentioned !== undefined) {
+        settings.notification.user.mentioned = notificationUserData.mentioned;
+      }
+      if (notificationUserData.commentReply !== undefined) {
+        settings.notification.user.commentReply =
+          notificationUserData.commentReply;
       }
     }
     return settings;

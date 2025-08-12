@@ -1,7 +1,6 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
-import { ICommunity } from '@domain/community/community';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -38,7 +37,6 @@ import {
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -57,15 +55,16 @@ import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ISpace } from '@domain/space/space/space.interface';
+import { UserPayload } from '@alkemio/notifications-lib/dist/dto/user.payload';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 
 @Injectable()
 export class NotificationExternalAdapter {
   constructor(
     private contributorLookupService: ContributorLookupService,
+    private userLookupService: UserLookupService,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
-    @InjectRepository(Community)
-    private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
@@ -288,7 +287,6 @@ export class NotificationExternalAdapter {
         description: callout.framing.profile.description ?? '',
         nameID: callout.nameID,
         url: calloutURL,
-        type: 'deprecated',
       },
       ...spacePayload,
     };
@@ -551,9 +549,9 @@ export class NotificationExternalAdapter {
       triggeredBy,
       recipients
     );
-    const receiverPayload = await this.getContributorPayloadOrFail(receiverID);
+    const user = await this.getUserPayloadOrFail(receiverID);
     const payload: UserMessageEventPayload = {
-      user: receiverPayload,
+      user,
       message,
       ...basePayload,
     };
@@ -646,7 +644,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     data: NotificationInputCommentReply
   ): Promise<UserCommentReplyEventPayload> {
-    const user = await this.getContributorPayloadOrFail(data.commentOwnerID);
+    const user = await this.getUserPayloadOrFail(data.commentOwnerID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       data.commentType,
@@ -682,8 +680,7 @@ export class NotificationExternalAdapter {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<UserMentionEventPayload | undefined> {
-    const userContributor =
-      await this.getContributorPayloadOrFail(mentionedUserUUID);
+    const userContributor = await this.getUserPayloadOrFail(mentionedUserUUID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -796,7 +793,7 @@ export class NotificationExternalAdapter {
       eventType,
       triggeredBy: contributor,
       recipients: recipients.map(recipient =>
-        this.createContributorPayloadFromContributor(recipient)
+        this.createUserPayloadFromUser(recipient)
       ),
       platform: {
         url: this.getPlatformURL(),
@@ -826,48 +823,72 @@ export class NotificationExternalAdapter {
     const contributorType =
       this.contributorLookupService.getContributorType(contributor);
 
-    const userURL =
+    const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);
     const result: ContributorPayload = {
       id: contributor.id,
       nameID: contributor.nameID,
       profile: {
         displayName: contributor.profile.displayName,
-        url: userURL,
+        url: contributorURL,
       },
       type: contributorType,
     };
     return result;
   }
 
-  private createContributorPayloadFromContributor(
-    user: IContributor
-  ): ContributorPayload {
+  private async getUserPayloadOrFail(userID: string): Promise<UserPayload> {
+    const user = await this.userLookupService.getUserOrFail(userID, {
+      relations: {
+        profile: true,
+      },
+    });
+
+    const userURL = this.urlGeneratorService.createUrlForUserNameID(
+      user.nameID
+    );
+    const result: UserPayload = {
+      id: user.id,
+      nameID: user.nameID,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      profile: {
+        displayName: user.profile.displayName,
+        url: userURL,
+      },
+      type: RoleSetContributorType.USER,
+    };
+    return result;
+  }
+
+  private createUserPayloadFromUser(user: IUser): UserPayload {
     return {
       id: user.id,
       nameID: user.nameID,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
       profile: {
         displayName: user.profile.displayName,
-        url: this.urlGeneratorService.createUrlForContributor(user),
+        url: this.urlGeneratorService.createUrlForUserNameID(user.nameID),
       },
       type: RoleSetContributorType.USER,
     };
   }
 
-  private async getCommunityOrFail(communityID: string): Promise<ICommunity> {
-    const community = await this.communityRepository
-      .createQueryBuilder('community')
-      .where('community.id = :id')
-      .setParameters({ id: communityID })
-      .getOne();
-
-    if (!community) {
-      throw new EntityNotFoundException(
-        `Unable to find Community with id: ${communityID}`,
-        LogContext.SPACES
-      );
-    }
-    return community;
+  private createContributorPayloadFromContributor(
+    contributor: IContributor
+  ): ContributorPayload {
+    return {
+      id: contributor.id,
+      nameID: contributor.nameID,
+      profile: {
+        displayName: contributor.profile.displayName,
+        url: this.urlGeneratorService.createUrlForContributor(contributor),
+      },
+      type: RoleSetContributorType.USER,
+    };
   }
 
   private getPlatformURL(): string {

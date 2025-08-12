@@ -144,10 +144,10 @@ export class NotificationRecipientsService {
         return notificationSettings.user.messageReceived;
       case NotificationEvent.USER_MESSAGE_SENDER:
         return notificationSettings.user.messageSent;
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_RECIPIENT:
-        return notificationSettings.space.applicationReceived;
+      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
+        return notificationSettings.space.communityApplicationReceived;
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
-        return notificationSettings.space.applicationSubmitted;
+        return notificationSettings.space.communityApplicationSubmitted;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         return notificationSettings.space.communicationUpdates;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
@@ -158,16 +158,16 @@ export class NotificationRecipientsService {
         return notificationSettings.space.communityNewMemberAdmin;
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
         return notificationSettings.space.communityInvitationUser;
-      case NotificationEvent.SPACE_POST_CREATED_ADMIN:
-        return notificationSettings.space.postCreatedAdmin;
-      case NotificationEvent.SPACE_POST_CREATED:
-        return notificationSettings.space.postCreated;
-      case NotificationEvent.SPACE_POST_COMMENT_CREATED:
-        return notificationSettings.space.postCommentCreated;
-      case NotificationEvent.SPACE_WHITEBOARD_CREATED:
-        return notificationSettings.space.whiteboardCreated;
-      case NotificationEvent.SPACE_CALLOUT_PUBLISHED:
-        return notificationSettings.space.calloutPublished;
+      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN:
+        return notificationSettings.space.collaborationPostCreatedAdmin;
+      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
+        return notificationSettings.space.collaborationPostCreated;
+      case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED:
+        return notificationSettings.space.collaborationPostCommentCreated;
+      case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
+        return notificationSettings.space.collaborationWhiteboardCreated;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
+        return notificationSettings.space.collaborationCalloutPublished;
 
       default:
         throw new ValidationException(
@@ -221,7 +221,7 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getOrganizationCredentialCriteria(entityID);
         break;
       }
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_RECIPIENT: {
+      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceCredentialCriteria(entityID);
         credentialCriteria.push({
@@ -232,16 +232,16 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
-      case NotificationEvent.SPACE_POST_CREATED_ADMIN: {
+      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceCredentialCriteria(entityID);
         break;
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
-      case NotificationEvent.SPACE_POST_CREATED:
-      case NotificationEvent.SPACE_WHITEBOARD_CREATED:
-      case NotificationEvent.SPACE_CALLOUT_PUBLISHED: {
+      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria = this.getSpaceCredentialCriteria(entityID);
         break;
@@ -251,7 +251,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
-      case NotificationEvent.SPACE_POST_COMMENT_CREATED: {
+      case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED: {
         credentialCriteria = this.getUserSelfCriteria(entityID);
         break;
       }
@@ -269,7 +269,7 @@ export class NotificationRecipientsService {
     switch (eventType) {
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.USER_MENTION:
-      case NotificationEvent.SPACE_CALLOUT_PUBLISHED:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return true;
       default:
         return false;
@@ -305,17 +305,17 @@ export class NotificationRecipientsService {
         }
         return organization.authorization;
       }
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_RECIPIENT:
+      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
-      case NotificationEvent.SPACE_POST_CREATED_ADMIN:
-      case NotificationEvent.SPACE_POST_CREATED:
-      case NotificationEvent.SPACE_POST_COMMENT_CREATED:
-      case NotificationEvent.SPACE_WHITEBOARD_CREATED:
-      case NotificationEvent.SPACE_CALLOUT_PUBLISHED:
+      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN:
+      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY: {
         // get the space authorization policy

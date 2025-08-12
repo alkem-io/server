@@ -16,28 +16,36 @@ type UserSettingsNotificationOrganization = {
   mentioned: boolean;
 };
 
+type UserSettingsNotificationUser = {
+  messageReceived: boolean;
+  messageSent: boolean;
+  mentioned: boolean;
+  commentReply: boolean;
+};
+
 // Local type to mimic UserSettingsNotificationSpace interface
 type UserSettingsNotificationSpace = {
-  applicationReceived: boolean;
-  applicationSubmitted: boolean;
+  communityApplicationReceived: boolean;
+  communityApplicationSubmitted: boolean;
   communicationUpdates: boolean;
   communicationUpdatesAdmin: boolean;
   communityNewMember: boolean;
   communityNewMemberAdmin: boolean;
   communityInvitationUser: boolean;
-  postCreatedAdmin: boolean;
-  postCreated: boolean;
-  postCommentCreated: boolean;
-  whiteboardCreated: boolean;
-  calloutPublished: boolean;
-  communicationMention: boolean;
-  commentReply: boolean;
+  collaborationPostCreatedAdmin: boolean;
+  collaborationPostCreated: boolean;
+  collaborationPostCommentCreated: boolean;
+  collaborationWhiteboardCreated: boolean;
+  collaborationCalloutPublished: boolean;
+  communicationMessage: boolean;
+  communicationMessageAdmin: boolean;
 };
 
 type UserSettingsNotification = {
   platform: UserSettingsNotificationPlatform;
   organization: UserSettingsNotificationOrganization;
   space: UserSettingsNotificationSpace;
+  user: UserSettingsNotificationUser;
 };
 
 export class UserSettingsEntity1754384352799 implements MigrationInterface {
@@ -148,13 +156,13 @@ export class UserSettingsEntity1754384352799 implements MigrationInterface {
           ),
         },
         space: {
-          applicationReceived: await this.getPreferenceValue(
+          communityApplicationReceived: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,
             user.preferenceSetId,
             PreferenceType.NOTIFICATION_APPLICATION_RECEIVED
           ),
-          applicationSubmitted: await this.getPreferenceValue(
+          communityApplicationSubmitted: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,
             user.preferenceSetId,
@@ -190,37 +198,43 @@ export class UserSettingsEntity1754384352799 implements MigrationInterface {
             user.preferenceSetId,
             PreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER
           ),
-          postCreatedAdmin: await this.getPreferenceValue(
+          collaborationPostCreatedAdmin: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,
             user.preferenceSetId,
             PreferenceType.NOTIFICATION_POST_CREATED_ADMIN
           ),
-          postCreated: await this.getPreferenceValue(
+          collaborationPostCreated: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,
             user.preferenceSetId,
             PreferenceType.NOTIFICATION_POST_CREATED
           ),
-          postCommentCreated: await this.getPreferenceValue(
+          collaborationPostCommentCreated: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,
             user.preferenceSetId,
             PreferenceType.NOTIFICATION_POST_COMMENT_CREATED
           ),
-          whiteboardCreated: await this.getPreferenceValue(
+          collaborationWhiteboardCreated: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,
             user.preferenceSetId,
             PreferenceType.NOTIFICATION_WHITEBOARD_CREATED
           ),
-          calloutPublished: await this.getPreferenceValue(
+          collaborationCalloutPublished: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,
             user.preferenceSetId,
             PreferenceType.NOTIFICATION_CALLOUT_PUBLISHED
           ),
-          communicationMention: await this.getPreferenceValue(
+          communicationMessage: true, // Default value for new field
+          communicationMessageAdmin: true, // Default value for new field
+        },
+        user: {
+          messageReceived: true, // Default value for new field
+          messageSent: true, // Default value for new field
+          mentioned: await this.getPreferenceValue(
             queryRunner,
             preferenceDefinitionsMap,
             user.preferenceSetId,

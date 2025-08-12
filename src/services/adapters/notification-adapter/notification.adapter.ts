@@ -48,7 +48,7 @@ export class NotificationAdapter {
   public async SpaceCollaborationCalloutPublished(
     eventData: NotificationInputCalloutPublished
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_CALLOUT_PUBLISHED;
+    const event = NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED;
     const recipients = await this.getNotificationRecipients(
       event,
       eventData,
@@ -77,7 +77,7 @@ export class NotificationAdapter {
 
     // Send in-app notifications
     const inAppPayload: InAppNotificationCalloutPublishedPayload = {
-      type: NotificationEvent.SPACE_CALLOUT_PUBLISHED,
+      type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
       calloutID: eventData.callout.id,
       spaceID: payload.space.id,
       triggeredByID: eventData.triggeredBy,
@@ -92,7 +92,7 @@ export class NotificationAdapter {
   public async spaceCollaborationPostCreated(
     eventData: NotificationInputPostCreated
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_POST_CREATED;
+    const event = NotificationEvent.SPACE_COLLABORATION_POST_CREATED;
     const recipients = await this.getNotificationRecipients(
       event,
       eventData,
@@ -124,7 +124,7 @@ export class NotificationAdapter {
   public async spaceCollaborationWhiteboardCreated(
     eventData: NotificationInputWhiteboardCreated
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_WHITEBOARD_CREATED;
+    const event = NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED;
     const community =
       await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
         eventData.callout.id
@@ -260,7 +260,7 @@ export class NotificationAdapter {
   public async spaceContactLeadsMessage(
     eventData: NotificationInputCommunityLeadsMessage
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_CONTACT_MESSAGE_RECIPIENT;
+    const event = NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT;
     const space =
       await this.communityResolverService.getSpaceForCommunityOrFail(
         eventData.communityID
@@ -285,7 +285,7 @@ export class NotificationAdapter {
   public async spaceCollaborationPostComment(
     eventData: NotificationInputPostComment
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_POST_COMMENT_CREATED;
+    const event = NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED;
 
     const community =
       await this.communityResolverService.getCommunityFromPostRoomOrFail(

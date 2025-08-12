@@ -4,30 +4,6 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export abstract class IUserSettingsNotificationSpace {
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Receive a notification when an application is received',
-  })
-  applicationReceived!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when an application is submitted',
-  })
-  applicationSubmitted!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification for community updates',
-  })
-  communicationUpdates!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification for community updates as Admin',
-  })
-  communicationUpdatesAdmin!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
     description: 'Receive a notification when a new member joins the community',
   })
   communityNewMember!: boolean;
@@ -47,43 +23,68 @@ export abstract class IUserSettingsNotificationSpace {
 
   @Field(() => Boolean, {
     nullable: false,
+    description: 'Receive a notification when an application is received',
+  })
+  communityApplicationReceived!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Receive a notification when an application is submitted',
+  })
+  communityApplicationSubmitted!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Receive a notification for community updates',
+  })
+  communicationUpdates!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Receive a notification for community updates as Admin',
+  })
+  communicationUpdatesAdmin!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Receive a copy of messages that I send to a Space',
+  })
+  communicationMessage!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Receive a notification when a message is sent to a Space I lead',
+  })
+  communicationMessageAdmin!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
     description: 'Receive a notification when a post is created (admin)',
   })
-  postCreatedAdmin!: boolean;
+  collaborationPostCreatedAdmin!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a post is created',
   })
-  postCreated!: boolean;
+  collaborationPostCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a comment is created on a post',
   })
-  postCommentCreated!: boolean;
+  collaborationPostCommentCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a whiteboard is created',
   })
-  whiteboardCreated!: boolean;
+  collaborationWhiteboardCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a callout is published',
   })
-  calloutPublished!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when mentioned in communication',
-  })
-  communicationMention!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when someone replies to your comment',
-  })
-  commentReply!: boolean;
+  collaborationCalloutPublished!: boolean;
 }

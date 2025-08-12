@@ -16,7 +16,7 @@ import { InAppNotificationPayloadBase } from '@services/adapters/notification-in
   description: 'An in-app notification type. To not be queried directly',
   resolveType(inAppNotification) {
     switch (inAppNotification.type) {
-      case NotificationEvent.SPACE_CALLOUT_PUBLISHED:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return InAppNotificationEntryCalloutPublished;
       case NotificationEvent.USER_MENTION:
         return InAppNotificationEntryUserMentioned;
