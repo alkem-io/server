@@ -735,7 +735,7 @@ export class RoleSetService {
               subspaceAdminCredential
             );
           if (!alreadyHasSubspaceAdmin) {
-            await this.agentService.grantCredential({
+            await this.agentService.grantCredentialOrFail({
               agentID: agent.id,
               type: subspaceAdminCredential.type,
               resourceID: subspaceAdminCredential.resourceID,
@@ -755,7 +755,7 @@ export class RoleSetService {
               accountAdminCredential
             );
           if (!alreadyHasAccountAdmin) {
-            await this.agentService.grantCredential({
+            await this.agentService.grantCredentialOrFail({
               agentID: agent.id,
               type: accountAdminCredential.type,
               resourceID: accountAdminCredential.resourceID,
@@ -889,7 +889,7 @@ export class RoleSetService {
       }
     );
     if (!hasInviteeCredential) {
-      await this.agentService.grantCredential({
+      await this.agentService.grantCredentialOrFail({
         agentID: agent.id,
         type: inviteeCredential.type,
         resourceID: inviteeCredential.resourceID,
@@ -1293,7 +1293,7 @@ export class RoleSetService {
 
     const roleCredential = await this.getCredentialForRole(roleSet, roleType);
 
-    return await this.agentService.grantCredential({
+    return await this.agentService.grantCredentialOrFail({
       agentID: agent.id,
       type: roleCredential.type,
       resourceID: roleCredential.resourceID,
