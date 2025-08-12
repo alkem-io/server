@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 const exampleBaselineLicensePlan = {
-  spaceFree: 1,
+  spaceFree: 0,
   spacePlus: 0,
   spacePremium: 0,
   virtualContributor: 0,
