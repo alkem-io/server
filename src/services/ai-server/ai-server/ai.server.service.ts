@@ -245,8 +245,10 @@ export class AiServerService {
 
       //NOTE this should not be needed but untill we start using the callout contents in the
       //expert engine better skip it
-      const includeCallout =
-        personaService.engine === AiPersonaEngine.LIBRA_FLOW;
+      const includeCallout = [
+        AiPersonaEngine.LIBRA_FLOW,
+        AiPersonaEngine.EXPERT,
+      ].includes(personaService.engine);
 
       history = await this.getLastNInteractionMessages(
         invocationInput.resultHandler.roomDetails,
