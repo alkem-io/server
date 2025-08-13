@@ -5,6 +5,7 @@ import { InAppNotificationEntity } from '@platform/in-app-notification/in.app.no
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { InAppNotificationFilterInput } from '@services/api/in-app-notification-reader/dto/in.app.notification.filter.dto.input';
 
 @Injectable()
 export class InAppNotificationService {
@@ -32,9 +33,12 @@ export class InAppNotificationService {
   }
 
   public getRawNotifications(
-    receiverID?: string
+    receiverID: string,
+    filter?: InAppNotificationFilterInput
   ): Promise<InAppNotificationEntity[]> {
-    const where = receiverID ? { receiverID } : {};
+    const where = filter
+      ? { receiverID, type: In(filter.types) }
+      : { receiverID };
     return this.inAppNotificationRepo.find({
       where,
       order: { triggeredAt: 'desc' },
