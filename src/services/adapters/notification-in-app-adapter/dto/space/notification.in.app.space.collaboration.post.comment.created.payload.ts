@@ -2,8 +2,10 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { InAppNotificationPayloadBaseSpace } from './notification.in.app.payload.space.base';
 import { InAppNotificationPayloadBaseMessage } from '../notification.in.app.payload.base.message';
 
-export interface InAppNotificationSpaceCommunicationMessageRecipientPayload
+export interface InAppNotificationSpaceCollaborationPostCommentCreatedPayload
   extends InAppNotificationPayloadBaseSpace {
-  type: NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT;
+  type: NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED;
+  calloutID: string;
+  postID: string;
   message: InAppNotificationPayloadBaseMessage;
 }

@@ -1,19 +1,8 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { InAppNotificationEntryUserMentioned } from '../dto/in.app.notification.entry.user.mentioned';
 
 @Resolver(() => InAppNotificationEntryUserMentioned)
 export class InAppNotificationUserMentionedResolverFields {
-  @ResolveField(() => RoleSetContributorType, {
-    nullable: false,
-    description: 'The type of the Contributor that joined.',
-  })
-  public contributorType(
-    @Parent() { payload }: InAppNotificationEntryUserMentioned
-  ): RoleSetContributorType {
-    return payload.contributorType as RoleSetContributorType;
-  }
-
   @ResolveField(() => String, {
     nullable: false,
     description: 'The comment that the contributor was mentioned in.',
@@ -21,7 +10,7 @@ export class InAppNotificationUserMentionedResolverFields {
   public comment(
     @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): string {
-    return payload.comment;
+    return payload.message.messageID; // TODO: this should be a comment object, not just a string
   }
 
   @ResolveField(() => String, {
@@ -31,7 +20,7 @@ export class InAppNotificationUserMentionedResolverFields {
   public commentUrl(
     @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): string {
-    return payload.commentOrigin.url;
+    return payload.message.roomID; // TODO: this URL should NOT be part of data in InApp data
   }
 
   @ResolveField(() => String, {
@@ -42,6 +31,6 @@ export class InAppNotificationUserMentionedResolverFields {
   public commentOriginName(
     @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): string {
-    return payload.commentOrigin.displayName;
+    return payload.message.roomID; // TODO
   }
 }

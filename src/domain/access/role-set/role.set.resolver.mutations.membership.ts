@@ -750,6 +750,7 @@ export class RoleSetResolverMutationsMembership {
                 {
                   triggeredBy: agentInfo.userID,
                   community,
+                  invitationID: invitation.id,
                   invitedContributorID: invitation.invitedContributorID,
                   accountHost: accountProvider,
                   welcomeMessage: invitation.welcomeMessage,
@@ -765,6 +766,7 @@ export class RoleSetResolverMutationsMembership {
               const notificationInput: NotificationInputCommunityInvitation = {
                 triggeredBy: agentInfo.userID,
                 community,
+                invitationID: invitation.id,
                 invitedContributorID: invitation.invitedContributorID,
                 welcomeMessage: invitation.welcomeMessage,
               };

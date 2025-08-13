@@ -21,7 +21,7 @@ import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.ad
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.callout.published';
+import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';

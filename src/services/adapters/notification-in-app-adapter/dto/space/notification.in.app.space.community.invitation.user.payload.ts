@@ -5,6 +5,4 @@ export interface InAppNotificationSpaceCommunityInvitationUserPayload
   extends InAppNotificationPayloadBaseSpace {
   type: NotificationEvent.SPACE_COMMUNITY_INVITATION_USER;
   invitationID: string;
-  inviterID: string;
-  inviterDisplayName: string;
 }

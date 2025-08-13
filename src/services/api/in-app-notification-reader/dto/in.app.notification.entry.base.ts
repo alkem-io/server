@@ -8,11 +8,11 @@ export abstract class IInAppNotificationEntryBase {
 
   type!: NotificationEvent;
 
-  triggeredAt!: Date;
+  category!: NotificationEventCategory;
 
   state!: NotificationEventInAppState;
 
-  category!: NotificationEventCategory;
+  triggeredAt!: Date;
 
   receiverID!: string;
 

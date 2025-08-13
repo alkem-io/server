@@ -4,7 +4,5 @@ import { InAppNotificationPayloadBaseSpace } from './notification.in.app.payload
 export interface InAppNotificationSpaceCommunityApplicationAdminPayload
   extends InAppNotificationPayloadBaseSpace {
   type: NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN;
-  applicantID: string;
-  applicantDisplayName: string;
   applicationID: string;
 }

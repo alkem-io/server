@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationInputPostCreated } from './dto/space/notification.dto.input.post.created';
-import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.callout.published';
+import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
 import { NotificationInputPostComment } from './dto/space/notification.dto.input.post.comment';
 import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.update.sent';
 import { NotificationInputPlatformForumDiscussionCreated } from './dto/platform/notification.dto.input.platform.forum.discussion.created';
@@ -15,13 +15,13 @@ import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils';
 import { NotificationInputUserMessage } from './dto/user/notification.dto.input.user.message';
 import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
-import { NotificationInputCommunityLeadsMessage } from './dto/space/notification.dto.input.community.leads.message';
+import { NotificationInputCommunityLeadsMessage as NotificationInputSpaceCommunityLeadsMessage } from './dto/space/notification.dto.input.community.leads.message';
 import { NotificationInputEntityMention } from './dto/space/notification.dto.input.entity.mention';
 import { NotificationInputEntityMentions } from './dto/space/notification.dto.input.entity.mentions';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 import { NotificationInputPlatformForumDiscussionComment } from './dto/platform/notification.dto.input.platform.forum.discussion.comment';
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.community.invitation';
-import { NotificationInputCommentReply } from './dto/space/notification.dto.input.comment.reply';
+import { NotificationInputCommentReply } from './dto/space/notification.dto.input.user.comment.reply';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.platform.invitation';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.community.invitation.vc';
@@ -290,8 +290,7 @@ export class NotificationAdapter {
           category: NotificationEventCategory.SPACE_MEMBER,
           triggeredAt: new Date(),
           spaceID: space.id,
-          applicationID: 'unknown', // Application ID would need to be added to eventData
-          applicationStatus: 'submitted',
+          applicationID: 'unknown',
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -340,9 +339,7 @@ export class NotificationAdapter {
           category: NotificationEventCategory.SPACE_MEMBER,
           triggeredAt: new Date(),
           spaceID: space.id,
-          invitationID: 'unknown', // Would need to be added to eventData
-          inviterID: eventData.triggeredBy,
-          inviterDisplayName: 'unknown', // Would need to be resolved
+          invitationID: eventData.invitationID,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -381,7 +378,7 @@ export class NotificationAdapter {
   }
 
   public async spaceContactLeadsMessage(
-    eventData: NotificationInputCommunityLeadsMessage
+    eventData: NotificationInputSpaceCommunityLeadsMessage
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT;
     const space =
@@ -416,9 +413,10 @@ export class NotificationAdapter {
           category: NotificationEventCategory.SPACE_ADMIN,
           triggeredAt: new Date(),
           spaceID: space.id,
-          messageID: 'unknown', // Message ID would need to be added to eventData
-          messageContent: eventData.message,
-          roomID: 'unknown', // Room ID would need to be added to eventData
+          message: {
+            roomID: 'unknown',
+            messageID: eventData.message,
+          },
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

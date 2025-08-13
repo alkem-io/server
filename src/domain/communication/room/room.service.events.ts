@@ -17,7 +17,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
-import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.comment.reply';
+import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.user.comment.reply';
 import { IProfile } from '@domain/common/profile';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 

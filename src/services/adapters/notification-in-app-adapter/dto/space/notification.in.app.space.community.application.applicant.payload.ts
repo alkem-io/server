@@ -5,5 +5,4 @@ export interface InAppNotificationSpaceCommunityApplicationApplicantPayload
   extends InAppNotificationPayloadBaseSpace {
   type: NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT;
   applicationID: string;
-  applicationStatus: string;
 }

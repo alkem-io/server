@@ -18,7 +18,7 @@ import { TemporaryStorageService } from '@services/infrastructure/temporary-stor
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.callout.published';
+import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';

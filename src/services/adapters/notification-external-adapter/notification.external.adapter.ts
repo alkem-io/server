@@ -50,7 +50,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { NotificationInputPostCreated } from '../notification-adapter/dto/space/notification.dto.input.post.created';
 import { NotificationInputWhiteboardCreated } from '../notification-adapter/dto/space/notification.dto.input.whiteboard.created';
 import { NotificationInputPostComment } from '../notification-adapter/dto/space/notification.dto.input.post.comment';
-import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.comment.reply';
+import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.user.comment.reply';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';

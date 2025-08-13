@@ -5,6 +5,4 @@ export interface InAppNotificationSpaceCommunityInvitationVcPayload
   extends InAppNotificationPayloadBaseSpace {
   type: NotificationEvent.SPACE_COMMUNITY_INVITATION_VC;
   invitationID: string;
-  inviterID: string;
-  virtualContributorID: string;
 }
