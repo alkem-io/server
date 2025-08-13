@@ -2,14 +2,14 @@ import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { InAppNotificationEntrySpaceCommunityNewMember } from '../dto/in.app.notification.entry.space.community.new.member';
+import { InAppNotificationEntrySpaceCommunityNewMember } from '../dto/space/in.app.notification.entry.space.community.new.member';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
 
 @Resolver(() => InAppNotificationEntrySpaceCommunityNewMember)
-export class InAppNotificationCommunityNewMemberResolverFields {
+export class InAppNotificationSpaceCommunityNewMemberResolverFields {
   @ResolveField(() => RoleSetContributorType, {
     nullable: false,
     description: 'The type of the Contributor that joined.',
@@ -24,8 +24,7 @@ export class InAppNotificationCommunityNewMemberResolverFields {
     nullable: true,
     description: 'The Contributor that joined.',
   })
-  // todo: rename?
-  public actor(
+  public contributor(
     @Parent() { payload }: InAppNotificationEntrySpaceCommunityNewMember,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>

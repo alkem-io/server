@@ -1,5 +1,4 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { InAppNotificationEntrySpaceCollaborationCalloutPublished } from '@services/api/in-app-notification-reader/dto/in.app.notification.entry.space.collaboration.callout.published';
 import { ISpace } from '@domain/space/space/space.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Loader } from '@core/dataloader/decorators';
@@ -8,9 +7,10 @@ import {
   SpaceLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { InAppNotificationEntrySpaceCollaborationCalloutPublished } from '../dto/space/in.app.notification.entry.space.collaboration.callout.published';
 
 @Resolver(() => InAppNotificationEntrySpaceCollaborationCalloutPublished)
-export class InAppNotificationCalloutPublishedResolverFields {
+export class InAppNotificationSpaceCollaborationCalloutPublishedResolverFields {
   @ResolveField(() => ICallout, {
     nullable: true,
     description: 'The Callout that was published.',

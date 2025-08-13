@@ -1,10 +1,10 @@
 import { ObjectType } from '@nestjs/graphql';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { IInAppNotificationEntryBase } from './in.app.notification.entry.base';
-import { IInAppNotificationEntry } from './in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { InAppNotificationSpaceCollaborationCalloutPublishedPayload } from '@services/adapters/notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.callout.published.payload';
+import { IInAppNotificationEntry } from '../in.app.notification.entry.interface';
+import { IInAppNotificationEntryBase } from '../in.app.notification.entry.base';
 
 @ObjectType('InAppNotificationSpaceCollaborationCalloutPublished', {
   implements: () => IInAppNotificationEntry,

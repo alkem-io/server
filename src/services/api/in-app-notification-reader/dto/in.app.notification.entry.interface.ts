@@ -4,12 +4,12 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { InAppNotificationEntrySpaceCollaborationCalloutPublished } from './in.app.notification.entry.space.collaboration.callout.published';
-import { InAppNotificationEntryUserMentioned } from './in.app.notification.entry.user.mentioned';
-import { InAppNotificationEntrySpaceCommunityNewMember } from './in.app.notification.entry.space.community.new.member';
+import { InAppNotificationEntrySpaceCommunityNewMember } from './space/in.app.notification.entry.space.community.new.member';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { InAppNotificationPayloadBase } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
+import { InAppNotificationEntrySpaceCollaborationCalloutPublished } from './space/in.app.notification.entry.space.collaboration.callout.published';
+import { InAppNotificationEntryUserMentioned } from './user/in.app.notification.entry.user.mentioned';
 
 @InterfaceType('InAppNotification', {
   isAbstract: true,

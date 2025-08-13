@@ -9,8 +9,8 @@ import { InAppNotificationResolverMutations } from '../../../platform/in-app-not
 import { InAppNotificationResolverFields } from './in.app.notification.reader.resolver.fields';
 import { InAppNotificationResolverSubscription } from './in.app.notification.resolver.subscription';
 import {
-  InAppNotificationCalloutPublishedResolverFields,
-  InAppNotificationCommunityNewMemberResolverFields,
+  InAppNotificationSpaceCollaborationCalloutPublishedResolverFields,
+  InAppNotificationSpaceCommunityNewMemberResolverFields,
   InAppNotificationUserMentionedResolverFields,
 } from './field-resolvers';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
@@ -30,8 +30,8 @@ import { InAppNotificationModule } from '@platform/in-app-notification/in.app.no
     InAppNotificationResolverMutations,
     InAppNotificationResolverSubscription,
     // concrete resolvers
-    InAppNotificationCalloutPublishedResolverFields,
-    InAppNotificationCommunityNewMemberResolverFields,
+    InAppNotificationSpaceCollaborationCalloutPublishedResolverFields,
+    InAppNotificationSpaceCommunityNewMemberResolverFields,
     InAppNotificationUserMentionedResolverFields,
   ],
   exports: [InAppNotificationReader],
