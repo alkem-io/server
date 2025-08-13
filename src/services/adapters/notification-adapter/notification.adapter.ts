@@ -29,7 +29,13 @@ import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.i
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
 import { NotificationRecipientsService } from '@services/api/notification-recipients/notification.recipients.service';
-import { InAppNotificationSpaceCollaborationCalloutPublishedPayload } from '../notification-in-app-adapter/dto/notification.in.app.space.collaboration.callout.published.payload';
+import { InAppNotificationSpaceCollaborationCalloutPublishedPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.callout.published.payload';
+import { InAppNotificationSpaceCommunityNewMemberPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.new.member.payload';
+import { InAppNotificationSpaceCommunityApplicationApplicantPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.application.applicant.payload';
+import { InAppNotificationSpaceCommunityInvitationUserPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.invitation.user.payload';
+import { InAppNotificationSpaceCommunicationMessageRecipientPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.communication.message.recipient.payload';
+import { InAppNotificationOrganizationMentionedPayload } from '../notification-in-app-adapter/dto/organization/notification.in.app.organization.mentioned.payload';
+import { InAppNotificationPlatformForumDiscussionCreatedPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.forum.discussion.created.payload';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
@@ -178,6 +184,28 @@ export class NotificationAdapter {
       );
 
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      // TODO: Create InAppNotificationSpaceCollaborationWhiteboardCreatedPayload interface
+      const inAppPayload: any = {
+        type: NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED,
+        triggeredByID: eventData.triggeredBy,
+        category: NotificationEventCategory.SPACE_MEMBER,
+        triggeredAt: new Date(),
+        spaceID: space.id,
+        calloutID: eventData.callout.id,
+        whiteboardID: eventData.whiteboard.id,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
   }
 
   public async spaceCommunityNewMember(
@@ -203,6 +231,27 @@ export class NotificationAdapter {
         eventData.contributorID
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationSpaceCommunityNewMemberPayload = {
+        type: NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER,
+        triggeredByID: eventData.triggeredBy,
+        category: NotificationEventCategory.SPACE_MEMBER,
+        triggeredAt: new Date(),
+        spaceID: space.id,
+        contributorType: 'user', // Default value, could be derived from eventData if available
+        newMemberID: eventData.contributorID,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
   }
 
   public async spaceCommunityApplicationCreated(
@@ -228,6 +277,28 @@ export class NotificationAdapter {
       );
 
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationSpaceCommunityApplicationApplicantPayload =
+        {
+          type: NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_MEMBER,
+          triggeredAt: new Date(),
+          spaceID: space.id,
+          applicationID: 'unknown', // Application ID would need to be added to eventData
+          applicationStatus: 'submitted',
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
   }
 
   public async spaceCommunityInvitationCreated(
@@ -256,6 +327,29 @@ export class NotificationAdapter {
       );
 
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationSpaceCommunityInvitationUserPayload =
+        {
+          type: NotificationEvent.SPACE_COMMUNITY_INVITATION_USER,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_MEMBER,
+          triggeredAt: new Date(),
+          spaceID: space.id,
+          invitationID: 'unknown', // Would need to be added to eventData
+          inviterID: eventData.triggeredBy,
+          inviterDisplayName: 'unknown', // Would need to be resolved
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
   }
 
   public async spaceCommunityInvitationVirtualContributorCreated(
@@ -309,6 +403,29 @@ export class NotificationAdapter {
         eventData.message
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationSpaceCommunicationMessageRecipientPayload =
+        {
+          type: NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_ADMIN,
+          triggeredAt: new Date(),
+          spaceID: space.id,
+          messageID: 'unknown', // Message ID would need to be added to eventData
+          messageContent: eventData.message,
+          roomID: 'unknown', // Room ID would need to be added to eventData
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
   }
 
   public async spaceCollaborationPostComment(
@@ -404,6 +521,31 @@ export class NotificationAdapter {
         event,
         payload
       );
+
+      // Send in-app notifications
+      const inAppReceiverIDs = recipients.inAppRecipients.map(
+        recipient => recipient.id
+      );
+      if (inAppReceiverIDs.length > 0) {
+        const inAppPayload: InAppNotificationOrganizationMentionedPayload = {
+          type: NotificationEvent.ORGANIZATION_MENTIONED,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.ORGANIZATION,
+          triggeredAt: new Date(),
+          organizationID: eventData.mentionedEntityID,
+          commentID: eventData.commentsId || 'unknown',
+          commentContent: eventData.comment,
+          commentOrigin: {
+            displayName: eventData.originEntity.displayName,
+            url: 'unknown', // Would need to be constructed
+          },
+        };
+
+        await this.notificationInAppAdapter.sendInAppNotifications(
+          inAppPayload,
+          inAppReceiverIDs
+        );
+      }
     }
   }
 
@@ -548,6 +690,26 @@ export class NotificationAdapter {
         eventData.discussion
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPlatformForumDiscussionCreatedPayload =
+        {
+          type: NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.PLATFORM,
+          triggeredAt: new Date(),
+          discussionID: eventData.discussion.id,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
   }
 
   public async platformForumDiscussionComment(

@@ -5,7 +5,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { IInAppNotificationEntryBase } from './in.app.notification.entry.base';
 import { IInAppNotificationEntry } from './in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationSpaceCommunityNewMemberPayload } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.space.community.new.member.payload';
+import { InAppNotificationSpaceCommunityNewMemberPayload } from '@services/adapters/notification-in-app-adapter/dto/space/notification.in.app.space.community.new.member.payload';
 
 @ObjectType('InAppNotificationSpaceCommunityNewMember', {
   implements: () => IInAppNotificationEntry,

@@ -278,9 +278,34 @@ export class NotificationRecipientsService {
   private isInAppEnabled(eventType: NotificationEvent): boolean {
     switch (eventType) {
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
-      case NotificationEvent.USER_MENTION:
+      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
+      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN:
+      case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
+      case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
+      case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
+      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
+      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT: {
         return true;
+      }
+      case NotificationEvent.USER_MENTION:
+      case NotificationEvent.USER_COMMENT_REPLY:
+      case NotificationEvent.USER_MESSAGE_RECIPIENT: {
+        return true;
+      }
+      case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT: {
+        return true;
+      }
+      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
+      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED:
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
+      case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED:
+      case NotificationEvent.PLATFORM_SPACE_CREATED: {
+        return true;
+      }
       default:
         return false;
     }
@@ -291,7 +316,7 @@ export class NotificationRecipientsService {
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
       case NotificationEvent.PLATFORM_SPACE_CREATED:
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
       case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
         // get the platform authorization policy
         return await this.platformAuthorizationService.getPlatformAuthorizationPolicy();

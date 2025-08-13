@@ -3,7 +3,7 @@ import { RoleSetContributorType } from '@common/enums/role.set.contributor.type'
 import { IInAppNotificationEntryBase } from './in.app.notification.entry.base';
 import { IInAppNotificationEntry } from './in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationUserMentionedPayload } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.user.mentioned.payload';
+import { InAppNotificationUserMentionedPayload } from '@services/adapters/notification-in-app-adapter/dto/user/notification.in.app.user.mentioned.payload';
 
 @ObjectType('InAppNotificationUserMentioned', {
   implements: () => IInAppNotificationEntry,

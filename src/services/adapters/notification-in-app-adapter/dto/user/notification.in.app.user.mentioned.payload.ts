@@ -1,4 +1,4 @@
-import { InAppNotificationPayloadBase } from './notification.in.app.payload.base';
+import { InAppNotificationPayloadBase } from '../notification.in.app.payload.base';
 import { NotificationEvent } from '@common/enums/notification.event';
 
 export interface InAppNotificationUserMentionedPayload
