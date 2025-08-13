@@ -47,16 +47,16 @@ import { ContributorLookupService } from '@services/infrastructure/contributor-l
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AlkemioConfig } from '@src/types';
 import { ClientProxy } from '@nestjs/microservices';
-import { NotificationInputPostCreated } from '../notification-adapter/dto/space/notification.dto.input.post.created';
-import { NotificationInputWhiteboardCreated } from '../notification-adapter/dto/space/notification.dto.input.whiteboard.created';
-import { NotificationInputPostComment } from '../notification-adapter/dto/space/notification.dto.input.post.comment';
-import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.user.comment.reply';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ISpace } from '@domain/space/space/space.interface';
 import { UserPayload } from '@alkemio/notifications-lib/dist/dto/user.payload';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { NotificationInputPostCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.post.created';
+import { NotificationInputWhiteboardCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.whiteboard.created';
+import { NotificationInputPostComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.post.comment';
+import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 
 @Injectable()
 export class NotificationExternalAdapter {

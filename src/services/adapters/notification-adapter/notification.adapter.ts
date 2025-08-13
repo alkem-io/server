@@ -1,30 +1,18 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { NotificationInputPostCreated } from './dto/space/notification.dto.input.post.created';
-import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
-import { NotificationInputPostComment } from './dto/space/notification.dto.input.post.comment';
-import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.update.sent';
 import { NotificationInputPlatformForumDiscussionCreated } from './dto/platform/notification.dto.input.platform.forum.discussion.created';
-import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.community.application';
-import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.community.new.member';
 import { NotificationInputPlatformUserRegistered } from './dto/platform/notification.dto.input.platform.user.registered';
 import { NotificationInputPlatformUserRemoved } from './dto/platform/notification.dto.input.platform.user.removed';
-import { NotificationInputWhiteboardCreated } from './dto/space/notification.dto.input.whiteboard.created';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils';
 import { NotificationInputUserMessage } from './dto/user/notification.dto.input.user.message';
 import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
-import { NotificationInputCommunityLeadsMessage as NotificationInputSpaceCommunityLeadsMessage } from './dto/space/notification.dto.input.community.leads.message';
-import { NotificationInputEntityMention } from './dto/space/notification.dto.input.entity.mention';
-import { NotificationInputEntityMentions } from './dto/space/notification.dto.input.entity.mentions';
+import { NotificationInputEntityMentions } from './dto/user/notification.dto.input.entity.mentions';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 import { NotificationInputPlatformForumDiscussionComment } from './dto/platform/notification.dto.input.platform.forum.discussion.comment';
-import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.community.invitation';
-import { NotificationInputCommentReply } from './dto/space/notification.dto.input.user.comment.reply';
-import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.platform.invitation';
+import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notification.dto.input.platform.global.role.change';
-import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.community.invitation.vc';
 import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.input.platform.space.created';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
@@ -40,6 +28,19 @@ import { NotificationEventCategory } from '@common/enums/notification.event.cate
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
+import { NotificationInputPostCreated } from './dto/space/notification.dto.input.space.collaboration.post.created';
+import { NotificationInputWhiteboardCreated } from './dto/space/notification.dto.input.space.collaboration.whiteboard.created';
+import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
+import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
+import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
+import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.space.community.invitation.vc';
+import { NotificationInputPostComment } from './dto/space/notification.dto.input.space.collaboration.post.comment';
+import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.space.communication.update.sent';
+import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
+import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
+import { NotificationInputUserMention } from './dto/user/notification.dto.input.user.mention';
+import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
 @Injectable()
 export class NotificationAdapter {
   constructor(
@@ -378,7 +379,7 @@ export class NotificationAdapter {
   }
 
   public async spaceContactLeadsMessage(
-    eventData: NotificationInputSpaceCommunityLeadsMessage
+    eventData: NotificationInputCommunicationLeadsMessage
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT;
     const space =
@@ -493,7 +494,7 @@ export class NotificationAdapter {
   }
 
   public async organizationMention(
-    eventData: NotificationInputEntityMention
+    eventData: NotificationInputOrganizationMention
   ): Promise<void> {
     const event = NotificationEvent.ORGANIZATION_MENTIONED;
     const recipients = await this.getNotificationRecipientsOrganization(
@@ -621,7 +622,7 @@ export class NotificationAdapter {
   }
 
   public async userMention(
-    eventData: NotificationInputEntityMention
+    eventData: NotificationInputUserMention
   ): Promise<void> {
     const event = NotificationEvent.USER_MENTION;
     const recipients = await this.getNotificationRecipientsUser(
@@ -817,7 +818,7 @@ export class NotificationAdapter {
     eventData: NotificationInputEntityMentions
   ): Promise<void> {
     for (const mention of eventData.mentions) {
-      const entityMentionNotificationInput: NotificationInputEntityMention = {
+      const entityMentionNotificationInput: NotificationInputUserMention = {
         triggeredBy: eventData.triggeredBy,
         comment: eventData.comment,
         mentionedEntityID: mention.id,

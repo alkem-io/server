@@ -12,9 +12,9 @@ import { CommunicationSendMessageToUserInput } from './dto/communication.dto.sen
 import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/organization/notification.input.organization.message';
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
-import { NotificationInputCommunityLeadsMessage } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.community.leads.message';
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationInputCommunicationLeadsMessage } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.leads.message';
 
 @InstrumentResolver()
 @Resolver()
@@ -92,7 +92,7 @@ export class CommunicationResolverMutations {
       `send message to community ${messageData.communityId} from: ${agentInfo.email}`
     );
 
-    const notificationInput: NotificationInputCommunityLeadsMessage = {
+    const notificationInput: NotificationInputCommunicationLeadsMessage = {
       triggeredBy: agentInfo.userID,
       communityID: messageData.communityId,
       message: messageData.message,

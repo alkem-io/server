@@ -13,7 +13,7 @@ import { ApplicationEventInput } from '../application/dto/application.dto.event'
 import { IApplication } from '../application/application.interface';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
-import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.platform.invitation';
+import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.platform';
 import { ApplicationService } from '../application/application.service';
 import { InvitationService } from '../invitation/invitation.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
@@ -24,15 +24,12 @@ import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle
 import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ApplyForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.apply';
-import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.community.application';
 import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.invite';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.community.invitation.vc';
-import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.community.invitation';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
@@ -62,6 +59,9 @@ import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { compact } from 'lodash';
+import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
+import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
+import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc';
 
 @InstrumentResolver()
 @Resolver()
