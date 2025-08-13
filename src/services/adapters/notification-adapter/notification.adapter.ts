@@ -29,8 +29,8 @@ import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.i
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
 import { NotificationRecipientsService } from '@services/api/notification-recipients/notification.recipients.service';
-import { InAppNotificationCalloutPublishedPayload } from '../notification-in-app-adapter/dto/notification.in.app.callout.published.payload';
-import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
+import { InAppNotificationSpaceCollaborationCalloutPublishedPayload } from '../notification-in-app-adapter/dto/notification.in.app.space.collaboration.callout.published.payload';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -73,20 +73,28 @@ export class NotificationAdapter {
         space,
         eventData.callout
       );
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
     // Send in-app notifications
-    const inAppPayload: InAppNotificationCalloutPublishedPayload = {
-      type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
-      calloutID: eventData.callout.id,
-      spaceID: space.id,
-      triggeredByID: eventData.triggeredBy,
-      category: InAppNotificationCategory.MEMBER,
-      triggeredAt: new Date(),
-      receiverIDs: recipients.inAppRecipients.map(recipient => recipient.id),
-    };
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length >= 0) {
+      const inAppPayload: InAppNotificationSpaceCollaborationCalloutPublishedPayload =
+        {
+          type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_MEMBER,
+          triggeredAt: new Date(),
+          calloutID: eventData.callout.id,
+          spaceID: space.id,
+        };
 
-    await this.notificationInAppAdapter.decompressStoreNotify(inAppPayload);
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
   }
 
   public async spaceCollaborationPostCreated(
@@ -118,7 +126,28 @@ export class NotificationAdapter {
         eventData
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length >= 0) {
+      const inAppPayload: InAppNotificationSpaceCollaborationCalloutPublishedPayload =
+        {
+          type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_MEMBER,
+          triggeredAt: new Date(),
+          calloutID: eventData.callout.id,
+          spaceID: space.id,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
   }
 
   public async spaceCollaborationWhiteboardCreated(
@@ -148,7 +177,7 @@ export class NotificationAdapter {
         eventData
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceCommunityNewMember(
@@ -173,7 +202,7 @@ export class NotificationAdapter {
         space,
         eventData.contributorID
       );
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceCommunityApplicationCreated(
@@ -198,7 +227,7 @@ export class NotificationAdapter {
         space
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceCommunityInvitationCreated(
@@ -226,7 +255,7 @@ export class NotificationAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceCommunityInvitationVirtualContributorCreated(
@@ -254,7 +283,7 @@ export class NotificationAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceContactLeadsMessage(
@@ -279,7 +308,7 @@ export class NotificationAdapter {
         space,
         eventData.message
       );
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceCollaborationPostComment(
@@ -311,7 +340,7 @@ export class NotificationAdapter {
         eventData
       );
     // send notification event
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceCommunicationUpdateSent(
@@ -342,7 +371,7 @@ export class NotificationAdapter {
         eventData.updates,
         eventData.lastMessage
       );
-    this.notificationExternalAdapter.sendExternalNotification(
+    this.notificationExternalAdapter.sendExternalNotifications(
       event,
       notificationsPayload
     );
@@ -371,7 +400,10 @@ export class NotificationAdapter {
       );
 
     if (payload) {
-      this.notificationExternalAdapter.sendExternalNotification(event, payload);
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
     }
   }
 
@@ -393,7 +425,7 @@ export class NotificationAdapter {
         eventData.message,
         eventData.organizationID
       );
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async userCommentReply(
@@ -415,7 +447,10 @@ export class NotificationAdapter {
           eventData
         );
       // send notification event
-      this.notificationExternalAdapter.sendExternalNotification(event, payload);
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
     } catch (error: any) {
       this.logger.error(
         `Error while building comment reply notification payload ${error?.message}`,
@@ -442,7 +477,7 @@ export class NotificationAdapter {
         eventData.receiverID,
         eventData.message
       );
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async userMention(
@@ -467,7 +502,10 @@ export class NotificationAdapter {
       );
 
     if (payload) {
-      this.notificationExternalAdapter.sendExternalNotification(event, payload);
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
     }
   }
 
@@ -490,7 +528,7 @@ export class NotificationAdapter {
         eventData.role
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async platformForumDiscussionCreated(
@@ -509,7 +547,7 @@ export class NotificationAdapter {
         recipients.emailRecipients,
         eventData.discussion
       );
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async platformForumDiscussionComment(
@@ -531,7 +569,7 @@ export class NotificationAdapter {
         eventData.commentSent
       );
     // send notification event
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async platformInvitationCreated(
@@ -553,7 +591,7 @@ export class NotificationAdapter {
         eventData.welcomeMessage
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async platformSpaceCreated(
@@ -572,7 +610,7 @@ export class NotificationAdapter {
         recipients.emailRecipients,
         eventData.space
       );
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async platformUserRegistered(
@@ -592,7 +630,7 @@ export class NotificationAdapter {
         eventData.userID
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async platformUserRemoved(
@@ -612,7 +650,7 @@ export class NotificationAdapter {
         eventData.user
       );
 
-    this.notificationExternalAdapter.sendExternalNotification(event, payload);
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async entityMentions(

@@ -11,7 +11,7 @@ export * from './space.filter.service.mock';
 export * from './space.service.mock';
 export * from './http.service.mock';
 export * from './notification.adapter.service.mock';
-export * from './notification.payload.builder.mock';
+export * from './notification.external.adapter.mock';
 export * from './notifications.service.mock';
 export * from './organization.service.mock';
 export * from './platform.authorization.service.mock';

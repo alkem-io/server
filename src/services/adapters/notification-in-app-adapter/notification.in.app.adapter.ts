@@ -5,7 +5,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { InAppNotificationEntity } from '@platform/in-app-notification/in.app.notification.entity';
-import { InAppNotificationState } from '@common/enums/in.app.notification.state';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { InAppNotificationPayloadBase } from './dto/notification.in.app.payload.base';
 
 @Injectable()
@@ -18,24 +18,25 @@ export class NotificationInAppAdapter {
     private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
   ) {}
 
-  public async decompressStoreNotify(
-    notification: InAppNotificationPayloadBase
+  public async sendInAppNotifications(
+    notification: InAppNotificationPayloadBase,
+    receiverIDs: string[]
   ) {
-    if (!notification.receiverIDs || notification.receiverIDs.length === 0) {
+    if (receiverIDs.length === 0) {
       this.logger.error(
         'Received in-app notification with no receiver IDs, skipping storage.',
         LogContext.IN_APP_NOTIFICATION
       );
       return;
     }
-    const receiverIDs = notification.receiverIDs;
+
     this.logger.verbose?.(
       `Received ${receiverIDs?.length} in-app notifications with receiver IDs: ${receiverIDs.join(', ')}`,
       LogContext.IN_APP_NOTIFICATION
     );
 
     // filtering out notifications that are not for beta users now done by platform privilege
-    const savedNotifications = await this.store(notification);
+    const savedNotifications = await this.store(notification, receiverIDs);
 
     // notify
     this.logger.verbose?.(
@@ -50,22 +51,18 @@ export class NotificationInAppAdapter {
   }
 
   private async store(
-    notification: InAppNotificationPayloadBase
+    payload: InAppNotificationPayloadBase,
+    receiverIDs: string[]
   ): Promise<InAppNotificationEntity[]> {
-    // Remove receiverIDs from the payload stored per entity to avoid duplication
-    const {
-      receiverIDs: receiverIDsFromNotification,
-      ...payloadSansReceivers
-    } = notification;
-    const entities = receiverIDsFromNotification.map(receiverID =>
+    const entities = receiverIDs.map(receiverID =>
       InAppNotificationEntity.create({
-        triggeredAt: notification.triggeredAt,
-        type: notification.type,
-        state: InAppNotificationState.UNREAD,
-        category: notification.category,
+        type: payload.type,
+        category: payload.category,
+        triggeredAt: payload.triggeredAt,
+        state: NotificationEventInAppState.UNREAD,
         receiverID: receiverID,
-        triggeredByID: notification.triggeredByID,
-        payload: payloadSansReceivers,
+        triggeredByID: payload.triggeredByID,
+        payload: payload,
       })
     );
     return this.inAppNotificationRepo.save(entities, {

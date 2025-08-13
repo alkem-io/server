@@ -73,7 +73,7 @@ export class NotificationExternalAdapter {
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
-  public async sendExternalNotification(
+  public async sendExternalNotifications(
     event: NotificationEvent,
     payload: any
   ): Promise<void> {

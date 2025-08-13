@@ -3,14 +3,14 @@ import { RoleSetContributorType } from '@common/enums/role.set.contributor.type'
 import { IInAppNotificationEntryBase } from './in.app.notification.entry.base';
 import { IInAppNotificationEntry } from './in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationContributorMentionedPayload } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.contributor.mentioned.payload';
+import { InAppNotificationUserMentionedPayload } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.user.mentioned.payload';
 
 @ObjectType('InAppNotificationUserMentioned', {
   implements: () => IInAppNotificationEntry,
 })
 export class InAppNotificationEntryUserMentioned extends IInAppNotificationEntryBase {
   declare type: NotificationEvent.USER_MENTION;
-  declare payload: InAppNotificationContributorMentionedPayload;
+  declare payload: InAppNotificationUserMentionedPayload;
   // fields resolved by a concrete resolver
   contributorType!: RoleSetContributorType;
   comment!: string;

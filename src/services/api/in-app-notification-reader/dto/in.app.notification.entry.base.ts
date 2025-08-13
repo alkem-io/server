@@ -1,5 +1,5 @@
-import { InAppNotificationState } from '@common/enums/in.app.notification.state';
-import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { InAppNotificationPayloadBase } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
 
@@ -10,9 +10,9 @@ export abstract class IInAppNotificationEntryBase {
 
   triggeredAt!: Date;
 
-  state!: InAppNotificationState;
+  state!: NotificationEventInAppState;
 
-  category!: InAppNotificationCategory;
+  category!: NotificationEventCategory;
 
   receiverID!: string;
 

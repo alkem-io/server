@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { InAppNotificationState } from '@common/enums/in.app.notification.state';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums';
@@ -15,13 +15,13 @@ export class InAppNotificationResolverMutations {
     private readonly inAppNotificationService: InAppNotificationService
   ) {}
 
-  @Mutation(() => InAppNotificationState, {
+  @Mutation(() => NotificationEventInAppState, {
     description: 'Update notification state and return the notification.',
   })
   async updateNotificationState(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('notificationData') notificationData: UpdateNotificationStateInput
-  ): Promise<InAppNotificationState> {
+  ): Promise<NotificationEventInAppState> {
     const notification =
       await this.inAppNotificationService.getRawNotificationOrFail(
         notificationData.ID
@@ -52,7 +52,7 @@ export class InAppNotificationResolverMutations {
     return this.updateNotificationStates(
       agentInfo,
       notificationIds,
-      InAppNotificationState.READ
+      NotificationEventInAppState.READ
     );
   }
 
@@ -66,14 +66,14 @@ export class InAppNotificationResolverMutations {
     return this.updateNotificationStates(
       agentInfo,
       notificationIds,
-      InAppNotificationState.UNREAD
+      NotificationEventInAppState.UNREAD
     );
   }
 
   private async updateNotificationStates(
     agentInfo: AgentInfo,
     notificationIds: string[],
-    state: InAppNotificationState
+    state: NotificationEventInAppState
   ): Promise<boolean> {
     if (notificationIds.length === 0) {
       return false;

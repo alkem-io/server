@@ -1,9 +1,9 @@
 import { Column, Entity } from 'typeorm';
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../../domain/common/entity/base-entity/base.alkemio.entity';
-import { InAppNotificationState } from '../../common/enums/in.app.notification.state';
+import { NotificationEventInAppState } from '../../common/enums/notification.event.in.app.state';
 import { IInAppNotification } from './in.app.notification.interface';
-import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { InAppNotificationPayloadBase } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
 
@@ -19,14 +19,14 @@ export class InAppNotificationEntity
   type!: NotificationEvent;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  state!: InAppNotificationState;
+  state!: NotificationEventInAppState;
 
   @Column('varchar', {
     length: ENUM_LENGTH,
     nullable: false,
     comment: 'Which category (role) is this notification targeted to.',
   })
-  category!: InAppNotificationCategory;
+  category!: NotificationEventCategory;
 
   @Column('char', {
     length: UUID_LENGTH,

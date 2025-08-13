@@ -2,7 +2,7 @@ import { Repository, In, UpdateResult } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationEntity } from '@platform/in-app-notification/in.app.notification.entity';
-import { InAppNotificationState } from '@common/enums/in.app.notification.state';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 
@@ -43,8 +43,8 @@ export class InAppNotificationService {
 
   public async updateNotificationState(
     ID: string,
-    state: InAppNotificationState
-  ): Promise<InAppNotificationState> {
+    state: NotificationEventInAppState
+  ): Promise<NotificationEventInAppState> {
     const notification = await this.getRawNotificationOrFail(ID);
 
     const updatedNotification = await this.inAppNotificationRepo.save({
@@ -58,7 +58,7 @@ export class InAppNotificationService {
   async bulkUpdateNotificationState(
     notificationIds: string[],
     userId: string,
-    state: InAppNotificationState
+    state: NotificationEventInAppState
   ): Promise<UpdateResult> {
     return this.inAppNotificationRepo.update(
       { id: In(notificationIds), receiverID: userId },

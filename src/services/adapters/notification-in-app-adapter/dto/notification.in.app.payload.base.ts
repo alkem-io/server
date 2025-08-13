@@ -1,11 +1,10 @@
-import { InAppNotificationCategory } from '@common/enums/in.app.notification.category';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 
 export interface InAppNotificationPayloadBase {
-  receiverIDs: string[];
+  type: NotificationEvent;
+  category: NotificationEventCategory;
+  triggeredByID: string;
   /** UTC */
   triggeredAt: Date;
-  type: NotificationEvent;
-  triggeredByID: string;
-  category: InAppNotificationCategory;
 }

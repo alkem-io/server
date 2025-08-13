@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { InAppNotificationState } from '@common/enums/in.app.notification.state';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { UUID } from '@domain/common/scalars';
 
 @InputType()
@@ -10,9 +10,9 @@ export abstract class UpdateNotificationStateInput {
   })
   ID!: string;
 
-  @Field(() => InAppNotificationState, {
+  @Field(() => NotificationEventInAppState, {
     nullable: false,
     description: 'The new state of the notification.',
   })
-  state!: InAppNotificationState;
+  state!: NotificationEventInAppState;
 }
