@@ -51,6 +51,7 @@ export class TemplateApplierResolverMutations {
               },
             },
             innovationFlow: {
+              states: true,
               flowStatesTagsetTemplate: true,
             },
           },

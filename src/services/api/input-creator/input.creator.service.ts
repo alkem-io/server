@@ -81,6 +81,9 @@ export class InputCreatorService {
               visuals: true,
             },
           },
+          link: {
+            profile: true,
+          },
         },
       },
     });
@@ -128,9 +131,14 @@ export class InputCreatorService {
         LogContext.INPUT_CREATOR
       );
     }
+    // we do not support having memo callouts in the template
+    // https://github.com/alkem-io/collaborative-document-service/issues/4
+    const filteredCallouts = calloutsSet.callouts.filter(
+      callout => callout.framing.type !== 'memo'
+    );
 
     const calloutInputs: CreateCalloutInput[] = [];
-    for (const callout of calloutsSet.callouts) {
+    for (const callout of filteredCallouts) {
       calloutInputs.push(
         await this.buildCreateCalloutInputFromCallout(callout.id)
       );
@@ -289,6 +297,9 @@ export class InputCreatorService {
                     visuals: true,
                   },
                 },
+                link: {
+                  profile: true,
+                },
               },
             },
           },
@@ -394,7 +405,7 @@ export class InputCreatorService {
     };
   }
 
-  private buildCreateSpaceAboutInputFromSpaceAbout(
+  public buildCreateSpaceAboutInputFromSpaceAbout(
     spaceAbout: ISpaceAbout
   ): CreateSpaceAboutInput {
     const result: CreateSpaceAboutInput = {
@@ -430,6 +441,14 @@ export class InputCreatorService {
       whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
       ),
+      link: calloutFraming.link?.profile
+        ? {
+            profile: this.buildCreateProfileInputFromProfile(
+              calloutFraming.link.profile
+            ),
+            uri: calloutFraming.link.uri,
+          }
+        : undefined,
     };
   }
 

@@ -1,5 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -19,7 +19,6 @@ export class LicensingFrameworkResolverMutations {
   @Mutation(() => ILicensePlan, {
     description: 'Create a new LicensePlan on the Licensing.',
   })
-  @Profiling.api
   async createLicensePlan(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('planData') planData: CreateLicensePlanOnLicensingFrameworkInput

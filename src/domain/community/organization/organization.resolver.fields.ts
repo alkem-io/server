@@ -6,11 +6,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IProfile } from '@domain/common/profile';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@common/decorators';
+import { CurrentUser } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -43,7 +39,6 @@ export class OrganizationResolverFields {
     nullable: true,
     description: 'Groups defined on this organization.',
   })
-  @Profiling.api
   async groups(
     @Parent() parent: Organization,
     @CurrentUser() agentInfo: AgentInfo
@@ -75,7 +70,6 @@ export class OrganizationResolverFields {
     nullable: true,
     description: 'Group defined on this organization.',
   })
-  @Profiling.api
   async group(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() parent: Organization,
@@ -168,7 +162,6 @@ export class OrganizationResolverFields {
     nullable: false,
     description: 'The verification handler for this organization.',
   })
-  @Profiling.api
   async verification(@Parent() organization: Organization) {
     return await this.organizationService.getVerification(organization);
   }
@@ -204,7 +197,6 @@ export class OrganizationResolverFields {
     nullable: true,
     description: 'Metrics about the activity within this Organization.',
   })
-  @Profiling.api
   async metrics(@Parent() organization: Organization) {
     return await this.organizationService.getMetrics(organization);
   }

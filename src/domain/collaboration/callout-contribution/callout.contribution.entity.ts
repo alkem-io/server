@@ -6,6 +6,7 @@ import { Post } from '../post/post.entity';
 import { Callout } from '../callout/callout.entity';
 import { Link } from '../link/link.entity';
 import { UUID_LENGTH } from '@common/constants';
+import { Memo } from '@domain/common/memo/memo.entity';
 
 @Entity()
 export class CalloutContribution
@@ -22,6 +23,14 @@ export class CalloutContribution
   })
   @JoinColumn()
   whiteboard?: Whiteboard;
+
+  @OneToOne(() => Memo, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  memo?: Memo;
 
   @OneToOne(() => Post, {
     eager: false,
