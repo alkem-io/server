@@ -6,7 +6,5 @@ export interface InAppNotificationSpaceCommunityInvitationVcPayload
   type: NotificationEvent.SPACE_COMMUNITY_INVITATION_VC;
   invitationID: string;
   inviterID: string;
-  inviterDisplayName: string;
   virtualContributorID: string;
-  virtualContributorDisplayName: string;
 }
