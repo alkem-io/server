@@ -86,6 +86,7 @@ import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/
 import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 import { CreateSpaceAboutInput } from '@domain/space/space.about';
 import { UpdateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.update';
+import { UpdateBaselineLicensePlanOnAccount } from '@domain/space/account/dto/account.dto.update.baseline.license.plan';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -163,6 +164,7 @@ export class BaseHandler extends AbstractHandler {
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
       CreateCalloutOnCalloutsSetInput,
+      UpdateBaselineLicensePlanOnAccount,
     ];
 
     if (types.includes(metatype)) {

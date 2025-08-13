@@ -39,6 +39,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 import { SpaceAboutModule } from '@domain/space/space.about/space.about.module';
 import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
+import { MemoModule } from '@domain/common/memo';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { TemplateContentSpaceModule } from '@domain/template/template-content-sp
     TemplatesSetModule,
     TemplatesManagerModule,
     WhiteboardModule,
+    MemoModule,
     InnovationFlowModule,
     InnovationPackModule,
     PostModule,

@@ -15,8 +15,12 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
 import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
-import { ValidationException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto';
 
 @InstrumentResolver()
 @Resolver()
@@ -144,6 +148,44 @@ export class InnovationFlowResolverMutations {
     );
 
     return await this.innovationFlowService.updateCurrentState(
+      innovationFlowStateData
+    );
+  }
+
+  @Mutation(() => IInnovationFlowState, {
+    description: 'Updates the specified InnovationFlowState.',
+  })
+  async updateInnovationFlowState(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('stateData')
+    innovationFlowStateData: UpdateInnovationFlowStateInput
+  ): Promise<IInnovationFlowState> {
+    const innovationFlowState =
+      await this.innovationFlowStateService.getInnovationFlowStateOrFail(
+        innovationFlowStateData.innovationFlowStateID,
+        {
+          relations: {
+            innovationFlow: true,
+          },
+        }
+      );
+    if (!innovationFlowState.innovationFlow) {
+      throw new EntityNotInitializedException(
+        'InnovationFlowState does not have an associated InnovationFlow.',
+        LogContext.INNOVATION_FLOW,
+        { innovationFlowStateID: innovationFlowState.id }
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationFlowState.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update InnovationFlowState: ${innovationFlowState.id}`
+    );
+
+    return this.innovationFlowService.updateInnovationFlowState(
+      innovationFlowState.innovationFlow.id,
       innovationFlowStateData
     );
   }

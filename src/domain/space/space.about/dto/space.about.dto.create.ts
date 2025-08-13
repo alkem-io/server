@@ -23,11 +23,6 @@ export class CreateSpaceAboutInput {
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   who?: string;
 
-  @Field(() => Markdown, { nullable: true })
-  @IsOptional()
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
-  when?: string;
-
   @Field(() => CreateCommunityGuidelinesInput, {
     nullable: true,
     description: 'The CommunityGuidelines for the Space',

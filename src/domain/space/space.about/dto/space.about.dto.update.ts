@@ -25,9 +25,4 @@ export class UpdateSpaceAboutInput {
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   who?: string;
-
-  @Field(() => Markdown, { nullable: true })
-  @IsOptional()
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
-  when?: string;
 }

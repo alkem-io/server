@@ -51,7 +51,7 @@ sudo bash ./.scripts/bootstrap_synapse.sh
 - Finally, ports available on localhost:
   - 4000 (alkemio server),
   - 3306 (MySQL database)
-  - 8888 (traefik dashobard)
+  - 8888 (traefik dashboard)
   - 3000 (alkemio client)
   - 8008 (synapse server)
   - 4436 (mailslurper UI)

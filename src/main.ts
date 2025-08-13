@@ -16,6 +16,7 @@ import { INestApplication } from '@nestjs/common';
 import { AlkemioConfig } from '@src/types';
 import { renderGraphiQL } from 'graphql-helix';
 import { Request, Response } from 'express';
+
 // this is used - it needs to start before the app
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { apmAgent } from './apm';
@@ -99,6 +100,11 @@ const bootstrap = async () => {
   connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
+  connectMicroservice(
+    app,
+    amqpEndpoint,
+    MessagingQueue.COLLABORATION_DOCUMENT_SERVICE
+  );
   await app.startAllMicroservices();
 };
 

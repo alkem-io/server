@@ -25,6 +25,7 @@ import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.da
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LicenseType } from '@common/enums/license.type';
+import { CreateSpaceAboutInput } from '@domain/space/space.about';
 
 @Injectable()
 export class TemplateContentSpaceService {
@@ -238,6 +239,31 @@ export class TemplateContentSpaceService {
     return await this.save(templateContentSpace);
   }
 
+  public async updateAboutFromExistingSpace(
+    templateContentSpace: ITemplateContentSpace,
+    spaceAbout: CreateSpaceAboutInput,
+    storageAggregator: IStorageAggregator
+  ): Promise<ITemplateContentSpace> {
+    if (!templateContentSpace.about) {
+      throw new EntityNotInitializedException(
+        'TemplateContentSpace not initialized',
+        LogContext.TEMPLATES,
+        { templateContentSpaceId: templateContentSpace.id }
+      );
+    }
+    // Delete space about and its profile and create a new one
+    await this.spaceAboutService.removeSpaceAbout(
+      templateContentSpace.about.id
+    );
+
+    templateContentSpace.about = await this.spaceAboutService.createSpaceAbout(
+      spaceAbout,
+      storageAggregator
+    );
+
+    return templateContentSpace;
+  }
+
   public createLicenseTemplateContentSpace(): ILicense {
     return this.licenseService.createLicense({
       type: LicenseType.TEMPLATE_CONTENT_SPACE,
@@ -274,6 +300,12 @@ export class TemplateContentSpaceService {
         },
         {
           type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: true,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER,
           dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: true,

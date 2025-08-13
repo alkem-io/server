@@ -18,7 +18,7 @@ import { WingbackContract } from '@services/external/wingback/types/wingback.typ
 import { WingbackCustomerNotFound } from '@services/external/wingback/exceptions/wingback.customer.not.found';
 import { WingbackCustomerNotRemoved } from '@services/external/wingback/exceptions/wingback.customer.not.removed';
 import { WingbackCustomerNotCreated } from '@services/external/wingback/exceptions/wingback.customer.not.created';
-import { WingbackError } from '@services/external/wingback/types/wingback.type.error';
+
 import {
   isWingbackException,
   WingbackException,
@@ -54,6 +54,10 @@ export class WingbackManager {
     }
 
     return this.sendGet<WingbackContract>(`/v1/c/contract/${contractId}`);
+  }
+
+  public isEnabled(): boolean {
+    return this.enabled;
   }
 
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#1-create-a-new-customer-in-wingback-backend
@@ -209,7 +213,7 @@ export class WingbackManager {
   async getCustomer(customerId: string): Promise<unknown | undefined> {
     try {
       return await this.sendGet(`/v1/c/customer/${customerId}`);
-    } catch (e) {
+    } catch {
       return undefined;
     }
   }

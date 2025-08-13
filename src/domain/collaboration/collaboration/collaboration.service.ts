@@ -33,6 +33,7 @@ import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 
 @Injectable()
 export class CollaborationService {
@@ -106,6 +107,12 @@ export class CollaborationService {
           limit: 0,
           enabled: false,
         },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
       ],
     });
 
@@ -156,15 +163,22 @@ export class CollaborationService {
     this.innovationFlowService.validateInnovationFlowDefinition(
       innovationFlowData.states
     );
-    const allowedStates = innovationFlowData.states.map(
-      state => state.displayName
-    );
+    const allowedValues = innovationFlowData.states
+      .sort(sortBySortOrder)
+      .map(state => state.displayName);
+    let defaultSelectedValue = innovationFlowData.currentStateDisplayName;
+    if (
+      !defaultSelectedValue ||
+      allowedValues.indexOf(defaultSelectedValue) === -1
+    ) {
+      defaultSelectedValue = allowedValues[0];
+    }
+
     const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
       name: TagsetReservedName.FLOW_STATE,
       type: TagsetType.SELECT_ONE,
-      allowedValues: allowedStates,
-      defaultSelectedValue:
-        allowedStates.length > 0 ? allowedStates[0] : undefined,
+      allowedValues,
+      defaultSelectedValue,
     };
     return tagsetTemplateDataStates;
   }
