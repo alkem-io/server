@@ -71,7 +71,7 @@ export class AuthorizationPolicyResolverFields {
   }
 
   @ResolveField('hasPrivilege', () => Boolean, {
-    nullable: true,
+    nullable: false,
     description:
       'Does the current User have the specified privilege based on this Authorization Policy.',
   })
@@ -85,9 +85,6 @@ export class AuthorizationPolicyResolverFields {
       agentInfo,
       authorization
     );
-    if (!privileges || privileges.length === 0) {
-      return false;
-    }
-    return privileges.includes(privilege);
+    return Array.isArray(privileges) && privileges.includes(privilege);
   }
 }
