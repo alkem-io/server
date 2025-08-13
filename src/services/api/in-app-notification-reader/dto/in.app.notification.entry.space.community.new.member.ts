@@ -7,10 +7,10 @@ import { IInAppNotificationEntry } from './in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { InAppNotificationSpaceCommunityNewMemberPayload } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.space.community.new.member.payload';
 
-@ObjectType('InAppNotificationCommunityNewMember', {
+@ObjectType('InAppNotificationSpaceCommunityNewMember', {
   implements: () => IInAppNotificationEntry,
 })
-export class InAppNotificationEntryCommunityNewMember extends IInAppNotificationEntryBase {
+export class InAppNotificationEntrySpaceCommunityNewMember extends IInAppNotificationEntryBase {
   declare type: NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER;
   declare payload: InAppNotificationSpaceCommunityNewMemberPayload;
   // fields resolved by a concrete resolver

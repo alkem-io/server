@@ -6,10 +6,10 @@ import { IInAppNotificationEntry } from './in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { InAppNotificationSpaceCollaborationCalloutPublishedPayload } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.space.collaboration.callout.published.payload';
 
-@ObjectType('InAppNotificationCalloutPublished', {
+@ObjectType('InAppNotificationSpaceCollaborationCalloutPublished', {
   implements: () => IInAppNotificationEntry,
 })
-export abstract class InAppNotificationEntryCalloutPublished extends IInAppNotificationEntryBase {
+export abstract class InAppNotificationEntrySpaceCollaborationCalloutPublished extends IInAppNotificationEntryBase {
   declare type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED;
   declare payload: InAppNotificationSpaceCollaborationCalloutPublishedPayload;
   // fields resolved by a concrete resolver

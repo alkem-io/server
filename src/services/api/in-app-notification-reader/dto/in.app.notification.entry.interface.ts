@@ -4,9 +4,9 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { InAppNotificationEntryCalloutPublished } from './in.app.notification.entry.callout.published';
+import { InAppNotificationEntrySpaceCollaborationCalloutPublished } from './in.app.notification.entry.space.collaboration.callout.published';
 import { InAppNotificationEntryUserMentioned } from './in.app.notification.entry.user.mentioned';
-import { InAppNotificationEntryCommunityNewMember } from './in.app.notification.entry.community.new.member';
+import { InAppNotificationEntrySpaceCommunityNewMember } from './in.app.notification.entry.space.community.new.member';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { InAppNotificationPayloadBase } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
@@ -17,11 +17,11 @@ import { InAppNotificationPayloadBase } from '@services/adapters/notification-in
   resolveType(inAppNotification) {
     switch (inAppNotification.type) {
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
-        return InAppNotificationEntryCalloutPublished;
+        return InAppNotificationEntrySpaceCollaborationCalloutPublished;
       case NotificationEvent.USER_MENTION:
         return InAppNotificationEntryUserMentioned;
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
-        return InAppNotificationEntryCommunityNewMember;
+        return InAppNotificationEntrySpaceCommunityNewMember;
     }
 
     throw new BaseException(

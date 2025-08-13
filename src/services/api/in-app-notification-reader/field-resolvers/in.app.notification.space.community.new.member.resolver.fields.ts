@@ -2,20 +2,20 @@ import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { InAppNotificationEntryCommunityNewMember } from '../dto/in.app.notification.entry.community.new.member';
+import { InAppNotificationEntrySpaceCommunityNewMember } from '../dto/in.app.notification.entry.space.community.new.member';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
 
-@Resolver(() => InAppNotificationEntryCommunityNewMember)
+@Resolver(() => InAppNotificationEntrySpaceCommunityNewMember)
 export class InAppNotificationCommunityNewMemberResolverFields {
   @ResolveField(() => RoleSetContributorType, {
     nullable: false,
     description: 'The type of the Contributor that joined.',
   })
   public contributorType(
-    @Parent() { payload }: InAppNotificationEntryCommunityNewMember
+    @Parent() { payload }: InAppNotificationEntrySpaceCommunityNewMember
   ) {
     return payload.contributorType;
   }
@@ -26,7 +26,7 @@ export class InAppNotificationCommunityNewMemberResolverFields {
   })
   // todo: rename?
   public actor(
-    @Parent() { payload }: InAppNotificationEntryCommunityNewMember,
+    @Parent() { payload }: InAppNotificationEntrySpaceCommunityNewMember,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {
@@ -38,7 +38,7 @@ export class InAppNotificationCommunityNewMemberResolverFields {
     description: 'The Space that was joined.',
   })
   public space(
-    @Parent() { payload }: InAppNotificationEntryCommunityNewMember,
+    @Parent() { payload }: InAppNotificationEntrySpaceCommunityNewMember,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
     loader: ILoader<ISpace | null>
   ) {
