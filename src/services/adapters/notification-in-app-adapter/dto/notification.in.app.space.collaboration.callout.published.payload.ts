@@ -1,9 +1,8 @@
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from './notification.in.app.payload.base';
+import { InAppNotificationPayloadBaseSpace } from './notification.in.app.payload.space.base';
 
 export interface InAppNotificationSpaceCollaborationCalloutPublishedPayload
-  extends InAppNotificationPayloadBase {
+  extends InAppNotificationPayloadBaseSpace {
   type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED;
   calloutID: string;
-  spaceID: string;
 }
