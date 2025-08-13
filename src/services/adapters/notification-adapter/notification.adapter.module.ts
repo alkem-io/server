@@ -11,6 +11,7 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
 import { NotificationExternalAdapterModule } from '../notification-external-adapter/notification.external.adapter.module';
 import { NotificationInAppAdapterModule } from '../notification-in-app-adapter/notification.in.app.adapter.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
+import { NotificationAdapterSpace } from './notification.adapter.space';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { NotificationRecipientsModule } from '@services/api/notification-recipie
     NotificationExternalAdapterModule,
     NotificationInAppAdapterModule,
   ],
-  providers: [NotificationAdapter],
-  exports: [NotificationAdapter],
+  providers: [NotificationAdapter, NotificationAdapterSpace],
+  exports: [NotificationAdapter, NotificationAdapterSpace],
 })
 export class NotificationAdapterModule {}

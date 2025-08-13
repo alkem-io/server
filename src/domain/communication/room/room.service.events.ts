@@ -3,7 +3,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessage } from '../message/message.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.comment';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from './room.interface';
@@ -20,12 +19,15 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputPostComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.post.comment';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.update.sent';
+import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
 @Injectable()
 export class RoomServiceEvents {
   constructor(
     private activityAdapter: ActivityAdapter,
     private contributionReporter: ContributionReporterService,
+    private notificationAdapterSpace: NotificationAdapterSpace,
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -70,7 +72,7 @@ export class RoomServiceEvents {
       room: room,
       commentSent: message,
     };
-    await this.notificationAdapter.spaceCollaborationPostComment(
+    await this.notificationAdapterSpace.spaceCollaborationPostComment(
       notificationInput
     );
   }
@@ -180,7 +182,7 @@ export class RoomServiceEvents {
       updates: updates,
       lastMessage: lastMessage,
     };
-    await this.notificationAdapter.spaceCommunicationUpdateSent(
+    await this.notificationAdapterSpace.spaceCommunicationUpdateSent(
       notificationInput
     );
   }

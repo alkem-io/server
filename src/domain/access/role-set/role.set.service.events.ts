@@ -11,12 +11,14 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { LogContext } from '@common/enums';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.new.member';
+import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
 
 @Injectable()
 export class RoleSetEventsService {
   constructor(
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
+    private notificationAdapterSpace: NotificationAdapterSpace,
     private activityAdapter: ActivityAdapter,
     private communityResolverService: CommunityResolverService
   ) {}
@@ -59,7 +61,9 @@ export class RoleSetEventsService {
       triggeredBy: agentInfo.userID,
       community,
     };
-    await this.notificationAdapter.spaceCommunityNewMember(notificationInput);
+    await this.notificationAdapterSpace.spaceCommunityNewMember(
+      notificationInput
+    );
 
     // Record the contribution events
     switch (space.level) {

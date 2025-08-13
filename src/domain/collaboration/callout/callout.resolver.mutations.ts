@@ -20,7 +20,6 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
@@ -44,6 +43,7 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.whiteboard.created';
 import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.post.created';
+import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
 
 @InstrumentResolver()
 @Resolver()
@@ -52,7 +52,7 @@ export class CalloutResolverMutations {
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
-    private notificationAdapter: NotificationAdapter,
+    private notificationAdapterSpace: NotificationAdapterSpace,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
@@ -162,7 +162,7 @@ export class CalloutResolverMutations {
               triggeredBy: agentInfo.userID,
               callout: callout,
             };
-            await this.notificationAdapter.spaceCollaborationCalloutPublished(
+            await this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
               notificationInput
             );
           }
@@ -400,7 +400,7 @@ export class CalloutResolverMutations {
       whiteboard: whiteboard,
       triggeredBy: agentInfo.userID,
     };
-    await this.notificationAdapter.spaceCollaborationWhiteboardCreated(
+    await this.notificationAdapterSpace.spaceCollaborationWhiteboardCreated(
       notificationInput
     );
 
@@ -436,7 +436,7 @@ export class CalloutResolverMutations {
       post: post,
       triggeredBy: agentInfo.userID,
     };
-    await this.notificationAdapter.spaceCollaborationPostCreated(
+    await this.notificationAdapterSpace.spaceCollaborationPostCreated(
       notificationInput
     );
 

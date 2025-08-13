@@ -6,7 +6,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.message';
 import { CommunicationSendMessageToUserInput } from './dto/communication.dto.send.message.user';
 import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/organization/notification.input.organization.message';
@@ -15,12 +14,15 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationInputCommunicationLeadsMessage } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.leads.message';
+import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
 @InstrumentResolver()
 @Resolver()
 export class CommunicationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private notificationAdapterSpace: NotificationAdapterSpace,
     private notificationAdapter: NotificationAdapter,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -97,7 +99,9 @@ export class CommunicationResolverMutations {
       communityID: messageData.communityId,
       message: messageData.message,
     };
-    await this.notificationAdapter.spaceContactLeadsMessage(notificationInput);
+    await this.notificationAdapterSpace.spaceContactLeadsMessage(
+      notificationInput
+    );
     return true;
   }
 }
