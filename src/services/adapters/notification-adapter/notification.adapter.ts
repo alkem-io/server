@@ -31,6 +31,13 @@ import { InAppNotificationOrganizationMessageRecipientPayload } from '../notific
 import { InAppNotificationUserCommentReplyPayload } from '../notification-in-app-adapter/dto/user/notification.in.app.user.comment.reply.payload';
 import { InAppNotificationUserMessageRecipientPayload } from '../notification-in-app-adapter/dto/user/notification.in.app.user.message.recipient.payload';
 import { InAppNotificationUserMentionedPayload } from '../notification-in-app-adapter/dto/user/notification.in.app.user.mentioned.payload';
+import { InAppNotificationSpaceCommunityNewMemberAdminPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.new.member.admin.payload';
+import { InAppNotificationSpaceCommunityApplicationAdminPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.application.admin.payload';
+import { InAppNotificationSpaceCommunicationUpdateAdminPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.communication.update.admin.payload';
+import { InAppNotificationSpaceCollaborationPostCreatedAdminPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.post.created.admin.payload';
+import { InAppNotificationSpaceCollaborationPostCreatedPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.post.created.payload';
+import { InAppNotificationPlatformUserProfileCreatedAdminPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.user.profile.created.admin.payload';
+import { InAppNotificationPlatformUserProfileCreatedPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.user.profile.created.payload';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
@@ -147,19 +154,67 @@ export class NotificationAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length >= 0) {
-      const inAppPayload: InAppNotificationSpaceCollaborationCalloutPublishedPayload =
+      const inAppPayload: InAppNotificationSpaceCollaborationPostCreatedPayload =
         {
-          type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+          type: NotificationEvent.SPACE_COLLABORATION_POST_CREATED,
           triggeredByID: eventData.triggeredBy,
           category: NotificationEventCategory.SPACE_MEMBER,
           triggeredAt: new Date(),
           calloutID: eventData.callout.id,
+          postID: eventData.post.id,
           spaceID: space.id,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         inAppPayload,
         inAppReceiverIDs
+      );
+    }
+
+    // ALSO send admin notifications
+    const adminEvent = NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN;
+    const adminRecipients = await this.getNotificationRecipients(
+      adminEvent,
+      eventData,
+      eventData.callout.id
+    );
+
+    const adminPayload =
+      await this.notificationExternalAdapter.buildSpaceCollaborationPostCreatedPayload(
+        adminEvent,
+        eventData.triggeredBy,
+        adminRecipients.emailRecipients,
+        space,
+        eventData
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(
+      adminEvent,
+      adminPayload
+    );
+
+    // Send admin in-app notifications
+    const adminInAppReceiverIDs = adminRecipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (adminInAppReceiverIDs.length >= 0) {
+      const adminInAppPayload: InAppNotificationSpaceCollaborationPostCreatedAdminPayload =
+        {
+          type: NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_ADMIN,
+          triggeredAt: new Date(),
+          calloutID: eventData.callout.id,
+          postID: eventData.post.id,
+          spaceID: space.id,
+          message: {
+            roomID: 'unknown',
+            messageID: eventData.post.id,
+          },
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        adminInAppPayload,
+        adminInAppReceiverIDs
       );
     }
   }
@@ -260,6 +315,49 @@ export class NotificationAdapter {
         inAppReceiverIDs
       );
     }
+
+    // ALSO send admin notifications
+    const adminEvent = NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN;
+    const adminRecipients = await this.getNotificationRecipientsSpace(
+      adminEvent,
+      eventData,
+      space.id
+    );
+
+    const adminPayload =
+      await this.notificationExternalAdapter.buildSpaceCommunityNewMemberPayload(
+        adminEvent,
+        eventData.triggeredBy,
+        adminRecipients.emailRecipients,
+        space,
+        eventData.contributorID
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(
+      adminEvent,
+      adminPayload
+    );
+
+    // Send admin in-app notifications
+    const adminInAppReceiverIDs = adminRecipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (adminInAppReceiverIDs.length > 0) {
+      const adminInAppPayload: InAppNotificationSpaceCommunityNewMemberAdminPayload =
+        {
+          type: NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_ADMIN,
+          triggeredAt: new Date(),
+          spaceID: space.id,
+          contributorType: 'user',
+          newMemberID: eventData.contributorID,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        adminInAppPayload,
+        adminInAppReceiverIDs
+      );
+    }
   }
 
   public async spaceCommunityApplicationCreated(
@@ -304,6 +402,47 @@ export class NotificationAdapter {
       await this.notificationInAppAdapter.sendInAppNotifications(
         inAppPayload,
         inAppReceiverIDs
+      );
+    }
+
+    // ALSO send admin notifications
+    const adminEvent = NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN;
+    const adminRecipients = await this.getNotificationRecipientsSpace(
+      adminEvent,
+      eventData,
+      space.id
+    );
+
+    const adminPayload =
+      await this.notificationExternalAdapter.buildSpaceCommunityApplicationCreatedNotificationPayload(
+        adminEvent,
+        eventData.triggeredBy,
+        adminRecipients.emailRecipients,
+        space
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(
+      adminEvent,
+      adminPayload
+    );
+
+    // Send admin in-app notifications
+    const adminInAppReceiverIDs = adminRecipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (adminInAppReceiverIDs.length > 0) {
+      const adminInAppPayload: InAppNotificationSpaceCommunityApplicationAdminPayload =
+        {
+          type: NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_ADMIN,
+          triggeredAt: new Date(),
+          spaceID: space.id,
+          applicationID: 'unknown',
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        adminInAppPayload,
+        adminInAppReceiverIDs
       );
     }
   }
@@ -542,6 +681,49 @@ export class NotificationAdapter {
       await this.notificationInAppAdapter.sendInAppNotifications(
         inAppPayload,
         inAppReceiverIDs
+      );
+    }
+
+    // ALSO send admin notifications
+    const adminEvent = NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN;
+    const adminRecipients = await this.getNotificationRecipientsSpace(
+      adminEvent,
+      eventData,
+      space.id
+    );
+
+    const adminPayload =
+      await this.notificationExternalAdapter.buildSpaceCommunicationUpdateSentNotificationPayload(
+        adminEvent,
+        eventData.triggeredBy,
+        adminRecipients.emailRecipients,
+        space,
+        eventData.updates,
+        eventData.lastMessage
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(
+      adminEvent,
+      adminPayload
+    );
+
+    // Send admin in-app notifications
+    const adminInAppReceiverIDs = adminRecipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (adminInAppReceiverIDs.length > 0) {
+      const adminInAppPayload: InAppNotificationSpaceCommunicationUpdateAdminPayload =
+        {
+          type: NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.SPACE_ADMIN,
+          triggeredAt: new Date(),
+          spaceID: space.id,
+          updateID: eventData.updates.id,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        adminInAppPayload,
+        adminInAppReceiverIDs
       );
     }
   }
@@ -935,6 +1117,64 @@ export class NotificationAdapter {
       );
 
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPlatformUserProfileCreatedPayload = {
+        type: NotificationEvent.PLATFORM_USER_PROFILE_CREATED,
+        triggeredByID: eventData.triggeredBy,
+        category: NotificationEventCategory.PLATFORM,
+        triggeredAt: new Date(),
+        userID: eventData.userID,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
+
+    // ALSO send admin notifications
+    const adminEvent = NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN;
+    const adminRecipients = await this.getNotificationRecipientsPlatform(
+      adminEvent,
+      eventData
+    );
+
+    const adminPayload =
+      await this.notificationExternalAdapter.buildPlatformUserRegisteredNotificationPayload(
+        adminEvent,
+        eventData.triggeredBy,
+        adminRecipients.emailRecipients,
+        eventData.userID
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(
+      adminEvent,
+      adminPayload
+    );
+
+    // Send admin in-app notifications
+    const adminInAppReceiverIDs = adminRecipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (adminInAppReceiverIDs.length > 0) {
+      const adminInAppPayload: InAppNotificationPlatformUserProfileCreatedAdminPayload =
+        {
+          type: NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN,
+          triggeredByID: eventData.triggeredBy,
+          category: NotificationEventCategory.PLATFORM,
+          triggeredAt: new Date(),
+          userID: eventData.userID,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        adminInAppPayload,
+        adminInAppReceiverIDs
+      );
+    }
   }
 
   public async platformUserRemoved(
