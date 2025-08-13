@@ -803,7 +803,7 @@ export class SearchResultService {
       .filter((x): x is PostParents => !!x)
       .filter(
         postParent =>
-          postParent.callout.settings.visibility !== CalloutVisibility.DRAFT
+          postParent.callout?.settings?.visibility !== CalloutVisibility.DRAFT
       );
   }
 
