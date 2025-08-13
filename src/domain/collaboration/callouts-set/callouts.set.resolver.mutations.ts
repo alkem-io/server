@@ -107,7 +107,7 @@ export class CalloutsSetResolverMutations {
             triggeredBy: agentInfo.userID,
             callout: callout,
           };
-          this.notificationAdapter.SpaceCollaborationCalloutPublished(
+          this.notificationAdapter.spaceCollaborationCalloutPublished(
             notificationInput
           );
         }

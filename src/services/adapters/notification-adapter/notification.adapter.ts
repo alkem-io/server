@@ -45,7 +45,7 @@ export class NotificationAdapter {
     private communityResolverService: CommunityResolverService
   ) {}
 
-  public async SpaceCollaborationCalloutPublished(
+  public async spaceCollaborationCalloutPublished(
     eventData: NotificationInputCalloutPublished
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED;
@@ -79,7 +79,7 @@ export class NotificationAdapter {
     const inAppPayload: InAppNotificationCalloutPublishedPayload = {
       type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
       calloutID: eventData.callout.id,
-      spaceID: payload.space.id,
+      spaceID: space.id,
       triggeredByID: eventData.triggeredBy,
       category: InAppNotificationCategory.MEMBER,
       triggeredAt: new Date(),
@@ -130,7 +130,7 @@ export class NotificationAdapter {
         eventData.callout.id
       );
     const space =
-      await this.communityResolverService.getSpaceForCollaborationOrFail(
+      await this.communityResolverService.getSpaceForCommunityOrFail(
         community.id
       );
     const recipients = await this.getNotificationRecipients(
@@ -538,10 +538,6 @@ export class NotificationAdapter {
     eventData: NotificationInputPlatformInvitation
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM;
-    const recipients = await this.getNotificationRecipientsPlatform(
-      event,
-      eventData
-    );
 
     const space =
       await this.communityResolverService.getSpaceForCommunityOrFail(
@@ -552,8 +548,7 @@ export class NotificationAdapter {
       await this.notificationExternalAdapter.buildSpaceCommunityExternalInvitationCreatedNotificationPayload(
         event,
         eventData.triggeredBy,
-        recipients.emailRecipients,
-        eventData.invitedUser,
+        eventData.invitedUserEmail,
         space,
         eventData.welcomeMessage
       );

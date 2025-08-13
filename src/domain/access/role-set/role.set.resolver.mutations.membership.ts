@@ -721,7 +721,7 @@ export class RoleSetResolverMutationsMembership {
           const notificationInput: NotificationInputPlatformInvitation = {
             triggeredBy: agentInfo.userID,
             community,
-            invitedUser: platformInvitation.email,
+            invitedUserEmail: platformInvitation.email,
             welcomeMessage: platformInvitation.welcomeMessage,
           };
           await this.notificationAdapter.platformInvitationCreated(

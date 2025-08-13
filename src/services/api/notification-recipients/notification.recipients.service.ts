@@ -35,7 +35,7 @@ export class NotificationRecipientsService {
     eventData: NotificationRecipientsInput
   ): Promise<NotificationRecipientResult> {
     this.logger.verbose?.(
-      `Getting notification recipients for: ${JSON.stringify(eventData)}`,
+      `[${eventData.eventType}] - Getting notification recipients: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
     );
 
@@ -45,6 +45,13 @@ export class NotificationRecipientsService {
         eventData.eventType,
         eventData.entityID
       );
+
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - Privilege required: ${privilegeRequired}, Credential criteria: ${JSON.stringify(
+        credentialCriteria
+      )}`,
+      LogContext.NOTIFICATIONS
+    );
 
     // Note: the candidate recipients are set to a level that is greater than or equal to the end set of recipients
     // The final list of recipients will be filtered based on the privilege required
@@ -69,6 +76,10 @@ export class NotificationRecipientsService {
           recipient.settings?.notification
         )
     );
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - Found ${recipientsWithNotificationEnabled.length} recipients with notifications enabled`,
+      LogContext.NOTIFICATIONS
+    );
 
     // Filter out recipients who do not have the required privilege
     let recipientsWithPrivilege = recipientsWithNotificationEnabled;
@@ -89,7 +100,10 @@ export class NotificationRecipientsService {
       );
     }
 
-    // TODO: check checkIsUserMessagingAllowed??
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - Found ${recipientsWithPrivilege.length} recipients with privilege`,
+      LogContext.NOTIFICATIONS
+    );
 
     const inAppParticipantCandidates = inAppEnabledForEventType
       ? recipientsWithPrivilege
@@ -156,8 +170,6 @@ export class NotificationRecipientsService {
         return notificationSettings.space.communityNewMember;
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
         return notificationSettings.space.communityNewMemberAdmin;
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
-        return notificationSettings.space.communityInvitationUser;
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN:
         return notificationSettings.space.collaborationPostCreatedAdmin;
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
@@ -168,6 +180,9 @@ export class NotificationRecipientsService {
         return notificationSettings.space.collaborationWhiteboardCreated;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
+      // ALways true!
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
+        return true;
 
       default:
         throw new ValidationException(
@@ -247,21 +262,16 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria = this.getUserSelfCriteria(entityID);
         break;
       }
     }
-    this.logger.verbose?.(
-      `event: ${eventType}, Privilege required: ${privilegeRequired}, Credential criteria: ${JSON.stringify(
-        credentialCriteria
-      )}`,
-      LogContext.NOTIFICATIONS
-    );
     return { privilegeRequired, credentialCriteria };
   }
 
@@ -305,9 +315,9 @@ export class NotificationRecipientsService {
         }
         return organization.authorization;
       }
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
+
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
+      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
@@ -315,9 +325,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
       case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED:
       case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
-      case NotificationEvent.USER_MENTION:
-      case NotificationEvent.USER_COMMENT_REPLY: {
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         // get the space authorization policy
         if (!entityID) {
           throw new ValidationException(
@@ -334,6 +342,30 @@ export class NotificationRecipientsService {
         }
         return space.authorization;
       }
+
+      case NotificationEvent.USER_MENTION:
+      case NotificationEvent.USER_MESSAGE_RECIPIENT:
+      case NotificationEvent.USER_MESSAGE_SENDER:
+      case NotificationEvent.USER_COMMENT_REPLY:
+      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
+        // get the User authorization policy
+        if (!entityID) {
+          throw new ValidationException(
+            'Entity ID is required for user notification recipients',
+            LogContext.NOTIFICATIONS
+          );
+        }
+        const user = await this.userLookupService.getUserOrFail(entityID);
+        if (!user.authorization) {
+          throw new RelationshipNotFoundException(
+            `User does not have an authorization policy: ${user.id}`,
+            LogContext.NOTIFICATIONS
+          );
+        }
+        return user.authorization;
+      }
+
       default:
         // For other events, no specific authorization policy is needed
         // or the event does not require a specific policy

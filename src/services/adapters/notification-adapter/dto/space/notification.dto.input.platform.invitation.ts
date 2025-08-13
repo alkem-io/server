@@ -4,6 +4,6 @@ import { NotificationInputBase } from '../notification.dto.input.base';
 export interface NotificationInputPlatformInvitation
   extends NotificationInputBase {
   community: ICommunity;
-  invitedUser: string;
+  invitedUserEmail: string;
   welcomeMessage?: string;
 }

@@ -162,7 +162,7 @@ export class CalloutResolverMutations {
               triggeredBy: agentInfo.userID,
               callout: callout,
             };
-            await this.notificationAdapter.SpaceCollaborationCalloutPublished(
+            await this.notificationAdapter.spaceCollaborationCalloutPublished(
               notificationInput
             );
           }

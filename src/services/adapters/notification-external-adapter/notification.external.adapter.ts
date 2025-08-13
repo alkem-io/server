@@ -160,21 +160,40 @@ export class NotificationExternalAdapter {
   async buildSpaceCommunityExternalInvitationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
-    recipients: IUser[],
     invitedUserEmail: string,
     space: ISpace,
     message?: string
   ): Promise<SpaceCommunityPlatformInvitationCreatedEventPayload> {
+    const recipients: UserPayload[] = [
+      {
+        email: invitedUserEmail,
+        firstName: '',
+        lastName: '',
+        id: '',
+        nameID: '',
+        type: RoleSetContributorType.USER,
+        profile: {
+          url: '',
+          displayName: '',
+        },
+      },
+    ];
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
-      recipients,
+      [],
       space
     );
     const payload: SpaceCommunityPlatformInvitationCreatedEventPayload = {
-      invitees: [{ email: invitedUserEmail }],
+      recipients,
       welcomeMessage: message,
-      ...spacePayload,
+      space: spacePayload.space,
+      triggeredBy: spacePayload.triggeredBy,
+      eventType,
+      platform: spacePayload.platform,
+      invitee: {
+        email: invitedUserEmail,
+      },
     };
 
     return payload;
@@ -427,11 +446,9 @@ export class NotificationExternalAdapter {
       triggeredBy,
       recipients
     );
-    const userPayload = await this.getContributorPayloadOrFail(userID);
-    const actorPayload = await this.getContributorPayloadOrFail(triggeredBy);
+    const userPayload = await this.getUserPayloadOrFail(userID);
     const result: PlatformGlobalRoleChangeEventPayload = {
       user: userPayload,
-      actor: actorPayload,
       type,
       role,
       ...basePayload,
@@ -450,7 +467,7 @@ export class NotificationExternalAdapter {
       triggeredBy,
       recipients
     );
-    const userPayload = await this.getContributorPayloadOrFail(userID);
+    const userPayload = await this.getUserPayloadOrFail(userID);
 
     const result: PlatformUserRegistrationEventPayload = {
       user: userPayload,
@@ -788,7 +805,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[]
   ): Promise<BaseEventPayload> {
-    const contributor = await this.getContributorPayloadOrFail(triggeredBy);
+    const contributor = await this.getUserPayloadOrFail(triggeredBy);
     const result: BaseEventPayload = {
       eventType,
       triggeredBy: contributor,
