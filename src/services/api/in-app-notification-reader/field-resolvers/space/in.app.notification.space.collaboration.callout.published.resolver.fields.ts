@@ -7,7 +7,7 @@ import {
   SpaceLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { InAppNotificationEntrySpaceCollaborationCalloutPublished } from '../dto/space/in.app.notification.entry.space.collaboration.callout.published';
+import { InAppNotificationEntrySpaceCollaborationCalloutPublished } from '../../dto/space/in.app.notification.entry.space.collaboration.callout.published';
 
 @Resolver(() => InAppNotificationEntrySpaceCollaborationCalloutPublished)
 export class InAppNotificationSpaceCollaborationCalloutPublishedResolverFields {

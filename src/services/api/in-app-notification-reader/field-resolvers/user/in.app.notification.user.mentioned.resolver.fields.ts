@@ -1,5 +1,5 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { InAppNotificationEntryUserMentioned } from '../dto/user/in.app.notification.entry.user.mentioned';
+import { InAppNotificationEntryUserMentioned } from '../../dto/user/in.app.notification.entry.user.mentioned';
 
 @Resolver(() => InAppNotificationEntryUserMentioned)
 export class InAppNotificationUserMentionedResolverFields {
