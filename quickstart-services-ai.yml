@@ -345,7 +345,7 @@ services:
       - alkemio_dev_net
     depends_on:
       rabbitmq:
-        condition: "service_healthy"
+        condition: 'service_healthy'
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -391,7 +391,7 @@ services:
       - alkemio_dev_net
     depends_on:
       rabbitmq:
-        condition: "service_healthy"
+        condition: 'service_healthy'
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -416,7 +416,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor-engine-expert:v0.11.1
+    image: alkemio/virtual-contributor-engine-expert:v0.13.0
     platform: linux/x86_64
     restart: always
     volumes:
@@ -425,7 +425,7 @@ services:
       - alkemio_dev_net
     depends_on:
       rabbitmq:
-        condition: "service_healthy"
+        condition: 'service_healthy'
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -470,7 +470,7 @@ services:
       - alkemio_dev_net
     depends_on:
       rabbitmq:
-        condition: "service_healthy"
+        condition: 'service_healthy'
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -501,7 +501,6 @@ services:
       - VECTOR_DB_HOST
       - VECTOR_DB_CREDENTIALS
 
-
   virtual_contributor_engine_libra_flow:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
@@ -516,7 +515,7 @@ services:
       - alkemio_dev_net
     depends_on:
       rabbitmq:
-        condition: "service_healthy"
+        condition: 'service_healthy'
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -560,11 +559,11 @@ services:
     platform: linux/x86_64
     restart: always
     volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+      - /dev/shm:/dev/shm
+      - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
     depends_on:
       rabbitmq:
-        condition: "service_healthy"
+        condition: 'service_healthy'
     environment:
       - RABBITMQ_HOST=localhost
       - RABBITMQ_USER
@@ -610,7 +609,7 @@ services:
       - alkemio_dev_net
     depends_on:
       rabbitmq:
-        condition: "service_healthy"
+        condition: 'service_healthy'
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -642,7 +641,7 @@ services:
       - alkemio_dev_net
     depends_on:
       rabbitmq:
-        condition: "service_healthy"
+        condition: 'service_healthy'
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
