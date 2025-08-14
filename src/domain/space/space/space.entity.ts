@@ -131,5 +131,6 @@ export class Space extends AuthorizableEntity implements ISpace {
     super();
     this.nameID = '';
     this.settings = {} as ISpaceSettings;
+    this.platformRolesAccess = { roles: [] } as IPlatformRolesAccess;
   }
 }
