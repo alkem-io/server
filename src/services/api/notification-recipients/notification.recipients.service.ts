@@ -354,6 +354,7 @@ export class NotificationRecipientsService {
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
       case NotificationEvent.PLATFORM_SPACE_CREATED:
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
       case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
       case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
         // get the platform authorization policy
