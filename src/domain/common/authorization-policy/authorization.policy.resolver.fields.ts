@@ -1,4 +1,4 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
@@ -64,5 +64,23 @@ export class AuthorizationPolicyResolverFields {
       agentInfo,
       authorization
     );
+  }
+
+  @ResolveField('hasPrivilege', () => Boolean, {
+    nullable: false,
+    description:
+      'Does the current User have the specified privilege based on this Authorization Policy.',
+  })
+  hasPrivilege(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() authorization: IAuthorizationPolicy,
+    @Args('privilege', { type: () => AuthorizationPrivilege, nullable: false })
+    privilege: AuthorizationPrivilege
+  ): boolean {
+    const privileges = this.authorizationPolicyService.getAgentPrivileges(
+      agentInfo,
+      authorization
+    );
+    return Array.isArray(privileges) && privileges.includes(privilege);
   }
 }
