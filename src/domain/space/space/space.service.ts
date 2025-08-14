@@ -849,8 +849,7 @@ export class SpaceService {
       return undefined;
     }
 
-    const parentSpace = await this.spaceRepository.findOne({
-      where: { id: space.id },
+    const { parentSpace } = await this.getSpaceOrFail(space.id, {
       relations: {
         parentSpace: true,
       },
@@ -858,8 +857,9 @@ export class SpaceService {
 
     if (!parentSpace || !parentSpace.platformRolesAccess) {
       throw new EntityNotFoundException(
-        `Unable to find parent space platform roles access for subspace ${space.id}`,
-        LogContext.SPACES
+        'Unable to find parent space platform roles access for subspace',
+        LogContext.SPACES,
+        { spaceId: space.id }
       );
     }
 
