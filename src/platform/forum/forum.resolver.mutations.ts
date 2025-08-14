@@ -15,7 +15,6 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { ForumDiscussionUpdated } from './dto/forum.dto.event.discussion.updated';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputPlatformForumDiscussionCreated } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.forum.discussion.created';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { ValidationException } from '@common/exceptions/validation.exception';
@@ -23,6 +22,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -30,7 +30,7 @@ export class ForumResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private notificationAdapter: NotificationAdapter,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private forumService: ForumService,
     private namingService: NamingService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
@@ -97,7 +97,7 @@ export class ForumResolverMutations {
       triggeredBy: agentInfo.userID,
       discussion: discussion,
     };
-    await this.notificationAdapter.platformForumDiscussionCreated(
+    await this.notificationPlatformAdapter.platformForumDiscussionCreated(
       notificationInput
     );
 

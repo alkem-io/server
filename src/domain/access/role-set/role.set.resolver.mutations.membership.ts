@@ -62,7 +62,8 @@ import { compact } from 'lodash';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc';
-import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -73,7 +74,8 @@ export class RoleSetResolverMutationsMembership {
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private notificationAdapter: NotificationAdapter,
-    private notificationAdapterSpace: NotificationAdapterSpace,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private accountLookupService: AccountLookupService,
@@ -726,7 +728,7 @@ export class RoleSetResolverMutationsMembership {
             invitedUserEmail: platformInvitation.email,
             welcomeMessage: platformInvitation.welcomeMessage,
           };
-          await this.notificationAdapter.platformInvitationCreated(
+          await this.notificationPlatformAdapter.platformInvitationCreated(
             notificationInput
           );
           break;

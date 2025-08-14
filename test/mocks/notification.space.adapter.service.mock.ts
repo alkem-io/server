@@ -1,11 +1,11 @@
 import { ValueProvider } from '@nestjs/common';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { PublicPart } from '../utils/public-part';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 
-export const MockNotificationAdapter: ValueProvider<
-  PublicPart<NotificationAdapter>
+export const MockNotificationSpaceAdapter: ValueProvider<
+  PublicPart<NotificationSpaceAdapter>
 > = {
-  provide: NotificationAdapter,
+  provide: NotificationSpaceAdapter,
   useValue: {
     spaceCollaborationCalloutPublished: jest.fn(),
     spaceCollaborationPostCreated: jest.fn(),
@@ -13,7 +13,5 @@ export const MockNotificationAdapter: ValueProvider<
     spaceCommunicationUpdateSent: jest.fn(),
     spaceCommunityApplicationCreated: jest.fn(),
     spaceCommunityNewMember: jest.fn(),
-    platformForumDiscussionCreated: jest.fn(),
-    platformUserRegistered: jest.fn(),
   },
 };

@@ -19,15 +19,17 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputPostComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.post.comment';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.update.sent';
-import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 
 @Injectable()
 export class RoomServiceEvents {
   constructor(
     private activityAdapter: ActivityAdapter,
     private contributionReporter: ContributionReporterService,
-    private notificationAdapterSpace: NotificationAdapterSpace,
+    private notificationSpaceAdapter: NotificationSpaceAdapter,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -72,7 +74,7 @@ export class RoomServiceEvents {
       room: room,
       commentSent: message,
     };
-    await this.notificationAdapterSpace.spaceCollaborationPostComment(
+    await this.notificationSpaceAdapter.spaceCollaborationPostComment(
       notificationInput
     );
   }
@@ -88,7 +90,7 @@ export class RoomServiceEvents {
         discussion,
         commentSent: message,
       };
-    this.notificationAdapter.platformForumDiscussionComment(
+    this.notificationPlatformAdapter.platformForumDiscussionComment(
       forumDiscussionCommentNotificationInput
     );
   }
@@ -182,7 +184,7 @@ export class RoomServiceEvents {
       updates: updates,
       lastMessage: lastMessage,
     };
-    await this.notificationAdapterSpace.spaceCommunicationUpdateSent(
+    await this.notificationSpaceAdapter.spaceCommunicationUpdateSent(
       notificationInput
     );
   }

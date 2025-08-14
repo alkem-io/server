@@ -6,7 +6,6 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleChangeType } from '@alkemio/notifications-lib';
 import { IUser } from '@domain/community/user/user.interface';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { RoleName } from '@common/enums/role.name';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
@@ -22,6 +21,7 @@ import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
 import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
 import { PlatformService } from '@platform/platform/platform.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -31,7 +31,7 @@ export class PlatformRoleResolverMutations {
     private accountLookupService: AccountLookupService,
     private accountLicenseService: AccountLicenseService,
     private authorizationService: AuthorizationService,
-    private notificationAdapter: NotificationAdapter,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private licenseService: LicenseService,
     private agentService: AgentService,
     private roleSetService: RoleSetService,
@@ -193,6 +193,8 @@ export class PlatformRoleResolverMutations {
       type: type,
       role: role,
     };
-    await this.notificationAdapter.platformGlobalRoleChanged(notificationInput);
+    await this.notificationPlatformAdapter.platformGlobalRoleChanged(
+      notificationInput
+    );
   }
 }

@@ -7,7 +7,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { RegistrationService } from './registration.service';
 import { NotificationInputPlatformUserRegistered } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.registered';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -23,13 +22,14 @@ import { AccountAuthorizationService } from '@domain/space/account/account.servi
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteOrganizationInput } from '@domain/community/organization/dto/organization.dto.delete';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 
 @InstrumentResolver()
 @Resolver()
 export class RegistrationResolverMutations {
   constructor(
     private userAuthorizationService: UserAuthorizationService,
-    private notificationAdapter: NotificationAdapter,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private registrationService: RegistrationService,
     private userService: UserService,
     private organizationService: OrganizationService,
@@ -143,7 +143,9 @@ export class RegistrationResolverMutations {
       triggeredBy: agentInfo.userID,
       userID: user.id,
     };
-    await this.notificationAdapter.platformUserRegistered(notificationInput);
+    await this.notificationPlatformAdapter.platformUserRegistered(
+      notificationInput
+    );
   }
 
   @Mutation(() => IUser, {
@@ -172,7 +174,9 @@ export class RegistrationResolverMutations {
       triggeredBy: agentInfo.userID,
       user,
     };
-    await this.notificationAdapter.platformUserRemoved(notificationInput);
+    await this.notificationPlatformAdapter.platformUserRemoved(
+      notificationInput
+    );
     return userDeleted;
   }
 

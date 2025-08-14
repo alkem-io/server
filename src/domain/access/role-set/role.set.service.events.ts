@@ -11,14 +11,14 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { LogContext } from '@common/enums';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.new.member';
-import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 
 @Injectable()
 export class RoleSetEventsService {
   constructor(
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
-    private notificationAdapterSpace: NotificationAdapterSpace,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
     private activityAdapter: ActivityAdapter,
     private communityResolverService: CommunityResolverService
   ) {}

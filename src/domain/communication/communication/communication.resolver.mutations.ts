@@ -14,7 +14,7 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationInputCommunicationLeadsMessage } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.leads.message';
-import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
 @InstrumentResolver()
@@ -22,7 +22,7 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 export class CommunicationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private notificationAdapterSpace: NotificationAdapterSpace,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
     private notificationAdapter: NotificationAdapter,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

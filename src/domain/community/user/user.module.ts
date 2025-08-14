@@ -15,7 +15,6 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
-import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -33,7 +32,6 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
   imports: [
     ProfileModule,
     UserSettingsModule,
-    NotificationAdapterModule,
     CommunicationAdapterModule,
     AgentModule,
     AuthenticationAgentInfoModule,

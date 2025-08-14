@@ -10,7 +10,7 @@ export * from './geo.location.service.mock';
 export * from './space.filter.service.mock';
 export * from './space.service.mock';
 export * from './http.service.mock';
-export * from './notification.adapter.service.mock';
+export * from './notification.platform.adapter.service.mock';
 export * from './notification.external.adapter.mock';
 export * from './notifications.service.mock';
 export * from './organization.service.mock';

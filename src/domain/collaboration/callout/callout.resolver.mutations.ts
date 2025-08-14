@@ -43,7 +43,7 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.whiteboard.created';
 import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.post.created';
-import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -52,7 +52,7 @@ export class CalloutResolverMutations {
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
-    private notificationAdapterSpace: NotificationAdapterSpace,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,

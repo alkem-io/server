@@ -24,7 +24,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { NotificationAdapterSpace } from '@services/adapters/notification-adapter/notification.adapter.space';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -38,7 +38,7 @@ export class CalloutsSetResolverMutations {
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
-    private notificationAdapterSpace: NotificationAdapterSpace,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
     private namingService: NamingService,
     private temporaryStorageService: TemporaryStorageService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

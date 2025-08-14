@@ -12,7 +12,6 @@ import { SpaceService } from '../space/space.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.space.created';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
@@ -46,6 +45,7 @@ import { VirtualContributorService } from '@domain/community/virtual-contributor
 import { InstrumentResolver } from '@src/apm/decorators';
 import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.baseline.license.plan';
 import { AccountLicensePlanService } from '../account.license.plan/account.license.plan.service';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -67,7 +67,7 @@ export class AccountResolverMutations {
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private spaceLicenseService: SpaceLicenseService,
-    private notificationAdapter: NotificationAdapter,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private temporaryStorageService: TemporaryStorageService,
     private licenseService: LicenseService,
     private accountLicensePlanService: AccountLicensePlanService
@@ -138,7 +138,9 @@ export class AccountResolverMutations {
       triggeredBy: agentInfo.userID,
       space,
     };
-    await this.notificationAdapter.platformSpaceCreated(notificationInput);
+    await this.notificationPlatformAdapter.platformSpaceCreated(
+      notificationInput
+    );
 
     return space;
   }
