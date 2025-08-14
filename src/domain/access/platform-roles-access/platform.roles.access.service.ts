@@ -1,4 +1,9 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  LoggerService,
+  NotImplementedException,
+} from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IPlatformAccessRole } from './platform.roles.access.role.interface';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
@@ -11,7 +16,7 @@ export class PlatformRolesAccessService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public getRolesWithPrivileges(
+  private getRolesWithPrivileges(
     platformAccessRoles: IPlatformAccessRole[],
     allowedPrivileges: AuthorizationPrivilege[]
   ): RoleName[] {
@@ -101,7 +106,7 @@ export class PlatformRolesAccessService {
       case RoleName.ANONYMOUS:
         return AuthorizationCredential.GLOBAL_ANONYMOUS;
       default:
-        throw new Error(`Invalid role name: ${roleName}`);
+        throw new NotImplementedException(`Invalid role name: ${roleName}`);
     }
   }
 }
