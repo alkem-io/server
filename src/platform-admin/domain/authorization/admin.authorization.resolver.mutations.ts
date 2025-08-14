@@ -194,9 +194,6 @@ export class AdminAuthorizationResolverMutations {
       where: {
         level: SpaceLevel.L0,
       },
-      relations: {
-        subspaces: true,
-      },
     });
     for (const space of spaces) {
       await this.spaceService.updatePlatformRolesAccessRecursively(space);

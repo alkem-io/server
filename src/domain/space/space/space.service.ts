@@ -699,6 +699,14 @@ export class SpaceService {
     space: ISpace,
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
+    const { subspaces } = await this.getSpaceOrFail(space.id, {
+      relations: {
+        subspaces: {
+          subspaces: true,
+        },
+      },
+    });
+
     space.platformRolesAccess =
       this.spacePlatformRolesAccessService.createPlatformRolesAccess(
         space,
@@ -708,8 +716,8 @@ export class SpaceService {
     const result = await this.save(space);
 
     // If the space has subspaces, update their platform roles access recursively
-    if (space.subspaces && space.subspaces.length > 0) {
-      for (const subspace of space.subspaces) {
+    if (subspaces && subspaces.length > 0) {
+      for (const subspace of subspaces) {
         await this.updatePlatformRolesAccessRecursively(
           subspace,
           space.platformRolesAccess
