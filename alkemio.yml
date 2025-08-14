@@ -411,6 +411,9 @@ collaboration:
   whiteboards:
     enabled: ${WHITEBOARDS_ENABLED}:true
     max_collaborators_in_room: ${WHITEBOARD_MAX_COLLABORATORS_IN_ROOM}:20
+  memo:
+    enabled: ${MEMO_ENABLED}:true
+    max_collaborators_in_room: ${MEMO_MAX_COLLABORATORS_IN_ROOM}:20
 
 ## Configuration of the legal / usability aspects of the platform
 platform:

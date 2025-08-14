@@ -1,8 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { AlkemioConfig } from '@src/types';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -32,13 +34,21 @@ type AccessGrantedInputData = {
 
 @Injectable()
 export class CollaborativeDocumentIntegrationService {
+  private readonly maxCollaboratorsInRoom: number;
+
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger,
     private readonly authorizationService: AuthorizationService,
     private readonly authenticationService: AuthenticationService,
     private readonly agentInfoService: AgentInfoService,
-    private readonly memoService: MemoService
-  ) {}
+    private readonly memoService: MemoService,
+    private readonly configService: ConfigService<AlkemioConfig, true>
+  ) {
+    this.maxCollaboratorsInRoom = this.configService.get(
+      'collaboration.memo.max_collaborators_in_room',
+      { infer: true }
+    );
+  }
 
   public async accessGranted(data: AccessGrantedInputData): Promise<boolean> {
     try {
@@ -76,6 +86,8 @@ export class CollaborativeDocumentIntegrationService {
       return {
         read: false,
         update: false,
+        isMultiUser: false,
+        maxCollaborators: 0,
       };
     }
 
@@ -85,7 +97,11 @@ export class CollaborativeDocumentIntegrationService {
       privilege: AuthorizationPrivilege.UPDATE_CONTENT,
     });
 
-    return { read, update };
+    const isMultiUser = await this.memoService.isMultiUser(documentId);
+
+    const maxCollaborators = isMultiUser ? this.maxCollaboratorsInRoom : 1;
+
+    return { read, update, isMultiUser, maxCollaborators };
   }
 
   public who(data: WhoInputData): Promise<AgentInfo> {
