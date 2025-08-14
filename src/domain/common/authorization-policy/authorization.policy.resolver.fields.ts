@@ -1,5 +1,5 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyService } from './authorization.policy.service';
@@ -17,7 +17,6 @@ export class AuthorizationPolicyResolverFields {
     description:
       'The set of credential rules that are contained by this Authorization Policy.',
   })
-  @Profiling.api
   credentialRules(
     @Parent() authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
@@ -33,7 +32,6 @@ export class AuthorizationPolicyResolverFields {
         'The set of verified credential rules that are contained by this Authorization Policy.',
     }
   )
-  @Profiling.api
   verifiedCredentialRules(
     @Parent() authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleVerifiedCredential[] {
@@ -47,7 +45,6 @@ export class AuthorizationPolicyResolverFields {
     description:
       'The set of privilege rules that are contained by this Authorization Policy.',
   })
-  @Profiling.api
   privilegeRules(
     @Parent() authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRulePrivilege[] {
@@ -59,7 +56,6 @@ export class AuthorizationPolicyResolverFields {
     description:
       'The privileges granted to the current user based on this Authorization Policy.',
   })
-  @Profiling.api
   myPrivileges(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() authorization: IAuthorizationPolicy

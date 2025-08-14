@@ -1,6 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { SpaceService } from './space.service';
 import { DeleteSpaceInput, UpdateSpaceInput } from '@domain/space/space';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -43,7 +43,6 @@ export class SpaceResolverMutations {
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
   })
-  @Profiling.api
   async updateSpace(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('spaceData') spaceData: UpdateSpaceInput
@@ -129,8 +128,10 @@ export class SpaceResolverMutations {
         settingsData.settings
       );
 
-    space = await this.spaceService.updateSpaceSettings(space, settingsData);
-    space = await this.spaceService.save(space);
+    space = await this.spaceService.updateSettings(
+      space.id,
+      settingsData.settings
+    );
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
     // but not all settings will require this, so only update if necessary
     if (shouldUpdateAuthorization) {
@@ -164,6 +165,7 @@ export class SpaceResolverMutations {
       space,
       updateData
     );
+
     space = await this.spaceService.save(space);
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);

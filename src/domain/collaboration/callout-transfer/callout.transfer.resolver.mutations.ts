@@ -18,6 +18,7 @@ import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { TransferCalloutInput } from './dto/callouts.set.dto.transfer.callout';
 import { CalloutTransferService } from './callout.transfer.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -29,6 +30,7 @@ export class CalloutTransferResolverMutations {
     private calloutAuthorizationService: CalloutAuthorizationService,
     private calloutService: CalloutService,
     private calloutTransferService: CalloutTransferService,
+    private namingService: NamingService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -86,11 +88,17 @@ export class CalloutTransferResolverMutations {
       agentInfo
     );
 
+    const { platformRolesAccess } =
+      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+        callout.id
+      );
+
     // Reset the authorization policy for the callout
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,
-        sourceCalloutsSet.authorization
+        sourceCalloutsSet.authorization,
+        platformRolesAccess
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);

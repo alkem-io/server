@@ -51,6 +51,9 @@ const createTestSpace = (id: string): ISpace => {
     settings: spaceSettings,
     levelZeroSpaceID: '',
     visibility: SpaceVisibility.ACTIVE,
+    platformRolesAccess: {
+      roles: [],
+    },
     createdDate: new Date(),
     updatedDate: new Date(),
     about: {
