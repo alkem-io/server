@@ -17,6 +17,7 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { Post } from '@domain/collaboration/post';
@@ -688,6 +689,9 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        settings: {
+          visibility: true,
+        },
         contributions: {
           id: true,
           post: {
@@ -796,7 +800,11 @@ export class SearchResultService {
           space,
         };
       })
-      .filter((x): x is PostParents => !!x);
+      .filter((x): x is PostParents => !!x)
+      .filter(
+        postParent =>
+          postParent.callout?.settings?.visibility !== CalloutVisibility.DRAFT
+      );
   }
 
   private async getUsersInSpace(spaceId: string): Promise<string[]> {
