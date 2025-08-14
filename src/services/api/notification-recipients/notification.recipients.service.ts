@@ -47,7 +47,7 @@ export class NotificationRecipientsService {
       );
 
     this.logger.verbose?.(
-      `[${eventData.eventType}] - Privilege required: ${privilegeRequired}, Credential criteria: ${JSON.stringify(
+      `[${eventData.eventType}] - 1. Privilege required: ${privilegeRequired}, Credential criteria: ${JSON.stringify(
         credentialCriteria
       )}`,
       LogContext.NOTIFICATIONS
@@ -56,18 +56,12 @@ export class NotificationRecipientsService {
     // Note: the candidate recipients are set to a level that is greater than or equal to the end set of recipients
     // The final list of recipients will be filtered based on the privilege required
     const candidateRecipients =
-      await this.userLookupService.usersWithCredentials(
-        credentialCriteria,
-        undefined,
-        {
-          relations: {
-            settings: true,
-            agent: {
-              credentials: true,
-            },
-          },
-        }
-      );
+      await this.userLookupService.usersWithCredentials(credentialCriteria);
+
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 2. ...identified ${candidateRecipients.length} potential recipients matching criteria`,
+      LogContext.NOTIFICATIONS
+    );
 
     const recipientsWithNotificationEnabled = candidateRecipients.filter(
       recipient =>
@@ -77,31 +71,56 @@ export class NotificationRecipientsService {
         )
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - Found ${recipientsWithNotificationEnabled.length} recipients with notifications enabled`,
+      `[${eventData.eventType}] - 3. ...${recipientsWithNotificationEnabled.length} of which have this notification enabled`,
       LogContext.NOTIFICATIONS
     );
 
+    // Need to reload the users to get the full set of credentials for use in authorization evaluation
+    const candidateRecipientIDs = candidateRecipients.map(
+      recipient => recipient.id
+    );
+    const recipientsWithNotificationEnabledWithCredentials =
+      await this.userLookupService.getUsersByUUID(candidateRecipientIDs, {
+        relations: {
+          settings: true,
+          agent: {
+            credentials: true,
+          },
+        },
+      });
+
     // Filter out recipients who do not have the required privilege
-    let recipientsWithPrivilege = recipientsWithNotificationEnabled;
-    if (privilegeRequired && recipientsWithNotificationEnabled.length > 0) {
+    let recipientsWithPrivilege =
+      recipientsWithNotificationEnabledWithCredentials;
+    if (
+      privilegeRequired &&
+      recipientsWithNotificationEnabledWithCredentials.length > 0
+    ) {
       const privilege = privilegeRequired;
       const authorizationPolicy = await this.getAuthorizationPolicy(
         eventData.eventType,
         eventData.entityID
       );
-      recipientsWithPrivilege = recipientsWithNotificationEnabled.filter(
-        recipient =>
+      recipientsWithPrivilege =
+        recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
+          const credentials = recipient.agent.credentials;
+          if (!credentials) {
+            throw new RelationshipNotFoundException(
+              `User ${recipient.id} does not have agent with credentials`,
+              LogContext.NOTIFICATIONS
+            );
+          }
           this.authorizationService.isAccessGrantedForCredentials(
-            recipient.agent.credentials || [],
+            credentials,
             [],
             authorizationPolicy,
             privilege
-          )
-      );
+          );
+        });
     }
 
     this.logger.verbose?.(
-      `[${eventData.eventType}] - Found ${recipientsWithPrivilege.length} recipients with privilege`,
+      `[${eventData.eventType}] - 4. ...and of those ${recipientsWithPrivilege.length} have the '${privilegeRequired}' privilege`,
       LogContext.NOTIFICATIONS
     );
 

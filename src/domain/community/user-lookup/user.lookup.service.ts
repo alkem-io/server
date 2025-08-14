@@ -35,6 +35,20 @@ export class UserLookupService {
     return user;
   }
 
+  public async getUsersByUUID(
+    userIDs: string[],
+    options?: FindManyOptions<User> | undefined
+  ): Promise<IUser[]> {
+    const users: IUser[] = await this.entityManager.find(User, {
+      where: {
+        id: In(userIDs),
+      },
+      ...options,
+    });
+
+    return users;
+  }
+
   public async getUserByEmail(
     email: string,
     options?: FindOneOptions<User> | undefined
