@@ -92,6 +92,7 @@ export class NotificationRecipientsService {
       await this.userLookupService.getUsersByUUID(candidateRecipientIDs, {
         relations: {
           settings: true,
+          profile: true,
           agent: {
             credentials: true,
           },
