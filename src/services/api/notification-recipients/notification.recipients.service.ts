@@ -56,7 +56,15 @@ export class NotificationRecipientsService {
     // Note: the candidate recipients are set to a level that is greater than or equal to the end set of recipients
     // The final list of recipients will be filtered based on the privilege required
     const candidateRecipients =
-      await this.userLookupService.usersWithCredentials(credentialCriteria);
+      await this.userLookupService.usersWithCredentials(
+        credentialCriteria,
+        undefined,
+        {
+          relations: {
+            settings: true,
+          },
+        }
+      );
 
     this.logger.verbose?.(
       `[${eventData.eventType}] - 2. ...identified ${candidateRecipients.length} potential recipients matching criteria`,
@@ -76,6 +84,7 @@ export class NotificationRecipientsService {
     );
 
     // Need to reload the users to get the full set of credentials for use in authorization evaluation
+    // TODO: this can clearly be optimized to have one lookup of the users, not two...
     const candidateRecipientIDs = candidateRecipients.map(
       recipient => recipient.id
     );
@@ -110,12 +119,16 @@ export class NotificationRecipientsService {
               LogContext.NOTIFICATIONS
             );
           }
-          this.authorizationService.isAccessGrantedForCredentials(
-            credentials,
-            [],
-            authorizationPolicy,
-            privilege
-          );
+          const accessGranted =
+            this.authorizationService.isAccessGrantedForCredentials(
+              credentials,
+              [],
+              authorizationPolicy,
+              privilege
+            );
+          if (accessGranted) {
+            return recipient;
+          }
         });
     }
 
