@@ -700,9 +700,7 @@ export class SpaceService {
   ): Promise<ISpace> {
     const { subspaces } = await this.getSpaceOrFail(space.id, {
       relations: {
-        subspaces: {
-          subspaces: true,
-        },
+        subspaces: true,
       },
     });
 
@@ -716,12 +714,14 @@ export class SpaceService {
 
     // If the space has subspaces, update their platform roles access recursively
     if (subspaces && subspaces.length > 0) {
-      for (const subspace of subspaces) {
-        await this.updatePlatformRolesAccessRecursively(
-          subspace,
-          space.platformRolesAccess
-        );
-      }
+      await Promise.all(
+        subspaces.map(subspace =>
+          this.updatePlatformRolesAccessRecursively(
+            subspace,
+            space.platformRolesAccess
+          )
+        )
+      );
     }
     return result;
   }
@@ -1374,7 +1374,6 @@ export class SpaceService {
     let space = await this.getSpaceOrFail(spaceID, {
       relations: {
         parentSpace: true,
-        subspaces: true,
       },
     });
     const settings = space.settings;
