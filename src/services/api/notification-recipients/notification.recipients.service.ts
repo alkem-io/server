@@ -157,6 +157,11 @@ export class NotificationRecipientsService {
       ? await this.userLookupService.getUserOrFail(eventData.triggeredBy)
       : undefined;
 
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 5. Email has ${recipientsWithPrivilege.length} recipients; InApp has ${inAppRecipientsWithPrivilege.length} recipients`,
+      LogContext.NOTIFICATIONS
+    );
+
     return {
       emailRecipients: recipientsWithPrivilege,
       inAppRecipients: inAppRecipientsWithPrivilege,
