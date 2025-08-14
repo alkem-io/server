@@ -48,8 +48,8 @@ type UserSettingsNotification = {
   user: UserSettingsNotificationUser;
 };
 
-export class UserSettingsEntity1754384352799 implements MigrationInterface {
-  name = 'UserSettingsEntity1754384352799';
+export class UserSettingsEntity1754573700399 implements MigrationInterface {
+  name = 'UserSettingsEntity1754573700399';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE TABLE \`user_settings\` (\`id\` char(36) NOT NULL,
