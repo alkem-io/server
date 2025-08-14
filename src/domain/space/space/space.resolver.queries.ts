@@ -11,8 +11,6 @@ import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/spac
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
-import { BaseException } from '@common/exceptions/base.exception';
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
 
 @InstrumentResolver()
 @Resolver()
@@ -64,15 +62,6 @@ export class SpaceResolverQueries {
     description: 'Get the list of restricted space names.',
   })
   restrictedSpaceNames(): string[] {
-    throw new BaseException(
-      'test',
-      LogContext.SPACES,
-      AlkemioErrorStatus.ACCOUNT_NOT_FOUND,
-      {
-        field1: 'a',
-        field2: 'b',
-      }
-    );
     return RestrictedSpaceNames;
   }
 }
