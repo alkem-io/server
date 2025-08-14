@@ -200,6 +200,10 @@ export type AlkemioConfig = {
       enabled: boolean;
       max_collaborators_in_room: number;
     };
+    memo: {
+      enabled: boolean;
+      max_collaborators_in_room: number;
+    };
   };
   platform: {
     terms: string;
