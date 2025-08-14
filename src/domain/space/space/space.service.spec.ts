@@ -11,7 +11,7 @@ import { Profile } from '@domain/common/profile';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
-import { ProfileType } from '@common/enums';
+import { AuthorizationPrivilege, ProfileType } from '@common/enums';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Account } from '../account/account.entity';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -31,6 +31,7 @@ import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { InnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
+import { RoleName } from '@common/enums/role.name';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -87,6 +88,7 @@ describe('SpaceService', () => {
         nameID: 'subspace-name',
         level: SpaceLevel.L1,
         levelZeroSpaceID: spaceId,
+        parentSpace: mockSpace,
         about: {
           profile: {
             id: `profile-${subspaceId}`,
@@ -106,6 +108,18 @@ describe('SpaceService', () => {
       service['namingService'] = mockNamingService as any;
 
       // Mock the repository to return subspaces
+      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+        const { where } = options ?? {};
+        if (!Array.isArray(where) && where?.id) {
+          const result = [mockSpace, mockSubspace].find(
+            space => space.id === where.id
+          );
+          if (result) {
+            return Promise.resolve(result);
+          }
+        }
+        return Promise.resolve(null);
+      });
       jest.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
       jest.spyOn(service, 'save').mockResolvedValue(mockSpace);
 
@@ -132,11 +146,32 @@ describe('SpaceService', () => {
       const oldNameID = 'old-subspace-name';
       const newNameID = 'new-subspace-name';
 
+      const mockParentSpace = {
+        id: parentSpaceId,
+        nameID: parentSpaceId,
+        level: SpaceLevel.L0,
+        levelZeroSpaceID: parentSpaceId,
+        about: {
+          profile: {
+            id: `profile-${parentSpaceId}`,
+          },
+        },
+        platformRolesAccess: {
+          roles: [
+            {
+              roleName: RoleName.MEMBER,
+              grantedPrivileges: [AuthorizationPrivilege.READ],
+            },
+          ],
+        },
+      } as Space;
+
       const mockSubspace = {
         id: subspaceId,
         nameID: oldNameID,
         level: SpaceLevel.L1,
         levelZeroSpaceID: parentSpaceId,
+        parentSpace: mockParentSpace,
         about: {
           profile: {
             id: `profile-${subspaceId}`,
@@ -149,6 +184,7 @@ describe('SpaceService', () => {
         nameID: 'child-subspace-name',
         level: SpaceLevel.L2,
         levelZeroSpaceID: parentSpaceId,
+        parentSpace: mockSubspace,
         about: {
           profile: {
             id: `profile-${childSubspaceId}`,
@@ -168,6 +204,20 @@ describe('SpaceService', () => {
       service['namingService'] = mockNamingService as any;
 
       // Mock the repository to return child subspaces
+      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+        const { where } = options ?? {};
+        if (!Array.isArray(where) && where?.id) {
+          const result = [
+            mockParentSpace,
+            mockSubspace,
+            mockChildSubspace,
+          ].find(space => space.id === where.id);
+          if (result) {
+            return Promise.resolve(result);
+          }
+        }
+        return Promise.resolve(null);
+      });
       jest
         .spyOn(spaceRepository, 'find')
         .mockResolvedValue([mockChildSubspace]);
@@ -208,6 +258,16 @@ describe('SpaceService', () => {
         visibility: SpaceVisibility.DEMO, // Only changing visibility, not nameID
       };
 
+      jest.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+        const { where } = options ?? {};
+        if (!Array.isArray(where) && where?.id) {
+          const result = [mockSpace].find(space => space.id === where.id);
+          if (result) {
+            return Promise.resolve(result);
+          }
+        }
+        return Promise.resolve(null);
+      });
       jest.spyOn(service, 'save').mockResolvedValue(mockSpace);
       jest
         .spyOn(service, 'updateSpaceVisibilityAllSubspaces' as any)
@@ -454,6 +514,9 @@ const getSubspacesMock = (
       nameID: `challenge-${spaceId}.${i}`,
       settings: spaceSettings,
       levelZeroSpaceID: spaceId,
+      platformRolesAccess: {
+        roles: [],
+      },
       account: {
         id: `account-${spaceId}.${i}`,
         virtualContributors: [],
@@ -575,6 +638,9 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       nameID: `subsubspace-${subsubspaceId}.${i}`,
       settings: spaceSettings,
       levelZeroSpaceID: subsubspaceId,
+      platformRolesAccess: {
+        roles: [],
+      },
       account: {
         id: `account-${subsubspaceId}.${i}`,
         virtualContributors: [],
@@ -702,6 +768,9 @@ const getSpaceMock = ({
     nameID: `space-${id}`,
     settings: settings,
     levelZeroSpaceID: '',
+    platformRolesAccess: {
+      roles: [],
+    },
     about: {
       id: '',
       profile: {

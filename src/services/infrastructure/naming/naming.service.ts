@@ -12,7 +12,6 @@ import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Space } from '@domain/space/space/space.entity';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -24,6 +23,7 @@ import { Template } from '@domain/template/template/template.entity';
 import { IRoleSet } from '@domain/access/role-set';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 export class NamingService {
   constructor(
@@ -251,7 +251,7 @@ export class NamingService {
     calloutsSetID: string
   ): Promise<{
     roleSet: IRoleSet;
-    spaceSettings: ISpaceSettings;
+    platformRolesAccess: IPlatformRolesAccess;
   }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
@@ -275,13 +275,18 @@ export class NamingService {
     }
     // Directly parse the settings string to avoid the need to load the settings service
     const roleSet = space.community.roleSet;
-    const spaceSettings: ISpaceSettings = space.settings;
-    return { roleSet, spaceSettings };
+    const platformRolesAccess: IPlatformRolesAccess =
+      space.platformRolesAccess || {
+        roles: [],
+      };
+    return { roleSet, platformRolesAccess };
   }
 
-  async getRoleSetAndSettingsForCallout(calloutID: string): Promise<{
+  async getRoleSetAndPlatformRolesWithAccessForCallout(
+    calloutID: string
+  ): Promise<{
     roleSet?: IRoleSet;
-    spaceSettings?: ISpaceSettings;
+    platformRolesAccess: IPlatformRolesAccess;
   }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
@@ -303,9 +308,12 @@ export class NamingService {
     // Directly parse the settings string to avoid the need to load the settings service
     // We have 2 types of CalloutSet parents now, and KnowledgeBase doesn't have a roleSet and spaceSettings
     const roleSet: IRoleSet | undefined = space?.community?.roleSet;
-    const spaceSettings: ISpaceSettings | undefined = space?.settings;
+    const platformRolesAccess: IPlatformRolesAccess =
+      space?.platformRolesAccess || {
+        roles: [],
+      };
 
-    return { roleSet: roleSet, spaceSettings };
+    return { roleSet: roleSet, platformRolesAccess };
   }
 
   async getPostForRoom(roomID: string): Promise<IPost> {

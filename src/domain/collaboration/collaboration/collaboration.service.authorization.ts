@@ -14,12 +14,13 @@ import { RoleName } from '@common/enums/role.name';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { CalloutsSetAuthorizationService } from '../callouts-set/callouts.set.service.authorization';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -30,12 +31,14 @@ export class CollaborationAuthorizationService {
     private timelineAuthorizationService: TimelineAuthorizationService,
     private calloutsSetAuthorizationService: CalloutsSetAuthorizationService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
-    private licenseAuthorizationService: LicenseAuthorizationService
+    private licenseAuthorizationService: LicenseAuthorizationService,
+    private platformRolesAccessService: PlatformRolesAccessService
   ) {}
 
   public async applyAuthorizationPolicy(
     collaborationInput: ICollaboration,
     parentAuthorization: IAuthorizationPolicy,
+    platformRolesAccess: IPlatformRolesAccess,
     roleSet?: IRoleSet,
     spaceSettings?: ISpaceSettings,
     credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
@@ -72,8 +75,8 @@ export class CollaborationAuthorizationService {
 
     collaboration.authorization = await this.appendCredentialRules(
       collaboration.authorization,
-      roleSet,
-      spaceSettings
+      platformRolesAccess,
+      roleSet
     );
     if (roleSet && spaceSettings) {
       collaboration.authorization =
@@ -91,6 +94,7 @@ export class CollaborationAuthorizationService {
     const childUpdatedAuthorizations =
       await this.propagateAuthorizationToChildEntities(
         collaboration,
+        platformRolesAccess,
         roleSet,
         spaceSettings
       );
@@ -101,6 +105,7 @@ export class CollaborationAuthorizationService {
 
   private async propagateAuthorizationToChildEntities(
     collaboration: ICollaboration,
+    platformRolesAccess: IPlatformRolesAccess,
     roleSet?: IRoleSet,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
@@ -122,6 +127,7 @@ export class CollaborationAuthorizationService {
       await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(
         collaboration.calloutsSet,
         collaboration.authorization,
+        platformRolesAccess,
         [],
         roleSet,
         spaceSettings
@@ -175,16 +181,14 @@ export class CollaborationAuthorizationService {
     // add challenge members
     let contributorCriterias = await this.roleSetService.getCredentialsForRole(
       roleSet,
-      RoleName.MEMBER,
-      spaceSettings
+      RoleName.MEMBER
     );
     // optionally add space members
     if (spaceSettings.collaboration.inheritMembershipRights) {
       contributorCriterias =
         await this.roleSetService.getCredentialsForRoleWithParents(
           roleSet,
-          RoleName.MEMBER,
-          spaceSettings
+          RoleName.MEMBER
         );
     }
 
@@ -197,9 +201,8 @@ export class CollaborationAuthorizationService {
 
   private async appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    roleSet?: IRoleSet,
-    spaceSettings?: ISpaceSettings,
-    spaceAgent?: IAgent
+    platformRolesAccess: IPlatformRolesAccess,
+    roleSet?: IRoleSet
   ): Promise<IAuthorizationPolicy> {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -212,19 +215,33 @@ export class CollaborationAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // For templates these will not be available
-    if (!roleSet || !spaceSettings || !spaceAgent) {
+    if (!roleSet) {
       return authorization;
     }
 
     const adminCriterias = await this.roleSetService.getCredentialsForRole(
       roleSet,
-      RoleName.ADMIN,
-      spaceSettings
+      RoleName.ADMIN
     );
+    const platformRolesAdminCriterias =
+      this.platformRolesAccessService.getCredentialsForRolesWithAccess(
+        platformRolesAccess.roles,
+        [AuthorizationPrivilege.UPDATE]
+      );
+    adminCriterias.push(...platformRolesAdminCriterias);
     adminCriterias.push({
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
+    if (adminCriterias.length > 0) {
+      const adminsRule = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.UPDATE],
+        adminCriterias,
+        CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS
+      );
+      adminsRule.cascade = true;
+      newRules.push(adminsRule);
+    }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

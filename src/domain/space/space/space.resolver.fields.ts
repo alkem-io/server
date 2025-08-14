@@ -33,6 +33,7 @@ import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 import { ISpaceAbout } from '../space.about';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -54,6 +55,18 @@ export class SpaceResolverFields {
     loader: ILoader<ICommunity>
   ): Promise<ICommunity> {
     return loader.load(space.id);
+  }
+
+  // TODO: consider making this protected by a heavy privilege?
+  @ResolveField('platformAccess', () => IPlatformRolesAccess, {
+    nullable: false,
+    description: 'The calculated platform access for this Space.',
+  })
+  platformAccess(@Parent() space: ISpace): IPlatformRolesAccess {
+    if (!space.platformRolesAccess) {
+      return { roles: [] };
+    }
+    return space.platformRolesAccess;
   }
 
   @ResolveField('about', () => ISpaceAbout, {
