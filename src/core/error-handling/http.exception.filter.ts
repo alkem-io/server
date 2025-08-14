@@ -53,7 +53,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     /* the logger will handle the passed exception by iteration over all it's fields
      * you can provide additional data in the stack and context
      */
-    this.logger.error(exception, secondParam, thirdParam);
+    const loggableException = {
+      ...exception,
+      stack: String(exception.stack),
+    };
+    this.logger.error(loggableException, secondParam, thirdParam);
 
     response.status(status).json({
       statusCode: status,
