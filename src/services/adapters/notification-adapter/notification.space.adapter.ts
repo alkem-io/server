@@ -32,6 +32,7 @@ import { NotificationInputPostComment } from './dto/space/notification.dto.input
 import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.space.communication.update.sent';
 import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
 import { NotificationAdapter } from './notification.adapter';
+import { IUser } from '@domain/community/user/user.interface';
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(
@@ -253,50 +254,12 @@ export class NotificationSpaceAdapter {
   public async spaceCommunityNewMember(
     eventData: NotificationInputCommunityNewMember
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER;
+    // ALSO send admin notifications
+    const adminEvent = NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN;
     const space =
       await this.communityResolverService.getSpaceForCommunityOrFail(
         eventData.community.id
       );
-    const recipients = await this.getNotificationRecipientsSpace(
-      event,
-      eventData,
-      space.id
-    );
-
-    const payload =
-      await this.notificationExternalAdapter.buildSpaceCommunityNewMemberPayload(
-        event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        space,
-        eventData.contributorID
-      );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
-
-    // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationSpaceCommunityNewMemberPayload = {
-        type: NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER,
-        triggeredByID: eventData.triggeredBy,
-        category: NotificationEventCategory.SPACE_MEMBER,
-        triggeredAt: new Date(),
-        spaceID: space.id,
-        contributorType: 'user', // Default value, could be derived from eventData if available
-        newMemberID: eventData.contributorID,
-      };
-
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
-      );
-    }
-
-    // ALSO send admin notifications
-    const adminEvent = NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN;
     const adminRecipients = await this.getNotificationRecipientsSpace(
       adminEvent,
       eventData,
@@ -337,6 +300,69 @@ export class NotificationSpaceAdapter {
         adminInAppReceiverIDs
       );
     }
+
+    const event = NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER;
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id
+    );
+
+    // Need to remove the admins that have already received a notification
+    const memberOnlyEmailRecipients =
+      this.removeAdminRecipientsFromMembersRecipients(
+        adminRecipients.emailRecipients,
+        recipients.emailRecipients
+      );
+
+    const payload =
+      await this.notificationExternalAdapter.buildSpaceCommunityNewMemberPayload(
+        event,
+        eventData.triggeredBy,
+        memberOnlyEmailRecipients,
+        space,
+        eventData.contributorID
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    const memberOnlyInAppRecipients =
+      this.removeAdminRecipientsFromMembersRecipients(
+        adminRecipients.inAppRecipients,
+        recipients.inAppRecipients
+      );
+
+    // Send in-app notifications
+    const inAppReceiverIDs = memberOnlyInAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationSpaceCommunityNewMemberPayload = {
+        type: NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER,
+        triggeredByID: eventData.triggeredBy,
+        category: NotificationEventCategory.SPACE_MEMBER,
+        triggeredAt: new Date(),
+        spaceID: space.id,
+        contributorType: 'user', // Default value, could be derived from eventData if available
+        newMemberID: eventData.contributorID,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        inAppPayload,
+        inAppReceiverIDs
+      );
+    }
+  }
+
+  private removeAdminRecipientsFromMembersRecipients(
+    adminRecipients: IUser[],
+    memberRecipients: IUser[]
+  ): IUser[] {
+    // Need to remove the admins that have already received a notification
+    const memberOnlyEmailRecipients = memberRecipients.filter(
+      email => !adminRecipients.includes(email)
+    );
+    return memberOnlyEmailRecipients;
   }
 
   public async spaceCommunityApplicationCreated(
