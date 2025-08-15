@@ -10,15 +10,15 @@ import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notifi
 import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.input.platform.space.created';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { InAppNotificationPlatformForumDiscussionCreatedPayload } from '../../../platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.forum.discussion';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPlatformGlobalRoleChangePayload } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.global.role.change';
+import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.global.role.change';
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.base';
+import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.forum.discussion';
 
 @Injectable()
 export class NotificationPlatformAdapter {
@@ -57,7 +57,7 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPlatformGlobalRoleChangePayload = {
+      const inAppPayload: InAppNotificationPayloadPlatformGlobalRoleChange = {
         type: NotificationEventPayload.PLATFORM_GLOBAL_ROLE_CHANGE,
         userID: eventData.userID,
         roleName: eventData.role,
@@ -96,11 +96,10 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPlatformForumDiscussionCreatedPayload =
-        {
-          type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
-          discussionID: eventData.discussion.id,
-        };
+      const inAppPayload: InAppNotificationPayloadPlatformForumDiscussion = {
+        type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
+        discussionID: eventData.discussion.id,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED,

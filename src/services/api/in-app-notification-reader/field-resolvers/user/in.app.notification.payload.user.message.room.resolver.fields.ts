@@ -7,7 +7,7 @@ import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-noti
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.room';
 
 @Resolver(() => InAppNotificationPayloadUserMessageRoom)
-export class InAppNotificationUserMessageRoomResolverFields {
+export class InAppNotificationPayloadUserMessageRoomResolverFields {
   @ResolveField(() => String, {
     nullable: true,
     description: 'The original message ID.',

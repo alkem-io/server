@@ -8,12 +8,12 @@ import { InAppNotificationResolverQueries } from './in.app.notification.reader.r
 import { InAppNotificationResolverMutations } from '../../../platform/in-app-notification/in.app.notification.resolver.mutations';
 import { InAppNotificationResolverFields } from './in.app.notification.reader.resolver.fields';
 import { InAppNotificationResolverSubscription } from './in.app.notification.resolver.subscription';
-import {
-  InAppNotificationSpaceCollaborationCalloutPublishedResolverFields,
-  InAppNotificationSpaceCommunityNewMemberResolverFields,
-  InAppNotificationUserMentionedResolverFields,
-} from './field-resolvers';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
+import {
+  InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
+  InAppNotificationPayloadSpaceCommunityContributorResolverFields,
+  InAppNotificationPayloadUserMessageRoomResolverFields,
+} from './field-resolvers';
 
 @Module({
   imports: [
@@ -30,9 +30,10 @@ import { InAppNotificationModule } from '@platform/in-app-notification/in.app.no
     InAppNotificationResolverMutations,
     InAppNotificationResolverSubscription,
     // concrete resolvers
-    InAppNotificationSpaceCollaborationCalloutPublishedResolverFields,
-    InAppNotificationSpaceCommunityNewMemberResolverFields,
-    InAppNotificationUserMentionedResolverFields,
+    // add n all the other payload resolvers from the ../field-resolvers directory
+    InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
+    InAppNotificationPayloadSpaceCommunityContributorResolverFields,
+    InAppNotificationPayloadUserMessageRoomResolverFields,
   ],
   exports: [InAppNotificationReader],
 })

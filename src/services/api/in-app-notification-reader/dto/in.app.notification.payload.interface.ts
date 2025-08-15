@@ -7,9 +7,9 @@ import { NotificationEventPayload } from '@common/enums/notification.event.paylo
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.base';
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.direct';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.room';
-import { InAppNotificationPayloadSpaceApplication } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.application';
-import { InAppNotificationPayloadSpaceContributor } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.contributor';
-import { InAppNotificationPayloadSpaceInvitation } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.invitation';
+import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.application';
+import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.invitation';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.message.direct';
 import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.callout';
@@ -19,7 +19,7 @@ import { InAppNotificationPayloadUser } from '@platform/in-app-notification/dto/
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.update';
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.room';
 import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.direct';
-import { InAppNotificationPayloadSpaceInvitationPlatform } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.invitation.platform';
+import { InAppNotificationPayloadSpaceCommunityInvitationPlatform } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.invitation.platform';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.forum.discussion';
 import { InAppNotificationPayloadPlatformForumDiscussionComment } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.forum.discussion.comment';
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.user.profile.removed';
@@ -49,13 +49,13 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
       case NotificationEventPayload.SPACE:
         return InAppNotificationPayloadSpace;
       case NotificationEventPayload.SPACE_COMMUNITY_APPLICATION:
-        return InAppNotificationPayloadSpaceApplication;
+        return InAppNotificationPayloadSpaceCommunityApplication;
       case NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR:
-        return InAppNotificationPayloadSpaceContributor;
+        return InAppNotificationPayloadSpaceCommunityContributor;
       case NotificationEventPayload.SPACE_COMMUNITY_INVITATION:
-        return InAppNotificationPayloadSpaceInvitation;
+        return InAppNotificationPayloadSpaceCommunityInvitation;
       case NotificationEventPayload.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
-        return InAppNotificationPayloadSpaceInvitationPlatform;
+        return InAppNotificationPayloadSpaceCommunityInvitationPlatform;
       case NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT:
         return InAppNotificationPayloadSpaceCommunicationMessageDirect;
       case NotificationEventPayload.SPACE_COMMUNICATION_UPDATE:

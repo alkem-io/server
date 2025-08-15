@@ -4,11 +4,7 @@ import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { InAppNotificationPayloadSpaceCollaborationCalloutPublished } from '../../../platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.callout';
-import { InAppNotificationPayloadSpaceCollaborationWhiteboardCreated } from '../../../platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.whiteboard';
-import { InAppNotificationPayloadSpaceCollaborationPostCommentCreated } from '../../../platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post.comment';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.update';
-import { InAppNotificationPayloadSpaceCollaborationPostCreated } from '../../../platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
@@ -25,11 +21,15 @@ import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.
 import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
 import { NotificationAdapter } from './notification.adapter';
 import { IUser } from '@domain/community/user/user.interface';
-import { InAppNotificationPayloadSpaceApplication } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.application';
-import { InAppNotificationPayloadSpaceContributor } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.contributor';
-import { InAppNotificationPayloadSpaceInvitation } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.invitation';
+import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.application';
+import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.invitation';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.message.direct';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.callout';
+import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post';
+import { InAppNotificationPayloadSpaceCollaborationWhiteboard } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.whiteboard';
+import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post.comment';
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(
@@ -77,12 +77,11 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length >= 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCalloutPublished =
-        {
-          type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
-          spaceID: space.id,
-          calloutID: eventData.callout.id,
-        };
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
+        type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+        spaceID: space.id,
+        calloutID: eventData.callout.id,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
@@ -131,13 +130,12 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length >= 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPostCreated =
-        {
-          type: NotificationEventPayload.SPACE_COLLABORATION_POST,
-          spaceID: space.id,
-          calloutID: eventData.callout.id,
-          postID: eventData.post.id,
-        };
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPost = {
+        type: NotificationEventPayload.SPACE_COLLABORATION_POST,
+        spaceID: space.id,
+        calloutID: eventData.callout.id,
+        postID: eventData.post.id,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COLLABORATION_POST_CREATED,
@@ -174,7 +172,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length >= 0) {
-      const adminInAppPayload: InAppNotificationPayloadSpaceCollaborationPostCreated =
+      const adminInAppPayload: InAppNotificationPayloadSpaceCollaborationPost =
         {
           type: NotificationEventPayload.SPACE_COLLABORATION_POST,
           spaceID: space.id,
@@ -226,7 +224,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationWhiteboardCreated =
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationWhiteboard =
         {
           type: NotificationEventPayload.SPACE_COLLABORATION_WHITEBOARD,
           spaceID: space.id,
@@ -277,11 +275,12 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationPayloadSpaceContributor = {
-        type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
-        spaceID: space.id,
-        contributorID: eventData.contributorID,
-      };
+      const adminInAppPayload: InAppNotificationPayloadSpaceCommunityContributor =
+        {
+          type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
+          spaceID: space.id,
+          contributorID: eventData.contributorID,
+        };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN,
@@ -328,7 +327,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceContributor = {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityContributor = {
         type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
         spaceID: space.id,
         contributorID: eventData.contributorID,
@@ -384,7 +383,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceApplication = {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityApplication = {
         type: NotificationEventPayload.SPACE_COMMUNITY_APPLICATION,
         spaceID: space.id,
         applicationID: 'unknown',
@@ -424,11 +423,12 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationPayloadSpaceApplication = {
-        type: NotificationEventPayload.SPACE_COMMUNITY_APPLICATION,
-        spaceID: space.id,
-        applicationID: 'unknown',
-      };
+      const adminInAppPayload: InAppNotificationPayloadSpaceCommunityApplication =
+        {
+          type: NotificationEventPayload.SPACE_COMMUNITY_APPLICATION,
+          spaceID: space.id,
+          applicationID: 'unknown',
+        };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN,
@@ -473,7 +473,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceInvitation = {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityInvitation = {
         type: NotificationEventPayload.SPACE_COMMUNITY_INVITATION,
         invitationID: eventData.invitationID,
         spaceID: space.id,
@@ -546,11 +546,12 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunicationMessageDirect = {
-        type: NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT,
-        spaceID: space.id,
-        message: eventData.message,
-      };
+      const inAppPayload: InAppNotificationPayloadSpaceCommunicationMessageDirect =
+        {
+          type: NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT,
+          spaceID: space.id,
+          message: eventData.message,
+        };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT,
@@ -598,7 +599,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPostCommentCreated =
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPostComment =
         {
           type: NotificationEventPayload.SPACE_COLLABORATION_POST_COMMENT,
           spaceID: space.id,

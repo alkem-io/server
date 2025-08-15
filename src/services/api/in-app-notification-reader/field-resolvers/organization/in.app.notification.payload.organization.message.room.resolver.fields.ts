@@ -5,7 +5,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.room';
 
-@Resolver(() => InAppNotificationPayloadOrganizationMentioned)
+@Resolver(() => InAppNotificationPayloadOrganizationMessageRoom)
 export class InAppNotificationOrganizationMentionedResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
@@ -28,17 +28,17 @@ export class InAppNotificationOrganizationMentionedResolverFields {
     @Parent()
     payload: InAppNotificationPayloadOrganizationMessageRoom
   ): string {
-    return payload.commentID;
+    return payload.messageID;
   }
 
   @ResolveField(() => String, {
     nullable: true,
-    description: 'The URL of the comment.',
+    description: 'The Room ID with of the comment.',
   })
-  public commentUrl(
+  public roomID(
     @Parent()
-    payload: InAppNotificationPayloadOrganizationMentioned
+    payload: InAppNotificationPayloadOrganizationMessageRoom
   ): string {
-    return payload.commentOrigin.url;
+    return payload.roomID;
   }
 }

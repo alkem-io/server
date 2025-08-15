@@ -1,34 +1,19 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { InAppNotificationPayloadSpaceCommunityInvitationUserPlatform } from '../../dto/space/in.app.notification.entry.space.community.invitation.user.platform';
-import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
+import { InAppNotificationPayloadSpaceCommunityInvitationPlatform } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.invitation.platform';
 
-@Resolver(() => InAppNotificationPayloadSpaceCommunityInvitationUserPlatform)
+@Resolver(() => InAppNotificationPayloadSpaceCommunityInvitationPlatform)
 export class InAppNotificationSpaceCommunityInvitationUserPlatformResolverFields {
-  @ResolveField(() => IContributor, {
-    nullable: true,
-    description: 'The Contributor that sent the invitation.',
-  })
-  public contributor(
-    @Parent()
-    payload: InAppNotificationPayloadSpaceCommunityInvitationUserPlatform,
-    @Loader(ContributorLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IContributor | null>
-  ) {
-    return loader.load(payload.triggeredByID);
-  }
-
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space that the invitation is for.',
   })
   public space(
     @Parent()
-    payload: InAppNotificationPayloadSpaceCommunityInvitationUserPlatform,
+    payload: InAppNotificationPayloadSpaceCommunityInvitationPlatform,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
     loader: ILoader<ISpace | null>
   ) {

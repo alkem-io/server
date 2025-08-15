@@ -3,19 +3,19 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { Loader } from '@core/dataloader/decorators';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IInAppNotificationEntry } from './dto/in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
 
-@Resolver(() => IInAppNotificationEntry)
+@Resolver(() => IInAppNotification)
 export class InAppNotificationResolverFields {
   @ResolveField(() => IContributor, {
     nullable: false,
     description: 'The receiver of the notification.',
   })
   public receiver(
-    @Parent() { receiverID }: IInAppNotificationEntry,
+    @Parent() { receiverID }: IInAppNotification,
     @Loader(ContributorLoaderCreator) loader: ILoader<IContributor>
   ) {
     return loader.load(receiverID);
@@ -26,7 +26,7 @@ export class InAppNotificationResolverFields {
     description: 'The Contributor who triggered the notification.',
   })
   public triggeredBy(
-    @Parent() notification: IInAppNotificationEntry,
+    @Parent() notification: IInAppNotification,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {
@@ -36,9 +36,7 @@ export class InAppNotificationResolverFields {
     nullable: false,
     description: 'The type of the notification event.',
   })
-  public type(
-    @Parent() notification: IInAppNotificationEntry
-  ): NotificationEvent {
+  public type(@Parent() notification: IInAppNotification): NotificationEvent {
     return notification.type;
   }
 
@@ -47,7 +45,7 @@ export class InAppNotificationResolverFields {
     description: 'The state of the notification event.',
   })
   public state(
-    @Parent() notification: IInAppNotificationEntry
+    @Parent() notification: IInAppNotification
   ): NotificationEventInAppState {
     return notification.state;
   }
@@ -57,7 +55,7 @@ export class InAppNotificationResolverFields {
     description: 'The category of the notification event.',
   })
   public category(
-    @Parent() notification: IInAppNotificationEntry
+    @Parent() notification: IInAppNotification
   ): NotificationEventCategory {
     return notification.category;
   }
@@ -67,7 +65,7 @@ export class InAppNotificationResolverFields {
     nullable: false,
     description: 'The triggered date of the notification event.',
   })
-  public triggeredAt(@Parent() notification: IInAppNotificationEntry): Date {
+  public triggeredAt(@Parent() notification: IInAppNotification): Date {
     return notification.triggeredAt;
   }
 }

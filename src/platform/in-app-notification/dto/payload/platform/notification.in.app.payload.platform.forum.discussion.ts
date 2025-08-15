@@ -5,6 +5,6 @@ import { ObjectType } from '@nestjs/graphql';
 @ObjectType('InAppNotificationPayloadPlatformForumDiscussion', {
   implements: () => IInAppNotificationPayload,
 })
-export abstract class InAppNotificationPlatformForumDiscussionCreatedPayload extends InAppNotificationPayload {
+export abstract class InAppNotificationPayloadPlatformForumDiscussion extends InAppNotificationPayload {
   discussionID!: string;
 }

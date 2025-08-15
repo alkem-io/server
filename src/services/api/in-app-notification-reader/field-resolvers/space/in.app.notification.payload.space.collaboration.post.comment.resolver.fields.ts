@@ -39,6 +39,6 @@ export class InAppNotificationSpaceCollaborationPostCommentResolverFields {
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationPostComment
   ): string {
-    return payload.message.messageID;
+    return payload.messageID;
   }
 }

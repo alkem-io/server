@@ -1,4 +1,3 @@
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
@@ -13,7 +12,7 @@ export class IInAppNotification extends IBaseAlkemio {
 
   // The agent who triggered the notification
   triggeredAt!: Date;
-  triggeredBy?: IContributor; // exposed via the interface field resolver
+  triggeredByID!: string;
 
   // The receiver of the notification
   receiverID!: string;

@@ -31,9 +31,9 @@ export class InAppNotification
   @Column('char', {
     length: UUID_LENGTH,
     nullable: true,
-    comment: 'The contributor who triggered the event, if applicable.',
+    comment: 'The contributor who triggered the event.',
   })
-  triggeredByID?: string;
+  triggeredByID!: string;
 
   @Column('char', {
     length: UUID_LENGTH,

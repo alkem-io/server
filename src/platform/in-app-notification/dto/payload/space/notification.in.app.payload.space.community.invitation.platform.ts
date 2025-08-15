@@ -2,9 +2,9 @@ import { InAppNotificationPayloadSpace } from './notification.in.app.payload.spa
 import { IInAppNotificationPayload } from '@services/api/in-app-notification-reader/dto/in.app.notification.payload.interface';
 import { ObjectType } from '@nestjs/graphql';
 
-@ObjectType('InAppNotificationPayloadSpaceInvitationPlatform', {
+@ObjectType('InAppNotificationPayloadSpaceCommunityInvitationPlatform', {
   implements: () => IInAppNotificationPayload,
 })
-export abstract class InAppNotificationPayloadSpaceInvitationPlatform extends InAppNotificationPayloadSpace {
+export abstract class InAppNotificationPayloadSpaceCommunityInvitationPlatform extends InAppNotificationPayloadSpace {
   platformInvitationID!: string;
 }

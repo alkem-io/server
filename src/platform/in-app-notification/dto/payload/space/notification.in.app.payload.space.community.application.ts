@@ -2,9 +2,9 @@ import { IInAppNotificationPayload } from '@services/api/in-app-notification-rea
 import { InAppNotificationPayloadSpace } from './notification.in.app.payload.space.base';
 import { ObjectType } from '@nestjs/graphql';
 
-@ObjectType('InAppNotificationPayloadSpaceApplication', {
+@ObjectType('InAppNotificationPayloadSpaceCommunityApplication', {
   implements: () => IInAppNotificationPayload,
 })
-export abstract class InAppNotificationPayloadSpaceApplication extends InAppNotificationPayloadSpace {
+export abstract class InAppNotificationPayloadSpaceCommunityApplication extends InAppNotificationPayloadSpace {
   applicationID!: string;
 }

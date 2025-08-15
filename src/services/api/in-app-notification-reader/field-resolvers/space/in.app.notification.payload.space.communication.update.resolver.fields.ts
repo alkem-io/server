@@ -1,27 +1,12 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../dto/space/in.app.notification.entry.space.communication.update';
-import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
+import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.update';
 
 @Resolver(() => InAppNotificationPayloadSpaceCommunicationUpdate)
 export class InAppNotificationSpaceCommunicationUpdateResolverFields {
-  @ResolveField(() => IContributor, {
-    nullable: true,
-    description: 'The Contributor that sent the update.',
-  })
-  public contributor(
-    @Parent()
-    payload: InAppNotificationPayloadSpaceCommunicationUpdate,
-    @Loader(ContributorLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IContributor | null>
-  ) {
-    return loader.load(payload.triggeredByID);
-  }
-
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space where the update was sent.',
