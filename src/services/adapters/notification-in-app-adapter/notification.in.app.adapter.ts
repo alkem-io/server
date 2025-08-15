@@ -54,15 +54,18 @@ export class NotificationInAppAdapter {
     payload: InAppNotificationPayloadBase,
     receiverIDs: string[]
   ): Promise<InAppNotificationEntity[]> {
+    // create a version of the payload without the type, category, triggeredAt, triggeredBy
+    const { type, category, triggeredAt, triggeredByID, ...payloadRest } =
+      payload;
     const entities = receiverIDs.map(receiverID =>
       InAppNotificationEntity.create({
-        type: payload.type,
-        category: payload.category,
-        triggeredAt: payload.triggeredAt,
-        state: NotificationEventInAppState.UNREAD,
+        type,
+        category,
+        triggeredByID,
+        triggeredAt,
         receiverID: receiverID,
-        triggeredByID: payload.triggeredByID,
-        payload: payload,
+        state: NotificationEventInAppState.UNREAD,
+        payload: payloadRest,
       })
     );
     return this.inAppNotificationRepo.save(entities, {
