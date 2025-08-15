@@ -201,7 +201,7 @@ export class NotificationPlatformAdapter {
     );
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadUser = {
-        type: NotificationEventPayload.PLATFORM_USER,
+        type: NotificationEventPayload.USER,
         userID: eventData.userID,
       };
 
@@ -239,7 +239,7 @@ export class NotificationPlatformAdapter {
     );
     if (adminInAppReceiverIDs.length > 0) {
       const adminInAppPayload: InAppNotificationPayloadUser = {
-        type: NotificationEventPayload.PLATFORM_USER,
+        type: NotificationEventPayload.USER,
         userID: eventData.userID,
       };
 
