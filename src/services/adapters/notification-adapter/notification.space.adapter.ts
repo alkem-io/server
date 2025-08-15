@@ -62,7 +62,7 @@ export class NotificationSpaceAdapter {
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      eventData.callout.id
+      space.id
     );
 
     const payload =
