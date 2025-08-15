@@ -263,7 +263,8 @@ export class NotificationSpaceAdapter {
     const adminRecipients = await this.getNotificationRecipientsSpace(
       adminEvent,
       eventData,
-      space.id
+      space.id,
+      eventData.contributorID
     );
 
     const adminPayload =
@@ -359,8 +360,9 @@ export class NotificationSpaceAdapter {
     memberRecipients: IUser[]
   ): IUser[] {
     // Need to remove the admins that have already received a notification
+    const adminRecipientIds = adminRecipients.map(admin => admin.id);
     const memberOnlyEmailRecipients = memberRecipients.filter(
-      email => !adminRecipients.includes(email)
+      member => !adminRecipientIds.includes(member.id)
     );
     return memberOnlyEmailRecipients;
   }
