@@ -1,8 +1,6 @@
-import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBaseSpace } from './notification.in.app.payload.space.base';
+import { InAppNotificationAdditionalData } from '../in.app.notification.additional.data';
 
 export interface InAppNotificationSpaceCommunityApplicationApplicantPayload
-  extends InAppNotificationPayloadBaseSpace {
-  type: NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT;
+  extends InAppNotificationAdditionalData {
   applicationID: string;
 }

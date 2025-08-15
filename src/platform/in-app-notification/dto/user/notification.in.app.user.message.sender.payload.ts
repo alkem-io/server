@@ -1,9 +1,7 @@
-import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from '../../../../services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
+import { InAppNotificationAdditionalData } from '../in.app.notification.additional.data';
 
 export interface InAppNotificationUserMessageSenderPayload
-  extends InAppNotificationPayloadBase {
-  type: NotificationEvent.USER_MESSAGE_SENDER;
+  extends InAppNotificationAdditionalData {
   message: string;
-  recipientUserID: string;
+  senderUserID: string;
 }

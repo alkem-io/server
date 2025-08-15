@@ -1,9 +1,7 @@
-import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from '../../../../services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
+import { InAppNotificationAdditionalData } from '../in.app.notification.additional.data';
 
 export interface InAppNotificationPlatformUserProfileRemovedPayload
-  extends InAppNotificationPayloadBase {
-  type: NotificationEvent.PLATFORM_USER_PROFILE_REMOVED;
+  extends InAppNotificationAdditionalData {
   userDisplayName: string;
   userEmail: string;
 }

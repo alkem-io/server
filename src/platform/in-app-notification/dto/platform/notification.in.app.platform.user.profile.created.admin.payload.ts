@@ -1,8 +1,6 @@
-import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from '../../../../services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
+import { InAppNotificationAdditionalData } from '../in.app.notification.additional.data';
 
 export interface InAppNotificationPlatformUserProfileCreatedAdminPayload
-  extends InAppNotificationPayloadBase {
-  type: NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN;
+  extends InAppNotificationAdditionalData {
   userID: string;
 }

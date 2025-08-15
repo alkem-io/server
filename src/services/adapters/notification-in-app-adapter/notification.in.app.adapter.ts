@@ -2,9 +2,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
-import { InAppNotificationPayloadBase } from './dto/notification.in.app.payload.base';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { CreateInAppNotificationInput } from '@platform/in-app-notification/dto/in.app.notification.create';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { NotificationEvent } from '@common/enums/notification.event';
+import { InAppNotificationAdditionalData } from '@platform/in-app-notification/dto/in.app.notification.additional.data';
 
 @Injectable()
 export class NotificationInAppAdapter {
@@ -16,8 +18,12 @@ export class NotificationInAppAdapter {
   ) {}
 
   public async sendInAppNotifications(
-    notification: InAppNotificationPayloadBase,
-    receiverIDs: string[]
+    type: NotificationEvent,
+    category: NotificationEventCategory,
+    triggeredByID: string,
+    receiverIDs: string[],
+    payload: InAppNotificationAdditionalData,
+    sourceEntityID: string | undefined
   ) {
     if (receiverIDs.length === 0) {
       this.logger.error(
@@ -32,8 +38,22 @@ export class NotificationInAppAdapter {
       LogContext.IN_APP_NOTIFICATION
     );
 
+    const inApps = receiverIDs.map(receiverID => {
+      const inAppData: CreateInAppNotificationInput = {
+        type,
+        category,
+        triggeredByID,
+        triggeredAt: new Date(),
+        payload,
+        receiverID,
+        sourceEntityID,
+      };
+      return this.inAppNotificationService.createInAppNotification(inAppData);
+    });
+
     // filtering out notifications that are not for beta users now done by platform privilege
-    const savedNotifications = await this.store(notification, receiverIDs);
+    const savedNotifications =
+      await this.inAppNotificationService.saveInAppNotifications(inApps);
 
     // notify
     this.logger.verbose?.(
@@ -45,25 +65,5 @@ export class NotificationInAppAdapter {
         this.subscriptionPublishService.publishInAppNotificationReceived(x)
       )
     );
-  }
-
-  private async store(
-    payload: InAppNotificationPayloadBase,
-    receiverIDs: string[]
-  ): Promise<InAppNotification[]> {
-    // create a version of the payload without the type, category, triggeredAt, triggeredBy
-    const { type, category, triggeredAt, triggeredByID, ...payloadRest } =
-      payload;
-    const entities = receiverIDs.map(receiverID =>
-      this.inAppNotificationService.createInAppNotification({
-        type,
-        category,
-        triggeredByID,
-        triggeredAt,
-        receiverID,
-        payload: payloadRest,
-      })
-    );
-    return this.inAppNotificationService.saveInAppNotifications(entities);
   }
 }

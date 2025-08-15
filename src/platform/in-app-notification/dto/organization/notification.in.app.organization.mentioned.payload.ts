@@ -1,13 +1,9 @@
-import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBaseOrganization } from './notification.in.app.payload.base.organization';
+import { InAppNotificationAdditionalData } from '../in.app.notification.additional.data';
 
 export interface InAppNotificationOrganizationMentionedPayload
-  extends InAppNotificationPayloadBaseOrganization {
-  type: NotificationEvent.ORGANIZATION_MENTIONED;
+  extends InAppNotificationAdditionalData {
   commentID: string;
   commentContent: string;
-  commentOrigin: {
-    displayName: string;
-    url: string;
-  };
+  commentOriginDisplayName: string;
+  commentOriginUrl: string;
 }

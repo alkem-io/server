@@ -1,9 +1,7 @@
-import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBaseOrganization } from './notification.in.app.payload.base.organization';
+import { InAppNotificationAdditionalData } from '../in.app.notification.additional.data';
 
 export interface InAppNotificationOrganizationMessageRecipientPayload
-  extends InAppNotificationPayloadBaseOrganization {
-  type: NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT;
+  extends InAppNotificationAdditionalData {
   messageID: string;
   messageContent: string;
 }

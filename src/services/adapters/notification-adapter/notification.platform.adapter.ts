@@ -77,16 +77,16 @@ export class NotificationPlatformAdapter {
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPlatformForumDiscussionCreatedPayload =
         {
-          type: NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.PLATFORM,
-          triggeredAt: new Date(),
           discussionID: eventData.discussion.id,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
         inAppPayload,
-        inAppReceiverIDs
+        undefined
       );
     }
   }
@@ -180,16 +180,16 @@ export class NotificationPlatformAdapter {
     );
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPlatformUserProfileCreatedPayload = {
-        type: NotificationEvent.PLATFORM_USER_PROFILE_CREATED,
-        triggeredByID: eventData.triggeredBy,
-        category: NotificationEventCategory.PLATFORM,
-        triggeredAt: new Date(),
         userID: eventData.userID,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_USER_PROFILE_CREATED,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
         inAppPayload,
-        inAppReceiverIDs
+        eventData.userID
       );
     }
 
@@ -219,16 +219,16 @@ export class NotificationPlatformAdapter {
     if (adminInAppReceiverIDs.length > 0) {
       const adminInAppPayload: InAppNotificationPlatformUserProfileCreatedAdminPayload =
         {
-          type: NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.PLATFORM,
-          triggeredAt: new Date(),
           userID: eventData.userID,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        adminInAppReceiverIDs,
         adminInAppPayload,
-        adminInAppReceiverIDs
+        eventData.userID
       );
     }
   }

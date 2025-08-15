@@ -1,9 +1,7 @@
-import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBaseSpace } from './notification.in.app.payload.space.base';
+import { InAppNotificationAdditionalData } from '../in.app.notification.additional.data';
 
 export interface InAppNotificationSpaceCollaborationWhiteboardCreatedPayload
-  extends InAppNotificationPayloadBaseSpace {
-  type: NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED;
+  extends InAppNotificationAdditionalData {
   calloutID: string;
   whiteboardID: string;
 }

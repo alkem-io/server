@@ -1,9 +1,7 @@
-import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from '../../../../services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
+import { InAppNotificationAdditionalData } from '../in.app.notification.additional.data';
 
 export interface InAppNotificationPlatformForumDiscussionCommentPayload
-  extends InAppNotificationPayloadBase {
-  type: NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT;
+  extends InAppNotificationAdditionalData {
   discussionID: string;
   commentID: string;
 }
