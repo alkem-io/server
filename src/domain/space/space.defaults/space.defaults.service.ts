@@ -66,21 +66,26 @@ export class SpaceDefaultsService {
     }
 
     // Enforce innovation flow settings:
-    const maxNumberOfStates =
-      templateSpaceContent.collaboration?.innovationFlow?.settings
-        .maximumNumberOfStates ?? Number.MAX_SAFE_INTEGER;
-    const minNumberOfStates =
-      templateSpaceContent.collaboration?.innovationFlow?.settings
-        .minimumNumberOfStates ?? 0;
+    if (templateSpaceContent.collaboration?.innovationFlow?.settings) {
+      collaborationData.innovationFlowData.settings.maximumNumberOfStates =
+        templateSpaceContent.collaboration.innovationFlow.settings.maximumNumberOfStates;
+      collaborationData.innovationFlowData.settings.minimumNumberOfStates =
+        templateSpaceContent.collaboration.innovationFlow.settings.minimumNumberOfStates;
+    }
 
     if (
-      collaborationData.innovationFlowData.states.length > maxNumberOfStates
+      collaborationData.innovationFlowData.states.length >
+      collaborationData.innovationFlowData.settings.maximumNumberOfStates
     ) {
       collaborationData.innovationFlowData.states =
-        collaborationData.innovationFlowData.states.slice(0, maxNumberOfStates);
+        collaborationData.innovationFlowData.states.slice(
+          0,
+          collaborationData.innovationFlowData.settings.maximumNumberOfStates
+        );
     }
     if (
-      collaborationData.innovationFlowData.states.length < minNumberOfStates
+      collaborationData.innovationFlowData.states.length <
+      collaborationData.innovationFlowData.settings.minimumNumberOfStates
     ) {
       throw new ValidationException(
         `Innovation flow must have at least ${collaborationData.innovationFlowData.settings.minimumNumberOfStates} states.`,
