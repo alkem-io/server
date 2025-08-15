@@ -43,7 +43,8 @@ export class NotificationRecipientsService {
     const { privilegeRequired, credentialCriteria } =
       this.getPrivilegeRequiredCredentialCriteria(
         eventData.eventType,
-        eventData.entityID
+        eventData.entityID,
+        eventData.userID
       );
 
     this.logger.verbose?.(
@@ -109,7 +110,8 @@ export class NotificationRecipientsService {
       const privilege = privilegeRequired;
       const authorizationPolicy = await this.getAuthorizationPolicy(
         eventData.eventType,
-        eventData.entityID
+        eventData.entityID,
+        eventData.userID
       );
       recipientsWithPrivilege =
         recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
@@ -200,6 +202,8 @@ export class NotificationRecipientsService {
         return notificationSettings.space.communityApplicationReceived;
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
         return notificationSettings.space.communityApplicationSubmitted;
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
+        return notificationSettings.space.communityInvitationUser;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         return notificationSettings.space.communicationUpdates;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
@@ -232,7 +236,8 @@ export class NotificationRecipientsService {
 
   private getPrivilegeRequiredCredentialCriteria(
     eventType: NotificationEvent,
-    entityID?: string
+    entityID?: string,
+    userID?: string
   ): {
     privilegeRequired: AuthorizationPrivilege | undefined;
     credentialCriteria: CredentialsSearchInput[];
@@ -300,13 +305,22 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getUserSelfCriteria(entityID);
+        // Use userID if provided, otherwise fall back to entityID for backward compatibility
+        const targetUserID = userID || entityID;
+        credentialCriteria = this.getUserSelfCriteria(targetUserID);
+        break;
+      }
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
+        // For direct user invitations, no privilege check is needed - just check if the user exists and has notifications enabled
+        // Use userID if provided, otherwise fall back to entityID for backward compatibility
+        const targetUserID = userID || entityID;
+        credentialCriteria = this.getUserSelfCriteria(targetUserID);
         break;
       }
     }
@@ -350,7 +364,8 @@ export class NotificationRecipientsService {
   }
   private async getAuthorizationPolicy(
     eventType: NotificationEvent,
-    entityID?: string
+    entityID?: string,
+    userID?: string
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
       case NotificationEvent.PLATFORM_SPACE_CREATED:
@@ -414,13 +429,15 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
         // get the User authorization policy
-        if (!entityID) {
+        // Use userID if provided, otherwise fall back to entityID for backward compatibility
+        const targetUserID = userID || entityID;
+        if (!targetUserID) {
           throw new ValidationException(
-            'Entity ID is required for user notification recipients',
+            'User ID is required for user notification recipients',
             LogContext.NOTIFICATIONS
           );
         }
-        const user = await this.userLookupService.getUserOrFail(entityID);
+        const user = await this.userLookupService.getUserOrFail(targetUserID);
         if (!user.authorization) {
           throw new RelationshipNotFoundException(
             `User does not have an authorization policy: ${user.id}`,

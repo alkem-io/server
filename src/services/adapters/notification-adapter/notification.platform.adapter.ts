@@ -160,7 +160,8 @@ export class NotificationPlatformAdapter {
     const event = NotificationEvent.PLATFORM_USER_PROFILE_CREATED;
     const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData
+      eventData,
+      eventData.userID
     );
 
     const payload =
@@ -254,8 +255,14 @@ export class NotificationPlatformAdapter {
 
   private async getNotificationRecipientsPlatform(
     event: NotificationEvent,
-    eventData: NotificationInputBase
+    eventData: NotificationInputBase,
+    userID?: string
   ): Promise<NotificationRecipientResult> {
-    return this.notificationAdapter.getNotificationRecipients(event, eventData);
+    return this.notificationAdapter.getNotificationRecipients(
+      event,
+      eventData,
+      undefined,
+      userID
+    );
   }
 }

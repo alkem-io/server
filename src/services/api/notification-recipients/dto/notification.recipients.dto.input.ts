@@ -22,4 +22,11 @@ export class NotificationRecipientsInput {
     description: 'The ID of the User that triggered the event.',
   })
   triggeredBy?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'The ID of the specific user recipient for user-related notifications (e.g., invitations, mentions).',
+  })
+  userID?: string;
 }
