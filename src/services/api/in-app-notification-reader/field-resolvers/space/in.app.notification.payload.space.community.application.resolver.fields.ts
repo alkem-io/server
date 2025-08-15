@@ -1,20 +1,21 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { InAppNotificationEntrySpaceCommunityApplicationAdmin } from '../../dto/space/in.app.notification.entry.space.community.application.admin';
+import { InAppNotificationPayloadSpaceCommunityApplicationApplicant } from '../../dto/space/in.app.notification.entry.space.community.application.applicant';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
 
-@Resolver(() => InAppNotificationEntrySpaceCommunityApplicationAdmin)
-export class InAppNotificationSpaceCommunityApplicationAdminResolverFields {
+@Resolver(() => InAppNotificationPayloadSpaceCommunityApplicationApplicant)
+export class InAppNotificationSpaceCommunityApplicationApplicantResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
     description: 'The Contributor that applied.',
   })
   public contributor(
-    @Parent() { payload }: InAppNotificationEntrySpaceCommunityApplicationAdmin,
+    @Parent()
+    payload: InAppNotificationPayloadSpaceCommunityApplicationApplicant,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {
@@ -26,7 +27,8 @@ export class InAppNotificationSpaceCommunityApplicationAdminResolverFields {
     description: 'The Space that the application was made to.',
   })
   public space(
-    @Parent() { payload }: InAppNotificationEntrySpaceCommunityApplicationAdmin,
+    @Parent()
+    payload: InAppNotificationPayloadSpaceCommunityApplicationApplicant,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
     loader: ILoader<ISpace | null>
   ) {

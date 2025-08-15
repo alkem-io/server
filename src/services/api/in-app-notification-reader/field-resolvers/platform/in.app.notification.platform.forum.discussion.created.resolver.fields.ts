@@ -1,11 +1,11 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { InAppNotificationEntryPlatformForumDiscussionCreated } from '../../dto/platform/in.app.notification.entry.platform.forum.discussion.created';
+import { InAppNotificationPayloadPlatformForumDiscussionCreated } from '../../dto/platform/in.app.notification.entry.platform.forum.discussion.created';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 
-@Resolver(() => InAppNotificationEntryPlatformForumDiscussionCreated)
+@Resolver(() => InAppNotificationPayloadPlatformForumDiscussionCreated)
 export class InAppNotificationPlatformForumDiscussionCreatedResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
@@ -13,7 +13,7 @@ export class InAppNotificationPlatformForumDiscussionCreatedResolverFields {
   })
   public contributor(
     @Parent()
-    { payload }: InAppNotificationEntryPlatformForumDiscussionCreated,
+    payload: InAppNotificationPayloadPlatformForumDiscussionCreated,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {
@@ -26,7 +26,7 @@ export class InAppNotificationPlatformForumDiscussionCreatedResolverFields {
   })
   public discussion(
     @Parent()
-    { payload }: InAppNotificationEntryPlatformForumDiscussionCreated
+    payload: InAppNotificationPayloadPlatformForumDiscussionCreated
   ): string {
     return payload.discussionID;
   }

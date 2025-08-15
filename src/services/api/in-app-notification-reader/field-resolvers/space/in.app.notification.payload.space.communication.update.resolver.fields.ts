@@ -1,21 +1,21 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { InAppNotificationEntrySpaceCollaborationPostCreatedAdmin } from '../../dto/space/in.app.notification.entry.space.collaboration.post.created.admin';
+import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../dto/space/in.app.notification.entry.space.communication.update';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
 
-@Resolver(() => InAppNotificationEntrySpaceCollaborationPostCreatedAdmin)
-export class InAppNotificationSpaceCollaborationPostCreatedAdminResolverFields {
+@Resolver(() => InAppNotificationPayloadSpaceCommunicationUpdate)
+export class InAppNotificationSpaceCommunicationUpdateResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
-    description: 'The Contributor that created the post.',
+    description: 'The Contributor that sent the update.',
   })
   public contributor(
     @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationPostCreatedAdmin,
+    payload: InAppNotificationPayloadSpaceCommunicationUpdate,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {
@@ -24,11 +24,11 @@ export class InAppNotificationSpaceCollaborationPostCreatedAdminResolverFields {
 
   @ResolveField(() => ISpace, {
     nullable: true,
-    description: 'The Space where the post was created.',
+    description: 'The Space where the update was sent.',
   })
   public space(
     @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationPostCreatedAdmin,
+    payload: InAppNotificationPayloadSpaceCommunicationUpdate,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
     loader: ILoader<ISpace | null>
   ) {
@@ -37,23 +37,12 @@ export class InAppNotificationSpaceCollaborationPostCreatedAdminResolverFields {
 
   @ResolveField(() => String, {
     nullable: true,
-    description: 'The post ID.',
+    description: 'The update content.',
   })
-  public post(
+  public update(
     @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationPostCreatedAdmin
+    payload: InAppNotificationPayloadSpaceCommunicationUpdate
   ): string {
-    return payload.postID;
-  }
-
-  @ResolveField(() => String, {
-    nullable: true,
-    description: 'The callout ID.',
-  })
-  public callout(
-    @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationPostCreatedAdmin
-  ): string {
-    return payload.calloutID;
+    return payload.updateID;
   }
 }

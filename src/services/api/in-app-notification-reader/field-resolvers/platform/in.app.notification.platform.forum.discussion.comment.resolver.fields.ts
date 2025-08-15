@@ -1,11 +1,11 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { InAppNotificationEntryPlatformForumDiscussionComment } from '../../dto/platform/in.app.notification.entry.platform.forum.discussion.comment';
+import { InAppNotificationPayloadPlatformForumDiscussionComment } from '../../dto/platform/in.app.notification.entry.platform.forum.discussion.comment';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 
-@Resolver(() => InAppNotificationEntryPlatformForumDiscussionComment)
+@Resolver(() => InAppNotificationPayloadPlatformForumDiscussionComment)
 export class InAppNotificationPlatformForumDiscussionCommentResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
@@ -13,7 +13,7 @@ export class InAppNotificationPlatformForumDiscussionCommentResolverFields {
   })
   public contributor(
     @Parent()
-    { payload }: InAppNotificationEntryPlatformForumDiscussionComment,
+    payload: InAppNotificationPayloadPlatformForumDiscussionComment,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {
@@ -26,7 +26,7 @@ export class InAppNotificationPlatformForumDiscussionCommentResolverFields {
   })
   public discussion(
     @Parent()
-    { payload }: InAppNotificationEntryPlatformForumDiscussionComment
+    payload: InAppNotificationPayloadPlatformForumDiscussionComment
   ): string {
     return payload.discussionID;
   }
@@ -37,7 +37,7 @@ export class InAppNotificationPlatformForumDiscussionCommentResolverFields {
   })
   public comment(
     @Parent()
-    { payload }: InAppNotificationEntryPlatformForumDiscussionComment
+    payload: InAppNotificationPayloadPlatformForumDiscussionComment
   ): string {
     return payload.commentID;
   }

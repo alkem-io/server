@@ -5,6 +5,24 @@ import { BaseException } from '@common/exceptions/base.exception';
 import { InAppNotificationPayload } from '@platform/in-app-notification/dto/payload/in.app.notification.payload.base';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.base';
+import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.direct';
+import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.room';
+import { InAppNotificationPayloadSpaceApplication } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.application';
+import { InAppNotificationPayloadSpaceContributor } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.contributor';
+import { InAppNotificationPayloadSpaceInvitation } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.invitation';
+import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.message.direct';
+import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post';
+import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.callout';
+import { InAppNotificationPayloadSpaceCollaborationWhiteboard } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.whiteboard';
+import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post.comment';
+import { InAppNotificationPayloadUser } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.base';
+import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.update';
+import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.room';
+import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.direct';
+import { InAppNotificationPayloadSpaceInvitationPlatform } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.invitation.platform';
+import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.forum.discussion';
+import { InAppNotificationPayloadPlatformForumDiscussionComment } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.forum.discussion.comment';
+import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification/dto/payload/platform/notification.in.app.payload.platform.user.profile.removed';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -31,29 +49,29 @@ import { InAppNotificationPayloadSpace } from '@platform/in-app-notification/dto
       case NotificationEventPayload.SPACE:
         return InAppNotificationPayloadSpace;
       case NotificationEventPayload.SPACE_COMMUNITY_APPLICATION:
-        return InAppNotificationPayloadSpaceCommunityApplication;
+        return InAppNotificationPayloadSpaceApplication;
       case NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR:
-        return InAppNotificationPayloadSpaceCommunityContributor;
+        return InAppNotificationPayloadSpaceContributor;
       case NotificationEventPayload.SPACE_COMMUNITY_INVITATION:
-        return InAppNotificationPayloadSpaceCommunityInvitation;
+        return InAppNotificationPayloadSpaceInvitation;
       case NotificationEventPayload.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
-        return InAppNotificationPayloadSpaceCommunityInvitationUserPlatform;
+        return InAppNotificationPayloadSpaceInvitationPlatform;
       case NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT:
         return InAppNotificationPayloadSpaceCommunicationMessageDirect;
       case NotificationEventPayload.SPACE_COMMUNICATION_UPDATE:
         return InAppNotificationPayloadSpaceCommunicationUpdate;
       case NotificationEventPayload.SPACE_COLLABORATION_POST:
-        return InAppNotificationPayloadSpaceCollaborationPostCreated;
+        return InAppNotificationPayloadSpaceCollaborationPost;
       case NotificationEventPayload.SPACE_COLLABORATION_POST_COMMENT:
-        return InAppNotificationPayloadSpaceCollaborationPostCommentCreated;
+        return InAppNotificationPayloadSpaceCollaborationPostComment;
       case NotificationEventPayload.SPACE_COLLABORATION_WHITEBOARD:
-        return InAppNotificationPayloadSpaceCollaborationWhiteboardCreated;
+        return InAppNotificationPayloadSpaceCollaborationWhiteboard;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
-        return InAppNotificationPayloadSpaceCollaborationCalloutPublished;
+        return InAppNotificationPayloadSpaceCollaborationCallout;
 
       // User notifications
       case NotificationEventPayload.USER:
-        return InAppNotificationPayloadPlatformUser;
+        return InAppNotificationPayloadUser;
       case NotificationEventPayload.USER_MESSAGE_ROOM:
         return InAppNotificationPayloadUserMessageRoom;
       case NotificationEventPayload.USER_MESSAGE_DIRECT:

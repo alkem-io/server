@@ -1,21 +1,21 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ISpace } from '@domain/space/space/space.interface';
-import { InAppNotificationEntrySpaceCollaborationPostCommentCreated } from '../../dto/space/in.app.notification.entry.space.collaboration.post.comment.created';
+import { InAppNotificationPayloadSpaceCommunicationMessageSender } from '../../dto/space/in.app.notification.entry.space.communication.message.sender';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/space.loader.creator';
 
-@Resolver(() => InAppNotificationEntrySpaceCollaborationPostCommentCreated)
-export class InAppNotificationSpaceCollaborationPostCommentCreatedResolverFields {
+@Resolver(() => InAppNotificationPayloadSpaceCommunicationMessageSender)
+export class InAppNotificationSpaceCommunicationMessageSenderResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
-    description: 'The Contributor that created the comment.',
+    description: 'The Contributor that sent the message.',
   })
   public contributor(
     @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationPostCommentCreated,
+    payload: InAppNotificationPayloadSpaceCommunicationMessageSender,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {
@@ -24,11 +24,11 @@ export class InAppNotificationSpaceCollaborationPostCommentCreatedResolverFields
 
   @ResolveField(() => ISpace, {
     nullable: true,
-    description: 'The Space where the comment was created.',
+    description: 'The Space where the message was sent.',
   })
   public space(
     @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationPostCommentCreated,
+    payload: InAppNotificationPayloadSpaceCommunicationMessageSender,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
     loader: ILoader<ISpace | null>
   ) {
@@ -37,22 +37,11 @@ export class InAppNotificationSpaceCollaborationPostCommentCreatedResolverFields
 
   @ResolveField(() => String, {
     nullable: true,
-    description: 'The post ID.',
+    description: 'The message content.',
   })
-  public post(
+  public message(
     @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationPostCommentCreated
-  ): string {
-    return payload.postID;
-  }
-
-  @ResolveField(() => String, {
-    nullable: true,
-    description: 'The comment ID.',
-  })
-  public comment(
-    @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationPostCommentCreated
+    payload: InAppNotificationPayloadSpaceCommunicationMessageSender
   ): string {
     return payload.message.messageID;
   }

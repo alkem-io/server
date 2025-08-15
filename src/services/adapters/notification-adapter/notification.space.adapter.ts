@@ -28,7 +28,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { InAppNotificationPayloadSpaceApplication } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.application';
 import { InAppNotificationPayloadSpaceContributor } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.contributor';
 import { InAppNotificationPayloadSpaceInvitation } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.invitation';
-import { InAppNotificationPayloadSpaceMessageDirect } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.message.direct';
+import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.message.direct';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 @Injectable()
 export class NotificationSpaceAdapter {
@@ -546,7 +546,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceMessageDirect = {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunicationMessageDirect = {
         type: NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT,
         spaceID: space.id,
         message: eventData.message,

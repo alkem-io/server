@@ -7,17 +7,17 @@ import {
   SpaceLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { InAppNotificationEntrySpaceCollaborationCalloutPublished } from '../../dto/space/in.app.notification.entry.space.collaboration.callout.published';
+import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.callout';
 
-@Resolver(() => InAppNotificationEntrySpaceCollaborationCalloutPublished)
-export class InAppNotificationSpaceCollaborationCalloutPublishedResolverFields {
+@Resolver(() => InAppNotificationPayloadSpaceCollaborationCallout)
+export class InAppNotificationPayloadSpaceCollaborationCalloutResolverFields {
   @ResolveField(() => ICallout, {
     nullable: true,
     description: 'The Callout that was published.',
   })
   public callout(
     @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationCalloutPublished,
+    payload: InAppNotificationPayloadSpaceCollaborationCallout,
     @Loader(CalloutLoaderCreator, { resolveToNull: true })
     loader: ILoader<ICallout>
   ) {
@@ -30,7 +30,7 @@ export class InAppNotificationSpaceCollaborationCalloutPublishedResolverFields {
   })
   public space(
     @Parent()
-    { payload }: InAppNotificationEntrySpaceCollaborationCalloutPublished,
+    payload: InAppNotificationPayloadSpaceCollaborationCallout,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
     loader: ILoader<ISpace>
   ) {

@@ -1,11 +1,11 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { InAppNotificationEntryPlatformUserProfileRemoved } from '../../dto/platform/in.app.notification.entry.platform.user.profile.removed';
+import { InAppNotificationPayloadPlatformUserProfileRemoved } from '../../dto/platform/in.app.notification.entry.platform.user.profile.removed';
 import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 
-@Resolver(() => InAppNotificationEntryPlatformUserProfileRemoved)
+@Resolver(() => InAppNotificationPayloadPlatformUserProfileRemoved)
 export class InAppNotificationPlatformUserProfileRemovedResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
@@ -13,7 +13,7 @@ export class InAppNotificationPlatformUserProfileRemovedResolverFields {
   })
   public contributor(
     @Parent()
-    { payload }: InAppNotificationEntryPlatformUserProfileRemoved,
+    payload: InAppNotificationPayloadPlatformUserProfileRemoved,
     @Loader(ContributorLoaderCreator, { resolveToNull: true })
     loader: ILoader<IContributor | null>
   ) {
@@ -26,7 +26,7 @@ export class InAppNotificationPlatformUserProfileRemovedResolverFields {
   })
   public user(
     @Parent()
-    { payload }: InAppNotificationEntryPlatformUserProfileRemoved
+    payload: InAppNotificationPayloadPlatformUserProfileRemoved
   ): string {
     return payload.userDisplayName;
   }
