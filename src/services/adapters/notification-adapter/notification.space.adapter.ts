@@ -438,7 +438,8 @@ export class NotificationSpaceAdapter {
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      space.id
+      space.id,
+      eventData.invitedContributorID
     );
 
     const payload =
@@ -732,12 +733,14 @@ export class NotificationSpaceAdapter {
   private async getNotificationRecipientsSpace(
     event: NotificationEvent,
     eventData: NotificationInputBase,
-    spaceID: string
+    spaceID: string,
+    userID?: string
   ): Promise<NotificationRecipientResult> {
     return this.notificationAdapter.getNotificationRecipients(
       event,
       eventData,
-      spaceID
+      spaceID,
+      userID
     );
   }
 }

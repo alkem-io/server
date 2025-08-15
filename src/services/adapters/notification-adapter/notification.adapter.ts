@@ -135,7 +135,8 @@ export class NotificationAdapter {
     const event = NotificationEvent.USER_COMMENT_REPLY;
     const recipients = await this.getNotificationRecipientsUser(
       event,
-      eventData
+      eventData,
+      eventData.commentOwnerID
     );
 
     try {
@@ -193,7 +194,8 @@ export class NotificationAdapter {
     const event = NotificationEvent.USER_MESSAGE_RECIPIENT;
     const recipients = await this.getNotificationRecipientsUser(
       event,
-      eventData
+      eventData,
+      eventData.receiverID
     );
     // Emit the events to notify others
     const payload =
@@ -233,7 +235,8 @@ export class NotificationAdapter {
     const event = NotificationEvent.USER_MENTION;
     const recipients = await this.getNotificationRecipientsUser(
       event,
-      eventData
+      eventData,
+      eventData.mentionedEntityID
     );
     // Emit the events to notify others
     const payload =
@@ -302,9 +305,10 @@ export class NotificationAdapter {
 
   private async getNotificationRecipientsUser(
     event: NotificationEvent,
-    eventData: NotificationInputBase
+    eventData: NotificationInputBase,
+    userID?: string
   ): Promise<NotificationRecipientResult> {
-    return this.getNotificationRecipients(event, eventData);
+    return this.getNotificationRecipients(event, eventData, undefined, userID);
   }
 
   private async getNotificationRecipientsOrganization(
@@ -318,13 +322,15 @@ export class NotificationAdapter {
   public async getNotificationRecipients(
     event: NotificationEvent,
     eventData: NotificationInputBase,
-    entityID?: string
+    entityID?: string,
+    userID?: string
   ): Promise<NotificationRecipientResult> {
     this.logEventTriggered(eventData, event);
 
     const recipients = await this.notificationsRecipientsService.getRecipients({
       eventType: event,
-      entityID,
+      spaceID: entityID,
+      userID,
     });
     return recipients;
   }

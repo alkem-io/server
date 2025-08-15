@@ -43,7 +43,8 @@ export class NotificationRecipientsService {
     const { privilegeRequired, credentialCriteria } =
       this.getPrivilegeRequiredCredentialCriteria(
         eventData.eventType,
-        eventData.entityID
+        eventData.spaceID,
+        eventData.userID
       );
 
     this.logger.verbose?.(
@@ -109,7 +110,8 @@ export class NotificationRecipientsService {
       const privilege = privilegeRequired;
       const authorizationPolicy = await this.getAuthorizationPolicy(
         eventData.eventType,
-        eventData.entityID
+        eventData.spaceID,
+        eventData.userID
       );
       recipientsWithPrivilege =
         recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
@@ -200,6 +202,8 @@ export class NotificationRecipientsService {
         return notificationSettings.space.communityApplicationReceived;
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
         return notificationSettings.space.communityApplicationSubmitted;
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
+        return notificationSettings.space.communityInvitationUser;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         return notificationSettings.space.communicationUpdates;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
@@ -232,7 +236,9 @@ export class NotificationRecipientsService {
 
   private getPrivilegeRequiredCredentialCriteria(
     eventType: NotificationEvent,
-    entityID?: string
+    spaceID?: string,
+    organizationID?: string,
+    userID?: string
   ): {
     privilegeRequired: AuthorizationPrivilege | undefined;
     credentialCriteria: CredentialsSearchInput[];
@@ -271,12 +277,13 @@ export class NotificationRecipientsService {
       case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT:
       case NotificationEvent.ORGANIZATION_MENTIONED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getOrganizationCredentialCriteria(entityID);
+        credentialCriteria =
+          this.getOrganizationCredentialCriteria(organizationID);
         break;
       }
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(entityID);
+        credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         credentialCriteria.push({
           type: AuthorizationCredential.GLOBAL_ADMIN,
           resourceID: '',
@@ -287,7 +294,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(entityID);
+        credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         break;
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
@@ -296,17 +303,22 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getSpaceCredentialCriteria(entityID);
+        credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         break;
       }
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getUserSelfCriteria(entityID);
+        credentialCriteria = this.getUserSelfCriteria(userID);
+        break;
+      }
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
+        // For direct user invitations, no privilege check is needed - just check if the user exists and has notifications enabled
+        credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
     }
@@ -350,7 +362,8 @@ export class NotificationRecipientsService {
   }
   private async getAuthorizationPolicy(
     eventType: NotificationEvent,
-    entityID?: string
+    entityID?: string,
+    userID?: string
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
       case NotificationEvent.PLATFORM_SPACE_CREATED:
@@ -414,13 +427,15 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
         // get the User authorization policy
-        if (!entityID) {
+        // Use userID if provided, otherwise fall back to entityID for backward compatibility
+        const targetUserID = userID || entityID;
+        if (!targetUserID) {
           throw new ValidationException(
-            'Entity ID is required for user notification recipients',
+            'User ID is required for user notification recipients',
             LogContext.NOTIFICATIONS
           );
         }
-        const user = await this.userLookupService.getUserOrFail(entityID);
+        const user = await this.userLookupService.getUserOrFail(targetUserID);
         if (!user.authorization) {
           throw new RelationshipNotFoundException(
             `User does not have an authorization policy: ${user.id}`,

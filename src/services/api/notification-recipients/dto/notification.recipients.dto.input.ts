@@ -12,14 +12,26 @@ export class NotificationRecipientsInput {
 
   @Field(() => UUID, {
     nullable: true,
-    description:
-      'The ID of the entity to retrieve the recipients for. This could be a Space, Organization etc, and is specific to the event type.',
-  })
-  entityID?: string;
-
-  @Field(() => UUID, {
-    nullable: true,
     description: 'The ID of the User that triggered the event.',
   })
   triggeredBy?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description: 'The ID of the space to retrieve the recipients for.',
+  })
+  spaceID?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'The ID of the specific user recipient for user-related notifications (e.g., invitations, mentions).',
+  })
+  userID?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description: 'The ID of the Organization to use to determine recipients.',
+  })
+  organizationID?: string;
 }
