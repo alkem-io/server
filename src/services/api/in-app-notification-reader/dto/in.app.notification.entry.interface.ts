@@ -1,12 +1,11 @@
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { Field, InterfaceType } from '@nestjs/graphql';
+import { InterfaceType } from '@nestjs/graphql';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
+import { InAppNotificationPayload } from '@platform/in-app-notification/dto/payload/in.app.notification.payload.base';
 
 // Space notifications
 import { InAppNotificationEntrySpaceCommunityNewMember } from './space/in.app.notification.entry.space.community.new.member';
@@ -129,36 +128,13 @@ import { InAppNotificationEntryUserCommentReply } from './user/in.app.notificati
   },
 })
 export abstract class IInAppNotificationEntry {
-  @Field(() => UUID, {
-    nullable: false,
-  })
-  id!: string;
-
-  @Field(() => NotificationEvent, {
-    nullable: false,
-    description: 'The type of the notification',
-  })
-  type!: NotificationEvent;
-
-  @Field(() => Date, {
-    nullable: false,
-    description: 'When (UTC) was the notification sent.',
-  })
-  triggeredAt!: Date;
-
-  @Field(() => NotificationEventInAppState, {
-    nullable: false,
-    description: 'The current state of the notification',
-  })
   state!: NotificationEventInAppState;
-
-  @Field(() => NotificationEventCategory, {
-    nullable: false,
-    description: 'Which category (role) is this notification targeted to.',
-  })
   category!: NotificationEventCategory;
-
+  type!: NotificationEvent;
   receiverID!: string;
 
-  payload!: InAppNotificationPayloadBase;
+  triggeredByID!: string;
+  triggeredAt!: Date;
+
+  payload!: InAppNotificationPayload;
 }

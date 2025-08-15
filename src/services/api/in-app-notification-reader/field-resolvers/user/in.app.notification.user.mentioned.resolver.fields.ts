@@ -20,7 +20,7 @@ export class InAppNotificationUserMentionedResolverFields {
   public commentUrl(
     @Parent() { payload }: InAppNotificationEntryUserMentioned
   ): string {
-    return payload.message.roomID; // TODO: this URL should NOT be part of data in InApp data
+    return payload.commentUrl; // TODO: this URL should NOT be part of data in InApp data
   }
 
   @ResolveField(() => String, {

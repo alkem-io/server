@@ -9,19 +9,6 @@ import { Loader } from '@core/dataloader/decorators';
 export class InAppNotificationUserMessageSenderResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
-    description: 'The Contributor that sent the message.',
-  })
-  public contributor(
-    @Parent()
-    { payload }: InAppNotificationEntryUserMessageSender,
-    @Loader(ContributorLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IContributor | null>
-  ) {
-    return loader.load(payload.triggeredByID);
-  }
-
-  @ResolveField(() => IContributor, {
-    nullable: true,
     description: 'The User that received the message.',
   })
   public user(

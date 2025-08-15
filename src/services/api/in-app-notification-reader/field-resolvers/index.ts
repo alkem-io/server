@@ -30,8 +30,8 @@ export * from './platform/in.app.notification.platform.forum.discussion.comment.
 export * from './platform/in.app.notification.platform.space.created.resolver.fields';
 
 // Organization Field Resolvers
-export * from './organization/in.app.notification.organization.mentioned.resolver.fields';
-export * from './organization/in.app.notification.organization.message.sender.resolver.fields';
+export * from './organization/in.app.notification.payload.organization.message.room.resolver.fields';
+export * from './organization/in.app.notification.payload.organization.message.direct.resolver.fields';
 export * from './organization/in.app.notification.organization.message.recipient.resolver.fields';
 
 // User Field Resolvers

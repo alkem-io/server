@@ -10,17 +10,17 @@ import { MentionedEntityType } from '@domain/communication/messaging/mention.int
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
 import { NotificationRecipientsService } from '@services/api/notification-recipients/notification.recipients.service';
-import { InAppNotificationOrganizationMentionedPayload } from '../../../platform/in-app-notification/dto/organization/notification.in.app.organization.mentioned.payload';
-import { InAppNotificationOrganizationMessageRecipientPayload } from '../../../platform/in-app-notification/dto/organization/notification.in.app.organization.message.recipient.payload';
-import { InAppNotificationUserCommentReplyPayload } from '../../../platform/in-app-notification/dto/user/notification.in.app.user.comment.reply.payload';
-import { InAppNotificationUserMessageRecipientPayload } from '../../../platform/in-app-notification/dto/user/notification.in.app.user.message.recipient.payload';
-import { InAppNotificationUserMentionedPayload } from '../../../platform/in-app-notification/dto/user/notification.in.app.user.mentioned.payload';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
 import { NotificationInputUserMention } from './dto/user/notification.dto.input.user.mention';
+import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.room';
+import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.direct';
+import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.room';
+import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.direct';
+import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 
 @Injectable()
 export class NotificationAdapter {
@@ -65,11 +65,11 @@ export class NotificationAdapter {
         recipient => recipient.id
       );
       if (inAppReceiverIDs.length > 0) {
-        const inAppPayload: InAppNotificationOrganizationMentionedPayload = {
-          commentID: eventData.commentsId || 'unknown',
-          commentContent: eventData.comment,
-          commentOriginDisplayName: eventData.originEntity.displayName,
-          commentOriginUrl: 'unknown', // Would need to be constructed
+        const inAppPayload: InAppNotificationPayloadOrganizationMessageRoom = {
+          type: NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM,
+          organizationID: eventData.mentionedEntityID,
+          roomID: eventData.originEntity.id,
+          messageID: eventData.commentsId || 'unknown',
         };
 
         await this.notificationInAppAdapter.sendInAppNotifications(
@@ -77,8 +77,7 @@ export class NotificationAdapter {
           NotificationEventCategory.ORGANIZATION,
           eventData.triggeredBy,
           inAppReceiverIDs,
-          inAppPayload,
-          eventData.mentionedEntityID
+          inAppPayload
         );
       }
     }
@@ -109,19 +108,18 @@ export class NotificationAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationOrganizationMessageRecipientPayload =
-        {
-          messageID: 'unknown', // Would need message ID from event data
-          messageContent: eventData.message,
-        };
+      const inAppPayload: InAppNotificationPayloadOrganizationMessageDirect = {
+        type: NotificationEventPayload.ORGANIZATION_MESSAGE_DIRECT,
+        organizationID: eventData.organizationID,
+        message: eventData.message,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT,
         NotificationEventCategory.ORGANIZATION,
         eventData.triggeredBy,
         inAppReceiverIDs,
-        inAppPayload,
-        eventData.organizationID
+        inAppPayload
       );
     }
   }
@@ -156,9 +154,11 @@ export class NotificationAdapter {
         recipient => recipient.id
       );
       if (inAppReceiverIDs.length > 0) {
-        const inAppPayload: InAppNotificationUserCommentReplyPayload = {
-          originalMessageID: 'unknown', // Would need original message ID
-          replyMessageID: 'unknown', // Would need reply message ID
+        const inAppPayload: InAppNotificationPayloadUserMessageRoom = {
+          type: NotificationEventPayload.USER_MESSAGE_ROOM,
+          userID: eventData.commentOwnerID,
+          roomID: 'unknown', // Would need room ID
+          messageID: 'unknown', // Would need original message ID
         };
 
         await this.notificationInAppAdapter.sendInAppNotifications(
@@ -166,8 +166,7 @@ export class NotificationAdapter {
           NotificationEventCategory.USER,
           eventData.triggeredBy,
           inAppReceiverIDs,
-          inAppPayload,
-          eventData.commentOwnerID
+          inAppPayload
         );
       }
     } catch (error: any) {
@@ -204,9 +203,10 @@ export class NotificationAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationUserMessageRecipientPayload = {
+      const inAppPayload: InAppNotificationPayloadUserMessageDirect = {
+        type: NotificationEventPayload.USER_MESSAGE_DIRECT,
+        userID: eventData.receiverID,
         message: eventData.message,
-        senderUserID: eventData.triggeredBy,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -214,8 +214,7 @@ export class NotificationAdapter {
         NotificationEventCategory.USER,
         eventData.triggeredBy,
         inAppReceiverIDs,
-        inAppPayload,
-        eventData.receiverID
+        inAppPayload
       );
     }
   }
@@ -253,7 +252,9 @@ export class NotificationAdapter {
         recipient => recipient.id
       );
       if (inAppReceiverIDs.length > 0) {
-        const inAppPayload: InAppNotificationUserMentionedPayload = {
+        const inAppPayload: InAppNotificationPayloadUserMessageRoom = {
+          type: NotificationEventPayload.USER_MESSAGE_ROOM,
+          userID: eventData.mentionedEntityID,
           messageID: 'unknown', // Would need actual message ID
           roomID: eventData.commentsId || 'unknown',
         };
@@ -263,8 +264,7 @@ export class NotificationAdapter {
           NotificationEventCategory.USER,
           eventData.triggeredBy,
           inAppReceiverIDs,
-          inAppPayload,
-          eventData.mentionedEntityID
+          inAppPayload
         );
       }
     }

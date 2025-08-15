@@ -3,7 +3,7 @@ import { NotificationEventInAppState } from '@common/enums/notification.event.in
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationAdditionalData } from './dto/in.app.notification.additional.data';
+import { InAppNotificationPayload } from './dto/payload/in.app.notification.payload.base';
 
 export class IInAppNotification extends IBaseAlkemio {
   // Meta information for classifying the InAppNotifications
@@ -15,12 +15,12 @@ export class IInAppNotification extends IBaseAlkemio {
   triggeredAt!: Date;
   triggeredBy?: IContributor; // exposed via the interface field resolver
 
-  // The entity that this notification was triggered on, if any
-  sourceEntityID?: string;
-
   // The receiver of the notification
   receiverID!: string;
 
+  // The entity that this notification was triggered on, if any
+  sourceEntityID?: string;
+
   // Additional data
-  payload!: InAppNotificationAdditionalData;
+  payload!: InAppNotificationPayload;
 }
