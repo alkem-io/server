@@ -329,7 +329,7 @@ export class NotificationAdapter {
 
     const recipients = await this.notificationsRecipientsService.getRecipients({
       eventType: event,
-      entityID,
+      spaceID: entityID,
       userID,
     });
     return recipients;
