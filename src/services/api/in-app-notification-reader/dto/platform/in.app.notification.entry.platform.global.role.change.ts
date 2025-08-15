@@ -3,7 +3,7 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { IInAppNotificationEntryBase } from '../in.app.notification.entry.base';
 import { IInAppNotificationEntry } from '../in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPlatformGlobalRoleChangePayload } from '@services/adapters/notification-in-app-adapter/dto/platform/notification.in.app.platform.global.role.change.payload';
+import { InAppNotificationPlatformGlobalRoleChangePayload } from '@platform/in-app-notification/dto/platform/notification.in.app.platform.global.role.change.payload';
 
 @ObjectType('InAppNotificationPlatformGlobalRoleChange', {
   implements: () => IInAppNotificationEntry,

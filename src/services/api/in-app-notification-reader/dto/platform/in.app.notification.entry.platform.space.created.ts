@@ -4,7 +4,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { IInAppNotificationEntryBase } from '../in.app.notification.entry.base';
 import { IInAppNotificationEntry } from '../in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPlatformSpaceCreatedPayload } from '@services/adapters/notification-in-app-adapter/dto/platform/notification.in.app.platform.space.created.payload';
+import { InAppNotificationPlatformSpaceCreatedPayload } from '@platform/in-app-notification/dto/platform/notification.in.app.platform.space.created.payload';
 
 @ObjectType('InAppNotificationPlatformSpaceCreated', {
   implements: () => IInAppNotificationEntry,

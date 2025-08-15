@@ -10,9 +10,9 @@ import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notifi
 import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.input.platform.space.created';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { InAppNotificationPlatformForumDiscussionCreatedPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.forum.discussion.created.payload';
-import { InAppNotificationPlatformUserProfileCreatedAdminPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.user.profile.created.admin.payload';
-import { InAppNotificationPlatformUserProfileCreatedPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.user.profile.created.payload';
+import { InAppNotificationPlatformForumDiscussionCreatedPayload } from '../../../platform/in-app-notification/dto/platform/notification.in.app.platform.forum.discussion.created.payload';
+import { InAppNotificationPlatformUserProfileCreatedAdminPayload } from '../../../platform/in-app-notification/dto/platform/notification.in.app.platform.user.profile.created.admin.payload';
+import { InAppNotificationPlatformUserProfileCreatedPayload } from '../../../platform/in-app-notification/dto/platform/notification.in.app.platform.user.profile.created.payload';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';

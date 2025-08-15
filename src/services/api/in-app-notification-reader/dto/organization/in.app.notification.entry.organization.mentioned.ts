@@ -4,7 +4,7 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IInAppNotificationEntryBase } from '../in.app.notification.entry.base';
 import { IInAppNotificationEntry } from '../in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationOrganizationMentionedPayload } from '@services/adapters/notification-in-app-adapter/dto/organization/notification.in.app.organization.mentioned.payload';
+import { InAppNotificationOrganizationMentionedPayload } from '@platform/in-app-notification/dto/organization/notification.in.app.organization.mentioned.payload';
 
 @ObjectType('InAppNotificationOrganizationMentioned', {
   implements: () => IInAppNotificationEntry,

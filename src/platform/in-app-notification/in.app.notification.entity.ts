@@ -5,16 +5,13 @@ import { NotificationEventInAppState } from '../../common/enums/notification.eve
 import { IInAppNotification } from './in.app.notification.interface';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
+import { InAppNotificationAdditionalData } from './dto/in.app.notification.additional.data';
 
 @Entity('in_app_notification')
-export class InAppNotificationEntity
+export class InAppNotification
   extends BaseAlkemioEntity
   implements IInAppNotification
 {
-  @Column({ type: 'datetime', comment: 'UTC', nullable: false })
-  triggeredAt!: Date;
-
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: NotificationEvent;
 
@@ -28,12 +25,8 @@ export class InAppNotificationEntity
   })
   category!: NotificationEventCategory;
 
-  @Column('char', {
-    length: UUID_LENGTH,
-    nullable: false,
-    comment: 'The contributor who is the receiver of this notification',
-  })
-  receiverID!: string;
+  @Column({ type: 'datetime', comment: 'UTC', nullable: false })
+  triggeredAt!: Date;
 
   @Column('char', {
     length: UUID_LENGTH,
@@ -42,9 +35,23 @@ export class InAppNotificationEntity
   })
   triggeredByID?: string;
 
+  @Column('char', {
+    length: UUID_LENGTH,
+    nullable: true,
+    comment: 'The source entity ID associated with this notification',
+  })
+  sourceEntityID?: string;
+
+  @Column('char', {
+    length: UUID_LENGTH,
+    nullable: false,
+    comment: 'The contributor who is the receiver of this notification',
+  })
+  receiverID!: string;
+
   @Column('json', {
     nullable: false,
-    comment: 'Holds the original notification payload as it was received',
+    comment: 'Additional data that is relevant for this Notification.',
   })
-  payload!: InAppNotificationPayloadBase;
+  payload!: InAppNotificationAdditionalData;
 }

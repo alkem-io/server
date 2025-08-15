@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { InAppNotificationReader } from './in.app.notification.reader.service';
-import { InAppNotificationEntity } from '../../../platform/in-app-notification/in.app.notification.entity';
+import { InAppNotification } from '../../../platform/in-app-notification/in.app.notification.entity';
 import { InAppNotificationResolverQueries } from './in.app.notification.reader.resolver.queries';
 import { InAppNotificationResolverMutations } from '../../../platform/in-app-notification/in.app.notification.resolver.mutations';
 import { InAppNotificationResolverFields } from './in.app.notification.reader.resolver.fields';
@@ -17,7 +17,7 @@ import { InAppNotificationModule } from '@platform/in-app-notification/in.app.no
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InAppNotificationEntity]),
+    TypeOrmModule.forFeature([InAppNotification]),
     AuthorizationModule,
     SubscriptionServiceModule,
     InAppNotificationModule,

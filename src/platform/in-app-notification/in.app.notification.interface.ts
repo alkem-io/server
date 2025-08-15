@@ -3,20 +3,24 @@ import { NotificationEventInAppState } from '@common/enums/notification.event.in
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from '@services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
+import { InAppNotificationAdditionalData } from './dto/in.app.notification.additional.data';
 
 export class IInAppNotification extends IBaseAlkemio {
+  // Meta information for classifying the InAppNotifications
   type!: NotificationEvent;
-
-  triggeredAt!: Date;
-
   state!: NotificationEventInAppState;
-
   category!: NotificationEventCategory;
-  // exposed via the interface field resolver
-  triggeredBy?: IContributor;
-  receiver?: IContributor;
+
+  // The agent who triggered the notification
+  triggeredAt!: Date;
+  triggeredBy?: IContributor; // exposed via the interface field resolver
+
+  // The entity that this notification was triggered on, if any
+  sourceEntityID?: string;
+
+  // The receiver of the notification
   receiverID!: string;
-  //
-  payload!: InAppNotificationPayloadBase;
+
+  // Additional data
+  payload!: InAppNotificationAdditionalData;
 }

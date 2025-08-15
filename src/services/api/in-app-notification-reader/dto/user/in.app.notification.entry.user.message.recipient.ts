@@ -3,7 +3,7 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { IInAppNotificationEntryBase } from '../in.app.notification.entry.base';
 import { IInAppNotificationEntry } from '../in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationUserMessageRecipientPayload } from '@services/adapters/notification-in-app-adapter/dto/user/notification.in.app.user.message.recipient.payload';
+import { InAppNotificationUserMessageRecipientPayload } from '@platform/in-app-notification/dto/user/notification.in.app.user.message.recipient.payload';
 
 @ObjectType('InAppNotificationUserMessageRecipient', {
   implements: () => IInAppNotificationEntry,

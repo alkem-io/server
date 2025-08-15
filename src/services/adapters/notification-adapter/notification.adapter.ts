@@ -10,11 +10,11 @@ import { MentionedEntityType } from '@domain/communication/messaging/mention.int
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
 import { NotificationRecipientsService } from '@services/api/notification-recipients/notification.recipients.service';
-import { InAppNotificationOrganizationMentionedPayload } from '../notification-in-app-adapter/dto/organization/notification.in.app.organization.mentioned.payload';
-import { InAppNotificationOrganizationMessageRecipientPayload } from '../notification-in-app-adapter/dto/organization/notification.in.app.organization.message.recipient.payload';
-import { InAppNotificationUserCommentReplyPayload } from '../notification-in-app-adapter/dto/user/notification.in.app.user.comment.reply.payload';
-import { InAppNotificationUserMessageRecipientPayload } from '../notification-in-app-adapter/dto/user/notification.in.app.user.message.recipient.payload';
-import { InAppNotificationUserMentionedPayload } from '../notification-in-app-adapter/dto/user/notification.in.app.user.mentioned.payload';
+import { InAppNotificationOrganizationMentionedPayload } from '../../../platform/in-app-notification/dto/organization/notification.in.app.organization.mentioned.payload';
+import { InAppNotificationOrganizationMessageRecipientPayload } from '../../../platform/in-app-notification/dto/organization/notification.in.app.organization.message.recipient.payload';
+import { InAppNotificationUserCommentReplyPayload } from '../../../platform/in-app-notification/dto/user/notification.in.app.user.comment.reply.payload';
+import { InAppNotificationUserMessageRecipientPayload } from '../../../platform/in-app-notification/dto/user/notification.in.app.user.message.recipient.payload';
+import { InAppNotificationUserMentionedPayload } from '../../../platform/in-app-notification/dto/user/notification.in.app.user.mentioned.payload';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';

@@ -4,7 +4,7 @@ import { RoleSetContributorType } from '@common/enums/role.set.contributor.type'
 import { IInAppNotificationEntryBase } from '../in.app.notification.entry.base';
 import { IInAppNotificationEntry } from '../in.app.notification.entry.interface';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationUserCommentReplyPayload } from '@services/adapters/notification-in-app-adapter/dto/user/notification.in.app.user.comment.reply.payload';
+import { InAppNotificationUserCommentReplyPayload } from '@platform/in-app-notification/dto/user/notification.in.app.user.comment.reply.payload';
 
 @ObjectType('InAppNotificationUserCommentReply', {
   implements: () => IInAppNotificationEntry,

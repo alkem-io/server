@@ -1,22 +1,45 @@
 import { Repository, In, UpdateResult } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { InAppNotificationEntity } from '@platform/in-app-notification/in.app.notification.entity';
+import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { InAppNotificationFilterInput } from '@services/api/in-app-notification-reader/dto/in.app.notification.filter.dto.input';
+import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
 
 @Injectable()
 export class InAppNotificationService {
   constructor(
-    @InjectRepository(InAppNotificationEntity)
-    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
+    @InjectRepository(InAppNotification)
+    private readonly inAppNotificationRepo: Repository<InAppNotification>
   ) {}
+
+  public createInAppNotification(
+    inAppData: CreateInAppNotificationInput
+  ): InAppNotification {
+    return this.inAppNotificationRepo.create({
+      type: inAppData.type,
+      category: inAppData.category,
+      triggeredByID: inAppData.triggeredByID,
+      triggeredAt: inAppData.triggeredAt,
+      receiverID: inAppData.receiverID,
+      state: NotificationEventInAppState.UNREAD,
+      payload: inAppData.payload,
+    });
+  }
+
+  public saveInAppNotifications(
+    entities: InAppNotification[]
+  ): Promise<InAppNotification[]> {
+    return this.inAppNotificationRepo.save(entities, {
+      chunk: 100,
+    });
+  }
 
   public async getRawNotificationOrFail(
     ID: string
-  ): Promise<InAppNotificationEntity> {
+  ): Promise<InAppNotification> {
     const notification = await this.inAppNotificationRepo.findOne({
       where: { id: ID },
     });
@@ -35,7 +58,7 @@ export class InAppNotificationService {
   public getRawNotifications(
     receiverID: string,
     filter?: InAppNotificationFilterInput
-  ): Promise<InAppNotificationEntity[]> {
+  ): Promise<InAppNotification[]> {
     const where = filter
       ? { receiverID, type: In(filter.types) }
       : { receiverID };

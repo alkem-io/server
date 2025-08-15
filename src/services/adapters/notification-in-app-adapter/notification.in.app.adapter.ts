@@ -1,12 +1,10 @@
-import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { InAppNotificationEntity } from '@platform/in-app-notification/in.app.notification.entity';
-import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
+import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
 import { InAppNotificationPayloadBase } from './dto/notification.in.app.payload.base';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 
 @Injectable()
 export class NotificationInAppAdapter {
@@ -14,8 +12,7 @@ export class NotificationInAppAdapter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private subscriptionPublishService: SubscriptionPublishService,
-    @InjectRepository(InAppNotificationEntity)
-    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
+    private inAppNotificationService: InAppNotificationService
   ) {}
 
   public async sendInAppNotifications(
@@ -53,23 +50,20 @@ export class NotificationInAppAdapter {
   private async store(
     payload: InAppNotificationPayloadBase,
     receiverIDs: string[]
-  ): Promise<InAppNotificationEntity[]> {
+  ): Promise<InAppNotification[]> {
     // create a version of the payload without the type, category, triggeredAt, triggeredBy
     const { type, category, triggeredAt, triggeredByID, ...payloadRest } =
       payload;
     const entities = receiverIDs.map(receiverID =>
-      InAppNotificationEntity.create({
+      this.inAppNotificationService.createInAppNotification({
         type,
         category,
         triggeredByID,
         triggeredAt,
-        receiverID: receiverID,
-        state: NotificationEventInAppState.UNREAD,
+        receiverID,
         payload: payloadRest,
       })
     );
-    return this.inAppNotificationRepo.save(entities, {
-      chunk: 100,
-    });
+    return this.inAppNotificationService.saveInAppNotifications(entities);
   }
 }

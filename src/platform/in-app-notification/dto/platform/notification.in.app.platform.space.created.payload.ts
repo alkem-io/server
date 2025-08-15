@@ -1,5 +1,5 @@
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayloadBase } from '../notification.in.app.payload.base';
+import { InAppNotificationPayloadBase } from '../../../../services/adapters/notification-in-app-adapter/dto/notification.in.app.payload.base';
 
 export interface InAppNotificationPlatformSpaceCreatedPayload
   extends InAppNotificationPayloadBase {
