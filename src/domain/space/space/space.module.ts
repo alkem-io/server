@@ -35,6 +35,8 @@ import { SpaceAboutModule } from '../space.about/space.about.module';
 import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
+import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
 
 @Module({
   imports: [
@@ -50,6 +52,7 @@ import { TemplateContentSpaceModule } from '@domain/template/template-content-sp
     LicensingCredentialBasedModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
+    PlatformRolesAccessModule,
     TemplatesManagerModule,
     TemplateContentSpaceModule,
     SpaceSettingsModule,
@@ -75,6 +78,7 @@ import { TemplateContentSpaceModule } from '@domain/template/template-content-sp
     SpaceResolverQueries,
     SpaceResolverMutations,
     SpaceResolverSubscriptions,
+    SpacePlatformRolesAccessService,
   ],
   exports: [SpaceService, SpaceAuthorizationService, SpaceLicenseService],
 })

@@ -14,7 +14,8 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
   catch(exception: BaseException, host: ArgumentsHost) {
     const httpArguments = host.switchToHttp();
     const ctx = httpArguments.getNext<IGraphQLContext>();
-    const userID = ctx.req.user.userID || 'unknown';
+    const userID =
+      exception.details?.userId ?? ctx.req.user.userID ?? 'unknown';
     exception.details = {
       ...exception.details,
       userId: userID,
@@ -27,7 +28,12 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
     /* the logger will handle the passed exception by iteration over all it's fields
      * you can provide additional data in the stack and context
      */
-    this.logger.error(exception, secondParam, thirdParam);
+    const loggableException = {
+      ...exception,
+      stack: String(exception.stack),
+      extensions: undefined, // we do not need it
+    };
+    this.logger.error(loggableException, secondParam, thirdParam);
     // something needs to be returned so the default ExceptionsHandler is not triggered
     if (process.env.NODE_ENV === 'production') {
       // return a new error with only the message and the id
