@@ -1,6 +1,18 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+const newMemoMultiUserCredential: LicensingCredentialBasedPolicyCredentialRule =
+  {
+    credentialType: 'space-feature-memo-multi-user',
+    grantedEntitlements: [
+      {
+        type: 'space-flag-memo-multi-user',
+        limit: 1,
+      },
+    ],
+    name: 'Space Multi-User memo',
+  } as const;
+
 export class MemoEntitlement1754286019151 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Rename + migrate type of credential rules str to be json on licence_policy
@@ -23,7 +35,9 @@ export class MemoEntitlement1754286019151 implements MigrationInterface {
         );
 
       // check if Memo entitlement exists
-      const memoEntitlement = entitlements.find(e => e.type === 'space-flag-memo-multi-user');
+      const memoEntitlement = entitlements.find(
+        e => e.type === 'space-flag-memo-multi-user'
+      );
       if (!memoEntitlement) {
         // create a new Memo entitlement
         await queryRunner.query(
@@ -35,8 +49,10 @@ export class MemoEntitlement1754286019151 implements MigrationInterface {
 
     // b) add an entry to the license_policy definition file to assign entitlement if have corresponding credential
     // get the single license policy
-    const licensePolicies: { id: string; credentialRules: string }[] =
-      await queryRunner.query(`
+    const licensePolicies: {
+      id: string;
+      credentialRules: LicensingCredentialBasedPolicyCredentialRule[];
+    }[] = await queryRunner.query(`
       SELECT id, credentialRules FROM license_policy
     `);
 
@@ -46,40 +62,38 @@ export class MemoEntitlement1754286019151 implements MigrationInterface {
     }
 
     const license_policy = licensePolicies[0];
-    try {
-      const credentialRules: LicensingCredentialBasedPolicyCredentialRule[] =
-        JSON.parse(licensePolicies[0].credentialRules);
-      // Check if the Memo entitlement is already present
-      const memoRuleExists = credentialRules.some(
-        rule => rule.credentialType === 'space-feature-memo-multi-user'
+    const credentialRules = license_policy.credentialRules;
+    // Check if the Memo entitlement is already present
+    const memoRuleExists = credentialRules.some(
+      rule => rule.credentialType === 'space-feature-memo-multi-user'
+    );
+
+    if (!memoRuleExists) {
+      const indexToInsert = credentialRules.findIndex(
+        rule => rule.credentialType === 'space-feature-whiteboard-multi-user'
       );
 
-      if (!memoRuleExists) {
-        // Add the new rule for Memo entitlement
-        credentialRules.push({
-          credentialType: 'space-feature-memo-multi-user',
-          grantedEntitlements: [
-            {
-              type: 'space-flag-memo-multi-user',
-              limit: 1,
-            },
-          ],
-          name: 'Space Multi-User memo',
-        });
+      if (indexToInsert > -1) {
+        // Insert the new rule after the whiteboard multi-user rule
+        credentialRules.splice(
+          indexToInsert + 1,
+          0,
+          newMemoMultiUserCredential
+        );
+      } else {
+        // If the whiteboard multi-user rule is not found, add the new rule at the end
+        credentialRules.push(newMemoMultiUserCredential);
       }
       // Update the license policy with the new credential rules
       await queryRunner.query(
         `UPDATE license_policy SET credentialRules = ? WHERE id = ?`,
         [JSON.stringify(credentialRules), license_policy.id]
       );
-    } catch (error) {
-      console.error('Failed to parse credential rules:', error);
-      return;
     }
 
     // Finally add in a new license plan entry so it is there for all environments
     const licenseFrameworks: { id: string }[] = await queryRunner.query(`
-      SELECT id FROM license_framework
+      SELECT id FROM licensing_framework
     `);
 
     if (licenseFrameworks.length === 0) {
