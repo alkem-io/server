@@ -21,6 +21,7 @@ import { NotificationRecipientResult } from '@services/api/notification-recipien
 import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
 import { NotificationInputUserMention } from './dto/user/notification.dto.input.user.mention';
+
 @Injectable()
 export class NotificationAdapter {
   constructor(
@@ -316,14 +317,21 @@ export class NotificationAdapter {
     eventData: NotificationInputBase,
     organizationID: string
   ): Promise<NotificationRecipientResult> {
-    return this.getNotificationRecipients(event, eventData, organizationID);
+    return this.getNotificationRecipients(
+      event,
+      eventData,
+      undefined,
+      undefined,
+      organizationID
+    );
   }
 
   public async getNotificationRecipients(
     event: NotificationEvent,
     eventData: NotificationInputBase,
     entityID?: string,
-    userID?: string
+    userID?: string,
+    organizationID?: string
   ): Promise<NotificationRecipientResult> {
     this.logEventTriggered(eventData, event);
 
@@ -331,6 +339,7 @@ export class NotificationAdapter {
       eventType: event,
       spaceID: entityID,
       userID,
+      organizationID,
     });
     return recipients;
   }

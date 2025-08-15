@@ -44,7 +44,8 @@ export class NotificationRecipientsService {
       this.getPrivilegeRequiredCredentialCriteria(
         eventData.eventType,
         eventData.spaceID,
-        eventData.userID
+        eventData.userID,
+        eventData.organizationID
       );
 
     this.logger.verbose?.(
@@ -237,8 +238,8 @@ export class NotificationRecipientsService {
   private getPrivilegeRequiredCredentialCriteria(
     eventType: NotificationEvent,
     spaceID?: string,
-    organizationID?: string,
-    userID?: string
+    userID?: string,
+    organizationID?: string
   ): {
     privilegeRequired: AuthorizationPrivilege | undefined;
     credentialCriteria: CredentialsSearchInput[];
