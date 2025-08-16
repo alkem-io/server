@@ -1,5 +1,5 @@
 import { LogContext } from '@common/enums/logging.context';
-import { InterfaceType } from '@nestjs/graphql';
+import { Field, InterfaceType } from '@nestjs/graphql';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
@@ -86,5 +86,9 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
   },
 })
 export abstract class IInAppNotificationPayload {
+  @Field(() => NotificationEventPayload, {
+    nullable: false,
+    description: 'The payload type.',
+  })
   type!: NotificationEventPayload;
 }
