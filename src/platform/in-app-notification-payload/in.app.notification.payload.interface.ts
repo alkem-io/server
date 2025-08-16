@@ -65,7 +65,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
         return InAppNotificationPayloadSpaceCollaborationPostComment;
       case NotificationEventPayload.SPACE_COLLABORATION_WHITEBOARD:
         return InAppNotificationPayloadSpaceCollaborationWhiteboard;
-      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT:
         return InAppNotificationPayloadSpaceCollaborationCallout;
 
       // User notifications
@@ -85,7 +85,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
     );
   },
 })
-export abstract class IInAppNotificationPayload {
+export class IInAppNotificationPayload {
   @Field(() => NotificationEventPayload, {
     nullable: false,
     description: 'The payload type.',

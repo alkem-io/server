@@ -37,13 +37,6 @@ export class InAppNotification
 
   @Column('char', {
     length: UUID_LENGTH,
-    nullable: true,
-    comment: 'The source entity ID associated with this notification',
-  })
-  sourceEntityID?: string;
-
-  @Column('char', {
-    length: UUID_LENGTH,
     nullable: false,
     comment: 'The contributor who is the receiver of this notification',
   })

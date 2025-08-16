@@ -37,9 +37,6 @@ export class IInAppNotification extends IBaseAlkemio {
   // The receiver of the notification
   receiverID!: string;
 
-  // The entity that this notification was triggered on, if any
-  sourceEntityID?: string;
-
   // Additional data
   payload!: IInAppNotificationPayload;
 }

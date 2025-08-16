@@ -78,7 +78,7 @@ export class NotificationSpaceAdapter {
     );
     if (inAppReceiverIDs.length >= 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
-        type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+        type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
         spaceID: space.id,
         calloutID: eventData.callout.id,
       };

@@ -43,31 +43,37 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
       switch (payload.type) {
         case 'user-mention': {
           const newPayload = {
+            type: NotificationEventPayload.USER_MESSAGE_ROOM,
+            userID: payload.userID,
             senderID: payload.senderID,
           };
           await queryRunner.query(
-            `UPDATE \`in_app_notification\` SET \`sourceEntityID\` = ?, \`payload\` = ? WHERE \`id\` = ?`,
-            [payload.userID, JSON.stringify(newPayload), notification.id]
+            `UPDATE \`in_app_notification\` SET \`payload\` = ? WHERE \`id\` = ?`,
+            [JSON.stringify(newPayload), notification.id]
           );
           break;
         }
         case 'space-community-new-member': {
           const newPayload = {
-            senderID: payload.senderID,
+            type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
+            spaceID: payload.spaceID,
+            contributorID: payload.senderID,
           };
           await queryRunner.query(
-            `UPDATE \`in_app_notification\` SET \`sourceEntityID\` = ?, \`payload\` = ? WHERE \`id\` = ?`,
-            [payload.spaceID, JSON.stringify(newPayload), notification.id]
+            `UPDATE \`in_app_notification\` SET \`payload\` = ? WHERE \`id\` = ?`,
+            [JSON.stringify(newPayload), notification.id]
           );
           break;
         }
         case 'space-collaboration-callout.published': {
           const newPayload = {
-            senderID: payload.senderID,
+            type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
+            spaceID: payload.spaceID,
+            contributorID: payload.senderID,
           };
           await queryRunner.query(
-            `UPDATE \`in_app_notification\` SET \`sourceEntityID\` = ?, \`payload\` = ? WHERE \`id\` = ?`,
-            [payload.spaceID, JSON.stringify(newPayload), notification.id]
+            `UPDATE \`in_app_notification\` SET \`payload\` = ? WHERE \`id\` = ?`,
+            [JSON.stringify(newPayload), notification.id]
           );
           break;
         }
@@ -80,4 +86,34 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
       `ALTER TABLE \`in_app_notification\` DROP COLUMN \`sourceEntityID\``
     );
   }
+}
+
+enum NotificationEventPayload {
+  // Platform notifications
+  PLATFORM_FORUM_DISCUSSION = 'PLATFORM_FORUM_DISCUSSION',
+  PLATFORM_FORUM_DISCUSSION_COMMENT = 'PLATFORM_FORUM_DISCUSSION_COMMENT',
+  PLATFORM_USER_PROFILE_REMOVED = 'PLATFORM_USER_PROFILE_REMOVED',
+  PLATFORM_GLOBAL_ROLE_CHANGE = 'PLATFORM_GLOBAL_ROLE_CHANGE',
+
+  // Organization notifications
+  ORGANIZATION_MESSAGE_DIRECT = 'ORGANIZATION_MESSAGE_DIRECT',
+  ORGANIZATION_MESSAGE_ROOM = 'ORGANIZATION_MESSAGE_ROOM',
+
+  // Space notifications
+  SPACE = 'SPACE',
+  SPACE_COMMUNITY_APPLICATION = 'SPACE_COMMUNITY_APPLICATION',
+  SPACE_COMMUNITY_CONTRIBUTOR = 'SPACE_COMMUNITY_CONTRIBUTOR',
+  SPACE_COMMUNITY_INVITATION = 'SPACE_COMMUNITY_INVITATION',
+  SPACE_COMMUNITY_INVITATION_USER_PLATFORM = 'SPACE_COMMUNITY_INVITATION_USER_PLATFORM',
+  SPACE_COMMUNICATION_MESSAGE_DIRECT = 'SPACE_COMMUNICATION_MESSAGE_DIRECT',
+  SPACE_COMMUNICATION_UPDATE = 'SPACE_COMMUNICATION_UPDATE',
+  SPACE_COLLABORATION_POST = 'SPACE_COLLABORATION_POST',
+  SPACE_COLLABORATION_POST_COMMENT = 'SPACE_COLLABORATION_POST_COMMENT',
+  SPACE_COLLABORATION_WHITEBOARD = 'SPACE_COLLABORATION_WHITEBOARD',
+  SPACE_COLLABORATION_CALLOUT = 'SPACE_COLLABORATION_CALLOUT',
+
+  // User notifications
+  USER = 'USER',
+  USER_MESSAGE_DIRECT = 'USER_MESSAGE_DIRECT',
+  USER_MESSAGE_ROOM = 'USER_MESSAGE_ROOM',
 }
