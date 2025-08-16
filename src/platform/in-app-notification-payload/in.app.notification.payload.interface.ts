@@ -85,4 +85,6 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
     );
   },
 })
-export abstract class IInAppNotificationPayload {}
+export abstract class IInAppNotificationPayload {
+  type!: NotificationEventPayload;
+}

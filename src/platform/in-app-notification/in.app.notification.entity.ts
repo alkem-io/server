@@ -5,7 +5,7 @@ import { NotificationEventInAppState } from '../../common/enums/notification.eve
 import { IInAppNotification } from './in.app.notification.interface';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayload } from '../in-app-notification-payload/in.app.notification.payload.base';
+import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 
 @Entity('in_app_notification')
 export class InAppNotification
@@ -53,5 +53,5 @@ export class InAppNotification
     nullable: false,
     comment: 'Additional data that is relevant for this Notification.',
   })
-  payload!: InAppNotificationPayload;
+  payload!: IInAppNotificationPayload;
 }

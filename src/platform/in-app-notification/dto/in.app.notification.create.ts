@@ -1,6 +1,6 @@
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
-import { InAppNotificationPayload } from '../../in-app-notification-payload/in.app.notification.payload.base';
+import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 
 export class CreateInAppNotificationInput {
   type!: NotificationEvent;
@@ -10,5 +10,5 @@ export class CreateInAppNotificationInput {
   receiverID!: string;
   sourceEntityID?: string;
   // Additional data
-  payload!: InAppNotificationPayload;
+  payload!: IInAppNotificationPayload;
 }

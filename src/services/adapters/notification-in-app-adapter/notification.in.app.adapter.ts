@@ -6,7 +6,7 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 import { CreateInAppNotificationInput } from '@platform/in-app-notification/dto/in.app.notification.create';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.base';
+import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 
 @Injectable()
 export class NotificationInAppAdapter {
@@ -22,7 +22,7 @@ export class NotificationInAppAdapter {
     category: NotificationEventCategory,
     triggeredByID: string,
     receiverIDs: string[],
-    payload: InAppNotificationPayload
+    payload: IInAppNotificationPayload
   ) {
     if (receiverIDs.length === 0) {
       this.logger.error(
