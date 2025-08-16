@@ -6,7 +6,7 @@ import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in
 import { InAppNotificationPayloadSpaceCollaborationWhiteboard } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.whiteboard';
 
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationWhiteboard)
-export class InAppNotificationSpaceCollaborationWhiteboardResolverFields {
+export class InAppNotificationPayloadSpaceCollaborationWhiteboardResolverFields {
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space where the whiteboard was created.',

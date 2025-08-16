@@ -6,7 +6,7 @@ import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in
 import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post.comment';
 
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationPostComment)
-export class InAppNotificationSpaceCollaborationPostCommentResolverFields {
+export class InAppNotificationPayloadSpaceCollaborationPostCommentResolverFields {
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space where the comment was created.',

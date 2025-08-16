@@ -8,7 +8,7 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 
 @Resolver(() => InAppNotificationPayloadOrganizationMessageRoom)
-export class InAppNotificationOrganizationMentionedResolverFields {
+export class InAppNotificationPayloadOrganizationMessageRoomResolverFields {
   @ResolveField(() => IContributor, {
     nullable: true,
     description: 'The organization.',

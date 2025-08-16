@@ -6,7 +6,7 @@ import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 
 @Resolver(() => InAppNotificationPayloadSpaceCommunicationMessageDirect)
-export class InAppNotificationSpaceCommunicationMessageSenderResolverFields {
+export class InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields {
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space where the message was sent.',

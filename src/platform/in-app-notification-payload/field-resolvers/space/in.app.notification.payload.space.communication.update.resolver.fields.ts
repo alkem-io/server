@@ -6,7 +6,7 @@ import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 
 @Resolver(() => InAppNotificationPayloadSpaceCommunicationUpdate)
-export class InAppNotificationSpaceCommunicationUpdateResolverFields {
+export class InAppNotificationPayloadSpaceCommunicationUpdateResolverFields {
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space where the update was sent.',

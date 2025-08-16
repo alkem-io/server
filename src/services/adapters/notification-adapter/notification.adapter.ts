@@ -39,7 +39,7 @@ export class NotificationAdapter {
     const recipients = await this.getNotificationRecipientsOrganization(
       event,
       eventData,
-      eventData.originEntity.id
+      eventData.mentionedEntityID
     );
     // Emit the events to notify others
     const payload =
@@ -157,8 +157,8 @@ export class NotificationAdapter {
         const inAppPayload: InAppNotificationPayloadUserMessageRoom = {
           type: NotificationEventPayload.USER_MESSAGE_ROOM,
           userID: eventData.commentOwnerID,
-          roomID: 'unknown', // Would need room ID
-          messageID: 'unknown', // Would need original message ID
+          roomID: eventData.roomId,
+          messageID: eventData.roomId, // TODO:  need original message ID
         };
 
         await this.notificationInAppAdapter.sendInAppNotifications(

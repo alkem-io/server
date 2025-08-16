@@ -8,7 +8,7 @@ import { IApplication } from '@domain/access/application';
 import { RoleSetApplicationLoaderCreator } from '@core/dataloader/creators/loader.creators/roleset.application.loader.creator';
 
 @Resolver(() => InAppNotificationPayloadSpaceCommunityApplication)
-export class InAppNotificationSpaceCommunityApplicationApplicantResolverFields {
+export class InAppNotificationPayloadSpaceCommunityApplicationApplicantResolverFields {
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space that the application was made to.',
