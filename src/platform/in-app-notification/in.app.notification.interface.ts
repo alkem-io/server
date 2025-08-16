@@ -8,7 +8,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('InAppNotification')
 export class IInAppNotification extends IBaseAlkemio {
   // Meta information for classifying the InAppNotifications
-  @Field(() => String, {
+  @Field(() => NotificationEvent, {
     nullable: false,
     description: 'The type of the notification event.',
   })

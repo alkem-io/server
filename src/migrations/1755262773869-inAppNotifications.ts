@@ -45,7 +45,11 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
           const newPayload = {
             type: NotificationEventPayload.USER_MESSAGE_ROOM,
             userID: payload.userID,
-            senderID: payload.senderID,
+            messageID: payload.messageID,
+            roomID: payload.roomID,
+            comment: payload.comment,
+            commentUrl: payload.commentUrl,
+            commentOriginName: payload.commentOriginName,
           };
           await queryRunner.query(
             `UPDATE \`in_app_notification\` SET \`payload\` = ? WHERE \`id\` = ?`,
@@ -69,7 +73,7 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
           const newPayload = {
             type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
             spaceID: payload.spaceID,
-            contributorID: payload.senderID,
+            calloutID: payload.calloutID,
           };
           await queryRunner.query(
             `UPDATE \`in_app_notification\` SET \`payload\` = ? WHERE \`id\` = ?`,

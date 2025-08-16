@@ -15,8 +15,39 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
   public originalMessageID(
     @Parent()
     payload: InAppNotificationPayloadUserMessageRoom
-  ): string {
+  ): string | undefined {
     return payload.messageID;
+  }
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'The original message ID.',
+  })
+  public comment(
+    @Parent()
+    payload: InAppNotificationPayloadUserMessageRoom
+  ): string | undefined {
+    return payload.comment;
+  }
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'The original message ID.',
+  })
+  public commentUrl(
+    @Parent()
+    payload: InAppNotificationPayloadUserMessageRoom
+  ): string | undefined {
+    return payload.commentUrl;
+  }
+
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'The original message ID.',
+  })
+  public commentOriginName(
+    @Parent()
+    payload: InAppNotificationPayloadUserMessageRoom
+  ): string | undefined {
+    return payload.commentOriginName;
   }
 
   @ResolveField(() => String, {
@@ -26,7 +57,7 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
   public roomID(
     @Parent()
     payload: InAppNotificationPayloadUserMessageRoom
-  ): string {
+  ): string | undefined {
     return payload.roomID;
   }
 
