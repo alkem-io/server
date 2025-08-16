@@ -8,7 +8,6 @@ export class CreateInAppNotificationInput {
   triggeredByID!: string;
   triggeredAt!: Date;
   receiverID!: string;
-  sourceEntityID?: string;
   // Additional data
   payload!: IInAppNotificationPayload;
 }

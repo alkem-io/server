@@ -5,8 +5,6 @@ import { Loader } from '@core/dataloader/decorators';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { OrganizationLoaderCreator } from '@core/dataloader/creators/loader.creators/organization.loader.creator';
 import { IOrganization } from '@domain/community/organization/organization.interface';
-import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
-
 @Resolver(() => InAppNotificationPayloadOrganizationMessageRoom)
 export class InAppNotificationPayloadOrganizationMessageRoomResolverFields {
   @ResolveField(() => IContributor, {
@@ -17,7 +15,7 @@ export class InAppNotificationPayloadOrganizationMessageRoomResolverFields {
     @Loader(OrganizationLoaderCreator, { resolveToNull: true })
     loader: ILoader<IOrganization | null>,
     @Parent()
-    payload: InAppNotificationPayloadOrganizationMessageDirect
+    payload: InAppNotificationPayloadOrganizationMessageRoom
   ): Promise<IOrganization | null> {
     return loader.load(payload.organizationID);
   }
