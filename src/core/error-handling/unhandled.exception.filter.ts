@@ -22,7 +22,10 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
     /* add values that you want to include as additional data
      e.g. secondParam = { code: '123' };
     */
-    const secondParam = { stack: exception.stack, errorId: randomUUID() };
+    const secondParam = {
+      stack: String(exception.stack),
+      errorId: randomUUID(),
+    };
     const thirdParam = 'UnhandledException';
     /* the logger will handle the passed exception by iteration over all it's fields
      * you can provide additional data in the stack and context
@@ -61,10 +64,10 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
       }
       // if not in PROD, return everything
       return new GraphQLError(exception.message, {
+        originalError: exception,
         extensions: {
-          ...exception,
-          stack: exception.stack,
-          message: undefined, // do not repeat the message
+          errorId: secondParam.errorId,
+          code: AlkemioErrorStatus.UNSPECIFIED,
         },
       });
     }

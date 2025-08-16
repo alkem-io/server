@@ -21,10 +21,10 @@ import { NotificationInputCalloutPublished } from '@services/adapters/notificati
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 @InstrumentResolver()
 @Resolver()
@@ -82,21 +82,23 @@ export class CalloutsSetResolverMutations {
     );
 
     let roleSet: IRoleSet | undefined = undefined;
-    let spaceSettings: ISpaceSettings | undefined = undefined;
+    let platformRolesAccess: IPlatformRolesAccess = {
+      roles: [],
+    };
     if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
       const roleSetAndSettings =
         await this.namingService.getRoleSetAndSettingsForCollaborationCalloutsSet(
           calloutsSet.id
         );
       roleSet = roleSetAndSettings.roleSet;
-      spaceSettings = roleSetAndSettings.spaceSettings;
+      platformRolesAccess = roleSetAndSettings.platformRolesAccess;
     }
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,
         calloutsSet.authorization,
-        roleSet,
-        spaceSettings
+        platformRolesAccess,
+        roleSet
       );
     await this.authorizationPolicyService.saveAll(authorizations);
 

@@ -72,6 +72,12 @@ export class KonfigService {
           }),
         },
         {
+          name: PlatformFeatureFlagName.MEMO,
+          enabled: this.configService.get('collaboration.memo.enabled', {
+            infer: true,
+          }),
+        },
+        {
           name: PlatformFeatureFlagName.LANDING_PAGE,
           enabled: this.configService.get('platform.landing_page.enabled', {
             infer: true,

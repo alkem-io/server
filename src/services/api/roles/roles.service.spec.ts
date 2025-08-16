@@ -252,6 +252,9 @@ const getSpaceRoleResultMock = ({
     roles,
     space: {
       id,
+      platformRolesAccess: {
+        roles: [],
+      },
       settings: spaceSettings,
       rowId: parseInt(id),
       nameID: `space-${id}`,

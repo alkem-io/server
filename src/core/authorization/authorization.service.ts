@@ -238,7 +238,7 @@ export class AuthorizationService {
     const criterias = credentialRule.criterias;
     if (criterias.length === 0) {
       throw new AuthorizationInvalidPolicyException(
-        `Credential rule without criteria: ${credentialRule}`,
+        `Credential rule without criteria: ${JSON.stringify(credentialRule)}`,
         LogContext.AUTH
       );
     }
