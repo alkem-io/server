@@ -2,7 +2,7 @@ import { NotificationEventInAppState } from '@common/enums/notification.event.in
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayload } from './dto/payload/in.app.notification.payload.base';
+import { InAppNotificationPayload } from '../in-app-notification-payload/in.app.notification.payload.base';
 
 export class IInAppNotification extends IBaseAlkemio {
   // Meta information for classifying the InAppNotifications

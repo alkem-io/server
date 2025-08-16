@@ -2,18 +2,10 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
-import { InAppNotificationReader } from './in.app.notification.reader.service';
 import { InAppNotification } from '../../../platform/in-app-notification/in.app.notification.entity';
 import { InAppNotificationResolverQueries } from './in.app.notification.reader.resolver.queries';
-import { InAppNotificationResolverMutations } from '../../../platform/in-app-notification/in.app.notification.resolver.mutations';
-import { InAppNotificationResolverFields } from './in.app.notification.reader.resolver.fields';
 import { InAppNotificationResolverSubscription } from './in.app.notification.resolver.subscription';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
-import {
-  InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
-  InAppNotificationPayloadSpaceCommunityContributorResolverFields,
-  InAppNotificationPayloadUserMessageRoomResolverFields,
-} from './field-resolvers';
 
 @Module({
   imports: [
@@ -23,18 +15,9 @@ import {
     InAppNotificationModule,
   ],
   providers: [
-    InAppNotificationReader,
-    // graphql
-    InAppNotificationResolverFields,
     InAppNotificationResolverQueries,
-    InAppNotificationResolverMutations,
     InAppNotificationResolverSubscription,
-    // concrete resolvers
-    // add n all the other payload resolvers from the ../field-resolvers directory
-    InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
-    InAppNotificationPayloadSpaceCommunityContributorResolverFields,
-    InAppNotificationPayloadUserMessageRoomResolverFields,
   ],
-  exports: [InAppNotificationReader],
+  exports: [],
 })
 export class InAppNotificationReaderModule {}

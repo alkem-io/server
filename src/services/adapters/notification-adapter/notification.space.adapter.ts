@@ -4,7 +4,7 @@ import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.update';
+import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
@@ -21,15 +21,15 @@ import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.
 import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
 import { NotificationAdapter } from './notification.adapter';
 import { IUser } from '@domain/community/user/user.interface';
-import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.application';
-import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.contributor';
-import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.community.invitation';
-import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.communication.message.direct';
+import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
+import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
+import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.callout';
-import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post';
-import { InAppNotificationPayloadSpaceCollaborationWhiteboard } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.whiteboard';
-import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform/in-app-notification/dto/payload/space/notification.in.app.payload.space.collaboration.post.comment';
+import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
+import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post';
+import { InAppNotificationPayloadSpaceCollaborationWhiteboard } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.whiteboard';
+import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post.comment';
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(

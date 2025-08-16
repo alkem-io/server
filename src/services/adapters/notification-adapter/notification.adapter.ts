@@ -16,10 +16,10 @@ import { NotificationRecipientResult } from '@services/api/notification-recipien
 import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
 import { NotificationInputUserMention } from './dto/user/notification.dto.input.user.mention';
-import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.room';
-import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification/dto/payload/organization/notification.in.app.payload.organization.message.direct';
-import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.room';
-import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification/dto/payload/user/notification.in.app.payload.user.message.direct';
+import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
+import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
+import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
+import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.direct';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 
 @Injectable()

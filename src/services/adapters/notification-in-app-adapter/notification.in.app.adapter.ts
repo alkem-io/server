@@ -6,7 +6,7 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 import { CreateInAppNotificationInput } from '@platform/in-app-notification/dto/in.app.notification.create';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayload } from '@platform/in-app-notification/dto/payload/in.app.notification.payload.base';
+import { InAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.base';
 
 @Injectable()
 export class NotificationInAppAdapter {

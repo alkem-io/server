@@ -5,7 +5,7 @@ import { NotificationEventInAppState } from '../../common/enums/notification.eve
 import { IInAppNotification } from './in.app.notification.interface';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { InAppNotificationPayload } from './dto/payload/in.app.notification.payload.base';
+import { InAppNotificationPayload } from '../in-app-notification-payload/in.app.notification.payload.base';
 
 @Entity('in_app_notification')
 export class InAppNotification
