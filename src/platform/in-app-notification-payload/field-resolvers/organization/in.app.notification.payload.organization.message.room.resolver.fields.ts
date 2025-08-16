@@ -1,9 +1,11 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
+import { OrganizationLoaderCreator } from '@core/dataloader/creators/loader.creators/organization.loader.creator';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 
 @Resolver(() => InAppNotificationPayloadOrganizationMessageRoom)
 export class InAppNotificationOrganizationMentionedResolverFields {
@@ -12,11 +14,11 @@ export class InAppNotificationOrganizationMentionedResolverFields {
     description: 'The organization.',
   })
   public async organization(
-    @Loader(ContributorLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IContributor | null>,
+    @Loader(OrganizationLoaderCreator, { resolveToNull: true })
+    loader: ILoader<IOrganization | null>,
     @Parent()
-    payload: InAppNotificationPayloadOrganizationMessageRoom
-  ): Promise<IContributor | null> {
+    payload: InAppNotificationPayloadOrganizationMessageDirect
+  ): Promise<IOrganization | null> {
     return loader.load(payload.organizationID);
   }
 

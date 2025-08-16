@@ -7,10 +7,21 @@ export class InAppNotificationPlatformUserProfileRemovedResolverFields {
     nullable: true,
     description: 'The display name of the User that was removed.',
   })
-  public user(
+  public userDisplayName(
     @Parent()
     payload: InAppNotificationPayloadPlatformUserProfileRemoved
   ): string {
     return payload.userDisplayName;
+  }
+
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'The email of the User that was removed.',
+  })
+  public userEmail(
+    @Parent()
+    payload: InAppNotificationPayloadPlatformUserProfileRemoved
+  ): string {
+    return payload.userEmail;
   }
 }
