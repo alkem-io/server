@@ -5,22 +5,22 @@ import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
-import { IInAppNotificationEntry } from './dto/in.app.notification.entry.interface';
 import { InAppNotificationFilterInput } from './dto/in.app.notification.filter.dto.input';
+import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
 
 @InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverQueries {
   constructor(private inAppNotificationService: InAppNotificationService) {}
 
-  @Query(() => [IInAppNotificationEntry], {
+  @Query(() => [IInAppNotification], {
     nullable: false,
     description: 'Get all notifications for the logged in user.',
   })
   public async notificationsInApp(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('filter', { nullable: true }) filter?: InAppNotificationFilterInput
-  ): Promise<IInAppNotificationEntry[]> {
+  ): Promise<IInAppNotification[]> {
     if (!agentInfo.userID) {
       throw new ForbiddenException(
         'User could not be resolved',
@@ -29,7 +29,7 @@ export class InAppNotificationResolverQueries {
       );
     }
 
-    return this.inAppNotificationService.getRawNotifications(
+    return await this.inAppNotificationService.getRawNotifications(
       agentInfo.userID,
       filter
     );

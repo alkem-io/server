@@ -4,19 +4,7 @@ import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { InAppNotificationSpaceCollaborationCalloutPublishedPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.callout.published.payload';
-import { InAppNotificationSpaceCommunityNewMemberPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.new.member.payload';
-import { InAppNotificationSpaceCommunityApplicationApplicantPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.application.applicant.payload';
-import { InAppNotificationSpaceCommunityInvitationUserPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.invitation.user.payload';
-import { InAppNotificationSpaceCommunicationMessageRecipientPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.communication.message.recipient.payload';
-import { InAppNotificationSpaceCollaborationWhiteboardCreatedPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.whiteboard.created.payload';
-import { InAppNotificationSpaceCollaborationPostCommentCreatedPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.post.comment.created.payload';
-import { InAppNotificationSpaceCommunicationUpdatePayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.communication.update.payload';
-import { InAppNotificationSpaceCommunityNewMemberAdminPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.new.member.admin.payload';
-import { InAppNotificationSpaceCommunityApplicationAdminPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.community.application.admin.payload';
-import { InAppNotificationSpaceCommunicationUpdateAdminPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.communication.update.admin.payload';
-import { InAppNotificationSpaceCollaborationPostCreatedAdminPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.post.created.admin.payload';
-import { InAppNotificationSpaceCollaborationPostCreatedPayload } from '../notification-in-app-adapter/dto/space/notification.in.app.space.collaboration.post.created.payload';
+import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
@@ -33,6 +21,15 @@ import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.
 import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
 import { NotificationAdapter } from './notification.adapter';
 import { IUser } from '@domain/community/user/user.interface';
+import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
+import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
+import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
+import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
+import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post';
+import { InAppNotificationPayloadSpaceCollaborationWhiteboard } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.whiteboard';
+import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post.comment';
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(
@@ -80,19 +77,18 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length >= 0) {
-      const inAppPayload: InAppNotificationSpaceCollaborationCalloutPublishedPayload =
-        {
-          type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_MEMBER,
-          triggeredAt: new Date(),
-          calloutID: eventData.callout.id,
-          spaceID: space.id,
-        };
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
+        type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
+        spaceID: space.id,
+        calloutID: eventData.callout.id,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
@@ -134,20 +130,19 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length >= 0) {
-      const inAppPayload: InAppNotificationSpaceCollaborationPostCreatedPayload =
-        {
-          type: NotificationEvent.SPACE_COLLABORATION_POST_CREATED,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_MEMBER,
-          triggeredAt: new Date(),
-          calloutID: eventData.callout.id,
-          postID: eventData.post.id,
-          spaceID: space.id,
-        };
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPost = {
+        type: NotificationEventPayload.SPACE_COLLABORATION_POST,
+        spaceID: space.id,
+        calloutID: eventData.callout.id,
+        postID: eventData.post.id,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COLLABORATION_POST_CREATED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
 
@@ -177,24 +172,20 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length >= 0) {
-      const adminInAppPayload: InAppNotificationSpaceCollaborationPostCreatedAdminPayload =
+      const adminInAppPayload: InAppNotificationPayloadSpaceCollaborationPost =
         {
-          type: NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_ADMIN,
-          triggeredAt: new Date(),
+          type: NotificationEventPayload.SPACE_COLLABORATION_POST,
+          spaceID: space.id,
           calloutID: eventData.callout.id,
           postID: eventData.post.id,
-          spaceID: space.id,
-          message: {
-            roomID: 'unknown',
-            messageID: eventData.post.id,
-          },
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        adminInAppPayload,
-        adminInAppReceiverIDs
+        NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        adminInAppReceiverIDs,
+        adminInAppPayload
       );
     }
   }
@@ -233,20 +224,20 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationSpaceCollaborationWhiteboardCreatedPayload =
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationWhiteboard =
         {
-          type: NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_MEMBER,
-          triggeredAt: new Date(),
+          type: NotificationEventPayload.SPACE_COLLABORATION_WHITEBOARD,
           spaceID: space.id,
           calloutID: eventData.callout.id,
           whiteboardID: eventData.whiteboard.id,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
@@ -285,20 +276,19 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationSpaceCommunityNewMemberAdminPayload =
+      const adminInAppPayload: InAppNotificationPayloadSpaceCommunityContributor =
         {
-          type: NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_ADMIN,
-          triggeredAt: new Date(),
+          type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
           spaceID: space.id,
-          contributorType: 'user',
-          newMemberID: eventData.contributorID,
+          contributorID: eventData.contributorID,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        adminInAppPayload,
-        adminInAppReceiverIDs
+        NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        adminInAppReceiverIDs,
+        adminInAppPayload
       );
     }
 
@@ -338,19 +328,18 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationSpaceCommunityNewMemberPayload = {
-        type: NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER,
-        triggeredByID: eventData.triggeredBy,
-        category: NotificationEventCategory.SPACE_MEMBER,
-        triggeredAt: new Date(),
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityContributor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
         spaceID: space.id,
-        contributorType: 'user', // Default value, could be derived from eventData if available
-        newMemberID: eventData.contributorID,
+        contributorID: eventData.contributorID,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
@@ -397,19 +386,18 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationSpaceCommunityApplicationApplicantPayload =
-        {
-          type: NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_MEMBER,
-          triggeredAt: new Date(),
-          spaceID: space.id,
-          applicationID: 'unknown',
-        };
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityApplication = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_APPLICATION,
+        spaceID: space.id,
+        applicationID: 'unknown',
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
 
@@ -438,19 +426,19 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationSpaceCommunityApplicationAdminPayload =
+      const adminInAppPayload: InAppNotificationPayloadSpaceCommunityApplication =
         {
-          type: NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_ADMIN,
-          triggeredAt: new Date(),
+          type: NotificationEventPayload.SPACE_COMMUNITY_APPLICATION,
           spaceID: space.id,
           applicationID: 'unknown',
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        adminInAppPayload,
-        adminInAppReceiverIDs
+        NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        adminInAppReceiverIDs,
+        adminInAppPayload
       );
     }
   }
@@ -488,19 +476,18 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationSpaceCommunityInvitationUserPayload =
-        {
-          type: NotificationEvent.SPACE_COMMUNITY_INVITATION_USER,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_MEMBER,
-          triggeredAt: new Date(),
-          spaceID: space.id,
-          invitationID: eventData.invitationID,
-        };
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityInvitation = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_INVITATION,
+        invitationID: eventData.invitationID,
+        spaceID: space.id,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COMMUNITY_INVITATION_USER,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
@@ -562,22 +549,19 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationSpaceCommunicationMessageRecipientPayload =
+      const inAppPayload: InAppNotificationPayloadSpaceCommunicationMessageDirect =
         {
-          type: NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_ADMIN,
-          triggeredAt: new Date(),
+          type: NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT,
           spaceID: space.id,
-          message: {
-            roomID: 'unknown',
-            messageID: eventData.message,
-          },
+          message: eventData.message,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
@@ -618,24 +602,21 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationSpaceCollaborationPostCommentCreatedPayload =
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPostComment =
         {
-          type: NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_MEMBER,
-          triggeredAt: new Date(),
+          type: NotificationEventPayload.SPACE_COLLABORATION_POST_COMMENT,
           spaceID: space.id,
           postID: eventData.post.id,
           calloutID: 'unknown', // Would need to get from post or context
-          message: {
-            roomID: eventData.room.id,
-            messageID: eventData.commentSent.id,
-          },
+          messageID: eventData.commentSent.id,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
@@ -678,18 +659,18 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationSpaceCommunicationUpdatePayload = {
-        type: NotificationEvent.SPACE_COMMUNICATION_UPDATE,
-        triggeredByID: eventData.triggeredBy,
-        category: NotificationEventCategory.SPACE_MEMBER,
-        triggeredAt: new Date(),
+      const inAppPayload: InAppNotificationPayloadSpaceCommunicationUpdate = {
+        type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE,
         spaceID: space.id,
         updateID: eventData.updates.id,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.SPACE_COMMUNICATION_UPDATE,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
 
@@ -720,19 +701,19 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationSpaceCommunicationUpdateAdminPayload =
+      const adminInAppPayload: InAppNotificationPayloadSpaceCommunicationUpdate =
         {
-          type: NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.SPACE_ADMIN,
-          triggeredAt: new Date(),
+          type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE,
           spaceID: space.id,
           updateID: eventData.updates.id,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        adminInAppPayload,
-        adminInAppReceiverIDs
+        NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        adminInAppReceiverIDs,
+        adminInAppPayload
       );
     }
   }

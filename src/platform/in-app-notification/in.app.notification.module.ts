@@ -1,16 +1,23 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { InAppNotificationEntity } from './in.app.notification.entity';
+import { InAppNotification } from './in.app.notification.entity';
 import { InAppNotificationService } from './in.app.notification.service';
 import { InAppNotificationResolverMutations } from './in.app.notification.resolver.mutations';
+import { InAppNotificationResolverFields } from './in.app.notification.resolver.fields';
+import { InAppNotificationPayloadModule } from '@platform/in-app-notification-payload/in.app.notification.payload.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InAppNotificationEntity]),
     AuthorizationModule,
+    InAppNotificationPayloadModule,
+    TypeOrmModule.forFeature([InAppNotification]),
   ],
-  providers: [InAppNotificationService, InAppNotificationResolverMutations],
+  providers: [
+    InAppNotificationService,
+    InAppNotificationResolverFields,
+    InAppNotificationResolverMutations,
+  ],
   exports: [InAppNotificationService],
 })
 export class InAppNotificationModule {}

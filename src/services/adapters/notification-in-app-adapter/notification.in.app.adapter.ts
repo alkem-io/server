@@ -1,12 +1,12 @@
-import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { InAppNotificationEntity } from '@platform/in-app-notification/in.app.notification.entity';
-import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { InAppNotificationPayloadBase } from './dto/notification.in.app.payload.base';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { CreateInAppNotificationInput } from '@platform/in-app-notification/dto/in.app.notification.create';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { NotificationEvent } from '@common/enums/notification.event';
+import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 
 @Injectable()
 export class NotificationInAppAdapter {
@@ -14,13 +14,15 @@ export class NotificationInAppAdapter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private subscriptionPublishService: SubscriptionPublishService,
-    @InjectRepository(InAppNotificationEntity)
-    private readonly inAppNotificationRepo: Repository<InAppNotificationEntity>
+    private inAppNotificationService: InAppNotificationService
   ) {}
 
   public async sendInAppNotifications(
-    notification: InAppNotificationPayloadBase,
-    receiverIDs: string[]
+    type: NotificationEvent,
+    category: NotificationEventCategory,
+    triggeredByID: string,
+    receiverIDs: string[],
+    payload: IInAppNotificationPayload
   ) {
     if (receiverIDs.length === 0) {
       this.logger.error(
@@ -35,8 +37,21 @@ export class NotificationInAppAdapter {
       LogContext.IN_APP_NOTIFICATION
     );
 
+    const inApps = receiverIDs.map(receiverID => {
+      const inAppData: CreateInAppNotificationInput = {
+        type,
+        category,
+        triggeredByID,
+        triggeredAt: new Date(),
+        payload,
+        receiverID,
+      };
+      return this.inAppNotificationService.createInAppNotification(inAppData);
+    });
+
     // filtering out notifications that are not for beta users now done by platform privilege
-    const savedNotifications = await this.store(notification, receiverIDs);
+    const savedNotifications =
+      await this.inAppNotificationService.saveInAppNotifications(inApps);
 
     // notify
     this.logger.verbose?.(
@@ -48,28 +63,5 @@ export class NotificationInAppAdapter {
         this.subscriptionPublishService.publishInAppNotificationReceived(x)
       )
     );
-  }
-
-  private async store(
-    payload: InAppNotificationPayloadBase,
-    receiverIDs: string[]
-  ): Promise<InAppNotificationEntity[]> {
-    // create a version of the payload without the type, category, triggeredAt, triggeredBy
-    const { type, category, triggeredAt, triggeredByID, ...payloadRest } =
-      payload;
-    const entities = receiverIDs.map(receiverID =>
-      InAppNotificationEntity.create({
-        type,
-        category,
-        triggeredByID,
-        triggeredAt,
-        receiverID: receiverID,
-        state: NotificationEventInAppState.UNREAD,
-        payload: payloadRest,
-      })
-    );
-    return this.inAppNotificationRepo.save(entities, {
-      chunk: 100,
-    });
   }
 }

@@ -6,7 +6,7 @@ import { InAppNotificationReceivedSubscriptionPayload } from '@services/subscrip
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { ForbiddenException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { IInAppNotificationEntry } from './dto/in.app.notification.entry.interface';
+import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
 
 @InstrumentResolver()
 @Resolver()
@@ -14,7 +14,7 @@ export class InAppNotificationResolverSubscription {
   constructor(private subscriptionService: SubscriptionReadService) {}
 
   @TypedSubscription<InAppNotificationReceivedSubscriptionPayload, never>(
-    () => IInAppNotificationEntry,
+    () => IInAppNotification,
     {
       description:
         'New in-app notification received for the currently authenticated user.',

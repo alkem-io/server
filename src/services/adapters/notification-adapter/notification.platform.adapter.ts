@@ -10,14 +10,15 @@ import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notifi
 import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.input.platform.space.created';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
-import { InAppNotificationPlatformForumDiscussionCreatedPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.forum.discussion.created.payload';
-import { InAppNotificationPlatformUserProfileCreatedAdminPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.user.profile.created.admin.payload';
-import { InAppNotificationPlatformUserProfileCreatedPayload } from '../notification-in-app-adapter/dto/platform/notification.in.app.platform.user.profile.created.payload';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NotificationAdapter } from './notification.adapter';
+import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
+import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
+import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 
 @Injectable()
 export class NotificationPlatformAdapter {
@@ -50,6 +51,26 @@ export class NotificationPlatformAdapter {
       );
 
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadPlatformGlobalRoleChange = {
+        type: NotificationEventPayload.PLATFORM_GLOBAL_ROLE_CHANGE,
+        userID: eventData.userID,
+        roleName: eventData.role,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
   public async platformForumDiscussionCreated(
@@ -75,18 +96,17 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPlatformForumDiscussionCreatedPayload =
-        {
-          type: NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.PLATFORM,
-          triggeredAt: new Date(),
-          discussionID: eventData.discussion.id,
-        };
+      const inAppPayload: InAppNotificationPayloadPlatformForumDiscussion = {
+        type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
+        discussionID: eventData.discussion.id,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
@@ -179,17 +199,17 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPlatformUserProfileCreatedPayload = {
-        type: NotificationEvent.PLATFORM_USER_PROFILE_CREATED,
-        triggeredByID: eventData.triggeredBy,
-        category: NotificationEventCategory.PLATFORM,
-        triggeredAt: new Date(),
+      const inAppPayload: InAppNotificationPayloadUser = {
+        type: NotificationEventPayload.USER,
         userID: eventData.userID,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        inAppPayload,
-        inAppReceiverIDs
+        NotificationEvent.PLATFORM_USER_PROFILE_CREATED,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
 
@@ -217,18 +237,17 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationPlatformUserProfileCreatedAdminPayload =
-        {
-          type: NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN,
-          triggeredByID: eventData.triggeredBy,
-          category: NotificationEventCategory.PLATFORM,
-          triggeredAt: new Date(),
-          userID: eventData.userID,
-        };
+      const adminInAppPayload: InAppNotificationPayloadUser = {
+        type: NotificationEventPayload.USER,
+        userID: eventData.userID,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        adminInAppPayload,
-        adminInAppReceiverIDs
+        NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        adminInAppReceiverIDs,
+        adminInAppPayload
       );
     }
   }
