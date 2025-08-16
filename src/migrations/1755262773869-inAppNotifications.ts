@@ -21,13 +21,13 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
 
     // Update all the event names; only three so far to update
     await queryRunner.query(
-      `UPDATE \`in_app_notification\` SET \`event\` = 'space-community-new-member' WHERE \`event\` = 'member-joined'`
+      `UPDATE \`in_app_notification\` SET \`type\` = 'space-community-new-member' WHERE \`type\` = 'member-joined'`
     );
     await queryRunner.query(
-      `UPDATE \`in_app_notification\` SET \`event\` = 'space-collaboration-callout.published' WHERE \`event\` = 'callout-published'`
+      `UPDATE \`in_app_notification\` SET \`type\` = 'space-collaboration-callout.published' WHERE \`type\` = 'callout-published'`
     );
     await queryRunner.query(
-      `UPDATE \`in_app_notification\` SET \`user-mention\` = 'user-profile-updated' WHERE \`event\` = 'self-profile-updated'`
+      `UPDATE \`in_app_notification\` SET \`type\` = 'user-mentioned' WHERE \`type\` = 'user-mention'`
     );
 
     // Finally update all inAppNotification payloads
@@ -36,7 +36,7 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
       type: string;
       payload: any;
     }[] = await queryRunner.query(
-      `SELECT id, payload, preferenceSetId FROM user`
+      `SELECT id, type, payload FROM in_app_notification`
     );
     for (const notification of inAppNotifications) {
       const payload = notification.payload;
