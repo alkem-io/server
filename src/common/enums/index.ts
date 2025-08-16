@@ -5,7 +5,5 @@ export * from './authorization.credential';
 export * from './authorization.credential.global';
 export * from './authorization.privilege';
 export * from './authorization.verified.credential';
-export * from './preference.value.type';
-export * from './preference.type';
 export * from './messaging.queue';
 export * from './profile.type';

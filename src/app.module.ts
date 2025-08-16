@@ -81,8 +81,6 @@ import { TemplateApplierModule } from '@domain/template/template-applier/templat
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
-import { InAppNotificationReaderModule } from '@domain/in-app-notification-reader/in.app.notification.reader.module';
-import { InAppNotificationReceiverModule } from '@domain/in-app-notification-receiver';
 import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
@@ -95,6 +93,8 @@ import { AuthInterceptor } from '@core/interceptors';
 import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
 import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
+import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
+import { InAppNotificationReaderModule } from '@services/api/in-app-notification-reader/in.app.notification.reader.module';
 
 @Module({
   imports: [
@@ -283,6 +283,7 @@ import { PlatformAdminModule } from './platform-admin/admin/platform.admin.modul
     AgentModule,
     MessageModule,
     MessageReactionModule,
+    NotificationRecipientsModule,
     RegistrationModule,
     ConversionModule,
     LibraryModule,
@@ -312,7 +313,6 @@ import { PlatformAdminModule } from './platform-admin/admin/platform.admin.modul
     PlatformRoleModule,
     TemplateApplierModule,
     InAppNotificationReaderModule,
-    InAppNotificationReceiverModule,
     WingbackWebhookModule,
     CalloutTransferModule,
     SearchModule,

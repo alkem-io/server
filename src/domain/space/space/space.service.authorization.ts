@@ -539,7 +539,10 @@ export class SpaceAuthorizationService {
       RoleName.MEMBER
     );
     const spaceMember = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.READ],
+      [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.RECEIVE_NOTIFICATIONS,
+      ],
       memberCriterias,
       CREDENTIAL_RULE_SPACE_MEMBERS_READ
     );

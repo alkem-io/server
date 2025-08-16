@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-inferrable-types */
 import {
   Column,
   Entity,
@@ -9,7 +8,6 @@ import {
 } from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/access/application/application.entity';
-import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Room } from '@domain/communication/room/room.entity';
@@ -18,7 +16,7 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
-import { IUserSettings } from '../user.settings/user.settings.interface';
+import { UserSettings } from '../user-settings/user.settings.entity';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
@@ -30,9 +28,6 @@ export class User extends ContributorBase implements IUser {
   })
   @Generated('increment')
   rowId!: number;
-
-  @Column('json', { nullable: false })
-  settings!: IUserSettings;
 
   @Column('varchar', {
     length: SMALL_TEXT_LENGTH,
@@ -65,13 +60,13 @@ export class User extends ContributorBase implements IUser {
   })
   applications?: Application[];
 
-  @OneToOne(() => PreferenceSet, {
+  @OneToOne(() => UserSettings, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  preferenceSet?: PreferenceSet;
+  settings!: UserSettings;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,

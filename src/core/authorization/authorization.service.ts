@@ -108,6 +108,20 @@ export class AuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
+    return this.isAccessGrantedForCredentials(
+      agentInfo.credentials,
+      agentInfo.verifiedCredentials,
+      authorization,
+      privilegeRequired
+    );
+  }
+
+  isAccessGrantedForCredentials(
+    credentials: ICredentialDefinition[],
+    verifiedCredentials: IVerifiedCredential[],
+    authorization: IAuthorizationPolicy | undefined,
+    privilegeRequired: AuthorizationPrivilege
+  ): boolean {
     if (!authorization) {
       throw new EntityNotInitializedException(
         'Authorization: no definition provided',
@@ -120,7 +134,7 @@ export class AuthorizationService {
 
     const credentialRules = authorization.credentialRules;
     for (const rule of credentialRules) {
-      for (const credential of agentInfo.credentials) {
+      for (const credential of credentials) {
         if (this.isCredentialMatch(credential, rule)) {
           for (const privilege of rule.grantedPrivileges) {
             if (privilege === privilegeRequired) {
@@ -138,7 +152,7 @@ export class AuthorizationService {
     const verifiedCredentialRules: IAuthorizationPolicyRuleVerifiedCredential[] =
       authorization.verifiedCredentialRules;
     for (const rule of verifiedCredentialRules) {
-      for (const verifiedCredential of agentInfo.verifiedCredentials) {
+      for (const verifiedCredential of verifiedCredentials) {
         const isMatch = this.isVerifiedCredentialMatch(
           verifiedCredential,
           rule
@@ -173,7 +187,7 @@ export class AuthorizationService {
     return false;
   }
 
-  getGrantedPrivileges(
+  public getGrantedPrivileges(
     credentials: ICredentialDefinition[],
     verifiedCredentials: IVerifiedCredential[],
     authorization: IAuthorizationPolicy

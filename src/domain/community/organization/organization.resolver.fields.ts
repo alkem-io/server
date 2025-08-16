@@ -24,7 +24,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @Resolver(() => IOrganization)

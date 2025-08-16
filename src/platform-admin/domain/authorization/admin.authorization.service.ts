@@ -44,7 +44,7 @@ export class AdminAuthorizationService {
         LogContext.AUTH
       );
 
-    return await this.userLookupService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredential({
       type: credentialCriteria.type.toString(),
       resourceID: credentialCriteria.resourceID,
     });

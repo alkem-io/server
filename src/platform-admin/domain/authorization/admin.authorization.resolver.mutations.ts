@@ -18,11 +18,11 @@ import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.serv
 import { IOrganization } from '@domain/community/organization';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
+import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { RoleChangeType } from '@alkemio/notifications-lib';
 import { AiPersonaService } from '@domain/community/ai-persona/ai.persona.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -37,7 +37,7 @@ export class AdminAuthorizationResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private notificationAdapter: NotificationAdapter,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -258,6 +258,8 @@ export class AdminAuthorizationResolverMutations {
       type: type,
       role: role,
     };
-    await this.notificationAdapter.platformGlobalRoleChanged(notificationInput);
+    await this.notificationPlatformAdapter.platformGlobalRoleChanged(
+      notificationInput
+    );
   }
 }
