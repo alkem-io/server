@@ -1,14 +1,11 @@
-export * from './space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
-export * from './space/in.app.notification.payload.space.community.contributor.resolver.fields';
-
 // Space Payload Field Resolvers
 export * from './space/in.app.notification.payload.space.collaboration.post.comment.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.whiteboard.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
+export * from './space/in.app.notification.payload.space.community.contributor.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.application.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.invitation.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.invitation.platform.resolver.fields';
-export * from './space/in.app.notification.payload.space.community.contributor.resolver.fields';
 export * from './space/in.app.notification.payload.space.communication.update.resolver.fields';
 export * from './space/in.app.notification.payload.space.communication.message.direct.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.post.resolver.fields';

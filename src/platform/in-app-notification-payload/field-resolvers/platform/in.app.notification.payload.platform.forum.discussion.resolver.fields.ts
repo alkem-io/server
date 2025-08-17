@@ -2,7 +2,7 @@ import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 
 @Resolver(() => InAppNotificationPayloadPlatformForumDiscussion)
-export class InAppNotificationPayloadPlatformForumDiscussionCreatedResolverFields {
+export class InAppNotificationPayloadPlatformForumDiscussionResolverFields {
   @ResolveField(() => String, {
     nullable: false,
     description: 'The discussion ID.',
