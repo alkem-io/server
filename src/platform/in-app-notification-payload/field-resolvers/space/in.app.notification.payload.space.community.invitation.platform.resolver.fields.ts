@@ -6,7 +6,7 @@ import { SpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/in
 import { InAppNotificationPayloadSpaceCommunityInvitationPlatform } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation.platform';
 
 @Resolver(() => InAppNotificationPayloadSpaceCommunityInvitationPlatform)
-export class InAppNotificationSpaceCommunityInvitationUserPlatformResolverFields {
+export class InAppNotificationPayloadSpaceCommunityInvitationPlatformResolverFields {
   @ResolveField(() => ISpace, {
     nullable: true,
     description: 'The Space that the invitation is for.',
