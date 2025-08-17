@@ -6,9 +6,9 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLoaderCreator } from '@core/dataloader/creators/loader.creators/user.loader.creator';
 
 @Resolver(() => InAppNotificationPayloadPlatformGlobalRoleChange)
-export class InAppNotificationPlatformGlobalRoleChangeResolverFields {
+export class InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields {
   @ResolveField(() => IUser, {
-    nullable: true,
+    nullable: false,
     description: 'The User whose role was changed.',
   })
   public user(

@@ -158,7 +158,7 @@ export class NotificationAdapter {
           type: NotificationEventPayload.USER_MESSAGE_ROOM,
           userID: eventData.commentOwnerID,
           roomID: eventData.roomId,
-          messageID: eventData.roomId, // TODO:  need original message ID
+          messageID: 'unknown', // TODO:  need original message ID
         };
 
         await this.notificationInAppAdapter.sendInAppNotifications(

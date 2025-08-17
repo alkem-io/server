@@ -8,7 +8,7 @@ import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-noti
 @Resolver(() => InAppNotificationPayloadUserMessageDirect)
 export class InAppNotificationPayloadUserMessageDirectResolverFields {
   @ResolveField(() => IUser, {
-    nullable: true,
+    nullable: false,
     description: 'The User that was sent the message.',
   })
   public async user(

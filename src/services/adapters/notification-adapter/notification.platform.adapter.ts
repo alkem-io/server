@@ -99,6 +99,7 @@ export class NotificationPlatformAdapter {
       const inAppPayload: InAppNotificationPayloadPlatformForumDiscussion = {
         type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
         discussionID: eventData.discussion.id,
+        commentID: '',
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -131,6 +132,25 @@ export class NotificationPlatformAdapter {
       );
     // send notification event
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadPlatformForumDiscussion = {
+        type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
+        discussionID: eventData.discussion.id,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
   public async platformInvitationCreated(

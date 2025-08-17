@@ -8,7 +8,7 @@ import { InAppNotificationPayloadSpaceCollaborationWhiteboard } from '@platform/
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationWhiteboard)
 export class InAppNotificationPayloadSpaceCollaborationWhiteboardResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space where the whiteboard was created.',
   })
   public space(
@@ -21,7 +21,7 @@ export class InAppNotificationPayloadSpaceCollaborationWhiteboardResolverFields 
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The whiteboard ID.',
   })
   public whiteboard(
@@ -32,7 +32,7 @@ export class InAppNotificationPayloadSpaceCollaborationWhiteboardResolverFields 
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The callout ID.',
   })
   public callout(

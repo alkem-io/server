@@ -20,7 +20,6 @@ import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notifi
 import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.direct';
 import { InAppNotificationPayloadSpaceCommunityInvitationPlatform } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation.platform';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
-import { InAppNotificationPayloadPlatformForumDiscussionComment } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion.comment';
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
 
 @InterfaceType('InAppNotificationPayload', {
@@ -31,8 +30,6 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
       // Platform notifications
       case NotificationEventPayload.PLATFORM_FORUM_DISCUSSION:
         return InAppNotificationPayloadPlatformForumDiscussion;
-      case NotificationEventPayload.PLATFORM_FORUM_DISCUSSION_COMMENT:
-        return InAppNotificationPayloadPlatformForumDiscussionComment;
       case NotificationEventPayload.PLATFORM_USER_PROFILE_REMOVED:
         return InAppNotificationPayloadPlatformUserProfileRemoved;
       case NotificationEventPayload.PLATFORM_GLOBAL_ROLE_CHANGE:

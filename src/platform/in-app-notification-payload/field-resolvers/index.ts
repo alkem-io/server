@@ -14,10 +14,9 @@ export * from './space/in.app.notification.payload.space.communication.message.d
 export * from './space/in.app.notification.payload.space.collaboration.post.resolver.fields';
 
 // Platform Payload Field Resolvers
-export * from './platform/in.app.notification.platform.user.profile.removed.resolver.fields';
-export * from './platform/in.app.notification.platform.global.role.change.resolver.fields';
-export * from './platform/in.app.notification.platform.forum.discussion.resolver.fields';
-export * from './platform/in.app.notification.platform.forum.discussion.comment.resolver.fields';
+export * from './platform/in.app.notification.payload.platform.user.profile.removed.resolver.fields';
+export * from './platform/in.app.notification.payload.platform.global.role.change.resolver.fields';
+export * from './platform/in.app.notification.payload.platform.forum.discussion.resolver.fields';
 
 // Organization Field Resolvers
 export * from './organization/in.app.notification.payload.organization.message.room.resolver.fields';

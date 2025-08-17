@@ -8,7 +8,7 @@ import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationPost)
 export class InAppNotificationPayloadSpaceCollaborationPostResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space where the post was created.',
   })
   public space(
@@ -21,7 +21,7 @@ export class InAppNotificationPayloadSpaceCollaborationPostResolverFields {
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The post ID.',
   })
   public post(
@@ -32,7 +32,7 @@ export class InAppNotificationPayloadSpaceCollaborationPostResolverFields {
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The callout ID.',
   })
   public callout(

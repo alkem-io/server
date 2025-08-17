@@ -8,7 +8,7 @@ import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationPostComment)
 export class InAppNotificationPayloadSpaceCollaborationPostCommentResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: true,
+    nullable: false,
     description: 'The Space where the comment was created.',
   })
   public space(
@@ -21,7 +21,7 @@ export class InAppNotificationPayloadSpaceCollaborationPostCommentResolverFields
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The post ID.',
   })
   public post(
@@ -32,7 +32,7 @@ export class InAppNotificationPayloadSpaceCollaborationPostCommentResolverFields
   }
 
   @ResolveField(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The comment ID.',
   })
   public comment(

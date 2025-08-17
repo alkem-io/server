@@ -1,5 +1,4 @@
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
@@ -7,8 +6,8 @@ import { OrganizationLoaderCreator } from '@core/dataloader/creators/loader.crea
 import { IOrganization } from '@domain/community/organization/organization.interface';
 @Resolver(() => InAppNotificationPayloadOrganizationMessageRoom)
 export class InAppNotificationPayloadOrganizationMessageRoomResolverFields {
-  @ResolveField(() => IContributor, {
-    nullable: true,
+  @ResolveField(() => IOrganization, {
+    nullable: false,
     description: 'The organization.',
   })
   public async organization(
