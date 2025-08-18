@@ -5,10 +5,6 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`in_app_notification\` ADD \`sourceEntityID\` char(36) NULL`
-    );
-
-    await queryRunner.query(
       `ALTER TABLE \`in_app_notification\` CHANGE \`triggeredByID\` \`triggeredByID\` char(36) NULL COMMENT 'The contributor who triggered the event.'`
     );
     await queryRunner.query(
@@ -80,7 +76,6 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
             [JSON.stringify(newPayload), notification.id]
           );
 
-          // No sourceEntityID!
           break;
         }
         case 'communityNewMember': {
@@ -94,13 +89,6 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
             [JSON.stringify(newPayload), notification.id]
           );
 
-          // Set sourceEntityID to the spaceID for community notifications
-          if (payload.spaceID) {
-            await queryRunner.query(
-              `UPDATE \`in_app_notification\` SET \`sourceEntityID\` = ? WHERE \`id\` = ?`,
-              [payload.spaceID, notification.id]
-            );
-          }
           break;
         }
         case 'collaborationCalloutPublished': {
@@ -114,14 +102,6 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
             [JSON.stringify(newPayload), notification.id]
           );
 
-          // Set sourceEntityID to calloutID if available, otherwise spaceID
-          const sourceEntityID = payload.calloutID || payload.spaceID;
-          if (sourceEntityID) {
-            await queryRunner.query(
-              `UPDATE \`in_app_notification\` SET \`sourceEntityID\` = ? WHERE \`id\` = ?`,
-              [sourceEntityID, notification.id]
-            );
-          }
           break;
         }
       }
@@ -161,11 +141,6 @@ export class InAppNotifications1755262773869 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`in_app_notification\` CHANGE \`payload\` \`payload\` json NOT NULL`
-    );
-
-    // Remove the added column
-    await queryRunner.query(
-      `ALTER TABLE \`in_app_notification\` DROP COLUMN \`sourceEntityID\``
     );
   }
 }
