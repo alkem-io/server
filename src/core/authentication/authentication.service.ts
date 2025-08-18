@@ -48,7 +48,7 @@ export class AuthenticationService {
         opts.authorization,
         opts.cookie
       );
-    } catch (e) {
+    } catch {
       return this.agentInfoService.createAnonymousAgentInfo();
     }
 
