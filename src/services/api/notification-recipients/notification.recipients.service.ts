@@ -112,7 +112,8 @@ export class NotificationRecipientsService {
       const authorizationPolicy = await this.getAuthorizationPolicy(
         eventData.eventType,
         eventData.spaceID,
-        eventData.userID
+        eventData.userID,
+        eventData.organizationID
       );
       recipientsWithPrivilege =
         recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
@@ -364,7 +365,8 @@ export class NotificationRecipientsService {
   private async getAuthorizationPolicy(
     eventType: NotificationEvent,
     entityID?: string,
-    userID?: string
+    userID?: string,
+    organizationID?: string
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
       case NotificationEvent.PLATFORM_SPACE_CREATED:
@@ -377,14 +379,16 @@ export class NotificationRecipientsService {
       case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT:
       case NotificationEvent.ORGANIZATION_MENTIONED: {
         // get the organization authorization policy
-        if (!entityID) {
+        if (!organizationID) {
           throw new ValidationException(
             'Entity ID is required for organization notification recipients',
             LogContext.NOTIFICATIONS
           );
         }
         const organization =
-          await this.organizationLookupService.getOrganizationOrFail(entityID);
+          await this.organizationLookupService.getOrganizationOrFail(
+            organizationID
+          );
         if (!organization.authorization) {
           throw new RelationshipNotFoundException(
             `Organization does not have an authorization policy: ${organization.id}`,
