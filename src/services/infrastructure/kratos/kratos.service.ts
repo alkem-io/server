@@ -215,23 +215,27 @@ export class KratosService {
    * - If the identity has password credentials, it returns `AuthenticationType.EMAIL`.
    * - If none of the above conditions are met, it returns `AuthenticationType.UNKNOWN`.
    */
-  public mapAuthenticationType(identity: Identity): AuthenticationType {
+  public mapAuthenticationType(identity: Identity): AuthenticationType[] {
+    const authTypes: AuthenticationType[] = [];
     if (identity.credentials) {
       if (identity.credentials.oidc) {
         const identifiers = identity.credentials.oidc.identifiers;
-        if (!identifiers) return AuthenticationType.UNKNOWN;
+        if (!identifiers) return [AuthenticationType.UNKNOWN];
         const identifier = identifiers[0];
-        if (!identifier) return AuthenticationType.UNKNOWN;
+        if (!identifier) return [AuthenticationType.UNKNOWN];
         if (identifier.startsWith('microsoft'))
-          return AuthenticationType.MICROSOFT;
+          authTypes.push(AuthenticationType.MICROSOFT);
         if (identifier.startsWith('linkedin'))
-          return AuthenticationType.LINKEDIN;
-      } else {
-        if (identity.credentials.password) return AuthenticationType.EMAIL;
+          authTypes.push(AuthenticationType.LINKEDIN);
+        if (identifier.startsWith('github'))
+          authTypes.push(AuthenticationType.GITHUB);
+      }
+      if (identity.credentials.password) {
+        authTypes.push(AuthenticationType.EMAIL);
       }
     }
 
-    return AuthenticationType.UNKNOWN;
+    return authTypes;
   }
 
   /**
@@ -481,9 +485,9 @@ export class KratosService {
    */
   public async getAuthenticationTypeFromIdentity(
     identity: Identity
-  ): Promise<AuthenticationType> {
+  ): Promise<AuthenticationType[]> {
     if (!identity) {
-      return AuthenticationType.UNKNOWN;
+      return [AuthenticationType.UNKNOWN];
     }
 
     return this.mapAuthenticationType(identity);
