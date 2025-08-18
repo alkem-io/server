@@ -204,7 +204,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.23.3
+    image: alkemio/notifications:v0.23.4
     platform: linux/amd64
     depends_on:
       rabbitmq:
@@ -294,7 +294,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.6.0
+    image: alkemio/whiteboard-collaboration-service:v0.6.1
     platform: linux/amd64
     depends_on:
       rabbitmq:
@@ -339,7 +339,7 @@ services:
   collaborative-document:
     container_name: alkemio_dev_collaborative-document
     hostname: collaborative-document
-    image: svetoslavpetkov23/collaborative-document-service:v0.0.3
+    image: alkemio/collaborative-document-service:v0.0.1
     platform: linux/amd64
     depends_on:
       rabbitmq:
