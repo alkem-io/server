@@ -26,7 +26,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       this.logger.error(
         `Exception '${exception.name}' probably thrown in the wrong execution context`,
         undefined,
-        LogContext.UNSPECIFIED
+        LogContext.NEST_FILTER
       );
 
       return exception;
@@ -45,19 +45,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       ...exception.details,
       userId: userID,
     };
-    /* add values that you want to include as additional data
-     e.g. secondParam = { code: '123' };
-    */
-    const secondParam = undefined;
-    const thirdParam = undefined;
-    /* the logger will handle the passed exception by iteration over all it's fields
-     * you can provide additional data in the stack and context
-     */
     const loggableException = {
       ...exception,
       stack: String(exception.stack),
     };
-    this.logger.error(loggableException, secondParam, thirdParam);
+    this.logger.error(loggableException);
 
     response.status(status).json({
       statusCode: status,

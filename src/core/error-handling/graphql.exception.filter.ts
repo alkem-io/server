@@ -20,20 +20,12 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
       ...exception.details,
       userId: userID,
     };
-    /* add values that you want to include as additional data
-     e.g. secondParam = { code: '123' };
-    */
-    const secondParam = undefined;
-    const thirdParam = undefined;
-    /* the logger will handle the passed exception by iteration over all it's fields
-     * you can provide additional data in the stack and context
-     */
     const loggableException = {
       ...exception,
       stack: String(exception.stack),
       extensions: undefined, // we do not need it
     };
-    this.logger.error(loggableException, secondParam, thirdParam);
+    this.logger.error(loggableException);
     // something needs to be returned so the default ExceptionsHandler is not triggered
     if (process.env.NODE_ENV === 'production') {
       // return a new error with only the message and the id
