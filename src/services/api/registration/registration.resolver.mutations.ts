@@ -50,7 +50,7 @@ export class RegistrationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
     const user = await this.registrationService.registerNewUser(agentInfo);
-    return await this.processCreatedUser(user, agentInfo);
+    return await this.processCreatedUser(user);
   }
 
   @Mutation(() => IUser, {
@@ -69,13 +69,10 @@ export class RegistrationResolverMutations {
       `create new User: ${agentInfo.email}`
     );
     const user = await this.userService.createUser(userData);
-    return this.processCreatedUser(user, agentInfo);
+    return this.processCreatedUser(user);
   }
 
-  private async processCreatedUser(
-    userInput: IUser,
-    agentInfo: AgentInfo
-  ): Promise<IUser> {
+  private async processCreatedUser(userInput: IUser): Promise<IUser> {
     const user =
       await this.userAuthorizationService.grantCredentialsAllUsersReceive(
         userInput.id
@@ -94,7 +91,7 @@ export class RegistrationResolverMutations {
 
     await this.registrationService.processPendingInvitations(user);
 
-    await this.userCreatedEvents(user, agentInfo);
+    await this.userCreatedEvents(user);
     return await this.userService.getUserOrFail(user.id);
   }
 
@@ -137,10 +134,10 @@ export class RegistrationResolverMutations {
     );
   }
 
-  private async userCreatedEvents(user: IUser, agentInfo: AgentInfo) {
+  private async userCreatedEvents(user: IUser) {
     // Send the notification
     const notificationInput: NotificationInputPlatformUserRegistered = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: user.id,
       userID: user.id,
     };
     await this.notificationPlatformAdapter.platformUserRegistered(
