@@ -5,7 +5,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export class UserAuthenticationResult {
   @Field(() => [AuthenticationType], {
     description:
-      'The Authentication Methods used for this User. One of email, linkedin, microsoft, or unknown',
+      'The Authentication Methods used for this User. One of email, linkedin, microsoft, github or unknown',
     nullable: false,
   })
   methods!: AuthenticationType[];
