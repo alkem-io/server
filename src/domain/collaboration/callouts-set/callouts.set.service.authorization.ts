@@ -16,6 +16,7 @@ import {
 } from '@common/constants';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 @Injectable()
 export class CalloutsSetAuthorizationService {
@@ -28,6 +29,7 @@ export class CalloutsSetAuthorizationService {
   async applyAuthorizationPolicy(
     calloutsSetInput: ICalloutsSet,
     parentAuthorization: IAuthorizationPolicy | undefined,
+    platformRolesAccess: IPlatformRolesAccess,
     credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = [],
     roleSet?: IRoleSet,
     spaceSettings?: ISpaceSettings
@@ -68,8 +70,8 @@ export class CalloutsSetAuthorizationService {
           await this.calloutAuthorizationService.applyAuthorizationPolicy(
             callout.id,
             parentAuthorization,
-            roleSet,
-            spaceSettings
+            platformRolesAccess,
+            roleSet
           );
         updatedAuthorizations.push(...calloutAuthorizations);
       }

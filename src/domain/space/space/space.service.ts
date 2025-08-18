@@ -43,7 +43,6 @@ import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.sett
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
-import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
@@ -80,6 +79,8 @@ import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { UUID_LENGTH } from '@common/constants';
+import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -111,6 +112,7 @@ export class SpaceService {
     private templateContentSpaceService: TemplateContentSpaceService,
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
+    private spacePlatformRolesAccessService: SpacePlatformRolesAccessService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -126,7 +128,8 @@ export class SpaceService {
   private async createSpace(
     spaceData: CreateSpaceInput,
     templateContentSpace: ITemplateContentSpace,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
     // default to demo space
@@ -137,6 +140,12 @@ export class SpaceService {
     );
 
     space.settings = templateContentSpace.settings;
+    space.platformRolesAccess =
+      this.spacePlatformRolesAccessService.createPlatformRolesAccess(
+        space,
+        space.settings,
+        parentPlatformRolesAccess
+      );
 
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -293,6 +302,12 @@ export class SpaceService {
         },
         {
           type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: true,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER,
           dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: true,
@@ -627,10 +642,9 @@ export class SpaceService {
     const space = await this.getSpace(spaceID, options);
     if (!space)
       throw new EntityNotFoundException(
-        `Unable to find Space with ID: ${spaceID} using options '${JSON.stringify(
-          options
-        )}`,
-        LogContext.SPACES
+        `Unable to find Space using options '${JSON.stringify(options)}'`,
+        LogContext.SPACES,
+        { spaceID }
       );
     return space;
   }
@@ -680,6 +694,38 @@ export class SpaceService {
     return this.spaceRepository.find(options);
   }
 
+  public async updatePlatformRolesAccessRecursively(
+    space: ISpace,
+    parentPlatformRolesAccess?: IPlatformRolesAccess
+  ): Promise<ISpace> {
+    const { subspaces } = await this.getSpaceOrFail(space.id, {
+      relations: {
+        subspaces: true,
+      },
+    });
+
+    space.platformRolesAccess =
+      this.spacePlatformRolesAccessService.createPlatformRolesAccess(
+        space,
+        space.settings,
+        parentPlatformRolesAccess
+      );
+    const result = await this.save(space);
+
+    // If the space has subspaces, update their platform roles access recursively
+    if (subspaces && subspaces.length > 0) {
+      await Promise.all(
+        subspaces.map(subspace =>
+          this.updatePlatformRolesAccessRecursively(
+            subspace,
+            space.platformRolesAccess
+          )
+        )
+      );
+    }
+    return result;
+  }
+
   public async updateSpacePlatformSettings(
     space: ISpace,
     updateData: UpdateSpacePlatformSettingsInput
@@ -692,6 +738,7 @@ export class SpaceService {
           LogContext.SPACES
         );
       }
+
       await this.updateSpaceVisibilityAllSubspaces(
         space.id,
         updateData.visibility
@@ -783,7 +830,39 @@ export class SpaceService {
       }
     }
 
-    return await this.save(space);
+    await this.save(space);
+
+    // Update the platform roles access for the space
+    const parentPlatformRolesAccess =
+      await this.getParentSpacePlatformRolesAccess(space);
+    return await this.updatePlatformRolesAccessRecursively(
+      space,
+      parentPlatformRolesAccess
+    );
+  }
+
+  private async getParentSpacePlatformRolesAccess(
+    space: ISpace
+  ): Promise<IPlatformRolesAccess | undefined> {
+    if (space.level === SpaceLevel.L0) {
+      return undefined;
+    }
+
+    const { parentSpace } = await this.getSpaceOrFail(space.id, {
+      relations: {
+        parentSpace: true,
+      },
+    });
+
+    if (!parentSpace || !parentSpace.platformRolesAccess) {
+      throw new EntityNotFoundException(
+        'Unable to find parent space platform roles access for subspace',
+        LogContext.SPACES,
+        { spaceId: space.id }
+      );
+    }
+
+    return parentSpace.platformRolesAccess;
   }
 
   private async updateSpaceVisibilityAllSubspaces(
@@ -799,13 +878,6 @@ export class SpaceService {
       space.visibility = visibility;
       await this.save(space);
     }
-  }
-
-  public async updateSpaceSettings(
-    space: ISpace,
-    settingsData: UpdateSpaceSettingsInput
-  ): Promise<ISpace> {
-    return await this.updateSettings(space, settingsData.settings);
   }
 
   /**
@@ -1056,7 +1128,8 @@ export class SpaceService {
     let subspace = await this.createSpace(
       subspaceData,
       templateContentSubspace,
-      agentInfo
+      agentInfo,
+      space.platformRolesAccess
     );
 
     subspace = await this.addSubspaceToSpace(space, subspace);
@@ -1295,16 +1368,26 @@ export class SpaceService {
   }
 
   public async updateSettings(
-    space: ISpace,
+    spaceID: string,
     settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
+    let space = await this.getSpaceOrFail(spaceID, {
+      relations: {
+        parentSpace: true,
+      },
+    });
     const settings = space.settings;
     const updatedSettings = this.spaceSettingsService.updateSettings(
       settings,
       settingsData
     );
     space.settings = updatedSettings;
-    return await this.save(space);
+    space = await this.save(space);
+
+    return await this.updatePlatformRolesAccessRecursively(
+      space,
+      space.parentSpace?.platformRolesAccess
+    );
   }
 
   public async getAccountForLevelZeroSpaceOrFail(

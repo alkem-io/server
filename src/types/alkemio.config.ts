@@ -158,6 +158,7 @@ export type AlkemioConfig = {
   };
   integrations: {
     geo: {
+      header: string;
       rest_endpoint: string;
       service_endpoint: string;
       cache_entry_ttl: number;
@@ -196,6 +197,10 @@ export type AlkemioConfig = {
       cache_ttl: number;
     };
     whiteboards: {
+      enabled: boolean;
+      max_collaborators_in_room: number;
+    };
+    memo: {
       enabled: boolean;
       max_collaborators_in_room: number;
     };

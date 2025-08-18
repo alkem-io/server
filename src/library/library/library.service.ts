@@ -85,6 +85,18 @@ export class LibraryService {
       },
     });
 
+    return await this.sortAndFilterInnovationPacks(
+      innovationPacks,
+      limit,
+      orderBy
+    );
+  }
+
+  public async sortAndFilterInnovationPacks(
+    innovationPacks: IInnovationPack[],
+    limit?: number,
+    orderBy: InnovationPacksOrderBy = InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC
+  ): Promise<IInnovationPack[]> {
     // Sort based on the amount of Templates in the InnovationPacks
     const innovationPacksWithCounts = await Promise.all(
       innovationPacks.map(async innovationPack => {

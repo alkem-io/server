@@ -12,6 +12,7 @@ import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { ISpaceAbout } from '../space.about/space.about.interface';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 @ObjectType('Space')
 export class ISpace extends IAuthorizable {
@@ -50,6 +51,8 @@ export class ISpace extends IAuthorizable {
   community?: ICommunity;
 
   settings!: ISpaceSettings;
+
+  platformRolesAccess!: IPlatformRolesAccess;
 
   storageAggregator?: IStorageAggregator;
 

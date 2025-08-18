@@ -66,21 +66,43 @@ export class SpaceDefaultsService {
     }
 
     // Enforce innovation flow settings:
-    const maxNumberOfStates =
-      templateSpaceContent.collaboration?.innovationFlow?.settings
-        .maximumNumberOfStates ?? Number.MAX_SAFE_INTEGER;
-    const minNumberOfStates =
-      templateSpaceContent.collaboration?.innovationFlow?.settings
-        .minimumNumberOfStates ?? 0;
+    if (!templateSpaceContent.collaboration?.innovationFlow?.settings) {
+      throw new RelationshipNotFoundException(
+        'Innovation flow settings not found in template',
+        LogContext.TEMPLATES,
+        { templateSpaceContentId: templateSpaceContent.id }
+      );
+    }
+    const { maximumNumberOfStates, minimumNumberOfStates } =
+      templateSpaceContent.collaboration.innovationFlow.settings;
+    if (
+      maximumNumberOfStates < minimumNumberOfStates ||
+      maximumNumberOfStates < 1 ||
+      minimumNumberOfStates < 1
+    ) {
+      throw new ValidationException(
+        `Invalid min (${minimumNumberOfStates})/max (${maximumNumberOfStates}) number of states.`,
+        LogContext.SPACES,
+        { templateSpaceContentId: templateSpaceContent.id }
+      );
+    }
+
+    collaborationData.innovationFlowData.settings.maximumNumberOfStates =
+      maximumNumberOfStates;
+    collaborationData.innovationFlowData.settings.minimumNumberOfStates =
+      minimumNumberOfStates;
 
     if (
-      collaborationData.innovationFlowData.states.length > maxNumberOfStates
+      collaborationData.innovationFlowData.states.length > maximumNumberOfStates
     ) {
       collaborationData.innovationFlowData.states =
-        collaborationData.innovationFlowData.states.slice(0, maxNumberOfStates);
+        collaborationData.innovationFlowData.states.slice(
+          0,
+          maximumNumberOfStates
+        );
     }
     if (
-      collaborationData.innovationFlowData.states.length < minNumberOfStates
+      collaborationData.innovationFlowData.states.length < minimumNumberOfStates
     ) {
       throw new ValidationException(
         `Innovation flow must have at least ${collaborationData.innovationFlowData.settings.minimumNumberOfStates} states.`,

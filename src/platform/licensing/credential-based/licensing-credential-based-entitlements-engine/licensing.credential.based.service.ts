@@ -56,9 +56,7 @@ export class LicensingCredentialBasedService {
       await this.getLicensingCredentialBasedPolicyOrFail(licensePolicy);
     const credentials = await this.getCredentialsFromAgent(agent);
 
-    const credentialRules = this.convertCredentialRulesStr(
-      policy.credentialRulesStr
-    );
+    const credentialRules = policy.credentialRules;
     for (const credentialRule of credentialRules) {
       for (const credential of credentials) {
         if (credential.type === credentialRule.credentialType) {
@@ -87,9 +85,7 @@ export class LicensingCredentialBasedService {
       await this.getLicensingCredentialBasedPolicyOrFail(licensePolicy);
     const credentials = await this.getCredentialsFromAgent(agent);
 
-    const credentialRules = this.convertCredentialRulesStr(
-      policy.credentialRulesStr
-    );
+    const credentialRules = policy.credentialRules;
     for (const credentialRule of credentialRules) {
       for (const credential of credentials) {
         if (credential.type === credentialRule.credentialType) {
@@ -125,7 +121,7 @@ export class LicensingCredentialBasedService {
   ): Promise<ILicensePolicy> {
     let policy = licensePolicy;
     if (!policy) {
-      policy = await this.getDefaultLicensePollicyOrFail();
+      policy = await this.getDefaultLicensePolicyOrFail();
     }
     return policy;
   }
@@ -140,9 +136,7 @@ export class LicensingCredentialBasedService {
 
     const grantedEntitlements: LicenseEntitlementType[] = [];
 
-    const credentialRules = this.convertCredentialRulesStr(
-      policy.credentialRulesStr
-    );
+    const credentialRules = policy.credentialRules;
     for (const rule of credentialRules) {
       for (const credential of credentials) {
         if (rule.credentialType === credential.type) {
@@ -177,7 +171,7 @@ export class LicensingCredentialBasedService {
 
   // TODO: a work around, need to look at how to make the license policy more readily available
   // in all contexts
-  private async getDefaultLicensePollicyOrFail(): Promise<ILicensePolicy> {
+  private async getDefaultLicensePolicyOrFail(): Promise<ILicensePolicy> {
     let licensePolicy: ILicensePolicy | null = null;
     licensePolicy = (
       await this.entityManager.find(LicensePolicy, { take: 1 })

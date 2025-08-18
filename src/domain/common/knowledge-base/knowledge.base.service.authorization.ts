@@ -76,7 +76,10 @@ export class KnowledgeBaseAuthorizationService {
     const calloutsSetAuthorizations =
       await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(
         knowledgeBase.calloutsSet,
-        knowledgeBase.authorization
+        knowledgeBase.authorization,
+        {
+          roles: [],
+        }
       );
     updatedAuthorizations.push(...calloutsSetAuthorizations);
 

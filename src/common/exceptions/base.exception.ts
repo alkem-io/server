@@ -12,14 +12,7 @@ export class BaseException extends GraphQLError {
     public details?: ExceptionDetails,
     public errorId: string = randomUUID()
   ) {
-    super(message, {
-      extensions: {
-        code: code.toLocaleString(),
-        context,
-        errorId,
-        details,
-      },
-    });
+    super(message);
     this.name = this.constructor.name;
   }
 }

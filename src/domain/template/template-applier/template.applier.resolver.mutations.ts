@@ -15,6 +15,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
+import { InnovationFlowAuthorizationService } from '@domain/collaboration/innovation-flow/innovation.flow.service.authorization';
 
 @InstrumentResolver()
 @Resolver()
@@ -23,6 +24,7 @@ export class TemplateApplierResolverMutations {
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
     private calloutsSetAuthorizationService: CalloutsSetAuthorizationService,
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     private templateApplierService: TemplateApplierService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -77,6 +79,9 @@ export class TemplateApplierResolverMutations {
         targetCollaboration.id,
         {
           relations: {
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: true,
             },
@@ -84,7 +89,10 @@ export class TemplateApplierResolverMutations {
           },
         }
       );
-    if (!targetCollaboration.calloutsSet?.callouts) {
+    if (
+      !targetCollaboration.calloutsSet?.callouts ||
+      !targetCollaboration.innovationFlow
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to retrieve callouts for collaboration: ${targetCollaboration.id}`,
         LogContext.TEMPLATES
@@ -93,8 +101,17 @@ export class TemplateApplierResolverMutations {
     const updatedAuthorizations: IAuthorizationPolicy[] =
       await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(
         targetCollaboration.calloutsSet,
-        targetCollaboration.authorization
+        targetCollaboration.authorization,
+        {
+          roles: [],
+        }
       );
+    updatedAuthorizations.push(
+      ...(await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        targetCollaboration.innovationFlow.id,
+        targetCollaboration.authorization
+      ))
+    );
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
     return this.collaborationService.getCollaborationOrFail(
