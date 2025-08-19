@@ -267,6 +267,14 @@ export class NotificationAdapter {
           inAppPayload
         );
       }
+    } else {
+      this.logger.warn(
+        'No payload generated for event',
+        LogContext.NOTIFICATIONS,
+        {
+          type: NotificationEvent.USER_MENTION,
+        }
+      );
     }
   }
 
