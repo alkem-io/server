@@ -247,7 +247,7 @@ export class AiServerService {
 
       //NOTE this should not be needed but untill we start using the callout contents in the
       //expert engine better skip it
-      const includeEntry = [
+      const includeEntityContents = [
         AiPersonaEngine.LIBRA_FLOW,
         AiPersonaEngine.EXPERT,
       ].includes(personaService.engine);
@@ -255,7 +255,7 @@ export class AiServerService {
       history = await this.getLastNInteractionMessages(
         invocationInput.resultHandler.roomDetails,
         historyLimit,
-        includeEntry
+        includeEntityContents
       );
     }
 
@@ -266,7 +266,7 @@ export class AiServerService {
     roomDetails: RoomDetails,
     // interactionID: string | undefined,
     limit: number = 100,
-    includeEntry = false
+    includeEntityContents = false
   ): Promise<InteractionMessage[]> {
     let roomMessages: IMessage[] = [];
     // const room = await this.roomControllerService.getRoomOrFail(roomDetails.roomID);
@@ -298,26 +298,26 @@ export class AiServerService {
       });
 
       if (
-        (includeEntry && messages.length === limit - 1) ||
-        (!includeEntry && messages.length === limit)
+        (includeEntityContents && messages.length === limit - 1) ||
+        (!includeEntityContents && messages.length === limit)
       ) {
         break;
       }
     }
-    if (includeEntry) {
-      const entry = await this.roomControllerService.getRoomCalloutOrFail(
+    if (includeEntityContents) {
+      const entity = await this.roomControllerService.getRoomEntityOrFail(
         roomDetails.roomID
       );
-      let entryContent: string | undefined = '';
-      if (entry instanceof Callout) {
-        entryContent = entry?.framing?.profile?.description;
+      let entityContent: string | undefined = '';
+      if (entity instanceof Callout) {
+        entityContent = entity?.framing?.profile?.description;
       }
-      if (entry instanceof Post) {
-        entryContent = entry?.profile?.description;
+      if (entity instanceof Post) {
+        entityContent = entity?.profile?.description;
       }
-      if (entryContent) {
+      if (entityContent) {
         messages.unshift({
-          content: entryContent,
+          content: entityContent,
           role: MessageSenderRole.HUMAN,
         });
       }
