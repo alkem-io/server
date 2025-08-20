@@ -619,7 +619,7 @@ export class NotificationSpaceAdapter {
   public async spaceCommunicationUpdateSent(
     eventData: NotificationInputUpdateSent
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_COMMUNICATION_UPDATE;
+    // Get the data needed
     const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
         eventData.updates.id
@@ -628,48 +628,8 @@ export class NotificationSpaceAdapter {
       await this.communityResolverService.getSpaceForCommunityOrFail(
         community.id
       );
-    const recipients = await this.getNotificationRecipientsSpace(
-      event,
-      eventData,
-      space.id
-    );
 
-    // Send the notifications event
-    const notificationsPayload =
-      await this.notificationExternalAdapter.buildSpaceCommunicationUpdateSentNotificationPayload(
-        event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        space,
-        eventData.updates,
-        eventData.lastMessage
-      );
-    this.notificationExternalAdapter.sendExternalNotifications(
-      event,
-      notificationsPayload
-    );
-
-    // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunicationUpdate = {
-        type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE,
-        spaceID: space.id,
-        updateID: eventData.updates.id,
-      };
-
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.SPACE_COMMUNICATION_UPDATE,
-        NotificationEventCategory.SPACE_MEMBER,
-        eventData.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
-
-    // ALSO send admin notifications
+    // Send admin notifications
     const adminEvent = NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN;
     const adminRecipients = await this.getNotificationRecipientsSpace(
       adminEvent,
@@ -709,6 +669,62 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         adminInAppReceiverIDs,
         adminInAppPayload
+      );
+    }
+
+    // And send the member updates
+    const event = NotificationEvent.SPACE_COMMUNICATION_UPDATE;
+
+    const memberRecipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id
+    );
+
+    const memberEmailRecipientsWithoutAdmins =
+      this.removeAdminRecipientsFromMembersRecipients(
+        adminRecipients.emailRecipients,
+        memberRecipients.emailRecipients
+      );
+
+    // Send the notifications event
+    const notificationsPayload =
+      await this.notificationExternalAdapter.buildSpaceCommunicationUpdateSentNotificationPayload(
+        event,
+        eventData.triggeredBy,
+        memberEmailRecipientsWithoutAdmins,
+        space,
+        eventData.updates,
+        eventData.lastMessage
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      notificationsPayload
+    );
+
+    // Send in-app notifications
+    const memberInAppRecipientsWithoutAdmins =
+      this.removeAdminRecipientsFromMembersRecipients(
+        adminRecipients.inAppRecipients,
+        memberRecipients.inAppRecipients
+      );
+    const inAppReceiverIDs = memberInAppRecipientsWithoutAdmins.map(
+      recipient => recipient.id
+    );
+
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunicationUpdate = {
+        type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE,
+        spaceID: space.id,
+        updateID: eventData.updates.id,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.SPACE_COMMUNICATION_UPDATE,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
