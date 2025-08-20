@@ -7,6 +7,7 @@ export enum PlatformFeatureFlagName {
   SUBSCRIPTIONS = 'subscriptions',
   NOTIFICATIONS = 'notifications',
   WHITEBOARDS = 'whiteboards',
+  MEMO = 'memo',
   LANDING_PAGE = 'landing-page',
   GUIDENCE_ENGINE = 'guidance-engine',
 }

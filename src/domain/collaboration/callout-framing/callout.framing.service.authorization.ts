@@ -5,6 +5,7 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { CalloutFramingService } from './callout.framing.service';
 import { ICalloutFraming } from './callout.framing.interface';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
+import { MemoAuthorizationService } from '@domain/common/memo';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 
@@ -14,7 +15,8 @@ export class CalloutFramingAuthorizationService {
     private calloutFramingService: CalloutFramingService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private whiteboardAuthorizationService: WhiteboardAuthorizationService
+    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
+    private memoAuthorizationService: MemoAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -30,6 +32,7 @@ export class CalloutFramingAuthorizationService {
             authorization: true,
             profile: true,
             whiteboard: true,
+            memo: true,
           },
           select: {
             id: true,
@@ -39,6 +42,9 @@ export class CalloutFramingAuthorizationService {
               id: true,
             },
             whiteboard: {
+              id: true,
+            },
+            memo: {
               id: true,
             },
           },
@@ -74,6 +80,15 @@ export class CalloutFramingAuthorizationService {
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...whiteboardAuthorizations);
+    }
+
+    if (calloutFraming.memo) {
+      const memoAuthorizations =
+        await this.memoAuthorizationService.applyAuthorizationPolicy(
+          calloutFraming.memo.id,
+          calloutFraming.authorization
+        );
+      updatedAuthorizations.push(...memoAuthorizations);
     }
 
     return updatedAuthorizations;

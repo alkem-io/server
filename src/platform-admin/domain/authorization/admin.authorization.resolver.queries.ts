@@ -1,8 +1,7 @@
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationPrivilege } from '@common/enums';
-import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AdminAuthorizationService } from './admin.authorization.service';
@@ -24,7 +23,6 @@ export class AdminAuthorizationResolverQueries {
     description:
       'All Users that hold credentials matching the supplied criteria.',
   })
-  @Profiling.api
   async usersWithAuthorizationCredential(
     @Args('credentialsCriteriaData', { nullable: false })
     credentialsCriteriaData: UsersWithAuthorizationCredentialInput,
@@ -38,29 +36,6 @@ export class AdminAuthorizationResolverQueries {
     );
     return await this.adminAuthorizationService.usersWithCredentials(
       credentialsCriteriaData
-    );
-  }
-
-  @Query(() => [AuthorizationPrivilege], {
-    nullable: false,
-    description:
-      'Privileges assigned to a User (based on held credentials) given an Authorization defnition.',
-  })
-  @Profiling.api
-  async userAuthorizationPrivileges(
-    @Args('userAuthorizationPrivilegesData', { nullable: false })
-    userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<AuthorizationPrivilege[]> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS,
-      `authorization query: ${agentInfo.email}`
-    );
-    return await this.adminAuthorizationService.userAuthorizationPrivileges(
-      agentInfo,
-      userAuthorizationPrivilegesData
     );
   }
 }

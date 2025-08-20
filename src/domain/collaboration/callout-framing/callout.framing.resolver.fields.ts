@@ -7,6 +7,8 @@ import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { CalloutFramingService } from './callout.framing.service';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
+import { ILink } from '@domain/collaboration/link/link.interface';
+import { IMemo } from '@domain/common/memo/types';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {
@@ -32,5 +34,21 @@ export class CalloutFramingResolverFields {
     @Parent() calloutFraming: ICalloutFraming
   ): Promise<IWhiteboard | null> {
     return this.calloutFramingService.getWhiteboard(calloutFraming);
+  }
+
+  @ResolveField('link', () => ILink, {
+    nullable: true,
+    description: 'The Link for framing the associated Callout.',
+  })
+  link(@Parent() calloutFraming: ICalloutFraming): Promise<ILink | null> {
+    return this.calloutFramingService.getLink(calloutFraming);
+  }
+
+  @ResolveField('memo', () => IMemo, {
+    nullable: true,
+    description: 'The Memo for framing the associated Callout.',
+  })
+  memo(@Parent() calloutFraming: ICalloutFraming): Promise<IMemo | null> {
+    return this.calloutFramingService.getMemo(calloutFraming);
   }
 }

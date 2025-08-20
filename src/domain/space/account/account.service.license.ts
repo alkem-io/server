@@ -182,7 +182,10 @@ export class AccountLicenseService {
   /**
    * @throws {EntityNotInitializedException} if the license entitlements are not initialized
    */
-  public async applyWingbackEntitlements(account: IAccount, license: ILicense) {
+  private async applyWingbackEntitlements(
+    account: IAccount,
+    license: ILicense
+  ) {
     if (!this.licensingWingbackSubscriptionService.isEnabled()) {
       return license;
     }
