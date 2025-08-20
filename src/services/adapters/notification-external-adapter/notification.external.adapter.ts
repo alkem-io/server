@@ -53,6 +53,7 @@ import { NotificationInputPostCreated } from '../notification-adapter/dto/space/
 import { NotificationInputWhiteboardCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.whiteboard.created';
 import { NotificationInputPostComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.post.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @Injectable()
 export class NotificationExternalAdapter {
@@ -186,9 +187,6 @@ export class NotificationExternalAdapter {
       triggeredBy: spacePayload.triggeredBy,
       eventType,
       platform: spacePayload.platform,
-      invitee: {
-        email: invitedUserEmail,
-      },
     };
 
     return payload;
@@ -226,8 +224,10 @@ export class NotificationExternalAdapter {
         },
         contribution: {
           id: post.id,
+          type: CalloutContributionType.POST,
           createdBy: await this.getContributorPayloadOrFail(post.createdBy),
           displayName: post.profile.displayName,
+          description: post.profile.description ?? '',
           url: postURL,
         },
       },
@@ -265,16 +265,22 @@ export class NotificationExternalAdapter {
     );
     const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
-        displayName: callout.framing.profile.displayName,
-        nameID: callout.nameID,
-        url: calloutURL,
-      },
-      whiteboard: {
-        id: eventData.whiteboard.id,
-        createdBy: whiteboardCreator,
-        displayName: whiteboard.profile.displayName,
-        nameID: whiteboard.nameID,
-        url: whiteboardURL,
+        id: callout.id,
+        framing: {
+          id: callout.framing.id,
+          type: callout.framing.type,
+          displayName: callout.framing.profile.displayName,
+          description: callout.framing.profile.description ?? '',
+          url: calloutURL,
+        },
+        contribution: {
+          id: eventData.whiteboard.id,
+          type: CalloutContributionType.WHITEBOARD,
+          createdBy: whiteboardCreator,
+          displayName: whiteboard.profile.displayName,
+          description: whiteboard.profile.description ?? '',
+          url: whiteboardURL,
+        },
       },
       ...spacePayload,
     };
@@ -301,10 +307,13 @@ export class NotificationExternalAdapter {
     const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
         id: callout.id,
-        displayName: callout.framing.profile.displayName,
-        description: callout.framing.profile.description ?? '',
-        nameID: callout.nameID,
-        url: calloutURL,
+        framing: {
+          id: callout.framing.id,
+          displayName: callout.framing.profile.displayName,
+          description: callout.framing.profile.description ?? '',
+          type: callout.framing.type,
+          url: calloutURL,
+        },
       },
       ...spacePayload,
     };
@@ -339,15 +348,22 @@ export class NotificationExternalAdapter {
     const postURL = await this.urlGeneratorService.getPostUrlPath(post.id);
     const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
-        displayName: callout.framing.profile.displayName,
-        nameID: callout.nameID,
-        url: calloutURL,
-      },
-      post: {
-        displayName: post.profile.displayName,
-        createdBy: await this.getContributorPayloadOrFail(post.createdBy),
-        nameID: post.nameID,
-        url: postURL,
+        id: callout.id,
+        framing: {
+          id: callout.framing.id,
+          displayName: callout.framing.profile.displayName,
+          description: callout.framing.profile.description ?? '',
+          type: callout.framing.type,
+          url: calloutURL,
+        },
+        contribution: {
+          id: post.id,
+          displayName: post.profile.displayName,
+          description: post.profile.description ?? '',
+          createdBy: await this.getContributorPayloadOrFail(post.createdBy),
+          type: CalloutContributionType.POST,
+          url: postURL,
+        },
       },
       comment: {
         message: messageResult.message,
@@ -512,6 +528,7 @@ export class NotificationExternalAdapter {
       await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
     const payload: NotificationEventPayloadPlatformForumDiscussion = {
       discussion: {
+        id: discussion.id,
         displayName: discussion.profile.displayName,
         createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
         url: discussionURL,
