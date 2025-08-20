@@ -282,7 +282,7 @@ export class NotificationPlatformAdapter {
     );
 
     const payload =
-      this.notificationExternalAdapter.buildPlatformUserRemovedNotificationPayload(
+      await this.notificationExternalAdapter.buildPlatformUserRemovedNotificationPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,

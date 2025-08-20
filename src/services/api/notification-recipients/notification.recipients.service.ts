@@ -301,7 +301,6 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
       case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
@@ -325,6 +324,7 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
+      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
         // For direct user invitations, no privilege check is needed - just check if the user exists and has notifications enabled
@@ -409,7 +409,6 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN:
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
@@ -436,6 +435,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MESSAGE_RECIPIENT:
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.USER_COMMENT_REPLY:
+      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
         // get the User authorization policy

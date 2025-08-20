@@ -294,24 +294,19 @@ export class NotificationSpaceAdapter {
 
     const event = NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER;
 
+    // Will be one recipient i.e. the new member!
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      space.id
+      space.id,
+      eventData.contributorID
     );
-
-    // Need to remove the admins that have already received a notification
-    const memberOnlyEmailRecipients =
-      this.removeAdminRecipientsFromMembersRecipients(
-        adminRecipients.emailRecipients,
-        recipients.emailRecipients
-      );
 
     const payload =
       await this.notificationExternalAdapter.buildSpaceCommunityNewMemberPayload(
         event,
         eventData.triggeredBy,
-        memberOnlyEmailRecipients,
+        recipients.emailRecipients,
         space,
         eventData.contributorID
       );
