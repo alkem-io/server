@@ -182,7 +182,7 @@ export class NotificationRecipientsService {
         return notificationSettings.platform.forumDiscussionCreated;
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
         return notificationSettings.platform.forumDiscussionComment;
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
         return notificationSettings.platform.newUserSignUp;
       case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED:
         return notificationSettings.platform.userProfileRemoved;
@@ -225,6 +225,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
       // ALways true!
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED: // For the user that signs up!
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
         return true;
 
@@ -260,7 +261,7 @@ export class NotificationRecipientsService {
         ];
         break;
       }
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
       case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getGlobalAdminCriteria();
@@ -315,6 +316,7 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_MESSAGE_RECIPIENT: {
