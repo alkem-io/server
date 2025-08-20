@@ -310,13 +310,13 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
-      case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
       case NotificationEvent.USER_MENTION:
+      case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_MESSAGE_RECIPIENT: {
         // TODO: confirm
         // For mentions, no privilege check is needed - mentions are direct notifications to specific users

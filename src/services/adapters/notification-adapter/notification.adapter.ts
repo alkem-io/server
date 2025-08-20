@@ -60,7 +60,7 @@ export class NotificationAdapter {
         payload
       );
 
-      // Send in-app notifications
+      // In-app notification
       const inAppReceiverIDs = recipients.inAppRecipients.map(
         recipient => recipient.id
       );
@@ -103,7 +103,7 @@ export class NotificationAdapter {
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
-    // Send in-app notifications
+    // In-app notification
     const inAppReceiverIDs = recipients.inAppRecipients.map(
       recipient => recipient.id
     );
@@ -135,30 +135,40 @@ export class NotificationAdapter {
     );
 
     try {
-      // build notification payload
-      const payload =
-        await this.notificationExternalAdapter.buildUserCommentReplyPayload(
+      if (recipients.emailRecipients.length > 0) {
+        // build notification payload
+        const payload =
+          await this.notificationExternalAdapter.buildUserCommentReplyPayload(
+            event,
+            eventData.triggeredBy,
+            recipients.emailRecipients,
+            eventData
+          );
+        // send notification event
+        this.notificationExternalAdapter.sendExternalNotifications(
           event,
-          eventData.triggeredBy,
-          recipients.emailRecipients,
-          eventData
+          payload
         );
-      // send notification event
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
+      }
 
-      // Send in-app notifications
+      // In-app notification
       const inAppReceiverIDs = recipients.inAppRecipients.map(
         recipient => recipient.id
       );
       if (inAppReceiverIDs.length > 0) {
+        const commentOriginUrl =
+          await this.notificationExternalAdapter.buildCommentOriginUrl(
+            eventData.commentType,
+            eventData.originEntity.id
+          );
+
         const inAppPayload: InAppNotificationPayloadUserMessageRoom = {
           type: NotificationEventPayload.USER_MESSAGE_ROOM,
           userID: eventData.commentOwnerID,
           roomID: eventData.roomId,
-          messageID: 'unknown', // TODO:  need original message ID
+          comment: eventData.reply,
+          commentUrl: commentOriginUrl,
+          commentOriginName: eventData.originEntity.displayName,
         };
 
         await this.notificationInAppAdapter.sendInAppNotifications(
@@ -171,9 +181,9 @@ export class NotificationAdapter {
       }
     } catch (error: any) {
       this.logger.error(
-        `Error while building comment reply notification payload ${error?.message}`,
-        error?.stack,
-        LogContext.NOTIFICATIONS
+        'Error while building comment reply notification payload',
+        LogContext.NOTIFICATIONS,
+        { error: error?.message }
       );
     }
   }
@@ -187,18 +197,23 @@ export class NotificationAdapter {
       eventData,
       eventData.receiverID
     );
-    // Emit the events to notify others
-    const payload =
-      await this.notificationExternalAdapter.buildUserMessageNotificationPayload(
-        event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        eventData.receiverID,
-        eventData.message
-      );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
-    // Send in-app notifications
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildUserMessageNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.receiverID,
+          eventData.message
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // In-app notification
     const inAppReceiverIDs = recipients.inAppRecipients.map(
       recipient => recipient.id
     );
@@ -228,47 +243,39 @@ export class NotificationAdapter {
       eventData,
       eventData.mentionedEntityID
     );
-    // Emit the events to notify others
-    const payload =
-      await this.notificationExternalAdapter.buildUserMentionNotificationPayload(
-        event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        eventData.mentionedEntityID,
-        eventData.comment,
-        eventData.originEntity.id,
-        eventData.originEntity.displayName,
-        eventData.commentType
-      );
 
-    if (payload) {
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildUserMentionNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.mentionedEntityID,
+          eventData.comment,
+          eventData.originEntity.id,
+          eventData.originEntity.displayName,
+          eventData.commentType
+        );
+
       this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
+    }
 
-      // Send in-app notifications
-      const inAppReceiverIDs = recipients.inAppRecipients.map(
-        recipient => recipient.id
-      );
-      if (inAppReceiverIDs.length > 0) {
-        const inAppPayload = await this.buildUserMentionInAppPayload(eventData);
+    // In-app notification
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload = await this.buildUserMentionInAppPayload(eventData);
 
-        await this.notificationInAppAdapter.sendInAppNotifications(
-          NotificationEvent.USER_MENTION,
-          NotificationEventCategory.USER,
-          eventData.triggeredBy,
-          inAppReceiverIDs,
-          inAppPayload
-        );
-      }
-    } else {
-      this.logger.warn(
-        'No payload generated for event',
-        LogContext.NOTIFICATIONS,
-        {
-          type: NotificationEvent.USER_MENTION,
-        }
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.USER_MENTION,
+        NotificationEventCategory.USER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
