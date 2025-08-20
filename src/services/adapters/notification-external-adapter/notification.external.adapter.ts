@@ -8,31 +8,27 @@ import { Repository } from 'typeorm';
 import { Post } from '@domain/collaboration/post/post.entity';
 import {
   BaseEventPayload,
-  OrganizationMentionEventPayload,
-  OrganizationMessageEventPayload,
-  UserMessageEventPayload,
   ContributorPayload,
-  PlatformForumDiscussionCommentEventPayload,
-  PlatformForumDiscussionCreatedEventPayload,
-  PlatformGlobalRoleChangeEventPayload,
-  PlatformUserRegistrationEventPayload,
-  PlatformUserRemovedEventPayload,
+  NotificationEventPayloadOrganizationMessageDirect,
+  NotificationEventPayloadOrganizationMessageRoom,
+  NotificationEventPayloadPlatformForumDiscussion,
+  NotificationEventPayloadPlatformGlobalRole,
+  NotificationEventPayloadPlatformSpaceCreated,
+  NotificationEventPayloadPlatformUserRegistration,
+  NotificationEventPayloadPlatformUserRemoved,
+  NotificationEventPayloadSpace,
+  NotificationEventPayloadSpaceCollaborationCallout,
+  NotificationEventPayloadSpaceCommunicationMessageDirect,
+  NotificationEventPayloadSpaceCommunicationUpdate,
+  NotificationEventPayloadSpaceCommunityApplication,
+  NotificationEventPayloadSpaceCommunityContributor,
+  NotificationEventPayloadSpaceCommunityInvitation,
+  NotificationEventPayloadSpaceCommunityInvitationPlatform,
+  NotificationEventPayloadSpaceCommunityInvitationVirtualContributor,
+  NotificationEventPayloadUserMessageDirect,
+  NotificationEventPayloadUserMessageRoom,
+  NotificationEventPayloadUserMessageRoomReply,
   RoleChangeType,
-  SpaceBaseEventPayload,
-  PlatformSpaceCreatedEventPayload,
-  SpaceCommunityApplicationCreatedEventPayload,
-  SpaceCommunityInvitationCreatedEventPayload,
-  SpaceCommunityInvitationVirtualContributorCreatedEventPayload,
-  SpaceCommunityPlatformInvitationCreatedEventPayload,
-  SpaceCollaborationPostCreatedEventPayload,
-  SpaceCollaborationWhiteboardCreatedEventPayload,
-  SpaceCollaborationCalloutPublishedEventPayload,
-  SpaceCollaborationPostCommentEventPayload,
-  UserCommentReplyEventPayload,
-  SpaceCommunityNewMemberPayload,
-  SpaceCommunicationUpdateEventPayload,
-  SpaceCommunicationLeadsMessageEventPayload,
-  UserMentionEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
@@ -57,6 +53,7 @@ import { NotificationInputPostCreated } from '../notification-adapter/dto/space/
 import { NotificationInputWhiteboardCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.whiteboard.created';
 import { NotificationInputPostComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.post.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @Injectable()
 export class NotificationExternalAdapter {
@@ -85,7 +82,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace
-  ): Promise<SpaceCommunityApplicationCreatedEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCommunityApplication> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -94,7 +91,7 @@ export class NotificationExternalAdapter {
     );
     const applicantPayload =
       await this.getContributorPayloadOrFail(triggeredBy);
-    const payload: SpaceCommunityApplicationCreatedEventPayload = {
+    const payload: NotificationEventPayloadSpaceCommunityApplication = {
       applicant: applicantPayload,
       ...spacePayload,
     };
@@ -109,7 +106,7 @@ export class NotificationExternalAdapter {
     invitedUserID: string,
     space: ISpace,
     welcomeMessage?: string
-  ): Promise<SpaceCommunityInvitationCreatedEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitation> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -118,7 +115,7 @@ export class NotificationExternalAdapter {
     );
     const inviteePayload =
       await this.getContributorPayloadOrFail(invitedUserID);
-    const payload: SpaceCommunityInvitationCreatedEventPayload = {
+    const payload: NotificationEventPayloadSpaceCommunityInvitation = {
       invitee: inviteePayload,
       welcomeMessage,
       ...spacePayload,
@@ -135,7 +132,7 @@ export class NotificationExternalAdapter {
     accountHost: IContributor,
     space: ISpace,
     welcomeMessage?: string
-  ): Promise<SpaceCommunityInvitationVirtualContributorCreatedEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitationVirtualContributor> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -147,7 +144,7 @@ export class NotificationExternalAdapter {
 
     const virtualContributorPayload: ContributorPayload =
       await this.getContributorPayloadOrFail(virtualContributorID);
-    const result: SpaceCommunityInvitationVirtualContributorCreatedEventPayload =
+    const result: NotificationEventPayloadSpaceCommunityInvitationVirtualContributor =
       {
         host: hostPayload,
         invitee: virtualContributorPayload,
@@ -163,14 +160,13 @@ export class NotificationExternalAdapter {
     invitedUserEmail: string,
     space: ISpace,
     message?: string
-  ): Promise<SpaceCommunityPlatformInvitationCreatedEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitationPlatform> {
     const recipients: UserPayload[] = [
       {
         email: invitedUserEmail,
         firstName: '',
         lastName: '',
         id: '',
-        nameID: '',
         type: RoleSetContributorType.USER,
         profile: {
           url: '',
@@ -184,16 +180,13 @@ export class NotificationExternalAdapter {
       [],
       space
     );
-    const payload: SpaceCommunityPlatformInvitationCreatedEventPayload = {
+    const payload: NotificationEventPayloadSpaceCommunityInvitationPlatform = {
       recipients,
       welcomeMessage: message,
       space: spacePayload.space,
       triggeredBy: spacePayload.triggeredBy,
       eventType,
       platform: spacePayload.platform,
-      invitee: {
-        email: invitedUserEmail,
-      },
     };
 
     return payload;
@@ -205,7 +198,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     eventData: NotificationInputPostCreated
-  ): Promise<SpaceCollaborationPostCreatedEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const callout = eventData.callout;
     const post = eventData.post;
 
@@ -219,18 +212,24 @@ export class NotificationExternalAdapter {
       callout.id
     );
     const postURL = await this.urlGeneratorService.getPostUrlPath(post.id);
-    const payload: SpaceCollaborationPostCreatedEventPayload = {
+    const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
-        displayName: callout.framing.profile.displayName,
-        nameID: callout.nameID,
-        url: calloutURL,
-      },
-      post: {
-        id: post.id,
-        createdBy: await this.getContributorPayloadOrFail(post.createdBy),
-        displayName: post.profile.displayName,
-        nameID: post.nameID,
-        url: postURL,
+        id: callout.id,
+        framing: {
+          id: callout.framing.id,
+          displayName: callout.framing.profile.displayName,
+          url: calloutURL,
+          description: callout.framing.profile.description ?? '',
+          type: callout.framing.type,
+        },
+        contribution: {
+          id: post.id,
+          type: CalloutContributionType.POST,
+          createdBy: await this.getContributorPayloadOrFail(post.createdBy),
+          displayName: post.profile.displayName,
+          description: post.profile.description ?? '',
+          url: postURL,
+        },
       },
       ...spacePayload,
     };
@@ -244,7 +243,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     eventData: NotificationInputWhiteboardCreated
-  ): Promise<SpaceCollaborationWhiteboardCreatedEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const callout = eventData.callout;
     const whiteboard = eventData.whiteboard;
 
@@ -264,18 +263,24 @@ export class NotificationExternalAdapter {
     const whiteboardCreator = await this.getContributorPayloadOrEmpty(
       whiteboard.createdBy
     );
-    const payload: SpaceCollaborationWhiteboardCreatedEventPayload = {
+    const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
-        displayName: callout.framing.profile.displayName,
-        nameID: callout.nameID,
-        url: calloutURL,
-      },
-      whiteboard: {
-        id: eventData.whiteboard.id,
-        createdBy: whiteboardCreator,
-        displayName: whiteboard.profile.displayName,
-        nameID: whiteboard.nameID,
-        url: whiteboardURL,
+        id: callout.id,
+        framing: {
+          id: callout.framing.id,
+          type: callout.framing.type,
+          displayName: callout.framing.profile.displayName,
+          description: callout.framing.profile.description ?? '',
+          url: calloutURL,
+        },
+        contribution: {
+          id: eventData.whiteboard.id,
+          type: CalloutContributionType.WHITEBOARD,
+          createdBy: whiteboardCreator,
+          displayName: whiteboard.profile.displayName,
+          description: whiteboard.profile.description ?? '',
+          url: whiteboardURL,
+        },
       },
       ...spacePayload,
     };
@@ -289,7 +294,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     callout: ICallout
-  ): Promise<SpaceCollaborationCalloutPublishedEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -299,13 +304,16 @@ export class NotificationExternalAdapter {
     const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
       callout.id
     );
-    const payload: SpaceCollaborationCalloutPublishedEventPayload = {
+    const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
         id: callout.id,
-        displayName: callout.framing.profile.displayName,
-        description: callout.framing.profile.description ?? '',
-        nameID: callout.nameID,
-        url: calloutURL,
+        framing: {
+          id: callout.framing.id,
+          displayName: callout.framing.profile.displayName,
+          description: callout.framing.profile.description ?? '',
+          type: callout.framing.type,
+          url: calloutURL,
+        },
       },
       ...spacePayload,
     };
@@ -319,7 +327,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     eventData: NotificationInputPostComment
-  ): Promise<SpaceCollaborationPostCommentEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const post = eventData.post;
     const callout =
       await this.contributionResolverService.getCalloutForPostContribution(
@@ -338,17 +346,24 @@ export class NotificationExternalAdapter {
       callout.id
     );
     const postURL = await this.urlGeneratorService.getPostUrlPath(post.id);
-    const payload: SpaceCollaborationPostCommentEventPayload = {
+    const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
-        displayName: callout.framing.profile.displayName,
-        nameID: callout.nameID,
-        url: calloutURL,
-      },
-      post: {
-        displayName: post.profile.displayName,
-        createdBy: await this.getContributorPayloadOrFail(post.createdBy),
-        nameID: post.nameID,
-        url: postURL,
+        id: callout.id,
+        framing: {
+          id: callout.framing.id,
+          displayName: callout.framing.profile.displayName,
+          description: callout.framing.profile.description ?? '',
+          type: callout.framing.type,
+          url: calloutURL,
+        },
+        contribution: {
+          id: post.id,
+          displayName: post.profile.displayName,
+          description: post.profile.description ?? '',
+          createdBy: await this.getContributorPayloadOrFail(post.createdBy),
+          type: CalloutContributionType.POST,
+          url: postURL,
+        },
       },
       comment: {
         message: messageResult.message,
@@ -366,7 +381,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     contributorID: string
-  ): Promise<SpaceCommunityNewMemberPayload> {
+  ): Promise<NotificationEventPayloadSpaceCommunityContributor> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -374,7 +389,7 @@ export class NotificationExternalAdapter {
       space
     );
     const memberPayload = await this.getContributorPayloadOrFail(contributorID);
-    const payload: SpaceCommunityNewMemberPayload = {
+    const payload: NotificationEventPayloadSpaceCommunityContributor = {
       contributor: memberPayload,
       ...spacePayload,
     };
@@ -389,14 +404,14 @@ export class NotificationExternalAdapter {
     space: ISpace,
     updates: IRoom,
     lastMessage?: IMessage
-  ): Promise<SpaceCommunicationUpdateEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCommunicationUpdate> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
       space
     );
-    const payload: SpaceCommunicationUpdateEventPayload = {
+    const payload: NotificationEventPayloadSpaceCommunicationUpdate = {
       update: {
         id: updates.id,
         createdBy: await this.getContributorPayloadOrFail(triggeredBy),
@@ -414,7 +429,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace
-  ): Promise<PlatformSpaceCreatedEventPayload> {
+  ): Promise<NotificationEventPayloadPlatformSpaceCreated> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -440,14 +455,14 @@ export class NotificationExternalAdapter {
     userID: string,
     type: RoleChangeType,
     role: string
-  ): Promise<PlatformGlobalRoleChangeEventPayload> {
+  ): Promise<NotificationEventPayloadPlatformGlobalRole> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
       recipients
     );
     const userPayload = await this.getUserPayloadOrFail(userID);
-    const result: PlatformGlobalRoleChangeEventPayload = {
+    const result: NotificationEventPayloadPlatformGlobalRole = {
       user: userPayload,
       type,
       role,
@@ -461,7 +476,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     userID: string
-  ): Promise<PlatformUserRegistrationEventPayload> {
+  ): Promise<NotificationEventPayloadPlatformUserRegistration> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
@@ -469,7 +484,7 @@ export class NotificationExternalAdapter {
     );
     const userPayload = await this.getUserPayloadOrFail(userID);
 
-    const result: PlatformUserRegistrationEventPayload = {
+    const result: NotificationEventPayloadPlatformUserRegistration = {
       user: userPayload,
       ...basePayload,
     };
@@ -481,13 +496,13 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     user: IUser
-  ): Promise<PlatformUserRemovedEventPayload> {
+  ): Promise<NotificationEventPayloadPlatformUserRemoved> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
       recipients
     );
-    const result: PlatformUserRemovedEventPayload = {
+    const result: NotificationEventPayloadPlatformUserRemoved = {
       user: {
         displayName: user.profile.displayName,
         email: user.email,
@@ -503,7 +518,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     discussion: IDiscussion,
     message: IMessage
-  ): Promise<PlatformForumDiscussionCommentEventPayload> {
+  ): Promise<NotificationEventPayloadPlatformForumDiscussion> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
@@ -511,8 +526,9 @@ export class NotificationExternalAdapter {
     );
     const discussionURL =
       await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
-    const payload: PlatformForumDiscussionCommentEventPayload = {
+    const payload: NotificationEventPayloadPlatformForumDiscussion = {
       discussion: {
+        id: discussion.id,
         displayName: discussion.profile.displayName,
         createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
         url: discussionURL,
@@ -533,7 +549,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     discussion: IDiscussion
-  ): Promise<PlatformForumDiscussionCreatedEventPayload> {
+  ): Promise<NotificationEventPayloadPlatformForumDiscussion> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
@@ -541,7 +557,7 @@ export class NotificationExternalAdapter {
     );
     const discussionURL =
       await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
-    const payload: PlatformForumDiscussionCreatedEventPayload = {
+    const payload: NotificationEventPayloadPlatformForumDiscussion = {
       discussion: {
         id: discussion.id,
         createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
@@ -560,14 +576,14 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     receiverID: string,
     message: string
-  ): Promise<UserMessageEventPayload> {
+  ): Promise<NotificationEventPayloadUserMessageDirect> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
       recipients
     );
     const user = await this.getUserPayloadOrFail(receiverID);
-    const payload: UserMessageEventPayload = {
+    const payload: NotificationEventPayloadUserMessageDirect = {
       user,
       message,
       ...basePayload,
@@ -585,7 +601,7 @@ export class NotificationExternalAdapter {
     originEntityId: string,
     originEntityDisplayName: string,
     commentType: RoomType
-  ): Promise<OrganizationMentionEventPayload | undefined> {
+  ): Promise<NotificationEventPayloadOrganizationMessageRoom> {
     const orgData = await this.getContributorPayloadOrFail(mentionedOrgUUID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
@@ -598,7 +614,7 @@ export class NotificationExternalAdapter {
       triggeredBy,
       recipients
     );
-    const payload: OrganizationMentionEventPayload = {
+    const payload: NotificationEventPayloadOrganizationMessageRoom = {
       organization: orgData,
       comment,
       commentOrigin: {
@@ -617,7 +633,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     message: string,
     organizationID: string
-  ): Promise<OrganizationMessageEventPayload> {
+  ): Promise<NotificationEventPayloadOrganizationMessageDirect> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
@@ -625,7 +641,7 @@ export class NotificationExternalAdapter {
     );
     const orgContributor =
       await this.getContributorPayloadOrFail(organizationID);
-    const payload: OrganizationMessageEventPayload = {
+    const payload: NotificationEventPayloadOrganizationMessageDirect = {
       message,
       organization: orgContributor,
       ...basePayload,
@@ -640,14 +656,14 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     message: string
-  ): Promise<SpaceCommunicationLeadsMessageEventPayload> {
+  ): Promise<NotificationEventPayloadSpaceCommunicationMessageDirect> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
       space
     );
-    const payload: SpaceCommunicationLeadsMessageEventPayload = {
+    const payload: NotificationEventPayloadSpaceCommunicationMessageDirect = {
       message,
       ...spacePayload,
     };
@@ -660,7 +676,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     data: NotificationInputCommentReply
-  ): Promise<UserCommentReplyEventPayload> {
+  ): Promise<NotificationEventPayloadUserMessageRoomReply> {
     const user = await this.getUserPayloadOrFail(data.commentOwnerID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
@@ -673,7 +689,7 @@ export class NotificationExternalAdapter {
       triggeredBy,
       recipients
     );
-    const payload: UserCommentReplyEventPayload = {
+    const payload: NotificationEventPayloadUserMessageRoomReply = {
       user,
       reply: data.reply,
       comment: {
@@ -696,7 +712,7 @@ export class NotificationExternalAdapter {
     originEntityId: string,
     originEntityDisplayName: string,
     commentType: RoomType
-  ): Promise<UserMentionEventPayload | undefined> {
+  ): Promise<NotificationEventPayloadUserMessageRoom> {
     const userContributor = await this.getUserPayloadOrFail(mentionedUserUUID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
@@ -710,7 +726,7 @@ export class NotificationExternalAdapter {
       recipients
     );
     //const userURL = await this.urlGeneratorService.
-    const payload: UserMentionEventPayload = {
+    const payload: NotificationEventPayloadUserMessageRoom = {
       user: userContributor,
       comment,
       commentOrigin: {
@@ -771,7 +787,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace
-  ): Promise<SpaceBaseEventPayload> {
+  ): Promise<NotificationEventPayloadSpace> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
@@ -783,10 +799,9 @@ export class NotificationExternalAdapter {
     );
     const spaceCommunityAdminUrl =
       await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id);
-    const result: SpaceBaseEventPayload = {
+    const result: NotificationEventPayloadSpace = {
       space: {
         id: space.id,
-        nameID: space.nameID,
         level: space.level.toString(),
         profile: {
           displayName: space.about.profile.displayName,
@@ -844,7 +859,6 @@ export class NotificationExternalAdapter {
       this.urlGeneratorService.createUrlForContributor(contributor);
     const result: ContributorPayload = {
       id: contributor.id,
-      nameID: contributor.nameID,
       profile: {
         displayName: contributor.profile.displayName,
         url: contributorURL,
@@ -866,7 +880,6 @@ export class NotificationExternalAdapter {
     );
     const result: UserPayload = {
       id: user.id,
-      nameID: user.nameID,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -882,7 +895,6 @@ export class NotificationExternalAdapter {
   private createUserPayloadFromUser(user: IUser): UserPayload {
     return {
       id: user.id,
-      nameID: user.nameID,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -899,7 +911,6 @@ export class NotificationExternalAdapter {
   ): ContributorPayload {
     return {
       id: contributor.id,
-      nameID: contributor.nameID,
       profile: {
         displayName: contributor.profile.displayName,
         url: this.urlGeneratorService.createUrlForContributor(contributor),
@@ -918,7 +929,6 @@ export class NotificationExternalAdapter {
     if (!contributorID) {
       return {
         id: '',
-        nameID: '',
         profile: {
           displayName: '',
           url: '',
