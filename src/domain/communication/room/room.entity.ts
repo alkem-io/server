@@ -32,10 +32,10 @@ export class Room extends AuthorizableEntity implements IRoom {
   vcInteractions?: VcInteraction[];
 
   @OneToOne(() => Callout, callout => callout.comments)
-  callout!: Callout;
+  callout?: Callout;
 
   @OneToOne(() => Post, post => post.comments)
-  post!: Post;
+  post?: Post;
 
   constructor(displayName: string, type: RoomType) {
     super();
