@@ -223,14 +223,14 @@ export class UserResolverFields {
       AuthorizationPrivilege.PLATFORM_ADMIN
     );
     const result: UserAuthenticationResult = {
-      method: AuthenticationType.UNKNOWN,
+      methods: [AuthenticationType.UNKNOWN],
       createdAt: undefined,
       authenticatedAt: undefined,
     };
     if (isCurrentUser || platformAccessGranted) {
       const identity = await this.kratosService.getIdentityByEmail(user.email);
       if (identity) {
-        result.method =
+        result.methods =
           await this.kratosService.getAuthenticationTypeFromIdentity(identity);
         result.createdAt = await this.kratosService.getCreatedAt(identity);
         result.authenticatedAt =
