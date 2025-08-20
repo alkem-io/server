@@ -252,12 +252,7 @@ export class NotificationAdapter {
         recipient => recipient.id
       );
       if (inAppReceiverIDs.length > 0) {
-        const inAppPayload: InAppNotificationPayloadUserMessageRoom = {
-          type: NotificationEventPayload.USER_MESSAGE_ROOM,
-          userID: eventData.mentionedEntityID,
-          messageID: 'unknown', // Would need actual message ID
-          roomID: eventData.commentsId || 'unknown',
-        };
+        const inAppPayload = await this.buildUserMentionInAppPayload(eventData);
 
         await this.notificationInAppAdapter.sendInAppNotifications(
           NotificationEvent.USER_MENTION,
@@ -276,6 +271,24 @@ export class NotificationAdapter {
         }
       );
     }
+  }
+
+  private async buildUserMentionInAppPayload(
+    eventData: NotificationInputUserMention
+  ): Promise<InAppNotificationPayloadUserMessageRoom> {
+    const commentOriginUrl =
+      await this.notificationExternalAdapter.buildCommentOriginUrl(
+        eventData.commentType,
+        eventData.originEntity.id
+      );
+
+    return {
+      type: NotificationEventPayload.USER_MESSAGE_ROOM,
+      userID: eventData.mentionedEntityID,
+      comment: eventData.comment,
+      commentUrl: commentOriginUrl,
+      commentOriginName: eventData.originEntity.displayName,
+    };
   }
 
   public async entityMentions(

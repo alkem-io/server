@@ -723,7 +723,7 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  private async buildCommentOriginUrl(
+  public async buildCommentOriginUrl(
     commentType: RoomType,
     originEntityId: string
   ): Promise<string> {
