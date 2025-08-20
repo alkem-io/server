@@ -559,6 +559,50 @@ export class NotificationSpaceAdapter {
         inAppPayload
       );
     }
+
+    // And for the sender
+    const eventSender = NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER;
+
+    const recipientsSender = await this.getNotificationRecipientsSpace(
+      eventSender,
+      eventData,
+      space.id,
+      eventData.triggeredBy
+    );
+    // Emit the events to notify others
+    const payloadSender =
+      await this.notificationExternalAdapter.buildSpaceCommunicationLeadsMessageNotificationPayload(
+        event,
+        eventData.triggeredBy,
+        recipientsSender.emailRecipients,
+        space,
+        eventData.message
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(
+      event,
+      payloadSender
+    );
+
+    // Send in-app notifications
+    const inAppReceiverIDsSender = recipientsSender.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunicationMessageDirect =
+        {
+          type: NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT,
+          spaceID: space.id,
+          message: eventData.message,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDsSender,
+        inAppPayload
+      );
+    }
   }
 
   public async spaceCollaborationPostComment(

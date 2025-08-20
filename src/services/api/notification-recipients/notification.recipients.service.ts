@@ -20,6 +20,7 @@ import {
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
+import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 
 export class NotificationRecipientsService {
   constructor(
@@ -206,6 +207,10 @@ export class NotificationRecipientsService {
         return notificationSettings.space.communityApplicationSubmitted;
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
         return notificationSettings.space.communityInvitationUser;
+      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
+        return notificationSettings.space.communicationMessage;
+      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT:
+        return notificationSettings.space.communicationMessageAdmin;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         return notificationSettings.space.communicationUpdates;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
@@ -230,7 +235,7 @@ export class NotificationRecipientsService {
         return true;
 
       default:
-        throw new ValidationException(
+        throw new NotificationEventException(
           `Unknown notification event type: ${eventType}`,
           LogContext.NOTIFICATIONS
         );
@@ -294,6 +299,7 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
+      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
@@ -325,11 +331,18 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
+      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
         // For direct user invitations, no privilege check is needed - just check if the user exists and has notifications enabled
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
+      }
+      default: {
+        throw new NotificationEventException(
+          `Unrecognized event encountered: ${eventType}`,
+          LogContext.NOTIFICATIONS
+        );
       }
     }
     return { privilegeRequired, credentialCriteria };
@@ -414,6 +427,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
       case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED:
       case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
+      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         // get the space authorization policy
         if (!entityID) {
@@ -436,6 +450,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
+      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
         // get the User authorization policy
@@ -460,7 +475,7 @@ export class NotificationRecipientsService {
       default:
         // For other events, no specific authorization policy is needed
         // or the event does not require a specific policy
-        throw new ValidationException(
+        throw new NotificationEventException(
           `No authorization policy needed for event type: ${eventType}`,
           LogContext.NOTIFICATIONS
         );
