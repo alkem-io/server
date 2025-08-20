@@ -1,5 +1,7 @@
 import { LogContext } from '@common/enums';
 import { MutationType } from '@common/enums/subscriptions';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -21,12 +23,16 @@ export class RoomControllerService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async getRoomCalloutOrFail(roomID: string) {
+  public async getRoomCalloutOrFail(roomID: string): Promise<Callout | Post> {
     const room = await this.roomLookupService.getRoomOrFail(roomID, {
-      relations: { callout: { framing: { profile: true } } },
+      relations: {
+        callout: { framing: { profile: true } },
+        post: { profile: true },
+      },
     });
-    return room.callout;
+    return room.callout || room.post;
   }
+
   public async getMessages(roomID: string) {
     const room = await this.getRoomOrFail(roomID);
     return await this.roomLookupService.getMessages(room);

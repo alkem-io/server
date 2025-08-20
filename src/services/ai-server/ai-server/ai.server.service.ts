@@ -44,6 +44,8 @@ import { RoomControllerService } from '@services/room-integration/room.controlle
 import { IMessage } from '@domain/communication/message/message.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 
 @Injectable()
 export class AiServerService {
@@ -245,7 +247,7 @@ export class AiServerService {
 
       //NOTE this should not be needed but untill we start using the callout contents in the
       //expert engine better skip it
-      const includeCallout = [
+      const includeEntry = [
         AiPersonaEngine.LIBRA_FLOW,
         AiPersonaEngine.EXPERT,
       ].includes(personaService.engine);
@@ -253,7 +255,7 @@ export class AiServerService {
       history = await this.getLastNInteractionMessages(
         invocationInput.resultHandler.roomDetails,
         historyLimit,
-        includeCallout
+        includeEntry
       );
     }
 
@@ -264,7 +266,7 @@ export class AiServerService {
     roomDetails: RoomDetails,
     // interactionID: string | undefined,
     limit: number = 100,
-    includeCallout = false
+    includeEntry = false
   ): Promise<InteractionMessage[]> {
     let roomMessages: IMessage[] = [];
     // const room = await this.roomControllerService.getRoomOrFail(roomDetails.roomID);
@@ -296,19 +298,26 @@ export class AiServerService {
       });
 
       if (
-        (includeCallout && messages.length === limit - 1) ||
-        (!includeCallout && messages.length === limit)
+        (includeEntry && messages.length === limit - 1) ||
+        (!includeEntry && messages.length === limit)
       ) {
         break;
       }
     }
-    if (includeCallout) {
-      const callout = await this.roomControllerService.getRoomCalloutOrFail(
+    if (includeEntry) {
+      const entry = await this.roomControllerService.getRoomCalloutOrFail(
         roomDetails.roomID
       );
-      if (callout.framing.profile.description) {
+      let entryContent: string | undefined = '';
+      if (entry instanceof Callout) {
+        entryContent = entry?.framing?.profile?.description;
+      }
+      if (entry instanceof Post) {
+        entryContent = entry?.profile?.description;
+      }
+      if (entryContent) {
         messages.unshift({
-          content: callout.framing.profile.description || '',
+          content: entryContent,
           role: MessageSenderRole.HUMAN,
         });
       }
