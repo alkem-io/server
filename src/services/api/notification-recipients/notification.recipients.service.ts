@@ -286,7 +286,7 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
+        credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
         credentialCriteria.push({
           type: AuthorizationCredential.GLOBAL_ADMIN,
           resourceID: '',
@@ -297,7 +297,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
       case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
+        credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
         break;
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
@@ -498,6 +498,23 @@ export class NotificationRecipientsService {
     return [
       {
         type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: spaceID,
+      },
+    ];
+  }
+
+  private getSpaceAdminCredentialCriteria(
+    spaceID: string | undefined
+  ): CredentialsSearchInput[] {
+    if (!spaceID) {
+      throw new ValidationException(
+        'Space ID is required for notification recipients',
+        LogContext.NOTIFICATIONS
+      );
+    }
+    return [
+      {
+        type: AuthorizationCredential.SPACE_ADMIN,
         resourceID: spaceID,
       },
     ];

@@ -570,6 +570,7 @@ export class SpaceAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
         ],
         spaceAdminCriterias,
         CREDENTIAL_RULE_SPACE_ADMINS
