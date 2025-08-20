@@ -316,7 +316,8 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.USER_MENTION: {
+      case NotificationEvent.USER_MENTION:
+      case NotificationEvent.USER_MESSAGE_RECIPIENT: {
         // TODO: confirm
         // For mentions, no privilege check is needed - mentions are direct notifications to specific users
         credentialCriteria = this.getUserSelfCriteria(userID);
