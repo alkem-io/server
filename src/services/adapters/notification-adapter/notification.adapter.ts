@@ -41,45 +41,45 @@ export class NotificationAdapter {
       eventData,
       eventData.mentionedEntityID
     );
-    // Emit the events to notify others
-    const payload =
-      await this.notificationExternalAdapter.buildOrganizationMentionNotificationPayload(
-        event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        eventData.mentionedEntityID,
-        eventData.comment,
-        eventData.originEntity.id,
-        eventData.originEntity.displayName,
-        eventData.commentType
-      );
 
-    if (payload) {
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationMentionNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.mentionedEntityID,
+          eventData.comment,
+          eventData.originEntity.id,
+          eventData.originEntity.displayName,
+          eventData.commentType
+        );
+
       this.notificationExternalAdapter.sendExternalNotifications(
         event,
         payload
       );
+    }
 
-      // In-app notification
-      const inAppReceiverIDs = recipients.inAppRecipients.map(
-        recipient => recipient.id
+    // In-app notification
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationMessageRoom = {
+        type: NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM,
+        organizationID: eventData.mentionedEntityID,
+        roomID: eventData.originEntity.id,
+        messageID: eventData.commentsId || 'unknown',
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.ORGANIZATION_MENTIONED,
+        NotificationEventCategory.ORGANIZATION,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
-      if (inAppReceiverIDs.length > 0) {
-        const inAppPayload: InAppNotificationPayloadOrganizationMessageRoom = {
-          type: NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM,
-          organizationID: eventData.mentionedEntityID,
-          roomID: eventData.originEntity.id,
-          messageID: eventData.commentsId || 'unknown',
-        };
-
-        await this.notificationInAppAdapter.sendInAppNotifications(
-          NotificationEvent.ORGANIZATION_MENTIONED,
-          NotificationEventCategory.ORGANIZATION,
-          eventData.triggeredBy,
-          inAppReceiverIDs,
-          inAppPayload
-        );
-      }
     }
   }
 
@@ -92,16 +92,21 @@ export class NotificationAdapter {
       eventData,
       eventData.organizationID
     );
-    // Emit the events to notify others
-    const payload =
-      await this.notificationExternalAdapter.buildOrganizationMessageNotificationPayload(
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationMessageNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.message,
+          eventData.organizationID
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
         event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        eventData.message,
-        eventData.organizationID
+        payload
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    }
 
     // In-app notification
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -136,7 +141,6 @@ export class NotificationAdapter {
 
     try {
       if (recipients.emailRecipients.length > 0) {
-        // build notification payload
         const payload =
           await this.notificationExternalAdapter.buildUserCommentReplyPayload(
             event,
@@ -144,7 +148,7 @@ export class NotificationAdapter {
             recipients.emailRecipients,
             eventData
           );
-        // send notification event
+
         this.notificationExternalAdapter.sendExternalNotifications(
           event,
           payload
