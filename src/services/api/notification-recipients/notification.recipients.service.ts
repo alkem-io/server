@@ -1,4 +1,4 @@
-import { Inject, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationRecipientsInput } from './dto/notification.recipients.dto.input';
 import { NotificationRecipientResult } from './dto/notification.recipients.dto.result';
@@ -21,7 +21,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
-
+@Injectable()
 export class NotificationRecipientsService {
   constructor(
     private userLookupService: UserLookupService,
@@ -88,19 +88,21 @@ export class NotificationRecipientsService {
 
     // Need to reload the users to get the full set of credentials for use in authorization evaluation
     // TODO: this can clearly be optimized to have one lookup of the users, not two...
-    const candidateRecipientIDs = candidateRecipients.map(
-      recipient => recipient.id
-    );
+    const recipientsWithNotificationEnabledIDs =
+      recipientsWithNotificationEnabled.map(recipient => recipient.id);
     const recipientsWithNotificationEnabledWithCredentials =
-      await this.userLookupService.getUsersByUUID(candidateRecipientIDs, {
-        relations: {
-          settings: true,
-          profile: true,
-          agent: {
-            credentials: true,
+      await this.userLookupService.getUsersByUUID(
+        recipientsWithNotificationEnabledIDs,
+        {
+          relations: {
+            settings: true,
+            profile: true,
+            agent: {
+              credentials: true,
+            },
           },
-        },
-      });
+        }
+      );
 
     // Filter out recipients who do not have the required privilege
     let recipientsWithPrivilege =
@@ -365,10 +367,13 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
-      case NotificationEvent.USER_MESSAGE_RECIPIENT: {
+      case NotificationEvent.USER_MESSAGE_RECIPIENT:
+      case NotificationEvent.USER_MESSAGE_SENDER: {
         return true;
       }
-      case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT: {
+      case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT:
+      case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
+      case NotificationEvent.ORGANIZATION_MENTIONED: {
         return true;
       }
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:

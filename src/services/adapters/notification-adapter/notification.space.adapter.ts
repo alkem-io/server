@@ -76,7 +76,7 @@ export class NotificationSpaceAdapter {
     const inAppReceiverIDs = recipients.inAppRecipients.map(
       recipient => recipient.id
     );
-    if (inAppReceiverIDs.length >= 0) {
+    if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
         type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
         spaceID: space.id,
@@ -129,7 +129,7 @@ export class NotificationSpaceAdapter {
     const inAppReceiverIDs = recipients.inAppRecipients.map(
       recipient => recipient.id
     );
-    if (inAppReceiverIDs.length >= 0) {
+    if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCollaborationPost = {
         type: NotificationEventPayload.SPACE_COLLABORATION_POST,
         spaceID: space.id,
@@ -171,7 +171,7 @@ export class NotificationSpaceAdapter {
     const adminInAppReceiverIDs = adminRecipients.inAppRecipients.map(
       recipient => recipient.id
     );
-    if (adminInAppReceiverIDs.length >= 0) {
+    if (adminInAppReceiverIDs.length > 0) {
       const adminInAppPayload: InAppNotificationPayloadSpaceCollaborationPost =
         {
           type: NotificationEventPayload.SPACE_COLLABORATION_POST,
@@ -518,26 +518,35 @@ export class NotificationSpaceAdapter {
   public async spaceContactLeadsMessage(
     eventData: NotificationInputCommunicationLeadsMessage
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT;
     const space =
       await this.communityResolverService.getSpaceForCommunityOrFail(
         eventData.communityID
       );
+
+    // Recipient
+    const eventRecipient =
+      NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT;
+
     const recipients = await this.getNotificationRecipientsSpace(
-      event,
+      eventRecipient,
       eventData,
       space.id
     );
-    // Emit the events to notify others
-    const payload =
-      await this.notificationExternalAdapter.buildSpaceCommunicationLeadsMessageNotificationPayload(
-        event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        space,
-        eventData.message
+    if (recipients.emailRecipients.length > 0) {
+      // Emit the events to notify others
+      const payloadRecipients =
+        await this.notificationExternalAdapter.buildSpaceCommunicationLeadsMessageNotificationPayload(
+          eventRecipient,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          space,
+          eventData.message
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        eventRecipient,
+        payloadRecipients
       );
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    }
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
@@ -561,27 +570,28 @@ export class NotificationSpaceAdapter {
     }
 
     // And for the sender
-    const eventSender = NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER;
 
     const recipientsSender = await this.getNotificationRecipientsSpace(
-      eventSender,
+      NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER,
       eventData,
       space.id,
       eventData.triggeredBy
     );
-    // Emit the events to notify others
-    const payloadSender =
-      await this.notificationExternalAdapter.buildSpaceCommunicationLeadsMessageNotificationPayload(
-        event,
-        eventData.triggeredBy,
-        recipientsSender.emailRecipients,
-        space,
-        eventData.message
+    if (recipients.emailRecipients.length > 0) {
+      // Emit the events to notify others
+      const payloadSender =
+        await this.notificationExternalAdapter.buildSpaceCommunicationLeadsMessageNotificationPayload(
+          NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER,
+          eventData.triggeredBy,
+          recipientsSender.emailRecipients,
+          space,
+          eventData.message
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER,
+        payloadSender
       );
-    this.notificationExternalAdapter.sendExternalNotifications(
-      event,
-      payloadSender
-    );
+    }
 
     // Send in-app notifications
     const inAppReceiverIDsSender = recipientsSender.inAppRecipients.map(
