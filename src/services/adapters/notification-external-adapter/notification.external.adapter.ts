@@ -650,7 +650,7 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildSpaceCommunicationLeadsMessageNotificationPayload(
+  async buildSpaceCommunicationMessageDirectNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],

@@ -535,7 +535,7 @@ export class NotificationSpaceAdapter {
     if (recipients.emailRecipients.length > 0) {
       // Emit the events to notify others
       const payloadRecipients =
-        await this.notificationExternalAdapter.buildSpaceCommunicationLeadsMessageNotificationPayload(
+        await this.notificationExternalAdapter.buildSpaceCommunicationMessageDirectNotificationPayload(
           eventRecipient,
           eventData.triggeredBy,
           recipients.emailRecipients,
@@ -580,7 +580,7 @@ export class NotificationSpaceAdapter {
     if (recipients.emailRecipients.length > 0) {
       // Emit the events to notify others
       const payloadSender =
-        await this.notificationExternalAdapter.buildSpaceCommunicationLeadsMessageNotificationPayload(
+        await this.notificationExternalAdapter.buildSpaceCommunicationMessageDirectNotificationPayload(
           NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER,
           eventData.triggeredBy,
           recipientsSender.emailRecipients,
