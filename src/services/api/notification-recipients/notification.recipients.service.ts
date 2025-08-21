@@ -48,7 +48,8 @@ export class NotificationRecipientsService {
         eventData.eventType,
         eventData.spaceID,
         eventData.userID,
-        eventData.organizationID
+        eventData.organizationID,
+        eventData.virtualContributorID
       );
 
     this.logger.verbose?.(
@@ -118,7 +119,8 @@ export class NotificationRecipientsService {
         eventData.eventType,
         eventData.spaceID,
         eventData.userID,
-        eventData.organizationID
+        eventData.organizationID,
+        eventData.virtualContributorID
       );
       recipientsWithPrivilege =
         recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
@@ -353,6 +355,7 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_VC: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria =
           await this.getVirtualContributorCriteria(virtualContributorID);
         break;
@@ -409,7 +412,8 @@ export class NotificationRecipientsService {
     eventType: NotificationEvent,
     entityID?: string,
     userID?: string,
-    organizationID?: string
+    organizationID?: string,
+    virtualContributorID?: string
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
       case NotificationEvent.PLATFORM_SPACE_CREATED:
@@ -492,6 +496,27 @@ export class NotificationRecipientsService {
           );
         }
         return user.authorization;
+      }
+
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_VC: {
+        if (!virtualContributorID) {
+          throw new ValidationException(
+            'Virtual Contributor ID is required for space community invitation notifications',
+            LogContext.NOTIFICATIONS
+          );
+        }
+        const virtualContributor =
+          await this.virtualContributorLookupService.getVirtualContributorOrFail(
+            virtualContributorID
+          );
+        if (!virtualContributor.authorization) {
+          throw new RelationshipNotFoundException(
+            `Virtual Contributor does not have an authorization policy: ${virtualContributor.id}`,
+            LogContext.NOTIFICATIONS
+          );
+        }
+
+        return virtualContributor.authorization;
       }
 
       default:

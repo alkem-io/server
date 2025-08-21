@@ -150,20 +150,6 @@ export class VirtualContributorAuthorizationService {
     return credentialCriteriasWithAccess;
   }
 
-  private createCredentialRuleAnonymousRegisteredUserRead(): IAuthorizationPolicyRuleCredential {
-    const globalCommunityRead =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
-        [
-          AuthorizationCredential.GLOBAL_REGISTERED,
-          AuthorizationCredential.GLOBAL_ANONYMOUS,
-        ],
-        CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
-      );
-
-    return globalCommunityRead;
-  }
-
   private resetToBaseVirtualContributorAuthorization(
     authorizationPolicy: IAuthorizationPolicy | undefined,
     accountAdminCredential: ICredentialDefinition
@@ -207,7 +193,7 @@ export class VirtualContributorAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.CONTRIBUTE,
-          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS,
         ],
         [accountAdminCredential],
         CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE

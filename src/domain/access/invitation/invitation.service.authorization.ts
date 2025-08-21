@@ -12,7 +12,6 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { CREDENTIAL_RULE_ROLESET_INVITATION } from '@common/constants';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
@@ -25,8 +24,7 @@ export class InvitationAuthorizationService {
     private invitationService: InvitationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private contributorService: ContributorService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
-    private accountLookupService: AccountLookupService
+    private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
   async applyAuthorizationPolicy(
