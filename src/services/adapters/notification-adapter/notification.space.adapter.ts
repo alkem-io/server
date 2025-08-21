@@ -577,7 +577,7 @@ export class NotificationSpaceAdapter {
       space.id,
       eventData.triggeredBy
     );
-    if (recipients.emailRecipients.length > 0) {
+    if (recipientsSender.emailRecipients.length > 0) {
       // Emit the events to notify others
       const payloadSender =
         await this.notificationExternalAdapter.buildSpaceCommunicationMessageDirectNotificationPayload(
