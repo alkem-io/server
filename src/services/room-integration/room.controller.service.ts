@@ -23,17 +23,15 @@ export class RoomControllerService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async getRoomEntityOrFail(
-    roomID: string
-    // undefined should not be needed bevause of the throw below but Typescript complains
-  ): Promise<Callout | Post | undefined> {
+  public async getRoomEntityOrFail(roomID: string): Promise<Callout | Post> {
     const room = await this.roomLookupService.getRoomOrFail(roomID, {
       relations: {
         callout: { framing: { profile: true } },
         post: { profile: true },
       },
     });
-    if (!room.callout && !room.post) {
+    const entity = room.callout || room.post;
+    if (!entity) {
       this.logger.error(
         `Room with ID ${roomID} does not have a callout or post.`,
         LogContext.COMMUNICATION
@@ -43,7 +41,7 @@ export class RoomControllerService {
       );
     }
 
-    return room.callout || room.post;
+    return entity;
   }
 
   public async getMessages(roomID: string) {

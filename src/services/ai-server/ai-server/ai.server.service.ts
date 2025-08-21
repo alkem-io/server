@@ -245,8 +245,7 @@ export class AiServerService {
         )
       );
 
-      //NOTE this should not be needed but untill we start using the callout contents in the
-      //expert engine better skip it
+      //NOTE this should not be needed when we start using the callout/post contents  in all engines
       const includeEntityContents = [
         AiPersonaEngine.LIBRA_FLOW,
         AiPersonaEngine.EXPERT,
