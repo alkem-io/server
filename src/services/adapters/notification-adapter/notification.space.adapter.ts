@@ -15,7 +15,6 @@ import { NotificationInputWhiteboardCreated } from './dto/space/notification.dto
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
-import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.space.community.invitation.vc';
 import { NotificationInputPostComment } from './dto/space/notification.dto.input.space.collaboration.post.comment';
 import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.space.communication.update.sent';
 import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
@@ -485,34 +484,6 @@ export class NotificationSpaceAdapter {
         inAppPayload
       );
     }
-  }
-
-  public async spaceCommunityInvitationVirtualContributorCreated(
-    eventData: NotificationInputCommunityInvitationVirtualContributor
-  ): Promise<void> {
-    const event = NotificationEvent.SPACE_COMMUNITY_INVITATION_VC;
-    const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
-        eventData.community.id
-      );
-    const recipients = await this.getNotificationRecipientsSpace(
-      event,
-      eventData,
-      space.id
-    );
-
-    const payload =
-      await this.notificationExternalAdapter.buildSpaceCommunityInvitationVirtualContributorCreatedNotificationPayload(
-        event,
-        eventData.triggeredBy,
-        recipients.emailRecipients,
-        eventData.invitedContributorID,
-        eventData.accountHost,
-        space,
-        eventData.welcomeMessage
-      );
-
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceContactLeadsMessage(

@@ -760,7 +760,7 @@ export class RoleSetResolverMutationsMembership {
                   welcomeMessage: invitation.welcomeMessage,
                 };
 
-              await this.notificationAdapterSpace.spaceCommunityInvitationVirtualContributorCreated(
+              await this.notificationAdapter.spaceCommunityInvitationVirtualContributorCreated(
                 notificationInput
               );
               break;

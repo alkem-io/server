@@ -21,6 +21,8 @@ import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
 import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.direct';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.space.community.invitation.vc';
 
 @Injectable()
 export class NotificationAdapter {
@@ -29,7 +31,8 @@ export class NotificationAdapter {
     private readonly logger: LoggerService,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationsRecipientsService: NotificationRecipientsService,
-    private notificationInAppAdapter: NotificationInAppAdapter
+    private notificationInAppAdapter: NotificationInAppAdapter,
+    private communityResolverService: CommunityResolverService
   ) {}
 
   public async organizationMention(
@@ -284,6 +287,34 @@ export class NotificationAdapter {
     }
   }
 
+  public async spaceCommunityInvitationVirtualContributorCreated(
+    eventData: NotificationInputCommunityInvitationVirtualContributor
+  ): Promise<void> {
+    const event = NotificationEvent.SPACE_COMMUNITY_INVITATION_VC;
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        eventData.community.id
+      );
+    const recipients = await this.getNotificationRecipientsVirtualContributor(
+      event,
+      eventData,
+      eventData.invitedContributorID
+    );
+
+    const payload =
+      await this.notificationExternalAdapter.buildSpaceCommunityInvitationVirtualContributorCreatedNotificationPayload(
+        event,
+        eventData.triggeredBy,
+        recipients.emailRecipients,
+        eventData.invitedContributorID,
+        eventData.accountHost,
+        space,
+        eventData.welcomeMessage
+      );
+
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+  }
+
   private async buildUserMentionInAppPayload(
     eventData: NotificationInputUserMention
   ): Promise<InAppNotificationPayloadUserMessageRoom> {
@@ -346,12 +377,28 @@ export class NotificationAdapter {
     );
   }
 
+  private async getNotificationRecipientsVirtualContributor(
+    event: NotificationEvent,
+    eventData: NotificationInputBase,
+    virtualContributorID: string
+  ): Promise<NotificationRecipientResult> {
+    return this.getNotificationRecipients(
+      event,
+      eventData,
+      undefined,
+      undefined,
+      undefined,
+      virtualContributorID
+    );
+  }
+
   public async getNotificationRecipients(
     event: NotificationEvent,
     eventData: NotificationInputBase,
     entityID?: string,
     userID?: string,
-    organizationID?: string
+    organizationID?: string,
+    virtualContributorID?: string
   ): Promise<NotificationRecipientResult> {
     this.logEventTriggered(eventData, event);
 
@@ -360,6 +407,7 @@ export class NotificationAdapter {
       spaceID: entityID,
       userID,
       organizationID,
+      virtualContributorID,
     });
     return recipients;
   }
