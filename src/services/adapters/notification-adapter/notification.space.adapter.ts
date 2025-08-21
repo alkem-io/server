@@ -597,7 +597,7 @@ export class NotificationSpaceAdapter {
     const inAppReceiverIDsSender = recipientsSender.inAppRecipients.map(
       recipient => recipient.id
     );
-    if (inAppReceiverIDs.length > 0) {
+    if (inAppReceiverIDsSender.length > 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCommunicationMessageDirect =
         {
           type: NotificationEventPayload.SPACE_COMMUNICATION_MESSAGE_DIRECT,
