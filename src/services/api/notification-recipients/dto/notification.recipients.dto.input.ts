@@ -34,4 +34,11 @@ export class NotificationRecipientsInput {
     description: 'The ID of the Organization to use to determine recipients.',
   })
   organizationID?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'The ID of the Virtual Contributor to use to determine recipients.',
+  })
+  virtualContributorID?: string;
 }

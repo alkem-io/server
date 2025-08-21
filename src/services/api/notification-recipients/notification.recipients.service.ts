@@ -21,10 +21,12 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 @Injectable()
 export class NotificationRecipientsService {
   constructor(
     private userLookupService: UserLookupService,
+    private virtualContributorLookupService: VirtualContributorLookupService,
     private spaceLookupService: SpaceLookupService,
     private organizationLookupService: OrganizationLookupService,
     private authorizationService: AuthorizationService,
@@ -42,7 +44,7 @@ export class NotificationRecipientsService {
 
     const inAppEnabledForEventType = this.isInAppEnabled(eventData.eventType);
     const { privilegeRequired, credentialCriteria } =
-      this.getPrivilegeRequiredCredentialCriteria(
+      await this.getPrivilegeRequiredCredentialCriteria(
         eventData.eventType,
         eventData.spaceID,
         eventData.userID,
@@ -231,7 +233,16 @@ export class NotificationRecipientsService {
         return notificationSettings.space.collaborationWhiteboardCreated;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
-      // ALways true!
+      // TODO: The settings around this one are missing, and at least one should be on the VC as root entity
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_VC:
+        return true;
+      // TODO: missing this setting
+      case NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE:
+        return true;
+      // TODO: missing this setting; might need to be a shared one for all direct messages sent
+      case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
+        return true;
+      // Always true!
       case NotificationEvent.PLATFORM_USER_PROFILE_CREATED: // For the user that signs up!
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
         return true;
@@ -244,15 +255,16 @@ export class NotificationRecipientsService {
     }
   }
 
-  private getPrivilegeRequiredCredentialCriteria(
+  private async getPrivilegeRequiredCredentialCriteria(
     eventType: NotificationEvent,
     spaceID?: string,
     userID?: string,
-    organizationID?: string
-  ): {
+    organizationID?: string,
+    virtualContributorID?: string
+  ): Promise<{
     privilegeRequired: AuthorizationPrivilege | undefined;
     credentialCriteria: CredentialsSearchInput[];
-  } {
+  }> {
     // 1. Depending on the event type, get a) the candidate list of recipients b) the privilege required per recipient c) whether inApp is enabled or not
     // 2. Filter the candidate list based on the privilege required
     let privilegeRequired: AuthorizationPrivilege | undefined = undefined;
@@ -340,9 +352,14 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
+      case NotificationEvent.SPACE_COMMUNITY_INVITATION_VC: {
+        credentialCriteria =
+          await this.getVirtualContributorCriteria(virtualContributorID);
+        break;
+      }
       default: {
         throw new NotificationEventException(
-          `Unrecognized event encountered: ${eventType}`,
+          `Unrecognized event encountered for privilege check: ${eventType}`,
           LogContext.NOTIFICATIONS
         );
       }
@@ -553,6 +570,38 @@ export class NotificationRecipientsService {
       {
         type: AuthorizationCredential.USER_SELF_MANAGEMENT,
         resourceID: userID,
+      },
+    ];
+  }
+
+  private async getVirtualContributorCriteria(
+    virtualContributorID: string | undefined
+  ): Promise<CredentialsSearchInput[]> {
+    if (!virtualContributorID) {
+      throw new ValidationException(
+        'Virtual Contributor ID is required for notification recipients',
+        LogContext.NOTIFICATIONS
+      );
+    }
+    const virtual =
+      await this.virtualContributorLookupService.getVirtualContributorOrFail(
+        virtualContributorID,
+        {
+          relations: {
+            account: true,
+          },
+        }
+      );
+    if (!virtual.account)
+      throw new RelationshipNotFoundException(
+        `Unable to load entities for virtual: ${virtual.id} `,
+        LogContext.NOTIFICATIONS
+      );
+
+    return [
+      {
+        type: AuthorizationCredential.ACCOUNT_ADMIN,
+        resourceID: virtual.account.id,
       },
     ];
   }

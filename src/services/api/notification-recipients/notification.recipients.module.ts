@@ -8,6 +8,7 @@ import { NotificationRecipientsResolverFields } from './notification.recipients.
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OrganizationLookupModule } from '@domain/community/organization-lookup/
     PlatformAuthorizationPolicyModule,
     SpaceLookupModule,
     UserLookupModule,
+    VirtualContributorLookupModule,
     OrganizationLookupModule,
   ],
   providers: [

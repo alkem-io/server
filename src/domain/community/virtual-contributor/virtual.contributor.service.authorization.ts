@@ -207,6 +207,7 @@ export class VirtualContributorAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.CONTRIBUTE,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
         ],
         [accountAdminCredential],
         CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE
