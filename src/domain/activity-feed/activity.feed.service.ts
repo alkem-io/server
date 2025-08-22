@@ -262,9 +262,13 @@ export class ActivityFeedService {
           `Collaboration activity query: ${agentInfo.email}`
         );
         readableCollaborationIds.push(collaboration.id);
-      } catch (error) {
+      } catch {
         this.logger?.warn(
-          `User ${agentInfo.userID} is not able to read collaboration ${collaboration.id}`,
+          {
+            message: 'User is not able to read collaboration',
+            userID: agentInfo.userID,
+            collaborationID: collaboration.id,
+          },
           LogContext.ACTIVITY_FEED
         );
       }
@@ -275,9 +279,14 @@ export class ActivityFeedService {
           await this.collaborationService.getChildCollaborationsOrFail(
             collaboration.id
           );
-      } catch (error) {
+      } catch {
         this.logger?.warn(
-          `User ${agentInfo.userID} is not able to read childCollaborations for collaboration: ${collaboration.id}`,
+          {
+            message:
+              'User is not able to read childCollaborations for collaboration',
+            userID: agentInfo.userID,
+            collaborationID: collaboration.id,
+          },
           LogContext.ACTIVITY_FEED
         );
       }
@@ -290,9 +299,9 @@ export class ActivityFeedService {
               agentInfo,
               childCollaboration.authorization,
               AuthorizationPrivilege.READ,
-              `Collaboration activity query: ${agentInfo.email}`
+              `Collaboration activity query: ${agentInfo.email} `
             );
-          } catch (e) {
+          } catch {
             return false;
           }
         }
