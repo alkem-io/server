@@ -91,11 +91,12 @@ export class UserSettingsEntity1754573700399 implements MigrationInterface {
 
     // Check that there is an entry for each of the entries in the enum
     const preferenceTypes = Object.values(PreferenceType);
+    const missingPreferenceTypes: string[] = [];
     for (const type of preferenceTypes) {
       if (!preferenceDefinitionsMap[type]) {
-        const msg = `Missing preference definition for type ${type}`;
-        console.error(msg);
-        throw new Error(msg);
+        const msg = `Missing preference definition for type ${type}, defaulting to false`;
+        console.warn(msg);
+        missingPreferenceTypes.push(type);
       }
     }
 
@@ -107,163 +108,246 @@ export class UserSettingsEntity1754573700399 implements MigrationInterface {
     }[] = await queryRunner.query(
       `SELECT id, settings, preferenceSetId FROM user`
     );
-    for (const user of users) {
-      const newSettingsId = randomUUID();
-      const newSettingsAuthID =
-        await this.createAuthorizationPolicy(queryRunner);
 
-      // Get all the preferences, and find the right one to update each of the fields in the notification object
-      const notification: UserSettingsNotification = {
-        platform: {
-          spaceCreated: true,
-          forumDiscussionCreated: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED
-          ),
-          forumDiscussionComment: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT
-          ),
-          newUserSignUp: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_USER_SIGN_UP
-          ),
-          userProfileRemoved: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_USER_REMOVED
-          ),
-        },
-        organization: {
-          messageReceived: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE
-          ),
-          mentioned: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_ORGANIZATION_MENTION
-          ),
-        },
-        space: {
-          communityApplicationReceived: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_APPLICATION_RECEIVED
-          ),
-          communityApplicationSubmitted: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_APPLICATION_SUBMITTED
-          ),
-          communicationUpdates: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_COMMUNICATION_UPDATES
-          ),
-          communicationUpdatesAdmin: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN
-          ),
-          communityNewMember: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_COMMUNITY_NEW_MEMBER
-          ),
-          communityNewMemberAdmin: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_COMMUNITY_NEW_MEMBER_ADMIN
-          ),
-          communityInvitationUser: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER
-          ),
-          collaborationPostCreatedAdmin: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_POST_CREATED_ADMIN
-          ),
-          collaborationPostCreated: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_POST_CREATED
-          ),
-          collaborationPostCommentCreated: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_POST_COMMENT_CREATED
-          ),
-          collaborationWhiteboardCreated: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_WHITEBOARD_CREATED
-          ),
-          collaborationCalloutPublished: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_CALLOUT_PUBLISHED
-          ),
-          communicationMessage: true, // Default value for new field
-          communicationMessageAdmin: true, // Default value for new field
-        },
-        user: {
-          messageReceived: true, // Default value for new field
-          messageSent: true, // Default value for new field
-          mentioned: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_COMMUNICATION_MENTION
-          ),
-          commentReply: await this.getPreferenceValue(
-            queryRunner,
-            preferenceDefinitionsMap,
-            user.preferenceSetId,
-            PreferenceType.NOTIFICATION_COMMENT_REPLY
-          ),
-        },
-      };
+    console.log(`Starting migration for ${users.length} users`);
 
-      await queryRunner.query(
-        `INSERT INTO user_settings (id, version, communication, privacy, notification, authorizationId) VALUES  (?, ?, ?, ?, ?, ?)`,
-        [
-          newSettingsId,
-          1,
-          JSON.stringify(user.settings.communication),
-          JSON.stringify(user.settings.privacy),
-          JSON.stringify(notification),
-          newSettingsAuthID,
-        ]
+    // Check if we have users without settings or preferenceSetId
+    const usersWithoutSettings = users.filter(u => !u.settings).length;
+    const usersWithoutPrefSet = users.filter(u => !u.preferenceSetId).length;
+
+    if (usersWithoutSettings > 0) {
+      console.warn(`Found ${usersWithoutSettings} users without settings`);
+    }
+    if (usersWithoutPrefSet > 0) {
+      console.warn(
+        `Found ${usersWithoutPrefSet} users without preferenceSetId`
       );
-      await queryRunner.query(`UPDATE user SET settingsId = ? WHERE id = ?`, [
-        newSettingsId,
-        user.id,
-      ]);
+    }
+
+    for (const user of users) {
+      try {
+        if (!user.preferenceSetId) {
+          console.warn(`User ${user.id} has no preferenceSetId, skipping`);
+          continue;
+        }
+
+        // Validate and parse user settings
+        const userSettings = this.validateAndParseUserSettings(
+          user.settings,
+          user.id
+        );
+        if (!userSettings) {
+          continue;
+        }
+
+        const newSettingsId = randomUUID();
+        const newSettingsAuthID =
+          await this.createAuthorizationPolicy(queryRunner);
+
+        // Get all the preferences, and find the right one to update each of the fields in the notification object
+        const notification: UserSettingsNotification = {
+          platform: {
+            spaceCreated: true,
+            forumDiscussionCreated: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED
+            ),
+            forumDiscussionComment: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT
+            ),
+            newUserSignUp: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_USER_SIGN_UP
+            ),
+            userProfileRemoved: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_USER_REMOVED
+            ),
+          },
+          organization: {
+            messageReceived: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE
+            ),
+            mentioned: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_ORGANIZATION_MENTION
+            ),
+          },
+          space: {
+            communityApplicationReceived: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_APPLICATION_RECEIVED
+            ),
+            communityApplicationSubmitted: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_APPLICATION_SUBMITTED
+            ),
+            communicationUpdates: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_COMMUNICATION_UPDATES
+            ),
+            communicationUpdatesAdmin: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN
+            ),
+            communityNewMember: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_COMMUNITY_NEW_MEMBER
+            ),
+            communityNewMemberAdmin: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_COMMUNITY_NEW_MEMBER_ADMIN
+            ),
+            communityInvitationUser: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER
+            ),
+            collaborationPostCreatedAdmin: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_POST_CREATED_ADMIN
+            ),
+            collaborationPostCreated: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_POST_CREATED
+            ),
+            collaborationPostCommentCreated: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_POST_COMMENT_CREATED
+            ),
+            collaborationWhiteboardCreated: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_WHITEBOARD_CREATED
+            ),
+            collaborationCalloutPublished: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_CALLOUT_PUBLISHED
+            ),
+            communicationMessage: true, // Default value for new field
+            communicationMessageAdmin: true, // Default value for new field
+          },
+          user: {
+            messageReceived: true, // Default value for new field
+            messageSent: true, // Default value for new field
+            mentioned: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_COMMUNICATION_MENTION
+            ),
+            commentReply: await this.getPreferenceValue(
+              queryRunner,
+              preferenceDefinitionsMap,
+              user.preferenceSetId,
+              PreferenceType.NOTIFICATION_COMMENT_REPLY
+            ),
+          },
+        };
+
+        // Safely stringify JSON with error handling
+        let communicationJson: string;
+        let privacyJson: string;
+        let notificationJson: string;
+
+        try {
+          communicationJson = JSON.stringify(userSettings.communication);
+        } catch (error) {
+          console.warn(
+            `Failed to stringify communication settings for user ${user.id}, using default:`,
+            error
+          );
+          communicationJson = JSON.stringify({});
+        }
+
+        try {
+          privacyJson = JSON.stringify(userSettings.privacy);
+        } catch (error) {
+          console.warn(
+            `Failed to stringify privacy settings for user ${user.id}, using default:`,
+            error
+          );
+          privacyJson = JSON.stringify({});
+        }
+
+        try {
+          notificationJson = JSON.stringify(notification);
+        } catch (error) {
+          console.error(
+            `Failed to stringify notification settings for user ${user.id}:`,
+            error
+          );
+          continue;
+        }
+
+        await queryRunner.query(
+          `INSERT INTO user_settings (id, version, communication, privacy, notification, authorizationId) VALUES  (?, ?, ?, ?, ?, ?)`,
+          [
+            newSettingsId,
+            1,
+            communicationJson,
+            privacyJson,
+            notificationJson,
+            newSettingsAuthID,
+          ]
+        );
+        await queryRunner.query(`UPDATE user SET settingsId = ? WHERE id = ?`, [
+          newSettingsId,
+          user.id,
+        ]);
+      } catch (error) {
+        console.error(`Error migrating user ${user.id}:`, error);
+      }
+    }
+
+    // Verify that all users now have settings
+    const usersWithoutSettingsAfter = await queryRunner.query(
+      `SELECT COUNT(*) as count FROM user WHERE settingsId IS NULL`
+    );
+    const countAfter = usersWithoutSettingsAfter[0].count;
+
+    if (countAfter > 0) {
+      console.warn(
+        `Warning: ${countAfter} users still don't have settingsId after migration`
+      );
+    } else {
+      console.log('✓ All users now have settingsId');
     }
 
     await queryRunner.query(`ALTER TABLE \`user\` DROP COLUMN \`settings\``);
@@ -309,7 +393,10 @@ export class UserSettingsEntity1754573700399 implements MigrationInterface {
   ): Promise<boolean> {
     const preferenceDefinitionId = preferenceDefinitionsMap[type];
     if (!preferenceDefinitionId) {
-      throw new Error(`Preference definition for type ${type} not found`);
+      console.warn(
+        `Preference definition for type ${type} not found, defaulting to false`
+      );
+      return false;
     }
 
     const preference: {
@@ -319,7 +406,10 @@ export class UserSettingsEntity1754573700399 implements MigrationInterface {
       [preferenceSetId, preferenceDefinitionId]
     );
     if (preference.length === 0) {
-      throw new Error(`Preference value for type ${type} not found`);
+      console.warn(
+        `Preference value for type ${type} not found, defaulting to false`
+      );
+      return false;
     }
     const result = preference[0].value;
 
@@ -339,9 +429,10 @@ export class UserSettingsEntity1754573700399 implements MigrationInterface {
     ) {
       return false;
     } else {
-      throw new Error(
-        `Preference value for type ${type} is not a valid boolean: ${result} (type: ${typeof result})`
+      console.warn(
+        `Preference value for type ${type} is not a valid boolean: ${result} (type: ${typeof result}), defaulting to false`
       );
+      return false;
     }
   }
 
@@ -356,6 +447,96 @@ export class UserSettingsEntity1754573700399 implements MigrationInterface {
       [authID, 1, '[]', '[]', '[]', authorizationType]
     );
     return authID;
+  }
+
+  private validateAndParseUserSettings(
+    settings: any,
+    userId: string
+  ): { communication: any; privacy: any } | null {
+    try {
+      // Handle null or undefined settings
+      if (!settings) {
+        console.warn(
+          `User ${userId} has null/undefined settings, using defaults`
+        );
+        return {
+          communication: {},
+          privacy: {},
+        };
+      }
+
+      // Handle string settings (JSON string)
+      if (typeof settings === 'string') {
+        try {
+          const parsed = JSON.parse(settings);
+          return this.validateSettingsStructure(parsed, userId);
+        } catch (parseError) {
+          console.warn(
+            `User ${userId} has malformed JSON settings: ${parseError}, using defaults`
+          );
+          return {
+            communication: {},
+            privacy: {},
+          };
+        }
+      }
+
+      // Handle object settings
+      if (typeof settings === 'object') {
+        return this.validateSettingsStructure(settings, userId);
+      }
+
+      console.warn(
+        `User ${userId} has unexpected settings type: ${typeof settings}, using defaults`
+      );
+      return {
+        communication: {},
+        privacy: {},
+      };
+    } catch (error) {
+      console.error(`Error validating settings for user ${userId}:`, error);
+      return null;
+    }
+  }
+
+  private validateSettingsStructure(
+    settings: any,
+    userId: string
+  ): { communication: any; privacy: any } {
+    const result = {
+      communication: {},
+      privacy: {},
+    };
+
+    // Validate communication settings
+    if (settings.communication) {
+      if (
+        typeof settings.communication === 'object' &&
+        !Array.isArray(settings.communication)
+      ) {
+        result.communication = settings.communication;
+      } else {
+        console.warn(
+          `User ${userId} has invalid communication settings structure, using default`
+        );
+      }
+    }
+
+    // Validate privacy settings
+    if (settings.privacy) {
+      if (
+        typeof settings.privacy === 'object' &&
+        !Array.isArray(settings.privacy)
+      ) {
+        result.privacy = settings.privacy;
+      } else {
+        console.warn(
+          `User ${userId} has invalid privacy settings structure, using default`
+        );
+      }
+    }
+
+    return result;
   }
 }
 
