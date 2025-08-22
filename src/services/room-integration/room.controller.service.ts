@@ -1,5 +1,7 @@
 import { LogContext } from '@common/enums';
 import { MutationType } from '@common/enums/subscriptions';
+import { Post } from '@domain/collaboration/post/post.entity';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -11,6 +13,7 @@ import {
 
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class RoomControllerService {
@@ -21,12 +24,32 @@ export class RoomControllerService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async getRoomCalloutOrFail(roomID: string) {
+  /**
+   * Retrieves the Callout or Post entity associated with the given room ID.
+   * Throws EntityNotFoundException if neither entity is found.
+   *
+   * @param {string} roomID - The unique identifier of the room.
+   * @returns {Promise<Callout | Post>} The associated Callout or Post entity.
+   * @throws {EntityNotFoundException} If the room does not have a callout or post.
+   */
+  public async getRoomEntityOrFail(roomID: string): Promise<Callout | Post> {
     const room = await this.roomLookupService.getRoomOrFail(roomID, {
-      relations: { callout: { framing: { profile: true } } },
+      relations: {
+        callout: { framing: { profile: true } },
+        post: { profile: true },
+      },
     });
-    return room.callout;
+    const entity = room.callout || room.post;
+    if (!entity) {
+      throw new EntityNotFoundException(
+        'Room with ID does not have a callout or post.',
+        LogContext.COMMUNICATION,
+        { roomID }
+      );
+    }
+    return entity;
   }
+
   public async getMessages(roomID: string) {
     const room = await this.getRoomOrFail(roomID);
     return await this.roomLookupService.getMessages(room);
