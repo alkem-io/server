@@ -29,11 +29,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
         collaborationCalloutPublished: true,
       },
       platform: {
-        userProfileRemoved: true,
-        userProfileCreated: true,
+        adminUserProfileRemoved: true,
+        adminUserProfileCreated: true,
         forumDiscussionComment: true,
         forumDiscussionCreated: true,
-        spaceCreated: true,
+        adminSpaceCreated: true,
       },
       organization: {
         adminMentioned: true,

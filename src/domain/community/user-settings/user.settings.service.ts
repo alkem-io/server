@@ -67,21 +67,21 @@ export class UserSettingsService {
           notificationPlatformData.forumDiscussionCreated;
       }
       if (notificationPlatformData.adminUserProfileRemoved !== undefined) {
-        settings.notification.platform.userProfileRemoved.email =
+        settings.notification.platform.adminUserProfileRemoved.email =
           notificationPlatformData.adminUserProfileRemoved;
-        settings.notification.platform.userProfileRemoved.inApp =
+        settings.notification.platform.adminUserProfileRemoved.inApp =
           notificationPlatformData.adminUserProfileRemoved;
       }
       if (notificationPlatformData.adminUserProfileCreated !== undefined) {
-        settings.notification.platform.userProfileCreated.email =
+        settings.notification.platform.adminUserProfileCreated.email =
           notificationPlatformData.adminUserProfileCreated;
-        settings.notification.platform.userProfileCreated.inApp =
+        settings.notification.platform.adminUserProfileCreated.inApp =
           notificationPlatformData.adminUserProfileCreated;
       }
       if (notificationPlatformData.adminSpaceCreated !== undefined) {
-        settings.notification.platform.spaceCreated.email =
+        settings.notification.platform.adminSpaceCreated.email =
           notificationPlatformData.adminSpaceCreated;
-        settings.notification.platform.spaceCreated.inApp =
+        settings.notification.platform.adminSpaceCreated.inApp =
           notificationPlatformData.adminSpaceCreated;
       }
     }

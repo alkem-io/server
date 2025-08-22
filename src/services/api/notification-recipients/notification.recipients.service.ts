@@ -22,6 +22,8 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
+import { IUser } from '@domain/community/user/user.interface';
 @Injectable()
 export class NotificationRecipientsService {
   constructor(
@@ -42,7 +44,6 @@ export class NotificationRecipientsService {
       LogContext.NOTIFICATIONS
     );
 
-    const inAppEnabledForEventType = this.isInAppEnabled(eventData.eventType);
     const { privilegeRequired, credentialCriteria } =
       await this.getPrivilegeRequiredCredentialCriteria(
         eventData.eventType,
@@ -77,22 +78,94 @@ export class NotificationRecipientsService {
       LogContext.NOTIFICATIONS
     );
 
-    const recipientsWithNotificationEnabled = candidateRecipients.filter(
+    const emailRecipientsWithNotificationEnabled = candidateRecipients.filter(
       recipient =>
-        this.isNotificationEnabled(
+        this.getChannelsSettingsForEvent(
           eventData.eventType,
           recipient.settings?.notification
-        )
+        ).email
+    );
+    const inAppRecipientsWithNotificationEnabled = candidateRecipients.filter(
+      recipient =>
+        this.getChannelsSettingsForEvent(
+          eventData.eventType,
+          recipient.settings?.notification
+        ).inApp
+    );
+
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 3a. ...for email, ${emailRecipientsWithNotificationEnabled.length} have notification enabled`,
+      LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 3. ...${recipientsWithNotificationEnabled.length} of which have this notification enabled`,
+      `[${eventData.eventType}] - 3b. ...for in-app, ${inAppRecipientsWithNotificationEnabled.length} have notification enabled`,
       LogContext.NOTIFICATIONS
     );
 
-    // Need to reload the users to get the full set of credentials for use in authorization evaluation
+    // Filter out recipients who do not have the required privilege
     // TODO: this can clearly be optimized to have one lookup of the users, not two...
+    const emailRecipientsWithPrivilege =
+      await this.filterRecipientsWithPrivileges(
+        emailRecipientsWithNotificationEnabled,
+        privilegeRequired,
+        eventData
+      );
+    const inAppRecipientsWithEntityPrivilege =
+      await this.filterRecipientsWithPrivileges(
+        inAppRecipientsWithNotificationEnabled,
+        privilegeRequired,
+        eventData
+      );
+    // Filter by whether they have the InApp privilege on platform level
+    const authorizationPolicyForInApp =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    const inAppRecipientsWithPrivilege =
+      inAppRecipientsWithEntityPrivilege.filter(recipient =>
+        this.authorizationService.isAccessGrantedForCredentials(
+          recipient.agent.credentials || [],
+          [],
+          authorizationPolicyForInApp,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_IN_APP
+        )
+      );
+
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 4a. ...and for email, of those ${emailRecipientsWithPrivilege.length} have the '${privilegeRequired}' privilege`,
+      LogContext.NOTIFICATIONS
+    );
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithPrivilege.length} have the '${privilegeRequired}' privilege`,
+      LogContext.NOTIFICATIONS
+    );
+
+    const triggeredBy = eventData.triggeredBy
+      ? await this.userLookupService.getUserOrFail(eventData.triggeredBy)
+      : undefined;
+
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients`,
+      LogContext.NOTIFICATIONS
+    );
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients`,
+      LogContext.NOTIFICATIONS
+    );
+
+    return {
+      emailRecipients: emailRecipientsWithPrivilege,
+      inAppRecipients: inAppRecipientsWithPrivilege,
+      triggeredBy,
+    };
+  }
+
+  private async filterRecipientsWithPrivileges(
+    emailRecipientsWithNotificationEnabled: IUser[],
+    privilegeRequired: AuthorizationPrivilege | undefined,
+    eventData: NotificationRecipientsInput
+  ) {
     const recipientsWithNotificationEnabledIDs =
-      recipientsWithNotificationEnabled.map(recipient => recipient.id);
+      emailRecipientsWithNotificationEnabled.map(recipient => recipient.id);
+    // Need to reload the users to get the full set of credentials for use in authorization evaluation
     const recipientsWithNotificationEnabledWithCredentials =
       await this.userLookupService.getUsersByUUID(
         recipientsWithNotificationEnabledIDs,
@@ -108,7 +181,7 @@ export class NotificationRecipientsService {
       );
 
     // Filter out recipients who do not have the required privilege
-    let recipientsWithPrivilege =
+    let emailRecipientsWithPrivilege =
       recipientsWithNotificationEnabledWithCredentials;
     if (
       privilegeRequired &&
@@ -122,7 +195,7 @@ export class NotificationRecipientsService {
         eventData.organizationID,
         eventData.virtualContributorID
       );
-      recipientsWithPrivilege =
+      emailRecipientsWithPrivilege =
         recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
           const credentials = recipient.agent.credentials;
           if (!credentials) {
@@ -143,62 +216,36 @@ export class NotificationRecipientsService {
           }
         });
     }
-
-    this.logger.verbose?.(
-      `[${eventData.eventType}] - 4. ...and of those ${recipientsWithPrivilege.length} have the '${privilegeRequired}' privilege`,
-      LogContext.NOTIFICATIONS
-    );
-
-    const inAppParticipantCandidates = inAppEnabledForEventType
-      ? recipientsWithPrivilege
-      : [];
-    // Filter by whether they have the InApp privilege on platform level
-    const authorizationPolicyForInApp =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    const inAppRecipientsWithPrivilege = inAppParticipantCandidates.filter(
-      recipient =>
-        this.authorizationService.isAccessGrantedForCredentials(
-          recipient.agent.credentials || [],
-          [],
-          authorizationPolicyForInApp,
-          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_IN_APP
-        )
-    );
-    const triggeredBy = eventData.triggeredBy
-      ? await this.userLookupService.getUserOrFail(eventData.triggeredBy)
-      : undefined;
-
-    this.logger.verbose?.(
-      `[${eventData.eventType}] - 5. Email has ${recipientsWithPrivilege.length} recipients; InApp has ${inAppRecipientsWithPrivilege.length} recipients`,
-      LogContext.NOTIFICATIONS
-    );
-
-    return {
-      emailRecipients: recipientsWithPrivilege,
-      inAppRecipients: inAppRecipientsWithPrivilege,
-      triggeredBy,
-    };
+    return emailRecipientsWithPrivilege;
   }
 
-  private isNotificationEnabled(
+  private getChannelsSettingsForEvent(
     eventType: NotificationEvent,
     notificationSettings: IUserSettingsNotification
-  ): boolean {
+  ): IUserSettingsNotificationChannels {
     switch (eventType) {
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED:
         return notificationSettings.platform.forumDiscussionCreated;
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
         return notificationSettings.platform.forumDiscussionComment;
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
-        return notificationSettings.platform.userProfileCreated;
+        return notificationSettings.platform.adminUserProfileCreated;
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
-        return notificationSettings.platform.userProfileRemoved;
+        return notificationSettings.platform.adminUserProfileRemoved;
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
-        return notificationSettings.platform.spaceCreated;
+        return notificationSettings.platform.adminSpaceCreated;
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE:
+        return notificationSettings.platform.adminUserGlobalRoleChange;
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
         return notificationSettings.organization.adminMessageReceived;
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
         return notificationSettings.organization.adminMentioned;
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
+        return notificationSettings.user.spaceCommunityApplicationSubmitted;
+      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
+        return notificationSettings.user.spaceCommunityInvitationReceived;
+      case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
+        return notificationSettings.user.spaceCommunityJoined;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
       case NotificationEvent.USER_MENTION:
@@ -209,20 +256,10 @@ export class NotificationRecipientsService {
         return notificationSettings.user.messageSent;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.adminCommunityApplicationReceived;
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
-        return notificationSettings.space.communityApplicationSubmitted;
-      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
-        return notificationSettings.space.communityInvitationUser;
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
-        return notificationSettings.space.communicationMessage;
       case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
-        return notificationSettings.space.communicationMessageAdmin;
+        return notificationSettings.space.adminCommunicationMessageReceived;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         return notificationSettings.space.communicationUpdates;
-      case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
-        return notificationSettings.space.communicationUpdatesAdmin;
-      case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-        return notificationSettings.space.communityNewMember;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
         return notificationSettings.space.adminCommunityNewMember;
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
@@ -237,19 +274,17 @@ export class NotificationRecipientsService {
         return notificationSettings.space.collaborationCalloutComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
-      // TODO: The settings around this one are missing, and at least one should be on the VC as root entity
       case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
-        return true;
-      // TODO: missing this setting
-      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE:
-        return true;
-      // TODO: missing this setting; might need to be a shared one for all direct messages sent
-      case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-        return true;
-      // Always true!
-      case NotificationEvent.USER_SIGN_UP + WELCOME: // For the user that signs up!
+        return notificationSettings.virtualContributor
+          .adminSpaceCommunityInvitation;
+
+      // Fixed values
+      case NotificationEvent.USER_SIGN_UP_WELCOME:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
-        return true;
+        return {
+          email: true,
+          inApp: false,
+        };
 
       default:
         throw new NotificationEventException(
@@ -317,7 +352,6 @@ export class NotificationRecipientsService {
         });
         break;
       }
-      case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
       case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION: {
@@ -327,30 +361,29 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         break;
       }
-      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT: {
+      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.USER_SIGN_UP + WELCOME:
+      case NotificationEvent.USER_SIGN_UP_WELCOME:
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
-      case NotificationEvent.USER_MESSAGE: {
-        // TODO: confirm
+      case NotificationEvent.USER_MESSAGE:
+      case NotificationEvent.USER_MESSAGE_SENT_COPY: {
         // For mentions, no privilege check is needed - mentions are direct notifications to specific users
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
         // For direct user invitations, no privilege check is needed - just check if the user exists and has notifications enabled
@@ -373,44 +406,6 @@ export class NotificationRecipientsService {
     return { privilegeRequired, credentialCriteria };
   }
 
-  private isInAppEnabled(eventType: NotificationEvent): boolean {
-    switch (eventType) {
-      case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-      case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
-      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
-      case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
-      case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
-      case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION: {
-        return true;
-      }
-      case NotificationEvent.USER_MENTION:
-      case NotificationEvent.USER_COMMENT_REPLY:
-      case NotificationEvent.USER_MESSAGE:
-      case NotificationEvent.USER_MESSAGE_SENT_COPY: {
-        return true;
-      }
-      case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
-      case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED: {
-        return true;
-      }
-      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
-      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED:
-      case NotificationEvent.USER_SIGN_UP + WELCOME:
-      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
-      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
-      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED: {
-        return true;
-      }
-      default:
-        return false;
-    }
-  }
   private async getAuthorizationPolicy(
     eventType: NotificationEvent,
     entityID?: string,
@@ -450,7 +445,6 @@ export class NotificationRecipientsService {
 
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
-      case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
@@ -475,12 +469,11 @@ export class NotificationRecipientsService {
         return space.authorization;
       }
 
-      case NotificationEvent.USER_SIGN_UP + WELCOME:
+      case NotificationEvent.USER_SIGN_UP_WELCOME:
       case NotificationEvent.USER_MESSAGE:
       case NotificationEvent.USER_MESSAGE_SENT_COPY:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
         // get the User authorization policy

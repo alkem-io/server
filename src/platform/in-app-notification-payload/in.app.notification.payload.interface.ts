@@ -10,10 +10,7 @@ import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-
 import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
-import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
-import { InAppNotificationPayloadSpaceCollaborationWhiteboard } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.whiteboard';
-import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post.comment';
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
@@ -56,12 +53,6 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
         return InAppNotificationPayloadSpaceCommunicationMessageDirect;
       case NotificationEventPayload.SPACE_COMMUNICATION_UPDATE:
         return InAppNotificationPayloadSpaceCommunicationUpdate;
-      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT:
-        return InAppNotificationPayloadSpaceCollaborationPost;
-      case NotificationEventPayload.SPACE_COLLABORATION_POST_COMMENT:
-        return InAppNotificationPayloadSpaceCollaborationPostComment;
-      case NotificationEventPayload.SPACE_COLLABORATION_WHITEBOARD:
-        return InAppNotificationPayloadSpaceCollaborationWhiteboard;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT:
         return InAppNotificationPayloadSpaceCollaborationCallout;
 

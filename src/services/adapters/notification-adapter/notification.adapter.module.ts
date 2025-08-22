@@ -14,6 +14,8 @@ import { NotificationRecipientsModule } from '@services/api/notification-recipie
 import { NotificationSpaceAdapter } from './notification.space.adapter';
 import { NotificationPlatformAdapter } from './notification.platform.adapter';
 import { NotificationUserAdapter } from './notification.user.adapter';
+import { NotificationOrganizationAdapter } from './notification.organization.adapter';
+import { NotificationVirtualContributorAdapter } from './notification.virtual.contributor.adapter';
 
 @Module({
   imports: [
@@ -31,11 +33,16 @@ import { NotificationUserAdapter } from './notification.user.adapter';
     NotificationSpaceAdapter,
     NotificationPlatformAdapter,
     NotificationUserAdapter,
+    NotificationOrganizationAdapter,
+    NotificationVirtualContributorAdapter,
   ],
   exports: [
     NotificationAdapter,
     NotificationSpaceAdapter,
     NotificationPlatformAdapter,
+    NotificationUserAdapter,
+    NotificationOrganizationAdapter,
+    NotificationVirtualContributorAdapter,
   ],
 })
 export class NotificationAdapterModule {}

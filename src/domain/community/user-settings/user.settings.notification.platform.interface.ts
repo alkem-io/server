@@ -21,24 +21,24 @@ export abstract class IUserSettingsNotificationPlatform {
     nullable: false,
     description: 'Receive notification when a new user signs up',
   })
-  userProfileCreated!: IUserSettingsNotificationChannels;
+  adminUserProfileCreated!: IUserSettingsNotificationChannels;
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when a user profile is removed',
   })
-  userProfileRemoved!: IUserSettingsNotificationChannels;
+  adminUserProfileRemoved!: IUserSettingsNotificationChannels;
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when a user global role is assigned or removed.',
   })
-  userGlobalRoleChange!: IUserSettingsNotificationChannels;
+  adminUserGlobalRoleChange!: IUserSettingsNotificationChannels;
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when a new L0 Space is created',
   })
-  spaceCreated!: IUserSettingsNotificationChannels;
+  adminSpaceCreated!: IUserSettingsNotificationChannels;
 }
