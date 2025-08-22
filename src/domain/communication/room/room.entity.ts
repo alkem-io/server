@@ -5,6 +5,7 @@ import { RoomType } from '@common/enums/room.type';
 import { VcInteraction } from '../vc-interaction/vc.interaction.entity';
 import { ENUM_LENGTH } from '@common/constants';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 
 @Entity()
 export class Room extends AuthorizableEntity implements IRoom {
@@ -31,7 +32,10 @@ export class Room extends AuthorizableEntity implements IRoom {
   vcInteractions?: VcInteraction[];
 
   @OneToOne(() => Callout, callout => callout.comments)
-  callout!: Callout;
+  callout?: Callout;
+
+  @OneToOne(() => Post, post => post.comments)
+  post?: Post;
 
   constructor(displayName: string, type: RoomType) {
     super();
