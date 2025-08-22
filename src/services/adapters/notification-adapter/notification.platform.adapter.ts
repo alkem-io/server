@@ -34,7 +34,7 @@ export class NotificationPlatformAdapter {
   public async platformGlobalRoleChanged(
     eventData: NotificationInputPlatformGlobalRoleChange
   ): Promise<void> {
-    const event = NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE;
+    const event = NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE;
     const recipients = await this.getNotificationRecipientsPlatform(
       event,
       eventData
@@ -64,7 +64,7 @@ export class NotificationPlatformAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE,
+        NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE,
         NotificationEventCategory.PLATFORM,
         eventData.triggeredBy,
         inAppReceiverIDs,
@@ -178,7 +178,7 @@ export class NotificationPlatformAdapter {
   public async platformSpaceCreated(
     eventData: NotificationInputSpaceCreated
   ): Promise<void> {
-    const event = NotificationEvent.PLATFORM_SPACE_CREATED;
+    const event = NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED;
     const recipients = await this.getNotificationRecipientsPlatform(
       event,
       eventData
@@ -197,7 +197,7 @@ export class NotificationPlatformAdapter {
   public async platformUserRegistered(
     eventData: NotificationInputPlatformUserRegistered
   ): Promise<void> {
-    const event = NotificationEvent.PLATFORM_USER_PROFILE_CREATED;
+    const event = NotificationEvent.USER_SIGN_UP + WELCOME;
     const recipients = await this.getNotificationRecipientsPlatform(
       event,
       eventData,
@@ -225,7 +225,7 @@ export class NotificationPlatformAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.PLATFORM_USER_PROFILE_CREATED,
+        NotificationEvent.USER_SIGN_UP + WELCOME,
         NotificationEventCategory.PLATFORM,
         eventData.triggeredBy,
         inAppReceiverIDs,
@@ -234,7 +234,7 @@ export class NotificationPlatformAdapter {
     }
 
     // ALSO send admin notifications
-    const adminEvent = NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN;
+    const adminEvent = NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED;
     const adminRecipients = await this.getNotificationRecipientsPlatform(
       adminEvent,
       eventData
@@ -263,7 +263,7 @@ export class NotificationPlatformAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN,
+        NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED,
         NotificationEventCategory.PLATFORM,
         eventData.triggeredBy,
         adminInAppReceiverIDs,
@@ -275,7 +275,7 @@ export class NotificationPlatformAdapter {
   public async platformUserRemoved(
     eventData: NotificationInputPlatformUserRemoved
   ): Promise<void> {
-    const event = NotificationEvent.PLATFORM_USER_PROFILE_REMOVED;
+    const event = NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED;
     const recipients = await this.getNotificationRecipientsPlatform(
       event,
       eventData

@@ -189,63 +189,65 @@ export class NotificationRecipientsService {
         return notificationSettings.platform.forumDiscussionCreated;
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
         return notificationSettings.platform.forumDiscussionComment;
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
-        return notificationSettings.platform.newUserSignUp;
-      case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED:
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
+        return notificationSettings.platform.userProfileCreated;
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
         return notificationSettings.platform.userProfileRemoved;
-      case NotificationEvent.PLATFORM_SPACE_CREATED:
+      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
         return notificationSettings.platform.spaceCreated;
-      case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT:
+      case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
         return notificationSettings.organization.messageReceived;
-      case NotificationEvent.ORGANIZATION_MENTIONED:
+      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
         return notificationSettings.organization.mentioned;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
       case NotificationEvent.USER_MENTION:
         return notificationSettings.user.mentioned;
-      case NotificationEvent.USER_MESSAGE_RECIPIENT:
+      case NotificationEvent.USER_MESSAGE:
         return notificationSettings.user.messageReceived;
-      case NotificationEvent.USER_MESSAGE_SENDER:
+      case NotificationEvent.USER_MESSAGE_SENT_COPY:
         return notificationSettings.user.messageSent;
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
-        return notificationSettings.space.communityApplicationReceived;
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
+        return notificationSettings.space.adminCommunityApplicationReceived;
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
         return notificationSettings.space.communityApplicationSubmitted;
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER:
+      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.space.communityInvitationUser;
       case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
         return notificationSettings.space.communicationMessage;
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT:
+      case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
         return notificationSettings.space.communicationMessageAdmin;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         return notificationSettings.space.communicationUpdates;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
         return notificationSettings.space.communicationUpdatesAdmin;
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
+      case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
         return notificationSettings.space.communityNewMember;
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
-        return notificationSettings.space.communityNewMemberAdmin;
-      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN:
-        return notificationSettings.space.collaborationPostCreatedAdmin;
-      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
-        return notificationSettings.space.collaborationPostCreated;
-      case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED:
-        return notificationSettings.space.collaborationPostCommentCreated;
-      case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
-        return notificationSettings.space.collaborationWhiteboardCreated;
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
+        return notificationSettings.space.adminCommunityNewMember;
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+        return notificationSettings.space.adminCollaborationContributionCreated;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+        return notificationSettings.space
+          .collaborationCalloutContributionCreated;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
+        return notificationSettings.space
+          .collaborationCalloutContributionComment;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+        return notificationSettings.space.collaborationCalloutComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
       // TODO: The settings around this one are missing, and at least one should be on the VC as root entity
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_VC:
+      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
         return true;
       // TODO: missing this setting
-      case NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE:
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE:
         return true;
       // TODO: missing this setting; might need to be a shared one for all direct messages sent
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
         return true;
       // Always true!
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED: // For the user that signs up!
+      case NotificationEvent.USER_SIGN_UP + WELCOME: // For the user that signs up!
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
         return true;
 
@@ -282,14 +284,14 @@ export class NotificationRecipientsService {
         ];
         break;
       }
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
-      case NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE:
-      case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE:
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getGlobalAdminCriteria();
         break;
       }
-      case NotificationEvent.PLATFORM_SPACE_CREATED: {
+      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = [
           {
@@ -299,14 +301,14 @@ export class NotificationRecipientsService {
         ];
         break;
       }
-      case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT:
-      case NotificationEvent.ORGANIZATION_MENTIONED: {
+      case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
+      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria =
           this.getOrganizationCredentialCriteria(organizationID);
         break;
       }
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN: {
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
         credentialCriteria.push({
@@ -316,46 +318,46 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT:
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
-      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN: {
+      case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
         break;
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
-      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
-      case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         break;
       }
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
-      case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED: {
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
+      case NotificationEvent.USER_SIGN_UP + WELCOME:
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
-      case NotificationEvent.USER_MESSAGE_RECIPIENT: {
+      case NotificationEvent.USER_MESSAGE: {
         // TODO: confirm
         // For mentions, no privilege check is needed - mentions are direct notifications to specific users
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
+      case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
+      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
         // For direct user invitations, no privilege check is needed - just check if the user exists and has notifications enabled
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_VC: {
+      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria =
           await this.getVirtualContributorCriteria(virtualContributorID);
@@ -373,36 +375,36 @@ export class NotificationRecipientsService {
 
   private isInAppEnabled(eventType: NotificationEvent): boolean {
     switch (eventType) {
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
+      case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
-      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
-      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN:
-      case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED:
-      case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT: {
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION: {
         return true;
       }
       case NotificationEvent.USER_MENTION:
       case NotificationEvent.USER_COMMENT_REPLY:
-      case NotificationEvent.USER_MESSAGE_RECIPIENT:
-      case NotificationEvent.USER_MESSAGE_SENDER: {
+      case NotificationEvent.USER_MESSAGE:
+      case NotificationEvent.USER_MESSAGE_SENT_COPY: {
         return true;
       }
-      case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT:
+      case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-      case NotificationEvent.ORGANIZATION_MENTIONED: {
+      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED: {
         return true;
       }
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED:
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
-      case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED:
-      case NotificationEvent.PLATFORM_SPACE_CREATED: {
+      case NotificationEvent.USER_SIGN_UP + WELCOME:
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
+      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED: {
         return true;
       }
       default:
@@ -417,15 +419,15 @@ export class NotificationRecipientsService {
     virtualContributorID?: string
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
-      case NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE:
-      case NotificationEvent.PLATFORM_SPACE_CREATED:
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
-      case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE:
+      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED: {
         // get the platform authorization policy
         return await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
       }
-      case NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT:
-      case NotificationEvent.ORGANIZATION_MENTIONED: {
+      case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
+      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED: {
         // get the organization authorization policy
         if (!organizationID) {
           throw new ValidationException(
@@ -447,14 +449,14 @@ export class NotificationRecipientsService {
       }
 
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_ADMIN:
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN:
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER_ADMIN:
-      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED_ADMIN:
-      case NotificationEvent.SPACE_COLLABORATION_POST_CREATED:
-      case NotificationEvent.SPACE_COLLABORATION_POST_COMMENT_CREATED:
-      case NotificationEvent.SPACE_COLLABORATION_WHITEBOARD_CREATED:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_RECIPIENT:
+      case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         // get the space authorization policy
         if (!entityID) {
@@ -473,14 +475,14 @@ export class NotificationRecipientsService {
         return space.authorization;
       }
 
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
-      case NotificationEvent.USER_MESSAGE_RECIPIENT:
-      case NotificationEvent.USER_MESSAGE_SENDER:
+      case NotificationEvent.USER_SIGN_UP + WELCOME:
+      case NotificationEvent.USER_MESSAGE:
+      case NotificationEvent.USER_MESSAGE_SENT_COPY:
       case NotificationEvent.USER_COMMENT_REPLY:
-      case NotificationEvent.SPACE_COMMUNITY_NEW_MEMBER:
+      case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
-      case NotificationEvent.SPACE_COMMUNITY_APPLICATION_APPLICANT:
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER: {
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
+      case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION: {
         // get the User authorization policy
         // Use userID if provided, otherwise fall back to entityID for backward compatibility
         const targetUserID = userID || entityID;
@@ -500,7 +502,7 @@ export class NotificationRecipientsService {
         return user.authorization;
       }
 
-      case NotificationEvent.SPACE_COMMUNITY_INVITATION_VC: {
+      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
         if (!virtualContributorID) {
           throw new ValidationException(
             'Virtual Contributor ID is required for space community invitation notifications',

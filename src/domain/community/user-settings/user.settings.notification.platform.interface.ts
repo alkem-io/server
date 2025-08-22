@@ -20,13 +20,20 @@ export abstract class IUserSettingsNotificationPlatform {
     nullable: false,
     description: 'Receive notification when a new user signs up',
   })
-  newUserSignUp!: boolean;
+  userProfileCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when a user profile is removed',
   })
   userProfileRemoved!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Receive a notification when a user global role is assigned or removed.',
+  })
+  userGlobalRoleChange!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,

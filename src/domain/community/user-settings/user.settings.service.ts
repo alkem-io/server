@@ -67,7 +67,7 @@ export class UserSettingsService {
           notificationPlatformData.userProfileRemoved;
       }
       if (notificationPlatformData.newUserSignUp !== undefined) {
-        settings.notification.platform.newUserSignUp =
+        settings.notification.platform.userProfileCreated =
           notificationPlatformData.newUserSignUp;
       }
       if (notificationPlatformData.spaceCreated !== undefined) {
@@ -91,7 +91,7 @@ export class UserSettingsService {
     const notificationSpaceData = updateData.notification?.space;
     if (notificationSpaceData) {
       if (notificationSpaceData.communityApplicationReceived !== undefined) {
-        settings.notification.space.communityApplicationReceived =
+        settings.notification.space.adminCommunityApplicationReceived =
           notificationSpaceData.communityApplicationReceived;
       }
       if (notificationSpaceData.communityApplicationSubmitted !== undefined) {
@@ -111,7 +111,7 @@ export class UserSettingsService {
           notificationSpaceData.communityNewMember;
       }
       if (notificationSpaceData.communityNewMemberAdmin !== undefined) {
-        settings.notification.space.communityNewMemberAdmin =
+        settings.notification.space.adminCommunityNewMember =
           notificationSpaceData.communityNewMemberAdmin;
       }
       if (notificationSpaceData.communityInvitationUser !== undefined) {
@@ -119,19 +119,19 @@ export class UserSettingsService {
           notificationSpaceData.communityInvitationUser;
       }
       if (notificationSpaceData.collaborationPostCreatedAdmin !== undefined) {
-        settings.notification.space.collaborationPostCreatedAdmin =
+        settings.notification.space.adminCollaborationContributionCreated =
           notificationSpaceData.collaborationPostCreatedAdmin;
       }
       if (notificationSpaceData.collaborationPostCreated !== undefined) {
-        settings.notification.space.collaborationPostCreated =
+        settings.notification.space.collaborationCalloutContributionCreated =
           notificationSpaceData.collaborationPostCreated;
       }
       if (notificationSpaceData.collaborationPostCommentCreated !== undefined) {
-        settings.notification.space.collaborationPostCommentCreated =
+        settings.notification.space.collaborationCalloutContributionComment =
           notificationSpaceData.collaborationPostCommentCreated;
       }
       if (notificationSpaceData.collaborationWhiteboardCreated !== undefined) {
-        settings.notification.space.collaborationWhiteboardCreated =
+        settings.notification.space.collaborationCalloutComment =
           notificationSpaceData.collaborationWhiteboardCreated;
       }
       if (notificationSpaceData.collaborationCalloutPublished !== undefined) {

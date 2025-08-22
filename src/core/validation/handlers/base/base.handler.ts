@@ -92,6 +92,15 @@ import { CreateUserSettingsPrivacyInput } from '@domain/community/user-settings/
 import { CreateUserSettingsCommunicationInput } from '@domain/community/user-settings/dto/user.settings.communications.dto.create';
 import { UpdateUserSettingsNotificationInput } from '@domain/community/user-settings/dto/user.settings.notification.dto.update';
 import { UpdateBaselineLicensePlanOnAccount } from '@domain/space/account/dto/account.dto.update.baseline.license.plan';
+import { CreateUserSettingsNotificationUserInput } from '@domain/community/user-settings/dto/user.settings.notification.user.dto.create';
+import { CreateUserSettingsNotificationSpaceInput } from '@domain/community/user-settings/dto/user.settings.notification.space.dto.create';
+import { CreateUserSettingsNotificationOrganizationInput } from '@domain/community/user-settings/dto/user.settings.notification.organization.dto.create';
+import { CreateUserSettingsNotificationVirtualContributorInput } from '@domain/community/user-settings/dto/user.settings.notification.virtual.contributor.dto.create';
+import { CreateUserSettingsNotificationPlatformInput } from '@domain/community/user-settings/dto/user.settings.notification.platform.dto.create';
+import { UpdateUserSettingsNotificationUserInput } from '@domain/community/user-settings/dto/user.settings.notification.user.dto.update';
+import { UpdateUserSettingsNotificationVirtualContributorInput } from '@domain/community/user-settings/dto/user.settings.notification.virtual.contributor.dto.update';
+import { UpdateUserSettingsNotificationPlatformInput } from '@domain/community/user-settings/dto/user.settings.notification.platform.dto.update';
+import { UpdateUserSettingsNotificationOrganizationInput } from '@domain/community/user-settings/dto/user.settings.notification.organization.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -132,6 +141,11 @@ export class BaseHandler extends AbstractHandler {
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
       CreateUserSettingsNotificationInput,
+      CreateUserSettingsNotificationUserInput,
+      CreateUserSettingsNotificationOrganizationInput,
+      CreateUserSettingsNotificationVirtualContributorInput,
+      CreateUserSettingsNotificationPlatformInput,
+      CreateUserSettingsNotificationSpaceInput,
       CreateUserSettingsPrivacyInput,
       CreateUserSettingsCommunicationInput,
       CreateUserSettingsInput,
@@ -172,6 +186,10 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserSettingsCommunicationInput,
       UpdateUserSettingsPrivacyInput,
       UpdateUserSettingsNotificationInput,
+      UpdateUserSettingsNotificationUserInput,
+      UpdateUserSettingsNotificationVirtualContributorInput,
+      UpdateUserSettingsNotificationPlatformInput,
+      UpdateUserSettingsNotificationOrganizationInput,
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,

@@ -38,7 +38,7 @@ export class NotificationAdapter {
   public async organizationMention(
     eventData: NotificationInputOrganizationMention
   ): Promise<void> {
-    const event = NotificationEvent.ORGANIZATION_MENTIONED;
+    const event = NotificationEvent.ORGANIZATION_ADMIN_MENTIONED;
     const recipients = await this.getNotificationRecipientsOrganization(
       event,
       eventData,
@@ -77,7 +77,7 @@ export class NotificationAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.ORGANIZATION_MENTIONED,
+        NotificationEvent.ORGANIZATION_ADMIN_MENTIONED,
         NotificationEventCategory.ORGANIZATION,
         eventData.triggeredBy,
         inAppReceiverIDs,
@@ -89,7 +89,7 @@ export class NotificationAdapter {
   public async organizationSendMessage(
     eventData: NotificationInputOrganizationMessage
   ): Promise<void> {
-    const event = NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT;
+    const event = NotificationEvent.ORGANIZATION_ADMIN_MESSAGE;
     const recipients = await this.getNotificationRecipientsOrganization(
       event,
       eventData,
@@ -123,7 +123,7 @@ export class NotificationAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT,
+        NotificationEvent.ORGANIZATION_ADMIN_MESSAGE,
         NotificationEventCategory.ORGANIZATION,
         eventData.triggeredBy,
         inAppReceiverIDs,
@@ -198,7 +198,7 @@ export class NotificationAdapter {
   public async userMessageSend(
     eventData: NotificationInputUserMessage
   ): Promise<void> {
-    const event = NotificationEvent.USER_MESSAGE_RECIPIENT;
+    const event = NotificationEvent.USER_MESSAGE;
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData,
@@ -232,7 +232,7 @@ export class NotificationAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.USER_MESSAGE_RECIPIENT,
+        NotificationEvent.USER_MESSAGE,
         NotificationEventCategory.USER,
         eventData.triggeredBy,
         inAppReceiverIDs,
@@ -290,7 +290,8 @@ export class NotificationAdapter {
   public async spaceCommunityInvitationVirtualContributorCreated(
     eventData: NotificationInputCommunityInvitationVirtualContributor
   ): Promise<void> {
-    const event = NotificationEvent.SPACE_COMMUNITY_INVITATION_VC;
+    const event =
+      NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION;
     const space =
       await this.communityResolverService.getSpaceForCommunityOrFail(
         eventData.community.id

@@ -4,34 +4,30 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export abstract class IUserSettingsNotificationSpace {
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Receive a notification when a new member joins the community',
-  })
-  communityNewMember!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
     description:
       'Receive a notification when a new member joins the community (admin)',
   })
-  communityNewMemberAdmin!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification for community invitation',
-  })
-  communityInvitationUser!: boolean;
+  adminCommunityNewMember!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description: 'Receive a notification when an application is received',
   })
-  communityApplicationReceived!: boolean;
+  adminCommunityApplicationReceived!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Receive a notification when an application is submitted',
+    description:
+      'Receive a notification when a message is sent to a Space I lead',
   })
-  communityApplicationSubmitted!: boolean;
+  adminCommunicationMessageReceived!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Receive a notification when a contribution is created (admin)',
+  })
+  adminCollaborationContributionCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
@@ -41,50 +37,26 @@ export abstract class IUserSettingsNotificationSpace {
 
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Receive a notification for community updates as Admin',
+    description: 'Receive a notification when a callout is published',
   })
-  communicationUpdatesAdmin!: boolean;
+  collaborationCalloutPublished!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Receive a copy of messages that I send to a Space',
+    description: 'Receive a notification when a comment is made on a Callout',
   })
-  communicationMessage!: boolean;
+  collaborationCalloutComment!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Receive a notification when a contribution is created',
+  })
+  collaborationCalloutContributionCreated!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description:
-      'Receive a notification when a message is sent to a Space I lead',
+      'Receive a notification when a comment is created on a contribution',
   })
-  communicationMessageAdmin!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a post is created (admin)',
-  })
-  collaborationPostCreatedAdmin!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a post is created',
-  })
-  collaborationPostCreated!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a comment is created on a post',
-  })
-  collaborationPostCommentCreated!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a whiteboard is created',
-  })
-  collaborationWhiteboardCreated!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a callout is published',
-  })
-  collaborationCalloutPublished!: boolean;
+  collaborationCalloutContributionComment!: boolean;
 }
