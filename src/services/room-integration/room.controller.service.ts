@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { MutationType } from '@common/enums/subscriptions';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -13,6 +13,7 @@ import {
 
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class RoomControllerService {
@@ -36,8 +37,9 @@ export class RoomControllerService {
         `Room with ID ${roomID} does not have a callout or post.`,
         LogContext.COMMUNICATION
       );
-      throw new Error(
-        `Room with ID ${roomID} does not have a callout or post.`
+      throw new EntityNotFoundException(
+        `Room with ID ${roomID} does not have a callout or post.`,
+        LogContext.COMMUNICATION
       );
     }
 
