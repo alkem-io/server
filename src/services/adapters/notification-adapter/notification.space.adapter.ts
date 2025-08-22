@@ -655,49 +655,6 @@ export class NotificationSpaceAdapter {
         community.id
       );
 
-    // Send admin notifications
-    const adminEvent = NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN;
-    const adminRecipients = await this.getNotificationRecipientsSpace(
-      adminEvent,
-      eventData,
-      space.id
-    );
-
-    const adminPayload =
-      await this.notificationExternalAdapter.buildSpaceCommunicationUpdateSentNotificationPayload(
-        adminEvent,
-        eventData.triggeredBy,
-        adminRecipients.emailRecipients,
-        space,
-        eventData.updates,
-        eventData.lastMessage
-      );
-    this.notificationExternalAdapter.sendExternalNotifications(
-      adminEvent,
-      adminPayload
-    );
-
-    // Send admin in-app notifications
-    const adminInAppReceiverIDs = adminRecipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationPayloadSpaceCommunicationUpdate =
-        {
-          type: NotificationEventPayload.SPACE_COMMUNICATION_UPDATE,
-          spaceID: space.id,
-          updateID: eventData.updates.id,
-        };
-
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.SPACE_COMMUNICATION_UPDATE_ADMIN,
-        NotificationEventCategory.SPACE_ADMIN,
-        eventData.triggeredBy,
-        adminInAppReceiverIDs,
-        adminInAppPayload
-      );
-    }
-
     // And send the member updates
     const event = NotificationEvent.SPACE_COMMUNICATION_UPDATE;
 
@@ -709,7 +666,7 @@ export class NotificationSpaceAdapter {
 
     const memberEmailRecipientsWithoutAdmins =
       this.removeAdminRecipientsFromMembersRecipients(
-        adminRecipients.emailRecipients,
+        [memberRecipients.triggeredBy!],
         memberRecipients.emailRecipients
       );
 
@@ -731,7 +688,7 @@ export class NotificationSpaceAdapter {
     // Send in-app notifications
     const memberInAppRecipientsWithoutAdmins =
       this.removeAdminRecipientsFromMembersRecipients(
-        adminRecipients.inAppRecipients,
+        [memberRecipients.triggeredBy!],
         memberRecipients.inAppRecipients
       );
     const inAppReceiverIDs = memberInAppRecipientsWithoutAdmins.map(

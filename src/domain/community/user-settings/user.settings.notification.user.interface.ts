@@ -1,50 +1,51 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IUserSettingsNotificationChannels } from './user.settings.notification.channels.interface';
 
 @ObjectType('UserSettingsNotificationUser')
 export abstract class IUserSettingsNotificationUser {
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when I join a Space',
   })
-  spaceCommunityJoined!: boolean;
+  spaceCommunityJoined!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when an application for a Space is submitted',
   })
-  spaceCommunityApplicationSubmitted!: boolean;
+  spaceCommunityApplicationSubmitted!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when I am invited to join a Space community',
   })
-  spaceCommunityInvitationReceived!: boolean;
+  spaceCommunityInvitationReceived!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive notification when I receive a direct message.',
   })
-  messageReceived!: boolean;
+  messageReceived!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive notification I send a message to a User, Organization or Space.',
   })
-  messageSent!: boolean;
+  messageSent!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification you are mentioned',
   })
-  mentioned!: boolean;
+  mentioned!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when someone replies to a comment I made.',
   })
-  commentReply!: boolean;
+  commentReply!: IUserSettingsNotificationChannels;
 }

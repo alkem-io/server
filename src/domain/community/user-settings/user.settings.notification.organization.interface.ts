@@ -1,18 +1,19 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IUserSettingsNotificationChannels } from './user.settings.notification.channels.interface';
 
 @ObjectType('UserSettingsNotificationOrganization')
 export abstract class IUserSettingsNotificationOrganization {
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive notification when the organization you are admin of is messaged',
   })
-  adminMessageReceived!: boolean;
+  adminMessageReceived!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when the organization you are admin of is mentioned',
   })
-  adminMentioned!: boolean;
+  adminMentioned!: IUserSettingsNotificationChannels;
 }

@@ -1,55 +1,56 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsBoolean } from 'class-validator';
+import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
 
 @InputType()
 export class CreateUserSettingsNotificationUserInput {
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive notification when I receive a message.',
   })
   @IsBoolean()
-  messageReceived!: boolean;
+  messageReceived!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive notification I send a message.',
   })
   @IsBoolean()
-  messageSent!: boolean;
+  messageSent!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification you are mentioned',
   })
   @IsBoolean()
-  mentioned!: boolean;
+  mentioned!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description:
       'Receive a notification when someone replies to a comment I made.',
   })
   @IsBoolean()
-  commentReply!: boolean;
+  commentReply!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification when an application is submitted',
   })
   @IsBoolean()
-  spaceCommunityApplicationSubmitted!: boolean;
+  spaceCommunityApplicationSubmitted!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification for community invitation',
   })
   @IsBoolean()
-  spaceCommunityInvitation!: boolean;
+  spaceCommunityInvitation!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification when I join a new community',
   })
   @IsBoolean()
-  spaceCommunityJoined!: boolean;
+  spaceCommunityJoined!: CreateUserSettingsNotificationChannelsInput;
 }

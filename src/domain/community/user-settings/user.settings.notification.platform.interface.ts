@@ -1,43 +1,44 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IUserSettingsNotificationChannels } from './user.settings.notification.channels.interface';
 
 @ObjectType('UserSettingsNotificationPlatform')
 export abstract class IUserSettingsNotificationPlatform {
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when a new Discussion is created in the Forum',
   })
-  forumDiscussionCreated!: boolean;
+  forumDiscussionCreated!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when a new comment is added to a Discussion I created in the Forum',
   })
-  forumDiscussionComment!: boolean;
+  forumDiscussionComment!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive notification when a new user signs up',
   })
-  userProfileCreated!: boolean;
+  userProfileCreated!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when a user profile is removed',
   })
-  userProfileRemoved!: boolean;
+  userProfileRemoved!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when a user global role is assigned or removed.',
   })
-  userGlobalRoleChange!: boolean;
+  userGlobalRoleChange!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when a new L0 Space is created',
   })
-  spaceCreated!: boolean;
+  spaceCreated!: IUserSettingsNotificationChannels;
 }

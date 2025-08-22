@@ -55,23 +55,33 @@ export class UserSettingsService {
     const notificationPlatformData = updateData.notification?.platform;
     if (notificationPlatformData) {
       if (notificationPlatformData.forumDiscussionComment !== undefined) {
-        settings.notification.platform.forumDiscussionComment =
+        settings.notification.platform.forumDiscussionComment.email =
+          notificationPlatformData.forumDiscussionComment;
+        settings.notification.platform.forumDiscussionComment.inApp =
           notificationPlatformData.forumDiscussionComment;
       }
       if (notificationPlatformData.forumDiscussionCreated !== undefined) {
-        settings.notification.platform.forumDiscussionCreated =
+        settings.notification.platform.forumDiscussionCreated.email =
+          notificationPlatformData.forumDiscussionCreated;
+        settings.notification.platform.forumDiscussionCreated.inApp =
           notificationPlatformData.forumDiscussionCreated;
       }
       if (notificationPlatformData.adminUserProfileRemoved !== undefined) {
-        settings.notification.platform.userProfileRemoved =
+        settings.notification.platform.userProfileRemoved.email =
+          notificationPlatformData.adminUserProfileRemoved;
+        settings.notification.platform.userProfileRemoved.inApp =
           notificationPlatformData.adminUserProfileRemoved;
       }
       if (notificationPlatformData.adminUserProfileCreated !== undefined) {
-        settings.notification.platform.userProfileCreated =
+        settings.notification.platform.userProfileCreated.email =
+          notificationPlatformData.adminUserProfileCreated;
+        settings.notification.platform.userProfileCreated.inApp =
           notificationPlatformData.adminUserProfileCreated;
       }
       if (notificationPlatformData.adminSpaceCreated !== undefined) {
-        settings.notification.platform.spaceCreated =
+        settings.notification.platform.spaceCreated.email =
+          notificationPlatformData.adminSpaceCreated;
+        settings.notification.platform.spaceCreated.inApp =
           notificationPlatformData.adminSpaceCreated;
       }
     }
@@ -79,11 +89,15 @@ export class UserSettingsService {
     const notificationOrganizationData = updateData.notification?.organization;
     if (notificationOrganizationData) {
       if (notificationOrganizationData.adminMentioned !== undefined) {
-        settings.notification.organization.adminMentioned =
+        settings.notification.organization.adminMentioned.email =
+          notificationOrganizationData.adminMentioned;
+        settings.notification.organization.adminMentioned.inApp =
           notificationOrganizationData.adminMentioned;
       }
       if (notificationOrganizationData.adminMessageReceived !== undefined) {
-        settings.notification.organization.adminMessageReceived =
+        settings.notification.organization.adminMessageReceived.email =
+          notificationOrganizationData.adminMessageReceived;
+        settings.notification.organization.adminMessageReceived.inApp =
           notificationOrganizationData.adminMessageReceived;
       }
     }
@@ -93,47 +107,65 @@ export class UserSettingsService {
       if (
         notificationSpaceData.adminCommunityApplicationReceived !== undefined
       ) {
-        settings.notification.space.adminCommunityApplicationReceived =
+        settings.notification.space.adminCommunityApplicationReceived.email =
+          notificationSpaceData.adminCommunityApplicationReceived;
+        settings.notification.space.adminCommunityApplicationReceived.inApp =
           notificationSpaceData.adminCommunityApplicationReceived;
       }
       if (notificationSpaceData.adminCommunityNewMember !== undefined) {
-        settings.notification.space.adminCommunityNewMember =
+        settings.notification.space.adminCommunityNewMember.email =
+          notificationSpaceData.adminCommunityNewMember;
+        settings.notification.space.adminCommunityNewMember.inApp =
           notificationSpaceData.adminCommunityNewMember;
       }
       if (notificationSpaceData.adminCommunicationMessage !== undefined) {
-        settings.notification.space.adminCommunicationMessageReceived =
+        settings.notification.space.adminCommunicationMessageReceived.email =
+          notificationSpaceData.adminCommunicationMessage;
+        settings.notification.space.adminCommunicationMessageReceived.inApp =
           notificationSpaceData.adminCommunicationMessage;
       }
       if (
         notificationSpaceData.adminCollaborationCalloutContribution !==
         undefined
       ) {
-        settings.notification.space.adminCollaborationContributionCreated =
+        settings.notification.space.adminCollaborationContributionCreated.email =
+          notificationSpaceData.adminCollaborationCalloutContribution;
+        settings.notification.space.adminCollaborationContributionCreated.inApp =
           notificationSpaceData.adminCollaborationCalloutContribution;
       }
       if (notificationSpaceData.communicationUpdates !== undefined) {
-        settings.notification.space.communicationUpdates =
+        settings.notification.space.communicationUpdates.email =
+          notificationSpaceData.communicationUpdates;
+        settings.notification.space.communicationUpdates.inApp =
           notificationSpaceData.communicationUpdates;
       }
       if (
         notificationSpaceData.collaborationContributionCreated !== undefined
       ) {
-        settings.notification.space.collaborationCalloutContributionCreated =
+        settings.notification.space.collaborationCalloutContributionCreated.email =
+          notificationSpaceData.collaborationContributionCreated;
+        settings.notification.space.collaborationCalloutContributionCreated.inApp =
           notificationSpaceData.collaborationContributionCreated;
       }
       if (
         notificationSpaceData.collaborationCalloutContributionComment !==
         undefined
       ) {
-        settings.notification.space.collaborationCalloutContributionComment =
+        settings.notification.space.collaborationCalloutContributionComment.email =
+          notificationSpaceData.collaborationCalloutContributionComment;
+        settings.notification.space.collaborationCalloutContributionComment.inApp =
           notificationSpaceData.collaborationCalloutContributionComment;
       }
       if (notificationSpaceData.collaborationCalloutComment !== undefined) {
-        settings.notification.space.collaborationCalloutComment =
+        settings.notification.space.collaborationCalloutComment.email =
+          notificationSpaceData.collaborationCalloutComment;
+        settings.notification.space.collaborationCalloutComment.inApp =
           notificationSpaceData.collaborationCalloutComment;
       }
       if (notificationSpaceData.collaborationCalloutPublished !== undefined) {
-        settings.notification.space.collaborationCalloutPublished =
+        settings.notification.space.collaborationCalloutPublished.email =
+          notificationSpaceData.collaborationCalloutPublished;
+        settings.notification.space.collaborationCalloutPublished.inApp =
           notificationSpaceData.collaborationCalloutPublished;
       }
     }
@@ -141,32 +173,47 @@ export class UserSettingsService {
     const notificationUserData = updateData.notification?.user;
     if (notificationUserData) {
       if (notificationUserData.messageReceived !== undefined) {
-        settings.notification.user.messageReceived =
+        settings.notification.user.messageReceived.email =
+          notificationUserData.messageReceived;
+        settings.notification.user.messageReceived.inApp =
           notificationUserData.messageReceived;
       }
       if (notificationUserData.messageSent !== undefined) {
-        settings.notification.user.messageSent =
+        settings.notification.user.messageSent.email =
+          notificationUserData.messageSent;
+        settings.notification.user.messageSent.inApp =
           notificationUserData.messageSent;
       }
       if (notificationUserData.mentioned !== undefined) {
-        settings.notification.user.mentioned = notificationUserData.mentioned;
+        settings.notification.user.mentioned.email =
+          notificationUserData.mentioned;
+        settings.notification.user.mentioned.inApp =
+          notificationUserData.mentioned;
       }
       if (notificationUserData.commentReply !== undefined) {
-        settings.notification.user.commentReply =
+        settings.notification.user.commentReply.email =
+          notificationUserData.commentReply;
+        settings.notification.user.commentReply.inApp =
           notificationUserData.commentReply;
       }
       if (
         notificationUserData.spaceCommunityApplicationSubmitted !== undefined
       ) {
-        settings.notification.user.spaceCommunityApplicationSubmitted =
+        settings.notification.user.spaceCommunityApplicationSubmitted.email =
+          notificationUserData.spaceCommunityApplicationSubmitted;
+        settings.notification.user.spaceCommunityApplicationSubmitted.inApp =
           notificationUserData.spaceCommunityApplicationSubmitted;
       }
       if (notificationUserData.spaceCommunityInvitation !== undefined) {
-        settings.notification.user.spaceCommunityInvitationReceived =
+        settings.notification.user.spaceCommunityInvitationReceived.email =
+          notificationUserData.spaceCommunityInvitation;
+        settings.notification.user.spaceCommunityInvitationReceived.inApp =
           notificationUserData.spaceCommunityInvitation;
       }
       if (notificationUserData.spaceCommunityJoined !== undefined) {
-        settings.notification.user.spaceCommunityJoined =
+        settings.notification.user.spaceCommunityJoined.email =
+          notificationUserData.spaceCommunityJoined;
+        settings.notification.user.spaceCommunityJoined.inApp =
           notificationUserData.spaceCommunityJoined;
       }
     }
@@ -174,7 +221,9 @@ export class UserSettingsService {
     const notificationVcData = updateData.notification?.virtualContributor;
     if (notificationVcData) {
       if (notificationVcData.adminSpaceCommunityInvitation !== undefined) {
-        settings.notification.virtualContributor.adminSpaceCommunityInvitation =
+        settings.notification.virtualContributor.adminSpaceCommunityInvitation.email =
+          notificationVcData.adminSpaceCommunityInvitation;
+        settings.notification.virtualContributor.adminSpaceCommunityInvitation.inApp =
           notificationVcData.adminSpaceCommunityInvitation;
       }
     }

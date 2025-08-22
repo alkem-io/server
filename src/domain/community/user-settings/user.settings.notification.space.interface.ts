@@ -1,62 +1,63 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IUserSettingsNotificationChannels } from './user.settings.notification.channels.interface';
 
 @ObjectType('UserSettingsNotificationSpace')
 export abstract class IUserSettingsNotificationSpace {
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when a new member joins the community (admin)',
   })
-  adminCommunityNewMember!: boolean;
+  adminCommunityNewMember!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when an application is received',
   })
-  adminCommunityApplicationReceived!: boolean;
+  adminCommunityApplicationReceived!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when a message is sent to a Space I lead',
   })
-  adminCommunicationMessageReceived!: boolean;
+  adminCommunicationMessageReceived!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when a contribution is created (admin)',
   })
-  adminCollaborationContributionCreated!: boolean;
+  adminCollaborationContributionCreated!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification for community updates',
   })
-  communicationUpdates!: boolean;
+  communicationUpdates!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when a callout is published',
   })
-  collaborationCalloutPublished!: boolean;
+  collaborationCalloutPublished!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when a comment is made on a Callout',
   })
-  collaborationCalloutComment!: boolean;
+  collaborationCalloutComment!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification when a contribution is created',
   })
-  collaborationCalloutContributionCreated!: boolean;
+  collaborationCalloutContributionCreated!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when a comment is created on a contribution',
   })
-  collaborationCalloutContributionComment!: boolean;
+  collaborationCalloutContributionComment!: IUserSettingsNotificationChannels;
 }
