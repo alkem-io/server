@@ -36,8 +36,8 @@ export const userSettingsData: { userSettings: IUserSettings } = {
         spaceCreated: true,
       },
       organization: {
-        mentioned: true,
-        messageReceived: true,
+        adminMentioned: true,
+        adminMessageReceived: true,
       },
       user: {
         commentReply: true,

@@ -196,9 +196,9 @@ export class NotificationRecipientsService {
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
         return notificationSettings.platform.spaceCreated;
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
-        return notificationSettings.organization.messageReceived;
+        return notificationSettings.organization.adminMessageReceived;
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
-        return notificationSettings.organization.mentioned;
+        return notificationSettings.organization.adminMentioned;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
       case NotificationEvent.USER_MENTION:

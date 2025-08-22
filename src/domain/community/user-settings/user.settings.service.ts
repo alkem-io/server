@@ -62,89 +62,79 @@ export class UserSettingsService {
         settings.notification.platform.forumDiscussionCreated =
           notificationPlatformData.forumDiscussionCreated;
       }
-      if (notificationPlatformData.userProfileRemoved !== undefined) {
+      if (notificationPlatformData.adminUserProfileRemoved !== undefined) {
         settings.notification.platform.userProfileRemoved =
-          notificationPlatformData.userProfileRemoved;
+          notificationPlatformData.adminUserProfileRemoved;
       }
-      if (notificationPlatformData.newUserSignUp !== undefined) {
+      if (notificationPlatformData.adminUserProfileCreated !== undefined) {
         settings.notification.platform.userProfileCreated =
-          notificationPlatformData.newUserSignUp;
+          notificationPlatformData.adminUserProfileCreated;
       }
-      if (notificationPlatformData.spaceCreated !== undefined) {
+      if (notificationPlatformData.adminSpaceCreated !== undefined) {
         settings.notification.platform.spaceCreated =
-          notificationPlatformData.spaceCreated;
+          notificationPlatformData.adminSpaceCreated;
       }
     }
 
     const notificationOrganizationData = updateData.notification?.organization;
     if (notificationOrganizationData) {
-      if (notificationOrganizationData.mentioned !== undefined) {
-        settings.notification.organization.mentioned =
-          notificationOrganizationData.mentioned;
+      if (notificationOrganizationData.adminMentioned !== undefined) {
+        settings.notification.organization.adminMentioned =
+          notificationOrganizationData.adminMentioned;
       }
-      if (notificationOrganizationData.messageReceived !== undefined) {
-        settings.notification.organization.messageReceived =
-          notificationOrganizationData.messageReceived;
+      if (notificationOrganizationData.adminMessageReceived !== undefined) {
+        settings.notification.organization.adminMessageReceived =
+          notificationOrganizationData.adminMessageReceived;
       }
     }
 
     const notificationSpaceData = updateData.notification?.space;
     if (notificationSpaceData) {
-      if (notificationSpaceData.communityApplicationReceived !== undefined) {
+      if (
+        notificationSpaceData.adminCommunityApplicationReceived !== undefined
+      ) {
         settings.notification.space.adminCommunityApplicationReceived =
-          notificationSpaceData.communityApplicationReceived;
+          notificationSpaceData.adminCommunityApplicationReceived;
       }
-      if (notificationSpaceData.communityApplicationSubmitted !== undefined) {
-        settings.notification.space.communityApplicationSubmitted =
-          notificationSpaceData.communityApplicationSubmitted;
+      if (notificationSpaceData.adminCommunityNewMember !== undefined) {
+        settings.notification.space.adminCommunityNewMember =
+          notificationSpaceData.adminCommunityNewMember;
+      }
+      if (notificationSpaceData.adminCommunicationMessage !== undefined) {
+        settings.notification.space.adminCommunicationMessageReceived =
+          notificationSpaceData.adminCommunicationMessage;
+      }
+      if (
+        notificationSpaceData.adminCollaborationCalloutContribution !==
+        undefined
+      ) {
+        settings.notification.space.adminCollaborationContributionCreated =
+          notificationSpaceData.adminCollaborationCalloutContribution;
       }
       if (notificationSpaceData.communicationUpdates !== undefined) {
         settings.notification.space.communicationUpdates =
           notificationSpaceData.communicationUpdates;
       }
-      if (notificationSpaceData.communicationUpdatesAdmin !== undefined) {
-        settings.notification.space.communicationUpdatesAdmin =
-          notificationSpaceData.communicationUpdatesAdmin;
-      }
-      if (notificationSpaceData.communityNewMember !== undefined) {
-        settings.notification.space.communityNewMember =
-          notificationSpaceData.communityNewMember;
-      }
-      if (notificationSpaceData.communityNewMemberAdmin !== undefined) {
-        settings.notification.space.adminCommunityNewMember =
-          notificationSpaceData.communityNewMemberAdmin;
-      }
-      if (notificationSpaceData.communityInvitationUser !== undefined) {
-        settings.notification.space.communityInvitationUser =
-          notificationSpaceData.communityInvitationUser;
-      }
-      if (notificationSpaceData.collaborationPostCreatedAdmin !== undefined) {
-        settings.notification.space.adminCollaborationContributionCreated =
-          notificationSpaceData.collaborationPostCreatedAdmin;
-      }
-      if (notificationSpaceData.collaborationPostCreated !== undefined) {
+      if (
+        notificationSpaceData.collaborationContributionCreated !== undefined
+      ) {
         settings.notification.space.collaborationCalloutContributionCreated =
-          notificationSpaceData.collaborationPostCreated;
+          notificationSpaceData.collaborationContributionCreated;
       }
-      if (notificationSpaceData.collaborationPostCommentCreated !== undefined) {
+      if (
+        notificationSpaceData.collaborationCalloutContributionComment !==
+        undefined
+      ) {
         settings.notification.space.collaborationCalloutContributionComment =
-          notificationSpaceData.collaborationPostCommentCreated;
+          notificationSpaceData.collaborationCalloutContributionComment;
       }
-      if (notificationSpaceData.collaborationWhiteboardCreated !== undefined) {
+      if (notificationSpaceData.collaborationCalloutComment !== undefined) {
         settings.notification.space.collaborationCalloutComment =
-          notificationSpaceData.collaborationWhiteboardCreated;
+          notificationSpaceData.collaborationCalloutComment;
       }
       if (notificationSpaceData.collaborationCalloutPublished !== undefined) {
         settings.notification.space.collaborationCalloutPublished =
           notificationSpaceData.collaborationCalloutPublished;
-      }
-      if (notificationSpaceData.communicationMessage !== undefined) {
-        settings.notification.space.communicationMessage =
-          notificationSpaceData.communicationMessage;
-      }
-      if (notificationSpaceData.communicationMessageAdmin !== undefined) {
-        settings.notification.space.communicationMessageAdmin =
-          notificationSpaceData.communicationMessageAdmin;
       }
     }
 
@@ -165,7 +155,30 @@ export class UserSettingsService {
         settings.notification.user.commentReply =
           notificationUserData.commentReply;
       }
+      if (
+        notificationUserData.spaceCommunityApplicationSubmitted !== undefined
+      ) {
+        settings.notification.user.spaceCommunityApplicationSubmitted =
+          notificationUserData.spaceCommunityApplicationSubmitted;
+      }
+      if (notificationUserData.spaceCommunityInvitation !== undefined) {
+        settings.notification.user.spaceCommunityInvitationReceived =
+          notificationUserData.spaceCommunityInvitation;
+      }
+      if (notificationUserData.spaceCommunityJoined !== undefined) {
+        settings.notification.user.spaceCommunityJoined =
+          notificationUserData.spaceCommunityJoined;
+      }
     }
+
+    const notificationVcData = updateData.notification?.virtualContributor;
+    if (notificationVcData) {
+      if (notificationVcData.adminSpaceCommunityInvitation !== undefined) {
+        settings.notification.virtualContributor.adminSpaceCommunityInvitation =
+          notificationVcData.adminSpaceCommunityInvitation;
+      }
+    }
+
     return settings;
   }
 

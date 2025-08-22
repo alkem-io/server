@@ -24,7 +24,7 @@ export class UpdateUserSettingsNotificationPlatformInput {
     description: '[Admin] Receive notification when a new user signs up',
   })
   @IsBoolean()
-  newUserSignUp?: boolean;
+  adminUserProfileCreated?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,
@@ -32,7 +32,7 @@ export class UpdateUserSettingsNotificationPlatformInput {
       '[Admin] Receive a notification when a user profile is removed',
   })
   @IsBoolean()
-  userProfileRemoved?: boolean;
+  adminUserProfileRemoved?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,
@@ -40,5 +40,13 @@ export class UpdateUserSettingsNotificationPlatformInput {
       '[Admin] Receive a notification when a new L0 Space is created',
   })
   @IsBoolean()
-  spaceCreated?: boolean;
+  adminSpaceCreated?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      '[Admin] Receive a notification user is assigned or removed from a global role',
+  })
+  @IsBoolean()
+  adminGlobalRoleChanged?: boolean;
 }

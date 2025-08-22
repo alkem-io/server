@@ -236,15 +236,15 @@ export class UserService {
       },
       notification: {
         organization: {
-          messageReceived: true,
-          mentioned: true,
+          adminMessageReceived: true,
+          adminMentioned: true,
         },
         platform: {
           forumDiscussionCreated: false,
           forumDiscussionComment: true,
-          newUserSignUp: true,
-          userProfileRemoved: true,
-          spaceCreated: true,
+          adminUserProfileCreated: true,
+          adminUserProfileRemoved: true,
+          adminSpaceCreated: true,
         },
         space: {
           adminCommunityApplicationReceived: true,

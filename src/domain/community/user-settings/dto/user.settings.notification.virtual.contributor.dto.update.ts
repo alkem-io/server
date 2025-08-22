@@ -7,5 +7,5 @@ export class UpdateUserSettingsNotificationVirtualContributorInput {
     description:
       'Receive notification when a Virtual Contributor receives an invitation to join a Space.',
   })
-  invitedToSpace?: boolean;
+  adminSpaceCommunityInvitation?: boolean;
 }

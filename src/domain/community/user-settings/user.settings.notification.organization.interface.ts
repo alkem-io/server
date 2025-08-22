@@ -7,12 +7,12 @@ export abstract class IUserSettingsNotificationOrganization {
     description:
       'Receive notification when the organization you are admin of is messaged',
   })
-  messageReceived!: boolean;
+  adminMessageReceived!: boolean;
 
   @Field(() => Boolean, {
     nullable: false,
     description:
       'Receive a notification when the organization you are admin of is mentioned',
   })
-  mentioned!: boolean;
+  adminMentioned!: boolean;
 }
