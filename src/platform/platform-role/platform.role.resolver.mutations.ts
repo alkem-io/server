@@ -96,6 +96,13 @@ export class PlatformRoleResolverMutations {
       await this.resetLicenseForUserAccount(user);
     }
 
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.ADDED,
+      roleData.role
+    );
+
     return await this.userLookupService.getUserOrFail(roleData.contributorID);
   }
 

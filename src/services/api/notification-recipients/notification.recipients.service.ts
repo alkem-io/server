@@ -283,6 +283,7 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
+      case NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE:
       case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getGlobalAdminCriteria();
@@ -416,8 +417,8 @@ export class NotificationRecipientsService {
     virtualContributorID?: string
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
+      case NotificationEvent.PLATFORM_GLOBAL_ROLE_CHANGE:
       case NotificationEvent.PLATFORM_SPACE_CREATED:
-      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
       case NotificationEvent.PLATFORM_USER_PROFILE_CREATED_ADMIN:
       case NotificationEvent.PLATFORM_USER_PROFILE_REMOVED: {
         // get the platform authorization policy
@@ -472,6 +473,7 @@ export class NotificationRecipientsService {
         return space.authorization;
       }
 
+      case NotificationEvent.PLATFORM_USER_PROFILE_CREATED:
       case NotificationEvent.USER_MESSAGE_RECIPIENT:
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.USER_COMMENT_REPLY:
@@ -523,7 +525,7 @@ export class NotificationRecipientsService {
         // For other events, no specific authorization policy is needed
         // or the event does not require a specific policy
         throw new NotificationEventException(
-          `No authorization policy needed for event type: ${eventType}`,
+          `Unrecognized event when retrieving authorization policy for recipients: ${eventType}`,
           LogContext.NOTIFICATIONS
         );
     }
