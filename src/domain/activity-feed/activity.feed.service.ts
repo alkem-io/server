@@ -265,7 +265,7 @@ export class ActivityFeedService {
       } catch {
         this.logger?.warn(
           {
-            mesage: 'User is not able to read collaboration',
+            message: 'User is not able to read collaboration',
             userID: agentInfo.userID,
             collaborationID: collaboration.id,
           },
@@ -282,7 +282,7 @@ export class ActivityFeedService {
       } catch {
         this.logger?.warn(
           {
-            mesage:
+            message:
               'User is not able to read childCollaborations for collaboration',
             userID: agentInfo.userID,
             collaborationID: collaboration.id,
