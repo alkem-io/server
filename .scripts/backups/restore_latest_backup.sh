@@ -67,13 +67,16 @@ check_and_install_dependencies() {
 configure_aws_cli() {
     AWS_CONFIG_FILE=~/.aws/config
 
+    # Determine region based on environment (will be set later)
+    local region="$1"
+
     if [[ -f "$AWS_CONFIG_FILE" ]]; then
         echo "Existing AWS configuration found."
         read -p "Do you want to overwrite the current AWS configuration? (y/n) " choice
         case "$choice" in
             y|Y )
                 echo "Overwriting AWS CLI configuration..."
-                configure_aws_settings
+                configure_aws_settings "$region"
                 ;;
             n|N )
                 echo "Keeping the existing AWS CLI configuration."
@@ -85,37 +88,38 @@ configure_aws_cli() {
         esac
     else
         echo "No existing AWS CLI configuration found. Configuring AWS CLI."
-        configure_aws_settings
+        configure_aws_settings "$region"
     fi
 }
 
 # Function to set AWS configuration
 configure_aws_settings() {
+    local region="$1"
+    local service_name="scw-$region"
+    local endpoint_url="https://s3.$region.scw.cloud"
+
     mkdir -p ~/.aws
     cat > ~/.aws/config << EOL
 [default]
-region = nl-ams
+region = $region
 output = json
-services = scw-nl-ams
+services = $service_name
 
-[services scw-nl-ams]
+[services $service_name]
 s3 =
-  endpoint_url = https://s3.nl-ams.scw.cloud
+  endpoint_url = $endpoint_url
   max_concurrent_requests = 100
   max_queue_size = 1000
   multipart_threshold = 50 MB
   multipart_chunksize = 10 MB
 s3api =
-  endpoint_url = https://s3.nl-ams.scw.cloud
+  endpoint_url = $endpoint_url
 EOL
-    echo "AWS CLI configuration updated successfully."
+    echo "AWS CLI configuration updated successfully for region: $region"
 }
 
 # Call the dependency check function
 check_and_install_dependencies
-
-# Call the AWS configuration function
-configure_aws_cli
 
 # The storage is the first argument passed to the script. Default to 'mysql' if not provided.
 STORAGE=${1:-mysql}
@@ -135,9 +139,19 @@ if [[ "$ENV" != "acc" && "$ENV" != "dev" && "$ENV" != "sandbox" && "$ENV" != "pr
     exit 1
 fi
 
+# Determine the region based on the environment
+if [[ "$ENV" == "prod" ]]; then
+    REGION="fr-par"
+else
+    REGION="nl-ams"
+fi
+
+# Call the AWS configuration function with the appropriate region
+configure_aws_cli "$REGION"
+
 # Determine the S3 bucket and path based on the environment
 if [[ "$ENV" == "prod" ]]; then
-    S3_BUCKET="alkemio-s3-backups-prod"
+    S3_BUCKET="alkemio-s3-backups-prod-paris"
     S3_PATH="s3://$S3_BUCKET/storage/$STORAGE/backups/"
 else
     S3_BUCKET="alkemio-s3-backups-dev"
@@ -145,6 +159,7 @@ else
 fi
 
 echo "Using S3 bucket: $S3_BUCKET"
+echo "Using region: $REGION"
 echo "Using S3 path: $S3_PATH"
 
 # Source environment variables from .env file
