@@ -1,4 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
+import { IsBoolean } from 'class-validator';
 
 @InputType()
 export class UpdateUserSettingsNotificationUserInput {
@@ -10,7 +11,8 @@ export class UpdateUserSettingsNotificationUserInput {
 
   @Field(() => Boolean, {
     nullable: true,
-    description: 'Receive notification I send a message.',
+    description:
+      'Receive notification I send a message to a User, Organization or Space.',
   })
   messageSent?: boolean;
 
@@ -26,4 +28,25 @@ export class UpdateUserSettingsNotificationUserInput {
       'Receive a notification when someone replies to a comment I made.',
   })
   commentReply?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Receive a notification when an application is submitted',
+  })
+  @IsBoolean()
+  spaceCommunityApplicationSubmitted?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Receive a notification for community invitation',
+  })
+  @IsBoolean()
+  spaceCommunityInvitation?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Receive a notification when I join a new community',
+  })
+  @IsBoolean()
+  spaceCommunityJoined?: boolean;
 }
