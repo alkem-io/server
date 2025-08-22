@@ -1,5 +1,5 @@
 import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver, Mutation } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MemoService } from './memo.service';
