@@ -304,9 +304,20 @@ export class AiServerService {
       }
     }
     if (includeEntityContents) {
-      const entity = await this.roomControllerService.getRoomEntityOrFail(
-        roomDetails.roomID
-      );
+      let entity = null;
+      try {
+        entity = await this.roomControllerService.getRoomEntityOrFail(
+          roomDetails.roomID
+        );
+      } catch (error: any) {
+        this.logger?.error(
+          { message: 'Error getting post/callout for room', error },
+          error.stack,
+          LogContext.AI_SERVER
+        );
+        return messages;
+      }
+
       let entityContent: string | undefined = '';
       if (entity instanceof Callout) {
         entityContent = entity?.framing?.profile?.description;

@@ -24,6 +24,14 @@ export class RoomControllerService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Retrieves the Callout or Post entity associated with the given room ID.
+   * Throws EntityNotFoundException if neither entity is found.
+   *
+   * @param {string} roomID - The unique identifier of the room.
+   * @returns {Promise<Callout | Post>} The associated Callout or Post entity.
+   * @throws {EntityNotFoundException} If the room does not have a callout or post.
+   */
   public async getRoomEntityOrFail(roomID: string): Promise<Callout | Post> {
     const room = await this.roomLookupService.getRoomOrFail(roomID, {
       relations: {
@@ -33,16 +41,12 @@ export class RoomControllerService {
     });
     const entity = room.callout || room.post;
     if (!entity) {
-      this.logger.error(
-        `Room with ID ${roomID} does not have a callout or post.`,
-        LogContext.COMMUNICATION
-      );
       throw new EntityNotFoundException(
-        `Room with ID ${roomID} does not have a callout or post.`,
-        LogContext.COMMUNICATION
+        'Room with ID does not have a callout or post.',
+        LogContext.COMMUNICATION,
+        { roomID }
       );
     }
-
     return entity;
   }
 
