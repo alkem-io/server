@@ -17,11 +17,12 @@ import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activi
 import { IProfile } from '@domain/common/profile';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
-import { NotificationInputPostComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.post.comment';
+import { NotificationInputCalloutPostContributionComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.update.sent';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -30,6 +31,7 @@ export class RoomServiceEvents {
     private contributionReporter: ContributionReporterService,
     private notificationSpaceAdapter: NotificationSpaceAdapter,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
+    private notificationUserAdapter: NotificationUserAdapter,
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -58,7 +60,7 @@ export class RoomServiceEvents {
       },
       commentType: room.type as RoomType,
     };
-    await this.notificationAdapter.userCommentReply(notificationInput);
+    await this.notificationUserAdapter.userCommentReply(notificationInput);
   }
 
   public async processNotificationPostComment(
@@ -68,10 +70,10 @@ export class RoomServiceEvents {
     agentInfo: AgentInfo
   ) {
     // Send the notification
-    const notificationInput: NotificationInputPostComment = {
+    const notificationInput: NotificationInputCalloutPostContributionComment = {
       triggeredBy: agentInfo.userID,
-      post: post,
-      room: room,
+      post,
+      room,
       commentSent: message,
     };
     await this.notificationSpaceAdapter.spaceCollaborationCalloutContributionComment(

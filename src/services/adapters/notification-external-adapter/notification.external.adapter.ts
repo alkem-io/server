@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -49,11 +52,10 @@ import { RoleSetContributorType } from '@common/enums/role.set.contributor.type'
 import { ISpace } from '@domain/space/space/space.interface';
 import { UserPayload } from '@alkemio/notifications-lib/dist/dto/user.payload';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { NotificationInputPostCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.post.created';
-import { NotificationInputWhiteboardCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.whiteboard.created';
-import { NotificationInputPostComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.post.comment';
+import { NotificationInputCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { NotificationInputCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 
 @Injectable()
 export class NotificationExternalAdapter {
@@ -197,10 +199,19 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    eventData: NotificationInputPostCreated
+    eventData: NotificationInputCalloutContributionCreated
   ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const callout = eventData.callout;
-    const post = eventData.post;
+    const post = eventData.contribution.post;
+    if (!post) {
+      throw new RelationshipNotFoundException(
+        'Post not found',
+        LogContext.NOTIFICATIONS,
+        {
+          contribution: eventData.contribution.id,
+        }
+      );
+    }
 
     const spacePayload = await this.buildSpacePayload(
       eventType,
@@ -242,10 +253,20 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    eventData: NotificationInputWhiteboardCreated
+    eventData: NotificationInputCalloutContributionCreated
   ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const callout = eventData.callout;
-    const whiteboard = eventData.whiteboard;
+    const whiteboard = eventData.contribution.whiteboard;
+
+    if (!whiteboard) {
+      throw new RelationshipNotFoundException(
+        'Whiteboard not found',
+        LogContext.NOTIFICATIONS,
+        {
+          contribution: eventData.contribution.id,
+        }
+      );
+    }
 
     const spacePayload = await this.buildSpacePayload(
       eventType,
@@ -274,7 +295,7 @@ export class NotificationExternalAdapter {
           url: calloutURL,
         },
         contribution: {
-          id: eventData.whiteboard.id,
+          id: whiteboard.id,
           type: CalloutContributionType.WHITEBOARD,
           createdBy: whiteboardCreator,
           displayName: whiteboard.profile.displayName,
@@ -326,7 +347,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    eventData: NotificationInputPostComment
+    eventData: NotificationInputCalloutPostContributionComment
   ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const post = eventData.post;
     const callout =

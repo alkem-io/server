@@ -10,10 +10,9 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
-import { NotificationInputPostCreated } from './dto/space/notification.dto.input.space.collaboration.post.created';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
-import { NotificationInputPostComment } from './dto/space/notification.dto.input.space.collaboration.post.comment';
+import { NotificationInputCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.space.communication.update.sent';
 import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
 import { NotificationAdapter } from './notification.adapter';
@@ -23,10 +22,9 @@ import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
-import { InAppNotificationPayloadSpaceCollaborationPost } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post';
-import { InAppNotificationPayloadSpaceCollaborationPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.post.comment';
 import { NotificationUserAdapter } from './notification.user.adapter';
 import { NotificationInputUserMessage } from './dto/user/notification.dto.input.user.message';
+import { NotificationInputCalloutContributionCreated } from './dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(
@@ -92,7 +90,7 @@ export class NotificationSpaceAdapter {
   }
 
   public async spaceCollaborationCalloutContributionCreated(
-    eventData: NotificationInputPostCreated
+    eventData: NotificationInputCalloutContributionCreated
   ): Promise<void> {
     const event = NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION;
 
@@ -128,11 +126,11 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPost = {
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
         type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
         spaceID: space.id,
         calloutID: eventData.callout.id,
-        postID: eventData.post.id,
+        contributionID: eventData.contribution.id,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -171,12 +169,12 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationPayloadSpaceCollaborationPost =
+      const adminInAppPayload: InAppNotificationPayloadSpaceCollaborationCallout =
         {
           type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
           spaceID: space.id,
           calloutID: eventData.callout.id,
-          postID: eventData.post.id,
+          contributionID: eventData.contribution.id,
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -370,7 +368,7 @@ export class NotificationSpaceAdapter {
   }
 
   public async spaceCollaborationCalloutContributionComment(
-    eventData: NotificationInputPostComment
+    eventData: NotificationInputCalloutPostContributionComment
   ): Promise<void> {
     const event =
       NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT;
@@ -406,14 +404,13 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPostComment =
-        {
-          type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
-          spaceID: space.id,
-          postID: eventData.post.id,
-          calloutID: 'unknown', // Would need to get from post or context
-          messageID: eventData.commentSent.id,
-        };
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
+        type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
+        spaceID: space.id,
+        contributionID: eventData.post.id,
+        calloutID: 'unknown', // Would need to get from post or context
+        messageID: eventData.commentSent.id,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT,

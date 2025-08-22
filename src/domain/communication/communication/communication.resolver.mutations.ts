@@ -15,7 +15,8 @@ import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communicati
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationInputCommunicationLeadsMessage } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.leads.message';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -23,7 +24,8 @@ export class CommunicationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private notificationAdapterSpace: NotificationSpaceAdapter,
-    private notificationAdapter: NotificationAdapter,
+    private notificationUserAdapter: NotificationUserAdapter,
+    private notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -48,7 +50,7 @@ export class CommunicationResolverMutations {
         receiverID: receiverId,
         message: messageData.message,
       };
-      await this.notificationAdapter.userMessageSend(notificationInput);
+      await this.notificationUserAdapter.userMessageSent(notificationInput);
     }
 
     return true;
@@ -74,7 +76,9 @@ export class CommunicationResolverMutations {
       message: messageData.message,
       organizationID: messageData.organizationId,
     };
-    await this.notificationAdapter.organizationSendMessage(notificationInput);
+    await this.notificationOrganizationAdapter.organizationSendMessage(
+      notificationInput
+    );
 
     return true;
   }
