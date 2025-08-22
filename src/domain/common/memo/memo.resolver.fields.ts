@@ -13,6 +13,7 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Memo } from './memo.entity';
 import { MemoService } from './memo.service';
+import { Markdown } from '../scalars/scalar.markdown';
 
 @Resolver(() => IMemo)
 export class MemoResolverFields {
@@ -25,7 +26,7 @@ export class MemoResolverFields {
   @ResolveField(() => String, {
     nullable: true,
     description:
-      'The binary state V2 of the Yjs document, used to collaborate on the Memo, represented in base64.',
+      'The last saved binary stateV2 of the Yjs document, used to collaborate on the Memo, represented in base64.',
   })
   public content(@Parent() memo: IMemo): string | null {
     if (!memo.content) {
@@ -33,6 +34,18 @@ export class MemoResolverFields {
     }
 
     return memo.content.toString('base64');
+  }
+
+  @ResolveField(() => Markdown, {
+    nullable: true,
+    description: 'The last saved content of the Memo, represented in Markdown.',
+  })
+  public markdown(@Parent() memo: IMemo): string | null {
+    if (!memo.content) {
+      return null;
+    }
+
+    return this.memoService.binaryToMarkdown(memo.content);
   }
 
   @ResolveField(() => Boolean, {
