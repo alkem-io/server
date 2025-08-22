@@ -99,7 +99,7 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildSpaceCommunityInvitationCreatedNotificationPayload(
+  async buildNotificationPayloadUserSpaceCommunityInvitation(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
@@ -570,7 +570,7 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildUserMessageNotificationPayload(
+  async buildUserMessageSentNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],

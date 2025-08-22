@@ -56,7 +56,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
         return InAppNotificationPayloadSpaceCommunicationMessageDirect;
       case NotificationEventPayload.SPACE_COMMUNICATION_UPDATE:
         return InAppNotificationPayloadSpaceCommunicationUpdate;
-      case NotificationEventPayload.SPACE_COLLABORATION_POST:
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT:
         return InAppNotificationPayloadSpaceCollaborationPost;
       case NotificationEventPayload.SPACE_COLLABORATION_POST_COMMENT:
         return InAppNotificationPayloadSpaceCollaborationPostComment;

@@ -438,7 +438,7 @@ export class CalloutResolverMutations {
       post: post,
       triggeredBy: agentInfo.userID,
     };
-    await this.notificationAdapterSpace.spaceCollaborationPostCreated(
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 

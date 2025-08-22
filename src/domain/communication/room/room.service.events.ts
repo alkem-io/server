@@ -74,7 +74,7 @@ export class RoomServiceEvents {
       room: room,
       commentSent: message,
     };
-    await this.notificationSpaceAdapter.spaceCollaborationPostComment(
+    await this.notificationSpaceAdapter.spaceCollaborationCalloutContributionComment(
       notificationInput
     );
   }
