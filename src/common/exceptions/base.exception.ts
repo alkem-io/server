@@ -15,7 +15,7 @@ export class BaseException extends GraphQLError {
     super(message, {
       extensions: {
         // this needs to be set, since graphql automatically chooses a default code
-        code: code.toLocaleString(),
+        code: String(code),
       },
     });
     this.name = this.constructor.name;
