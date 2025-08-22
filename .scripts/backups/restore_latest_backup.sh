@@ -110,8 +110,8 @@ s3 =
   endpoint_url = $endpoint_url
   max_concurrent_requests = 100
   max_queue_size = 1000
-  multipart_threshold = 50 MB
-  multipart_chunksize = 10 MB
+  multipart_threshold = 50MB
+  multipart_chunksize = 10MB
 s3api =
   endpoint_url = $endpoint_url
 EOL
