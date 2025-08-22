@@ -67,7 +67,7 @@ check_and_install_dependencies() {
 configure_aws_cli() {
     AWS_CONFIG_FILE=~/.aws/config
 
-    # Determine region based on environment (will be set later)
+    # Region parameter passed from caller
     local region="$1"
 
     if [[ -f "$AWS_CONFIG_FILE" ]]; then
