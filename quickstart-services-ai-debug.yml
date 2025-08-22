@@ -234,7 +234,7 @@ services:
     build:
       context: '../virtual-contributor-engine-guidance'
       dockerfile: ../virtual-contributor-engine-guidance/Dockerfile
-    platform: linux/x86_64
+    platform: linux/amd64
     restart: always
     volumes:
        - /dev/shm:/dev/shm
@@ -273,7 +273,7 @@ services:
   #   build:
   #     context: '../virtual-contributor-engine-community-manager'
   #     dockerfile: ../virtual-contributor-engine-community-manager/Dockerfile
-  #   platform: linux/x86_64
+  #   platform: linux/amd64
   #   restart: always
   #   volumes:
   #      - /dev/shm:/dev/shm
@@ -308,7 +308,7 @@ services:
     build:
       dockerfile: ../virtual-contributor-ingest-space/Dockerfile
       context: '../virtual-contributor-ingest-space/'
-    platform: linux/x86_64
+    platform: linux/amd64
     restart: always
     volumes:
        - /dev/shm:/dev/shm
@@ -350,7 +350,7 @@ services:
     build:
       dockerfile: ../virtual-contributor-engine-expert//Dockerfile
       context: '../virtual-contributor-engine-expert/'
-    platform: linux/x86_64
+    platform: linux/amd64
     restart: always
     volumes:
       - /dev/shm:/dev/shm
