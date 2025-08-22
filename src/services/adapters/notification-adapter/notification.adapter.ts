@@ -1,278 +1,343 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
-import { NotificationInputCalloutPublished } from './dto/notification.dto.input.callout.published';
-import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
-import { NotificationPayloadBuilder } from './notification.payload.builder';
-import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
-import { ClientProxy } from '@nestjs/microservices';
-import { NotificationEventType } from '@alkemio/notifications-lib';
-import { NotificationInputUpdateSent } from './dto/notification.dto.input.update.sent';
-import { NotificationInputForumDiscussionCreated } from './dto/notification.dto.input.discussion.created';
-import { NotificationInputCommunityApplication } from './dto/notification.dto.input.community.application';
-import { NotificationInputCommunityNewMember } from './dto/notification.dto.input.community.new.member';
-import { NotificationInputUserRegistered } from './dto/notification.dto.input.user.registered';
-import { NotificationInputUserRemoved } from './dto/notification.dto.input.user.removed';
-import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input.whiteboard.created';
-import { NotificationInputDiscussionComment } from './dto/notification.dto.input.discussion.comment';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils';
-import { NotificationInputUserMessage } from './dto/notification.dto.input.user.message';
-import { NotificationInputOrganizationMessage } from './dto/notification.input.organization.message';
-import { NotificationInputCommunityLeadsMessage } from './dto/notification.dto.input.community.leads.message';
-import { NotificationInputEntityMention } from './dto/notification.dto.input.entity.mention';
-import { NotificationInputEntityMentions } from './dto/notification.dto.input.entity.mentions';
+import { NotificationInputUserMessage } from './dto/user/notification.dto.input.user.message';
+import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
+import { NotificationInputEntityMentions } from './dto/user/notification.dto.input.entity.mentions';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
-import { NotificationInputForumDiscussionComment } from './dto/notification.dto.input.forum.discussion.comment';
-import { NotificationInputCommunityInvitation } from './dto/notification.dto.input.community.invitation';
-import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
-import { NotificationInputPlatformInvitation } from './dto/notification.dto.input.platform.invitation';
-import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
-import { NotificationInputCommunityInvitationVirtualContributor } from './dto/notification.dto.input.community.invitation.vc';
-import { NotificationInputSpaceCreated } from './dto/notification.dto.input.space.created';
+import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
+import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationRecipientsService } from '@services/api/notification-recipients/notification.recipients.service';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { NotificationEvent } from '@common/enums/notification.event';
+import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
+import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
+import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
+import { NotificationInputUserMention } from './dto/user/notification.dto.input.user.mention';
+import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
+import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
+import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
+import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.direct';
+import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.space.community.invitation.vc';
 
 @Injectable()
 export class NotificationAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private notificationPayloadBuilder: NotificationPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private notificationExternalAdapter: NotificationExternalAdapter,
+    private notificationsRecipientsService: NotificationRecipientsService,
+    private notificationInAppAdapter: NotificationInAppAdapter,
+    private communityResolverService: CommunityResolverService
   ) {}
 
-  public async calloutPublished(
-    eventData: NotificationInputCalloutPublished
+  public async organizationMention(
+    eventData: NotificationInputOrganizationMention
   ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED;
-    this.logEventTriggered(eventData, event);
+    const event = NotificationEvent.ORGANIZATION_MENTIONED;
+    const recipients = await this.getNotificationRecipientsOrganization(
+      event,
+      eventData,
+      eventData.mentionedEntityID
+    );
 
-    const payload =
-      await this.notificationPayloadBuilder.buildCalloutPublishedPayload(
-        eventData.triggeredBy,
-        eventData.callout
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async postCreated(
-    eventData: NotificationInputPostCreated
-  ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_POST_CREATED;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildPostCreatedPayload(eventData);
-
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async whiteboardCreated(
-    eventData: NotificationInputWhiteboardCreated
-  ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_WHITEBOARD_CREATED;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildWhiteboardCreatedPayload(
-        eventData
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async postComment(
-    eventData: NotificationInputPostComment
-  ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_POST_COMMENT;
-    this.logEventTriggered(eventData, event);
-    // build notification payload
-    const payload =
-      await this.notificationPayloadBuilder.buildCommentCreatedOnPostPayload(
-        eventData
-      );
-    // send notification event
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async discussionComment(
-    eventData: NotificationInputDiscussionComment
-  ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_DISCUSSION_COMMENT;
-    this.logEventTriggered(eventData, event);
-
-    // build notification payload
-    const payload =
-      await this.notificationPayloadBuilder.buildCommentCreatedOnDiscussionPayload(
-        eventData.callout,
-        eventData.comments.id,
-        eventData.commentSent
-      );
-    // send notification event
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async forumDiscussionComment(
-    eventData: NotificationInputForumDiscussionComment
-  ): Promise<void> {
-    const event = NotificationEventType.PLATFORM_FORUM_DISCUSSION_COMMENT;
-    this.logEventTriggered(eventData, event);
-
-    // build notification payload
-    const payload =
-      await this.notificationPayloadBuilder.buildCommentCreatedOnForumDiscussionPayload(
-        eventData.discussion,
-        eventData.commentSent
-      );
-    // send notification event
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async commentReply(
-    eventData: NotificationInputCommentReply
-  ): Promise<void> {
-    const event = NotificationEventType.COMMENT_REPLY;
-    this.logEventTriggered(eventData, event);
-
-    try {
-      // build notification payload
+    if (recipients.emailRecipients.length > 0) {
       const payload =
-        await this.notificationPayloadBuilder.buildCommentReplyPayload(
-          eventData
+        await this.notificationExternalAdapter.buildOrganizationMentionNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.mentionedEntityID,
+          eventData.comment,
+          eventData.originEntity.id,
+          eventData.originEntity.displayName,
+          eventData.commentType
         );
-      // send notification event
-      this.notificationsClient.emit<number>(event, payload);
-    } catch (error: any) {
-      this.logger.error(
-        `Error while building comment reply notification payload ${error?.message}`,
-        error?.stack,
-        LogContext.NOTIFICATIONS
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // In-app notification
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationMessageRoom = {
+        type: NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM,
+        organizationID: eventData.mentionedEntityID,
+        roomID: eventData.originEntity.id,
+        messageID: eventData.commentsId || 'unknown',
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.ORGANIZATION_MENTIONED,
+        NotificationEventCategory.ORGANIZATION,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
       );
     }
   }
 
-  public async updateSent(
-    eventData: NotificationInputUpdateSent
-  ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_UPDATE_SENT;
-    this.logEventTriggered(eventData, event);
-
-    // Send the notifications event
-    const notificationsPayload =
-      await this.notificationPayloadBuilder.buildCommunicationUpdateSentNotificationPayload(
-        eventData.triggeredBy,
-        eventData.updates,
-        eventData.lastMessage
-      );
-    this.notificationsClient.emit<number>(event, notificationsPayload);
-  }
-
-  public async forumDiscussionCreated(
-    eventData: NotificationInputForumDiscussionCreated
-  ): Promise<void> {
-    const event = NotificationEventType.PLATFORM_FORUM_DISCUSSION_CREATED;
-    this.logEventTriggered(eventData, event);
-    // Emit the events to notify others
-    const payload =
-      await this.notificationPayloadBuilder.buildPlatformForumDiscussionCreatedNotificationPayload(
-        eventData.discussion
-      );
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async sendUserMessage(
-    eventData: NotificationInputUserMessage
-  ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_USER_MESSAGE;
-    this.logEventTriggered(eventData, event);
-    // Emit the events to notify others
-    const payload =
-      await this.notificationPayloadBuilder.buildCommunicationUserMessageNotificationPayload(
-        eventData.triggeredBy,
-        eventData.receiverID,
-        eventData.message
-      );
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async sendOrganizationMessage(
+  public async organizationSendMessage(
     eventData: NotificationInputOrganizationMessage
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_ORGANIZATION_MESSAGE;
-    this.logEventTriggered(eventData, event);
-    // Emit the events to notify others
-    const payload =
-      await this.notificationPayloadBuilder.buildCommunicationOrganizationMessageNotificationPayload(
-        eventData.triggeredBy,
-        eventData.message,
-        eventData.organizationID
+    const event = NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT;
+    const recipients = await this.getNotificationRecipientsOrganization(
+      event,
+      eventData,
+      eventData.organizationID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationMessageNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.message,
+          eventData.organizationID
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
       );
-    this.notificationsClient.emit<number>(event, payload);
+    }
+
+    // In-app notification
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationMessageDirect = {
+        type: NotificationEventPayload.ORGANIZATION_MESSAGE_DIRECT,
+        organizationID: eventData.organizationID,
+        message: eventData.message,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.ORGANIZATION_MESSAGE_RECIPIENT,
+        NotificationEventCategory.ORGANIZATION,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
-  public async sendCommunityLeadsMessage(
-    eventData: NotificationInputCommunityLeadsMessage
+  public async userCommentReply(
+    eventData: NotificationInputCommentReply
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_COMMUNITY_MESSAGE;
-    this.logEventTriggered(eventData, event);
-    // Emit the events to notify others
-    const payload =
-      await this.notificationPayloadBuilder.buildCommunicationCommunityLeadsMessageNotificationPayload(
-        eventData.triggeredBy,
-        eventData.message,
-        eventData.communityID
+    const event = NotificationEvent.USER_COMMENT_REPLY;
+    const recipients = await this.getNotificationRecipientsUser(
+      event,
+      eventData,
+      eventData.commentOwnerID
+    );
+
+    try {
+      if (recipients.emailRecipients.length > 0) {
+        const payload =
+          await this.notificationExternalAdapter.buildUserCommentReplyPayload(
+            event,
+            eventData.triggeredBy,
+            recipients.emailRecipients,
+            eventData
+          );
+
+        this.notificationExternalAdapter.sendExternalNotifications(
+          event,
+          payload
+        );
+      }
+
+      // In-app notification
+      const inAppReceiverIDs = recipients.inAppRecipients.map(
+        recipient => recipient.id
       );
-    this.notificationsClient.emit<number>(event, payload);
+      if (inAppReceiverIDs.length > 0) {
+        const commentOriginUrl =
+          await this.notificationExternalAdapter.buildCommentOriginUrl(
+            eventData.commentType,
+            eventData.originEntity.id
+          );
+
+        const inAppPayload: InAppNotificationPayloadUserMessageRoom = {
+          type: NotificationEventPayload.USER_MESSAGE_ROOM,
+          userID: eventData.commentOwnerID,
+          roomID: eventData.roomId,
+          comment: eventData.reply,
+          commentUrl: commentOriginUrl,
+          commentOriginName: eventData.originEntity.displayName,
+        };
+
+        await this.notificationInAppAdapter.sendInAppNotifications(
+          NotificationEvent.USER_COMMENT_REPLY,
+          NotificationEventCategory.USER,
+          eventData.triggeredBy,
+          inAppReceiverIDs,
+          inAppPayload
+        );
+      }
+    } catch (error: any) {
+      this.logger.error(
+        'Error while building comment reply notification payload',
+        LogContext.NOTIFICATIONS,
+        { error: error?.message }
+      );
+    }
+  }
+
+  public async userMessageSend(
+    eventData: NotificationInputUserMessage
+  ): Promise<void> {
+    const event = NotificationEvent.USER_MESSAGE_RECIPIENT;
+    const recipients = await this.getNotificationRecipientsUser(
+      event,
+      eventData,
+      eventData.receiverID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildUserMessageNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.receiverID,
+          eventData.message
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // In-app notification
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadUserMessageDirect = {
+        type: NotificationEventPayload.USER_MESSAGE_DIRECT,
+        userID: eventData.receiverID,
+        message: eventData.message,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.USER_MESSAGE_RECIPIENT,
+        NotificationEventCategory.USER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
   public async userMention(
-    eventData: NotificationInputEntityMention
+    eventData: NotificationInputUserMention
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_USER_MENTION;
-    this.logEventTriggered(eventData, event);
-    // Emit the events to notify others
-    const payload =
-      await this.notificationPayloadBuilder.buildCommunicationUserMentionNotificationPayload(
-        eventData.triggeredBy,
-        eventData.mentionedEntityID,
-        eventData.comment,
-        eventData.originEntity.id,
-        eventData.originEntity.displayName,
-        eventData.commentType
-      );
+    const event = NotificationEvent.USER_MENTION;
+    const recipients = await this.getNotificationRecipientsUser(
+      event,
+      eventData,
+      eventData.mentionedEntityID
+    );
 
-    if (payload) {
-      this.notificationsClient.emit<number>(event, payload);
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildUserMentionNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.mentionedEntityID,
+          eventData.comment,
+          eventData.originEntity.id,
+          eventData.originEntity.displayName,
+          eventData.commentType
+        );
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // In-app notification
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload = await this.buildUserMentionInAppPayload(eventData);
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.USER_MENTION,
+        NotificationEventCategory.USER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
     }
   }
 
-  public async organizationMention(
-    eventData: NotificationInputEntityMention
+  public async spaceCommunityInvitationVirtualContributorCreated(
+    eventData: NotificationInputCommunityInvitationVirtualContributor
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_ORGANIZATION_MENTION;
-    this.logEventTriggered(eventData, event);
-    // Emit the events to notify others
+    const event = NotificationEvent.SPACE_COMMUNITY_INVITATION_VC;
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        eventData.community.id
+      );
+    const recipients = await this.getNotificationRecipientsVirtualContributor(
+      event,
+      eventData,
+      eventData.invitedContributorID
+    );
+
     const payload =
-      await this.notificationPayloadBuilder.buildCommunicationOrganizationMentionNotificationPayload(
+      await this.notificationExternalAdapter.buildSpaceCommunityInvitationVirtualContributorCreatedNotificationPayload(
+        event,
         eventData.triggeredBy,
-        eventData.mentionedEntityID,
-        eventData.comment,
-        eventData.originEntity.id,
-        eventData.originEntity.displayName,
-        eventData.commentType
+        recipients.emailRecipients,
+        eventData.invitedContributorID,
+        eventData.accountHost,
+        space,
+        eventData.welcomeMessage
       );
 
-    if (payload) {
-      this.notificationsClient.emit<number>(event, payload);
-    }
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+  }
+
+  private async buildUserMentionInAppPayload(
+    eventData: NotificationInputUserMention
+  ): Promise<InAppNotificationPayloadUserMessageRoom> {
+    const commentOriginUrl =
+      await this.notificationExternalAdapter.buildCommentOriginUrl(
+        eventData.commentType,
+        eventData.originEntity.id
+      );
+
+    return {
+      type: NotificationEventPayload.USER_MESSAGE_ROOM,
+      userID: eventData.mentionedEntityID,
+      comment: eventData.comment,
+      commentUrl: commentOriginUrl,
+      commentOriginName: eventData.originEntity.displayName,
+    };
   }
 
   public async entityMentions(
     eventData: NotificationInputEntityMentions
   ): Promise<void> {
     for (const mention of eventData.mentions) {
-      const entityMentionNotificationInput: NotificationInputEntityMention = {
+      const entityMentionNotificationInput: NotificationInputUserMention = {
         triggeredBy: eventData.triggeredBy,
         comment: eventData.comment,
         mentionedEntityID: mention.id,
@@ -290,153 +355,66 @@ export class NotificationAdapter {
     }
   }
 
-  public async applicationCreated(
-    eventData: NotificationInputCommunityApplication
-  ): Promise<void> {
-    const event = NotificationEventType.COMMUNITY_APPLICATION_CREATED;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildApplicationCreatedNotificationPayload(
-        eventData.triggeredBy,
-        eventData.triggeredBy,
-        eventData.community
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
+  private async getNotificationRecipientsUser(
+    event: NotificationEvent,
+    eventData: NotificationInputBase,
+    userID?: string
+  ): Promise<NotificationRecipientResult> {
+    return this.getNotificationRecipients(event, eventData, undefined, userID);
   }
 
-  public async invitationCreated(
-    eventData: NotificationInputCommunityInvitation
-  ): Promise<void> {
-    const event = NotificationEventType.COMMUNITY_INVITATION_CREATED;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildInvitationCreatedNotificationPayload(
-        eventData.triggeredBy,
-        eventData.invitedContributorID,
-        eventData.community,
-        eventData.welcomeMessage
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
+  private async getNotificationRecipientsOrganization(
+    event: NotificationEvent,
+    eventData: NotificationInputBase,
+    organizationID: string
+  ): Promise<NotificationRecipientResult> {
+    return this.getNotificationRecipients(
+      event,
+      eventData,
+      undefined,
+      undefined,
+      organizationID
+    );
   }
 
-  public async invitationVirtualContributorCreated(
-    eventData: NotificationInputCommunityInvitationVirtualContributor
-  ): Promise<void> {
-    const event = NotificationEventType.COMMUNITY_INVITATION_CREATED_VC;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildInvitationVirtualContributorCreatedNotificationPayload(
-        eventData.triggeredBy,
-        eventData.invitedContributorID,
-        eventData.accountHost,
-        eventData.community,
-        eventData.welcomeMessage
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
+  private async getNotificationRecipientsVirtualContributor(
+    event: NotificationEvent,
+    eventData: NotificationInputBase,
+    virtualContributorID: string
+  ): Promise<NotificationRecipientResult> {
+    return this.getNotificationRecipients(
+      event,
+      eventData,
+      undefined,
+      undefined,
+      undefined,
+      virtualContributorID
+    );
   }
 
-  public async platformInvitationCreated(
-    eventData: NotificationInputPlatformInvitation
-  ): Promise<void> {
-    const event = NotificationEventType.COMMUNITY_PLATFORM_INVITATION_CREATED;
+  public async getNotificationRecipients(
+    event: NotificationEvent,
+    eventData: NotificationInputBase,
+    entityID?: string,
+    userID?: string,
+    organizationID?: string,
+    virtualContributorID?: string
+  ): Promise<NotificationRecipientResult> {
     this.logEventTriggered(eventData, event);
 
-    const payload =
-      await this.notificationPayloadBuilder.buildExternalInvitationCreatedNotificationPayload(
-        eventData.triggeredBy,
-        eventData.invitedUser,
-        eventData.community,
-        eventData.welcomeMessage
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async spaceCreated(
-    eventData: NotificationInputSpaceCreated
-  ): Promise<void> {
-    const event = NotificationEventType.SPACE_CREATED;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildSpaceCreatedPayload(
-        eventData.triggeredBy,
-        eventData.community
-      );
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async communityNewMember(
-    eventData: NotificationInputCommunityNewMember
-  ): Promise<void> {
-    const event = NotificationEventType.COMMUNITY_NEW_MEMBER;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildCommunityNewMemberPayload(
-        eventData.triggeredBy,
-        eventData.contributorID,
-        eventData.community
-      );
-    this.notificationsClient.emit(event, payload);
-  }
-
-  public async platformGlobalRoleChanged(
-    eventData: NotificationInputPlatformGlobalRoleChange
-  ): Promise<void> {
-    const event = NotificationEventType.PLATFORM_GLOBAL_ROLE_CHANGE;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildGlobalRoleChangedNotificationPayload(
-        eventData.triggeredBy,
-        eventData.userID,
-        eventData.type,
-        eventData.role
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async userRegistered(
-    eventData: NotificationInputUserRegistered
-  ): Promise<void> {
-    const event = NotificationEventType.PLATFORM_USER_REGISTERED;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildUserRegisteredNotificationPayload(
-        eventData.triggeredBy,
-        eventData.userID
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async userRemoved(
-    eventData: NotificationInputUserRemoved
-  ): Promise<void> {
-    const event = NotificationEventType.PLATFORM_USER_REMOVED;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      this.notificationPayloadBuilder.buildUserRemovedNotificationPayload(
-        eventData.triggeredBy,
-        eventData.user
-      );
-
-    this.notificationsClient.emit<number>(event, payload);
+    const recipients = await this.notificationsRecipientsService.getRecipients({
+      eventType: event,
+      spaceID: entityID,
+      userID,
+      organizationID,
+      virtualContributorID,
+    });
+    return recipients;
   }
 
   private logEventTriggered(
     eventData: NotificationInputBase,
-    eventType: NotificationEventType
+    eventType: NotificationEvent
   ) {
     // Stringify without authorization information
     const loggedData = stringifyWithoutAuthorizationMetaInfo(eventData);

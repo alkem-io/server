@@ -3,7 +3,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessage } from '../message/message.interface';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { RoomType } from '@common/enums/room.type';
-import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
+import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IProfile } from '@domain/common/profile';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';

@@ -10,8 +10,6 @@ import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IPreference } from '@domain/common/preference/preference.interface';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -20,6 +18,7 @@ import {
   AgentLoaderCreator,
   AuthorizationLoaderCreator,
   ProfileLoaderCreator,
+  UserSettingsLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
@@ -30,7 +29,7 @@ import { AuthenticationType } from '@common/enums/authentication.type';
 import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { IUserSettings } from '../user.settings/user.settings.interface';
+import { IUserSettings } from '../user-settings/user.settings.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
@@ -39,7 +38,6 @@ export class UserResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private userService: UserService,
-    private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -58,14 +56,6 @@ export class UserResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(user.id);
-  }
-
-  @ResolveField('settings', () => IUserSettings, {
-    nullable: false,
-    description: 'The settings for this User.',
-  })
-  settings(@Parent() user: IUser): IUserSettings {
-    return user.settings;
   }
 
   @ResolveField('agent', () => IAgent, {
@@ -90,30 +80,6 @@ export class UserResolverFields {
     loader: ILoader<IAuthorizationPolicy>
   ) {
     return loader.load(user.id);
-  }
-
-  @ResolveField('preferences', () => [IPreference], {
-    nullable: false,
-    description: 'The preferences for this user',
-  })
-  async preferences(
-    @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IPreference[]> {
-    // reject when a basic user reads other user's preferences
-    if (
-      !(await this.isAccessGranted(
-        user,
-        agentInfo,
-        AuthorizationPrivilege.READ_USER_SETTINGS
-      ))
-    ) {
-      return [];
-    }
-    const preferenceSet = await this.userService.getPreferenceSetOrFail(
-      user.id
-    );
-    return await this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 
   @ResolveField('communityRooms', () => [CommunicationRoomResult], {
@@ -195,22 +161,36 @@ export class UserResolverFields {
     return undefined;
   }
 
+  @ResolveField('settings', () => IUserSettings, {
+    nullable: false,
+    description: 'The settings for this User.',
+  })
+  settings(
+    @Parent() user: IUser,
+    @Loader(UserSettingsLoaderCreator, {
+      parentClassRef: User,
+      checkParentPrivilege: AuthorizationPrivilege.READ_USER_SETTINGS,
+    })
+    loader: ILoader<IUserSettings>
+  ): Promise<IUserSettings> {
+    return loader.load(user.id);
+  }
+
   @ResolveField('isContactable', () => Boolean, {
     nullable: false,
     description: 'Can a message be sent to this User.',
   })
   async isContactable(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
+    @Loader(UserSettingsLoaderCreator, {
+      parentClassRef: User,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
+    loader: ILoader<IUserSettings>
   ): Promise<boolean> {
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS,
-      `user: ${agentInfo.email} can contact user: ${user.email}`
-    );
+    const userSettings = await loader.load(user.id);
 
-    return user.settings.communication.allowOtherUsersToSendMessages;
+    return userSettings.communication.allowOtherUsersToSendMessages;
   }
 
   @ResolveField('storageAggregator', () => IStorageAggregator, {

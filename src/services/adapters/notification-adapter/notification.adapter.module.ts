@@ -6,19 +6,34 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ActivityModule } from '@src/platform/activity/activity.module';
 import { NotificationAdapter } from './notification.adapter';
-import { NotificationPayloadBuilder } from './notification.payload.builder';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { NotificationExternalAdapterModule } from '../notification-external-adapter/notification.external.adapter.module';
+import { NotificationInAppAdapterModule } from '../notification-in-app-adapter/notification.in.app.adapter.module';
+import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
+import { NotificationSpaceAdapter } from './notification.space.adapter';
+import { NotificationPlatformAdapter } from './notification.platform.adapter';
 
 @Module({
   imports: [
     ActivityModule,
-    EntityResolverModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([Post, Whiteboard, Community]),
     ContributorLookupModule,
+    EntityResolverModule,
+    NotificationRecipientsModule,
+    NotificationExternalAdapterModule,
+    NotificationInAppAdapterModule,
   ],
-  providers: [NotificationAdapter, NotificationPayloadBuilder],
-  exports: [NotificationAdapter],
+  providers: [
+    NotificationAdapter,
+    NotificationSpaceAdapter,
+    NotificationPlatformAdapter,
+  ],
+  exports: [
+    NotificationAdapter,
+    NotificationSpaceAdapter,
+    NotificationPlatformAdapter,
+  ],
 })
 export class NotificationAdapterModule {}

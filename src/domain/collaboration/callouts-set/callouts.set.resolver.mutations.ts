@@ -16,14 +16,14 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
+import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 @InstrumentResolver()
@@ -38,7 +38,7 @@ export class CalloutsSetResolverMutations {
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
-    private notificationAdapter: NotificationAdapter,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
     private namingService: NamingService,
     private temporaryStorageService: TemporaryStorageService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -109,7 +109,9 @@ export class CalloutsSetResolverMutations {
             triggeredBy: agentInfo.userID,
             callout: callout,
           };
-          this.notificationAdapter.calloutPublished(notificationInput);
+          this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
+            notificationInput
+          );
         }
 
         const activityLogInput: ActivityInputCalloutPublished = {

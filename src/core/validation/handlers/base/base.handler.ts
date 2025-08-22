@@ -71,13 +71,13 @@ import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto
 import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
 import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
 import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
-import { UpdateOrganizationSettingsEntityInput } from '@domain/community/organization.settings/dto/organization.settings.dto.update';
-import { UpdateOrganizationSettingsMembershipInput } from '@domain/community/organization.settings/dto/organization.settings.membership.dto.update';
-import { UpdateOrganizationSettingsPrivacyInput } from '@domain/community/organization.settings/dto/organization.settings.privacy.dto.update';
-import { UpdateUserSettingsEntityInput } from '@domain/community/user.settings';
+import { UpdateOrganizationSettingsEntityInput } from '@domain/community/organization-settings/dto/organization.settings.dto.update';
+import { UpdateOrganizationSettingsMembershipInput } from '@domain/community/organization-settings/dto/organization.settings.membership.dto.update';
+import { UpdateOrganizationSettingsPrivacyInput } from '@domain/community/organization-settings/dto/organization.settings.privacy.dto.update';
+import { UpdateUserSettingsEntityInput } from '@domain/community/user-settings';
 import { UpdateUserSettingsInput } from '@domain/community/user/dto/user.dto.update.settings';
-import { UpdateUserSettingsCommunicationInput } from '@domain/community/user.settings/dto/user.settings.communications.dto.update';
-import { UpdateUserSettingsPrivacyInput } from '@domain/community/user.settings/dto/user.settings.privacy.dto.update';
+import { UpdateUserSettingsCommunicationInput } from '@domain/community/user-settings/dto/user.settings.communications.dto.update';
+import { UpdateUserSettingsPrivacyInput } from '@domain/community/user-settings/dto/user.settings.privacy.dto.update';
 import { UpdateOrganizationSettingsInput } from '@domain/community/organization/dto/organization.dto.update.settings';
 import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
 import { UpdateVirtualContributorSettingsEntityInput } from '@domain/community/virtual-contributor-settings';
@@ -86,6 +86,11 @@ import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/
 import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 import { CreateSpaceAboutInput } from '@domain/space/space.about';
 import { UpdateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.update';
+import { CreateUserSettingsNotificationInput } from '@domain/community/user-settings/dto/user.settings.notification.dto.create';
+import { CreateUserSettingsInput } from '@domain/community/user-settings/dto/user.settings.dto.create';
+import { CreateUserSettingsPrivacyInput } from '@domain/community/user-settings/dto/user.settings.privacy.dto.create';
+import { CreateUserSettingsCommunicationInput } from '@domain/community/user-settings/dto/user.settings.communications.dto.create';
+import { UpdateUserSettingsNotificationInput } from '@domain/community/user-settings/dto/user.settings.notification.dto.update';
 import { UpdateBaselineLicensePlanOnAccount } from '@domain/space/account/dto/account.dto.update.baseline.license.plan';
 
 export class BaseHandler extends AbstractHandler {
@@ -126,6 +131,12 @@ export class BaseHandler extends AbstractHandler {
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
+      CreateUserSettingsNotificationInput,
+      CreateUserSettingsPrivacyInput,
+      CreateUserSettingsCommunicationInput,
+      CreateUserSettingsInput,
+      UpdateInnovationFlowStateInput,
+      CreateCalloutOnCalloutsSetInput,
       DeleteDocumentInput,
       UpdateSpaceAboutInput,
       UpdatePostInput,
@@ -160,6 +171,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserSettingsInput,
       UpdateUserSettingsCommunicationInput,
       UpdateUserSettingsPrivacyInput,
+      UpdateUserSettingsNotificationInput,
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,

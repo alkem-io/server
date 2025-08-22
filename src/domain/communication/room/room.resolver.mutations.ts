@@ -223,12 +223,6 @@ export class RoomResolverMutations {
             message,
             agentInfo
           );
-          this.roomServiceEvents.processNotificationDiscussionComment(
-            callout,
-            room,
-            message,
-            agentInfo
-          );
         }
         break;
       default:

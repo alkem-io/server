@@ -20,8 +20,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
+import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -29,8 +28,6 @@ import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.created';
-import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
-import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.whiteboard.created';
 import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
@@ -44,6 +41,9 @@ import { UpdateContributionCalloutsSortOrderInput } from '../callout-contributio
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.whiteboard.created';
+import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.post.created';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -52,7 +52,7 @@ export class CalloutResolverMutations {
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
-    private notificationAdapter: NotificationAdapter,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
@@ -162,7 +162,9 @@ export class CalloutResolverMutations {
               triggeredBy: agentInfo.userID,
               callout: callout,
             };
-            await this.notificationAdapter.calloutPublished(notificationInput);
+            await this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
+              notificationInput
+            );
           }
 
           const activityLogInput: ActivityInputCalloutPublished = {
@@ -400,7 +402,9 @@ export class CalloutResolverMutations {
       whiteboard: whiteboard,
       triggeredBy: agentInfo.userID,
     };
-    await this.notificationAdapter.whiteboardCreated(notificationInput);
+    await this.notificationAdapterSpace.spaceCollaborationWhiteboardCreated(
+      notificationInput
+    );
 
     this.activityAdapter.calloutWhiteboardCreated({
       triggeredBy: agentInfo.userID,
@@ -434,7 +438,9 @@ export class CalloutResolverMutations {
       post: post,
       triggeredBy: agentInfo.userID,
     };
-    await this.notificationAdapter.postCreated(notificationInput);
+    await this.notificationAdapterSpace.spaceCollaborationPostCreated(
+      notificationInput
+    );
 
     const activityLogInput: ActivityInputCalloutPostCreated = {
       triggeredBy: agentInfo.userID,

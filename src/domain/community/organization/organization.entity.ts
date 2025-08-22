@@ -13,7 +13,7 @@ import { OrganizationVerification } from '../organization-verification/organizat
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { UUID_LENGTH } from '@common/constants';
-import { IOrganizationSettings } from '../organization.settings/organization.settings.interface';
+import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 
 @Entity()

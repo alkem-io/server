@@ -45,6 +45,10 @@ export enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
   UPDATE_CONTENT = 'update-content',
+  RECEIVE_NOTIFICATIONS = 'receive-notifications',
+  RECEIVE_NOTIFICATIONS_ADMIN = 'receive-notifications-admin',
+  // Temporary privileges for in-app notifications until rolled out platform wide
+  RECEIVE_NOTIFICATIONS_IN_APP = 'receive-notifications-in-app',
   TRANSFER_RESOURCE_OFFER = 'transfer-resource-offer',
   TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
   ACCOUNT_LICENSE_MANAGE = 'account-license-manage',
