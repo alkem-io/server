@@ -17,8 +17,6 @@ import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notifi
 import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUserMessage } from './dto/user/notification.dto.input.user.message';
 import { NotificationInputUserMention } from './dto/user/notification.dto.input.user.mention';
-import { IOrganization } from '@domain/community/organization';
-import { IUser } from '@domain/community/user/user.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
@@ -121,52 +119,6 @@ export class NotificationUserAdapter {
     }
   }
 
-  public async userMention(
-    eventData: NotificationInputUserMention
-  ): Promise<void> {
-    const event = NotificationEvent.USER_MENTION;
-    const recipients = await this.getNotificationRecipientsUser(
-      event,
-      eventData,
-      eventData.mentionedEntityID
-    );
-
-    if (recipients.emailRecipients.length > 0) {
-      const payload =
-        await this.notificationExternalAdapter.buildUserMentionNotificationPayload(
-          event,
-          eventData.triggeredBy,
-          recipients.emailRecipients,
-          eventData.mentionedEntityID,
-          eventData.comment,
-          eventData.originEntity.id,
-          eventData.originEntity.displayName,
-          eventData.commentType
-        );
-
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
-    }
-
-    // In-app notification
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload = await this.buildUserMentionInAppPayload(eventData);
-
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.USER_MENTION,
-        NotificationEventCategory.USER,
-        eventData.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
-  }
-
   public async userSpaceCommunityInvitationCreated(
     eventData: NotificationInputCommunityInvitation
   ): Promise<void> {
@@ -259,16 +211,111 @@ export class NotificationUserAdapter {
     }
   }
 
-  public async userMessageSent(
+  public async userMention(
+    eventData: NotificationInputUserMention
+  ): Promise<void> {
+    const event = NotificationEvent.USER_MENTION;
+    const recipients = await this.getNotificationRecipientsUser(
+      event,
+      eventData,
+      eventData.mentionedEntityID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildUserMentionNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.mentionedEntityID,
+          eventData.comment,
+          eventData.originEntity.id,
+          eventData.originEntity.displayName,
+          eventData.commentType
+        );
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // In-app notification
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload = await this.buildUserMentionInAppPayload(eventData);
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.USER_MENTION,
+        NotificationEventCategory.USER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+  }
+
+  public async userToUserMessageDirect(
+    eventData: NotificationInputUserMessage
+  ): Promise<void> {
+    const event = NotificationEvent.USER_MESSAGE;
+    const recipients = await this.getNotificationRecipientsUser(
+      event,
+      eventData,
+      eventData.receiverID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildUserMessageSentNotificationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.receiverID,
+          eventData.message
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    // In-app notification
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadUserMessageDirect = {
+        type: NotificationEventPayload.USER_MESSAGE_DIRECT,
+        userID: eventData.receiverID,
+        message: eventData.message,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.USER_MESSAGE,
+        NotificationEventCategory.USER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    // send a copy to the sender if they have that flag enabled
+    await this.userCopyOfMessageSent(eventData, eventData.receiverID);
+  }
+
+  public async userCopyOfMessageSent(
     eventData: NotificationInputUserMessage,
-    user?: IUser,
-    space?: ISpace,
-    organization?: IOrganization
+    userID?: string,
+    spaceID?: string,
+    organizationID?: string
   ): Promise<void> {
     this.logger.verbose?.(
       'sending message notification',
       LogContext.NOTIFICATIONS,
-      { user, space, organization }
+      { userID, spaceID, organizationID }
     );
     const event = NotificationEvent.USER_MESSAGE;
     const recipients = await this.getNotificationRecipientsUser(

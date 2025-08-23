@@ -50,7 +50,9 @@ export class CommunicationResolverMutations {
         receiverID: receiverId,
         message: messageData.message,
       };
-      await this.notificationUserAdapter.userMessageSent(notificationInput);
+      await this.notificationUserAdapter.userToUserMessageDirect(
+        notificationInput
+      );
     }
 
     return true;

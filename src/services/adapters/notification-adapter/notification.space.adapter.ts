@@ -360,10 +360,10 @@ export class NotificationSpaceAdapter {
       triggeredBy: eventData.triggeredBy,
       receiverID: space.id,
     };
-    await this.notificationUserAdapter.userMessageSent(
+    await this.notificationUserAdapter.userCopyOfMessageSent(
       notificationUserInputMessage,
       undefined,
-      space
+      space.id
     );
   }
 
