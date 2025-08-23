@@ -53,25 +53,27 @@ export class NotificationChannels1755929043483 implements MigrationInterface {
         },
         space: {
           // Map legacy space fields to new structure
-          adminCommunityApplicationReceived: {
-            email:
-              legacyNotificationSettings.space.communityApplicationReceived,
-            inApp:
-              legacyNotificationSettings.space.communityApplicationReceived,
-          },
-          adminCollaborationCalloutContributionCreated: {
-            email:
-              legacyNotificationSettings.space.collaborationPostCreatedAdmin,
-            inApp:
-              legacyNotificationSettings.space.collaborationPostCreatedAdmin,
-          },
-          adminCommunityNewMember: {
-            email: legacyNotificationSettings.space.communityNewMemberAdmin,
-            inApp: legacyNotificationSettings.space.communityNewMemberAdmin,
-          },
-          adminCommunicationMessageReceived: {
-            email: legacyNotificationSettings.space.communicationMessageAdmin,
-            inApp: legacyNotificationSettings.space.communicationMessageAdmin,
+          admin: {
+            communityApplicationReceived: {
+              email:
+                legacyNotificationSettings.space.communityApplicationReceived,
+              inApp:
+                legacyNotificationSettings.space.communityApplicationReceived,
+            },
+            collaborationCalloutContributionCreated: {
+              email:
+                legacyNotificationSettings.space.collaborationPostCreatedAdmin,
+              inApp:
+                legacyNotificationSettings.space.collaborationPostCreatedAdmin,
+            },
+            communityNewMember: {
+              email: legacyNotificationSettings.space.communityNewMemberAdmin,
+              inApp: legacyNotificationSettings.space.communityNewMemberAdmin,
+            },
+            communicationMessageReceived: {
+              email: legacyNotificationSettings.space.communicationMessageAdmin,
+              inApp: legacyNotificationSettings.space.communicationMessageAdmin,
+            },
           },
           collaborationCalloutContributionCreated: {
             email: legacyNotificationSettings.space.collaborationPostCreated,
@@ -100,19 +102,21 @@ export class NotificationChannels1755929043483 implements MigrationInterface {
         },
         user: {
           // Map legacy user fields to new structure
-          spaceCommunityInvitationReceived: {
-            email: legacyNotificationSettings.space.communityInvitationUser,
-            inApp: legacyNotificationSettings.space.communityInvitationUser,
-          },
-          spaceCommunityJoined: {
-            email: legacyNotificationSettings.space.communityNewMember,
-            inApp: legacyNotificationSettings.space.communityNewMember,
-          },
-          spaceCommunityApplicationSubmitted: {
-            email:
-              legacyNotificationSettings.space.communityApplicationSubmitted,
-            inApp:
-              legacyNotificationSettings.space.communityApplicationSubmitted,
+          membership: {
+            spaceCommunityInvitationReceived: {
+              email: legacyNotificationSettings.space.communityInvitationUser,
+              inApp: legacyNotificationSettings.space.communityInvitationUser,
+            },
+            spaceCommunityJoined: {
+              email: legacyNotificationSettings.space.communityNewMember,
+              inApp: legacyNotificationSettings.space.communityNewMember,
+            },
+            spaceCommunityApplicationSubmitted: {
+              email:
+                legacyNotificationSettings.space.communityApplicationSubmitted,
+              inApp:
+                legacyNotificationSettings.space.communityApplicationSubmitted,
+            },
           },
           mentioned: {
             email: legacyNotificationSettings.user.mentioned,
@@ -215,10 +219,12 @@ interface NewNotificationOrganization {
 
 interface NewNotificationSpace {
   // Admin related notifications
-  adminCommunityApplicationReceived: NotificationChannels;
-  adminCollaborationCalloutContributionCreated: NotificationChannels;
-  adminCommunityNewMember: NotificationChannels;
-  adminCommunicationMessageReceived: NotificationChannels;
+  admin: {
+    communityApplicationReceived: NotificationChannels;
+    collaborationCalloutContributionCreated: NotificationChannels;
+    communityNewMember: NotificationChannels;
+    communicationMessageReceived: NotificationChannels;
+  };
   // Member related notifications
   collaborationCalloutContributionCreated: NotificationChannels;
   communicationUpdates: NotificationChannels;
@@ -228,9 +234,11 @@ interface NewNotificationSpace {
 }
 
 interface NewNotificationUser {
-  spaceCommunityInvitationReceived: NotificationChannels;
-  spaceCommunityJoined: NotificationChannels;
-  spaceCommunityApplicationSubmitted: NotificationChannels;
+  membership: {
+    spaceCommunityInvitationReceived: NotificationChannels;
+    spaceCommunityJoined: NotificationChannels;
+    spaceCommunityApplicationSubmitted: NotificationChannels;
+  };
   mentioned: NotificationChannels;
   commentReply: NotificationChannels;
   messageReceived: NotificationChannels;

@@ -1,6 +1,8 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
+import { CreateUserSettingsNotificationUserMembershipInput } from './user.settings.notification.user.membership.dto.create';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateUserSettingsNotificationUserInput {
@@ -33,24 +35,11 @@ export class CreateUserSettingsNotificationUserInput {
   @IsBoolean()
   commentReply!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description: 'Receive a notification when an application is submitted',
+  @Field(() => CreateUserSettingsNotificationUserMembershipInput, {
+    nullable: true,
+    description: 'Settings related to User Membership Notifications.',
   })
-  @IsBoolean()
-  spaceCommunityApplicationSubmitted!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description: 'Receive a notification for community invitation',
-  })
-  @IsBoolean()
-  spaceCommunityInvitationReceived!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description: 'Receive a notification when I join a new community',
-  })
-  @IsBoolean()
-  spaceCommunityJoined!: CreateUserSettingsNotificationChannelsInput;
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationUserMembershipInput)
+  membership!: CreateUserSettingsNotificationUserMembershipInput;
 }

@@ -1,38 +1,18 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
+import { CreateUserSettingsNotificationSpaceAdminInput } from './user.settings.notification.space.admin.dto.create';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateUserSettingsNotificationSpaceInput {
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description:
-      'Receive a notification when a message is sent to a Space I lead',
+  @Field(() => CreateUserSettingsNotificationSpaceAdminInput, {
+    nullable: true,
+    description: 'Settings related to Space Admin Notifications.',
   })
-  @IsBoolean()
-  adminCommunicationMessageReceived!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description: 'Receive a notification when an application is received',
-  })
-  @IsBoolean()
-  adminCommunityApplicationReceived!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description:
-      'Receive a notification when a new member joins the community (admin)',
-  })
-  @IsBoolean()
-  adminCommunityNewMember!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description: 'Receive a notification when a contribution is added (admin)',
-  })
-  @IsBoolean()
-  adminCollaborationCalloutContributionCreated!: CreateUserSettingsNotificationChannelsInput;
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationSpaceAdminInput)
+  admin!: CreateUserSettingsNotificationSpaceAdminInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,

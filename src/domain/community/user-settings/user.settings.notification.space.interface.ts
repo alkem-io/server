@@ -1,34 +1,15 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IUserSettingsNotificationChannels } from './user.settings.notification.channels.interface';
+import { IUserSettingsNotificationSpaceAdmin } from './user.settings.notification.space.admin.interface';
 
 @ObjectType('UserSettingsNotificationSpace')
 export abstract class IUserSettingsNotificationSpace {
-  @Field(() => IUserSettingsNotificationChannels, {
+  @Field(() => IUserSettingsNotificationSpaceAdmin, {
     nullable: false,
     description:
-      'Receive a notification when a new member joins the community (admin)',
+      'The notifications settings for Space Admin events for this User',
   })
-  adminCommunityNewMember!: IUserSettingsNotificationChannels;
-
-  @Field(() => IUserSettingsNotificationChannels, {
-    nullable: false,
-    description: 'Receive a notification when an application is received',
-  })
-  adminCommunityApplicationReceived!: IUserSettingsNotificationChannels;
-
-  @Field(() => IUserSettingsNotificationChannels, {
-    nullable: false,
-    description:
-      'Receive a notification when a message is sent to a Space I lead',
-  })
-  adminCommunicationMessageReceived!: IUserSettingsNotificationChannels;
-
-  @Field(() => IUserSettingsNotificationChannels, {
-    nullable: false,
-    description:
-      'Receive a notification when a contribution is created (admin)',
-  })
-  adminCollaborationCalloutContributionCreated!: IUserSettingsNotificationChannels;
+  admin!: IUserSettingsNotificationSpaceAdmin;
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,

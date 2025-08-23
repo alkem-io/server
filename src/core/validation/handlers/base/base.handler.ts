@@ -101,6 +101,9 @@ import { UpdateUserSettingsNotificationUserInput } from '@domain/community/user-
 import { UpdateUserSettingsNotificationVirtualContributorInput } from '@domain/community/user-settings/dto/user.settings.notification.virtual.contributor.dto.update';
 import { UpdateUserSettingsNotificationPlatformInput } from '@domain/community/user-settings/dto/user.settings.notification.platform.dto.update';
 import { UpdateUserSettingsNotificationOrganizationInput } from '@domain/community/user-settings/dto/user.settings.notification.organization.dto.update';
+import { CreateUserSettingsNotificationSpaceAdminInput } from '@domain/community/user-settings/dto/user.settings.notification.space.admin.dto.create';
+import { UpdateUserSettingsNotificationSpaceAdminInput } from '@domain/community/user-settings/dto/user.settings.notification.space.admin.dto.update';
+import { UpdateUserSettingsNotificationSpaceInput } from '@domain/community/user-settings/dto/user.settings.notification.space.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -146,6 +149,7 @@ export class BaseHandler extends AbstractHandler {
       CreateUserSettingsNotificationVirtualContributorInput,
       CreateUserSettingsNotificationPlatformInput,
       CreateUserSettingsNotificationSpaceInput,
+      CreateUserSettingsNotificationSpaceAdminInput,
       CreateUserSettingsPrivacyInput,
       CreateUserSettingsCommunicationInput,
       CreateUserSettingsInput,
@@ -190,6 +194,8 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserSettingsNotificationVirtualContributorInput,
       UpdateUserSettingsNotificationPlatformInput,
       UpdateUserSettingsNotificationOrganizationInput,
+      UpdateUserSettingsNotificationSpaceInput,
+      UpdateUserSettingsNotificationSpaceAdminInput,
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,

@@ -104,37 +104,37 @@ export class UserSettingsService {
 
     const notificationSpaceData = updateData.notification?.space;
     if (notificationSpaceData) {
-      if (
-        notificationSpaceData.adminCommunityApplicationReceived !== undefined
-      ) {
-        settings.notification.space.adminCommunityApplicationReceived.email =
-          notificationSpaceData.adminCommunityApplicationReceived;
-        settings.notification.space.adminCommunityApplicationReceived.inApp =
-          notificationSpaceData.adminCommunityApplicationReceived;
+      // Handle admin space notifications
+      if (notificationSpaceData.admin) {
+        const adminData = notificationSpaceData.admin;
+
+        if (adminData.communityApplicationReceived !== undefined) {
+          settings.notification.space.admin.communityApplicationReceived.email =
+            adminData.communityApplicationReceived;
+          settings.notification.space.admin.communityApplicationReceived.inApp =
+            adminData.communityApplicationReceived;
+        }
+        if (adminData.communityNewMember !== undefined) {
+          settings.notification.space.admin.communityNewMember.email =
+            adminData.communityNewMember;
+          settings.notification.space.admin.communityNewMember.inApp =
+            adminData.communityNewMember;
+        }
+        if (adminData.communicationMessageReceived !== undefined) {
+          settings.notification.space.admin.communicationMessageReceived.email =
+            adminData.communicationMessageReceived;
+          settings.notification.space.admin.communicationMessageReceived.inApp =
+            adminData.communicationMessageReceived;
+        }
+        if (adminData.collaborationCalloutContributionCreated !== undefined) {
+          settings.notification.space.admin.collaborationCalloutContributionCreated.email =
+            adminData.collaborationCalloutContributionCreated;
+          settings.notification.space.admin.collaborationCalloutContributionCreated.inApp =
+            adminData.collaborationCalloutContributionCreated;
+        }
       }
-      if (notificationSpaceData.adminCommunityNewMember !== undefined) {
-        settings.notification.space.adminCommunityNewMember.email =
-          notificationSpaceData.adminCommunityNewMember;
-        settings.notification.space.adminCommunityNewMember.inApp =
-          notificationSpaceData.adminCommunityNewMember;
-      }
-      if (
-        notificationSpaceData.adminCommunicationMessageReceived !== undefined
-      ) {
-        settings.notification.space.adminCommunicationMessageReceived.email =
-          notificationSpaceData.adminCommunicationMessageReceived;
-        settings.notification.space.adminCommunicationMessageReceived.inApp =
-          notificationSpaceData.adminCommunicationMessageReceived;
-      }
-      if (
-        notificationSpaceData.adminCollaborationCalloutContributionCreated !==
-        undefined
-      ) {
-        settings.notification.space.adminCollaborationCalloutContributionCreated.email =
-          notificationSpaceData.adminCollaborationCalloutContributionCreated;
-        settings.notification.space.adminCollaborationCalloutContributionCreated.inApp =
-          notificationSpaceData.adminCollaborationCalloutContributionCreated;
-      }
+
+      // Handle regular space notifications
       if (notificationSpaceData.communicationUpdates !== undefined) {
         settings.notification.space.communicationUpdates.email =
           notificationSpaceData.communicationUpdates;
@@ -175,6 +175,7 @@ export class UserSettingsService {
 
     const notificationUserData = updateData.notification?.user;
     if (notificationUserData) {
+      // Handle core user notifications
       if (notificationUserData.messageReceived !== undefined) {
         settings.notification.user.messageReceived.email =
           notificationUserData.messageReceived;
@@ -199,25 +200,29 @@ export class UserSettingsService {
         settings.notification.user.commentReply.inApp =
           notificationUserData.commentReply;
       }
-      if (
-        notificationUserData.spaceCommunityApplicationSubmitted !== undefined
-      ) {
-        settings.notification.user.spaceCommunityApplicationSubmitted.email =
-          notificationUserData.spaceCommunityApplicationSubmitted;
-        settings.notification.user.spaceCommunityApplicationSubmitted.inApp =
-          notificationUserData.spaceCommunityApplicationSubmitted;
-      }
-      if (notificationUserData.spaceCommunityInvitationReceived !== undefined) {
-        settings.notification.user.spaceCommunityInvitationReceived.email =
-          notificationUserData.spaceCommunityInvitationReceived;
-        settings.notification.user.spaceCommunityInvitationReceived.inApp =
-          notificationUserData.spaceCommunityInvitationReceived;
-      }
-      if (notificationUserData.spaceCommunityJoined !== undefined) {
-        settings.notification.user.spaceCommunityJoined.email =
-          notificationUserData.spaceCommunityJoined;
-        settings.notification.user.spaceCommunityJoined.inApp =
-          notificationUserData.spaceCommunityJoined;
+
+      // Handle membership notifications
+      if (notificationUserData.membership) {
+        const membershipData = notificationUserData.membership;
+
+        if (membershipData.spaceCommunityApplicationSubmitted !== undefined) {
+          settings.notification.user.membership.spaceCommunityApplicationSubmitted.email =
+            membershipData.spaceCommunityApplicationSubmitted;
+          settings.notification.user.membership.spaceCommunityApplicationSubmitted.inApp =
+            membershipData.spaceCommunityApplicationSubmitted;
+        }
+        if (membershipData.spaceCommunityInvitationReceived !== undefined) {
+          settings.notification.user.membership.spaceCommunityInvitationReceived.email =
+            membershipData.spaceCommunityInvitationReceived;
+          settings.notification.user.membership.spaceCommunityInvitationReceived.inApp =
+            membershipData.spaceCommunityInvitationReceived;
+        }
+        if (membershipData.spaceCommunityJoined !== undefined) {
+          settings.notification.user.membership.spaceCommunityJoined.email =
+            membershipData.spaceCommunityJoined;
+          settings.notification.user.membership.spaceCommunityJoined.inApp =
+            membershipData.spaceCommunityJoined;
+        }
       }
     }
 

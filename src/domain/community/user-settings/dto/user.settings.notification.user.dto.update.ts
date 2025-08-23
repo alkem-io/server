@@ -1,5 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { ValidateNested } from 'class-validator';
+import { UpdateUserSettingsNotificationUserMembershipInput } from './user.settings.notification.user.membership.dto.update';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationUserInput {
@@ -29,24 +31,11 @@ export class UpdateUserSettingsNotificationUserInput {
   })
   commentReply?: boolean;
 
-  @Field(() => Boolean, {
+  @Field(() => UpdateUserSettingsNotificationUserMembershipInput, {
     nullable: true,
-    description: 'Receive a notification when an application is submitted',
+    description: 'Settings related to User Membership Notifications.',
   })
-  @IsBoolean()
-  spaceCommunityApplicationSubmitted?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification for community invitation',
-  })
-  @IsBoolean()
-  spaceCommunityInvitationReceived?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when I join a new community',
-  })
-  @IsBoolean()
-  spaceCommunityJoined?: boolean;
+  @ValidateNested()
+  @Type(() => UpdateUserSettingsNotificationUserMembershipInput)
+  membership!: UpdateUserSettingsNotificationUserMembershipInput;
 }

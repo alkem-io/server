@@ -1,37 +1,17 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, ValidateNested } from 'class-validator';
+import { UpdateUserSettingsNotificationSpaceAdminInput } from './user.settings.notification.space.admin.dto.update';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationSpaceInput {
-  @Field(() => Boolean, {
+  @Field(() => UpdateUserSettingsNotificationSpaceAdminInput, {
     nullable: true,
-    description:
-      'Receive a notification when a message is sent to a Space I lead',
+    description: 'Settings related to Space Admin Notifications.',
   })
-  @IsBoolean()
-  adminCommunicationMessageReceived?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when an application is received',
-  })
-  @IsBoolean()
-  adminCommunityApplicationReceived?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description:
-      'Receive a notification when a new member joins the community (admin)',
-  })
-  @IsBoolean()
-  adminCommunityNewMember?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when a contribution is added (admin)',
-  })
-  @IsBoolean()
-  adminCollaborationCalloutContributionCreated?: boolean;
+  @ValidateNested()
+  @Type(() => UpdateUserSettingsNotificationSpaceAdminInput)
+  admin?: UpdateUserSettingsNotificationSpaceAdminInput;
 
   @Field(() => Boolean, {
     nullable: true,

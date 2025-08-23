@@ -241,11 +241,13 @@ export class NotificationRecipientsService {
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
         return notificationSettings.organization.adminMentioned;
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
-        return notificationSettings.user.spaceCommunityApplicationSubmitted;
+        return notificationSettings.user.membership
+          .spaceCommunityApplicationSubmitted;
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
-        return notificationSettings.user.spaceCommunityInvitationReceived;
+        return notificationSettings.user.membership
+          .spaceCommunityInvitationReceived;
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
-        return notificationSettings.user.spaceCommunityJoined;
+        return notificationSettings.user.membership.spaceCommunityJoined;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
       case NotificationEvent.USER_MENTIONED:
@@ -255,16 +257,16 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_COPY_OF_MESSAGE_SENT:
         return notificationSettings.user.copyOfMessageSent;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
-        return notificationSettings.space.adminCommunityApplicationReceived;
+        return notificationSettings.space.admin.communityApplicationReceived;
       case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
-        return notificationSettings.space.adminCommunicationMessageReceived;
+        return notificationSettings.space.admin.communicationMessageReceived;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         return notificationSettings.space.communicationUpdates;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
-        return notificationSettings.space.adminCommunityNewMember;
+        return notificationSettings.space.admin.communityNewMember;
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
-        return notificationSettings.space
-          .adminCollaborationCalloutContributionCreated;
+        return notificationSettings.space.admin
+          .collaborationCalloutContributionCreated;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
         return notificationSettings.space
           .collaborationCalloutContributionCreated;
