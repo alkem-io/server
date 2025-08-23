@@ -14,7 +14,7 @@ export class UpdateUserSettingsNotificationUserInput {
     description:
       'Receive notification I send a message to a User, Organization or Space.',
   })
-  messageSent?: boolean;
+  copyOfMessageSent?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,

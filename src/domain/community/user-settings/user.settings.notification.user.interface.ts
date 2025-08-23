@@ -34,7 +34,7 @@ export abstract class IUserSettingsNotificationUser {
     description:
       'Receive notification I send a message to a User, Organization or Space.',
   })
-  messageSent!: IUserSettingsNotificationChannels;
+  copyOfMessageSent!: IUserSettingsNotificationChannels;
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,

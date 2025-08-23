@@ -54,7 +54,7 @@ export class CreateUserSettingsNotificationSpaceInput {
       'Receive a notification when a comment is created on a contribution',
   })
   @IsBoolean()
-  collaborationCalloutContributionComment!: CreateUserSettingsNotificationChannelsInput;
+  collaborationCalloutPostContributionComment!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,

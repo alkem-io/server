@@ -57,7 +57,7 @@ export abstract class IUserSettingsNotificationSpace {
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
-      'Receive a notification when a comment is created on a contribution',
+      'Receive a notification when a comment is created on a Post contribution',
   })
-  collaborationCalloutContributionComment!: IUserSettingsNotificationChannels;
+  collaborationCalloutPostContributionComment!: IUserSettingsNotificationChannels;
 }

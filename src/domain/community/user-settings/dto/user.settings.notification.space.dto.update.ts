@@ -53,7 +53,7 @@ export class UpdateUserSettingsNotificationSpaceInput {
       'Receive a notification when a comment is created on a contribution',
   })
   @IsBoolean()
-  collaborationCalloutContributionComment?: boolean;
+  collaborationCalloutPostContributionComment?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,

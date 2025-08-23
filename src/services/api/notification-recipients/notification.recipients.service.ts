@@ -253,7 +253,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MESSAGE:
         return notificationSettings.user.messageReceived;
       case NotificationEvent.USER_MESSAGE_SENT_COPY:
-        return notificationSettings.user.messageSent;
+        return notificationSettings.user.copyOfMessageSent;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.adminCommunityApplicationReceived;
       case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
@@ -269,7 +269,7 @@ export class NotificationRecipientsService {
           .collaborationCalloutContributionCreated;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
         return notificationSettings.space
-          .collaborationCalloutContributionComment;
+          .collaborationCalloutPostContributionComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
         return notificationSettings.space.collaborationCalloutComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:

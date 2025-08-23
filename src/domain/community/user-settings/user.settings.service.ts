@@ -148,13 +148,13 @@ export class UserSettingsService {
           notificationSpaceData.collaborationContributionCreated;
       }
       if (
-        notificationSpaceData.collaborationCalloutContributionComment !==
+        notificationSpaceData.collaborationCalloutPostContributionComment !==
         undefined
       ) {
-        settings.notification.space.collaborationCalloutContributionComment.email =
-          notificationSpaceData.collaborationCalloutContributionComment;
-        settings.notification.space.collaborationCalloutContributionComment.inApp =
-          notificationSpaceData.collaborationCalloutContributionComment;
+        settings.notification.space.collaborationCalloutPostContributionComment.email =
+          notificationSpaceData.collaborationCalloutPostContributionComment;
+        settings.notification.space.collaborationCalloutPostContributionComment.inApp =
+          notificationSpaceData.collaborationCalloutPostContributionComment;
       }
       if (notificationSpaceData.collaborationCalloutComment !== undefined) {
         settings.notification.space.collaborationCalloutComment.email =
@@ -178,11 +178,11 @@ export class UserSettingsService {
         settings.notification.user.messageReceived.inApp =
           notificationUserData.messageReceived;
       }
-      if (notificationUserData.messageSent !== undefined) {
-        settings.notification.user.messageSent.email =
-          notificationUserData.messageSent;
-        settings.notification.user.messageSent.inApp =
-          notificationUserData.messageSent;
+      if (notificationUserData.copyOfMessageSent !== undefined) {
+        settings.notification.user.copyOfMessageSent.email =
+          notificationUserData.copyOfMessageSent;
+        settings.notification.user.copyOfMessageSent.inApp =
+          notificationUserData.copyOfMessageSent;
       }
       if (notificationUserData.mentioned !== undefined) {
         settings.notification.user.mentioned.email =
