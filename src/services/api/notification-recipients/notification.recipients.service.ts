@@ -229,13 +229,13 @@ export class NotificationRecipientsService {
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
         return notificationSettings.platform.forumDiscussionComment;
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
-        return notificationSettings.platform.adminUserProfileCreated;
+        return notificationSettings.platform.admin.userProfileCreated;
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
-        return notificationSettings.platform.adminUserProfileRemoved;
+        return notificationSettings.platform.admin.userProfileRemoved;
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
-        return notificationSettings.platform.adminSpaceCreated;
+        return notificationSettings.platform.admin.spaceCreated;
       case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
-        return notificationSettings.platform.adminUserGlobalRoleChanged;
+        return notificationSettings.platform.admin.userGlobalRoleChanged;
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
         return notificationSettings.organization.adminMessageReceived;
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:

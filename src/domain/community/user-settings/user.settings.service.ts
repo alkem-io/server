@@ -54,6 +54,7 @@ export class UserSettingsService {
     }
     const notificationPlatformData = updateData.notification?.platform;
     if (notificationPlatformData) {
+      // Handle regular platform notifications
       if (notificationPlatformData.forumDiscussionComment !== undefined) {
         settings.notification.platform.forumDiscussionComment.email =
           notificationPlatformData.forumDiscussionComment;
@@ -66,23 +67,35 @@ export class UserSettingsService {
         settings.notification.platform.forumDiscussionCreated.inApp =
           notificationPlatformData.forumDiscussionCreated;
       }
-      if (notificationPlatformData.adminUserProfileRemoved !== undefined) {
-        settings.notification.platform.adminUserProfileRemoved.email =
-          notificationPlatformData.adminUserProfileRemoved;
-        settings.notification.platform.adminUserProfileRemoved.inApp =
-          notificationPlatformData.adminUserProfileRemoved;
-      }
-      if (notificationPlatformData.adminUserProfileCreated !== undefined) {
-        settings.notification.platform.adminUserProfileCreated.email =
-          notificationPlatformData.adminUserProfileCreated;
-        settings.notification.platform.adminUserProfileCreated.inApp =
-          notificationPlatformData.adminUserProfileCreated;
-      }
-      if (notificationPlatformData.adminSpaceCreated !== undefined) {
-        settings.notification.platform.adminSpaceCreated.email =
-          notificationPlatformData.adminSpaceCreated;
-        settings.notification.platform.adminSpaceCreated.inApp =
-          notificationPlatformData.adminSpaceCreated;
+
+      // Handle admin platform notifications
+      if (notificationPlatformData.admin) {
+        const adminData = notificationPlatformData.admin;
+
+        if (adminData.userProfileRemoved !== undefined) {
+          settings.notification.platform.admin.userProfileRemoved.email =
+            adminData.userProfileRemoved;
+          settings.notification.platform.admin.userProfileRemoved.inApp =
+            adminData.userProfileRemoved;
+        }
+        if (adminData.userProfileCreated !== undefined) {
+          settings.notification.platform.admin.userProfileCreated.email =
+            adminData.userProfileCreated;
+          settings.notification.platform.admin.userProfileCreated.inApp =
+            adminData.userProfileCreated;
+        }
+        if (adminData.spaceCreated !== undefined) {
+          settings.notification.platform.admin.spaceCreated.email =
+            adminData.spaceCreated;
+          settings.notification.platform.admin.spaceCreated.inApp =
+            adminData.spaceCreated;
+        }
+        if (adminData.userGlobalRoleChanged !== undefined) {
+          settings.notification.platform.admin.userGlobalRoleChanged.email =
+            adminData.userGlobalRoleChanged;
+          settings.notification.platform.admin.userGlobalRoleChanged.inApp =
+            adminData.userGlobalRoleChanged;
+        }
       }
     }
 

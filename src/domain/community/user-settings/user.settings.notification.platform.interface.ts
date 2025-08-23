@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IUserSettingsNotificationChannels } from './user.settings.notification.channels.interface';
+import { IUserSettingsNotificationPlatformAdmin } from './user.settings.notification.platform.admin.interface';
 
 @ObjectType('UserSettingsNotificationPlatform')
 export abstract class IUserSettingsNotificationPlatform {
@@ -17,28 +18,10 @@ export abstract class IUserSettingsNotificationPlatform {
   })
   forumDiscussionComment!: IUserSettingsNotificationChannels;
 
-  @Field(() => IUserSettingsNotificationChannels, {
-    nullable: false,
-    description: 'Receive notification when a new user signs up',
-  })
-  adminUserProfileCreated!: IUserSettingsNotificationChannels;
-
-  @Field(() => IUserSettingsNotificationChannels, {
-    nullable: false,
-    description: 'Receive a notification when a user profile is removed',
-  })
-  adminUserProfileRemoved!: IUserSettingsNotificationChannels;
-
-  @Field(() => IUserSettingsNotificationChannels, {
+  @Field(() => IUserSettingsNotificationPlatformAdmin, {
     nullable: false,
     description:
-      'Receive a notification when a user global role is assigned or removed.',
+      'The notifications settings for Platform Admin events for this User',
   })
-  adminUserGlobalRoleChanged!: IUserSettingsNotificationChannels;
-
-  @Field(() => IUserSettingsNotificationChannels, {
-    nullable: false,
-    description: 'Receive a notification when a new L0 Space is created',
-  })
-  adminSpaceCreated!: IUserSettingsNotificationChannels;
+  admin!: IUserSettingsNotificationPlatformAdmin;
 }

@@ -1,6 +1,8 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
+import { CreateUserSettingsNotificationPlatformAdminInput } from './user.settings.notification.platform.admin.dto.create';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateUserSettingsNotificationPlatformInput {
@@ -20,34 +22,11 @@ export class CreateUserSettingsNotificationPlatformInput {
   @IsBoolean()
   forumDiscussionComment!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description: '[Admin] Receive notification when a new user signs up',
+  @Field(() => CreateUserSettingsNotificationPlatformAdminInput, {
+    nullable: true,
+    description: 'Settings related to Space Admin Notifications.',
   })
-  @IsBoolean()
-  adminUserProfileCreated!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description:
-      '[Admin] Receive a notification when a user profile is removed',
-  })
-  @IsBoolean()
-  adminUserProfileRemoved!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description:
-      '[Admin] Receive a notification when a new L0 Space is created',
-  })
-  @IsBoolean()
-  adminSpaceCreated!: CreateUserSettingsNotificationChannelsInput;
-
-  @Field(() => CreateUserSettingsNotificationChannelsInput, {
-    nullable: false,
-    description:
-      '[Admin] Receive a notification user is assigned or removed from a global role',
-  })
-  @IsBoolean()
-  adminUserGlobalRoleChanged!: CreateUserSettingsNotificationChannelsInput;
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationPlatformAdminInput)
+  admin!: CreateUserSettingsNotificationPlatformAdminInput;
 }

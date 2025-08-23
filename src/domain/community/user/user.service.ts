@@ -242,10 +242,12 @@ export class UserService {
         platform: {
           forumDiscussionCreated: { email: false, inApp: false },
           forumDiscussionComment: { email: true, inApp: true },
-          adminUserProfileCreated: { email: true, inApp: true },
-          adminUserProfileRemoved: { email: true, inApp: true },
-          adminSpaceCreated: { email: true, inApp: true },
-          adminUserGlobalRoleChanged: { email: true, inApp: true },
+          admin: {
+            userProfileCreated: { email: true, inApp: true },
+            userProfileRemoved: { email: true, inApp: true },
+            spaceCreated: { email: true, inApp: true },
+            userGlobalRoleChanged: { email: true, inApp: true },
+          },
         },
         space: {
           admin: {

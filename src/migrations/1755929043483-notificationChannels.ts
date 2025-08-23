@@ -15,21 +15,23 @@ export class NotificationChannels1755929043483 implements MigrationInterface {
       const newNotificationSettings: NewNotificationSettings = {
         platform: {
           // Map legacy platform fields to new structure
-          adminUserProfileRemoved: {
-            email: legacyNotificationSettings.platform.userProfileRemoved,
-            inApp: legacyNotificationSettings.platform.userProfileRemoved,
-          },
-          adminUserProfileCreated: {
-            email: legacyNotificationSettings.platform.newUserSignUp,
-            inApp: legacyNotificationSettings.platform.newUserSignUp,
-          },
-          adminSpaceCreated: {
-            email: legacyNotificationSettings.platform.spaceCreated,
-            inApp: legacyNotificationSettings.platform.spaceCreated,
-          },
-          adminUserGlobalRoleChanged: {
-            email: true,
-            inApp: true,
+          admin: {
+            userProfileRemoved: {
+              email: legacyNotificationSettings.platform.userProfileRemoved,
+              inApp: legacyNotificationSettings.platform.userProfileRemoved,
+            },
+            userProfileCreated: {
+              email: legacyNotificationSettings.platform.newUserSignUp,
+              inApp: legacyNotificationSettings.platform.newUserSignUp,
+            },
+            spaceCreated: {
+              email: legacyNotificationSettings.platform.spaceCreated,
+              inApp: legacyNotificationSettings.platform.spaceCreated,
+            },
+            userGlobalRoleChanged: {
+              email: true,
+              inApp: true,
+            },
           },
           forumDiscussionComment: {
             email: legacyNotificationSettings.platform.forumDiscussionComment,
@@ -204,10 +206,12 @@ interface NotificationChannels {
 }
 
 interface NewNotificationPlatform {
-  adminUserProfileRemoved: NotificationChannels;
-  adminUserProfileCreated: NotificationChannels;
-  adminSpaceCreated: NotificationChannels;
-  adminUserGlobalRoleChanged: NotificationChannels;
+  admin: {
+    userProfileRemoved: NotificationChannels;
+    userProfileCreated: NotificationChannels;
+    spaceCreated: NotificationChannels;
+    userGlobalRoleChanged: NotificationChannels;
+  };
   forumDiscussionComment: NotificationChannels;
   forumDiscussionCreated: NotificationChannels;
 }
