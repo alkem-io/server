@@ -13,37 +13,123 @@ export const userSettingsData: { userSettings: IUserSettings } = {
     },
     notification: {
       space: {
-        adminCommunityApplicationReceived: true,
-        communityApplicationSubmitted: true,
-        communityNewMember: true,
-        adminCommunityNewMember: true,
-        communityInvitationUser: true,
-        communicationUpdates: true,
-        communicationUpdatesAdmin: true,
-        communicationMessage: true,
-        communicationMessageAdmin: true,
-        adminCollaborationCalloutContributionCreated: true,
-        collaborationCalloutPostContributionComment: true,
-        collaborationCalloutContributionCreated: true,
-        collaborationCalloutComment: true,
-        collaborationCalloutPublished: true,
+        admin: {
+          communityApplicationReceived: {
+            email: true,
+            inApp: true,
+          },
+          communityNewMember: {
+            email: true,
+            inApp: true,
+          },
+          communicationMessageReceived: {
+            email: true,
+            inApp: true,
+          },
+          collaborationCalloutContributionCreated: {
+            email: true,
+            inApp: true,
+          },
+        },
+
+        communicationUpdates: {
+          email: true,
+          inApp: true,
+        },
+
+        collaborationCalloutPostContributionComment: {
+          email: true,
+          inApp: true,
+        },
+        collaborationCalloutContributionCreated: {
+          email: true,
+          inApp: true,
+        },
+        collaborationCalloutComment: {
+          email: true,
+          inApp: true,
+        },
+        collaborationCalloutPublished: {
+          email: true,
+          inApp: true,
+        },
       },
       platform: {
-        adminUserProfileRemoved: true,
-        adminUserProfileCreated: true,
-        forumDiscussionComment: true,
-        forumDiscussionCreated: true,
-        adminSpaceCreated: true,
+        admin: {
+          userProfileRemoved: {
+            email: true,
+            inApp: true,
+          },
+          userProfileCreated: {
+            email: true,
+            inApp: true,
+          },
+          spaceCreated: {
+            email: true,
+            inApp: true,
+          },
+          userGlobalRoleChanged: {
+            email: true,
+            inApp: true,
+          },
+        },
+
+        forumDiscussionComment: {
+          email: true,
+          inApp: true,
+        },
+        forumDiscussionCreated: {
+          email: true,
+          inApp: true,
+        },
       },
       organization: {
-        adminMentioned: true,
-        adminMessageReceived: true,
+        adminMentioned: {
+          email: true,
+          inApp: true,
+        },
+        adminMessageReceived: {
+          email: true,
+          inApp: true,
+        },
+      },
+      virtualContributor: {
+        adminSpaceCommunityInvitation: {
+          email: true,
+          inApp: true,
+        },
       },
       user: {
-        commentReply: true,
-        mentioned: true,
-        messageReceived: true,
-        copyOfMessageSent: true,
+        commentReply: {
+          email: true,
+          inApp: true,
+        },
+        mentioned: {
+          email: true,
+          inApp: true,
+        },
+        messageReceived: {
+          email: true,
+          inApp: true,
+        },
+        copyOfMessageSent: {
+          email: true,
+          inApp: true,
+        },
+        membership: {
+          spaceCommunityApplicationSubmitted: {
+            email: true,
+            inApp: true,
+          },
+          spaceCommunityInvitationReceived: {
+            email: true,
+            inApp: true,
+          },
+          spaceCommunityJoined: {
+            email: true,
+            inApp: true,
+          },
+        },
       },
     },
   },
