@@ -41,7 +41,7 @@ export class UpdateUserSettingsNotificationUserInput {
     description: 'Receive a notification for community invitation',
   })
   @IsBoolean()
-  spaceCommunityInvitation?: boolean;
+  spaceCommunityInvitationReceived?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,

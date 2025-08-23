@@ -36,7 +36,7 @@ export class NotificationPlatformAdapter {
   public async platformGlobalRoleChanged(
     eventData: NotificationInputPlatformGlobalRoleChange
   ): Promise<void> {
-    const event = NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE;
+    const event = NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED;
     const recipients = await this.getNotificationRecipientsPlatform(
       event,
       eventData
@@ -66,7 +66,7 @@ export class NotificationPlatformAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE,
+        NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
         NotificationEventCategory.PLATFORM,
         eventData.triggeredBy,
         inAppReceiverIDs,

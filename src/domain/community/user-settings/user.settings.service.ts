@@ -118,20 +118,22 @@ export class UserSettingsService {
         settings.notification.space.adminCommunityNewMember.inApp =
           notificationSpaceData.adminCommunityNewMember;
       }
-      if (notificationSpaceData.adminCommunicationMessage !== undefined) {
+      if (
+        notificationSpaceData.adminCommunicationMessageReceived !== undefined
+      ) {
         settings.notification.space.adminCommunicationMessageReceived.email =
-          notificationSpaceData.adminCommunicationMessage;
+          notificationSpaceData.adminCommunicationMessageReceived;
         settings.notification.space.adminCommunicationMessageReceived.inApp =
-          notificationSpaceData.adminCommunicationMessage;
+          notificationSpaceData.adminCommunicationMessageReceived;
       }
       if (
-        notificationSpaceData.adminCollaborationCalloutContribution !==
+        notificationSpaceData.adminCollaborationCalloutContributionCreated !==
         undefined
       ) {
-        settings.notification.space.adminCollaborationContributionCreated.email =
-          notificationSpaceData.adminCollaborationCalloutContribution;
-        settings.notification.space.adminCollaborationContributionCreated.inApp =
-          notificationSpaceData.adminCollaborationCalloutContribution;
+        settings.notification.space.adminCollaborationCalloutContributionCreated.email =
+          notificationSpaceData.adminCollaborationCalloutContributionCreated;
+        settings.notification.space.adminCollaborationCalloutContributionCreated.inApp =
+          notificationSpaceData.adminCollaborationCalloutContributionCreated;
       }
       if (notificationSpaceData.communicationUpdates !== undefined) {
         settings.notification.space.communicationUpdates.email =
@@ -140,12 +142,13 @@ export class UserSettingsService {
           notificationSpaceData.communicationUpdates;
       }
       if (
-        notificationSpaceData.collaborationContributionCreated !== undefined
+        notificationSpaceData.collaborationCalloutContributionCreated !==
+        undefined
       ) {
         settings.notification.space.collaborationCalloutContributionCreated.email =
-          notificationSpaceData.collaborationContributionCreated;
+          notificationSpaceData.collaborationCalloutContributionCreated;
         settings.notification.space.collaborationCalloutContributionCreated.inApp =
-          notificationSpaceData.collaborationContributionCreated;
+          notificationSpaceData.collaborationCalloutContributionCreated;
       }
       if (
         notificationSpaceData.collaborationCalloutPostContributionComment !==
@@ -204,11 +207,11 @@ export class UserSettingsService {
         settings.notification.user.spaceCommunityApplicationSubmitted.inApp =
           notificationUserData.spaceCommunityApplicationSubmitted;
       }
-      if (notificationUserData.spaceCommunityInvitation !== undefined) {
+      if (notificationUserData.spaceCommunityInvitationReceived !== undefined) {
         settings.notification.user.spaceCommunityInvitationReceived.email =
-          notificationUserData.spaceCommunityInvitation;
+          notificationUserData.spaceCommunityInvitationReceived;
         settings.notification.user.spaceCommunityInvitationReceived.inApp =
-          notificationUserData.spaceCommunityInvitation;
+          notificationUserData.spaceCommunityInvitationReceived;
       }
       if (notificationUserData.spaceCommunityJoined !== undefined) {
         settings.notification.user.spaceCommunityJoined.email =

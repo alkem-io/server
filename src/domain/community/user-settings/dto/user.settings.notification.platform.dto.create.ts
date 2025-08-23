@@ -49,5 +49,5 @@ export class CreateUserSettingsNotificationPlatformInput {
       '[Admin] Receive a notification user is assigned or removed from a global role',
   })
   @IsBoolean()
-  adminGlobalRoleChanged!: CreateUserSettingsNotificationChannelsInput;
+  adminUserGlobalRoleChanged!: CreateUserSettingsNotificationChannelsInput;
 }

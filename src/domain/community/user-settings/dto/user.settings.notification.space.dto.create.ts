@@ -10,7 +10,7 @@ export class CreateUserSettingsNotificationSpaceInput {
       'Receive a notification when a message is sent to a Space I lead',
   })
   @IsBoolean()
-  adminCommunicationMessage!: CreateUserSettingsNotificationChannelsInput;
+  adminCommunicationMessageReceived!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
@@ -32,7 +32,7 @@ export class CreateUserSettingsNotificationSpaceInput {
     description: 'Receive a notification when a contribution is added (admin)',
   })
   @IsBoolean()
-  adminCollaborationCalloutContribution!: CreateUserSettingsNotificationChannelsInput;
+  adminCollaborationCalloutContributionCreated!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,

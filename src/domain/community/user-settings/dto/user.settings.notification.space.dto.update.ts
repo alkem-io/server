@@ -9,7 +9,7 @@ export class UpdateUserSettingsNotificationSpaceInput {
       'Receive a notification when a message is sent to a Space I lead',
   })
   @IsBoolean()
-  adminCommunicationMessage?: boolean;
+  adminCommunicationMessageReceived?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,
@@ -31,7 +31,7 @@ export class UpdateUserSettingsNotificationSpaceInput {
     description: 'Receive a notification when a contribution is added (admin)',
   })
   @IsBoolean()
-  adminCollaborationCalloutContribution?: boolean;
+  adminCollaborationCalloutContributionCreated?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,
@@ -45,7 +45,7 @@ export class UpdateUserSettingsNotificationSpaceInput {
     description: 'Receive a notification when a contribution is added',
   })
   @IsBoolean()
-  collaborationContributionCreated?: boolean;
+  collaborationCalloutContributionCreated?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,

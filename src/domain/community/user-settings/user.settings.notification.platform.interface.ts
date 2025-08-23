@@ -34,7 +34,7 @@ export abstract class IUserSettingsNotificationPlatform {
     description:
       'Receive a notification when a user global role is assigned or removed.',
   })
-  adminUserGlobalRoleChange!: IUserSettingsNotificationChannels;
+  adminUserGlobalRoleChanged!: IUserSettingsNotificationChannels;
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,

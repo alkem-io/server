@@ -28,7 +28,7 @@ export abstract class IUserSettingsNotificationSpace {
     description:
       'Receive a notification when a contribution is created (admin)',
   })
-  adminCollaborationContributionCreated!: IUserSettingsNotificationChannels;
+  adminCollaborationCalloutContributionCreated!: IUserSettingsNotificationChannels;
 
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,

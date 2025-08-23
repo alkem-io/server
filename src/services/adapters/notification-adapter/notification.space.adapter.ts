@@ -371,7 +371,7 @@ export class NotificationSpaceAdapter {
     eventData: NotificationInputCalloutPostContributionComment
   ): Promise<void> {
     const event =
-      NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT;
+      NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT;
 
     const community =
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
@@ -413,7 +413,7 @@ export class NotificationSpaceAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT,
+        NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT,
         NotificationEventCategory.SPACE_MEMBER,
         eventData.triggeredBy,
         inAppReceiverIDs,

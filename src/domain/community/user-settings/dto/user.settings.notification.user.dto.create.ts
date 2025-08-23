@@ -45,7 +45,7 @@ export class CreateUserSettingsNotificationUserInput {
     description: 'Receive a notification for community invitation',
   })
   @IsBoolean()
-  spaceCommunityInvitation!: CreateUserSettingsNotificationChannelsInput;
+  spaceCommunityInvitationReceived!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,

@@ -27,7 +27,7 @@ export class NotificationChannels1755929043483 implements MigrationInterface {
             email: legacyNotificationSettings.platform.spaceCreated,
             inApp: legacyNotificationSettings.platform.spaceCreated,
           },
-          adminUserGlobalRoleChange: {
+          adminUserGlobalRoleChanged: {
             email: true,
             inApp: true,
           },
@@ -59,7 +59,7 @@ export class NotificationChannels1755929043483 implements MigrationInterface {
             inApp:
               legacyNotificationSettings.space.communityApplicationReceived,
           },
-          adminCollaborationContributionCreated: {
+          adminCollaborationCalloutContributionCreated: {
             email:
               legacyNotificationSettings.space.collaborationPostCreatedAdmin,
             inApp:
@@ -88,10 +88,8 @@ export class NotificationChannels1755929043483 implements MigrationInterface {
               legacyNotificationSettings.space.collaborationCalloutPublished,
           },
           collaborationCalloutComment: {
-            email:
-              legacyNotificationSettings.space.collaborationWhiteboardCreated,
-            inApp:
-              legacyNotificationSettings.space.collaborationWhiteboardCreated,
+            email: true,
+            inApp: true,
           },
           collaborationCalloutPostContributionComment: {
             email:
@@ -205,7 +203,7 @@ interface NewNotificationPlatform {
   adminUserProfileRemoved: NotificationChannels;
   adminUserProfileCreated: NotificationChannels;
   adminSpaceCreated: NotificationChannels;
-  adminUserGlobalRoleChange: NotificationChannels;
+  adminUserGlobalRoleChanged: NotificationChannels;
   forumDiscussionComment: NotificationChannels;
   forumDiscussionCreated: NotificationChannels;
 }
@@ -218,7 +216,7 @@ interface NewNotificationOrganization {
 interface NewNotificationSpace {
   // Admin related notifications
   adminCommunityApplicationReceived: NotificationChannels;
-  adminCollaborationContributionCreated: NotificationChannels;
+  adminCollaborationCalloutContributionCreated: NotificationChannels;
   adminCommunityNewMember: NotificationChannels;
   adminCommunicationMessageReceived: NotificationChannels;
   // Member related notifications

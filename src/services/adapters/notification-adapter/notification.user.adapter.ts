@@ -214,7 +214,7 @@ export class NotificationUserAdapter {
   public async userMention(
     eventData: NotificationInputUserMention
   ): Promise<void> {
-    const event = NotificationEvent.USER_MENTION;
+    const event = NotificationEvent.USER_MENTIONED;
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData,
@@ -248,7 +248,7 @@ export class NotificationUserAdapter {
       const inAppPayload = await this.buildUserMentionInAppPayload(eventData);
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.USER_MENTION,
+        NotificationEvent.USER_MENTIONED,
         NotificationEventCategory.USER,
         eventData.triggeredBy,
         inAppReceiverIDs,

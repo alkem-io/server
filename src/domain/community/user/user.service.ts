@@ -245,13 +245,16 @@ export class UserService {
           adminUserProfileCreated: { email: true, inApp: true },
           adminUserProfileRemoved: { email: true, inApp: true },
           adminSpaceCreated: { email: true, inApp: true },
-          adminGlobalRoleChanged: { email: true, inApp: true },
+          adminUserGlobalRoleChanged: { email: true, inApp: true },
         },
         space: {
           adminCommunityApplicationReceived: { email: true, inApp: true },
           adminCommunityNewMember: { email: true, inApp: true },
-          adminCommunicationMessage: { email: true, inApp: true },
-          adminCollaborationCalloutContribution: { email: true, inApp: true },
+          adminCommunicationMessageReceived: { email: true, inApp: true },
+          adminCollaborationCalloutContributionCreated: {
+            email: true,
+            inApp: true,
+          },
           communicationUpdates: { email: true, inApp: true },
           collaborationCalloutContributionCreated: { email: true, inApp: true },
           collaborationCalloutPostContributionComment: {
@@ -267,7 +270,7 @@ export class UserService {
           messageReceived: { email: true, inApp: true },
           copyOfMessageSent: { email: true, inApp: true },
           spaceCommunityApplicationSubmitted: { email: true, inApp: true },
-          spaceCommunityInvitation: { email: true, inApp: true },
+          spaceCommunityInvitationReceived: { email: true, inApp: true },
           spaceCommunityJoined: { email: true, inApp: true },
         },
         virtualContributor: {

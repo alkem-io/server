@@ -22,7 +22,7 @@ export const userSettingsData: { userSettings: IUserSettings } = {
         communicationUpdatesAdmin: true,
         communicationMessage: true,
         communicationMessageAdmin: true,
-        adminCollaborationContributionCreated: true,
+        adminCollaborationCalloutContributionCreated: true,
         collaborationCalloutPostContributionComment: true,
         collaborationCalloutContributionCreated: true,
         collaborationCalloutComment: true,

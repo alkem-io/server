@@ -234,8 +234,8 @@ export class NotificationRecipientsService {
         return notificationSettings.platform.adminUserProfileRemoved;
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
         return notificationSettings.platform.adminSpaceCreated;
-      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE:
-        return notificationSettings.platform.adminUserGlobalRoleChange;
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
+        return notificationSettings.platform.adminUserGlobalRoleChanged;
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
         return notificationSettings.organization.adminMessageReceived;
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
@@ -248,11 +248,11 @@ export class NotificationRecipientsService {
         return notificationSettings.user.spaceCommunityJoined;
       case NotificationEvent.USER_COMMENT_REPLY:
         return notificationSettings.user.commentReply;
-      case NotificationEvent.USER_MENTION:
+      case NotificationEvent.USER_MENTIONED:
         return notificationSettings.user.mentioned;
       case NotificationEvent.USER_MESSAGE:
         return notificationSettings.user.messageReceived;
-      case NotificationEvent.USER_MESSAGE_SENT_COPY:
+      case NotificationEvent.USER_COPY_OF_MESSAGE_SENT:
         return notificationSettings.user.copyOfMessageSent;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.adminCommunityApplicationReceived;
@@ -263,11 +263,12 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
         return notificationSettings.space.adminCommunityNewMember;
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
-        return notificationSettings.space.adminCollaborationContributionCreated;
+        return notificationSettings.space
+          .adminCollaborationCalloutContributionCreated;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
         return notificationSettings.space
           .collaborationCalloutContributionCreated;
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
         return notificationSettings.space
           .collaborationCalloutPostContributionComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
@@ -320,7 +321,7 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
-      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE:
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getGlobalAdminCriteria();
@@ -361,7 +362,7 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
@@ -374,10 +375,10 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.USER_SIGN_UP_WELCOME:
-      case NotificationEvent.USER_MENTION:
+      case NotificationEvent.USER_MENTIONED:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_MESSAGE:
-      case NotificationEvent.USER_MESSAGE_SENT_COPY: {
+      case NotificationEvent.USER_COPY_OF_MESSAGE_SENT: {
         // For mentions, no privilege check is needed - mentions are direct notifications to specific users
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
@@ -414,7 +415,7 @@ export class NotificationRecipientsService {
     virtualContributorID?: string
   ): Promise<IAuthorizationPolicy> {
     switch (eventType) {
-      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGE:
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED: {
@@ -448,7 +449,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION_COMMENT:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
@@ -471,7 +472,7 @@ export class NotificationRecipientsService {
 
       case NotificationEvent.USER_SIGN_UP_WELCOME:
       case NotificationEvent.USER_MESSAGE:
-      case NotificationEvent.USER_MESSAGE_SENT_COPY:
+      case NotificationEvent.USER_COPY_OF_MESSAGE_SENT:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:
