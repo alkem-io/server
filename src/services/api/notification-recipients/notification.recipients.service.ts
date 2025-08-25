@@ -142,6 +142,13 @@ export class NotificationRecipientsService {
       ? await this.userLookupService.getUserOrFail(eventData.triggeredBy)
       : undefined;
 
+    if (!triggeredBy) {
+      this.logger.verbose?.(
+        `[${eventData.eventType}] - No triggeredBy provided!`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+
     this.logger.verbose?.(
       `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients`,
       LogContext.NOTIFICATIONS

@@ -443,11 +443,10 @@ export class NotificationSpaceAdapter {
       space.id
     );
 
-    const memberEmailRecipientsWithoutAdmins =
-      this.removeAdminRecipientsFromMembersRecipients(
-        [memberRecipients.triggeredBy!],
-        memberRecipients.emailRecipients
-      );
+    const memberEmailRecipientsWithoutAdmins = this.excludeDuplicatedRecipients(
+      memberRecipients.triggeredBy ? [memberRecipients.triggeredBy] : [],
+      memberRecipients.emailRecipients
+    );
 
     // Send the notifications event
     const notificationsPayload =
@@ -465,11 +464,10 @@ export class NotificationSpaceAdapter {
     );
 
     // Send in-app notifications
-    const memberInAppRecipientsWithoutAdmins =
-      this.removeAdminRecipientsFromMembersRecipients(
-        [memberRecipients.triggeredBy!],
-        memberRecipients.inAppRecipients
-      );
+    const memberInAppRecipientsWithoutAdmins = this.excludeDuplicatedRecipients(
+      memberRecipients.triggeredBy ? [memberRecipients.triggeredBy] : [],
+      memberRecipients.inAppRecipients
+    );
     const inAppReceiverIDs = memberInAppRecipientsWithoutAdmins.map(
       recipient => recipient.id
     );
@@ -513,16 +511,17 @@ export class NotificationSpaceAdapter {
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
-  private removeAdminRecipientsFromMembersRecipients(
-    adminRecipients: IUser[],
-    memberRecipients: IUser[]
+  private excludeDuplicatedRecipients(
+    recipientsToExclude: IUser[],
+    allRecipients: IUser[]
   ): IUser[] {
-    // Need to remove the admins that have already received a notification
-    const adminRecipientIds = adminRecipients.map(admin => admin.id);
-    const memberOnlyEmailRecipients = memberRecipients.filter(
-      member => !adminRecipientIds.includes(member.id)
+    if (!recipientsToExclude || recipientsToExclude.length === 0) {
+      return allRecipients;
+    }
+
+    return allRecipients.filter(
+      rec => !recipientsToExclude.some(excludeRec => excludeRec.id === rec.id)
     );
-    return memberOnlyEmailRecipients;
   }
 
   private async getNotificationRecipientsSpace(
