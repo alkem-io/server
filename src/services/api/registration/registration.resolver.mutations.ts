@@ -140,7 +140,7 @@ export class RegistrationResolverMutations {
       triggeredBy: user.id,
       userID: user.id,
     };
-    await this.notificationPlatformAdapter.platformUserRegistered(
+    await this.notificationPlatformAdapter.platformUserProfileCreated(
       notificationInput
     );
   }

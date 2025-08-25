@@ -5,6 +5,7 @@ import { ValidateNested } from 'class-validator';
 import { UpdateUserSettingsNotificationPlatformInput } from './user.settings.notification.platform.dto.update';
 import { UpdateUserSettingsNotificationSpaceInput } from './user.settings.notification.space.dto.update';
 import { UpdateUserSettingsNotificationUserInput } from './user.settings.notification.user.dto.update';
+import { UpdateUserSettingsNotificationVirtualContributorInput } from './user.settings.notification.virtual.contributor.dto.update';
 
 @InputType()
 export class UpdateUserSettingsNotificationInput {
@@ -23,6 +24,14 @@ export class UpdateUserSettingsNotificationInput {
   @ValidateNested()
   @Type(() => UpdateUserSettingsNotificationUserInput)
   user?: UpdateUserSettingsNotificationUserInput;
+
+  @Field(() => UpdateUserSettingsNotificationVirtualContributorInput, {
+    nullable: true,
+    description: 'Settings related to Virtual Contributor Notifications.',
+  })
+  @ValidateNested()
+  @Type(() => UpdateUserSettingsNotificationVirtualContributorInput)
+  virtualContributor?: UpdateUserSettingsNotificationVirtualContributorInput;
 
   @Field(() => UpdateUserSettingsNotificationPlatformInput, {
     nullable: true,

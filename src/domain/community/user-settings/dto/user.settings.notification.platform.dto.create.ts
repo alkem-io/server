@@ -1,44 +1,32 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, ValidateNested } from 'class-validator';
+import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
+import { CreateUserSettingsNotificationPlatformAdminInput } from './user.settings.notification.platform.admin.dto.create';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateUserSettingsNotificationPlatformInput {
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description:
       'Receive a notification when a new Discussion is created in the Forum',
   })
   @IsBoolean()
-  forumDiscussionCreated!: boolean;
+  forumDiscussionCreated!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description:
       'Receive a notification when a new comment is added to a Discussion I created in the Forum',
   })
   @IsBoolean()
-  forumDiscussionComment!: boolean;
+  forumDiscussionComment!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
-    nullable: false,
-    description: '[Admin] Receive notification when a new user signs up',
+  @Field(() => CreateUserSettingsNotificationPlatformAdminInput, {
+    nullable: true,
+    description: 'Settings related to Space Admin Notifications.',
   })
-  @IsBoolean()
-  newUserSignUp!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description:
-      '[Admin] Receive a notification when a user profile is removed',
-  })
-  @IsBoolean()
-  userProfileRemoved!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description:
-      '[Admin] Receive a notification when a new L0 Space is created',
-  })
-  @IsBoolean()
-  spaceCreated!: boolean;
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationPlatformAdminInput)
+  admin!: CreateUserSettingsNotificationPlatformAdminInput;
 }

@@ -8,6 +8,7 @@ import { Communication } from '@domain/communication/communication/communication
 import { TimelineResolverService } from './timeline.resolver.service';
 import { ContributionResolverService } from './contribution.resolver.service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { RoomResolverService } from './room.resolver.service';
 
 @Module({
   imports: [
@@ -21,12 +22,14 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
     CommunityResolverService,
     TimelineResolverService,
     ContributionResolverService,
+    RoomResolverService,
   ],
   exports: [
     IdentityResolverService,
     CommunityResolverService,
     TimelineResolverService,
     ContributionResolverService,
+    RoomResolverService,
   ],
 })
 export class EntityResolverModule {}

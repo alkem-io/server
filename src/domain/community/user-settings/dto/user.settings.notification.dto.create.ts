@@ -5,6 +5,7 @@ import { Type } from 'class-transformer';
 import { CreateUserSettingsNotificationPlatformInput } from './user.settings.notification.platform.dto.create';
 import { CreateUserSettingsNotificationSpaceInput } from './user.settings.notification.space.dto.create';
 import { CreateUserSettingsNotificationUserInput } from './user.settings.notification.user.dto.create';
+import { CreateUserSettingsNotificationVirtualContributorInput } from './user.settings.notification.virtual.contributor.dto.create';
 
 @InputType()
 export class CreateUserSettingsNotificationInput {
@@ -23,6 +24,14 @@ export class CreateUserSettingsNotificationInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsNotificationUserInput)
   user?: CreateUserSettingsNotificationUserInput;
+
+  @Field(() => CreateUserSettingsNotificationVirtualContributorInput, {
+    nullable: true,
+    description: 'Settings related to Virtual Contributor Notifications.',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationVirtualContributorInput)
+  virtualContributor?: CreateUserSettingsNotificationVirtualContributorInput;
 
   @Field(() => CreateUserSettingsNotificationPlatformInput, {
     nullable: true,

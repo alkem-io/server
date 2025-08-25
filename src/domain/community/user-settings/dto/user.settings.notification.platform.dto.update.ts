@@ -1,5 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, ValidateNested } from 'class-validator';
+import { UpdateUserSettingsNotificationPlatformAdminInput } from './user.settings.notification.platform.admin.dto.update';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationPlatformInput {
@@ -19,26 +21,11 @@ export class UpdateUserSettingsNotificationPlatformInput {
   @IsBoolean()
   forumDiscussionComment?: boolean;
 
-  @Field(() => Boolean, {
+  @Field(() => UpdateUserSettingsNotificationPlatformAdminInput, {
     nullable: true,
-    description: '[Admin] Receive notification when a new user signs up',
+    description: 'Settings related to Platform Admin Notifications.',
   })
-  @IsBoolean()
-  newUserSignUp?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description:
-      '[Admin] Receive a notification when a user profile is removed',
-  })
-  @IsBoolean()
-  userProfileRemoved?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description:
-      '[Admin] Receive a notification when a new L0 Space is created',
-  })
-  @IsBoolean()
-  spaceCreated?: boolean;
+  @ValidateNested()
+  @Type(() => UpdateUserSettingsNotificationPlatformAdminInput)
+  admin?: UpdateUserSettingsNotificationPlatformAdminInput;
 }

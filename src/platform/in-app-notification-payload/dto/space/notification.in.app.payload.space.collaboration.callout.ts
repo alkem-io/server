@@ -6,4 +6,6 @@ import { ObjectType } from '@nestjs/graphql';
 })
 export abstract class InAppNotificationPayloadSpaceCollaborationCallout extends InAppNotificationPayloadSpace {
   calloutID!: string;
+  contributionID?: string;
+  messageID?: string;
 }

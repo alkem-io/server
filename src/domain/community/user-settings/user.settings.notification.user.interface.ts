@@ -1,29 +1,39 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IUserSettingsNotificationChannels } from './user.settings.notification.channels.interface';
+import { IUserSettingsNotificationUserMembership } from './user.settings.notification.user.membership.interface';
 
 @ObjectType('UserSettingsNotificationUser')
 export abstract class IUserSettingsNotificationUser {
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationUserMembership, {
     nullable: false,
-    description: 'Receive notification when I receive a message.',
+    description:
+      'The notifications settings for membership events for this User',
   })
-  messageReceived!: boolean;
+  membership!: IUserSettingsNotificationUserMembership;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
-    description: 'Receive notification I send a message.',
+    description: 'Receive notification when I receive a direct message.',
   })
-  messageSent!: boolean;
+  messageReceived!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive notification I send a message to a User, Organization or Space.',
+  })
+  copyOfMessageSent!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description: 'Receive a notification you are mentioned',
   })
-  mentioned!: boolean;
+  mentioned!: IUserSettingsNotificationChannels;
 
-  @Field(() => Boolean, {
+  @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
       'Receive a notification when someone replies to a comment I made.',
   })
-  commentReply!: boolean;
+  commentReply!: IUserSettingsNotificationChannels;
 }

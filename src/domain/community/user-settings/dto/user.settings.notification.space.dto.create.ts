@@ -1,105 +1,52 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, ValidateNested } from 'class-validator';
+import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
+import { CreateUserSettingsNotificationSpaceAdminInput } from './user.settings.notification.space.admin.dto.create';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateUserSettingsNotificationSpaceInput {
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when an application is received',
+  @Field(() => CreateUserSettingsNotificationSpaceAdminInput, {
+    nullable: true,
+    description: 'Settings related to Space Admin Notifications.',
   })
-  @IsBoolean()
-  communityApplicationReceived!: boolean;
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationSpaceAdminInput)
+  admin!: CreateUserSettingsNotificationSpaceAdminInput;
 
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when an application is submitted',
-  })
-  @IsBoolean()
-  communityApplicationSubmitted!: boolean;
-
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification for community updates',
   })
   @IsBoolean()
-  communicationUpdates!: boolean;
+  communicationUpdates!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
-    description: 'Receive a notification for community updates',
+    description: 'Receive a notification when a contribution is added',
   })
   @IsBoolean()
-  communicationUpdatesAdmin!: boolean;
+  collaborationCalloutContributionCreated!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a new member joins the community',
-  })
-  @IsBoolean()
-  communityNewMember!: boolean;
-
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description:
-      'Receive a notification when a new member joins the community (admin)',
+      'Receive a notification when a comment is created on a contribution',
   })
   @IsBoolean()
-  communityNewMemberAdmin!: boolean;
+  collaborationCalloutPostContributionComment!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
-    description: 'Receive a notification for community invitation',
+    description: 'Receive a notification when a comment is added to a Callout',
   })
   @IsBoolean()
-  communityInvitationUser!: boolean;
+  collaborationCalloutComment!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a post is created (admin)',
-  })
-  @IsBoolean()
-  collaborationPostCreatedAdmin!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a post is created',
-  })
-  @IsBoolean()
-  collaborationPostCreated!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a comment is created on a post',
-  })
-  @IsBoolean()
-  collaborationPostCommentCreated!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a notification when a whiteboard is created',
-  })
-  @IsBoolean()
-  collaborationWhiteboardCreated!: boolean;
-
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification when a callout is published',
   })
   @IsBoolean()
-  collaborationCalloutPublished!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Receive a copy of messages that I send to a Space',
-  })
-  @IsBoolean()
-  communicationMessage!: boolean;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description:
-      'Receive a notification when a message is sent to a Space I lead',
-  })
-  @IsBoolean()
-  communicationMessageAdmin!: boolean;
+  collaborationCalloutPublished!: CreateUserSettingsNotificationChannelsInput;
 }

@@ -9,7 +9,7 @@ export class UpdateUserSettingsNotificationOrganizationInput {
       'Receive notification when the organization you are admin of is messaged',
   })
   @IsBoolean()
-  messageReceived?: boolean;
+  adminMessageReceived?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,
@@ -17,5 +17,5 @@ export class UpdateUserSettingsNotificationOrganizationInput {
       'Receive a notification when the organization you are admin of is mentioned',
   })
   @IsBoolean()
-  mentioned?: boolean;
+  adminMentioned?: boolean;
 }

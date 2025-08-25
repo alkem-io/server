@@ -1,29 +1,45 @@
 import { Field, InputType } from '@nestjs/graphql';
+import { IsBoolean, ValidateNested } from 'class-validator';
+import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
+import { CreateUserSettingsNotificationUserMembershipInput } from './user.settings.notification.user.membership.dto.create';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateUserSettingsNotificationUserInput {
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive notification when I receive a message.',
   })
-  messageReceived!: boolean;
+  @IsBoolean()
+  messageReceived!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive notification I send a message.',
   })
-  messageSent!: boolean;
+  @IsBoolean()
+  copyOfMessageSent!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification you are mentioned',
   })
-  mentioned!: boolean;
+  @IsBoolean()
+  mentioned!: CreateUserSettingsNotificationChannelsInput;
 
-  @Field(() => Boolean, {
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description:
       'Receive a notification when someone replies to a comment I made.',
   })
-  commentReply!: boolean;
+  @IsBoolean()
+  commentReply!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationUserMembershipInput, {
+    nullable: true,
+    description: 'Settings related to User Membership Notifications.',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationUserMembershipInput)
+  membership!: CreateUserSettingsNotificationUserMembershipInput;
 }

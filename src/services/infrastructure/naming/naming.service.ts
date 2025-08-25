@@ -1,29 +1,18 @@
 import { EntityManager, Not, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { Post } from '@domain/collaboration/post/post.entity';
-import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
-import { IPost } from '@domain/collaboration/post/post.interface';
-import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
+import { CalendarEvent } from '@domain/timeline/event';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
-import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
 import { Template } from '@domain/template/template/template.entity';
-import { IRoleSet } from '@domain/access/role-set';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 export class NamingService {
   constructor(
@@ -243,142 +232,6 @@ export class NamingService {
       // If the nameID is already reserved, try again with a new random suffix starting from 1 but with two digits
       result = `${guess}-${count.toString()}`;
       count++;
-    }
-    return result;
-  }
-
-  async getRoleSetAndSettingsForCollaborationCalloutsSet(
-    calloutsSetID: string
-  ): Promise<{
-    roleSet: IRoleSet;
-    platformRolesAccess: IPlatformRolesAccess;
-  }> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            id: calloutsSetID,
-          },
-        },
-      },
-      relations: {
-        community: {
-          roleSet: true,
-        },
-      },
-    });
-    if (!space || !space.community || !space.community.roleSet) {
-      throw new EntityNotInitializedException(
-        `Unable to load all entities for roleSet + settings for collaboration ${calloutsSetID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    // Directly parse the settings string to avoid the need to load the settings service
-    const roleSet = space.community.roleSet;
-    const platformRolesAccess: IPlatformRolesAccess =
-      space.platformRolesAccess || {
-        roles: [],
-      };
-    return { roleSet, platformRolesAccess };
-  }
-
-  async getRoleSetAndPlatformRolesWithAccessForCallout(
-    calloutID: string
-  ): Promise<{
-    roleSet?: IRoleSet;
-    platformRolesAccess: IPlatformRolesAccess;
-  }> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          calloutsSet: {
-            callouts: {
-              id: calloutID,
-            },
-          },
-        },
-      },
-      relations: {
-        community: {
-          roleSet: true,
-        },
-      },
-    });
-
-    // Directly parse the settings string to avoid the need to load the settings service
-    // We have 2 types of CalloutSet parents now, and KnowledgeBase doesn't have a roleSet and spaceSettings
-    const roleSet: IRoleSet | undefined = space?.community?.roleSet;
-    const platformRolesAccess: IPlatformRolesAccess =
-      space?.platformRolesAccess || {
-        roles: [],
-      };
-
-    return { roleSet: roleSet, platformRolesAccess };
-  }
-
-  async getPostForRoom(roomID: string): Promise<IPost> {
-    const result = await this.entityManager.findOne(Post, {
-      where: {
-        comments: { id: roomID },
-      },
-      relations: { profile: true },
-    });
-    if (!result) {
-      throw new EntityNotFoundException(
-        `Unable to identify Post for Room: : ${roomID}`,
-        LogContext.COLLABORATION
-      );
-    }
-    return result;
-  }
-
-  async getCalloutForRoom(commentsID: string): Promise<ICallout> {
-    const result = await this.entityManager.findOne(Callout, {
-      where: {
-        comments: { id: commentsID },
-      },
-      relations: {
-        calloutsSet: true,
-      },
-    });
-    if (!result) {
-      throw new EntityNotFoundException(
-        `Unable to identify Callout for Room: : ${commentsID}`,
-        LogContext.COLLABORATION
-      );
-    }
-    return result;
-  }
-
-  async getCalendarEventForRoom(commentsID: string): Promise<ICalendarEvent> {
-    const result = await this.entityManager.findOne(CalendarEvent, {
-      where: {
-        comments: { id: commentsID },
-      },
-      relations: { profile: true, comments: true },
-    });
-    if (!result) {
-      throw new EntityNotFoundException(
-        `Unable to identify CalendarEvent for Room: : ${commentsID}`,
-        LogContext.COLLABORATION
-      );
-    }
-    return result;
-  }
-
-  async getDiscussionForRoom(commentsID: string): Promise<IDiscussion> {
-    // check if this is a comment related to an calendar
-    const result = await this.entityManager.findOne(Discussion, {
-      where: {
-        comments: { id: commentsID },
-      },
-      relations: { profile: true, comments: true },
-    });
-    if (!result) {
-      throw new EntityNotFoundException(
-        `Unable to identify Discussion for Room: : ${commentsID}`,
-        LogContext.COLLABORATION
-      );
     }
     return result;
   }

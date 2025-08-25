@@ -17,11 +17,12 @@ import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activi
 import { IProfile } from '@domain/common/profile';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
-import { NotificationInputPostComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.post.comment';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.update.sent';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
+import { NotificationInputCollaborationCalloutPostContributionComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
+import { NotificationInputCollaborationCalloutComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -30,7 +31,7 @@ export class RoomServiceEvents {
     private contributionReporter: ContributionReporterService,
     private notificationSpaceAdapter: NotificationSpaceAdapter,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
-    private notificationAdapter: NotificationAdapter,
+    private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -58,23 +59,44 @@ export class RoomServiceEvents {
       },
       commentType: room.type as RoomType,
     };
-    await this.notificationAdapter.userCommentReply(notificationInput);
+    await this.notificationUserAdapter.userCommentReply(notificationInput);
   }
 
-  public async processNotificationPostComment(
+  public async processNotificationCalloutComment(
+    callout: ICallout,
+    room: IRoom,
+    message: IMessage,
+    agentInfo: AgentInfo
+  ) {
+    // Send the notification
+    const notificationInput: NotificationInputCollaborationCalloutComment = {
+      triggeredBy: agentInfo.userID,
+      callout,
+      comments: room,
+      commentSent: message,
+    };
+    await this.notificationSpaceAdapter.spaceCollaborationCalloutComment(
+      notificationInput
+    );
+  }
+
+  public async processNotificationPostContributionComment(
+    callout: ICallout,
     post: IPost,
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
   ) {
     // Send the notification
-    const notificationInput: NotificationInputPostComment = {
-      triggeredBy: agentInfo.userID,
-      post: post,
-      room: room,
-      commentSent: message,
-    };
-    await this.notificationSpaceAdapter.spaceCollaborationPostComment(
+    const notificationInput: NotificationInputCollaborationCalloutPostContributionComment =
+      {
+        triggeredBy: agentInfo.userID,
+        post,
+        callout,
+        room,
+        commentSent: message,
+      };
+    await this.notificationSpaceAdapter.spaceCollaborationCalloutPostContributionComment(
       notificationInput
     );
   }
@@ -89,6 +111,7 @@ export class RoomServiceEvents {
         triggeredBy: agentInfo.userID,
         discussion,
         commentSent: message,
+        userID: discussion.createdBy,
       };
     this.notificationPlatformAdapter.platformForumDiscussionComment(
       forumDiscussionCommentNotificationInput
@@ -184,7 +207,7 @@ export class RoomServiceEvents {
       updates: updates,
       lastMessage: lastMessage,
     };
-    await this.notificationSpaceAdapter.spaceCommunicationUpdateSent(
+    await this.notificationSpaceAdapter.spaceCommunicationUpdate(
       notificationInput
     );
   }

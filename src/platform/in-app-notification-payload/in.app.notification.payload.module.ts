@@ -4,9 +4,6 @@ import { InAppNotificationPayloadSpaceCollaborationCalloutResolverFields } from 
 import {
   InAppNotificationPayloadOrganizationMessageDirectResolverFields,
   InAppNotificationPayloadOrganizationMessageRoomResolverFields,
-  InAppNotificationPayloadSpaceCollaborationPostCommentResolverFields,
-  InAppNotificationPayloadSpaceCollaborationPostResolverFields,
-  InAppNotificationPayloadSpaceCollaborationWhiteboardResolverFields,
   InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
   InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
   InAppNotificationPayloadSpaceCommunityApplicationResolverFields,
@@ -22,9 +19,6 @@ import {
     // add in all the other payload resolvers from the ../field-resolvers directory
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
-    InAppNotificationPayloadSpaceCollaborationPostCommentResolverFields,
-    InAppNotificationPayloadSpaceCollaborationPostResolverFields,
-    InAppNotificationPayloadSpaceCollaborationWhiteboardResolverFields,
     InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
     InAppNotificationPayloadSpaceCommunityContributorResolverFields,
