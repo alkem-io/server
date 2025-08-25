@@ -23,7 +23,6 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -44,6 +43,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationInputCalloutContributionCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -57,7 +57,7 @@ export class CalloutResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private calloutAuthorizationService: CalloutAuthorizationService,
-    private namingService: NamingService,
+    private roomResolverService: RoomResolverService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutContributionService: CalloutContributionService,
     private temporaryStorageService: TemporaryStorageService,
@@ -107,7 +107,7 @@ export class CalloutResolverMutations {
     // This is needed because updateCallout might create new entities (like comments room)
     // that need proper authorization policies
     const { roleSet, platformRolesAccess } =
-      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+      await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         updatedCallout.id
       );
 
@@ -265,7 +265,7 @@ export class CalloutResolverMutations {
     );
 
     const { roleSet, platformRolesAccess } =
-      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+      await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         callout.id
       );
 
