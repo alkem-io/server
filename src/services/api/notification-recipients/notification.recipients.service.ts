@@ -326,19 +326,10 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
       case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
+      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getGlobalAdminCriteria();
-        break;
-      }
-      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = [
-          {
-            type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-            resourceID: '',
-          },
-        ];
         break;
       }
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
@@ -645,6 +636,10 @@ export class NotificationRecipientsService {
       },
       {
         type: AuthorizationCredential.GLOBAL_SUPPORT,
+        resourceID: '',
+      },
+      {
+        type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         resourceID: '',
       },
     ];
