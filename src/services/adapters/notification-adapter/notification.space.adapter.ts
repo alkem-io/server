@@ -408,7 +408,7 @@ export class NotificationSpaceAdapter {
         type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
         spaceID: space.id,
         contributionID: eventData.post.id,
-        calloutID: 'unknown', // Would need to get from post or context
+        calloutID: eventData.callout.id,
         messageID: eventData.commentSent.id,
       };
 

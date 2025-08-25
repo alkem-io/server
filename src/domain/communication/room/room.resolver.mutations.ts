@@ -87,10 +87,11 @@ export class RoomResolverMutations {
     const threadID = message.id;
 
     switch (room.type) {
-      case RoomType.POST:
-        const post = await this.roomResolverService.getPostForRoom(
-          messageData.roomID
-        );
+      case RoomType.POST: {
+        const { post, callout } =
+          await this.roomResolverService.getCalloutWithPostContributionForRoom(
+            messageData.roomID
+          );
 
         this.roomMentionsService.processNotificationMentions(
           mentions,
@@ -104,6 +105,7 @@ export class RoomResolverMutations {
 
         if (post.createdBy !== agentInfo.userID) {
           this.roomServiceEvents.processNotificationPostComment(
+            callout,
             post,
             room,
             message,
@@ -127,6 +129,7 @@ export class RoomResolverMutations {
         }
 
         break;
+      }
       case RoomType.CALENDAR_EVENT:
         const calendar = await this.roomResolverService.getCalendarEventForRoom(
           messageData.roomID
@@ -292,10 +295,11 @@ export class RoomResolverMutations {
     );
 
     switch (room.type) {
-      case RoomType.POST:
-        const post = await this.roomResolverService.getPostForRoom(
-          messageData.roomID
-        );
+      case RoomType.POST: {
+        const { post } =
+          await this.roomResolverService.getCalloutWithPostContributionForRoom(
+            messageData.roomID
+          );
 
         this.roomServiceEvents.processNotificationCommentReply(
           post.id,
@@ -356,6 +360,7 @@ export class RoomResolverMutations {
         }
 
         break;
+      }
       case RoomType.CALENDAR_EVENT:
         const calendar = await this.roomResolverService.getCalendarEventForRoom(
           messageData.roomID

@@ -12,7 +12,6 @@ import { CalendarEvent } from '@domain/timeline/event/event.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { Post } from '@domain/collaboration/post/post.entity';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -95,20 +94,38 @@ export class RoomResolverService {
     return { roleSet: roleSet, platformRolesAccess };
   }
 
-  async getPostForRoom(roomID: string): Promise<IPost> {
-    const result = await this.entityManager.findOne(Post, {
+  async getCalloutWithPostContributionForRoom(
+    roomID: string
+  ): Promise<{ post: IPost; callout: ICallout }> {
+    const callout = await this.entityManager.findOne(Callout, {
       where: {
-        comments: { id: roomID },
+        contributions: {
+          post: {
+            comments: { id: roomID },
+          },
+        },
       },
-      relations: { profile: true },
+      relations: {
+        contributions: {
+          post: {
+            profile: true,
+          },
+        },
+      },
     });
-    if (!result) {
+    if (
+      !callout ||
+      !callout.contributions ||
+      callout.contributions.length === 0 ||
+      !callout.contributions[0].post
+    ) {
       throw new EntityNotFoundException(
-        `Unable to identify Post for Room: : ${roomID}`,
+        `Unable to identify Callout with Post contribution for Room: : ${roomID}`,
         LogContext.COLLABORATION
       );
     }
-    return result;
+    const postContribution = callout.contributions[0].post;
+    return { post: postContribution, callout };
   }
 
   async getCalloutForRoom(commentsID: string): Promise<ICallout> {

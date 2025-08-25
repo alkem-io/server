@@ -20,7 +20,6 @@ import { NotificationInputCommentReply } from '@services/adapters/notification-a
 import { NotificationInputCalloutPostContributionComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.update.sent';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 
@@ -32,7 +31,6 @@ export class RoomServiceEvents {
     private notificationSpaceAdapter: NotificationSpaceAdapter,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
-    private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -64,6 +62,7 @@ export class RoomServiceEvents {
   }
 
   public async processNotificationPostComment(
+    callout: ICallout,
     post: IPost,
     room: IRoom,
     message: IMessage,
@@ -73,6 +72,7 @@ export class RoomServiceEvents {
     const notificationInput: NotificationInputCalloutPostContributionComment = {
       triggeredBy: agentInfo.userID,
       post,
+      callout,
       room,
       commentSent: message,
     };
