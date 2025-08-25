@@ -52,10 +52,11 @@ import { RoleSetContributorType } from '@common/enums/role.set.contributor.type'
 import { ISpace } from '@domain/space/space/space.interface';
 import { UserPayload } from '@alkemio/notifications-lib/dist/dto/user.payload';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { NotificationInputCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { NotificationInputCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
+import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
+import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
+import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 
 @Injectable()
 export class NotificationExternalAdapter {
@@ -199,7 +200,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    eventData: NotificationInputCalloutContributionCreated
+    eventData: NotificationInputCollaborationCalloutContributionCreated
   ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const callout = eventData.callout;
     const post = eventData.contribution.post;
@@ -248,25 +249,14 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildSpaceCollaborationWhiteboardCreatedPayload(
+  async buildSpaceCollaborationCalloutCommentPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    eventData: NotificationInputCalloutContributionCreated
+    eventData: NotificationInputCollaborationCalloutComment
   ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const callout = eventData.callout;
-    const whiteboard = eventData.contribution.whiteboard;
-
-    if (!whiteboard) {
-      throw new RelationshipNotFoundException(
-        'Whiteboard not found',
-        LogContext.NOTIFICATIONS,
-        {
-          contribution: eventData.contribution.id,
-        }
-      );
-    }
 
     const spacePayload = await this.buildSpacePayload(
       eventType,
@@ -277,13 +267,7 @@ export class NotificationExternalAdapter {
     const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
       callout.id
     );
-    const whiteboardURL = await this.urlGeneratorService.getWhiteboardUrlPath(
-      whiteboard.id,
-      whiteboard.nameID
-    );
-    const whiteboardCreator = await this.getContributorPayloadOrEmpty(
-      whiteboard.createdBy
-    );
+
     const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
         id: callout.id,
@@ -293,14 +277,6 @@ export class NotificationExternalAdapter {
           displayName: callout.framing.profile.displayName,
           description: callout.framing.profile.description ?? '',
           url: calloutURL,
-        },
-        contribution: {
-          id: whiteboard.id,
-          type: CalloutContributionType.WHITEBOARD,
-          createdBy: whiteboardCreator,
-          displayName: whiteboard.profile.displayName,
-          description: whiteboard.profile.description ?? '',
-          url: whiteboardURL,
         },
       },
       ...spacePayload,
@@ -342,18 +318,15 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildSpaceCollaborationCommentCreatedOnPostPayload(
+  async buildSpaceCollaborationCalloutPostContributionCommentPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    eventData: NotificationInputCalloutPostContributionComment
+    eventData: NotificationInputCollaborationCalloutPostContributionComment
   ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const post = eventData.post;
-    const callout =
-      await this.contributionResolverService.getCalloutForPostContribution(
-        post.id
-      );
+    const callout = eventData.callout;
 
     const messageResult = eventData.commentSent;
 
@@ -364,7 +337,7 @@ export class NotificationExternalAdapter {
       space
     );
     const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
-      callout.id
+      eventData.callout.id
     );
     const postURL = await this.urlGeneratorService.getPostUrlPath(post.id);
     const payload: NotificationEventPayloadSpaceCollaborationCallout = {

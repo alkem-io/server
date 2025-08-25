@@ -17,11 +17,12 @@ import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activi
 import { IProfile } from '@domain/common/profile';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
-import { NotificationInputCalloutPostContributionComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.update.sent';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
+import { NotificationInputCollaborationCalloutPostContributionComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
+import { NotificationInputCollaborationCalloutComment } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -61,7 +62,25 @@ export class RoomServiceEvents {
     await this.notificationUserAdapter.userCommentReply(notificationInput);
   }
 
-  public async processNotificationPostComment(
+  public async processNotificationCalloutComment(
+    callout: ICallout,
+    room: IRoom,
+    message: IMessage,
+    agentInfo: AgentInfo
+  ) {
+    // Send the notification
+    const notificationInput: NotificationInputCollaborationCalloutComment = {
+      triggeredBy: agentInfo.userID,
+      callout,
+      comments: room,
+      commentSent: message,
+    };
+    await this.notificationSpaceAdapter.spaceCollaborationCalloutComment(
+      notificationInput
+    );
+  }
+
+  public async processNotificationPostContributionComment(
     callout: ICallout,
     post: IPost,
     room: IRoom,
@@ -69,14 +88,15 @@ export class RoomServiceEvents {
     agentInfo: AgentInfo
   ) {
     // Send the notification
-    const notificationInput: NotificationInputCalloutPostContributionComment = {
-      triggeredBy: agentInfo.userID,
-      post,
-      callout,
-      room,
-      commentSent: message,
-    };
-    await this.notificationSpaceAdapter.spaceCollaborationCalloutContributionComment(
+    const notificationInput: NotificationInputCollaborationCalloutPostContributionComment =
+      {
+        triggeredBy: agentInfo.userID,
+        post,
+        callout,
+        room,
+        commentSent: message,
+      };
+    await this.notificationSpaceAdapter.spaceCollaborationCalloutPostContributionComment(
       notificationInput
     );
   }
@@ -187,7 +207,7 @@ export class RoomServiceEvents {
       updates: updates,
       lastMessage: lastMessage,
     };
-    await this.notificationSpaceAdapter.spaceCommunicationUpdateSent(
+    await this.notificationSpaceAdapter.spaceCommunicationUpdate(
       notificationInput
     );
   }

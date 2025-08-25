@@ -105,7 +105,7 @@ export class CommunicationResolverMutations {
       communityID: messageData.communityId,
       message: messageData.message,
     };
-    await this.notificationAdapterSpace.spaceContactLeadsMessage(
+    await this.notificationAdapterSpace.spaceCommunicationMessage(
       notificationInput
     );
     return true;

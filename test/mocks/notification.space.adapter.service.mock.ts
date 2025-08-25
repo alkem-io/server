@@ -9,8 +9,8 @@ export const MockNotificationSpaceAdapter: ValueProvider<
   useValue: {
     spaceCollaborationCalloutPublished: jest.fn(),
     spaceCollaborationCalloutContributionCreated: jest.fn(),
-    spaceCollaborationCalloutContributionComment: jest.fn(),
-    spaceCommunicationUpdateSent: jest.fn(),
+    spaceCollaborationCalloutPostContributionComment: jest.fn(),
+    spaceCommunicationUpdate: jest.fn(),
     spaceCommunityApplicationCreated: jest.fn(),
     spaceCommunityNewMember: jest.fn(),
   },

@@ -4,7 +4,7 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { IPost } from '@domain/collaboration/post';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 
-export interface NotificationInputCalloutPostContributionComment
+export interface NotificationInputCollaborationCalloutPostContributionComment
   extends NotificationInputBase {
   callout: ICallout;
   post: IPost;

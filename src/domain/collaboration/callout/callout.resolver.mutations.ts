@@ -41,7 +41,7 @@ import { TemporaryStorageService } from '@services/infrastructure/temporary-stor
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
-import { NotificationInputCalloutContributionCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
+import { NotificationInputCollaborationCalloutContributionCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
@@ -396,12 +396,13 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
-    const notificationInput: NotificationInputCalloutContributionCreated = {
-      contribution: contribution,
-      callout: callout,
-      contributionType: CalloutContributionType.WHITEBOARD,
-      triggeredBy: agentInfo.userID,
-    };
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.WHITEBOARD,
+        triggeredBy: agentInfo.userID,
+      };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
@@ -432,12 +433,13 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
-    const notificationInput: NotificationInputCalloutContributionCreated = {
-      contribution: contribution,
-      callout: callout,
-      contributionType: CalloutContributionType.POST,
-      triggeredBy: agentInfo.userID,
-    };
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.POST,
+        triggeredBy: agentInfo.userID,
+      };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
