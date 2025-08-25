@@ -268,6 +268,26 @@ export class PlatformAuthorizationService {
     platformResetAuth.cascade = false;
     credentialRules.push(platformResetAuth);
 
+    // Allow organization admins to access organization admin notification settings
+    const receiveNotificationsOrganizationAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN],
+        [AuthorizationCredential.ORGANIZATION_ADMIN],
+        'Receive notifications organization admin'
+      );
+    receiveNotificationsOrganizationAdmin.cascade = false;
+    credentialRules.push(receiveNotificationsOrganizationAdmin);
+
+    // Allow organization admins to access organization admin notification settings
+    const receiveNotificationsSpaceAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_SPACE_ADMIN],
+        [AuthorizationCredential.SPACE_ADMIN],
+        'Receive notifications space admin'
+      );
+    receiveNotificationsSpaceAdmin.cascade = false;
+    credentialRules.push(receiveNotificationsSpaceAdmin);
+
     // Allow all registered users to query non-protected user information
     const userNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
