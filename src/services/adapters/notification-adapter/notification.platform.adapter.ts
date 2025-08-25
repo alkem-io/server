@@ -120,7 +120,8 @@ export class NotificationPlatformAdapter {
     const event = NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT;
     const recipients = await this.getNotificationRecipientsPlatform(
       event,
-      eventData
+      eventData,
+      eventData.userID
     );
 
     // build notification payload

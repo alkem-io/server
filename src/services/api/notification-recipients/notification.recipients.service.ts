@@ -364,18 +364,14 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         break;
       }
-      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
-        credentialCriteria = this.getUserSelfCriteria(userID);
-        break;
-      }
       case NotificationEvent.USER_SIGN_UP_WELCOME:
       case NotificationEvent.USER_MENTIONED:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_MESSAGE:
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
-      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER: {
+      case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
+      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT: {
         // For mentions, no privilege check is needed - mentions are direct notifications to specific users
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
@@ -472,6 +468,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MESSAGE_SENDER:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_COMMUNICATION_MESSAGE_SENDER:
+      case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION:

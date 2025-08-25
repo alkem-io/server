@@ -91,6 +91,7 @@ export class RoomServiceEvents {
         triggeredBy: agentInfo.userID,
         discussion,
         commentSent: message,
+        userID: discussion.createdBy,
       };
     this.notificationPlatformAdapter.platformForumDiscussionComment(
       forumDiscussionCommentNotificationInput
