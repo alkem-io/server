@@ -1,13 +1,15 @@
 import * as Y from 'yjs';
-import { yDocToProsemirrorJSON } from 'y-prosemirror';
+import { yDocToProsemirrorJSON } from '@tiptap/y-tiptap';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
-import Image from '@tiptap/extension-image';
 import { renderToMarkdown } from '@tiptap/static-renderer';
 import { Iframe } from './Iframe';
+import { ImageExtension } from './image.extension';
 
-const ImageExtension = Image.configure({ inline: true });
-
+/**
+ * Converts binary Y.Doc state update v2 to markdown string
+ * @param state
+ */
 export const yjsStateToMarkdown = (state: Buffer) => {
   const binaryV2State = new Uint8Array(state);
 

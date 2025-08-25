@@ -25,7 +25,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { LicenseService } from '../license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
+import { markdownToYjsV2State, yjsStateToMarkdown } from './conversion';
 
 @Injectable()
 export class MemoService {
@@ -42,19 +42,22 @@ export class MemoService {
   ) {}
 
   async createMemo(
-    memoData: CreateMemoInput,
+    { markdown, ...restOfMemoData }: CreateMemoInput,
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<IMemo> {
+    const binaryUpdateV2 = this.markdownToStateUpdate(markdown);
+    const content = binaryUpdateV2 ? Buffer.from(binaryUpdateV2) : undefined;
     const memo: IMemo = Memo.create({
-      ...memoData,
+      ...restOfMemoData,
+      content,
     });
     memo.authorization = new AuthorizationPolicy(AuthorizationPolicyType.MEMO);
     memo.createdBy = userID;
     memo.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
     memo.profile = await this.profileService.createProfile(
-      memoData.profile ?? {
+      restOfMemoData.profile ?? {
         displayName: 'Memo',
       },
       ProfileType.MEMO,
@@ -62,7 +65,7 @@ export class MemoService {
     );
     await this.profileService.addVisualsOnProfile(
       memo.profile,
-      memoData.profile?.visuals,
+      restOfMemoData.profile?.visuals,
       [VisualType.CARD]
     );
     await this.profileService.addOrUpdateTagsetOnProfile(memo.profile, {
@@ -120,8 +123,20 @@ export class MemoService {
     return deletedMemo;
   }
 
+  /**
+   * Converts binary Y.Doc state update v2 to markdown string
+   * @param content
+   */
   public binaryToMarkdown(content: Buffer) {
     return yjsStateToMarkdown(content);
+  }
+
+  /**
+   * Converts markdown string to binary Y.Doc state update v2
+   * @param markdown
+   */
+  public markdownToStateUpdate(markdown?: string) {
+    return markdown ? markdownToYjsV2State(markdown) : null;
   }
 
   async saveContent(memoId: string, content: Buffer): Promise<IMemo> {
