@@ -448,7 +448,7 @@ export class NotificationSpaceAdapter {
 
     // Recipient
     const eventRecipientsAdmins =
-      NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE;
+      NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE;
 
     const recipients = await this.getNotificationRecipientsSpace(
       eventRecipientsAdmins,
@@ -484,7 +484,7 @@ export class NotificationSpaceAdapter {
         };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE,
+        NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE,
         NotificationEventCategory.SPACE_ADMIN,
         eventData.triggeredBy,
         inAppReceiverIDs,

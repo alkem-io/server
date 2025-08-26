@@ -267,7 +267,7 @@ export class NotificationRecipientsService {
         return notificationSettings.user.copyOfMessageSent;
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.admin.communityApplicationReceived;
-      case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
+      case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
         return notificationSettings.space.admin.communicationMessageReceived;
       case NotificationEvent.SPACE_COMMUNICATION_UPDATE:
         return notificationSettings.space.communicationUpdates;
@@ -357,7 +357,11 @@ export class NotificationRecipientsService {
         });
         break;
       }
-      case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
+      case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE: {
+        // no need to have the admin privilege, only LEAD
+        credentialCriteria = this.getSpaceLeadCredentialCriteria(spaceID);
+        break;
+      }
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
@@ -454,7 +458,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
-      case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
+      case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         // get the space authorization policy
         if (!entityID) {
@@ -581,6 +585,23 @@ export class NotificationRecipientsService {
     return [
       {
         type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: spaceID,
+      },
+    ];
+  }
+
+  private getSpaceLeadCredentialCriteria(
+    spaceID: string | undefined
+  ): CredentialsSearchInput[] {
+    if (!spaceID) {
+      throw new ValidationException(
+        'Space ID is required for notification recipients',
+        LogContext.NOTIFICATIONS
+      );
+    }
+    return [
+      {
+        type: AuthorizationCredential.SPACE_LEAD,
         resourceID: spaceID,
       },
     ];
