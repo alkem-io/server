@@ -12,8 +12,6 @@ import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-
 import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
-import { NotificationInputUserMessage } from './dto/user/notification.dto.input.user.message';
-import { NotificationUserAdapter } from './notification.user.adapter';
 
 @Injectable()
 export class NotificationOrganizationAdapter {
@@ -22,8 +20,7 @@ export class NotificationOrganizationAdapter {
     private readonly logger: LoggerService,
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
-    private notificationInAppAdapter: NotificationInAppAdapter,
-    private notificationUserAdapter: NotificationUserAdapter
+    private notificationInAppAdapter: NotificationInAppAdapter
   ) {}
 
   public async organizationMention(
@@ -121,18 +118,50 @@ export class NotificationOrganizationAdapter {
         inAppPayload
       );
     }
+
+    /////////////////////////
     // And for the sender
-    const notificationUserInputMessage: NotificationInputUserMessage = {
-      ...eventData,
-      triggeredBy: eventData.triggeredBy,
-      receiverID: eventData.organizationID,
-    };
-    await this.notificationUserAdapter.userCopyOfMessageSent(
-      notificationUserInputMessage,
-      undefined,
-      undefined,
+    const eventSender = NotificationEvent.ORGANIZATION_MESSAGE_SENDER;
+    const recipientsSender = await this.getNotificationRecipientsOrganization(
+      eventSender,
+      eventData,
       eventData.organizationID
     );
+
+    if (recipientsSender.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationMessageNotificationPayload(
+          eventSender,
+          eventData.triggeredBy,
+          recipientsSender.emailRecipients,
+          eventData.message,
+          eventData.organizationID
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        eventSender,
+        payload
+      );
+    }
+
+    // In-app notification
+    const inAppReceiverSenderIDs = recipientsSender.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverSenderIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationMessageDirect = {
+        type: NotificationEventPayload.ORGANIZATION_MESSAGE_DIRECT,
+        organizationID: eventData.organizationID,
+        message: eventData.message,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.ORGANIZATION_MESSAGE_SENDER,
+        NotificationEventCategory.ORGANIZATION,
+        eventData.triggeredBy,
+        inAppReceiverSenderIDs,
+        inAppPayload
+      );
+    }
   }
 
   private async getNotificationRecipientsOrganization(
@@ -144,7 +173,7 @@ export class NotificationOrganizationAdapter {
       event,
       eventData,
       undefined,
-      undefined,
+      eventData.triggeredBy,
       organizationID
     );
   }

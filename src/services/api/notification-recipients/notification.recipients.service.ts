@@ -150,11 +150,11 @@ export class NotificationRecipientsService {
     }
 
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients`,
+      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients`,
+      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients: ${inAppRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
 
@@ -283,6 +283,8 @@ export class NotificationRecipientsService {
         return notificationSettings.space
           .collaborationCalloutPostContributionComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+        return notificationSettings.space.collaborationCalloutComment;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
         return notificationSettings.space.collaborationCalloutComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
         return notificationSettings.space.collaborationCalloutPublished;
@@ -451,6 +453,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
       case NotificationEvent.SPACE_ADMIN_COMMUNICATION_MESSAGE:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED: {
         // get the space authorization policy

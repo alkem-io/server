@@ -103,15 +103,14 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        if (post.createdBy !== agentInfo.userID) {
-          this.roomServiceEvents.processNotificationPostContributionComment(
-            callout,
-            post,
-            room,
-            message,
-            agentInfo
-          );
-        }
+        this.roomServiceEvents.processNotificationPostContributionComment(
+          callout,
+          post,
+          room,
+          message,
+          agentInfo
+        );
+
         this.roomServiceEvents.processActivityPostComment(
           post,
           room,
@@ -229,14 +228,13 @@ export class RoomResolverMutations {
             message,
             agentInfo
           );
-          if (callout.createdBy !== agentInfo.userID) {
-            this.roomServiceEvents.processNotificationCalloutComment(
-              callout,
-              room,
-              message,
-              agentInfo
-            );
-          }
+
+          this.roomServiceEvents.processNotificationCalloutComment(
+            callout,
+            room,
+            message,
+            agentInfo
+          );
         }
         break;
       default:

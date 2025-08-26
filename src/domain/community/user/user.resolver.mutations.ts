@@ -92,7 +92,12 @@ export class UserResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const receivingUser = await this.userService.getUserOrFail(
-      messageData.receivingUserID
+      messageData.receivingUserID,
+      {
+        relations: {
+          settings: true,
+        },
+      }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,

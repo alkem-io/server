@@ -26,6 +26,7 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const recipients = await this.notificationsRecipientsService.getRecipients({
+      triggeredBy: eventData.triggeredBy,
       eventType: event,
       spaceID,
       userID,
