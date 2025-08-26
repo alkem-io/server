@@ -317,7 +317,7 @@ export class NotificationUserAdapter {
       LogContext.NOTIFICATIONS,
       { userID, spaceID, organizationID }
     );
-    const event = NotificationEvent.USER_MESSAGE;
+    const event = NotificationEvent.USER_MESSAGE_SENDER;
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData,
@@ -352,7 +352,7 @@ export class NotificationUserAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.USER_MESSAGE,
+        NotificationEvent.USER_MESSAGE_SENDER,
         NotificationEventCategory.USER,
         eventData.triggeredBy,
         inAppReceiverIDs,
