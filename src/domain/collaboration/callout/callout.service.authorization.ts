@@ -23,6 +23,8 @@ import { CalloutFramingAuthorizationService } from '../callout-framing/callout.f
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -71,10 +73,22 @@ export class CalloutAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
+    const parentAuthorizationAdjusted =
+      this.getParentAuthorizationPolicyForCalloutVisibility(
+        callout,
+        parentAuthorization
+      );
+
     callout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         callout.authorization,
-        parentAuthorization
+        parentAuthorizationAdjusted
+      );
+
+    callout.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        callout.authorization,
+        parentAuthorizationAdjusted
       );
 
     callout.authorization = this.appendPrivilegeRules(
@@ -121,6 +135,60 @@ export class CalloutAuthorizationService {
     }
 
     return updatedAuthorizations;
+  }
+
+  private getParentAuthorizationPolicyForCalloutVisibility(
+    callout: ICallout,
+    parentAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy | undefined {
+    if (
+      !parentAuthorization ||
+      callout.settings.visibility !== CalloutVisibility.DRAFT
+    ) {
+      return parentAuthorization;
+    }
+
+    // Clone the parent authorization and strip out all rules that grant the READ privilege.
+    const clonedParent =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        parentAuthorization
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+    for (const rule of clonedParent.credentialRules) {
+      const grantedPrivileges = rule.grantedPrivileges;
+      const filteredPrivileges = grantedPrivileges.filter(
+        privilege => privilege !== AuthorizationPrivilege.READ
+      );
+      if (filteredPrivileges.length > 0) {
+        newRules.push({
+          ...rule,
+          grantedPrivileges: filteredPrivileges,
+        });
+      }
+    }
+    clonedParent.credentialRules = newRules;
+
+    // Add in who should READ
+    const criteriasWithReadAccess: ICredentialDefinition[] = [];
+    if (callout.createdBy) {
+      criteriasWithReadAccess.push({
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: callout.createdBy,
+      });
+      // TODO: add in those that should have access i.e. admins, global roles etc.
+    }
+    if (criteriasWithReadAccess.length > 0) {
+      const draftCalloutReadAccess =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.READ],
+          criteriasWithReadAccess,
+          'Callout read access for draft callouts'
+        );
+      clonedParent.credentialRules.push(draftCalloutReadAccess);
+    }
+
+    return clonedParent;
   }
 
   private appendCredentialRules(callout: ICallout): IAuthorizationPolicy {

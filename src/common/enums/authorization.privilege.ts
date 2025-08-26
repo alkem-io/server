@@ -41,6 +41,7 @@ export enum AuthorizationPrivilege {
   READ_USERS = 'read-users',
   READ_USER_PII = 'read-user-pii',
   READ_USER_SETTINGS = 'read-user-settings',
+  READ_DRAFT = 'read-draft',
   MOVE_POST = 'move-post',
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
