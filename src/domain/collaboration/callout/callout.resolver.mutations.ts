@@ -338,6 +338,7 @@ export class CalloutResolverMutations {
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityLinkCreated(
             callout,
+            contribution,
             contribution.link,
             levelZeroSpaceID,
             agentInfo
@@ -365,10 +366,21 @@ export class CalloutResolverMutations {
 
   private async processActivityLinkCreated(
     callout: ICallout,
+    contribution: ICalloutContribution,
     link: ILink,
     levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.LINK,
+        triggeredBy: agentInfo.userID,
+      };
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+      notificationInput
+    );
     const activityLogInput: ActivityInputCalloutLinkCreated = {
       triggeredBy: agentInfo.userID,
       link: link,

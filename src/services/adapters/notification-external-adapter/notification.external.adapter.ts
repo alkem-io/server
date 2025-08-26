@@ -265,7 +265,7 @@ export class NotificationExternalAdapter {
         ),
         displayName: contribution.link.profile.displayName,
         description: contribution.link.profile.description ?? '',
-        url: contribution.link.uri,
+        url: calloutURL, // no uri on link creation, use callout URL instead
       };
     } else {
       throw new RelationshipNotFoundException(
