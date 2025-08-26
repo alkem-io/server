@@ -17,6 +17,9 @@ import { NotificationInputCommunicationLeadsMessage } from '@services/adapters/n
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
+import { UserService } from '@domain/community/user/user.service';
+import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @InstrumentResolver()
 @Resolver()
@@ -27,6 +30,7 @@ export class CommunicationResolverMutations {
     private notificationUserAdapter: NotificationUserAdapter,
     private notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -45,6 +49,25 @@ export class CommunicationResolverMutations {
     );
 
     for (const receiverId of messageData.receiverIds) {
+      // Check if the receiving user allows messages from other users
+      const receivingUser = await this.userService.getUserOrFail(receiverId, {
+        relations: {
+          settings: true,
+        },
+      });
+
+      // Check if the user is willing to receive messages
+      if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
+        throw new MessagingNotEnabledException(
+          'User is not open to receiving messages',
+          LogContext.USER,
+          {
+            userId: receivingUser.id,
+            senderId: agentInfo.userID,
+          }
+        );
+      }
+
       const notificationInput: NotificationInputUserMessage = {
         triggeredBy: agentInfo.userID,
         receiverID: receiverId,
