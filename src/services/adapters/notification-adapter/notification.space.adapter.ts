@@ -111,7 +111,7 @@ export class NotificationSpaceAdapter {
     );
 
     const payload =
-      await this.notificationExternalAdapter.buildSpaceCollaborationPostCreatedPayload(
+      await this.notificationExternalAdapter.buildSpaceCollaborationCreatedPayload(
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
@@ -152,7 +152,7 @@ export class NotificationSpaceAdapter {
     );
 
     const adminPayload =
-      await this.notificationExternalAdapter.buildSpaceCollaborationPostCreatedPayload(
+      await this.notificationExternalAdapter.buildSpaceCollaborationCreatedPayload(
         adminEvent,
         eventData.triggeredBy,
         adminRecipients.emailRecipients,

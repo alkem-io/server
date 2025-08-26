@@ -58,6 +58,15 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 
+interface CalloutContributionPayload {
+  id: string;
+  displayName: string;
+  description: string;
+  createdBy: ContributorPayload;
+  type: CalloutContributionType;
+  url: string;
+}
+
 @Injectable()
 export class NotificationExternalAdapter {
   constructor(
@@ -195,7 +204,7 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
-  async buildSpaceCollaborationPostCreatedPayload(
+  async buildSpaceCollaborationCreatedPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
@@ -203,16 +212,7 @@ export class NotificationExternalAdapter {
     eventData: NotificationInputCollaborationCalloutContributionCreated
   ): Promise<NotificationEventPayloadSpaceCollaborationCallout> {
     const callout = eventData.callout;
-    const post = eventData.contribution.post;
-    if (!post) {
-      throw new RelationshipNotFoundException(
-        'Post not found',
-        LogContext.NOTIFICATIONS,
-        {
-          contribution: eventData.contribution.id,
-        }
-      );
-    }
+    const contribution = eventData.contribution;
 
     const spacePayload = await this.buildSpacePayload(
       eventType,
@@ -223,7 +223,61 @@ export class NotificationExternalAdapter {
     const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
       callout.id
     );
-    const postURL = await this.urlGeneratorService.getPostUrlPath(post.id);
+
+    // Determine the contribution type and generate appropriate URL and payload
+    let contributionPayload: CalloutContributionPayload;
+
+    if (contribution.post) {
+      const postURL = await this.urlGeneratorService.getPostUrlPath(
+        contribution.post.id
+      );
+      contributionPayload = {
+        id: contribution.post.id,
+        type: CalloutContributionType.POST,
+        createdBy: await this.getContributorPayloadOrFail(
+          contribution.createdBy || contribution.post.createdBy
+        ),
+        displayName: contribution.post.profile.displayName,
+        description: contribution.post.profile.description ?? '',
+        url: postURL,
+      };
+    } else if (contribution.whiteboard) {
+      const whiteboardURL = await this.urlGeneratorService.getWhiteboardUrlPath(
+        contribution.whiteboard.id,
+        contribution.whiteboard.nameID
+      );
+      contributionPayload = {
+        id: contribution.whiteboard.id,
+        type: CalloutContributionType.WHITEBOARD,
+        createdBy: await this.getContributorPayloadOrFail(
+          contribution.createdBy || contribution.whiteboard.createdBy || ''
+        ),
+        displayName: contribution.whiteboard.profile.displayName,
+        description: contribution.whiteboard.profile.description ?? '',
+        url: whiteboardURL,
+      };
+    } else if (contribution.link) {
+      contributionPayload = {
+        id: contribution.link.id,
+        type: CalloutContributionType.LINK,
+        createdBy: await this.getContributorPayloadOrFail(
+          contribution.createdBy || ''
+        ),
+        displayName: contribution.link.profile.displayName,
+        description: contribution.link.profile.description ?? '',
+        url: contribution.link.uri,
+      };
+    } else {
+      throw new RelationshipNotFoundException(
+        'No valid contribution type found (post, whiteboard, or link)',
+        LogContext.NOTIFICATIONS,
+        {
+          contribution: contribution.id,
+          allowedTypes: callout.settings.contribution.allowedTypes,
+        }
+      );
+    }
+
     const payload: NotificationEventPayloadSpaceCollaborationCallout = {
       callout: {
         id: callout.id,
@@ -234,14 +288,7 @@ export class NotificationExternalAdapter {
           description: callout.framing.profile.description ?? '',
           type: callout.framing.type,
         },
-        contribution: {
-          id: post.id,
-          type: CalloutContributionType.POST,
-          createdBy: await this.getContributorPayloadOrFail(post.createdBy),
-          displayName: post.profile.displayName,
-          description: post.profile.description ?? '',
-          url: postURL,
-        },
+        contribution: contributionPayload,
       },
       ...spacePayload,
     };
