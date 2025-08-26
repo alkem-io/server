@@ -27,5 +27,5 @@ export const yjsStateToMarkdown = (state: Buffer) => {
     extensions: [StarterKit, ImageExtension, /*Link,*/ Highlight, Iframe],
     content: pmJson,
     // options,
-  });
+  }).trim();
 };
