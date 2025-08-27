@@ -80,16 +80,18 @@ export class NotificationRecipientsService {
 
     const emailRecipientsWithNotificationEnabled = candidateRecipients.filter(
       recipient =>
+        recipient.settings?.notification &&
         this.getChannelsSettingsForEvent(
           eventData.eventType,
-          recipient.settings?.notification
+          recipient.settings.notification
         ).email
     );
     const inAppRecipientsWithNotificationEnabled = candidateRecipients.filter(
       recipient =>
+        recipient.settings?.notification &&
         this.getChannelsSettingsForEvent(
           eventData.eventType,
-          recipient.settings?.notification
+          recipient.settings.notification
         ).inApp
     );
 
