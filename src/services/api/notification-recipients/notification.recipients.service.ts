@@ -282,8 +282,6 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
         return notificationSettings.space
           .collaborationCalloutPostContributionComment;
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
-        return notificationSettings.space.collaborationCalloutComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
         return notificationSettings.space.collaborationCalloutComment;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:

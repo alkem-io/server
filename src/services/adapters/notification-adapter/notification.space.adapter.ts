@@ -233,12 +233,13 @@ export class NotificationSpaceAdapter {
     }
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
-    const inAppReceiverCreators = inAppReceiverIDs.filter(
-      recipientID => recipientID === eventData.post.createdBy
-    );
+    // get the creator but only if it not the sender
+    const inAppReceiverCreators = recipients.inAppRecipients
+      .filter(
+        r => r.id === eventData.post.createdBy && r.id !== eventData.triggeredBy
+      )
+      .map(r => r.id);
+
     if (inAppReceiverCreators.length > 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
         type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
