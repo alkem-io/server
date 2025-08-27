@@ -515,7 +515,7 @@ export class NotificationSpaceAdapter {
       space.id,
       eventData.triggeredBy
     );
-    if (recipients.emailRecipients.length > 0) {
+    if (recipientsSender.emailRecipients.length > 0) {
       // Emit the events to notify others
       const payloadRecipients =
         await this.notificationExternalAdapter.buildSpaceCommunicationMessageDirectNotificationPayload(
@@ -532,7 +532,7 @@ export class NotificationSpaceAdapter {
     }
 
     // Send in-app notifications
-    const inAppReceiverSenderIDs = recipients.inAppRecipients.map(
+    const inAppReceiverSenderIDs = recipientsSender.inAppRecipients.map(
       recipient => recipient.id
     );
     if (inAppReceiverSenderIDs.length > 0) {
