@@ -195,6 +195,7 @@ export class RoleSetResolverMutationsMembership {
     const notificationInput: NotificationInputCommunityApplication = {
       triggeredBy: agentInfo.userID,
       community,
+      application,
     };
     await this.notificationAdapterSpace.spaceCommunityApplicationCreated(
       notificationInput

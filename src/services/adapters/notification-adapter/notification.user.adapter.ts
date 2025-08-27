@@ -106,7 +106,7 @@ export class NotificationUserAdapter {
       const inAppPayload: InAppNotificationPayloadSpaceCommunityApplication = {
         type: NotificationEventPayload.SPACE_COMMUNITY_APPLICATION,
         spaceID: space.id,
-        applicationID: 'unknown',
+        applicationID: eventData.application.id,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
