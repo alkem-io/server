@@ -289,7 +289,7 @@ export class PlatformAuthorizationService {
     receiveNotificationsOrganizationAdmin.cascade = false;
     credentialRules.push(receiveNotificationsOrganizationAdmin);
 
-    // Allow organization admins to access organization admin notification settings
+    // Allow space admins to access space admin notification settings
     const receiveNotificationsSpaceAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_SPACE_ADMIN],
@@ -298,6 +298,16 @@ export class PlatformAuthorizationService {
       );
     receiveNotificationsSpaceAdmin.cascade = false;
     credentialRules.push(receiveNotificationsSpaceAdmin);
+
+    // Allow space leads to access space lead notification settings
+    const receiveNotificationsSpaceLead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_SPACE_LEAD],
+        [AuthorizationCredential.SPACE_LEAD],
+        'Receive notifications space lead'
+      );
+    receiveNotificationsSpaceLead.cascade = false;
+    credentialRules.push(receiveNotificationsSpaceLead);
 
     // Allow all registered users to query non-protected user information
     const userNotInherited =
