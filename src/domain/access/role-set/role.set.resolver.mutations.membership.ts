@@ -18,7 +18,6 @@ import { ApplicationService } from '../application/application.service';
 import { InvitationService } from '../invitation/invitation.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
 import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
@@ -64,6 +63,8 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationVirtualContributorAdapter } from '@services/adapters/notification-adapter/notification.virtual.contributor.adapter';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -73,8 +74,9 @@ export class RoleSetResolverMutationsMembership {
     private roleSetService: RoleSetService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private notificationAdapter: NotificationAdapter,
+    private notificationUserAdapter: NotificationUserAdapter,
     private notificationAdapterSpace: NotificationSpaceAdapter,
+    private notificationVirtualContributorAdapter: NotificationVirtualContributorAdapter,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
@@ -193,6 +195,7 @@ export class RoleSetResolverMutationsMembership {
     const notificationInput: NotificationInputCommunityApplication = {
       triggeredBy: agentInfo.userID,
       community,
+      application,
     };
     await this.notificationAdapterSpace.spaceCommunityApplicationCreated(
       notificationInput
@@ -760,7 +763,7 @@ export class RoleSetResolverMutationsMembership {
                   welcomeMessage: invitation.welcomeMessage,
                 };
 
-              await this.notificationAdapter.spaceCommunityInvitationVirtualContributorCreated(
+              await this.notificationVirtualContributorAdapter.spaceCommunityInvitationVirtualContributorCreated(
                 notificationInput
               );
               break;
@@ -775,7 +778,7 @@ export class RoleSetResolverMutationsMembership {
                 welcomeMessage: invitation.welcomeMessage,
               };
 
-              await this.notificationAdapterSpace.spaceCommunityInvitationCreated(
+              await this.notificationUserAdapter.userSpaceCommunityInvitationCreated(
                 notificationInput
               );
               break;

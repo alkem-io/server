@@ -1,21 +1,17 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, ValidateNested } from 'class-validator';
+import { UpdateUserSettingsNotificationSpaceAdminInput } from './user.settings.notification.space.admin.dto.update';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateUserSettingsNotificationSpaceInput {
-  @Field(() => Boolean, {
+  @Field(() => UpdateUserSettingsNotificationSpaceAdminInput, {
     nullable: true,
-    description: 'Receive a notification when an application is received',
+    description: 'Settings related to Space Admin Notifications.',
   })
-  @IsBoolean()
-  communityApplicationReceived?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when an application is submitted',
-  })
-  @IsBoolean()
-  communityApplicationSubmitted?: boolean;
+  @ValidateNested()
+  @Type(() => UpdateUserSettingsNotificationSpaceAdminInput)
+  admin?: UpdateUserSettingsNotificationSpaceAdminInput;
 
   @Field(() => Boolean, {
     nullable: true,
@@ -26,60 +22,25 @@ export class UpdateUserSettingsNotificationSpaceInput {
 
   @Field(() => Boolean, {
     nullable: true,
-    description: 'Receive a notification for community updates as admin',
+    description: 'Receive a notification when a contribution is added',
   })
   @IsBoolean()
-  communicationUpdatesAdmin?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when a new member joins the community',
-  })
-  @IsBoolean()
-  communityNewMember?: boolean;
+  collaborationCalloutContributionCreated?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,
     description:
-      'Receive a notification when a new member joins the community (admin)',
+      'Receive a notification when a comment is created on a contribution',
   })
   @IsBoolean()
-  communityNewMemberAdmin?: boolean;
+  collaborationCalloutPostContributionComment?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,
-    description: 'Receive a notification for community invitation',
+    description: 'Receive a notification when a comment is added to a Callout',
   })
   @IsBoolean()
-  communityInvitationUser?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when a post is created (admin)',
-  })
-  @IsBoolean()
-  collaborationPostCreatedAdmin?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when a post is created',
-  })
-  @IsBoolean()
-  collaborationPostCreated?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when a comment is created on a post',
-  })
-  @IsBoolean()
-  collaborationPostCommentCreated?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a notification when a whiteboard is created',
-  })
-  @IsBoolean()
-  collaborationWhiteboardCreated?: boolean;
+  collaborationCalloutComment?: boolean;
 
   @Field(() => Boolean, {
     nullable: true,
@@ -87,19 +48,4 @@ export class UpdateUserSettingsNotificationSpaceInput {
   })
   @IsBoolean()
   collaborationCalloutPublished?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Receive a copy of messages that I send to a Space',
-  })
-  @IsBoolean()
-  communicationMessage?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description:
-      'Receive a notification when a message is sent to a Space I lead',
-  })
-  @IsBoolean()
-  communicationMessageAdmin?: boolean;
 }

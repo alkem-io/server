@@ -8,6 +8,6 @@ export const MockNotificationPlatformAdapter: ValueProvider<
   provide: NotificationPlatformAdapter,
   useValue: {
     platformForumDiscussionCreated: jest.fn(),
-    platformUserRegistered: jest.fn(),
+    platformUserProfileCreated: jest.fn(),
   },
 };
