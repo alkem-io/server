@@ -15,7 +15,6 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
@@ -25,6 +24,7 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -39,7 +39,7 @@ export class CalloutsSetResolverMutations {
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapterSpace: NotificationSpaceAdapter,
-    private namingService: NamingService,
+    private roomResolverService: RoomResolverService,
     private temporaryStorageService: TemporaryStorageService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -87,7 +87,7 @@ export class CalloutsSetResolverMutations {
     };
     if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
       const roleSetAndSettings =
-        await this.namingService.getRoleSetAndSettingsForCollaborationCalloutsSet(
+        await this.roomResolverService.getRoleSetAndSettingsForCollaborationCalloutsSet(
           calloutsSet.id
         );
       roleSet = roleSetAndSettings.roleSet;

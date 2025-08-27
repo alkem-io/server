@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessage } from '../message/message.interface';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { RoomType } from '@common/enums/room.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -17,6 +16,9 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { IRoom } from '../room/room.interface';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { NotificationInputUserMention } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.mention';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
+import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
 
 @Injectable()
 export class RoomMentionsService {
@@ -26,7 +28,8 @@ export class RoomMentionsService {
   );
 
   constructor(
-    private notificationAdapter: NotificationAdapter,
+    private notificationUserAdapter: NotificationUserAdapter,
+    private notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private communityResolverService: CommunityResolverService,
     private roomLookupService: RoomLookupService,
     private virtualContributorMessageService: VirtualContributorMessageService,
@@ -130,7 +133,33 @@ export class RoomMentionsService {
       },
       commentType: room.type as RoomType,
     };
-    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
+    this.entityMentions(entityMentionsNotificationInput);
+  }
+
+  public async entityMentions(
+    eventData: NotificationInputEntityMentions
+  ): Promise<void> {
+    for (const mention of eventData.mentions) {
+      const entityMentionNotificationInput: NotificationInputUserMention = {
+        triggeredBy: eventData.triggeredBy,
+        comment: eventData.comment,
+        mentionedEntityID: mention.id,
+        commentsId: eventData.roomId,
+        originEntity: eventData.originEntity,
+        commentType: eventData.commentType,
+      };
+
+      if (mention.type == MentionedEntityType.USER) {
+        this.notificationUserAdapter.userMention(
+          entityMentionNotificationInput
+        );
+      }
+      if (mention.type == MentionedEntityType.ORGANIZATION) {
+        this.notificationOrganizationAdapter.organizationMention(
+          entityMentionNotificationInput
+        );
+      }
+    }
   }
 
   public async getMentionsFromText(text: string): Promise<Mention[]> {

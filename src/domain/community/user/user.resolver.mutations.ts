@@ -16,6 +16,8 @@ import { UpdateUserInput } from './dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateUserSettingsInput } from './dto/user.dto.update.settings';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { LogContext } from '@common/enums';
+import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 
 @InstrumentResolver()
 @Resolver(() => IUser)
@@ -90,14 +92,31 @@ export class UserResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const receivingUser = await this.userService.getUserOrFail(
-      messageData.receivingUserID
+      messageData.receivingUserID,
+      {
+        relations: {
+          settings: true,
+        },
+      }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       receivingUser.authorization,
       AuthorizationPrivilege.READ,
       `user send message: ${receivingUser.id}`
     );
+
+    // Check if the user is willing to receive messages
+    if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
+      throw new MessagingNotEnabledException(
+        'User is not open to receiving messages',
+        LogContext.USER,
+        {
+          userId: receivingUser.id,
+          senderId: agentInfo.userID,
+        }
+      );
+    }
 
     return await this.communicationAdapter.sendMessageToUser({
       senderCommunicationsID: agentInfo.communicationID,

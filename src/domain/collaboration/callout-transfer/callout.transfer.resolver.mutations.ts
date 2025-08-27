@@ -18,7 +18,7 @@ import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { TransferCalloutInput } from './dto/callouts.set.dto.transfer.callout';
 import { CalloutTransferService } from './callout.transfer.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -30,7 +30,7 @@ export class CalloutTransferResolverMutations {
     private calloutAuthorizationService: CalloutAuthorizationService,
     private calloutService: CalloutService,
     private calloutTransferService: CalloutTransferService,
-    private namingService: NamingService,
+    private roomResolverService: RoomResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -89,7 +89,7 @@ export class CalloutTransferResolverMutations {
     );
 
     const { platformRolesAccess } =
-      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+      await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         callout.id
       );
 
