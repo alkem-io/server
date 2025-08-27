@@ -570,13 +570,42 @@ export class SpaceAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
         ],
         spaceAdminCriterias,
         CREDENTIAL_RULE_SPACE_ADMINS
       );
       newRules.push(spaceAdmin);
     }
+
+    // Ensure admins + leads can receive admin notifications
+    const leadRoleCriterias = await this.roleSetService.getCredentialsForRole(
+      roleSet,
+      RoleName.LEAD
+    );
+    const adminNotificationCriterias =
+      leadRoleCriterias.concat(spaceAdminCriterias);
+    const receiveAdminNotifications =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN],
+        adminNotificationCriterias,
+        'Space Admin notifications'
+      );
+    receiveAdminNotifications.cascade = false;
+    newRules.push(receiveAdminNotifications);
+
+    const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
+      ],
+      spaceAdminCriterias,
+      CREDENTIAL_RULE_SPACE_ADMINS
+    );
+    newRules.push(spaceAdmin);
 
     const collaborationSettings = spaceSettings.collaboration;
     if (collaborationSettings.allowMembersToCreateSubspaces) {
