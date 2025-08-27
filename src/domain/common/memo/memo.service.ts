@@ -173,7 +173,7 @@ export class MemoService {
 
   async updateMemoContent(
     memoInputId: string,
-    _updatedMemoContent: string
+    newContent: string
   ): Promise<IMemo> {
     const memo = await this.getMemoOrFail(memoInputId, {
       loadEagerRelations: false,
@@ -185,22 +185,34 @@ export class MemoService {
     });
     if (!memo?.profile) {
       throw new EntityNotInitializedException(
-        `Profile not initialized on memo: '${memo.id}'`,
-        LogContext.MEMOS
+        'Profile not initialized on Memo',
+        LogContext.MEMOS,
+        { memoId: memoInputId }
       );
     }
 
-    // let newMemoContent = updatedMemoContent;
-    // const storageBucket = memo.profile.storageBucket;
-    // if (storageBucket) {
-    //   newMemoContent =
-    //     await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
-    //       updatedMemoContent,
-    //       storageBucket
-    //     );
-    // }
-    //
-    // memo.content = newMemoContent;
+    if (!newContent) {
+      return memo;
+    }
+
+    let newMemoContent = newContent;
+    const storageBucket = memo.profile.storageBucket;
+    if (storageBucket) {
+      newMemoContent =
+        await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+          newContent,
+          storageBucket
+        );
+    }
+
+    const binaryUpdateV2 = this.markdownToStateUpdate(newMemoContent);
+
+    if (!binaryUpdateV2) {
+      return memo;
+    }
+
+    memo.content = Buffer.from(binaryUpdateV2);
+
     return this.save(memo);
   }
 
