@@ -74,6 +74,9 @@ export class CalloutAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
+    // We must use this instead of the raw parentAuthorization because callouts in DRAFT visibility
+    // require stricter access control: only global admins, space admins, global support, and the creator
+    // should have READ privileges. The parent policy may grant broader access, so we need to filter it here.
     const parentAuthorizationAdjusted =
       this.getParentAuthorizationPolicyForCalloutVisibility(
         callout,
@@ -132,6 +135,16 @@ export class CalloutAuthorizationService {
     return updatedAuthorizations;
   }
 
+  /**
+   * Returns a modified parent authorization policy for callout visibility.
+   * If the callout is in DRAFT visibility, strips all READ privileges from the parent policy,
+   * then grants READ access only to global admins, space admins, global support, and the callout creator.
+   * Otherwise, returns the parent policy unchanged.
+   *
+   * @param callout The callout entity for which visibility is being checked.
+   * @param parentAuthorization The parent authorization policy to modify.
+   * @returns The modified authorization policy, or undefined if no parent policy is provided.
+   */
   private getParentAuthorizationPolicyForCalloutVisibility(
     callout: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined
