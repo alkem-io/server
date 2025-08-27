@@ -152,7 +152,7 @@ export class NotificationRecipientsService {
     }
 
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
+      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
@@ -454,7 +454,6 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
-      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
