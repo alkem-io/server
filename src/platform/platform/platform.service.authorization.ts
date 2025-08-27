@@ -227,10 +227,7 @@ export class PlatformAuthorizationService {
     // platform role
     const platformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
-          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
-        ],
+        [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
@@ -247,7 +244,6 @@ export class PlatformAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
         ],
         [AuthorizationCredential.GLOBAL_SUPPORT],
         CREDENTIAL_RULE_TYPES_PLATFORM_MGMT
@@ -267,6 +263,51 @@ export class PlatformAuthorizationService {
       );
     platformResetAuth.cascade = false;
     credentialRules.push(platformResetAuth);
+
+    // Who can receive the platform admin notifications
+    const platformAdminNotifications =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        ' Receive notifications platform admin'
+      );
+    platformAdminNotifications.cascade = false;
+    credentialRules.push(platformAdminNotifications);
+
+    // Allow organization admins to access organization admin notification settings
+    const receiveNotificationsOrganizationAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN],
+        [AuthorizationCredential.ORGANIZATION_ADMIN],
+        'Receive notifications organization admin'
+      );
+    receiveNotificationsOrganizationAdmin.cascade = false;
+    credentialRules.push(receiveNotificationsOrganizationAdmin);
+
+    // Allow space admins to access space admin notification settings
+    const receiveNotificationsSpaceAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_SPACE_ADMIN],
+        [AuthorizationCredential.SPACE_ADMIN],
+        'Receive notifications space admin'
+      );
+    receiveNotificationsSpaceAdmin.cascade = false;
+    credentialRules.push(receiveNotificationsSpaceAdmin);
+
+    // Allow space leads to access space lead notification settings
+    const receiveNotificationsSpaceLead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_SPACE_LEAD],
+        [AuthorizationCredential.SPACE_LEAD],
+        'Receive notifications space lead'
+      );
+    receiveNotificationsSpaceLead.cascade = false;
+    credentialRules.push(receiveNotificationsSpaceLead);
 
     // Allow all registered users to query non-protected user information
     const userNotInherited =
