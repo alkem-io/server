@@ -6,7 +6,7 @@ import { Schema } from 'prosemirror-model';
  *   marks: schema.spec.marks,
  * };
  */
-export const schema = new Schema({
+export const markdownSchema = new Schema({
   nodes: {
     doc: {
       content: 'block+',

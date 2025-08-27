@@ -1,30 +1,34 @@
 import * as Y from 'yjs';
 import { MarkdownParser } from 'prosemirror-markdown';
-import markdownIt from 'markdown-it';
+import markdownIt, { Token } from 'markdown-it';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
-import { schema } from './schema';
+import { markdownSchema } from './markdown.schema';
 
 /**
  * Converts a markdown string to a Yjs state update, encoded in binary.
  * @param markdown
  */
 export const markdownToYjsV2State = (markdown: string): Uint8Array => {
-  const mdParser = new MarkdownParser(schema, markdownIt(), parserRules);
+  const mdParser = new MarkdownParser(
+    markdownSchema,
+    markdownIt(),
+    parserRules
+  );
   const pmDoc = mdParser.parse(markdown);
   const pmJson = pmDoc.toJSON();
 
-  const ydoc = prosemirrorJSONToYDoc(schema, pmJson, 'default');
+  const ydoc = prosemirrorJSONToYDoc(markdownSchema, pmJson, 'default');
   return Y.encodeStateAsUpdateV2(ydoc);
 };
 
-const parserRules = {
+const parserRules: MarkdownParser['tokens'] = {
   // Block Nodes
   paragraph: { block: 'paragraph' },
   blockquote: { block: 'blockquote' },
   heading: {
     block: 'heading',
-    getAttrs: (tok: any) => ({
-      level: +tok.tag.slice(1),
+    getAttrs: (token: Token) => ({
+      level: Number(token.tag.slice(1)),
     }),
   },
   code_block: {
@@ -33,16 +37,16 @@ const parserRules = {
   },
   fence: {
     block: 'codeBlock',
-    getAttrs: (tok: any) => ({
-      language: tok.info,
+    getAttrs: (token: Token) => ({
+      language: token.info,
     }),
   },
   hr: { node: 'horizontalRule' },
   bullet_list: { block: 'bulletList' },
   ordered_list: {
     block: 'orderedList',
-    getAttrs: (tok: any) => ({
-      start: +tok.attrGet('start') || 1,
+    getAttrs: (token: Token) => ({
+      start: Number(token.attrGet('start') || 1),
     }),
   },
   list_item: { block: 'listItem' },
@@ -51,19 +55,19 @@ const parserRules = {
   // Inline Nodes
   image: {
     node: 'image',
-    getAttrs: (tok: any) => ({
-      src: tok.attrGet('src'),
-      alt: tok.attrGet('alt'),
-      title: tok.attrGet('title'),
+    getAttrs: (token: Token) => ({
+      src: token.attrGet('src'),
+      alt: token.attrGet('alt'),
+      title: token.attrGet('title'),
     }),
   },
 
   // Marks
   link: {
     mark: 'link',
-    getAttrs: (tok: any) => ({
-      href: tok.attrGet('href'),
-      title: tok.attrGet('title'),
+    getAttrs: (token: Token) => ({
+      href: token.attrGet('href'),
+      title: token.attrGet('title'),
       target: '_blank', // Set a default target based on your schema
       rel: 'noopener noreferrer nofollow', // Set a default rel based on your schema
     }),
