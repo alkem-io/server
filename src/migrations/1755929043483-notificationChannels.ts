@@ -4,151 +4,173 @@ export class NotificationChannels1755929043483 implements MigrationInterface {
   name = 'NotificationChannels1755929043483';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const userSettings: {
-      id: string;
-      notification: LegacyNotificationSettings;
-    }[] = await queryRunner.query(`SELECT id, notification FROM user_settings`);
+    try {
+      const userSettings: {
+        id: string;
+        notification: LegacyNotificationSettings;
+      }[] = await queryRunner.query(
+        `SELECT id, notification FROM user_settings`
+      );
 
-    for (const userSetting of userSettings) {
-      const legacyNotificationSettings: LegacyNotificationSettings =
-        userSetting.notification;
-      const newNotificationSettings: NewNotificationSettings = {
-        platform: {
-          // Map legacy platform fields to new structure
-          admin: {
-            userProfileRemoved: {
-              email: legacyNotificationSettings.platform.userProfileRemoved,
-              inApp: legacyNotificationSettings.platform.userProfileRemoved,
+      for (const userSetting of userSettings) {
+        // Skip invalid notification data
+        if (!userSetting.notification) {
+          console.warn(
+            `Skipping user setting ${userSetting.id}: no notification data`
+          );
+          continue;
+        }
+
+        const legacyNotificationSettings: LegacyNotificationSettings =
+          userSetting.notification;
+        const newNotificationSettings: NewNotificationSettings = {
+          platform: {
+            // Map legacy platform fields to new structure
+            admin: {
+              userProfileRemoved: {
+                email: legacyNotificationSettings.platform.userProfileRemoved,
+                inApp: legacyNotificationSettings.platform.userProfileRemoved,
+              },
+              userProfileCreated: {
+                email: legacyNotificationSettings.platform.newUserSignUp,
+                inApp: legacyNotificationSettings.platform.newUserSignUp,
+              },
+              spaceCreated: {
+                email: legacyNotificationSettings.platform.spaceCreated,
+                inApp: legacyNotificationSettings.platform.spaceCreated,
+              },
+              userGlobalRoleChanged: {
+                email: true,
+                inApp: true,
+              },
             },
-            userProfileCreated: {
-              email: legacyNotificationSettings.platform.newUserSignUp,
-              inApp: legacyNotificationSettings.platform.newUserSignUp,
+            forumDiscussionComment: {
+              email: legacyNotificationSettings.platform.forumDiscussionComment,
+              inApp: legacyNotificationSettings.platform.forumDiscussionComment,
             },
-            spaceCreated: {
-              email: legacyNotificationSettings.platform.spaceCreated,
-              inApp: legacyNotificationSettings.platform.spaceCreated,
+            forumDiscussionCreated: {
+              email: legacyNotificationSettings.platform.forumDiscussionCreated,
+              inApp: legacyNotificationSettings.platform.forumDiscussionCreated,
             },
-            userGlobalRoleChanged: {
+          },
+          organization: {
+            // Map legacy organization fields to new structure
+            adminMentioned: {
+              email: legacyNotificationSettings.organization.mentioned,
+              inApp: legacyNotificationSettings.organization.mentioned,
+            },
+            adminMessageReceived: {
+              email: legacyNotificationSettings.organization.messageReceived,
+              inApp: legacyNotificationSettings.organization.messageReceived,
+            },
+          },
+          space: {
+            // Map legacy space fields to new structure
+            admin: {
+              communityApplicationReceived: {
+                email:
+                  legacyNotificationSettings.space.communityApplicationReceived,
+                inApp:
+                  legacyNotificationSettings.space.communityApplicationReceived,
+              },
+              collaborationCalloutContributionCreated: {
+                email:
+                  legacyNotificationSettings.space
+                    .collaborationPostCreatedAdmin,
+                inApp:
+                  legacyNotificationSettings.space
+                    .collaborationPostCreatedAdmin,
+              },
+              communityNewMember: {
+                email: legacyNotificationSettings.space.communityNewMemberAdmin,
+                inApp: legacyNotificationSettings.space.communityNewMemberAdmin,
+              },
+              communicationMessageReceived: {
+                email:
+                  legacyNotificationSettings.space.communicationMessageAdmin,
+                inApp:
+                  legacyNotificationSettings.space.communicationMessageAdmin,
+              },
+            },
+            collaborationCalloutContributionCreated: {
+              email: legacyNotificationSettings.space.collaborationPostCreated,
+              inApp: legacyNotificationSettings.space.collaborationPostCreated,
+            },
+            communicationUpdates: {
+              email: legacyNotificationSettings.space.communicationUpdates,
+              inApp: legacyNotificationSettings.space.communicationUpdates,
+            },
+            collaborationCalloutPublished: {
+              email:
+                legacyNotificationSettings.space.collaborationCalloutPublished,
+              inApp:
+                legacyNotificationSettings.space.collaborationCalloutPublished,
+            },
+            collaborationCalloutComment: {
+              email: true,
+              inApp: true,
+            },
+            collaborationCalloutPostContributionComment: {
+              email:
+                legacyNotificationSettings.space
+                  .collaborationPostCommentCreated,
+              inApp:
+                legacyNotificationSettings.space
+                  .collaborationPostCommentCreated,
+            },
+          },
+          user: {
+            // Map legacy user fields to new structure
+            membership: {
+              spaceCommunityInvitationReceived: {
+                email: legacyNotificationSettings.space.communityInvitationUser,
+                inApp: legacyNotificationSettings.space.communityInvitationUser,
+              },
+              spaceCommunityJoined: {
+                email: legacyNotificationSettings.space.communityNewMember,
+                inApp: legacyNotificationSettings.space.communityNewMember,
+              },
+              spaceCommunityApplicationSubmitted: {
+                email:
+                  legacyNotificationSettings.space
+                    .communityApplicationSubmitted,
+                inApp:
+                  legacyNotificationSettings.space
+                    .communityApplicationSubmitted,
+              },
+            },
+            mentioned: {
+              email: legacyNotificationSettings.user.mentioned,
+              inApp: legacyNotificationSettings.user.mentioned,
+            },
+            commentReply: {
+              email: legacyNotificationSettings.user.commentReply,
+              inApp: legacyNotificationSettings.user.commentReply,
+            },
+            messageReceived: {
+              email: legacyNotificationSettings.user.messageReceived,
+              inApp: legacyNotificationSettings.user.messageReceived,
+            },
+            copyOfMessageSent: {
+              email: legacyNotificationSettings.user.messageSent,
+              inApp: legacyNotificationSettings.user.messageSent,
+            },
+          },
+          virtualContributor: {
+            adminSpaceCommunityInvitation: {
               email: true,
               inApp: true,
             },
           },
-          forumDiscussionComment: {
-            email: legacyNotificationSettings.platform.forumDiscussionComment,
-            inApp: legacyNotificationSettings.platform.forumDiscussionComment,
-          },
-          forumDiscussionCreated: {
-            email: legacyNotificationSettings.platform.forumDiscussionCreated,
-            inApp: legacyNotificationSettings.platform.forumDiscussionCreated,
-          },
-        },
-        organization: {
-          // Map legacy organization fields to new structure
-          adminMentioned: {
-            email: legacyNotificationSettings.organization.mentioned,
-            inApp: legacyNotificationSettings.organization.mentioned,
-          },
-          adminMessageReceived: {
-            email: legacyNotificationSettings.organization.messageReceived,
-            inApp: legacyNotificationSettings.organization.messageReceived,
-          },
-        },
-        space: {
-          // Map legacy space fields to new structure
-          admin: {
-            communityApplicationReceived: {
-              email:
-                legacyNotificationSettings.space.communityApplicationReceived,
-              inApp:
-                legacyNotificationSettings.space.communityApplicationReceived,
-            },
-            collaborationCalloutContributionCreated: {
-              email:
-                legacyNotificationSettings.space.collaborationPostCreatedAdmin,
-              inApp:
-                legacyNotificationSettings.space.collaborationPostCreatedAdmin,
-            },
-            communityNewMember: {
-              email: legacyNotificationSettings.space.communityNewMemberAdmin,
-              inApp: legacyNotificationSettings.space.communityNewMemberAdmin,
-            },
-            communicationMessageReceived: {
-              email: legacyNotificationSettings.space.communicationMessageAdmin,
-              inApp: legacyNotificationSettings.space.communicationMessageAdmin,
-            },
-          },
-          collaborationCalloutContributionCreated: {
-            email: legacyNotificationSettings.space.collaborationPostCreated,
-            inApp: legacyNotificationSettings.space.collaborationPostCreated,
-          },
-          communicationUpdates: {
-            email: legacyNotificationSettings.space.communicationUpdates,
-            inApp: legacyNotificationSettings.space.communicationUpdates,
-          },
-          collaborationCalloutPublished: {
-            email:
-              legacyNotificationSettings.space.collaborationCalloutPublished,
-            inApp:
-              legacyNotificationSettings.space.collaborationCalloutPublished,
-          },
-          collaborationCalloutComment: {
-            email: true,
-            inApp: true,
-          },
-          collaborationCalloutPostContributionComment: {
-            email:
-              legacyNotificationSettings.space.collaborationPostCommentCreated,
-            inApp:
-              legacyNotificationSettings.space.collaborationPostCommentCreated,
-          },
-        },
-        user: {
-          // Map legacy user fields to new structure
-          membership: {
-            spaceCommunityInvitationReceived: {
-              email: legacyNotificationSettings.space.communityInvitationUser,
-              inApp: legacyNotificationSettings.space.communityInvitationUser,
-            },
-            spaceCommunityJoined: {
-              email: legacyNotificationSettings.space.communityNewMember,
-              inApp: legacyNotificationSettings.space.communityNewMember,
-            },
-            spaceCommunityApplicationSubmitted: {
-              email:
-                legacyNotificationSettings.space.communityApplicationSubmitted,
-              inApp:
-                legacyNotificationSettings.space.communityApplicationSubmitted,
-            },
-          },
-          mentioned: {
-            email: legacyNotificationSettings.user.mentioned,
-            inApp: legacyNotificationSettings.user.mentioned,
-          },
-          commentReply: {
-            email: legacyNotificationSettings.user.commentReply,
-            inApp: legacyNotificationSettings.user.commentReply,
-          },
-          messageReceived: {
-            email: legacyNotificationSettings.user.messageReceived,
-            inApp: legacyNotificationSettings.user.messageReceived,
-          },
-          copyOfMessageSent: {
-            email: legacyNotificationSettings.user.messageSent,
-            inApp: legacyNotificationSettings.user.messageSent,
-          },
-        },
-        virtualContributor: {
-          adminSpaceCommunityInvitation: {
-            email: true,
-            inApp: true,
-          },
-        },
-      };
-      // update the user settings with the new settings
-      await queryRunner.query(
-        `UPDATE user_settings SET notification = ? WHERE id = ?`,
-        [JSON.stringify(newNotificationSettings), userSetting.id]
-      );
+        };
+        // update the user settings with the new settings
+        await queryRunner.query(
+          `UPDATE user_settings SET notification = ? WHERE id = ?`,
+          [JSON.stringify(newNotificationSettings), userSetting.id]
+        );
+      }
+    } catch (error) {
+      throw new Error(`Migration failed: ${error}`);
     }
   }
 
