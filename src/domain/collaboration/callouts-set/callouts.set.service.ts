@@ -1,6 +1,5 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, In, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
@@ -27,7 +26,6 @@ import {
 } from '@domain/common/tagset-template';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CalloutsSetArgsCallouts } from './dto/callouts.set.args.callouts';
@@ -51,8 +49,7 @@ export class CalloutsSetService {
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private tagsetTemplateSetService: TagsetTemplateSetService,
     private calloutService: CalloutService,
-    private namingService: NamingService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private namingService: NamingService
   ) {}
 
   public createCalloutsSet(
@@ -456,7 +453,12 @@ export class CalloutsSetService {
 
     const availableCallouts = allCallouts.filter(callout => {
       // Check for READ privilege
-      const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
+      const hasAccess = this.authorizationService.isAccessGranted(
+        agentInfo,
+        callout.authorization,
+        AuthorizationPrivilege.READ
+      );
+
       if (!hasAccess) return false;
 
       // Filter by Contribution types
@@ -512,7 +514,13 @@ export class CalloutsSetService {
             LogContext.COLLABORATION
           );
 
-        if (!this.hasAgentAccessToCallout(callout, agentInfo)) {
+        const hasAccess = this.authorizationService.isAccessGranted(
+          agentInfo,
+          callout.authorization,
+          AuthorizationPrivilege.READ
+        );
+
+        if (!hasAccess) {
           throw new ForbiddenException(
             `User does not have access to callout: ${callout.id}`,
             LogContext.COLLABORATION
@@ -551,26 +559,6 @@ export class CalloutsSetService {
     }
 
     return results.sort((a, b) => (a.sortOrder > b.sortOrder ? 1 : -1));
-  }
-
-  private hasAgentAccessToCallout(
-    callout: ICallout,
-    agentInfo: AgentInfo
-  ): boolean {
-    switch (callout.settings.visibility) {
-      case CalloutVisibility.PUBLISHED:
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          callout.authorization,
-          AuthorizationPrivilege.READ
-        );
-      case CalloutVisibility.DRAFT:
-        return this.authorizationService.isAccessGranted(
-          agentInfo,
-          callout.authorization,
-          AuthorizationPrivilege.UPDATE
-        );
-    }
   }
 
   /**

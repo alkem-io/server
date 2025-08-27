@@ -132,7 +132,13 @@ export class CalloutResolverMutations {
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID,
-      { relations: { framing: true, calloutsSet: true } }
+      {
+        relations: {
+          authorization: true,
+          framing: true,
+          calloutsSet: { authorization: true },
+        },
+      }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -140,6 +146,7 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update visibility on callout: ${callout.id}`
     );
+
     const oldVisibility = callout.settings.visibility;
     const savedCallout =
       await this.calloutService.updateCalloutVisibility(calloutData);
@@ -176,7 +183,25 @@ export class CalloutResolverMutations {
       }
     }
 
-    return savedCallout;
+    // Reset authorization policy for the callout and its child entities
+    // This is needed because when published as draft the authorization policy disallows access
+    // for community members different than the creator
+    const { roleSet, platformRolesAccess } =
+      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+        savedCallout.id
+      );
+
+    const updatedAuthorizations =
+      await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        savedCallout.id,
+        callout.calloutsSet?.authorization,
+        platformRolesAccess,
+        roleSet
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    //reload the callout to have all the relations updated
+    return this.calloutService.getCalloutOrFail(savedCallout.id);
   }
 
   @Mutation(() => ICallout, {

@@ -44,6 +44,7 @@ export class CalloutAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
+        authorization: true,
         comments: true,
         contributions: true,
         contributionDefaults: true,
@@ -77,12 +78,6 @@ export class CalloutAuthorizationService {
       this.getParentAuthorizationPolicyForCalloutVisibility(
         callout,
         parentAuthorization
-      );
-
-    callout.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        callout.authorization,
-        parentAuthorizationAdjusted
       );
 
     callout.authorization =
@@ -155,11 +150,13 @@ export class CalloutAuthorizationService {
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
     for (const rule of clonedParent.credentialRules) {
       const grantedPrivileges = rule.grantedPrivileges;
       const filteredPrivileges = grantedPrivileges.filter(
         privilege => privilege !== AuthorizationPrivilege.READ
       );
+
       if (filteredPrivileges.length > 0) {
         newRules.push({
           ...rule,
@@ -167,16 +164,20 @@ export class CalloutAuthorizationService {
         });
       }
     }
+
     clonedParent.credentialRules = newRules;
 
     // Add in who should READ
-    const criteriasWithReadAccess: ICredentialDefinition[] = [];
+    const criteriasWithReadAccess: ICredentialDefinition[] = [
+      { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+      { type: AuthorizationCredential.SPACE_ADMIN, resourceID: '' },
+      { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
+    ];
     if (callout.createdBy) {
       criteriasWithReadAccess.push({
         type: AuthorizationCredential.USER_SELF_MANAGEMENT,
         resourceID: callout.createdBy,
       });
-      // TODO: add in those that should have access i.e. admins, global roles etc.
     }
     if (criteriasWithReadAccess.length > 0) {
       const draftCalloutReadAccess =
