@@ -211,23 +211,35 @@ export class NotificationSpaceAdapter {
     const recipientsWithoutSender = recipients.emailRecipients.filter(
       recipient => recipient.id !== eventData.triggeredBy
     );
+    // ALSO only send to the creator of the post
+    const recipientCreator = recipientsWithoutSender.filter(
+      recipient => recipient.id === eventData.post.createdBy
+    );
     // build notification payload
-    const payload =
-      await this.notificationExternalAdapter.buildSpaceCollaborationCalloutPostContributionCommentPayload(
+    if (recipientCreator.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildSpaceCollaborationCalloutPostContributionCommentPayload(
+          event,
+          eventData.triggeredBy,
+          recipientCreator,
+          space,
+          eventData
+        );
+      // send notification event
+      this.notificationExternalAdapter.sendExternalNotifications(
         event,
-        eventData.triggeredBy,
-        recipientsWithoutSender,
-        space,
-        eventData
+        payload
       );
-    // send notification event
-    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+    }
 
     // Send in-app notifications
     const inAppReceiverIDs = recipients.inAppRecipients.map(
       recipient => recipient.id
     );
-    if (inAppReceiverIDs.length > 0) {
+    const inAppReceiverCreators = inAppReceiverIDs.filter(
+      recipientID => recipientID === eventData.post.createdBy
+    );
+    if (inAppReceiverCreators.length > 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
         type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
         spaceID: space.id,
@@ -240,7 +252,7 @@ export class NotificationSpaceAdapter {
         NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT,
         NotificationEventCategory.SPACE_MEMBER,
         eventData.triggeredBy,
-        inAppReceiverIDs,
+        inAppReceiverCreators,
         inAppPayload
       );
     }
