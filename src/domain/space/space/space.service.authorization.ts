@@ -538,15 +538,17 @@ export class SpaceAuthorizationService {
       roleSet,
       RoleName.MEMBER
     );
-    const spaceMember = this.authorizationPolicyService.createCredentialRule(
-      [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.RECEIVE_NOTIFICATIONS,
-      ],
-      memberCriterias,
-      CREDENTIAL_RULE_SPACE_MEMBERS_READ
-    );
-    newRules.push(spaceMember);
+    const spaceMemberRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS,
+        ],
+        memberCriterias,
+        CREDENTIAL_RULE_SPACE_MEMBERS_READ
+      );
+    spaceMemberRule.cascade = true;
+    newRules.push(spaceMemberRule);
 
     const spaceAdminCriterias: ICredentialDefinition[] = [];
     const roleSetAdminCriterias =
@@ -563,21 +565,32 @@ export class SpaceAuthorizationService {
     spaceAdminCriterias.push(...platformRolesAdminCriterias);
 
     if (spaceAdminCriterias.length > 0) {
-      const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.GRANT,
-        ],
-        spaceAdminCriterias,
-        CREDENTIAL_RULE_SPACE_ADMINS
-      );
-      newRules.push(spaceAdmin);
+      const spaceAdminRule =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+            AuthorizationPrivilege.GRANT,
+          ],
+          spaceAdminCriterias,
+          CREDENTIAL_RULE_SPACE_ADMINS
+        );
+      spaceAdminRule.cascade = true;
+      newRules.push(spaceAdminRule);
     }
 
-    // Ensure admins + leads can receive admin notifications
+    // Ensure privileges related to notifications are correctly assigned and also that they do not cascade
+    const spaceMemberNotificationsRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS],
+        memberCriterias,
+        'Space members receive notifications'
+      );
+    spaceMemberNotificationsRule.cascade = false;
+    newRules.push(spaceMemberNotificationsRule);
+
     const leadRoleCriterias = await this.roleSetService.getCredentialsForRole(
       roleSet,
       RoleName.LEAD
@@ -588,24 +601,11 @@ export class SpaceAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN],
         adminNotificationCriterias,
-        'Space Admin notifications'
+        'Space Admin receive notifications'
       );
+    // Important that the receive notifications admin does not cascade
     receiveAdminNotifications.cascade = false;
     newRules.push(receiveAdminNotifications);
-
-    const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
-      ],
-      spaceAdminCriterias,
-      CREDENTIAL_RULE_SPACE_ADMINS
-    );
-    newRules.push(spaceAdmin);
 
     const collaborationSettings = spaceSettings.collaboration;
     if (collaborationSettings.allowMembersToCreateSubspaces) {
