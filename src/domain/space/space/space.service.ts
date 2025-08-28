@@ -1546,14 +1546,4 @@ export class SpaceService {
       );
     return agent;
   }
-
-  public async getLevelZeroSpace(spaceId: string): Promise<ISpace | undefined> {
-    const subspaceWithContext = await this.getSpaceOrFail(spaceId, {
-      relations: { levelZeroSpace: true },
-    });
-    if (subspaceWithContext.id === subspaceWithContext.levelZeroSpaceID) {
-      return undefined;
-    }
-    return subspaceWithContext.levelZeroSpace;
-  }
 }
