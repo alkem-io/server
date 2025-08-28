@@ -8,6 +8,7 @@ export enum NotificationEventCategory {
   SPACE_ADMIN = 'space_admin',
   ORGANIZATION = 'organization',
   USER = 'user',
+  VIRTUAL_CONTRIBUTOR = 'virtual_contributor',
   PLATFORM = 'platform',
 }
 
