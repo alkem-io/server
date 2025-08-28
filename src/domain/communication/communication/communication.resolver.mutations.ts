@@ -6,23 +6,31 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.message';
+import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.message';
 import { CommunicationSendMessageToUserInput } from './dto/communication.dto.send.message.user';
-import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/notification.input.organization.message';
+import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/organization/notification.input.organization.message';
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
-import { NotificationInputCommunityLeadsMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.leads.message';
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationInputCommunicationLeadsMessage } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.leads.message';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
+import { UserService } from '@domain/community/user/user.service';
+import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @InstrumentResolver()
 @Resolver()
 export class CommunicationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private notificationAdapter: NotificationAdapter,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
+    private notificationUserAdapter: NotificationUserAdapter,
+    private notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -41,12 +49,33 @@ export class CommunicationResolverMutations {
     );
 
     for (const receiverId of messageData.receiverIds) {
+      // Check if the receiving user allows messages from other users
+      const receivingUser = await this.userService.getUserOrFail(receiverId, {
+        relations: {
+          settings: true,
+        },
+      });
+
+      // Check if the user is willing to receive messages
+      if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
+        throw new MessagingNotEnabledException(
+          'User is not open to receiving messages',
+          LogContext.USER,
+          {
+            userId: receivingUser.id,
+            senderId: agentInfo.userID,
+          }
+        );
+      }
+
       const notificationInput: NotificationInputUserMessage = {
         triggeredBy: agentInfo.userID,
         receiverID: receiverId,
         message: messageData.message,
       };
-      await this.notificationAdapter.sendUserMessage(notificationInput);
+      await this.notificationUserAdapter.userToUserMessageDirect(
+        notificationInput
+      );
     }
 
     return true;
@@ -72,7 +101,9 @@ export class CommunicationResolverMutations {
       message: messageData.message,
       organizationID: messageData.organizationId,
     };
-    await this.notificationAdapter.sendOrganizationMessage(notificationInput);
+    await this.notificationOrganizationAdapter.organizationSendMessage(
+      notificationInput
+    );
 
     return true;
   }
@@ -92,12 +123,14 @@ export class CommunicationResolverMutations {
       `send message to community ${messageData.communityId} from: ${agentInfo.email}`
     );
 
-    const notificationInput: NotificationInputCommunityLeadsMessage = {
+    const notificationInput: NotificationInputCommunicationLeadsMessage = {
       triggeredBy: agentInfo.userID,
       communityID: messageData.communityId,
       message: messageData.message,
     };
-    await this.notificationAdapter.sendCommunityLeadsMessage(notificationInput);
+    await this.notificationAdapterSpace.spaceCommunicationMessage(
+      notificationInput
+    );
     return true;
   }
 }

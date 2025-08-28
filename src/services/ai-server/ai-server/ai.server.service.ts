@@ -44,6 +44,8 @@ import { RoomControllerService } from '@services/room-integration/room.controlle
 import { IMessage } from '@domain/communication/message/message.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 
 @Injectable()
 export class AiServerService {
@@ -243,9 +245,8 @@ export class AiServerService {
         )
       );
 
-      //NOTE this should not be needed but untill we start using the callout contents in the
-      //expert engine better skip it
-      const includeCallout = [
+      //NOTE this should not be needed when we start using the callout/post contents  in all engines
+      const includeEntityContents = [
         AiPersonaEngine.LIBRA_FLOW,
         AiPersonaEngine.EXPERT,
       ].includes(personaService.engine);
@@ -253,7 +254,7 @@ export class AiServerService {
       history = await this.getLastNInteractionMessages(
         invocationInput.resultHandler.roomDetails,
         historyLimit,
-        includeCallout
+        includeEntityContents
       );
     }
 
@@ -264,7 +265,7 @@ export class AiServerService {
     roomDetails: RoomDetails,
     // interactionID: string | undefined,
     limit: number = 100,
-    includeCallout = false
+    includeEntityContents = false
   ): Promise<InteractionMessage[]> {
     let roomMessages: IMessage[] = [];
     // const room = await this.roomControllerService.getRoomOrFail(roomDetails.roomID);
@@ -296,19 +297,37 @@ export class AiServerService {
       });
 
       if (
-        (includeCallout && messages.length === limit - 1) ||
-        (!includeCallout && messages.length === limit)
+        (includeEntityContents && messages.length === limit - 1) ||
+        (!includeEntityContents && messages.length === limit)
       ) {
         break;
       }
     }
-    if (includeCallout) {
-      const callout = await this.roomControllerService.getRoomCalloutOrFail(
-        roomDetails.roomID
-      );
-      if (callout.framing.profile.description) {
+    if (includeEntityContents) {
+      let entity = null;
+      try {
+        entity = await this.roomControllerService.getRoomEntityOrFail(
+          roomDetails.roomID
+        );
+      } catch (error: any) {
+        this.logger?.error(
+          { message: 'Error getting post/callout for room', error },
+          error.stack,
+          LogContext.AI_SERVER
+        );
+        return messages;
+      }
+
+      let entityContent: string | undefined = '';
+      if (entity instanceof Callout) {
+        entityContent = entity?.framing?.profile?.description;
+      }
+      if (entity instanceof Post) {
+        entityContent = entity?.profile?.description;
+      }
+      if (entityContent) {
         messages.unshift({
-          content: callout.framing.profile.description || '',
+          content: entityContent,
           role: MessageSenderRole.HUMAN,
         });
       }

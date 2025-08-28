@@ -20,17 +20,13 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
+import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.published';
 import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.created';
-import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
-import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.whiteboard.created';
 import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
@@ -44,6 +40,10 @@ import { UpdateContributionCalloutsSortOrderInput } from '../callout-contributio
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { NotificationInputCollaborationCalloutContributionCreated } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -52,12 +52,12 @@ export class CalloutResolverMutations {
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
-    private notificationAdapter: NotificationAdapter,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private calloutAuthorizationService: CalloutAuthorizationService,
-    private namingService: NamingService,
+    private roomResolverService: RoomResolverService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutContributionService: CalloutContributionService,
     private temporaryStorageService: TemporaryStorageService,
@@ -107,7 +107,7 @@ export class CalloutResolverMutations {
     // This is needed because updateCallout might create new entities (like comments room)
     // that need proper authorization policies
     const { roleSet, platformRolesAccess } =
-      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+      await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         updatedCallout.id
       );
 
@@ -132,7 +132,13 @@ export class CalloutResolverMutations {
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID,
-      { relations: { framing: true, calloutsSet: true } }
+      {
+        relations: {
+          authorization: true,
+          framing: true,
+          calloutsSet: { authorization: true },
+        },
+      }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -140,6 +146,7 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update visibility on callout: ${callout.id}`
     );
+
     const oldVisibility = callout.settings.visibility;
     const savedCallout =
       await this.calloutService.updateCalloutVisibility(calloutData);
@@ -162,7 +169,9 @@ export class CalloutResolverMutations {
               triggeredBy: agentInfo.userID,
               callout: callout,
             };
-            await this.notificationAdapter.calloutPublished(notificationInput);
+            await this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
+              notificationInput
+            );
           }
 
           const activityLogInput: ActivityInputCalloutPublished = {
@@ -174,7 +183,25 @@ export class CalloutResolverMutations {
       }
     }
 
-    return savedCallout;
+    // Reset authorization policy for the callout and its child entities
+    // This is needed because when published as draft the authorization policy disallows access
+    // for community members different than the creator
+    const { roleSet, platformRolesAccess } =
+      await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
+        savedCallout.id
+      );
+
+    const updatedAuthorizations =
+      await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        savedCallout.id,
+        callout.calloutsSet?.authorization,
+        platformRolesAccess,
+        roleSet
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    //reload the callout to have all the relations updated
+    return this.calloutService.getCalloutOrFail(savedCallout.id);
   }
 
   @Mutation(() => ICallout, {
@@ -263,7 +290,7 @@ export class CalloutResolverMutations {
     );
 
     const { roleSet, platformRolesAccess } =
-      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+      await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         callout.id
       );
 
@@ -336,6 +363,7 @@ export class CalloutResolverMutations {
         if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
           this.processActivityLinkCreated(
             callout,
+            contribution,
             contribution.link,
             levelZeroSpaceID,
             agentInfo
@@ -363,10 +391,21 @@ export class CalloutResolverMutations {
 
   private async processActivityLinkCreated(
     callout: ICallout,
+    contribution: ICalloutContribution,
     link: ILink,
     levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.LINK,
+        triggeredBy: agentInfo.userID,
+      };
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+      notificationInput
+    );
     const activityLogInput: ActivityInputCalloutLinkCreated = {
       triggeredBy: agentInfo.userID,
       link: link,
@@ -394,13 +433,16 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
-    const notificationInput: NotificationInputWhiteboardCreated = {
-      contribution: contribution,
-      callout: callout,
-      whiteboard: whiteboard,
-      triggeredBy: agentInfo.userID,
-    };
-    await this.notificationAdapter.whiteboardCreated(notificationInput);
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.WHITEBOARD,
+        triggeredBy: agentInfo.userID,
+      };
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+      notificationInput
+    );
 
     this.activityAdapter.calloutWhiteboardCreated({
       triggeredBy: agentInfo.userID,
@@ -428,13 +470,16 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
-    const notificationInput: NotificationInputPostCreated = {
-      contribution: contribution,
-      callout: callout,
-      post: post,
-      triggeredBy: agentInfo.userID,
-    };
-    await this.notificationAdapter.postCreated(notificationInput);
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.POST,
+        triggeredBy: agentInfo.userID,
+      };
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+      notificationInput
+    );
 
     const activityLogInput: ActivityInputCalloutPostCreated = {
       triggeredBy: agentInfo.userID,

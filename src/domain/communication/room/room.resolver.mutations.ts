@@ -31,6 +31,7 @@ import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -39,6 +40,7 @@ export class RoomResolverMutations {
     private authorizationService: AuthorizationService,
     private roomService: RoomService,
     private namingService: NamingService,
+    private roomResolverService: RoomResolverService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
     private roomLookupService: RoomLookupService,
@@ -85,10 +87,11 @@ export class RoomResolverMutations {
     const threadID = message.id;
 
     switch (room.type) {
-      case RoomType.POST:
-        const post = await this.namingService.getPostForRoom(
-          messageData.roomID
-        );
+      case RoomType.POST: {
+        const { post, callout } =
+          await this.roomResolverService.getCalloutWithPostContributionForRoom(
+            messageData.roomID
+          );
 
         this.roomMentionsService.processNotificationMentions(
           mentions,
@@ -100,14 +103,14 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        if (post.createdBy !== agentInfo.userID) {
-          this.roomServiceEvents.processNotificationPostComment(
-            post,
-            room,
-            message,
-            agentInfo
-          );
-        }
+        this.roomServiceEvents.processNotificationPostContributionComment(
+          callout,
+          post,
+          room,
+          message,
+          agentInfo
+        );
+
         this.roomServiceEvents.processActivityPostComment(
           post,
           room,
@@ -125,8 +128,9 @@ export class RoomResolverMutations {
         }
 
         break;
+      }
       case RoomType.CALENDAR_EVENT:
-        const calendar = await this.namingService.getCalendarEventForRoom(
+        const calendar = await this.roomResolverService.getCalendarEventForRoom(
           messageData.roomID
         );
 
@@ -142,7 +146,7 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.DISCUSSION:
-        const discussion = await this.namingService.getDiscussionForRoom(
+        const discussion = await this.roomResolverService.getDiscussionForRoom(
           messageData.roomID
         );
 
@@ -157,9 +161,10 @@ export class RoomResolverMutations {
         );
         break;
       case RoomType.DISCUSSION_FORUM:
-        const discussionForum = await this.namingService.getDiscussionForRoom(
-          messageData.roomID
-        );
+        const discussionForum =
+          await this.roomResolverService.getDiscussionForRoom(
+            messageData.roomID
+          );
         this.roomMentionsService.processNotificationMentions(
           mentions,
           discussionForum.id,
@@ -189,7 +194,7 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.CALLOUT:
-        const callout = await this.namingService.getCalloutForRoom(
+        const callout = await this.roomResolverService.getCalloutForRoom(
           messageData.roomID
         );
 
@@ -223,7 +228,8 @@ export class RoomResolverMutations {
             message,
             agentInfo
           );
-          this.roomServiceEvents.processNotificationDiscussionComment(
+
+          this.roomServiceEvents.processNotificationCalloutComment(
             callout,
             room,
             message,
@@ -244,7 +250,7 @@ export class RoomResolverMutations {
 
   private async validateMessageOnCalloutOrFail(room: IRoom) {
     if (room.type === RoomType.CALLOUT) {
-      const callout = await this.namingService.getCalloutForRoom(room.id);
+      const callout = await this.roomResolverService.getCalloutForRoom(room.id);
 
       if (!callout.settings.framing.commentsEnabled) {
         throw new CalloutClosedException(
@@ -295,10 +301,11 @@ export class RoomResolverMutations {
     );
 
     switch (room.type) {
-      case RoomType.POST:
-        const post = await this.namingService.getPostForRoom(
-          messageData.roomID
-        );
+      case RoomType.POST: {
+        const { post } =
+          await this.roomResolverService.getCalloutWithPostContributionForRoom(
+            messageData.roomID
+          );
 
         this.roomServiceEvents.processNotificationCommentReply(
           post.id,
@@ -359,8 +366,9 @@ export class RoomResolverMutations {
         }
 
         break;
+      }
       case RoomType.CALENDAR_EVENT:
-        const calendar = await this.namingService.getCalendarEventForRoom(
+        const calendar = await this.roomResolverService.getCalendarEventForRoom(
           messageData.roomID
         );
 
@@ -376,7 +384,7 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.DISCUSSION:
-        const discussion = await this.namingService.getDiscussionForRoom(
+        const discussion = await this.roomResolverService.getDiscussionForRoom(
           messageData.roomID
         );
 
@@ -392,9 +400,10 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.DISCUSSION_FORUM:
-        const discussionForum = await this.namingService.getDiscussionForRoom(
-          messageData.roomID
-        );
+        const discussionForum =
+          await this.roomResolverService.getDiscussionForRoom(
+            messageData.roomID
+          );
         this.roomServiceEvents.processNotificationCommentReply(
           discussionForum.id,
           discussionForum.nameID,
@@ -407,7 +416,7 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.CALLOUT:
-        const callout = await this.namingService.getCalloutForRoom(
+        const callout = await this.roomResolverService.getCalloutForRoom(
           messageData.roomID
         );
 

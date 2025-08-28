@@ -14,10 +14,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
-import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
-import { PreferenceModule } from '@domain/common/preference';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
-import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -25,7 +22,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
 import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
-import { UserSettingsModule } from '../user.settings/user.settings.module';
+import { UserSettingsModule } from '../user-settings/user.settings.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
@@ -35,7 +32,6 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
   imports: [
     ProfileModule,
     UserSettingsModule,
-    NotificationAdapterModule,
     CommunicationAdapterModule,
     AgentModule,
     AuthenticationAgentInfoModule,
@@ -50,8 +46,6 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
     RoomLookupModule,
     MicroservicesModule,
     PlatformAuthorizationPolicyModule,
-    PreferenceModule,
-    PreferenceSetModule,
     StorageAggregatorModule,
     StorageBucketModule,
     DocumentModule,

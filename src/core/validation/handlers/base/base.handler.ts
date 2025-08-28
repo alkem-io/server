@@ -71,13 +71,13 @@ import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto
 import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
 import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
 import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
-import { UpdateOrganizationSettingsEntityInput } from '@domain/community/organization.settings/dto/organization.settings.dto.update';
-import { UpdateOrganizationSettingsMembershipInput } from '@domain/community/organization.settings/dto/organization.settings.membership.dto.update';
-import { UpdateOrganizationSettingsPrivacyInput } from '@domain/community/organization.settings/dto/organization.settings.privacy.dto.update';
-import { UpdateUserSettingsEntityInput } from '@domain/community/user.settings';
+import { UpdateOrganizationSettingsEntityInput } from '@domain/community/organization-settings/dto/organization.settings.dto.update';
+import { UpdateOrganizationSettingsMembershipInput } from '@domain/community/organization-settings/dto/organization.settings.membership.dto.update';
+import { UpdateOrganizationSettingsPrivacyInput } from '@domain/community/organization-settings/dto/organization.settings.privacy.dto.update';
+import { UpdateUserSettingsEntityInput } from '@domain/community/user-settings';
 import { UpdateUserSettingsInput } from '@domain/community/user/dto/user.dto.update.settings';
-import { UpdateUserSettingsCommunicationInput } from '@domain/community/user.settings/dto/user.settings.communications.dto.update';
-import { UpdateUserSettingsPrivacyInput } from '@domain/community/user.settings/dto/user.settings.privacy.dto.update';
+import { UpdateUserSettingsCommunicationInput } from '@domain/community/user-settings/dto/user.settings.communications.dto.update';
+import { UpdateUserSettingsPrivacyInput } from '@domain/community/user-settings/dto/user.settings.privacy.dto.update';
 import { UpdateOrganizationSettingsInput } from '@domain/community/organization/dto/organization.dto.update.settings';
 import { CreateCalloutOnCalloutsSetInput } from '@domain/collaboration/callouts-set/dto/callouts.set.dto.create.callout';
 import { UpdateVirtualContributorSettingsEntityInput } from '@domain/community/virtual-contributor-settings';
@@ -86,7 +86,24 @@ import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/
 import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 import { CreateSpaceAboutInput } from '@domain/space/space.about';
 import { UpdateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.update';
+import { CreateUserSettingsNotificationInput } from '@domain/community/user-settings/dto/user.settings.notification.dto.create';
+import { CreateUserSettingsInput } from '@domain/community/user-settings/dto/user.settings.dto.create';
+import { CreateUserSettingsPrivacyInput } from '@domain/community/user-settings/dto/user.settings.privacy.dto.create';
+import { CreateUserSettingsCommunicationInput } from '@domain/community/user-settings/dto/user.settings.communications.dto.create';
+import { UpdateUserSettingsNotificationInput } from '@domain/community/user-settings/dto/user.settings.notification.dto.update';
 import { UpdateBaselineLicensePlanOnAccount } from '@domain/space/account/dto/account.dto.update.baseline.license.plan';
+import { CreateUserSettingsNotificationUserInput } from '@domain/community/user-settings/dto/user.settings.notification.user.dto.create';
+import { CreateUserSettingsNotificationSpaceInput } from '@domain/community/user-settings/dto/user.settings.notification.space.dto.create';
+import { CreateUserSettingsNotificationOrganizationInput } from '@domain/community/user-settings/dto/user.settings.notification.organization.dto.create';
+import { CreateUserSettingsNotificationVirtualContributorInput } from '@domain/community/user-settings/dto/user.settings.notification.virtual.contributor.dto.create';
+import { CreateUserSettingsNotificationPlatformInput } from '@domain/community/user-settings/dto/user.settings.notification.platform.dto.create';
+import { UpdateUserSettingsNotificationUserInput } from '@domain/community/user-settings/dto/user.settings.notification.user.dto.update';
+import { UpdateUserSettingsNotificationVirtualContributorInput } from '@domain/community/user-settings/dto/user.settings.notification.virtual.contributor.dto.update';
+import { UpdateUserSettingsNotificationPlatformInput } from '@domain/community/user-settings/dto/user.settings.notification.platform.dto.update';
+import { UpdateUserSettingsNotificationOrganizationInput } from '@domain/community/user-settings/dto/user.settings.notification.organization.dto.update';
+import { CreateUserSettingsNotificationSpaceAdminInput } from '@domain/community/user-settings/dto/user.settings.notification.space.admin.dto.create';
+import { UpdateUserSettingsNotificationSpaceAdminInput } from '@domain/community/user-settings/dto/user.settings.notification.space.admin.dto.update';
+import { UpdateUserSettingsNotificationSpaceInput } from '@domain/community/user-settings/dto/user.settings.notification.space.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -126,6 +143,18 @@ export class BaseHandler extends AbstractHandler {
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
+      CreateUserSettingsNotificationInput,
+      CreateUserSettingsNotificationUserInput,
+      CreateUserSettingsNotificationOrganizationInput,
+      CreateUserSettingsNotificationVirtualContributorInput,
+      CreateUserSettingsNotificationPlatformInput,
+      CreateUserSettingsNotificationSpaceInput,
+      CreateUserSettingsNotificationSpaceAdminInput,
+      CreateUserSettingsPrivacyInput,
+      CreateUserSettingsCommunicationInput,
+      CreateUserSettingsInput,
+      UpdateInnovationFlowStateInput,
+      CreateCalloutOnCalloutsSetInput,
       DeleteDocumentInput,
       UpdateSpaceAboutInput,
       UpdatePostInput,
@@ -160,6 +189,13 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserSettingsInput,
       UpdateUserSettingsCommunicationInput,
       UpdateUserSettingsPrivacyInput,
+      UpdateUserSettingsNotificationInput,
+      UpdateUserSettingsNotificationUserInput,
+      UpdateUserSettingsNotificationVirtualContributorInput,
+      UpdateUserSettingsNotificationPlatformInput,
+      UpdateUserSettingsNotificationOrganizationInput,
+      UpdateUserSettingsNotificationSpaceInput,
+      UpdateUserSettingsNotificationSpaceAdminInput,
       VisualUploadImageInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,

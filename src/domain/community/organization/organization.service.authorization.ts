@@ -257,6 +257,7 @@ export class OrganizationAuthorizationService {
           AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
         ],
         organizationAdminCredentials,
         CREDENTIAL_RULE_ORGANIZATION_ADMIN

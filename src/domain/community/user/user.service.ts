@@ -1,7 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   ForbiddenException,
   RelationshipNotFoundException,
   UserAlreadyRegisteredException,
@@ -30,9 +29,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { PaginationArgs } from '@core/pagination';
 import { applyUserFilter } from '@core/filtering/filters';
@@ -61,10 +57,8 @@ import { AccountType } from '@common/enums/account.type';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomType } from '@common/enums/room.type';
-import { IUserSettings } from '../user.settings/user.settings.interface';
-import { UserSettingsService } from '../user.settings/user.settings.service';
-import { UpdateUserSettingsEntityInput } from '../user.settings/dto/user.settings.dto.update';
-import { PreferenceType } from '@common/enums/preference.type';
+import { UserSettingsService } from '../user-settings/user.settings.service';
+import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
@@ -72,6 +66,7 @@ import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { VisualType } from '@common/enums/visual.type';
 import { InstrumentService } from '@src/apm/decorators';
+import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
 
 @InstrumentService()
 @Injectable()
@@ -86,7 +81,6 @@ export class UserService {
     private namingService: NamingService,
     private agentService: AgentService,
     private agentInfoCacheService: AgentInfoCacheService,
-    private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
     private accountLookupService: AccountLookupService,
@@ -140,7 +134,9 @@ export class UserService {
       accountUpn: userData.accountUpn ?? userData.email,
     });
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
-    user.settings = this.getDefaultUserSettings();
+    user.settings = this.userSettingsService.createUserSettings(
+      this.getDefaultUserSettings()
+    );
 
     if (!user.serviceProfile) {
       user.serviceProfile = false;
@@ -186,11 +182,6 @@ export class UserService {
       LogContext.COMMUNITY
     );
 
-    user.preferenceSet = await this.preferenceSetService.createPreferenceSet(
-      PreferenceDefinitionSet.USER,
-      this.createPreferenceDefaults()
-    );
-
     const account = await this.accountHostService.createAccount(
       AccountType.USER
     );
@@ -234,14 +225,63 @@ export class UserService {
     return user;
   }
 
-  private getDefaultUserSettings(): IUserSettings {
-    const settings: IUserSettings = {
+  private getDefaultUserSettings(): CreateUserSettingsInput {
+    const settings: CreateUserSettingsInput = {
       communication: {
         allowOtherUsersToSendMessages: true,
       },
       privacy: {
         // Note: not currently used but will be near term.
         contributionRolesPubliclyVisible: true,
+      },
+      notification: {
+        organization: {
+          adminMessageReceived: { email: true, inApp: true },
+          adminMentioned: { email: true, inApp: true },
+        },
+        platform: {
+          forumDiscussionCreated: { email: false, inApp: false },
+          forumDiscussionComment: { email: true, inApp: true },
+          admin: {
+            userProfileCreated: { email: true, inApp: true },
+            userProfileRemoved: { email: true, inApp: true },
+            spaceCreated: { email: true, inApp: true },
+            userGlobalRoleChanged: { email: true, inApp: true },
+          },
+        },
+        space: {
+          admin: {
+            communityApplicationReceived: { email: true, inApp: true },
+            communityNewMember: { email: true, inApp: true },
+            communicationMessageReceived: { email: true, inApp: true },
+            collaborationCalloutContributionCreated: {
+              email: true,
+              inApp: true,
+            },
+          },
+          communicationUpdates: { email: true, inApp: true },
+          collaborationCalloutContributionCreated: { email: true, inApp: true },
+          collaborationCalloutPostContributionComment: {
+            email: true,
+            inApp: true,
+          },
+          collaborationCalloutComment: { email: true, inApp: true },
+          collaborationCalloutPublished: { email: true, inApp: true },
+        },
+        user: {
+          mentioned: { email: true, inApp: true },
+          commentReply: { email: true, inApp: true },
+          messageReceived: { email: true, inApp: true },
+          copyOfMessageSent: { email: true, inApp: true },
+          membership: {
+            spaceCommunityApplicationSubmitted: { email: true, inApp: true },
+            spaceCommunityInvitationReceived: { email: true, inApp: true },
+            spaceCommunityJoined: { email: true, inApp: true },
+          },
+        },
+        virtualContributor: {
+          adminSpaceCommunityInvitation: { email: true, inApp: true },
+        },
       },
     };
     return settings;
@@ -294,54 +334,6 @@ export class UserService {
     }
 
     return result;
-  }
-
-  private createPreferenceDefaults(): Map<PreferenceType, string> {
-    const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
-    defaults.set(
-      PreferenceType.NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN,
-      'true'
-    );
-
-    defaults.set(
-      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
-      'true'
-    );
-    defaults.set(
-      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED_ADMIN,
-      'true'
-    );
-
-    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
-    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_SUBMITTED, 'true');
-
-    defaults.set(PreferenceType.NOTIFICATION_WHITEBOARD_CREATED, 'true');
-    defaults.set(PreferenceType.NOTIFICATION_POST_CREATED, 'true');
-    defaults.set(PreferenceType.NOTIFICATION_POST_CREATED_ADMIN, 'true');
-    defaults.set(PreferenceType.NOTIFICATION_POST_COMMENT_CREATED, 'true');
-
-    defaults.set(
-      PreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER,
-      'true'
-    );
-    defaults.set(
-      PreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
-      'true'
-    );
-    defaults.set(PreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER, 'true');
-    defaults.set(PreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
-    // messaging & mentions
-    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
-    defaults.set(PreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
-    defaults.set(PreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
-
-    defaults.set(PreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED, 'false');
-    defaults.set(PreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT, 'true');
-
-    defaults.set(PreferenceType.NOTIFICATION_COMMENT_REPLY, 'true');
-
-    return defaults;
   }
 
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
@@ -411,11 +403,24 @@ export class UserService {
       relations: {
         profile: true,
         agent: true,
-        preferenceSet: true,
         storageAggregator: true,
         guidanceRoom: true,
+        settings: true,
       },
     });
+
+    if (
+      !user.profile ||
+      !user.storageAggregator ||
+      !user.agent ||
+      !user.authorization ||
+      !user.settings
+    ) {
+      throw new RelationshipNotFoundException(
+        `User entity missing required child entities when deleting: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
 
     // TODO: give additional feedback?
     const accountHasResources =
@@ -430,27 +435,15 @@ export class UserService {
 
     await this.clearUserCache(user);
 
-    if (user.profile) {
-      await this.profileService.deleteProfile(user.profile.id);
-    }
+    await this.profileService.deleteProfile(user.profile.id);
 
-    if (user.preferenceSet) {
-      await this.preferenceSetService.deletePreferenceSet(
-        user.preferenceSet.id
-      );
-    }
+    await this.agentService.deleteAgent(user.agent.id);
 
-    if (user.agent) {
-      await this.agentService.deleteAgent(user.agent.id);
-    }
+    await this.authorizationPolicyService.delete(user.authorization);
 
-    if (user.authorization) {
-      await this.authorizationPolicyService.delete(user.authorization);
-    }
+    await this.storageAggregatorService.delete(user.storageAggregator.id);
 
-    if (user.storageAggregator) {
-      await this.storageAggregatorService.delete(user.storageAggregator.id);
-    }
+    await this.userSettingsService.deleteUserSettings(user.settings.id);
 
     if (user.guidanceRoom) {
       await this.roomService.deleteRoom(user.guidanceRoom);
@@ -472,25 +465,6 @@ export class UserService {
 
   public async getAccount(user: IUser): Promise<IAccount> {
     return await this.accountLookupService.getAccountOrFail(user.accountID);
-  }
-
-  async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
-    const user = await this.getUserOrFail(userID, {
-      relations: {
-        preferenceSet: {
-          preferences: true,
-        },
-      },
-    });
-
-    if (!user.preferenceSet) {
-      throw new EntityNotInitializedException(
-        `User preferences not initialized or not found for user with nameID: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return user.preferenceSet;
   }
 
   async getUserOrFail(
@@ -595,7 +569,7 @@ export class UserService {
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const currentEntryRoleUsers =
-      await this.userLookupService.usersWithCredentials(
+      await this.userLookupService.usersWithCredential(
         entryRoleCredentials.role
       );
     const qb = this.userRepository.createQueryBuilder('user').select();
@@ -636,7 +610,7 @@ export class UserService {
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const currentElevatedRoleUsers =
-      await this.userLookupService.usersWithCredentials(
+      await this.userLookupService.usersWithCredential(
         roleSetCredentials.elevatedRole
       );
     const qb = this.userRepository
