@@ -57,14 +57,16 @@ In-app notifications are stored in the `in_app_notification` table with:
 
 ## Notification Event Categories
 
+## Notification Event Categories
+
 Events are categorized by their target audience:
 
-- `PLATFORM` - Platform-wide notifications
-- `SPACE_ADMIN` - Space administrators
-- `SPACE_MEMBER` - Space members
-- `ORGANIZATION` - Organization-related
-- `USER` - User-specific notifications
-- `VIRTUAL_CONTRIBUTOR` - Virtual contributor notifications
+- **PLATFORM** - Platform-wide notifications
+- **SPACE_ADMIN** - Space administrators
+- **SPACE_MEMBER** - Space members
+- **ORGANIZATION** - Organization-related
+- **USER** - User-specific notifications
+- **VIRTUAL_CONTRIBUTOR** - Virtual contributor notifications
 
 ## Current Notification Events
 
