@@ -437,6 +437,7 @@ export class CalloutsSetService {
     const calloutsSetLoaded = await this.getCalloutsSetOrFail(calloutsSet.id, {
       relations: {
         callouts: {
+          authorization: true,
           classification: {
             tagsets: true,
           },

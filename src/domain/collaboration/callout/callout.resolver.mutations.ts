@@ -187,7 +187,7 @@ export class CalloutResolverMutations {
     // This is needed because when published as draft the authorization policy disallows access
     // for community members different than the creator
     const { roleSet, platformRolesAccess } =
-      await this.namingService.getRoleSetAndPlatformRolesWithAccessForCallout(
+      await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         savedCallout.id
       );
 
