@@ -102,6 +102,10 @@ export class Space extends AuthorizableEntity implements ISpace {
   @Column('char', { length: UUID_LENGTH, nullable: true })
   levelZeroSpaceID!: string;
 
+  @ManyToOne(() => Space)
+  @JoinColumn({ name: 'levelZeroSpaceID' })
+  levelZeroSpace?: Space;
+
   @Column('int', { nullable: false })
   level!: SpaceLevel;
 
