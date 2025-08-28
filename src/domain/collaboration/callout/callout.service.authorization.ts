@@ -23,6 +23,8 @@ import { CalloutFramingAuthorizationService } from '../callout-framing/callout.f
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -42,6 +44,7 @@ export class CalloutAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
+        authorization: true,
         comments: true,
         contributions: true,
         contributionDefaults: true,
@@ -71,10 +74,19 @@ export class CalloutAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
+    // We must use this instead of the raw parentAuthorization because callouts in DRAFT visibility
+    // require stricter access control: only global admins, space admins, global support, and the creator
+    // should have READ privileges. The parent policy may grant broader access, so we need to filter it here.
+    const parentAuthorizationAdjusted =
+      this.getParentAuthorizationPolicyForCalloutVisibility(
+        callout,
+        parentAuthorization
+      );
+
     callout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         callout.authorization,
-        parentAuthorization
+        parentAuthorizationAdjusted
       );
 
     callout.authorization = this.appendPrivilegeRules(
@@ -121,6 +133,76 @@ export class CalloutAuthorizationService {
     }
 
     return updatedAuthorizations;
+  }
+
+  /**
+   * Returns a modified parent authorization policy for callout visibility.
+   * If the callout is in DRAFT visibility, strips all READ privileges from the parent policy,
+   * then grants READ access only to global admins, space admins, global support, and the callout creator.
+   * Otherwise, returns the parent policy unchanged.
+   *
+   * @param callout The callout entity for which visibility is being checked.
+   * @param parentAuthorization The parent authorization policy to modify.
+   * @returns The modified authorization policy, or undefined if no parent policy is provided.
+   */
+  private getParentAuthorizationPolicyForCalloutVisibility(
+    callout: ICallout,
+    parentAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy | undefined {
+    if (
+      !parentAuthorization ||
+      callout.settings.visibility !== CalloutVisibility.DRAFT
+    ) {
+      return parentAuthorization;
+    }
+
+    // Clone the parent authorization and strip out all rules that grant the READ privilege.
+    const clonedParent =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        parentAuthorization
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    for (const rule of clonedParent.credentialRules) {
+      const grantedPrivileges = rule.grantedPrivileges;
+      const filteredPrivileges = grantedPrivileges.filter(
+        privilege => privilege !== AuthorizationPrivilege.READ
+      );
+
+      if (filteredPrivileges.length > 0) {
+        newRules.push({
+          ...rule,
+          grantedPrivileges: filteredPrivileges,
+        });
+      }
+    }
+
+    clonedParent.credentialRules = newRules;
+
+    // Add in who should READ
+    const criteriasWithReadAccess: ICredentialDefinition[] = [
+      { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+      { type: AuthorizationCredential.SPACE_ADMIN, resourceID: '' },
+      { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
+    ];
+    if (callout.createdBy) {
+      criteriasWithReadAccess.push({
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: callout.createdBy,
+      });
+    }
+    if (criteriasWithReadAccess.length > 0) {
+      const draftCalloutReadAccess =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.READ],
+          criteriasWithReadAccess,
+          'Callout read access for draft callouts'
+        );
+      clonedParent.credentialRules.push(draftCalloutReadAccess);
+    }
+
+    return clonedParent;
   }
 
   private appendCredentialRules(callout: ICallout): IAuthorizationPolicy {
