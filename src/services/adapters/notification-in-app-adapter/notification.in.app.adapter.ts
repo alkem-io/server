@@ -10,6 +10,14 @@ import { IInAppNotificationPayload } from '@platform/in-app-notification-payload
 
 @Injectable()
 export class NotificationInAppAdapter {
+  private static readonly SUPPORTED_IN_APP_NOTIFICATION_TYPES: NotificationEvent[] =
+    [
+      NotificationEvent.USER_MENTIONED,
+      NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
+      NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER,
+      NotificationEvent.USER_SPACE_COMMUNITY_JOINED,
+    ];
+
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -24,6 +32,19 @@ export class NotificationInAppAdapter {
     receiverIDs: string[],
     payload: IInAppNotificationPayload
   ) {
+    // Filter out unsupported notification types
+    if (
+      !NotificationInAppAdapter.SUPPORTED_IN_APP_NOTIFICATION_TYPES.includes(
+        type
+      )
+    ) {
+      this.logger.verbose?.(
+        `Skipping in-app notification of type ${type} as it's not in the supported list`,
+        LogContext.IN_APP_NOTIFICATION
+      );
+      return;
+    }
+
     if (receiverIDs.length === 0) {
       this.logger.error(
         'Received in-app notification with no receiver IDs, skipping storage.',
