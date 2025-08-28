@@ -30,7 +30,7 @@ export class NotificationOrganizationAdapter {
     const recipients = await this.getNotificationRecipientsOrganization(
       event,
       eventData,
-      eventData.mentionedEntityID
+      eventData.organizationID
     );
 
     if (recipients.emailRecipients.length > 0) {
@@ -39,11 +39,9 @@ export class NotificationOrganizationAdapter {
           event,
           eventData.triggeredBy,
           recipients.emailRecipients,
-          eventData.mentionedEntityID,
-          eventData.comment,
-          eventData.originEntity.id,
-          eventData.originEntity.displayName,
-          eventData.commentType
+          eventData.organizationID,
+          eventData.roomID,
+          eventData.messageID
         );
 
       this.notificationExternalAdapter.sendExternalNotifications(
@@ -59,9 +57,9 @@ export class NotificationOrganizationAdapter {
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadOrganizationMessageRoom = {
         type: NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM,
-        organizationID: eventData.mentionedEntityID,
-        roomID: eventData.originEntity.id,
-        messageID: eventData.commentsId || 'unknown',
+        organizationID: eventData.organizationID,
+        roomID: eventData.roomID,
+        messageID: eventData.messageID,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

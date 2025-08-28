@@ -4,7 +4,6 @@ import { IMessage } from '../message/message.interface';
 import { RoomType } from '@common/enums/room.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.entity.mentions';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { IProfile } from '@domain/common/profile';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
@@ -19,6 +18,7 @@ import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { NotificationInputUserMention } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.mention';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
+import { NotificationInputOrganizationMention } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.mention';
 
 @Injectable()
 export class RoomMentionsService {
@@ -81,7 +81,8 @@ export class RoomMentionsService {
   ) {
     const contextSpaceID = await this.getSpaceIdForRoom(room);
     const vcMentions = mentions.filter(
-      mention => mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR
+      mention =>
+        mention.contributorType === MentionedEntityType.VIRTUAL_CONTRIBUTOR
     );
     // Only the first VC mention starts an interaction
     // check if interaction was not already created instead of hardcoded
@@ -89,19 +90,19 @@ export class RoomMentionsService {
 
     for (const vcMention of vcMentions) {
       this.logger.verbose?.(
-        `got mention for VC: ${vcMention.id}`,
+        `got mention for VC: ${vcMention.contributorID}`,
         LogContext.VIRTUAL_CONTRIBUTOR
       );
       if (!vcInteraction) {
         vcInteraction = await this.roomLookupService.addVcInteractionToRoom({
-          virtualContributorID: vcMention.id,
+          virtualContributorID: vcMention.contributorID,
           roomID: room.id,
           threadID: threadID,
         });
       }
 
       await this.virtualContributorMessageService.invokeVirtualContributor(
-        vcMention.id,
+        vcMention.contributorID,
         message,
         threadID,
         agentInfo,
@@ -114,24 +115,15 @@ export class RoomMentionsService {
 
   public processNotificationMentions(
     mentions: Mention[],
-    parentEntityId: string,
-    parentEntityNameId: string,
-    parentEntityProfile: IProfile,
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
   ) {
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
-      comment: message.message,
       roomId: room.id,
       mentions,
-      originEntity: {
-        id: parentEntityId,
-        nameId: parentEntityNameId,
-        displayName: parentEntityProfile.displayName,
-      },
-      commentType: room.type as RoomType,
+      messageID: message.id,
     };
     this.entityMentions(entityMentionsNotificationInput);
   }
@@ -140,21 +132,25 @@ export class RoomMentionsService {
     eventData: NotificationInputEntityMentions
   ): Promise<void> {
     for (const mention of eventData.mentions) {
-      const entityMentionNotificationInput: NotificationInputUserMention = {
-        triggeredBy: eventData.triggeredBy,
-        comment: eventData.comment,
-        mentionedEntityID: mention.id,
-        commentsId: eventData.roomId,
-        originEntity: eventData.originEntity,
-        commentType: eventData.commentType,
-      };
-
-      if (mention.type == MentionedEntityType.USER) {
+      if (mention.contributorType == MentionedEntityType.USER) {
+        const entityMentionNotificationInput: NotificationInputUserMention = {
+          triggeredBy: eventData.triggeredBy,
+          userID: mention.contributorID,
+          roomID: eventData.roomId,
+          messageID: eventData.messageID,
+        };
         this.notificationUserAdapter.userMention(
           entityMentionNotificationInput
         );
       }
-      if (mention.type == MentionedEntityType.ORGANIZATION) {
+      if (mention.contributorType == MentionedEntityType.ORGANIZATION) {
+        const entityMentionNotificationInput: NotificationInputOrganizationMention =
+          {
+            triggeredBy: eventData.triggeredBy,
+            organizationID: mention.contributorID,
+            roomID: eventData.roomId,
+            messageID: eventData.messageID,
+          };
         this.notificationOrganizationAdapter.organizationMention(
           entityMentionNotificationInput
         );
@@ -178,8 +174,8 @@ export class RoomMentionsService {
             contributorNamedID
           );
         result.push({
-          id: user.id,
-          type: MentionedEntityType.USER,
+          contributorID: user.id,
+          contributorType: MentionedEntityType.USER,
         });
       } else if (match.groups?.type === MentionedEntityType.ORGANIZATION) {
         const organization =
@@ -187,8 +183,8 @@ export class RoomMentionsService {
             contributorNamedID
           );
         result.push({
-          id: organization.id,
-          type: MentionedEntityType.ORGANIZATION,
+          contributorID: organization.id,
+          contributorType: MentionedEntityType.ORGANIZATION,
         });
       } else if (
         match.groups?.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR
@@ -198,8 +194,8 @@ export class RoomMentionsService {
             contributorNamedID
           );
         result.push({
-          id: virtualContributor.id,
-          type: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+          contributorID: virtualContributor.id,
+          contributorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         });
       }
     }

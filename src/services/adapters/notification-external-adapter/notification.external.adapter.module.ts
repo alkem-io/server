@@ -1,6 +1,4 @@
-import { Post } from '@domain/collaboration/post/post.entity';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ActivityModule } from '@src/platform/activity/activity.module';
 import { NotificationExternalAdapter } from './notification.external.adapter';
@@ -13,7 +11,6 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
     ActivityModule,
     EntityResolverModule,
     UrlGeneratorModule,
-    TypeOrmModule.forFeature([Post]),
     ContributorLookupModule,
     UserLookupModule,
   ],
