@@ -24,7 +24,7 @@ export class MessageDetailsService {
       roomID,
       messageID
     );
-    const roomParentEntityInfo = await this.buildCommentEntityInfoForRoom(
+    const roomParentEntityInfo = await this.buildParentEntityInfoForRoom(
       room.type,
       roomID
     );
@@ -37,7 +37,7 @@ export class MessageDetailsService {
     };
   }
 
-  public async buildCommentEntityInfoForRoom(
+  private async buildParentEntityInfoForRoom(
     roomType: RoomType,
     roomID: string
   ): Promise<MessageParent> {
