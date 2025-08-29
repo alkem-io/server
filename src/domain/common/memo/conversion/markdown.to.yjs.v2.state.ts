@@ -1,23 +1,29 @@
 import * as Y from 'yjs';
 import { MarkdownParser } from 'prosemirror-markdown';
 import markdownIt, { Token } from 'markdown-it';
-import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
+import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
 import { markdownSchema } from './markdown.schema';
 
 /**
  * Converts a markdown string to a Yjs state update, encoded in binary.
- * @param markdown
+ * @param _markdown
  */
-export const markdownToYjsV2State = (markdown: string): Uint8Array => {
+export const markdownToYjsV2State = (_markdown: string): Uint8Array => {
+  // Convert <strong>...</strong> to **...** for Markdown bold
+  // it is something to do with the schema or the rules that I cannot solve
+  const processed = _markdown
+    .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+    // Only replace <br> tags with a single empty paragraph
+    .replace(/<br\s*\/?>(\r?\n)?/gm, '\n\n\u00A0\n\n');
+
   const mdParser = new MarkdownParser(
     markdownSchema,
     markdownIt(),
     parserRules
   );
-  const pmDoc = mdParser.parse(markdown);
-  const pmJson = pmDoc.toJSON();
+  const pmDoc = mdParser.parse(processed);
+  const ydoc = prosemirrorToYDoc(pmDoc, 'default');
 
-  const ydoc = prosemirrorJSONToYDoc(markdownSchema, pmJson, 'default');
   return Y.encodeStateAsUpdateV2(ydoc);
 };
 

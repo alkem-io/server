@@ -46,6 +46,7 @@ export class MemoService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<IMemo> {
+    // const binaryUpdateV2 = await this.markdownToStateUpdate2(markdown);
     const binaryUpdateV2 = this.markdownToStateUpdate(markdown);
     const content = binaryUpdateV2 ? Buffer.from(binaryUpdateV2) : undefined;
     const memo: IMemo = Memo.create({

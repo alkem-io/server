@@ -23,6 +23,25 @@ export const yjsStateToMarkdown = (state: Buffer) => {
   //   doc.getXmlFragment('default'),
   //   schema
   // );
+  // overwrite empty paragraphs that have no content with a single empty paragraph
+  // to emulate new lines in the editor
+  pmJson.content.forEach((node: any) => {
+    if (node.type !== 'paragraph') {
+      return;
+    }
+
+    if (node.content?.length > 0) {
+      return;
+    }
+
+    node.content = [
+      {
+        type: 'text',
+        text: '\n\n\u00A0\n\n', // single empty paragraph
+      },
+    ];
+  });
+
   return renderToMarkdown({
     extensions: [StarterKit, ImageExtension, /*Link,*/ Highlight, Iframe],
     content: pmJson,
