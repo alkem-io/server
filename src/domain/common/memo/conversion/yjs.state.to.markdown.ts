@@ -1,10 +1,12 @@
 import * as Y from 'yjs';
-import { yDocToProsemirrorJSON } from '@tiptap/y-tiptap';
+import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
 import { renderToMarkdown } from '@tiptap/static-renderer';
 import { Iframe } from './Iframe';
 import { ImageExtension } from './image.extension';
+import { markdownSchema } from '@domain/common/memo/conversion/markdown.schema';
+import { Fragment, Node as ProseMirrorNode } from 'prosemirror-model';
 
 /**
  * Converts binary Y.Doc state update v2 to markdown string
@@ -15,36 +17,39 @@ export const yjsStateToMarkdown = (state: Buffer) => {
 
   const doc = new Y.Doc();
   Y.applyUpdateV2(doc, new Uint8Array(binaryV2State));
-
-  // use the deprecated method until a schema is defined that would replace the extensions
-  // https://tiptap.dev/docs/editor/core-concepts/schema
-  const pmJson = yDocToProsemirrorJSON(doc, 'default');
-  // const pmJson = yXmlFragmentToProseMirrorRootNode(
-  //   doc.getXmlFragment('default'),
-  //   schema
-  // );
-  // overwrite empty paragraphs that have no content with a single empty paragraph
-  // to emulate new lines in the editor
-  pmJson.content.forEach((node: any) => {
-    if (node.type !== 'paragraph') {
+  // Convert the Yjs document to a ProseMirror document
+  const pmDoc = yXmlFragmentToProseMirrorRootNode(
+    doc.getXmlFragment('default'),
+    markdownSchema
+  );
+  // Build a new array of child nodes, replacing empty paragraphs with paragraphs containing a non-breaking space
+  // This ensures that empty paragraphs are preserved in the markdown output
+  // (ProseMirror and TipTap tend to ignore completely empty paragraphs)
+  const newContent: ProseMirrorNode[] = [];
+  // use the built-in forEach method of the ProseMirror Fragment
+  pmDoc.content.forEach(child => {
+    // we only target paragraphs without content
+    if (child.type.name !== 'paragraph') {
+      newContent.push(child);
       return;
     }
 
-    if (node.content?.length > 0) {
+    if (child.content.size > 0) {
+      newContent.push(child);
       return;
     }
-
-    node.content = [
-      {
-        type: 'text',
-        text: '\n\n\u00A0\n\n', // single empty paragraph
-      },
-    ];
+    // Overwrite this paragraph with a new one, containing a non-breaking space
+    const newNode = markdownSchema.nodes.paragraph.create(
+      null,
+      markdownSchema.text('\n\n\u00A0\n\n')
+    );
+    newContent.push(newNode);
   });
+  const newDoc = pmDoc.copy(Fragment.fromArray(newContent));
 
   return renderToMarkdown({
     extensions: [StarterKit, ImageExtension, /*Link,*/ Highlight, Iframe],
-    content: pmJson,
+    content: newDoc,
     // options,
   }).trim();
 };
