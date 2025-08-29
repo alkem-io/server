@@ -9,9 +9,11 @@ import { TimelineResolverService } from './timeline.resolver.service';
 import { ContributionResolverService } from './contribution.resolver.service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { RoomResolverService } from './room.resolver.service';
+import { UrlGeneratorModule } from '../url-generator';
 
 @Module({
   imports: [
+    UrlGeneratorModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([VirtualContributor]),
     TypeOrmModule.forFeature([Community]),

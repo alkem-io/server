@@ -4,7 +4,6 @@ import { IMessage } from '../message/message.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.comment';
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { RoomType } from '@common/enums/room.type';
 import { IRoom } from './room.interface';
 import { NotificationInputPlatformForumDiscussionComment } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.forum.discussion.comment';
 import { IDiscussion } from '../../../platform/forum-discussion/discussion.interface';
@@ -14,7 +13,6 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
-import { IProfile } from '@domain/common/profile';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.update.sent';
@@ -38,9 +36,6 @@ export class RoomServiceEvents {
   ) {}
 
   public async processNotificationCommentReply(
-    parentEntityId: string,
-    parentEntityNameId: string,
-    parentEntityProfile: IProfile,
     room: IRoom,
     reply: IMessage,
     agentInfo: AgentInfo,
@@ -49,15 +44,9 @@ export class RoomServiceEvents {
     // Send the notification
     const notificationInput: NotificationInputCommentReply = {
       triggeredBy: agentInfo.userID,
-      reply: reply.message,
       roomId: room.id,
-      commentOwnerID: messageOwnerId,
-      originEntity: {
-        id: parentEntityId,
-        nameId: parentEntityNameId,
-        displayName: parentEntityProfile.displayName,
-      },
-      commentType: room.type as RoomType,
+      messageRepliedToOwnerID: messageOwnerId,
+      messageID: reply.id,
     };
     await this.notificationUserAdapter.userCommentReply(notificationInput);
   }

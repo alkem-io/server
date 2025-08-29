@@ -12,6 +12,7 @@ import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-
 import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
+import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 
 @Injectable()
 export class NotificationOrganizationAdapter {
@@ -20,7 +21,8 @@ export class NotificationOrganizationAdapter {
     private readonly logger: LoggerService,
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
-    private notificationInAppAdapter: NotificationInAppAdapter
+    private notificationInAppAdapter: NotificationInAppAdapter,
+    private messageDetailsService: MessageDetailsService
   ) {}
 
   public async organizationMention(
@@ -32,6 +34,10 @@ export class NotificationOrganizationAdapter {
       eventData,
       eventData.organizationID
     );
+    const messageDetails = await this.messageDetailsService.getMessageDetails(
+      eventData.roomID,
+      eventData.messageID
+    );
 
     if (recipients.emailRecipients.length > 0) {
       const payload =
@@ -40,8 +46,7 @@ export class NotificationOrganizationAdapter {
           eventData.triggeredBy,
           recipients.emailRecipients,
           eventData.organizationID,
-          eventData.roomID,
-          eventData.messageID
+          messageDetails
         );
 
       this.notificationExternalAdapter.sendExternalNotifications(

@@ -24,7 +24,7 @@ import { NotificationInputCommunityApplication } from './dto/space/notification.
 import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
-import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
+import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 
 @Injectable()
 export class NotificationUserAdapter {
@@ -35,7 +35,7 @@ export class NotificationUserAdapter {
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
     private communityResolverService: CommunityResolverService,
-    private roomLookupService: RoomLookupService
+    private messageDetailsService: MessageDetailsService
   ) {}
 
   public async userSignUpWelcome(
@@ -216,15 +216,10 @@ export class NotificationUserAdapter {
   public async userMention(
     eventData: NotificationInputUserMention
   ): Promise<void> {
-    const { room, message } = await this.roomLookupService.getMessageInRoom(
+    const messageDetails = await this.messageDetailsService.getMessageDetails(
       eventData.roomID,
       eventData.messageID
     );
-    const roomOriginEntity =
-      await this.notificationExternalAdapter.buildCommentOriginUrlForRoom(
-        room.type,
-        room.id
-      );
 
     const event = NotificationEvent.USER_MENTIONED;
     const recipients = await this.getNotificationRecipientsUser(
@@ -240,10 +235,7 @@ export class NotificationUserAdapter {
           eventData.triggeredBy,
           recipients.emailRecipients,
           eventData.userID,
-          message.message,
-          roomOriginEntity.id,
-          roomOriginEntity.displayName,
-          room.type
+          messageDetails
         );
 
       this.notificationExternalAdapter.sendExternalNotifications(
@@ -377,10 +369,14 @@ export class NotificationUserAdapter {
     eventData: NotificationInputCommentReply
   ): Promise<void> {
     const event = NotificationEvent.USER_COMMENT_REPLY;
+    const messageDetails = await this.messageDetailsService.getMessageDetails(
+      eventData.roomId,
+      eventData.messageID
+    );
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData,
-      eventData.commentOwnerID
+      eventData.messageRepliedToOwnerID
     );
 
     try {
@@ -390,7 +386,8 @@ export class NotificationUserAdapter {
             event,
             eventData.triggeredBy,
             recipients.emailRecipients,
-            eventData
+            eventData,
+            messageDetails
           );
 
         this.notificationExternalAdapter.sendExternalNotifications(
@@ -404,19 +401,11 @@ export class NotificationUserAdapter {
         recipient => recipient.id
       );
       if (inAppReceiverIDs.length > 0) {
-        const commentOriginUrl =
-          await this.notificationExternalAdapter.buildCommentOriginUrl(
-            eventData.commentType,
-            eventData.originEntity.id
-          );
-
         const inAppPayload: InAppNotificationPayloadUserMessageRoom = {
           type: NotificationEventPayload.USER_MESSAGE_ROOM,
-          userID: eventData.commentOwnerID,
+          userID: eventData.messageRepliedToOwnerID,
           roomID: eventData.roomId,
-          comment: eventData.reply,
-          commentUrl: commentOriginUrl,
-          commentOriginName: eventData.originEntity.displayName,
+          messageID: eventData.messageID,
         };
 
         await this.notificationInAppAdapter.sendInAppNotifications(
@@ -439,22 +428,11 @@ export class NotificationUserAdapter {
   private async buildUserMentionInAppPayload(
     eventData: NotificationInputUserMention
   ): Promise<InAppNotificationPayloadUserMessageRoom> {
-    const { room, message } = await this.roomLookupService.getMessageInRoom(
-      eventData.roomID,
-      eventData.messageID
-    );
-    const { url, displayName } =
-      await this.notificationExternalAdapter.buildCommentOriginUrlForRoom(
-        room.type,
-        room.id
-      );
-
     return {
       type: NotificationEventPayload.USER_MESSAGE_ROOM,
       userID: eventData.userID,
-      comment: message.message,
-      commentUrl: url,
-      commentOriginName: displayName,
+      roomID: eventData.roomID,
+      messageID: eventData.messageID,
     };
   }
 

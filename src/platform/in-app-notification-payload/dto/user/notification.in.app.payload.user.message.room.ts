@@ -5,9 +5,6 @@ import { ObjectType } from '@nestjs/graphql';
   implements: () => IInAppNotificationPayload,
 })
 export abstract class InAppNotificationPayloadUserMessageRoom extends InAppNotificationPayloadUser {
-  messageID?: string;
-  roomID?: string;
-  comment?: string;
-  commentUrl?: string;
-  commentOriginName?: string;
+  messageID!: string;
+  roomID!: string;
 }

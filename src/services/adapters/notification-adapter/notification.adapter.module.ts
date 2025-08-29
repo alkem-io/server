@@ -1,8 +1,4 @@
-import { Post } from '@domain/collaboration/post/post.entity';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Community } from '@domain/community/community/community.entity';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ActivityModule } from '@src/platform/activity/activity.module';
 import { NotificationAdapter } from './notification.adapter';
@@ -16,14 +12,15 @@ import { NotificationPlatformAdapter } from './notification.platform.adapter';
 import { NotificationUserAdapter } from './notification.user.adapter';
 import { NotificationOrganizationAdapter } from './notification.organization.adapter';
 import { NotificationVirtualContributorAdapter } from './notification.virtual.contributor.adapter';
+import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 
 @Module({
   imports: [
     ActivityModule,
     UrlGeneratorModule,
-    TypeOrmModule.forFeature([Post, Whiteboard, Community]),
     ContributorLookupModule,
     EntityResolverModule,
+    MessageDetailsModule,
     NotificationRecipientsModule,
     NotificationExternalAdapterModule,
     NotificationInAppAdapterModule,

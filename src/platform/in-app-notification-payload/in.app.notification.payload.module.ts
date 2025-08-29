@@ -13,8 +13,9 @@ import {
   InAppNotificationPayloadUserMessageDirectResolverFields,
   InAppNotificationPayloadUserMessageRoomResolverFields,
 } from './field-resolvers';
+import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 @Module({
-  imports: [AuthorizationModule],
+  imports: [AuthorizationModule, MessageDetailsModule],
   providers: [
     // add in all the other payload resolvers from the ../field-resolvers directory
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
