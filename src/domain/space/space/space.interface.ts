@@ -61,8 +61,6 @@ export class ISpace extends IAuthorizable {
   })
   levelZeroSpaceID!: string;
 
-  levelZeroSpace?: ISpace;
-
   templatesManager?: ITemplatesManager;
   license?: ILicense;
 }

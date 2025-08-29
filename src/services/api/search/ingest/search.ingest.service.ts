@@ -420,7 +420,6 @@ export class SearchIngestService {
       where: {
         level: SpaceLevel.L0,
         visibility: SpaceVisibility.ACTIVE,
-        levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
       },
     });
   }
@@ -431,7 +430,6 @@ export class SearchIngestService {
         where: {
           level: SpaceLevel.L0,
           visibility: SpaceVisibility.ACTIVE,
-          levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -464,7 +462,6 @@ export class SearchIngestService {
       where: {
         level: SpaceLevel.L1,
         visibility: SpaceVisibility.ACTIVE,
-        levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
       },
     });
   }
@@ -475,7 +472,6 @@ export class SearchIngestService {
         where: {
           level: SpaceLevel.L1,
           visibility: SpaceVisibility.ACTIVE,
-          levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -511,7 +507,6 @@ export class SearchIngestService {
       where: {
         level: SpaceLevel.L2,
         visibility: SpaceVisibility.ACTIVE,
-        levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
       },
     });
   }
@@ -522,7 +517,6 @@ export class SearchIngestService {
         where: {
           level: SpaceLevel.L2,
           visibility: SpaceVisibility.ACTIVE,
-          levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -627,7 +621,6 @@ export class SearchIngestService {
           collaboration: {
             space: {
               visibility: SpaceVisibility.ACTIVE,
-              levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
             },
           },
         },
@@ -641,7 +634,6 @@ export class SearchIngestService {
         loadEagerRelations: false,
         where: {
           visibility: SpaceVisibility.ACTIVE,
-          levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
         },
         relations: {
           parentSpace: {
@@ -715,7 +707,6 @@ export class SearchIngestService {
               collaboration: {
                 space: {
                   visibility: SpaceVisibility.ACTIVE,
-                  levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
                 },
               },
             },
@@ -731,7 +722,6 @@ export class SearchIngestService {
         loadEagerRelations: false,
         where: {
           visibility: SpaceVisibility.ACTIVE,
-          levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
         },
         relations: {
           collaboration: {
@@ -890,7 +880,6 @@ export class SearchIngestService {
               collaboration: {
                 space: {
                   visibility: SpaceVisibility.ACTIVE,
-                  levelZeroSpace: { visibility: SpaceVisibility.ACTIVE },
                 },
               },
             },
@@ -905,9 +894,6 @@ export class SearchIngestService {
         loadEagerRelations: false,
         where: {
           visibility: SpaceVisibility.ACTIVE,
-          levelZeroSpace: {
-            visibility: SpaceVisibility.ACTIVE,
-          },
         },
         relations: {
           collaboration: {
