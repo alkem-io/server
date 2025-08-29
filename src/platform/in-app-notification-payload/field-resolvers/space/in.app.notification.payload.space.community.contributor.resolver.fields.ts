@@ -10,7 +10,7 @@ import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-
 @Resolver(() => InAppNotificationPayloadSpaceCommunityContributor)
 export class InAppNotificationPayloadSpaceCommunityContributorResolverFields {
   @ResolveField(() => IContributor, {
-    nullable: false,
+    nullable: true,
     description: 'The Contributor that joined.',
   })
   public contributor(
@@ -22,7 +22,7 @@ export class InAppNotificationPayloadSpaceCommunityContributorResolverFields {
   }
 
   @ResolveField(() => ISpace, {
-    nullable: false,
+    nullable: true,
     description: 'The Space that was joined.',
   })
   public space(
