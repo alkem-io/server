@@ -152,11 +152,11 @@ export class NotificationRecipientsService {
     }
 
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
+      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients: ${inAppRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
+      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients: ${inAppRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
 
