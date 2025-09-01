@@ -253,6 +253,7 @@ export class CalloutService {
         callout.framing,
         calloutUpdateData.framing,
         storageAggregator,
+        callout.isTemplate,
         userID
       );
     }
