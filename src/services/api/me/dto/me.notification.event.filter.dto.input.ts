@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { NotificationEvent } from '@common/enums/notification.event';
 
 @InputType()
-export class InAppNotificationFilterInput {
+export class NotificationEventsFilterInput {
   @Field(() => [NotificationEvent], {
     nullable: true,
     description:

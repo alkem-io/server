@@ -94,7 +94,6 @@ import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation
 import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
-import { InAppNotificationReaderModule } from '@services/api/in-app-notification-reader/in.app.notification.reader.module';
 
 @Module({
   imports: [
@@ -312,7 +311,6 @@ import { InAppNotificationReaderModule } from '@services/api/in-app-notification
     DomainPlatformSettingsModule,
     PlatformRoleModule,
     TemplateApplierModule,
-    InAppNotificationReaderModule,
     WingbackWebhookModule,
     CalloutTransferModule,
     SearchModule,
