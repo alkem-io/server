@@ -3,6 +3,7 @@ import { MarkdownParser } from 'prosemirror-markdown';
 import markdownIt, { Token } from 'markdown-it';
 import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
 import { markdownSchema } from './markdown.schema';
+import { newLineReplacement } from './const';
 
 /**
  * Converts a markdown string to a Yjs state update, encoded in binary.
@@ -14,7 +15,7 @@ export const markdownToYjsV2State = (_markdown: string): Uint8Array => {
   const processed = _markdown
     .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
     // Only replace <br> tags with a single empty paragraph
-    .replace(/<br\s*\/?>(\r?\n)?/gm, '\n\n\u00A0\n\n');
+    .replace(/<br\s*\/?>(\r?\n)?/gm, newLineReplacement);
 
   const mdParser = new MarkdownParser(
     markdownSchema,

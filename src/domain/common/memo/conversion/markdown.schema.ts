@@ -270,10 +270,8 @@ export const markdownSchema = new Schema({
           tag: 'i',
         },
         {
-          style: 'font-style=normal',
-        },
-        {
-          style: 'font-style=italic',
+          style: 'font-style',
+          getAttrs: (value: string) => (value === 'italic' ? null : false),
         },
       ],
     },
@@ -291,6 +289,8 @@ export const markdownSchema = new Schema({
         {
           style: 'text-decoration',
           consuming: false,
+          getAttrs: (value: string) =>
+            /\bline-through\b/.test(value) ? null : false,
         },
       ],
     },

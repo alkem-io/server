@@ -7,6 +7,7 @@ import { Iframe } from './Iframe';
 import { ImageExtension } from './image.extension';
 import { markdownSchema } from '@domain/common/memo/conversion/markdown.schema';
 import { Fragment, Node as ProseMirrorNode } from 'prosemirror-model';
+import { newLineReplacement } from './const';
 
 /**
  * Converts binary Y.Doc state update v2 to markdown string
@@ -41,7 +42,7 @@ export const yjsStateToMarkdown = (state: Buffer) => {
     // Overwrite this paragraph with a new one, containing a non-breaking space
     const newNode = markdownSchema.nodes.paragraph.create(
       null,
-      markdownSchema.text('\n\n\u00A0\n\n')
+      markdownSchema.text(newLineReplacement)
     );
     newContent.push(newNode);
   });
