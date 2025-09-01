@@ -40,6 +40,9 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
+import { IMemo } from '@domain/common/memo/memo.interface';
+import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
+import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 
 @Injectable()
 export class InputCreatorService {
@@ -82,6 +85,9 @@ export class InputCreatorService {
             },
           },
           link: {
+            profile: true,
+          },
+          memo: {
             profile: true,
           },
         },
@@ -131,14 +137,9 @@ export class InputCreatorService {
         LogContext.INPUT_CREATOR
       );
     }
-    // we do not support having memo callouts in the template
-    // https://github.com/alkem-io/collaborative-document-service/issues/4
-    const filteredCallouts = calloutsSet.callouts.filter(
-      callout => callout.framing.type !== 'memo'
-    );
 
     const calloutInputs: CreateCalloutInput[] = [];
-    for (const callout of filteredCallouts) {
+    for (const callout of calloutsSet.callouts) {
       calloutInputs.push(
         await this.buildCreateCalloutInputFromCallout(callout.id)
       );
@@ -286,22 +287,7 @@ export class InputCreatorService {
       await this.collaborationService.getCollaborationOrFail(collaborationID, {
         relations: {
           calloutsSet: {
-            callouts: {
-              classification: {
-                tagsets: true,
-              },
-              framing: {
-                profile: true,
-                whiteboard: {
-                  profile: {
-                    visuals: true,
-                  },
-                },
-                link: {
-                  profile: true,
-                },
-              },
-            },
+            callouts: true,
           },
           innovationFlow: {
             profile: true,
@@ -405,6 +391,24 @@ export class InputCreatorService {
     };
   }
 
+  public buildCreateMemoInputFromMemo(memo: IMemo): CreateMemoInput {
+    if (!memo.profile) {
+      throw new EntityNotInitializedException(
+        'Memo not fully initialised',
+        LogContext.INPUT_CREATOR,
+        {
+          cause: 'Relation "profile" for memo not loaded',
+          memoId: memo.id,
+        }
+      );
+    }
+    return {
+      nameID: memo.nameID,
+      markdown: memo.content ? yjsStateToMarkdown(memo.content) : undefined,
+      profile: this.buildCreateProfileInputFromProfile(memo.profile),
+    };
+  }
+
   public buildCreateSpaceAboutInputFromSpaceAbout(
     spaceAbout: ISpaceAbout
   ): CreateSpaceAboutInput {
@@ -448,6 +452,9 @@ export class InputCreatorService {
             ),
             uri: calloutFraming.link.uri,
           }
+        : undefined,
+      memo: calloutFraming.memo
+        ? this.buildCreateMemoInputFromMemo(calloutFraming.memo)
         : undefined,
     };
   }

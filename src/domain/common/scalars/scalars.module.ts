@@ -7,7 +7,6 @@ import { MessageID } from './scalar.messageid';
 import { LifecycleDefinitionScalar } from './scalar.lifecycle.definition';
 import { Emoji } from './scalar.emoji';
 import { WhiteboardContent } from './scalar.whiteboard.content';
-import { MemoContent } from './scalar.memo.content';
 import { SearchCursor } from './scalar.search.cursor';
 
 @Module({
@@ -20,7 +19,6 @@ import { SearchCursor } from './scalar.search.cursor';
     Markdown,
     MessageID,
     LifecycleDefinitionScalar,
-    MemoContent,
     WhiteboardContent,
     SearchCursor,
   ],
