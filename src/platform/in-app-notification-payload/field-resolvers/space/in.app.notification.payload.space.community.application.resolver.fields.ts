@@ -24,7 +24,7 @@ export class InAppNotificationPayloadSpaceCommunityApplicationResolverFields {
 
   // Add in resolver for Application
   @ResolveField(() => IApplication, {
-    nullable: false,
+    nullable: true,
     description: 'The Application that the notification is related to.',
   })
   public application(
