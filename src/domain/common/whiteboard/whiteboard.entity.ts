@@ -14,6 +14,7 @@ import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
@@ -66,4 +67,11 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
     nullable: true,
   })
   framing?: CalloutFraming;
+
+  @OneToOne(
+    () => CalloutContribution,
+    contribution => contribution.whiteboard,
+    { nullable: true }
+  )
+  contribution?: CalloutContribution;
 }

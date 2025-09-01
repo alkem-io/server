@@ -26,6 +26,8 @@ import { AlkemioConfig } from '@src/types';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Post } from '@domain/collaboration/post';
+import { Memo } from '@domain/common/memo/memo.entity';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 
 const profileRelationOptions = {
   location: true,
@@ -96,6 +98,7 @@ const getIndices = (indexPattern: string) => [
   `${indexPattern}posts`,
   `${indexPattern}callouts`,
   `${indexPattern}whiteboards`,
+  `${indexPattern}memos`,
 ];
 
 @Injectable()
@@ -171,8 +174,7 @@ export class SearchIngestService {
     const indices = getIndices(this.indexPattern);
 
     const results = await asyncMap(indices, async index => {
-      // if does not exist exit early, no need to delete
-
+      // if it does not exist exit early, no need to delete
       try {
         if (!(await this.elasticClient!.indices.exists({ index }))) {
           return { acknowledged: true };
@@ -223,52 +225,58 @@ export class SearchIngestService {
 
     const result: IngestReturnType = {};
     const params = [
+      // {
+      //   index: `${this.indexPattern}spaces`,
+      //   fetchFn: this.fetchSpacesLevel0.bind(this),
+      //   countFn: this.fetchSpacesLevel0Count.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}subspaces`,
+      //   fetchFn: this.fetchSpacesLevel1.bind(this),
+      //   countFn: this.fetchSpacesLevel1Count.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}subspaces`,
+      //   fetchFn: this.fetchSpacesLevel2.bind(this),
+      //   countFn: this.fetchSpacesLevel2Count.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}organizations`,
+      //   fetchFn: this.fetchOrganizations.bind(this),
+      //   countFn: this.fetchOrganizationsCount.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}users`,
+      //   fetchFn: this.fetchUsers.bind(this),
+      //   countFn: this.fetchUsersCount.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}callouts`,
+      //   fetchFn: this.fetchCallout.bind(this),
+      //   countFn: this.fetchCalloutCount.bind(this),
+      //   batchSize: 20,
+      // },
+      // {
+      //   index: `${this.indexPattern}posts`,
+      //   fetchFn: this.fetchPosts.bind(this),
+      //   countFn: this.fetchPostsCount.bind(this),
+      //   batchSize: 20,
+      // },
+      // {
+      //   index: `${this.indexPattern}whiteboards`,
+      //   fetchFn: this.fetchWhiteboard.bind(this),
+      //   countFn: this.fetchWhiteboardCount.bind(this),
+      //   batchSize: 20,
+      // },
       {
-        index: `${this.indexPattern}spaces`,
-        fetchFn: this.fetchSpacesLevel0.bind(this),
-        countFn: this.fetchSpacesLevel0Count.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}subspaces`,
-        fetchFn: this.fetchSpacesLevel1.bind(this),
-        countFn: this.fetchSpacesLevel1Count.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}subspaces`,
-        fetchFn: this.fetchSpacesLevel2.bind(this),
-        countFn: this.fetchSpacesLevel2Count.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}organizations`,
-        fetchFn: this.fetchOrganizations.bind(this),
-        countFn: this.fetchOrganizationsCount.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}users`,
-        fetchFn: this.fetchUsers.bind(this),
-        countFn: this.fetchUsersCount.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}callouts`,
-        fetchFn: this.fetchCallout.bind(this),
-        countFn: this.fetchCalloutCount.bind(this),
-        batchSize: 20,
-      },
-      {
-        index: `${this.indexPattern}posts`,
-        fetchFn: this.fetchPosts.bind(this),
-        countFn: this.fetchPostsCount.bind(this),
-        batchSize: 20,
-      },
-      {
-        index: `${this.indexPattern}whiteboards`,
-        fetchFn: this.fetchWhiteboard.bind(this),
-        countFn: this.fetchWhiteboardCount.bind(this),
+        index: `${this.indexPattern}memos`,
+        fetchFn: this.fetchMemo.bind(this),
+        countFn: this.fetchMemoCount.bind(this),
         batchSize: 20,
       },
     ];
@@ -700,19 +708,35 @@ export class SearchIngestService {
   private fetchWhiteboardCount() {
     return this.entityManager.count<Whiteboard>(Whiteboard, {
       loadEagerRelations: false,
-      where: {
-        framing: {
-          callout: {
-            calloutsSet: {
-              collaboration: {
-                space: {
-                  visibility: SpaceVisibility.ACTIVE,
+      where: [
+        {
+          framing: {
+            type: CalloutFramingType.WHITEBOARD,
+            callout: {
+              calloutsSet: {
+                collaboration: {
+                  space: {
+                    visibility: SpaceVisibility.ACTIVE,
+                  },
                 },
               },
             },
           },
         },
-      },
+        {
+          contribution: {
+            callout: {
+              calloutsSet: {
+                collaboration: {
+                  space: {
+                    visibility: SpaceVisibility.ACTIVE,
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
     });
   }
 
@@ -840,9 +864,7 @@ export class SearchIngestService {
 
                 wbs.push({
                   ...contribution.whiteboard,
-                  content: extractTextFromWhiteboardContent(
-                    contribution.whiteboard.content
-                  ),
+                  content,
                   type: SearchResultType.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
@@ -868,6 +890,186 @@ export class SearchIngestService {
             .filter(Boolean);
         });
       });
+  }
+
+  private fetchMemoCount() {
+    return this.entityManager.count<Memo>(Memo, {
+      loadEagerRelations: false,
+      where: [
+        {
+          framing: {
+            type: CalloutFramingType.MEMO,
+            callout: {
+              calloutsSet: {
+                collaboration: {
+                  space: {
+                    visibility: SpaceVisibility.ACTIVE,
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          contribution: {
+            callout: {
+              calloutsSet: {
+                collaboration: {
+                  space: {
+                    visibility: SpaceVisibility.ACTIVE,
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    });
+  }
+  private async fetchMemo(start: number, limit: number) {
+    const spaces = await this.entityManager.find<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
+      relations: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              framing: {
+                memo: {
+                  profile: profileRelationOptions,
+                },
+              },
+              contributions: {
+                memo: {
+                  profile: profileRelationOptions,
+                },
+              },
+            },
+          },
+        },
+        parentSpace: {
+          parentSpace: true,
+        },
+      },
+      select: {
+        id: true,
+        visibility: true,
+        collaboration: {
+          id: true,
+          calloutsSet: {
+            id: true,
+            callouts: {
+              id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
+              framing: {
+                id: true,
+                memo: {
+                  id: true,
+                  content: true,
+                  profile: profileSelectOptions,
+                },
+              },
+              contributions: {
+                id: true,
+                memo: {
+                  id: true,
+                  content: true,
+                  profile: profileSelectOptions,
+                },
+              },
+            },
+          },
+        },
+        parentSpace: {
+          id: true,
+          parentSpace: {
+            id: true,
+          },
+        },
+      },
+      skip: start,
+      take: limit,
+    });
+
+    return spaces.flatMap(space => {
+      const callouts = space.collaboration?.calloutsSet?.callouts;
+      return callouts
+        ?.flatMap(callout => {
+          // a callout can have memo in the framing
+          // AND memos in the contributions
+          const memos = [];
+          if (callout.framing.memo) {
+            const markdown = extractMarkdownFromMemoContent(
+              callout.framing.memo.content
+            );
+            // only memos with content are ingested
+            if (!markdown) {
+              return;
+            }
+
+            memos.push({
+              ...callout.framing.memo,
+              markdown,
+              type: SearchResultType.MEMO,
+              license: {
+                visibility: space?.visibility ?? EMPTY_VALUE,
+              },
+              spaceID:
+                space?.parentSpace?.parentSpace?.id ??
+                space?.parentSpace?.id ??
+                space.id,
+              calloutID: callout.id,
+              collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+              profile: {
+                ...callout.framing.memo.profile,
+                tags: processTagsets(callout.framing.memo?.profile?.tagsets),
+                tagsets: undefined,
+              },
+            });
+          }
+
+          callout?.contributions?.forEach(contribution => {
+            if (!contribution?.memo) {
+              return;
+            }
+
+            const markdown = extractMarkdownFromMemoContent(
+              contribution.memo.content
+            );
+            // only memos with content are ingested
+            if (!markdown) {
+              return;
+            }
+
+            memos.push({
+              ...contribution.memo,
+              markdown,
+              type: SearchResultType.MEMO,
+              license: {
+                visibility: space?.visibility ?? EMPTY_VALUE,
+              },
+              spaceID:
+                space?.parentSpace?.parentSpace?.id ??
+                space?.parentSpace?.id ??
+                space.id,
+              calloutID: callout.id,
+              collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+              profile: {
+                ...contribution.memo.profile,
+                tags: processTagsets(contribution.memo?.profile?.tagsets),
+                tagsets: undefined,
+              },
+            });
+          });
+
+          return memos;
+        })
+        .filter(isDefined);
+    });
   }
 
   private fetchPostsCount() {
@@ -999,4 +1201,22 @@ const extractTextFromWhiteboardContent = (content: string): string => {
   } catch (error: any) {
     return '';
   }
+};
+
+const extractMarkdownFromMemoContent = (
+  content?: Buffer
+): string | undefined => {
+  if (!content) {
+    return undefined;
+  }
+
+  throw new Error('Not implemented');
+
+  // for now the memo content is just a markdown string
+  // return content;
+};
+
+// Generic type guard to filter out undefined or null
+const isDefined = <T>(value: T | undefined | null): value is T => {
+  return value !== undefined && value !== null;
 };
