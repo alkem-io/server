@@ -1,5 +1,7 @@
 import { Schema } from 'prosemirror-model';
 
+type HTMLElement = any;
+
 /** copy-pasted from the frontend
  *  const serializableSchema = {
  *   nodes: schema.spec.nodes,
@@ -233,6 +235,27 @@ export const markdownSchema = new Schema({
       parseDOM: [
         {
           tag: 'a[href]',
+          getAttrs: (dom: HTMLElement | string) => {
+            if (typeof dom === 'string') return false;
+
+            const href = (dom as HTMLElement).getAttribute('href');
+            if (!href) return false;
+
+            // Allow only safe URL schemes
+            const safeSchemePattern = /^(https?:|mailto:|tel:)/i;
+            if (!safeSchemePattern.test(href)) {
+              return false; // Reject dangerous schemes like javascript:, data:, file:, etc.
+            }
+
+            return {
+              href,
+              target: (dom as HTMLElement).getAttribute('target') || '_blank',
+              rel:
+                (dom as HTMLElement).getAttribute('rel') ||
+                'noopener noreferrer nofollow',
+              class: (dom as HTMLElement).getAttribute('class') || null,
+            };
+          },
         },
       ],
     },
@@ -245,10 +268,10 @@ export const markdownSchema = new Schema({
           tag: 'b',
         },
         {
-          style: 'font-weight=400',
-        },
-        {
           style: 'font-weight',
+          getAttrs: (value: string) => {
+            return /^(bold(er)?|[5-9]\d{2})$/.test(value) ? null : false;
+          },
         },
       ],
     },
