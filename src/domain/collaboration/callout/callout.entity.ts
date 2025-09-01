@@ -28,7 +28,7 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy?: string;
 
-  @OneToOne(() => CalloutFraming, {
+  @OneToOne(() => CalloutFraming, framing => framing.callout, {
     eager: true,
     cascade: true,
     onDelete: 'SET NULL',
