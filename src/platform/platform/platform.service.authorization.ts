@@ -12,7 +12,7 @@ import {
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
+  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_IN_APP_NOTIFICATIONS,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
@@ -148,9 +148,9 @@ export class PlatformAuthorizationService {
     authorization: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
     const credentialRules = this.createPlatformCredentialRules();
-    const credentialRuleInteractiveGuidance =
-      await this.createCredentialRuleInteractiveGuidance();
-    credentialRules.push(credentialRuleInteractiveGuidance);
+    const credentialRuleInAppNotifications =
+      await this.createCredentialRuleInAppNotifications();
+    credentialRules.push(credentialRuleInAppNotifications);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -188,17 +188,17 @@ export class PlatformAuthorizationService {
     return storageAuthorization;
   }
 
-  private async createCredentialRuleInteractiveGuidance(): Promise<IAuthorizationPolicyRuleCredential> {
-    const userChatGuidanceAccessCredential = {
-      type: AuthorizationCredential.GLOBAL_REGISTERED,
+  private async createCredentialRuleInAppNotifications(): Promise<IAuthorizationPolicyRuleCredential> {
+    const userChatGuidanceAccessInAppNotifications = {
+      type: AuthorizationCredential.BETA_TESTER,
       resourceID: '',
     };
 
     const userChatGuidanceAccessPrivilegeRule =
       this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
-        [userChatGuidanceAccessCredential],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_IN_APP],
+        [userChatGuidanceAccessInAppNotifications],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_IN_APP_NOTIFICATIONS
       );
     userChatGuidanceAccessPrivilegeRule.cascade = false;
 
@@ -263,6 +263,51 @@ export class PlatformAuthorizationService {
       );
     platformResetAuth.cascade = false;
     credentialRules.push(platformResetAuth);
+
+    // Who can receive the platform admin notifications
+    const platformAdminNotifications =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        ' Receive notifications platform admin'
+      );
+    platformAdminNotifications.cascade = false;
+    credentialRules.push(platformAdminNotifications);
+
+    // Allow organization admins to access organization admin notification settings
+    const receiveNotificationsOrganizationAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN],
+        [AuthorizationCredential.ORGANIZATION_ADMIN],
+        'Receive notifications organization admin'
+      );
+    receiveNotificationsOrganizationAdmin.cascade = false;
+    credentialRules.push(receiveNotificationsOrganizationAdmin);
+
+    // Allow space admins to access space admin notification settings
+    const receiveNotificationsSpaceAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_SPACE_ADMIN],
+        [AuthorizationCredential.SPACE_ADMIN],
+        'Receive notifications space admin'
+      );
+    receiveNotificationsSpaceAdmin.cascade = false;
+    credentialRules.push(receiveNotificationsSpaceAdmin);
+
+    // Allow space leads to access space lead notification settings
+    const receiveNotificationsSpaceLead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_SPACE_LEAD],
+        [AuthorizationCredential.SPACE_LEAD],
+        'Receive notifications space lead'
+      );
+    receiveNotificationsSpaceLead.cascade = false;
+    credentialRules.push(receiveNotificationsSpaceLead);
 
     // Allow all registered users to query non-protected user information
     const userNotInherited =

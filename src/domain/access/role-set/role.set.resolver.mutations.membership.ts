@@ -13,26 +13,22 @@ import { ApplicationEventInput } from '../application/dto/application.dto.event'
 import { IApplication } from '../application/application.interface';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
-import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.invitation';
+import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.platform';
 import { ApplicationService } from '../application/application.service';
 import { InvitationService } from '../invitation/invitation.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
 import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ApplyForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.apply';
-import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
 import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.invite';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.vc';
-import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
@@ -62,6 +58,13 @@ import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { compact } from 'lodash';
+import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
+import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
+import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationVirtualContributorAdapter } from '@services/adapters/notification-adapter/notification.virtual.contributor.adapter';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 
 @InstrumentResolver()
 @Resolver()
@@ -71,7 +74,10 @@ export class RoleSetResolverMutationsMembership {
     private roleSetService: RoleSetService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private notificationAdapter: NotificationAdapter,
+    private notificationUserAdapter: NotificationUserAdapter,
+    private notificationAdapterSpace: NotificationSpaceAdapter,
+    private notificationVirtualContributorAdapter: NotificationVirtualContributorAdapter,
+    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private userLookupService: UserLookupService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private accountLookupService: AccountLookupService,
@@ -189,8 +195,11 @@ export class RoleSetResolverMutationsMembership {
     const notificationInput: NotificationInputCommunityApplication = {
       triggeredBy: agentInfo.userID,
       community,
+      application,
     };
-    await this.notificationAdapter.applicationCreated(notificationInput);
+    await this.notificationAdapterSpace.spaceCommunityApplicationCreated(
+      notificationInput
+    );
 
     return await this.applicationService.getApplicationOrFail(application.id);
   }
@@ -719,10 +728,10 @@ export class RoleSetResolverMutationsMembership {
           const notificationInput: NotificationInputPlatformInvitation = {
             triggeredBy: agentInfo.userID,
             community,
-            invitedUser: platformInvitation.email,
+            invitedUserEmail: platformInvitation.email,
             welcomeMessage: platformInvitation.welcomeMessage,
           };
-          await this.notificationAdapter.platformInvitationCreated(
+          await this.notificationPlatformAdapter.platformInvitationCreated(
             notificationInput
           );
           break;
@@ -748,12 +757,13 @@ export class RoleSetResolverMutationsMembership {
                 {
                   triggeredBy: agentInfo.userID,
                   community,
+                  invitationID: invitation.id,
                   invitedContributorID: invitation.invitedContributorID,
                   accountHost: accountProvider,
                   welcomeMessage: invitation.welcomeMessage,
                 };
 
-              await this.notificationAdapter.invitationVirtualContributorCreated(
+              await this.notificationVirtualContributorAdapter.spaceCommunityInvitationVirtualContributorCreated(
                 notificationInput
               );
               break;
@@ -763,11 +773,12 @@ export class RoleSetResolverMutationsMembership {
               const notificationInput: NotificationInputCommunityInvitation = {
                 triggeredBy: agentInfo.userID,
                 community,
+                invitationID: invitation.id,
                 invitedContributorID: invitation.invitedContributorID,
                 welcomeMessage: invitation.welcomeMessage,
               };
 
-              await this.notificationAdapter.invitationCreated(
+              await this.notificationUserAdapter.userSpaceCommunityInvitationCreated(
                 notificationInput
               );
               break;

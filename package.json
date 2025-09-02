@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.114.5",
+  "version": "0.116.1",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -56,7 +56,7 @@
   },
   "dependencies": {
     "@alkemio/matrix-adapter-lib": "^0.4.1",
-    "@alkemio/notifications-lib": "0.10.5",
+    "@alkemio/notifications-lib": "0.11.5",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
     "@golevelup/nestjs-rabbitmq": "^5.3.0",
@@ -75,6 +75,10 @@
     "@nestjs/platform-express": "^10.3.10",
     "@nestjs/typeorm": "10.0.2",
     "@ory/kratos-client": "^1.2.0",
+    "@tiptap/extension-highlight": "^3.2.2",
+    "@tiptap/extension-image": "^3.2.2",
+    "@tiptap/starter-kit": "^3.2.0",
+    "@tiptap/static-renderer": "^3.2.0",
     "ajv": "^8.17.1",
     "cache-manager-redis-store": "^2.0.0",
     "chromadb": "^1.8.1",
@@ -111,7 +115,9 @@
     "typeorm": "0.3.13",
     "winston": "^3.13.1",
     "xstate": "^5.18.2",
-    "yaml": "^2.4.5"
+    "y-prosemirror": "^1.3.7",
+    "yaml": "^2.4.5",
+    "yjs": "^13.6.27"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.2",

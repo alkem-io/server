@@ -25,6 +25,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { LicenseService } from '../license/license.service';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 
 @Injectable()
 export class MemoService {
@@ -117,6 +118,10 @@ export class MemoService {
     const deletedMemo = await this.memoRepository.remove(memo as Memo);
     deletedMemo.id = memoID;
     return deletedMemo;
+  }
+
+  public binaryToMarkdown(content: Buffer) {
+    return yjsStateToMarkdown(content);
   }
 
   async saveContent(memoId: string, content: Buffer): Promise<IMemo> {

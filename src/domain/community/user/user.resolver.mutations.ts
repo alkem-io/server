@@ -10,16 +10,14 @@ import { UserAuthorizationService } from './user.service.authorization';
 import { UserSendMessageInput } from './dto/user.dto.communication.message.send';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { IPreference } from '@domain/common/preference/preference.interface';
-import { PreferenceService } from '@domain/common/preference';
-import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { UpdateUserInput } from './dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateUserSettingsInput } from './dto/user.dto.update.settings';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { LogContext } from '@common/enums';
+import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 
 @InstrumentResolver()
 @Resolver(() => IUser)
@@ -30,8 +28,6 @@ export class UserResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private preferenceService: PreferenceService,
-    private preferenceSetService: PreferenceSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -60,7 +56,11 @@ export class UserResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('settingsData') settingsData: UpdateUserSettingsInput
   ): Promise<IUser> {
-    let user = await this.userService.getUserOrFail(settingsData.userID);
+    let user = await this.userService.getUserOrFail(settingsData.userID, {
+      relations: {
+        settings: true,
+      },
+    });
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -83,53 +83,40 @@ export class UserResolverMutations {
     return this.userService.getUserOrFail(user.id);
   }
 
-  @Mutation(() => IPreference, {
-    description: 'Updates one of the Preferences on a Space',
-  })
-  @Profiling.api
-  async updatePreferenceOnUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('preferenceData') preferenceData: UpdateUserPreferenceInput
-  ) {
-    const user = await this.userService.getUserOrFail(preferenceData.userID);
-    const preferenceSet = await this.userService.getPreferenceSetOrFail(
-      user.id
-    );
-    const preference = await this.preferenceSetService.getPreferenceOrFail(
-      preferenceSet,
-      preferenceData.type
-    );
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      preference.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `user preference update: ${preference.id}`
-    );
-    return await this.preferenceService.updatePreference(
-      preference,
-      preferenceData.value
-    );
-  }
-
   @Mutation(() => String, {
     description:
       'Sends a message on the specified User`s behalf and returns the room id',
   })
-  @Profiling.api
   async messageUser(
     @Args('messageData') messageData: UserSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const receivingUser = await this.userService.getUserOrFail(
-      messageData.receivingUserID
+      messageData.receivingUserID,
+      {
+        relations: {
+          settings: true,
+        },
+      }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       receivingUser.authorization,
       AuthorizationPrivilege.READ,
       `user send message: ${receivingUser.id}`
     );
+
+    // Check if the user is willing to receive messages
+    if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
+      throw new MessagingNotEnabledException(
+        'User is not open to receiving messages',
+        LogContext.USER,
+        {
+          userId: receivingUser.id,
+          senderId: agentInfo.userID,
+        }
+      );
+    }
 
     return await this.communicationAdapter.sendMessageToUser({
       senderCommunicationsID: agentInfo.communicationID,

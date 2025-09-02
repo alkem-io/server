@@ -3,12 +3,12 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class UserAuthenticationResult {
-  @Field(() => AuthenticationType, {
+  @Field(() => [AuthenticationType], {
     description:
-      'The Authentication Method used for this User. One of email, linkedin, microsoft, or unknown',
+      'The Authentication Methods used for this User. One of email, linkedin, microsoft, github or unknown',
     nullable: false,
   })
-  method!: AuthenticationType;
+  methods!: AuthenticationType[];
 
   @Field(() => Date, {
     description: 'When the Kratos Account for the user was created',

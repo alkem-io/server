@@ -13,7 +13,6 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -31,6 +30,7 @@ import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-a
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
+import { UserSettingsAuthorizationService } from '../user-settings/user.settings.service.authorization';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -39,8 +39,8 @@ export class UserAuthorizationService {
     private agentAuthorizationService: AgentAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private userSettingsAuthorizationService: UserSettingsAuthorizationService,
     private agentService: AgentService,
     private userLookupService: UserLookupService
   ) {}
@@ -54,13 +54,12 @@ export class UserAuthorizationService {
         authorization: true,
         agent: { authorization: true },
         profile: { authorization: true },
-        preferenceSet: {
-          authorization: true,
-          preferences: { authorization: true },
-        },
         storageAggregator: {
           authorization: true,
           directStorage: { authorization: true },
+        },
+        settings: {
+          authorization: true,
         },
       },
       select: {
@@ -77,16 +76,6 @@ export class UserAuthorizationService {
           authorization:
             this.authorizationPolicyService.authorizationSelectOptions,
         },
-        preferenceSet: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-          preferences: {
-            id: true,
-            authorization:
-              this.authorizationPolicyService.authorizationSelectOptions,
-          },
-        },
         storageAggregator: {
           id: true,
           authorization:
@@ -97,14 +86,18 @@ export class UserAuthorizationService {
               this.authorizationPolicyService.authorizationSelectOptions,
           },
         },
+        settings: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
       },
     });
     if (
       !user.agent ||
       !user.profile ||
-      !user.preferenceSet ||
-      !user.preferenceSet.preferences ||
-      !user.storageAggregator
+      !user.storageAggregator ||
+      !user.settings
     )
       throw new RelationshipNotFoundException(
         `Unable to load agent or profile or preferences or storage for User ${user.id} `,
@@ -157,12 +150,12 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(agentAuthorization);
 
-    const preferenceSetAuthorizations =
-      this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-        user.preferenceSet,
+    const settingsAuthorization =
+      this.userSettingsAuthorizationService.applyAuthorizationPolicy(
+        user.settings,
         user.authorization
       );
-    updatedAuthorizations.push(...preferenceSetAuthorizations);
+    updatedAuthorizations.push(settingsAuthorization);
 
     const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
@@ -224,7 +217,7 @@ export class UserAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN
       );
-    globalAdminNotInherited.cascade = false;
+    globalAdminPlatformAdminNotInherited.cascade = false;
     newRules.push(globalAdminPlatformAdminNotInherited);
 
     const communityAdmin =
@@ -233,7 +226,7 @@ export class UserAuthorizationService {
         [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
         CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ
       );
-
+    communityAdmin.cascade = true;
     newRules.push(communityAdmin);
 
     const globalRegistered =

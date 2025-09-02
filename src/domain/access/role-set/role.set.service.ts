@@ -508,7 +508,7 @@ export class RoleSetService {
       roleSet,
       roleType
     );
-    return await this.userLookupService.usersWithCredentials(
+    return await this.userLookupService.usersWithCredential(
       {
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
@@ -526,7 +526,7 @@ export class RoleSetService {
       implicitCredential
     );
 
-    return await this.userLookupService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredential({
       type: inviteeCredential.type,
       resourceID: inviteeCredential.resourceID,
     });
@@ -538,7 +538,7 @@ export class RoleSetService {
     const accountAdminCredential =
       await this.getCredentialForOrganizationImplicitRole(roleSet);
 
-    return await this.userLookupService.usersWithCredentials({
+    return await this.userLookupService.usersWithCredential({
       type: accountAdminCredential.type,
       resourceID: accountAdminCredential.resourceID,
     });
