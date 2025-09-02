@@ -6,12 +6,14 @@ import {
   BeforeUpdate,
   Column,
   Entity,
+  OneToOne,
 } from 'typeorm';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { IWhiteboard } from './whiteboard.interface';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
@@ -26,7 +28,7 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
     if (this.content !== '') {
       try {
         this.content = await compressText(this.content);
-      } catch (e) {
+      } catch {
         this.content = '';
         // rethrow to be caught higher, does not crash the server
         throw new Error('Failed to compress content');
@@ -59,4 +61,9 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
     nullable: false,
   })
   contentUpdatePolicy!: ContentUpdatePolicy;
+
+  @OneToOne(() => CalloutFraming, framing => framing.whiteboard, {
+    nullable: true,
+  })
+  framing?: CalloutFraming;
 }

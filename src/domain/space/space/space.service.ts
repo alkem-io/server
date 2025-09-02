@@ -869,15 +869,12 @@ export class SpaceService {
     levelZeroSpaceID: string,
     visibility: SpaceVisibility
   ) {
-    const spaces = await this.spaceRepository.find({
-      where: {
+    await this.spaceRepository.update(
+      {
         levelZeroSpaceID: levelZeroSpaceID,
       },
-    });
-    for (const space of spaces) {
-      space.visibility = visibility;
-      await this.save(space);
-    }
+      { visibility }
+    );
   }
 
   /**
