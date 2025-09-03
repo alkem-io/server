@@ -32,7 +32,7 @@ export class CalloutContribution
   @JoinColumn()
   memo?: Memo;
 
-  @OneToOne(() => Post, {
+  @OneToOne(() => Post, post => post.contribution, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',

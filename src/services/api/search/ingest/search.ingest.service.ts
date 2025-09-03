@@ -23,6 +23,9 @@ import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { Post } from '@domain/collaboration/post';
 
 const profileRelationOptions = {
   location: true,
@@ -415,8 +418,8 @@ export class SearchIngestService {
   private fetchSpacesLevel0Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        visibility: SpaceVisibility.ACTIVE,
         level: SpaceLevel.L0,
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -425,8 +428,8 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          visibility: SpaceVisibility.ACTIVE,
           level: SpaceLevel.L0,
+          visibility: SpaceVisibility.ACTIVE,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -457,8 +460,8 @@ export class SearchIngestService {
   private fetchSpacesLevel1Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        visibility: SpaceVisibility.ACTIVE,
         level: SpaceLevel.L1,
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -467,8 +470,8 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          visibility: SpaceVisibility.ACTIVE,
           level: SpaceLevel.L1,
+          visibility: SpaceVisibility.ACTIVE,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -502,8 +505,8 @@ export class SearchIngestService {
   private fetchSpacesLevel2Count() {
     return this.entityManager.count<Space>(Space, {
       where: {
-        visibility: SpaceVisibility.ACTIVE,
         level: SpaceLevel.L2,
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -512,8 +515,8 @@ export class SearchIngestService {
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          visibility: SpaceVisibility.ACTIVE,
           level: SpaceLevel.L2,
+          visibility: SpaceVisibility.ACTIVE,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -611,13 +614,20 @@ export class SearchIngestService {
   }
 
   private fetchCalloutCount() {
-    return this.entityManager.count<Space>(Space, {
+    return this.entityManager.count<Callout>(Callout, {
       loadEagerRelations: false,
       where: {
-        visibility: SpaceVisibility.ACTIVE,
+        calloutsSet: {
+          collaboration: {
+            space: {
+              visibility: SpaceVisibility.ACTIVE,
+            },
+          },
+        },
       },
     });
   }
+
   private fetchCallout(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
@@ -688,13 +698,24 @@ export class SearchIngestService {
   }
 
   private fetchWhiteboardCount() {
-    return this.entityManager.count<Space>(Space, {
+    return this.entityManager.count<Whiteboard>(Whiteboard, {
       loadEagerRelations: false,
       where: {
-        visibility: SpaceVisibility.ACTIVE,
+        framing: {
+          callout: {
+            calloutsSet: {
+              collaboration: {
+                space: {
+                  visibility: SpaceVisibility.ACTIVE,
+                },
+              },
+            },
+          },
+        },
       },
     });
   }
+
   private fetchWhiteboard(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
@@ -850,10 +871,20 @@ export class SearchIngestService {
   }
 
   private fetchPostsCount() {
-    return this.entityManager.count<Space>(Space, {
+    return this.entityManager.count<Post>(Post, {
       loadEagerRelations: false,
       where: {
-        visibility: SpaceVisibility.ACTIVE,
+        contribution: {
+          callout: {
+            calloutsSet: {
+              collaboration: {
+                space: {
+                  visibility: SpaceVisibility.ACTIVE,
+                },
+              },
+            },
+          },
+        },
       },
     });
   }
