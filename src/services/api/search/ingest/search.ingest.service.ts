@@ -23,11 +23,7 @@ import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Post } from '@domain/collaboration/post';
-import { Memo } from '@domain/common/memo/memo.entity';
-import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 
 const profileRelationOptions = {
   location: true,
@@ -225,59 +221,59 @@ export class SearchIngestService {
 
     const result: IngestReturnType = {};
     const params = [
-      // {
-      //   index: `${this.indexPattern}spaces`,
-      //   fetchFn: this.fetchSpacesLevel0.bind(this),
-      //   countFn: this.fetchSpacesLevel0Count.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}subspaces`,
-      //   fetchFn: this.fetchSpacesLevel1.bind(this),
-      //   countFn: this.fetchSpacesLevel1Count.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}subspaces`,
-      //   fetchFn: this.fetchSpacesLevel2.bind(this),
-      //   countFn: this.fetchSpacesLevel2Count.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}organizations`,
-      //   fetchFn: this.fetchOrganizations.bind(this),
-      //   countFn: this.fetchOrganizationsCount.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}users`,
-      //   fetchFn: this.fetchUsers.bind(this),
-      //   countFn: this.fetchUsersCount.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}callouts`,
-      //   fetchFn: this.fetchCallout.bind(this),
-      //   countFn: this.fetchCalloutCount.bind(this),
-      //   batchSize: 20,
-      // },
-      // {
-      //   index: `${this.indexPattern}posts`,
-      //   fetchFn: this.fetchPosts.bind(this),
-      //   countFn: this.fetchPostsCount.bind(this),
-      //   batchSize: 20,
-      // },
-      // {
-      //   index: `${this.indexPattern}whiteboards`,
-      //   fetchFn: this.fetchWhiteboard.bind(this),
-      //   countFn: this.fetchWhiteboardCount.bind(this),
-      //   batchSize: 20,
-      // },
+      {
+        index: `${this.indexPattern}spaces`,
+        fetchFn: this.fetchSpacesLevel0.bind(this),
+        countFn: this.fetchSpacesLevel0Count.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}subspaces`,
+        fetchFn: this.fetchSpacesLevel1.bind(this),
+        countFn: this.fetchSpacesLevel1Count.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}subspaces`,
+        fetchFn: this.fetchSpacesLevel2.bind(this),
+        countFn: this.fetchSpacesLevel2Count.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}organizations`,
+        fetchFn: this.fetchOrganizations.bind(this),
+        countFn: this.fetchOrganizationsCount.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}users`,
+        fetchFn: this.fetchUsers.bind(this),
+        countFn: this.fetchUsersCount.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}callouts`,
+        fetchFn: this.fetchCallout.bind(this),
+        countFn: this.fetchCalloutCount.bind(this),
+        batchSize: 30,
+      },
+      {
+        index: `${this.indexPattern}posts`,
+        fetchFn: this.fetchPosts.bind(this),
+        countFn: this.fetchPostsCount.bind(this),
+        batchSize: 30,
+      },
+      {
+        index: `${this.indexPattern}whiteboards`,
+        fetchFn: this.fetchWhiteboard.bind(this),
+        countFn: this.fetchWhiteboardCount.bind(this),
+        batchSize: 30,
+      },
       {
         index: `${this.indexPattern}memos`,
         fetchFn: this.fetchMemo.bind(this),
         countFn: this.fetchMemoCount.bind(this),
-        batchSize: 20,
+        batchSize: 30,
       },
     ];
 
@@ -622,16 +618,11 @@ export class SearchIngestService {
   }
 
   private fetchCalloutCount() {
-    return this.entityManager.count<Callout>(Callout, {
+    // todo: count through Callout directly
+    return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        calloutsSet: {
-          collaboration: {
-            space: {
-              visibility: SpaceVisibility.ACTIVE,
-            },
-          },
-        },
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -706,37 +697,12 @@ export class SearchIngestService {
   }
 
   private fetchWhiteboardCount() {
-    return this.entityManager.count<Whiteboard>(Whiteboard, {
+    // todo: count through Whiteboard directly; consider both framing and contributions
+    return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
-      where: [
-        {
-          framing: {
-            type: CalloutFramingType.WHITEBOARD,
-            callout: {
-              calloutsSet: {
-                collaboration: {
-                  space: {
-                    visibility: SpaceVisibility.ACTIVE,
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          contribution: {
-            callout: {
-              calloutsSet: {
-                collaboration: {
-                  space: {
-                    visibility: SpaceVisibility.ACTIVE,
-                  },
-                },
-              },
-            },
-          },
-        },
-      ],
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
     });
   }
 
@@ -893,37 +859,12 @@ export class SearchIngestService {
   }
 
   private fetchMemoCount() {
-    return this.entityManager.count<Memo>(Memo, {
+    // todo: count through Memo directly; consider both framing and contributions
+    return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
-      where: [
-        {
-          framing: {
-            type: CalloutFramingType.MEMO,
-            callout: {
-              calloutsSet: {
-                collaboration: {
-                  space: {
-                    visibility: SpaceVisibility.ACTIVE,
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          contribution: {
-            callout: {
-              calloutsSet: {
-                collaboration: {
-                  space: {
-                    visibility: SpaceVisibility.ACTIVE,
-                  },
-                },
-              },
-            },
-          },
-        },
-      ],
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
     });
   }
   private async fetchMemo(start: number, limit: number) {
@@ -996,9 +937,9 @@ export class SearchIngestService {
     });
 
     return spaces.flatMap(space => {
-      const callouts = space.collaboration?.calloutsSet?.callouts;
+      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
       return callouts
-        ?.flatMap(callout => {
+        .flatMap(callout => {
           // a callout can have memo in the framing
           // AND memos in the contributions
           const memos = [];
@@ -1013,6 +954,7 @@ export class SearchIngestService {
 
             memos.push({
               ...callout.framing.memo,
+              content: undefined,
               markdown,
               type: SearchResultType.MEMO,
               license: {
@@ -1047,6 +989,7 @@ export class SearchIngestService {
 
             memos.push({
               ...contribution.memo,
+              content: undefined,
               markdown,
               type: SearchResultType.MEMO,
               license: {
@@ -1073,20 +1016,11 @@ export class SearchIngestService {
   }
 
   private fetchPostsCount() {
-    return this.entityManager.count<Post>(Post, {
+    // todo: count through Post directly
+    return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        contribution: {
-          callout: {
-            calloutsSet: {
-              collaboration: {
-                space: {
-                  visibility: SpaceVisibility.ACTIVE,
-                },
-              },
-            },
-          },
-        },
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -1210,13 +1144,10 @@ const extractMarkdownFromMemoContent = (
     return undefined;
   }
 
-  throw new Error('Not implemented');
-
-  // for now the memo content is just a markdown string
-  // return content;
+  return yjsStateToMarkdown(content);
 };
 
 // Generic type guard to filter out undefined or null
 const isDefined = <T>(value: T | undefined | null): value is T => {
-  return value !== undefined && value !== null;
+  return value != undefined;
 };
