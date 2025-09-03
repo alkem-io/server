@@ -12,28 +12,28 @@ import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationCallout)
 export class InAppNotificationPayloadSpaceCollaborationCalloutResolverFields {
   @ResolveField(() => ICallout, {
-    nullable: false,
+    nullable: true,
     description: 'The Callout that was published.',
   })
   public callout(
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCallout,
     @Loader(CalloutLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ICallout>
-  ) {
+    loader: ILoader<ICallout | null>
+  ): Promise<ICallout | null> {
     return loader.load(payload.calloutID);
   }
 
   @ResolveField(() => ISpace, {
-    nullable: false,
+    nullable: true,
     description: 'Where the callout is located.',
   })
   public space(
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCallout,
     @Loader(SpaceLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ISpace>
-  ): Promise<ISpace> {
+    loader: ILoader<ISpace | null>
+  ): Promise<ISpace | null> {
     return loader.load(payload.spaceID);
   }
 }
