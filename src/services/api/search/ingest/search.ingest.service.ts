@@ -24,6 +24,7 @@ import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
+import { isDefined } from '@common/utils';
 
 const profileRelationOptions = {
   location: true,
@@ -1145,9 +1146,4 @@ const extractMarkdownFromMemoContent = (
   }
 
   return yjsStateToMarkdown(content);
-};
-
-// Generic type guard to filter out undefined or null
-const isDefined = <T>(value: T | undefined | null): value is T => {
-  return value != undefined;
 };
