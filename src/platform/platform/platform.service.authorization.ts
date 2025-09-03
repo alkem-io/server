@@ -12,6 +12,7 @@ import {
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
+  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_IN_APP_NOTIFICATIONS,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
@@ -152,6 +153,10 @@ export class PlatformAuthorizationService {
       await this.createCredentialRuleInAppNotifications();
     credentialRules.push(credentialRuleInAppNotifications);
 
+    const credentialRuleInteractiveGuidance =
+      await this.createCredentialRuleInteractiveGuidance();
+    credentialRules.push(credentialRuleInteractiveGuidance);
+
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       credentialRules
@@ -176,7 +181,7 @@ export class PlatformAuthorizationService {
         [AuthorizationCredential.GLOBAL_REGISTERED],
         CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER
       );
-    // Cascade so the priviliege is picked up on the dirct storage bucket
+    // Cascade so the privilege is picked up on the direct storage bucket
     registeredUserUpload.cascade = true;
     newRules.push(registeredUserUpload);
 
@@ -186,6 +191,23 @@ export class PlatformAuthorizationService {
     );
 
     return storageAuthorization;
+  }
+
+  private async createCredentialRuleInteractiveGuidance(): Promise<IAuthorizationPolicyRuleCredential> {
+    const userChatGuidanceAccessCredential = {
+      type: AuthorizationCredential.GLOBAL_REGISTERED,
+      resourceID: '',
+    };
+
+    const userChatGuidanceAccessPrivilegeRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
+        [userChatGuidanceAccessCredential],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
+      );
+    userChatGuidanceAccessPrivilegeRule.cascade = false;
+
+    return userChatGuidanceAccessPrivilegeRule;
   }
 
   private async createCredentialRuleInAppNotifications(): Promise<IAuthorizationPolicyRuleCredential> {
