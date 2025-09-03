@@ -8,7 +8,7 @@ import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platfo
 @Resolver(() => InAppNotificationPayloadSpaceCommunicationMessageDirect)
 export class InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: false,
+    nullable: true,
     description: 'The Space where the message was sent.',
   })
   public space(
