@@ -23,9 +23,10 @@ import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
+import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
+import { isDefined } from '@common/utils';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Post } from '@domain/collaboration/post';
+import { Memo } from '@domain/common/memo/memo.entity';
 
 const profileRelationOptions = {
   location: true,
@@ -96,6 +97,7 @@ const getIndices = (indexPattern: string) => [
   `${indexPattern}posts`,
   `${indexPattern}callouts`,
   `${indexPattern}whiteboards`,
+  `${indexPattern}memos`,
 ];
 
 @Injectable()
@@ -171,8 +173,7 @@ export class SearchIngestService {
     const indices = getIndices(this.indexPattern);
 
     const results = await asyncMap(indices, async index => {
-      // if does not exist exit early, no need to delete
-
+      // if it does not exist exit early, no need to delete
       try {
         if (!(await this.elasticClient!.indices.exists({ index }))) {
           return { acknowledged: true };
@@ -257,19 +258,25 @@ export class SearchIngestService {
         index: `${this.indexPattern}callouts`,
         fetchFn: this.fetchCallout.bind(this),
         countFn: this.fetchCalloutCount.bind(this),
-        batchSize: 20,
+        batchSize: 30,
       },
       {
         index: `${this.indexPattern}posts`,
         fetchFn: this.fetchPosts.bind(this),
         countFn: this.fetchPostsCount.bind(this),
-        batchSize: 20,
+        batchSize: 30,
       },
       {
         index: `${this.indexPattern}whiteboards`,
         fetchFn: this.fetchWhiteboard.bind(this),
         countFn: this.fetchWhiteboardCount.bind(this),
-        batchSize: 20,
+        batchSize: 30,
+      },
+      {
+        index: `${this.indexPattern}memos`,
+        fetchFn: this.fetchMemo.bind(this),
+        countFn: this.fetchMemoCount.bind(this),
+        batchSize: 30,
       },
     ];
 
@@ -614,16 +621,11 @@ export class SearchIngestService {
   }
 
   private fetchCalloutCount() {
-    return this.entityManager.count<Callout>(Callout, {
+    // todo: count through Callout directly
+    return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        calloutsSet: {
-          collaboration: {
-            space: {
-              visibility: SpaceVisibility.ACTIVE,
-            },
-          },
-        },
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -698,20 +700,11 @@ export class SearchIngestService {
   }
 
   private fetchWhiteboardCount() {
-    return this.entityManager.count<Whiteboard>(Whiteboard, {
+    // todo: count through Whiteboard directly; consider both framing and contributions
+    return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        framing: {
-          callout: {
-            calloutsSet: {
-              collaboration: {
-                space: {
-                  visibility: SpaceVisibility.ACTIVE,
-                },
-              },
-            },
-          },
-        },
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -840,9 +833,7 @@ export class SearchIngestService {
 
                 wbs.push({
                   ...contribution.whiteboard,
-                  content: extractTextFromWhiteboardContent(
-                    contribution.whiteboard.content
-                  ),
+                  content,
                   type: SearchResultType.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
@@ -870,21 +861,144 @@ export class SearchIngestService {
       });
   }
 
-  private fetchPostsCount() {
-    return this.entityManager.count<Post>(Post, {
+  private fetchMemoCount() {
+    // todo: count through Memo directly; consider both framing and contributions
+    return this.entityManager.count<Space>(Space, {
       loadEagerRelations: false,
       where: {
-        contribution: {
-          callout: {
-            calloutsSet: {
-              collaboration: {
-                space: {
-                  visibility: SpaceVisibility.ACTIVE,
+        visibility: SpaceVisibility.ACTIVE,
+      },
+    });
+  }
+  private async fetchMemo(start: number, limit: number) {
+    const spaces = await this.entityManager.find<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
+      relations: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              framing: {
+                memo: {
+                  profile: profileRelationOptions,
+                },
+              },
+              contributions: {
+                memo: {
+                  profile: profileRelationOptions,
                 },
               },
             },
           },
         },
+        parentSpace: {
+          parentSpace: true,
+        },
+      },
+      select: {
+        id: true,
+        visibility: true,
+        collaboration: {
+          id: true,
+          calloutsSet: {
+            id: true,
+            callouts: {
+              id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
+              framing: {
+                id: true,
+                memo: {
+                  id: true,
+                  content: true,
+                  profile: profileSelectOptions,
+                },
+              },
+              contributions: {
+                id: true,
+                memo: {
+                  id: true,
+                  content: true,
+                  profile: profileSelectOptions,
+                },
+              },
+            },
+          },
+        },
+        parentSpace: {
+          id: true,
+          parentSpace: {
+            id: true,
+          },
+        },
+      },
+      skip: start,
+      take: limit,
+    });
+
+    const memoForIngestion = (memo: Memo, callout: Callout, space: Space) => {
+      const markdown = extractMarkdownFromMemoContent(memo.content);
+      // only memos with content are ingested
+      if (!markdown) {
+        return;
+      }
+
+      return {
+        ...memo,
+        content: undefined,
+        markdown,
+        type: SearchResultType.MEMO,
+        license: {
+          visibility: space?.visibility ?? EMPTY_VALUE,
+        },
+        spaceID:
+          space?.parentSpace?.parentSpace?.id ??
+          space?.parentSpace?.id ??
+          space.id,
+        calloutID: callout.id,
+        collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+        profile: {
+          ...memo.profile,
+          tags: processTagsets(memo?.profile?.tagsets),
+          tagsets: undefined,
+        },
+      };
+    };
+
+    return spaces.flatMap(space => {
+      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
+      return callouts
+        .flatMap(callout => {
+          // a callout can have memo in the framing
+          // AND memos in the contributions
+          const memos: (Record<string, unknown> | undefined)[] = [];
+          if (callout.framing.memo) {
+            memos.push(memoForIngestion(callout.framing.memo, callout, space));
+          }
+
+          callout?.contributions?.forEach(({ memo }) => {
+            if (!memo) {
+              return;
+            }
+
+            memos.push(memoForIngestion(memo, callout, space));
+          });
+
+          return memos;
+        })
+        .filter(isDefined);
+    });
+  }
+
+  private fetchPostsCount() {
+    // todo: count through Post directly
+    return this.entityManager.count<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
       },
     });
   }
@@ -999,4 +1113,14 @@ const extractTextFromWhiteboardContent = (content: string): string => {
   } catch (error: any) {
     return '';
   }
+};
+
+const extractMarkdownFromMemoContent = (
+  content?: Buffer
+): string | undefined => {
+  if (!content) {
+    return undefined;
+  }
+
+  return yjsStateToMarkdown(content);
 };
