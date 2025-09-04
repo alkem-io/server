@@ -25,6 +25,8 @@ import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { isDefined } from '@common/utils';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Memo } from '@domain/common/memo/memo.entity';
 
 const profileRelationOptions = {
   location: true,
@@ -937,77 +939,52 @@ export class SearchIngestService {
       take: limit,
     });
 
+    const memoForIngestion = (memo: Memo, callout: Callout, space: Space) => {
+      const markdown = extractMarkdownFromMemoContent(memo.content);
+      // only memos with content are ingested
+      if (!markdown) {
+        return;
+      }
+
+      return {
+        ...memo,
+        content: undefined,
+        markdown,
+        type: SearchResultType.MEMO,
+        license: {
+          visibility: space?.visibility ?? EMPTY_VALUE,
+        },
+        spaceID:
+          space?.parentSpace?.parentSpace?.id ??
+          space?.parentSpace?.id ??
+          space.id,
+        calloutID: callout.id,
+        collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+        profile: {
+          ...memo.profile,
+          tags: processTagsets(memo?.profile?.tagsets),
+          tagsets: undefined,
+        },
+      };
+    };
+
     return spaces.flatMap(space => {
       const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
       return callouts
         .flatMap(callout => {
           // a callout can have memo in the framing
           // AND memos in the contributions
-          const memos = [];
+          const memos: (Record<string, unknown> | undefined)[] = [];
           if (callout.framing.memo) {
-            const markdown = extractMarkdownFromMemoContent(
-              callout.framing.memo.content
-            );
-            // only memos with content are ingested
-            if (!markdown) {
-              return;
-            }
-
-            memos.push({
-              ...callout.framing.memo,
-              content: undefined,
-              markdown,
-              type: SearchResultType.MEMO,
-              license: {
-                visibility: space?.visibility ?? EMPTY_VALUE,
-              },
-              spaceID:
-                space?.parentSpace?.parentSpace?.id ??
-                space?.parentSpace?.id ??
-                space.id,
-              calloutID: callout.id,
-              collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-              profile: {
-                ...callout.framing.memo.profile,
-                tags: processTagsets(callout.framing.memo?.profile?.tagsets),
-                tagsets: undefined,
-              },
-            });
+            memos.push(memoForIngestion(callout.framing.memo, callout, space));
           }
 
-          callout?.contributions?.forEach(contribution => {
-            if (!contribution?.memo) {
+          callout?.contributions?.forEach(({ memo }) => {
+            if (!memo) {
               return;
             }
 
-            const markdown = extractMarkdownFromMemoContent(
-              contribution.memo.content
-            );
-            // only memos with content are ingested
-            if (!markdown) {
-              return;
-            }
-
-            memos.push({
-              ...contribution.memo,
-              content: undefined,
-              markdown,
-              type: SearchResultType.MEMO,
-              license: {
-                visibility: space?.visibility ?? EMPTY_VALUE,
-              },
-              spaceID:
-                space?.parentSpace?.parentSpace?.id ??
-                space?.parentSpace?.id ??
-                space.id,
-              calloutID: callout.id,
-              collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-              profile: {
-                ...contribution.memo.profile,
-                tags: processTagsets(contribution.memo?.profile?.tagsets),
-                tagsets: undefined,
-              },
-            });
+            memos.push(memoForIngestion(memo, callout, space));
           });
 
           return memos;
