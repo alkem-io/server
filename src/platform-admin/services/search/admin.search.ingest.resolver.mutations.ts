@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -26,7 +26,14 @@ export class AdminSearchIngestResolverMutations {
     description:
       'Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.',
   })
-  @Profiling.api
+  /**
+   * TODO
+   * 0. An alias is used to point to the active (ready) indices. (Old data)
+   * 1. Fresh data is ingested into new not-ready indices.
+   * 2. The new indices are verified.
+   * 3. The alias is switched to point to the new indices. (New data)
+   * 4. The old indices are deleted.
+   */
   async adminSearchIngestFromScratch(@CurrentUser() agentInfo: AgentInfo) {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();

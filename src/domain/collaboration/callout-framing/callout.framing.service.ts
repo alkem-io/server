@@ -192,6 +192,7 @@ export class CalloutFramingService {
     calloutFraming: ICalloutFraming,
     calloutFramingData: UpdateCalloutFramingInput,
     storageAggregator: IStorageAggregator,
+    isParentCalloutTemplate: boolean,
     userID?: string
   ): Promise<ICalloutFraming> {
     if (calloutFramingData.profile) {
@@ -265,8 +266,12 @@ export class CalloutFramingService {
           return calloutFraming;
         }
 
-        // if there is content and a Memo, we update it
-        if (calloutFraming.memo) {
+        // if there is content and a Memo AND the parent Callout is template, we update it
+        if (
+          calloutFraming.memo &&
+          calloutFramingData.memoContent &&
+          isParentCalloutTemplate
+        ) {
           calloutFraming.memo = await this.memoService.updateMemoContent(
             calloutFraming.memo.id,
             calloutFramingData.memoContent
