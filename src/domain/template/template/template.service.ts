@@ -620,6 +620,11 @@ export class TemplateService {
       relations: {
         profile: true,
       },
+      order: {
+        profile: {
+          displayName: 'ASC',
+        },
+      },
     });
   }
 
@@ -636,6 +641,11 @@ export class TemplateService {
       },
       relations: {
         profile: true,
+      },
+      order: {
+        profile: {
+          displayName: 'ASC',
+        },
       },
     });
   }
