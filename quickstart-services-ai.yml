@@ -204,7 +204,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.23.2
+    image: alkemio/notifications:v0.25.1
     platform: linux/amd64
     depends_on:
       rabbitmq:
@@ -217,6 +217,10 @@ services:
       - LOGGING_LEVEL_CONSOLE
       - EMAIL_SMTP_HOST
       - EMAIL_MULTI_PROVIDER_STRATEGY
+      - EMAIL_SMTP_SECURE
+      - EMAIL_SMTP_PORT
+      - EMAIL_SMTP_USER
+      - EMAIL_SMTP_PASSWORD
       - ENVIRONMENT=dev
       - ALKEMIO_SERVER_ENDPOINT
       - ALKEMIO_WEBCLIENT_ENDPOINT
