@@ -190,10 +190,6 @@ export class SearchResultService {
         ) {
           return undefined;
         }
-
-        // no authorization check - all spaces must be visible
-        // context, profile and others are readable by all
-
         return {
           ...rawSearchResult,
           space: space as ISpace,
