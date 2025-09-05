@@ -60,9 +60,10 @@ export class InAppNotificationService {
     receiverID: string,
     filter?: NotificationEventsFilterInput
   ): Promise<IInAppNotification[]> {
-    const where = filter
-      ? { receiverID, type: In(filter.types) }
-      : { receiverID };
+    const where =
+      filter && filter.types && filter.types.length > 0
+        ? { receiverID, type: In(filter.types) }
+        : { receiverID };
     return this.inAppNotificationRepo.find({
       where,
       order: { triggeredAt: 'desc' },
@@ -73,13 +74,14 @@ export class InAppNotificationService {
     receiverID: string,
     filter?: NotificationEventsFilterInput
   ): Promise<number> {
-    const where = filter
-      ? {
-          receiverID,
-          state: NotificationEventInAppState.UNREAD,
-          type: In(filter.types),
-        }
-      : { receiverID, state: NotificationEventInAppState.UNREAD };
+    const where =
+      filter && filter.types && filter.types.length > 0
+        ? {
+            receiverID,
+            state: NotificationEventInAppState.UNREAD,
+            type: In(filter.types),
+          }
+        : { receiverID, state: NotificationEventInAppState.UNREAD };
     return this.inAppNotificationRepo.count({
       where,
     });
