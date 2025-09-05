@@ -9,12 +9,17 @@ import {
 } from '@nestjs/microservices';
 import { ack } from '@services/util';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
-import { UserInfo, CollaborativeDocumentMessagePattern } from './types';
+import {
+  UserInfo,
+  CollaborativeDocumentMessagePattern,
+  CollaborativeDocumentEventPattern,
+} from './types';
 import {
   FetchInputData,
   InfoInputData,
   SaveInputData,
   WhoInputData,
+  MemoContributionsInputData,
 } from './inputs';
 import {
   FetchOutputData,
@@ -94,5 +99,21 @@ export class CollaborativeDocumentIntegrationController {
     );
     ack(context);
     return this.integrationService.fetch(data);
+  }
+
+  @MessagePattern(
+    CollaborativeDocumentEventPattern.MEMO_CONTRIBUTION,
+    Transport.RMQ
+  )
+  public memoContribution(
+    @Payload() data: MemoContributionsInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received MEMO_CONTRIBUTION request for document: ${data.memoId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.memoContributions(data);
   }
 }
