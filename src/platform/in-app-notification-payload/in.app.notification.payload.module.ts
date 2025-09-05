@@ -4,6 +4,9 @@ import { InAppNotificationPayloadSpaceCollaborationCalloutResolverFields } from 
 import {
   InAppNotificationPayloadOrganizationMessageDirectResolverFields,
   InAppNotificationPayloadOrganizationMessageRoomResolverFields,
+  InAppNotificationPayloadPlatformForumDiscussionResolverFields,
+  InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields,
+  InAppNotificationPayloadPlatformUserProfileRemovedResolverFields,
   InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
   InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
   InAppNotificationPayloadSpaceCommunityApplicationResolverFields,
@@ -30,6 +33,9 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
     InAppNotificationPayloadUserMessageDirectResolverFields,
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
     InAppNotificationPayloadOrganizationMessageRoomResolverFields,
+    InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields,
+    InAppNotificationPayloadPlatformForumDiscussionResolverFields,
+    InAppNotificationPayloadPlatformUserProfileRemovedResolverFields,
   ],
   exports: [],
 })
