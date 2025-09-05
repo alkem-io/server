@@ -361,7 +361,13 @@ export class AccountResolverMutations {
         account.baselineLicensePlan,
         updateData
       );
-    return await this.accountService.save(account);
+    await this.accountService.save(account);
+
+    const accountLicenses = await this.accountLicenseService.applyLicensePolicy(
+      account.id
+    );
+    await this.licenseService.saveAll(accountLicenses);
+    return await this.accountService.getAccountOrFail(account.id);
   }
 
   @Mutation(() => IInnovationHub, {
