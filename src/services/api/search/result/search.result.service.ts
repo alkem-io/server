@@ -89,7 +89,11 @@ export class SearchResultService {
       calloutsOfWhiteboards,
       calloutsOfMemos,
     ] = await Promise.all([
-      this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
+      this.getSpaceSearchResults(
+        groupedResults.space ?? [],
+        agentInfo,
+        spaceId
+      ),
       this.getSubspaceSearchResults(groupedResults.subspace ?? [], agentInfo),
       this.getUserSearchResults(groupedResults.user ?? [], spaceId),
       this.getOrganizationSearchResults(
@@ -105,6 +109,7 @@ export class SearchResultService {
       ),
       this.getMemoAsCalloutSearchResult(groupedResults.memo ?? [], agentInfo),
     ]);
+
     const filtersByCategory = groupBy(filters, 'category') as Record<
       SearchCategory,
       SearchFilterInput[]
@@ -141,6 +146,7 @@ export class SearchResultService {
   // todo: heavy copy-pasting below: must be refactored
   public async getSpaceSearchResults(
     rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo,
     spaceId?: string
   ): Promise<ISearchResultSpace[]> {
     if (rawSearchResults.length === 0) {
@@ -173,6 +179,15 @@ export class SearchResultService {
             undefined,
             LogContext.SEARCH
           );
+          return undefined;
+        }
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            space.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
           return undefined;
         }
 
@@ -462,7 +477,7 @@ export class SearchResultService {
       )
     );
 
-    const parents = await this.getCalloutParents(authorizedCallouts);
+    const parents = await this.getCalloutParents(authorizedCallouts, agentInfo);
 
     return parents
       .map<ISearchResultCallout | undefined>(parent => {
@@ -557,7 +572,7 @@ export class SearchResultService {
       )
     );
 
-    const parents = await this.getCalloutParents(authorizedCallouts);
+    const parents = await this.getCalloutParents(authorizedCallouts, agentInfo);
 
     return parents
       .map<ISearchResultCallout | undefined>(parent => {
@@ -650,7 +665,7 @@ export class SearchResultService {
       )
     );
 
-    const parents = await this.getCalloutParents(authorizedCallouts);
+    const parents = await this.getCalloutParents(authorizedCallouts, agentInfo);
 
     return parents
       .map<ISearchResultCallout | undefined>(parent => {
@@ -680,7 +695,8 @@ export class SearchResultService {
   }
 
   private async getCalloutParents(
-    callouts: Callout[]
+    callouts: Callout[],
+    agentInfo: AgentInfo
   ): Promise<CalloutParents[]> {
     const calloutIds = callouts.map(callout => callout.id);
 
@@ -766,7 +782,15 @@ export class SearchResultService {
           );
           return undefined;
         }
-
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            space.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          return undefined;
+        }
         return {
           callout,
           space,
