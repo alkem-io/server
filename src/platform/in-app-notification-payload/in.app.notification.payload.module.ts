@@ -7,6 +7,7 @@ import {
   InAppNotificationPayloadPlatformForumDiscussionResolverFields,
   InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields,
   InAppNotificationPayloadPlatformUserProfileRemovedResolverFields,
+  InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
   InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
   InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
   InAppNotificationPayloadSpaceCommunityApplicationResolverFields,
@@ -23,6 +24,7 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
     // add in all the other payload resolvers from the ../field-resolvers directory
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
+    InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
     InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
     InAppNotificationPayloadSpaceCommunityContributorResolverFields,

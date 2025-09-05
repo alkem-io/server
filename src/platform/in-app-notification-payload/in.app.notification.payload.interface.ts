@@ -19,6 +19,7 @@ import { InAppNotificationPayloadSpaceCommunityInvitationPlatform } from '@platf
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
 import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
+import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -56,6 +57,8 @@ import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-a
         return InAppNotificationPayloadSpaceCommunicationUpdate;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT:
         return InAppNotificationPayloadSpaceCollaborationCallout;
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT:
+        return InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
 
       // User notifications
       case NotificationEventPayload.USER:
