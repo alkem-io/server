@@ -5,8 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { LogContext } from '@common/enums';
-import { ISearchResult, BaseSearchHit } from '../dto/results';
-import { SearchInput } from '../dto/inputs';
+import { BaseSearchHit, ISearchResult } from '../dto/results';
+import { SearchFilterInput, SearchInput } from '../dto/inputs';
 import { buildSearchQuery } from './build.search.query';
 import { SearchResultType } from '../search.result.type';
 import { AlkemioConfig } from '@src/types';
@@ -19,9 +19,9 @@ import {
 } from '@elastic/elasticsearch/lib/api/types';
 import { isElasticError } from '@services/external/elasticsearch/utils';
 import { SearchCategory } from '../search.category';
-import { SearchFilterInput } from '../dto/inputs';
 import { SearchIndex } from './search.index';
 import { buildMultiSearchRequestItems } from './build.multi.search.request.items';
+import { isDefined } from '@common/utils';
 
 const getIndexStore = (
   indexPattern: string
@@ -68,6 +68,11 @@ const getIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.RESPONSES,
     },
+    {
+      name: `${indexPattern}memos`,
+      type: SearchResultType.MEMO,
+      category: SearchCategory.RESPONSES,
+    },
   ],
 });
 const getPublicIndexStore = (
@@ -97,6 +102,11 @@ const getPublicIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.RESPONSES,
     },
+    {
+      name: `${indexPattern}memos`,
+      type: SearchResultType.MEMO,
+      category: SearchCategory.RESPONSES,
+    },
   ],
 });
 
@@ -110,6 +120,7 @@ const allowedTypesPerCategory: Record<SearchCategory, SearchResultType[]> = {
   [SearchCategory.RESPONSES]: [
     SearchResultType.POST,
     SearchResultType.WHITEBOARD,
+    SearchResultType.MEMO,
   ],
 };
 
@@ -181,7 +192,7 @@ export class SearchExtractService {
 
         return filter.types;
       })
-      .filter((type): type is SearchResultType => !!type);
+      .filter(isDefined);
 
     const indexStore = getIndexStore(this.indexPattern);
 
@@ -218,10 +229,10 @@ export class SearchExtractService {
    The format of the request is similar to the bulk API format and makes use of the newline delimited JSON (NDJSON) format.
    The structure is as follows:
    ```
-   header\n
-   body\n
-   header\n
-   body\n
+     header\n
+     body\n
+     header\n
+     body\n
    ```
    */
   private async executeMultiSearch(
@@ -283,7 +294,7 @@ export class SearchExtractService {
       }
     );
     // filter the undefined produced by processing errors
-    return results.filter((result): result is ISearchResult => !!result);
+    return results.filter(isDefined);
   }
 
   private processMultiSearchItem(

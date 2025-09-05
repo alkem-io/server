@@ -38,6 +38,7 @@ import { SearchResultType } from '../search.result.type';
 import { calculateSearchCursor } from '@services/api/search/util';
 import { SearchFilterInput } from '@services/api/search/dto/inputs';
 import { SearchCategory } from '@services/api/search/search.category';
+import { isDefined } from '@common/utils';
 
 type PostParents = {
   post: Post;
@@ -86,6 +87,7 @@ export class SearchResultService {
       posts,
       callouts,
       calloutsOfWhiteboards,
+      calloutsOfMemos,
     ] = await Promise.all([
       this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
       this.getSubspaceSearchResults(groupedResults.subspace ?? [], agentInfo),
@@ -97,10 +99,11 @@ export class SearchResultService {
       ),
       this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
       this.getCalloutSearchResult(groupedResults.callout ?? [], agentInfo),
-      this.getWhiteboardSearchResult(
+      this.getWhiteboardAsCalloutSearchResult(
         groupedResults.whiteboard ?? [],
         agentInfo
       ),
+      this.getMemoAsCalloutSearchResult(groupedResults.memo ?? [], agentInfo),
     ]);
     const filtersByCategory = groupBy(filters, 'category') as Record<
       SearchCategory,
@@ -123,7 +126,8 @@ export class SearchResultService {
     const calloutResults = buildResults(
       filtersByCategory['collaboration-tools']?.[0],
       callouts,
-      calloutsOfWhiteboards
+      calloutsOfWhiteboards,
+      calloutsOfMemos
     );
 
     return {
@@ -397,7 +401,7 @@ export class SearchResultService {
       .filter((post): post is ISearchResultPost => !!post);
   }
   // the method returns Callouts until the proper search result is returned
-  private async getWhiteboardSearchResult(
+  private async getWhiteboardAsCalloutSearchResult(
     rawSearchResults: ISearchResult[],
     agentInfo: AgentInfo
   ): Promise<ISearchResultCallout[]> {
@@ -410,6 +414,7 @@ export class SearchResultService {
     const callouts = await this.entityManager.find(Callout, {
       where: [
         {
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
           framing: {
             whiteboard: {
               id: In(whiteboardIds),
@@ -417,6 +422,7 @@ export class SearchResultService {
           },
         },
         {
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
           contributions: {
             whiteboard: {
               id: In(whiteboardIds),
@@ -426,8 +432,7 @@ export class SearchResultService {
       ],
       relations: {
         framing: { whiteboard: true },
-        contributions: { whiteboard: true, post: true },
-        calloutsSet: true,
+        contributions: { whiteboard: true },
       },
       select: {
         id: true,
@@ -444,11 +449,6 @@ export class SearchResultService {
           whiteboard: {
             id: true,
           },
-          post: { id: true },
-        },
-        calloutsSet: {
-          id: true,
-          type: true,
         },
       },
     });
@@ -492,7 +492,105 @@ export class SearchResultService {
           space: parent.space,
         };
       })
-      .filter((callout): callout is ISearchResultCallout => !!callout);
+      .filter(isDefined);
+  }
+
+  // the method returns Callouts until the proper search result is returned
+  private async getMemoAsCalloutSearchResult(
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
+  ): Promise<ISearchResultCallout[]> {
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const memoIds = rawSearchResults.map(hit => hit.result.id);
+
+    const callouts = await this.entityManager.find(Callout, {
+      where: [
+        {
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
+          framing: {
+            memo: {
+              id: In(memoIds),
+            },
+          },
+        },
+        {
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
+          contributions: {
+            memo: {
+              id: In(memoIds),
+            },
+          },
+        },
+      ],
+      relations: {
+        framing: { memo: true },
+        contributions: { memo: true },
+      },
+      select: {
+        id: true,
+        nameID: true,
+        framing: {
+          id: true,
+          type: true,
+          memo: {
+            id: true,
+          },
+        },
+        contributions: {
+          id: true,
+          memo: {
+            id: true,
+          },
+        },
+      },
+    });
+    // usually the authorization is last but here it might be more expensive than usual
+    // find the authorized post first, then get the parents, and map the results
+    const authorizedCallouts = callouts.filter(callout =>
+      this.authorizationService.isAccessGranted(
+        agentInfo,
+        callout.authorization,
+        AuthorizationPrivilege.READ
+      )
+    );
+
+    const parents = await this.getCalloutParents(authorizedCallouts);
+
+    return parents
+      .map<ISearchResultCallout | undefined>(parent => {
+        const rawSearchResult = rawSearchResults.find(
+          hit =>
+            hit.result.id === parent.callout.framing.memo?.id ||
+            parent.callout.contributions?.some(
+              contribution => hit.result.id === contribution.memo?.id
+            )
+        );
+
+        if (!rawSearchResult) {
+          this.logger.error(
+            {
+              message: 'Unable to find raw search result for Memo with Callout',
+              calloutId: parent.callout.id,
+            },
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        return {
+          ...rawSearchResult,
+          // todo remove when Memo is a separate search result
+          // patch this so it displays the search result as a callout
+          type: SearchResultType.CALLOUT,
+          callout: parent.callout,
+          space: parent.space,
+        };
+      })
+      .filter(isDefined);
   }
 
   private async getCalloutSearchResult(
@@ -562,7 +660,10 @@ export class SearchResultService {
 
         if (!rawSearchResult) {
           this.logger.error(
-            `Unable to find raw search result for Callout: ${parent.callout.id}`,
+            {
+              message: 'Unable to find raw search result for Callout',
+              calloutId: parent.callout.id,
+            },
             undefined,
             LogContext.SEARCH
           );
@@ -575,23 +676,20 @@ export class SearchResultService {
           space: parent.space,
         };
       })
-      .filter((callout): callout is ISearchResultCallout => !!callout);
+      .filter(isDefined);
   }
 
   private async getCalloutParents(
     callouts: Callout[]
   ): Promise<CalloutParents[]> {
-    const spaceCallouts = callouts.filter(
-      callout => callout.calloutsSet?.type === CalloutsSetType.COLLABORATION
-    );
-    const spaceCalloutIds = spaceCallouts.map(callout => callout.id);
+    const calloutIds = callouts.map(callout => callout.id);
 
     const parentSpaces = await this.entityManager.find(Space, {
       where: {
         collaboration: {
           calloutsSet: {
             callouts: {
-              id: In(spaceCalloutIds),
+              id: In(calloutIds),
             },
           },
         },
@@ -602,10 +700,12 @@ export class SearchResultService {
             callouts: {
               framing: {
                 whiteboard: true,
+                memo: true,
               },
               contributions: {
                 post: true,
                 whiteboard: true,
+                memo: true,
               },
             },
           },
@@ -625,6 +725,9 @@ export class SearchResultService {
                 whiteboard: {
                   id: true,
                 },
+                memo: {
+                  id: true,
+                },
               },
               contributions: {
                 id: true,
@@ -634,6 +737,9 @@ export class SearchResultService {
                 whiteboard: {
                   id: true,
                 },
+                memo: {
+                  id: true,
+                },
               },
             },
           },
@@ -641,7 +747,7 @@ export class SearchResultService {
       },
     });
 
-    return spaceCallouts
+    return callouts
       .map(callout => {
         const space = parentSpaces.find(space =>
           space?.collaboration?.calloutsSet?.callouts?.some(
@@ -651,7 +757,10 @@ export class SearchResultService {
 
         if (!space) {
           this.logger.error(
-            `Unable to find Space parent for Callout: ${callout.id}`,
+            {
+              message: 'Unable to find Space parent for Callout',
+              calloutId: callout.id,
+            },
             undefined,
             LogContext.SEARCH_EXTRACT
           );
@@ -663,7 +772,7 @@ export class SearchResultService {
           space,
         };
       })
-      .filter((x): x is CalloutParents => !!x);
+      .filter(isDefined);
   }
 
   private async getPostParents(posts: Post[]): Promise<PostParents[]> {
