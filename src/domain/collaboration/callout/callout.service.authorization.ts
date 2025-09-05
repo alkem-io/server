@@ -48,6 +48,11 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
+        calloutsSet: {
+          collaboration: {
+            space: true,
+          },
+        },
         framing: {
           profile: true,
           whiteboard: {
@@ -183,9 +188,15 @@ export class CalloutAuthorizationService {
     // Add in who should READ
     const criteriasWithReadAccess: ICredentialDefinition[] = [
       { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-      { type: AuthorizationCredential.SPACE_ADMIN, resourceID: '' },
       { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
     ];
+
+    if (callout.calloutsSet?.collaboration?.space) {
+      criteriasWithReadAccess.push({
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: callout.calloutsSet.collaboration.space.id,
+      });
+    }
     if (callout.createdBy) {
       criteriasWithReadAccess.push({
         type: AuthorizationCredential.USER_SELF_MANAGEMENT,

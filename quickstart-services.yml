@@ -204,7 +204,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.23.4
+    image: alkemio/notifications:v0.25.1
     platform: linux/amd64
     depends_on:
       rabbitmq:
