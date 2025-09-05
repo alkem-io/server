@@ -8,6 +8,7 @@ export enum SearchResultType {
   POST = 'post',
   CALLOUT = 'callout',
   WHITEBOARD = 'whiteboard',
+  MEMO = 'memo',
 }
 
 registerEnumType(SearchResultType, {

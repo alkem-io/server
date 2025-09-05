@@ -7,6 +7,7 @@ import { Link } from '@domain/collaboration/link/link.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { ENUM_LENGTH } from '@common/constants';
+import { Callout } from '../callout/callout.entity';
 
 @Entity()
 export class CalloutFraming
@@ -28,7 +29,10 @@ export class CalloutFraming
   })
   type!: CalloutFramingType;
 
-  @OneToOne(() => Whiteboard, {
+  @OneToOne(() => Callout, callout => callout.framing)
+  callout?: Callout;
+
+  @OneToOne(() => Whiteboard, whiteboard => whiteboard.framing, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',

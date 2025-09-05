@@ -41,7 +41,7 @@ export class UpdateCalloutFramingInput {
 
   @Field(() => Markdown, {
     nullable: true,
-    description: 'The new content to be used.',
+    description: 'The new markdown content for the Memo.',
   })
   @IsOptional()
   memoContent?: string;
