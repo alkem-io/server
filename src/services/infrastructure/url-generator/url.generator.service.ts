@@ -496,17 +496,19 @@ export class UrlGeneratorService {
           },
         },
         relations: {
-          profile: true,
           templatesSet: true,
         },
       });
-      if (!template || !template.templatesSet || !template.profile) {
+      if (!template || !template.templatesSet) {
         throw new EntityNotFoundException(
           `Unable to find template info for Callout that was not in a Collaboration: ${callout.id}`,
           LogContext.URL_GENERATOR
         );
       }
-      return await this.getTemplateUrlPathOrFail(template.profile.id);
+      const templatesSetUrl = await this.getTemplatesSetUrlPathOrFail(
+        template.templatesSet.id
+      );
+      return `${templatesSetUrl}/${template.nameID}`;
     }
 
     // Callout is in CalloutsSet, so much be linked to a Space, TemplateContentSpace or KnowledgeBase
@@ -534,7 +536,7 @@ export class UrlGeneratorService {
         return `${collaborationJourneyUrlPath}/${UrlPathElement.COLLABORATION}/${callout.nameID}`;
       } else {
         // must be a space template
-        return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
+        return await this.getSpaceTemplateUrlPathOrFail(collaboration.id);
       }
     } else {
       // Must be a KnowledgeBase
@@ -552,7 +554,7 @@ export class UrlGeneratorService {
       );
       if (!virtualContributor) {
         throw new EntityNotFoundException(
-          `Unable to find virtual contributor for callouts set where id: ${callout.calloutsSet.id}`,
+          `Unable to find VirtualContributor for CalloutsSet where id: ${callout.calloutsSet.id}`,
           LogContext.URL_GENERATOR
         );
       }

@@ -447,11 +447,11 @@ export class StorageAggregatorResolverService {
       );
     }
     if (!callout.calloutsSet) {
-      // Not in a calloutsSet, ony other option is a callout template:
+      // Not in a calloutsSet, only other option is a callout template:
       return this.getStorageAggregatorIdForCalloutTemplate(calloutID);
     }
 
-    // Callout is in CalloutsSet, so much be linked to a Space, TemplateContentSpace or KnowledgeBase
+    // Callout is in a CalloutsSet, so much be linked to a Space, TemplateContentSpace or KnowledgeBase
 
     // Next see if have a collaboration parent or not
     const collaboration = await this.entityManager.findOne(Collaboration, {
@@ -469,11 +469,14 @@ export class StorageAggregatorResolverService {
             id: collaboration.id,
           },
         },
+        relations: {
+          storageAggregator: true,
+        },
       });
       if (space) {
         if (!space.storageAggregator) {
           throw new EntityNotFoundException(
-            `Unable to retrieve storage aggregator for space through calloutID: ${calloutID} - where did find CalloutsSet ${callout.calloutsSet.id} and Collaboration ${collaboration.id}`,
+            `Unable to retrieve StorageAggregator for Space from calloutID: ${calloutID} (found CalloutsSet ${callout.calloutsSet.id} and Collaboration ${collaboration.id}, but Space has no StorageAggregator)`,
             LogContext.STORAGE_AGGREGATOR
           );
         }
@@ -525,7 +528,7 @@ export class StorageAggregatorResolverService {
         !knowledgeBase.virtualContributor.account.storageAggregator
       ) {
         throw new EntityNotFoundException(
-          `Unable to retrieve storage aggregator for calloutID: ${calloutID} - where did find CalloutsSet ${callout.calloutsSet.id} but no KnowledgeBase linked to it`,
+          `Unable to resolve StorageAggregator for calloutID: ${calloutID} (found CalloutsSet ${callout.calloutsSet.id}, but no KnowledgeBase linked)`,
           LogContext.STORAGE_AGGREGATOR
         );
       }
