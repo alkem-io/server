@@ -28,6 +28,8 @@ import { Template } from '@domain/template/template/template.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
 import { TemplatesSet } from '@domain/template/templates-set';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -428,48 +430,111 @@ export class StorageAggregatorResolverService {
   }
 
   private async getStorageAggregatorIdForCallout(
-    calloutId: string
+    calloutID: string
   ): Promise<string> {
-    const space = await this.entityManager.findOne(Space, {
+    const callout = await this.entityManager.findOne(Callout, {
       where: {
-        collaboration: {
+        id: calloutID,
+      },
+      relations: {
+        calloutsSet: true,
+      },
+    });
+    if (!callout) {
+      throw new EntityNotFoundException(
+        `Unable to find callout where id: ${calloutID}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+    if (!callout.calloutsSet) {
+      // Not in a calloutsSet, only other option is a callout template:
+      return this.getStorageAggregatorIdForCalloutTemplate(calloutID);
+    }
+
+    // Callout is in a CalloutsSet, so much be linked to a Space, TemplateContentSpace or KnowledgeBase
+
+    // Next see if have a collaboration parent or not
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        calloutsSet: {
+          id: callout.calloutsSet.id,
+        },
+      },
+    });
+    if (collaboration) {
+      // Either Space or TemplateContentSpace
+      const space = await this.entityManager.findOne(Space, {
+        where: {
+          collaboration: {
+            id: collaboration.id,
+          },
+        },
+        relations: {
+          storageAggregator: true,
+        },
+      });
+      if (space) {
+        if (!space.storageAggregator) {
+          throw new EntityNotFoundException(
+            `Unable to retrieve StorageAggregator for Space from calloutID: ${calloutID} (found CalloutsSet ${callout.calloutsSet.id} and Collaboration ${collaboration.id}, but Space has no StorageAggregator)`,
+            LogContext.STORAGE_AGGREGATOR
+          );
+        }
+        return space.storageAggregator.id;
+      } else {
+        // must be a template content space
+        const spaceTemplate = await this.entityManager.findOne(TemplatesSet, {
+          where: {
+            templates: {
+              contentSpace: {
+                collaboration: {
+                  id: collaboration.id,
+                },
+              },
+            },
+          },
+          select: { id: true },
+        });
+        if (!spaceTemplate) {
+          throw new EntityNotFoundException(
+            `Unable to retrieve storage aggregator for calloutID: ${calloutID} - where did find CalloutsSet ${callout.calloutsSet.id} and Collaboration ${collaboration.id} but no Space or TemplateContentSpace linked to it`,
+            LogContext.STORAGE_AGGREGATOR
+          );
+        }
+        return (
+          await this.getStorageAggregatorForTemplatesSet(spaceTemplate.id)
+        ).id;
+      }
+    } else {
+      // Must be knowledgeBase
+      const knowledgeBase = await this.entityManager.findOne(KnowledgeBase, {
+        where: {
           calloutsSet: {
-            callouts: {
-              id: calloutId,
+            id: callout.calloutsSet.id,
+          },
+        },
+        relations: {
+          virtualContributor: {
+            account: {
+              storageAggregator: true,
             },
           },
         },
-      },
-      relations: {
-        storageAggregator: true,
-      },
-    });
-    const knowledgeBase = await this.entityManager.findOne(KnowledgeBase, {
-      where: {
-        calloutsSet: {
-          callouts: {
-            id: calloutId,
-          },
-        },
-      },
-      relations: {
-        virtualContributor: {
-          account: {
-            storageAggregator: true,
-          },
-        },
-      },
-    });
+      });
+      if (
+        !knowledgeBase ||
+        !knowledgeBase.virtualContributor ||
+        !knowledgeBase.virtualContributor.account ||
+        !knowledgeBase.virtualContributor.account.storageAggregator
+      ) {
+        throw new EntityNotFoundException(
+          `Unable to resolve StorageAggregator for calloutID: ${calloutID} (found CalloutsSet ${callout.calloutsSet.id}, but no KnowledgeBase linked)`,
+          LogContext.STORAGE_AGGREGATOR
+        );
+      }
 
-    const storageAggregator =
-      space?.storageAggregator ||
-      knowledgeBase?.virtualContributor?.account?.storageAggregator;
-
-    if (!storageAggregator) {
-      // Try to find the callout in a callout template:
-      return this.getStorageAggregatorIdForCalloutTemplate(calloutId);
+      return knowledgeBase.virtualContributor.account.storageAggregator.id;
     }
-    return storageAggregator.id;
   }
 
   private async getStorageAggregatorIdForCalloutTemplate(
