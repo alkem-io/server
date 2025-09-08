@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -40,9 +40,17 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import {
+  AllCalloutContributionTypes,
+  CalloutContributionType,
+} from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
+import { PaginationArgs } from '@core/pagination';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { ContributionsFilterInput } from './dto/contributions.filter';
+import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
 
 @Injectable()
 export class CalloutService {
@@ -54,6 +62,7 @@ export class CalloutService {
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionService: CalloutContributionService,
+    private contributionRepository: Repository<CalloutContribution>,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
     @InjectRepository(Callout)
@@ -597,17 +606,27 @@ export class CalloutService {
   public async getContributions(
     callout: ICallout,
     contributionIDs?: string[],
+    types: readonly CalloutContributionType[] = AllCalloutContributionTypes,
     limit?: number,
     shuffle?: boolean
   ): Promise<ICalloutContribution[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
       relations: {
         contributions: {
-          post: true,
-          whiteboard: true,
-          link: true,
+          post: types.includes(CalloutContributionType.POST),
+          whiteboard: types.includes(CalloutContributionType.WHITEBOARD),
+          link: types.includes(CalloutContributionType.LINK),
         },
       },
+      ...(contributionIDs
+        ? {
+            where: {
+              contributions: {
+                id: In(contributionIDs),
+              },
+            },
+          }
+        : undefined),
     });
     if (!calloutLoaded.contributions)
       throw new EntityNotFoundException(
@@ -631,5 +650,26 @@ export class CalloutService {
 
     const limitAndShuffled = limitAndShuffle(results, limit, shuffle);
     return limitAndShuffled;
+  }
+
+  async getPaginatedContributions(
+    callout: ICallout,
+    paginationArgs: PaginationArgs,
+    filter?: ContributionsFilterInput
+  ): Promise<IPaginatedType<ICalloutContribution>> {
+    const qb = this.contributionRepository.createQueryBuilder('contribution');
+    qb.where('contribution.calloutId = :calloutId', { calloutId: callout.id });
+    if (filter?.IDs && filter.IDs.length > 0) {
+      qb.andWhere('contribution.id IN (:...ids)', { ids: filter.IDs });
+    }
+    if (filter?.types && filter.types.length > 0) {
+      qb.andWhere('contribution.type IN (:...ids)', { ids: filter.IDs });
+    }
+
+    if (filter) {
+      applyUserFilter(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
   }
 }

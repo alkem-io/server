@@ -3,12 +3,11 @@ import { LoggerService } from '@nestjs/common';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { UUID } from '@domain/common/scalars';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -17,6 +16,9 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { IClassification } from '@domain/common/classification/classification.interface';
+import { PaginationArgs } from '@core/pagination';
+import { ContributionsFilterInput } from './dto/contributions.filter';
+import { PaginatedContributions } from '@core/pagination/paginated.contribution';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -32,16 +34,15 @@ export class CalloutResolverFields {
     nullable: false,
     description: 'The Contributions that have been made to this Callout.',
   })
-  @Profiling.api
   async contributions(
     @Parent() callout: Callout,
     @Args({
-      name: 'IDs',
-      type: () => [UUID],
-      description: 'The IDs of the Contributions to return',
+      name: 'filter',
+      type: () => ContributionsFilterInput,
+      description: 'Filter to apply to the Contributions returned.',
       nullable: true,
     })
-    IDs: string[],
+    filter?: ContributionsFilterInput,
     @Args({
       name: 'limit',
       type: () => Float,
@@ -49,7 +50,7 @@ export class CalloutResolverFields {
         'The number of Contributions to return; if omitted return all Contributions.',
       nullable: true,
     })
-    limit: number,
+    limit?: number,
     @Args({
       name: 'shuffle',
       type: () => Boolean,
@@ -57,13 +58,34 @@ export class CalloutResolverFields {
         'If true and limit is specified then return the Contributions based on a random selection. Defaults to false.',
       nullable: true,
     })
-    shuffle: boolean
+    shuffle?: boolean
   ): Promise<ICalloutContribution[]> {
     return await this.calloutService.getContributions(
       callout,
-      IDs,
+      filter?.IDs,
+      filter?.types,
       limit,
       shuffle
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => PaginatedContributions, {
+    nullable: false,
+    description:
+      'The Contributions that have been made to this Callout, paginated.',
+  })
+  async contributionsPaginated(
+    @Parent() callout: Callout,
+    @Args('pagination', { nullable: true }) pagination: PaginationArgs,
+    @Args('filter', { nullable: true }) filter?: ContributionsFilterInput
+  ): Promise<PaginatedContributions> {
+    return await this.calloutService.getContributions(
+      callout,
+      filter?.IDs,
+      filter?.types,
+      pagination.first
     );
   }
 

@@ -9,3 +9,9 @@ export enum CalloutContributionType {
 registerEnumType(CalloutContributionType, {
   name: 'CalloutContributionType',
 });
+
+export const AllCalloutContributionTypes = [
+  CalloutContributionType.POST,
+  CalloutContributionType.WHITEBOARD,
+  CalloutContributionType.LINK,
+] as const;
