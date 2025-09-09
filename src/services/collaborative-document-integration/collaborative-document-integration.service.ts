@@ -9,6 +9,9 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MemoService } from '@domain/common/memo';
+import { MemoContributionsInputData } from '@services/collaborative-document-integration/inputs/memo.contributions.input.data';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
   FetchInputData,
   InfoInputData,
@@ -42,7 +45,9 @@ export class CollaborativeDocumentIntegrationService {
     private readonly authenticationService: AuthenticationService,
     private readonly agentInfoService: AgentInfoService,
     private readonly memoService: MemoService,
-    private readonly configService: ConfigService<AlkemioConfig, true>
+    private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly contributionReporter: ContributionReporterService,
+    private readonly communityResolver: CommunityResolverService
   ) {
     this.maxCollaboratorsInRoom = this.configService.get(
       'collaboration.memo.max_collaborators_in_room',
@@ -157,6 +162,30 @@ export class CollaborativeDocumentIntegrationService {
         )
       );
     }
+  }
+
+  public async memoContributions({
+    memoId,
+    users,
+  }: MemoContributionsInputData): Promise<void> {
+    const community =
+      await this.communityResolver.getCommunityForMemoOrFail(memoId);
+    const levelZeroSpaceID =
+      await this.communityResolver.getLevelZeroSpaceIdForCommunity(
+        community.id
+      );
+    const { displayName } = await this.memoService.getProfile(memoId);
+
+    users.forEach(({ id, email }) => {
+      this.contributionReporter.memoContribution(
+        {
+          id: memoId,
+          name: displayName,
+          space: levelZeroSpaceID,
+        },
+        { id, email }
+      );
+    });
   }
 }
 
