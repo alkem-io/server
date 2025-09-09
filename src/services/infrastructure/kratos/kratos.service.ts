@@ -297,6 +297,48 @@ export class KratosService {
     });
   }
 
+  /**
+   * Retrieves all identities that have not been verified.
+   *
+   * @returns A promise that resolves to an array of unverified identities.
+   * @remarks
+   * This method fetches all identities from Kratos and filters for those
+   * with verifiable addresses that have not been verified.
+   */
+  public async getUnverifiedIdentities(): Promise<Identity[]> {
+    try {
+      const { data: identities } =
+        await this.kratosIdentityClient.listIdentities({
+          includeCredential: ['password', 'oidc'],
+        });
+
+      if (!identities || identities.length === 0) {
+        return [];
+      }
+
+      return identities.filter(identity => {
+        const oryIdentity = identity as OryDefaultIdentitySchema;
+
+        // Check if the identity has verifiable addresses
+        if (!oryIdentity.verifiable_addresses) {
+          return false;
+        }
+
+        // Return true if any verifiable address is not verified
+        return oryIdentity.verifiable_addresses.some(
+          address => !address.verified
+        );
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error fetching unverified identities: ${(error as Error)?.message}`,
+        (error as Error)?.stack,
+        LogContext.KRATOS
+      );
+      throw error;
+    }
+  }
+
   /***
  Checks if the session is still valid.
  */

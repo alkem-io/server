@@ -6,6 +6,7 @@ import { PlatformAdminResolverFields } from './platform.admin.resolver.fields';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { PlatformAdminCommunicationResolverFields } from './platform.admin.resolver.communication.fields';
 import { AdminCommunicationModule } from '../domain/communication/admin.communication.module';
+import { AdminIdentityModule } from '../core/identity/admin.identity.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
@@ -22,6 +23,7 @@ import { LibraryModule } from '@library/library/library.module';
     LibraryModule,
     SpaceModule,
     AdminCommunicationModule,
+    AdminIdentityModule,
   ],
   providers: [
     PlatformAdminService,
