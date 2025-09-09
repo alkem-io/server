@@ -17,6 +17,8 @@ entryPoints:
     address: ':8008'
   synapse-admin:
     address: ':8088'
+  kratos-admin-ui:
+    address: ':8188'
   mailslurper-client:
     address: ':4436'
   mailslurper-api:

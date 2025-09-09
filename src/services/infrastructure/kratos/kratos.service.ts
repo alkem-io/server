@@ -309,7 +309,7 @@ export class KratosService {
     try {
       const { data: identities } =
         await this.kratosIdentityClient.listIdentities({
-          includeCredential: ['password', 'oidc'],
+          includeCredential: ['password'],
         });
 
       if (!identities || identities.length === 0) {
@@ -371,7 +371,7 @@ export class KratosService {
     try {
       const { data: identities } =
         await this.kratosIdentityClient.listIdentities({
-          includeCredential: ['password', 'oidc'],
+          includeCredential: ['password'],
         });
 
       if (!identities || identities.length === 0) {

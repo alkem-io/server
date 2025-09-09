@@ -1,26 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { KratosIdentityDto } from './dto/kratos.identity.dto';
 import { PlatformIdentityDto } from './dto/platform.identity.dto';
 import { IdentityVerificationStatusFilter } from '@common/enums/identity.verification.status.filter';
 import { Identity } from '@ory/kratos-client';
 import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
+import { LogContext } from '@common/enums/logging.context';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class AdminIdentityService {
-  constructor(private kratosService: KratosService) {}
+  constructor(
+    private kratosService: KratosService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
+  ) {}
 
   /**
    * Gets all identities from Kratos that have not been verified.
    *
-   * @returns A promise that resolves to an array of UnverifiedIdentityDto.
+   * @returns A promise that resolves to an array of KratosIdentityDto.
    */
   async getUnverifiedIdentities(): Promise<KratosIdentityDto[]> {
     const unverifiedIdentities =
       await this.kratosService.getUnverifiedIdentities();
 
     return unverifiedIdentities.map(identity =>
-      this.mapToUnverifiedIdentityDto(identity)
+      this.mapToKratosIdentityDto(identity)
     );
   }
 
@@ -52,12 +58,32 @@ export class AdminIdentityService {
   }
 
   /**
-   * Maps a Kratos Identity to UnverifiedIdentityDto.
+   * Deletes a Kratos identity by email.
+   *
+   * @param email - The email of the identity to delete.
+   * @returns A promise that resolves when the identity is deleted.
+   */
+  async deleteIdentityByEmail(email: string): Promise<boolean> {
+    try {
+      await this.kratosService.deleteIdentityByEmail(email);
+    } catch (error) {
+      this.logger.error(
+        `Error deleting identity with email ${email}: ${(error as Error)?.message}`,
+        (error as Error)?.stack,
+        LogContext.KRATOS
+      );
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Maps a Kratos Identity to KratosIdentityDto.
    *
    * @param identity - The Kratos identity to map.
-   * @returns The mapped UnverifiedIdentityDto.
+   * @returns The mapped KratosIdentityDto.
    */
-  private mapToUnverifiedIdentityDto(identity: Identity): KratosIdentityDto {
+  private mapToKratosIdentityDto(identity: Identity): KratosIdentityDto {
     const oryIdentity = identity as OryDefaultIdentitySchema;
     const traits = oryIdentity.traits;
 

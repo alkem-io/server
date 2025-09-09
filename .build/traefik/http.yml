@@ -35,6 +35,11 @@ http:
         servers:
           - url: 'http://kratos:4434/'
 
+    kratos-admin-ui:
+      loadBalancer:
+        servers:
+          - url: 'http://kratos-admin-ui:8080/'
+
     oathkeeper-proxy:
       loadBalancer:
         servers:
@@ -206,6 +211,12 @@ http:
         - strip-kratos-prefix
       entryPoints:
         - 'web'
+
+    kratos-admin-ui:
+      rule: 'PathPrefix(`/`)'
+      service: 'kratos-admin-ui'
+      entryPoints:
+        - 'kratos-admin-ui'
 
     alkemiowebroute:
       rule: 'PathPrefix(`/`)'
