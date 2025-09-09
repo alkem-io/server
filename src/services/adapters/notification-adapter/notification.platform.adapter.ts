@@ -163,6 +163,9 @@ export class NotificationPlatformAdapter {
           displayName: eventData.discussion.profile.displayName,
           url: discussionURL,
         },
+        comment: {
+          message: eventData.commentSent.message,
+        },
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

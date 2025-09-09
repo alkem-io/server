@@ -37,4 +37,15 @@ export class InAppNotificationPayloadPlatformForumDiscussionResolverFields {
   ): DiscussionDetails | undefined {
     return payload.discussion;
   }
+
+  @ResolveField(() => String, {
+    nullable: true,
+    description: 'The comment message.',
+  })
+  public comment(
+    @Parent()
+    payload: InAppNotificationPayloadPlatformForumDiscussion
+  ): string | undefined {
+    return payload.comment?.message;
+  }
 }
