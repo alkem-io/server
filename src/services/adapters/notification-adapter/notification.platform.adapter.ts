@@ -20,6 +20,7 @@ import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-a
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
+import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.base';
 import { NotificationUserAdapter } from './notification.user.adapter';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 
@@ -218,6 +219,25 @@ export class NotificationPlatformAdapter {
         eventData.space
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpace = {
+        type: NotificationEventPayload.SPACE,
+        spaceID: eventData.space.id,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
   public async platformUserProfileCreated(

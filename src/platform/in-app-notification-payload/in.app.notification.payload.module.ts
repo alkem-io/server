@@ -14,6 +14,7 @@ import {
   InAppNotificationPayloadSpaceCommunityContributorResolverFields,
   InAppNotificationPayloadSpaceCommunityInvitationPlatformResolverFields,
   InAppNotificationPayloadSpaceCommunityInvitationResolverFields,
+  InAppNotificationPayloadSpaceResolverFields,
   InAppNotificationPayloadUserMessageDirectResolverFields,
   InAppNotificationPayloadUserMessageRoomResolverFields,
 } from './field-resolvers';
@@ -25,6 +26,7 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
+    InAppNotificationPayloadSpaceResolverFields,
     InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
     InAppNotificationPayloadSpaceCommunityContributorResolverFields,
