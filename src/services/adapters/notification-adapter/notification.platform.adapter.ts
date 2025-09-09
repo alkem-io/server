@@ -20,6 +20,7 @@ import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-a
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 import { NotificationUserAdapter } from './notification.user.adapter';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 
 @Injectable()
 export class NotificationPlatformAdapter {
@@ -30,7 +31,8 @@ export class NotificationPlatformAdapter {
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   public async platformGlobalRoleChanged(
@@ -98,10 +100,18 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
+      const discussionURL =
+        await this.urlGeneratorService.getForumDiscussionUrlPath(
+          eventData.discussion.id
+        );
+
       const inAppPayload: InAppNotificationPayloadPlatformForumDiscussion = {
         type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
-        discussionID: eventData.discussion.id,
-        commentID: '',
+        discussion: {
+          id: eventData.discussion.id,
+          displayName: eventData.discussion.profile.displayName,
+          url: discussionURL,
+        },
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -141,9 +151,18 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
+      const discussionURL =
+        await this.urlGeneratorService.getForumDiscussionUrlPath(
+          eventData.discussion.id
+        );
+
       const inAppPayload: InAppNotificationPayloadPlatformForumDiscussion = {
         type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
-        discussionID: eventData.discussion.id,
+        discussion: {
+          id: eventData.discussion.id,
+          displayName: eventData.discussion.profile.displayName,
+          url: discussionURL,
+        },
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

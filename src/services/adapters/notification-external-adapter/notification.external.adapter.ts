@@ -591,13 +591,13 @@ export class NotificationExternalAdapter {
     const discussionURL =
       await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
     const payload: NotificationEventPayloadPlatformForumDiscussion = {
+      ...basePayload,
       discussion: {
         id: discussion.id,
         createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
         displayName: discussion.profile.displayName,
         url: discussionURL,
       },
-      ...basePayload,
     };
 
     return payload;
