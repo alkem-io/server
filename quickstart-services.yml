@@ -255,7 +255,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: vyanakiev/matrix-adapter-circuit:v0.0.1
+    image: alkemio/matrix-adapter:v0.6.1
     platform: linux/amd64
     depends_on:
       - rabbitmq
