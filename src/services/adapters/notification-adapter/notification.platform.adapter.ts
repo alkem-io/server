@@ -19,6 +19,7 @@ import { NotificationEventPayload } from '@common/enums/notification.event.paylo
 import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
+import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
 import { NotificationUserAdapter } from './notification.user.adapter';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 
@@ -281,6 +282,26 @@ export class NotificationPlatformAdapter {
       );
 
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadPlatformUserProfileRemoved = {
+        type: NotificationEventPayload.PLATFORM_USER_PROFILE_REMOVED,
+        userDisplayName: eventData.user.profile.displayName,
+        userEmail: eventData.user.email,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
   private async getNotificationRecipientsPlatform(
