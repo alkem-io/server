@@ -6,21 +6,22 @@ import { ForbiddenException } from '@common/exceptions';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { InAppNotificationFilterInput } from './dto/in.app.notification.filter.dto.input';
-import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
+import { PaginationArgs, PaginatedInAppNotifications } from '@core/pagination';
 
 @InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverQueries {
   constructor(private inAppNotificationService: InAppNotificationService) {}
 
-  @Query(() => [IInAppNotification], {
+  @Query(() => PaginatedInAppNotifications, {
     nullable: false,
-    description: 'Get all notifications for the logged in user.',
+    description: 'Get paginated notifications for the logged in user.',
   })
   public async notificationsInApp(
     @CurrentUser() agentInfo: AgentInfo,
+    @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: InAppNotificationFilterInput
-  ): Promise<IInAppNotification[]> {
+  ): Promise<PaginatedInAppNotifications> {
     if (!agentInfo.userID) {
       throw new ForbiddenException(
         'User could not be resolved',
@@ -29,8 +30,9 @@ export class InAppNotificationResolverQueries {
       );
     }
 
-    return await this.inAppNotificationService.getRawNotifications(
+    return await this.inAppNotificationService.getPaginatedNotifications(
       agentInfo.userID,
+      pagination,
       filter
     );
   }

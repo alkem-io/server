@@ -1,4 +1,4 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, Generated } from 'typeorm';
 import { ENUM_LENGTH, UUID_LENGTH } from '@constants/index';
 import { BaseAlkemioEntity } from '../../domain/common/entity/base-entity/base.alkemio.entity';
 import { NotificationEventInAppState } from '../../common/enums/notification.event.in.app.state';
@@ -12,6 +12,12 @@ export class InAppNotification
   extends BaseAlkemioEntity
   implements IInAppNotification
 {
+  @Column({
+    unique: true,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: NotificationEvent;
 

@@ -8,6 +8,11 @@ import { LogContext } from '@common/enums';
 import { InAppNotificationFilterInput } from '@services/api/in-app-notification-reader/dto/in.app.notification.filter.dto.input';
 import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
 import { IInAppNotification } from './in.app.notification.interface';
+import {
+  PaginationArgs,
+  PaginatedInAppNotifications,
+  getPaginationResults,
+} from '@core/pagination';
 
 @Injectable()
 export class InAppNotificationService {
@@ -67,6 +72,26 @@ export class InAppNotificationService {
       where,
       order: { triggeredAt: 'desc' },
     });
+  }
+
+  public async getPaginatedNotifications(
+    receiverID: string,
+    paginationArgs: PaginationArgs,
+    filter?: InAppNotificationFilterInput
+  ): Promise<PaginatedInAppNotifications> {
+    const queryBuilder = this.inAppNotificationRepo
+      .createQueryBuilder('notification')
+      .where('notification.receiverID = :receiverID', { receiverID });
+
+    if (filter?.types && filter.types.length > 0) {
+      queryBuilder.andWhere('notification.type IN (:...types)', {
+        types: filter.types,
+      });
+    }
+
+    queryBuilder.orderBy('notification.triggeredAt', 'DESC');
+
+    return await getPaginationResults(queryBuilder, paginationArgs, 'DESC');
   }
 
   public async updateNotificationState(
