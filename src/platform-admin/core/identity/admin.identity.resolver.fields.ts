@@ -7,8 +7,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { InstrumentResolver } from '@src/apm/decorators';
 import { AdminIdentityService } from './admin.identity.service';
 import { PlatformAdminIdentityQueryResults } from '../../admin/dto/platform.admin.query.identity.results';
-import { PlatformIdentityDto } from './dto/platform.identity.dto';
 import { IdentityVerificationStatusFilter } from '@common/enums/identity.verification.status.filter';
+import { KratosIdentityDto } from './dto/kratos.identity.dto';
 
 @InstrumentResolver()
 @Resolver(() => PlatformAdminIdentityQueryResults)
@@ -19,7 +19,7 @@ export class AdminIdentityResolverFields {
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
-  @ResolveField(() => [PlatformIdentityDto], {
+  @ResolveField(() => [KratosIdentityDto], {
     nullable: false,
     description: 'Get identities from Kratos with optional filtering.',
   })
@@ -32,7 +32,7 @@ export class AdminIdentityResolverFields {
       description: 'Filter identities by verification status',
     })
     filter?: IdentityVerificationStatusFilter
-  ): Promise<PlatformIdentityDto[]> {
+  ): Promise<KratosIdentityDto[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),

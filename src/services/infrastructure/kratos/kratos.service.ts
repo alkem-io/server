@@ -298,6 +298,18 @@ export class KratosService {
   }
 
   /**
+   * Deletes an identity by ID.
+   *
+   * @param kratosIdentityId - The ID of the identity to be deleted.
+   * @returns A promise that resolves to void if the identity is deleted successfully.
+   */
+  public async deleteIdentityById(kratosIdentityId: string): Promise<void> {
+    await this.kratosIdentityClient.deleteIdentity({
+      id: kratosIdentityId,
+    });
+  }
+
+  /**
    * Retrieves all identities that have not been verified.
    *
    * @returns A promise that resolves to an array of unverified identities.

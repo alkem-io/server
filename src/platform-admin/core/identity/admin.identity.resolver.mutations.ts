@@ -6,6 +6,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { AdminIdentityService } from './admin.identity.service';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @InstrumentResolver()
 @Resolver()
@@ -18,12 +19,12 @@ export class AdminIdentityResolverMutations {
 
   @Mutation(() => Boolean, {
     nullable: false,
-    description: 'Delete a Kratos identity by email.',
+    description: 'Delete a Kratos identity by ID.',
   })
   async adminIdentityDeleteKratosIdentity(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('email', { type: () => String })
-    email: string
+    @Args('kratosIdentityId', { type: () => UUID })
+    kratosIdentityId: string
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -32,6 +33,7 @@ export class AdminIdentityResolverMutations {
       'adminIdentityDeleteKratosIdentity'
     );
 
-    return await this.adminIdentityService.deleteIdentityByEmail(email);
+    await this.adminIdentityService.deleteIdentity(kratosIdentityId);
+    return true;
   }
 }

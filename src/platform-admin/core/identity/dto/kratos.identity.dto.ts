@@ -37,4 +37,10 @@ export class KratosIdentityDto {
     description: 'The current verification status of the email address.',
   })
   verificationStatus!: string;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Indicates whether the email address is verified.',
+  })
+  isVerified!: boolean;
 }
