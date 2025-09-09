@@ -339,6 +339,68 @@ export class KratosService {
     }
   }
 
+  /**
+   * Retrieves all identities from Kratos.
+   *
+   * @returns A promise that resolves to an array of all identities.
+   */
+  public async getAllIdentities(): Promise<Identity[]> {
+    try {
+      const { data: identities } =
+        await this.kratosIdentityClient.listIdentities({
+          includeCredential: ['password', 'oidc'],
+        });
+
+      return identities || [];
+    } catch (error) {
+      this.logger.error(
+        `Error fetching all identities: ${(error as Error)?.message}`,
+        (error as Error)?.stack,
+        LogContext.KRATOS
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieves all identities that have been verified.
+   *
+   * @returns A promise that resolves to an array of verified identities.
+   */
+  public async getVerifiedIdentities(): Promise<Identity[]> {
+    try {
+      const { data: identities } =
+        await this.kratosIdentityClient.listIdentities({
+          includeCredential: ['password', 'oidc'],
+        });
+
+      if (!identities || identities.length === 0) {
+        return [];
+      }
+
+      return identities.filter(identity => {
+        const oryIdentity = identity as OryDefaultIdentitySchema;
+
+        // Check if the identity has verifiable addresses
+        if (!oryIdentity.verifiable_addresses) {
+          return false;
+        }
+
+        // Return true if all verifiable addresses are verified
+        return oryIdentity.verifiable_addresses.every(
+          address => address.verified
+        );
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error fetching verified identities: ${(error as Error)?.message}`,
+        (error as Error)?.stack,
+        LogContext.KRATOS
+      );
+      throw error;
+    }
+  }
+
   /***
  Checks if the session is still valid.
  */

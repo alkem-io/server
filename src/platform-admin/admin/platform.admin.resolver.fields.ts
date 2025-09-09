@@ -3,6 +3,7 @@ import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { PlatformAdminQueryResults } from './dto/platform.admin.query.results';
+import { PlatformAdminIdentityQueryResults } from './dto/platform.admin.query.identity.results';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -175,5 +176,21 @@ export class PlatformAdminResolverFields {
       'platformAdmin Communication'
     );
     return {} as PlatformAdminCommunicationQueryResults;
+  }
+
+  @ResolveField(() => PlatformAdminIdentityQueryResults, {
+    nullable: false,
+    description: 'Lookup Identity related information.',
+  })
+  async identity(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<PlatformAdminIdentityQueryResults> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      'platformAdmin Identity'
+    );
+    return {} as PlatformAdminIdentityQueryResults;
   }
 }
