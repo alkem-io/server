@@ -33,7 +33,7 @@ export class AdminIdentityResolverMutations {
       'adminIdentityDeleteKratosIdentity'
     );
 
-    await this.adminIdentityService.deleteIdentity(kratosIdentityId);
-    return true;
+    const success = await this.adminIdentityService.deleteIdentity(kratosIdentityId);
+    return success;
   }
 }
