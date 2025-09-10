@@ -95,7 +95,7 @@ export class InAppNotificationService {
   public async getPaginatedNotifications(
     receiverID: string,
     paginationArgs: PaginationArgs,
-    filter?: InAppNotificationFilterInput
+    filter?: NotificationEventsFilterInput
   ): Promise<PaginatedInAppNotifications> {
     const queryBuilder = this.inAppNotificationRepo
       .createQueryBuilder('notification')

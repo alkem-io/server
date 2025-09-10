@@ -16,9 +16,10 @@ import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
-import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
 import { NotificationEventsFilterInput } from './dto/me.notification.event.filter.dto.input';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
+import { PaginationArgs } from '@core/pagination';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -28,14 +29,15 @@ export class MeResolverFields {
     private inAppNotificationService: InAppNotificationService
   ) {}
 
-  @ResolveField('notifications', () => [IInAppNotification], {
+  @ResolveField('notifications', () => PaginatedInAppNotifications, {
     nullable: false,
     description: 'Get all notifications for the logged in user.',
   })
   public async notificationsInApp(
     @CurrentUser() agentInfo: AgentInfo,
+    @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: NotificationEventsFilterInput
-  ): Promise<IInAppNotification[]> {
+  ): Promise<PaginatedInAppNotifications> {
     if (!agentInfo.userID) {
       throw new ForbiddenException(
         'User could not be resolved',
@@ -44,8 +46,9 @@ export class MeResolverFields {
       );
     }
 
-    return await this.inAppNotificationService.getRawNotifications(
+    return await this.inAppNotificationService.getPaginatedNotifications(
       agentInfo.userID,
+      pagination,
       filter
     );
   }
