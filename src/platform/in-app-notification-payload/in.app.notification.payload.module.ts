@@ -19,6 +19,7 @@ import {
   InAppNotificationPayloadUserMessageDirectResolverFields,
   InAppNotificationPayloadUserMessageRoomResolverFields,
   InAppNotificationPayloadVirtualContributorFieldsResolver,
+  InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,
 } from './field-resolvers';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 @Module({
@@ -28,6 +29,7 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
+    InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,
     InAppNotificationPayloadSpaceResolverFields,
     InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCommunicationUpdateResolverFields,
