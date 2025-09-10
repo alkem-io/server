@@ -1,7 +1,9 @@
 import { ExternalMetadata } from '@domain/communication/vc-interaction/vc.interaction.entity';
 import { AiPersonaEngineAdapterInputBase } from './ai.persona.engine.adapter.dto.base';
-import { InteractionMessage } from '@services/ai-server/ai-persona-service/dto/interaction.message';
-import { IExternalConfig } from '@services/ai-server/ai-persona-service/dto/external.config';
+import {
+  IExternalConfig,
+  InteractionMessage,
+} from '@services/ai-server/ai-persona/dto';
 
 export enum InvocationResultAction {
   POST_REPLY = 'postReply',

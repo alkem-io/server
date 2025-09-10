@@ -3,14 +3,14 @@ import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { IAiPersona } from '../ai-persona';
+import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
 })
-export class IVirtualContributor
+export abstract class IVirtualContributor
   extends IContributorBase
   implements IContributor
 {
@@ -18,7 +18,9 @@ export class IVirtualContributor
 
   account?: IAccount;
 
-  aiPersona!: IAiPersona;
+  aiPersonaID!: string;
+
+  aiPersona?: IAiPersona;
 
   knowledgeBase!: IKnowledgeBase;
 

@@ -174,15 +174,13 @@ export class ConversionResolverMutations {
             knowledgeBase: {
               calloutsSet: true,
             },
-            aiPersona: true,
           },
         }
       );
     if (
       !virtualContributor.knowledgeBase ||
       !virtualContributor.knowledgeBase.calloutsSet ||
-      !virtualContributor.account ||
-      !virtualContributor.aiPersona
+      !virtualContributor.account
     ) {
       throw new RelationshipNotFoundException(
         `Missing entities on Virtual Contributor when converting to KnowledgeBase: ${virtualContributor.id}`,
@@ -195,10 +193,9 @@ export class ConversionResolverMutations {
         virtualContributor
       );
 
-    const vcType =
-      await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeType(
-        aiPersona.aiPersonaServiceID
-      );
+    const vcType = await this.aiServerAdapter.getPersonaBodyOfKnowledgeType(
+      virtualContributor.aiPersonaID
+    );
 
     if (vcType !== AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE) {
       throw new ValidationException(
@@ -206,10 +203,9 @@ export class ConversionResolverMutations {
         LogContext.CONVERSION
       );
     }
-    const spaceID =
-      await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeID(
-        aiPersona.aiPersonaServiceID
-      );
+    const spaceID = await this.aiServerAdapter.getPersonaBodyOfKnowledgeID(
+      aiPersona.id
+    );
     if (!spaceID) {
       throw new ValidationException(
         `Virtual Contributor does not have a body of knowledge: ${virtualContributor.id}`,
@@ -267,8 +263,8 @@ export class ConversionResolverMutations {
     }
 
     // Update the information on the AI Persona Service
-    await this.aiServerAdapter.updateAiPersonaService({
-      ID: virtualContributor.aiPersona.aiPersonaServiceID,
+    await this.aiServerAdapter.updateAiPersona({
+      ID: virtualContributor.aiPersonaID,
       bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE,
       bodyOfKnowledgeID: virtualContributor.knowledgeBase.id,
     });

@@ -1,19 +1,17 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { IAiPersonaService } from './ai.persona.service.interface';
+import { IAiPersona } from './ai.persona.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { AiServer } from '../ai-server/ai.server.entity';
-import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { IExternalConfig } from './dto/external.config';
 
 @Entity()
-export class AiPersonaService
-  extends AuthorizableEntity
-  implements IAiPersonaService
-{
-  @ManyToOne(() => AiServer, aiServer => aiServer.aiPersonaServices, {
+export class AiPersona extends AuthorizableEntity implements IAiPersona {
+  @ManyToOne(() => AiServer, aiServer => aiServer.aiPersonas, {
     eager: true,
   })
   @JoinColumn()
@@ -23,7 +21,7 @@ export class AiPersonaService
   engine!: AiPersonaEngine;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
-  dataAccessMode!: AiPersonaDataAccessMode;
+  dataAccessMode!: VirtualContributorDataAccessMode;
 
   @Column('simple-json', { nullable: false })
   prompt!: string[];
@@ -42,4 +40,13 @@ export class AiPersonaService
     nullable: true,
   })
   externalConfig?: IExternalConfig = {};
+
+  @Column('text', { nullable: true })
+  description?: string;
+
+  @Column('simple-array', { nullable: false })
+  interactionModes!: VirtualContributorInteractionMode[];
+
+  @Column('text', { nullable: true })
+  bodyOfKnowledge?: string;
 }

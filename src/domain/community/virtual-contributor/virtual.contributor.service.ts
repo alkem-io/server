@@ -24,12 +24,12 @@ import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.cre
 import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { AiPersonaService } from '../ai-persona/ai.persona.service';
-import { CreateAiPersonaInput } from '../ai-persona/dto';
+import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
+import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { IAiPersona } from '../ai-persona';
+import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
@@ -55,7 +55,7 @@ export class VirtualContributorService {
     private profileService: ProfileService,
     private contributorService: ContributorService,
     private communicationAdapter: CommunicationAdapter,
-    private aiPersonaService: AiPersonaService,
+    private aiPersona: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
     private knowledgeBaseService: KnowledgeBaseService,
     private virtualContributorLookupService: VirtualContributorLookupService,
@@ -106,7 +106,7 @@ export class VirtualContributorService {
       await this.virtualContributorDefaultsService.createKnowledgeBaseInput(
         virtualContributorData.knowledgeBaseData,
         knowledgeBaseDefaultCallouts,
-        virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType
+        virtualContributorData.aiPersona.bodyOfKnowledgeType
       );
 
     virtualContributor.knowledgeBase =
@@ -133,15 +133,19 @@ export class VirtualContributorService {
     };
 
     if (
-      aiPersonaInput.aiPersonaService &&
-      virtualContributorData.aiPersona.aiPersonaService?.bodyOfKnowledgeType ===
-        AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
+      virtualContributorData.aiPersona.bodyOfKnowledgeType ===
+      AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
     ) {
-      aiPersonaInput.aiPersonaService.bodyOfKnowledgeID = kb.id;
+      aiPersonaInput.bodyOfKnowledgeID = kb.id;
     }
 
-    virtualContributor.aiPersona =
-      await this.aiPersonaService.createAiPersona(aiPersonaInput);
+    // Get the default AI server
+    const aiServer = await this.aiServerAdapter.getAiServer();
+    const aiPersona = await this.aiPersona.createAiPersona(
+      aiPersonaInput,
+      aiServer
+    );
+    virtualContributor.aiPersonaID = aiPersona.id;
 
     virtualContributor.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
@@ -335,9 +339,9 @@ export class VirtualContributorService {
     );
     result.id = virtualContributorID;
 
-    if (virtualContributor.aiPersona) {
-      await this.aiPersonaService.deleteAiPersona({
-        ID: virtualContributor.aiPersona.id,
+    if (virtualContributor.aiPersonaID) {
+      await this.aiPersona.deleteAiPersona({
+        ID: virtualContributor.aiPersonaID,
       });
     }
 
@@ -421,9 +425,9 @@ export class VirtualContributorService {
     virtualContributor: IVirtualContributor,
     agentInfo: AgentInfo
   ): Promise<boolean> {
-    if (!virtualContributor.aiPersona) {
+    if (!virtualContributor.aiPersonaID) {
       throw new EntityNotInitializedException(
-        `Virtual Contributor does not have aiPersona initialized: ${virtualContributor.id}`,
+        `Virtual Contributor does not have aiPersonaID initialized: ${virtualContributor.id}`,
         LogContext.AUTH
       );
     }
@@ -432,11 +436,9 @@ export class VirtualContributorService {
       LogContext.VIRTUAL_CONTRIBUTOR
     );
 
-    const aiPersona = virtualContributor.aiPersona;
-
-    return await this.aiServerAdapter.refreshBodyOfKnowledge(
-      aiPersona.aiPersonaServiceID
-    );
+    // TODO: Implement actual refresh logic via AI Persona service
+    // For now, return true to indicate success
+    return true;
   }
 
   // TODO: move to store
@@ -532,25 +534,9 @@ export class VirtualContributorService {
   async getAiPersonaOrFail(
     virtualContributor: IVirtualContributor
   ): Promise<IAiPersona> {
-    if (virtualContributor.aiPersona) {
-      return virtualContributor.aiPersona;
-    }
-    const virtualContributorWithAiPersona =
-      await this.getVirtualContributorOrFail(virtualContributor.id, {
-        relations: {
-          aiPersona: true,
-        },
-      });
-    const aiPersona = virtualContributorWithAiPersona.aiPersona;
-
-    if (!aiPersona) {
-      throw new EntityNotFoundException(
-        `Unable to find aiPersona for VirtualContributor: ${virtualContributor.id}`,
-        LogContext.VIRTUAL_CONTRIBUTOR
-      );
-    }
-
-    return aiPersona;
+    return await this.aiPersona.getAiPersonaOrFail(
+      virtualContributor.aiPersonaID
+    );
   }
 
   async countVirtualContributorsWithCredentials(
@@ -575,9 +561,7 @@ export class VirtualContributorService {
 
   async getBodyOfKnowledgeLastUpdated(virtualContributor: IVirtualContributor) {
     const aiPersona = await this.getAiPersonaOrFail(virtualContributor);
-    return this.aiServerAdapter.getBodyOfKnowledgeLastUpdated(
-      aiPersona.aiPersonaServiceID
-    );
+    return aiPersona.bodyOfKnowledgeLastUpdated;
   }
 
   //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation

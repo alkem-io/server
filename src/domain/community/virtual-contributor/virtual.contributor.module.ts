@@ -11,7 +11,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { AiPersonaModule } from '../ai-persona/ai.persona.module';
+import { AiPersonaModule } from '@services/ai-server/ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { ContributorModule } from '../contributor/contributor.module';

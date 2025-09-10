@@ -16,11 +16,11 @@ import {
 } from '@common/constants';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
 import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -29,9 +29,9 @@ export class VirtualContributorAuthorizationService {
     private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
     private knowledgeBaseAuthorizations: KnowledgeBaseAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private aiServerAdapter: AiServerAdapter
   ) {}
 
   async applyAuthorizationPolicy(
@@ -44,7 +44,6 @@ export class VirtualContributorAuthorizationService {
           account: true,
           profile: true,
           agent: true,
-          aiPersona: true,
           knowledgeBase: true,
         },
       }
@@ -116,10 +115,10 @@ export class VirtualContributorAuthorizationService {
       );
     updatedAuthorizations.push(agentAuthorization);
 
+    // TODO: this is a hack to deal with the fact that the AI Persona Service has an authorization policy that uses the VC's account
     const aiPersonaAuthorizations =
-      await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
-        virtual.aiPersona,
-        virtual.authorization
+      await this.aiServerAdapter.resetAuthorizationOnAiPersona(
+        virtual.aiPersonaID
       );
     updatedAuthorizations.push(...aiPersonaAuthorizations);
 

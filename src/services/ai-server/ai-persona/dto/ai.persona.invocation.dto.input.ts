@@ -64,12 +64,12 @@ export class ResultHandler {
 }
 
 @InputType()
-export class AiPersonaServiceInvocationInput {
+export class AiPersonaInvocationInput {
   @Field(() => UUID, {
     nullable: false,
-    description: 'Virtual Persona Type.',
+    description: 'AI Persona ID.',
   })
-  aiPersonaServiceID!: string;
+  aiPersonaID!: string;
 
   @Field(() => String, {
     nullable: false,
@@ -79,8 +79,7 @@ export class AiPersonaServiceInvocationInput {
 
   @Field(() => String, {
     nullable: true,
-    description:
-      'The ID of the context, the Virtual Persona is asked a question.',
+    description: 'The ID of the context, the AI Persona is asked a question.',
   })
   contextID?: string = undefined;
 

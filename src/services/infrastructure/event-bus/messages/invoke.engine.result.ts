@@ -1,5 +1,5 @@
 import { IEvent } from '@nestjs/cqrs';
-import { AiPersonaServiceInvocationInput } from '@services/ai-server/ai-persona-service/dto';
+import { AiPersonaInvocationInput } from '@services/ai-server/ai-persona';
 
 export class Source {
   chunkIndex?: number;
@@ -34,7 +34,7 @@ export class InvokeEngineResponse {
 
 export class InvokeEngineResult implements IEvent {
   constructor(
-    public original: AiPersonaServiceInvocationInput,
+    public original: AiPersonaInvocationInput,
     public response: InvokeEngineResponse
   ) {}
 }

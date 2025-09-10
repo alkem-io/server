@@ -1,9 +1,9 @@
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { AiPersona } from '@domain/community/ai-persona/ai.persona.entity';
+import { IAiPersona } from '@services/ai-server/ai-persona/ai.persona.interface';
 import { ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class AiPersonaModelCard {
-  aiPersona!: AiPersona;
+  aiPersona!: IAiPersona;
   aiPersonaEngine!: AiPersonaEngine;
 }

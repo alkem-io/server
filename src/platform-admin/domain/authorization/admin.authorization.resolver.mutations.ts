@@ -20,7 +20,7 @@ import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorizati
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { RoleChangeType } from '@alkemio/notifications-lib';
-import { AiPersonaService } from '@domain/community/ai-persona/ai.persona.service';
+import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { EntityManager } from 'typeorm';
@@ -43,7 +43,7 @@ export class AdminAuthorizationResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private authResetService: AuthResetService,
-    private aiPersonaService: AiPersonaService,
+    private aiPersona: AiPersonaService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private spaceService: SpaceService
@@ -243,7 +243,7 @@ export class AdminAuthorizationResolverMutations {
       `reset authorization on platform: ${agentInfo.email}`
     );
 
-    return this.aiPersonaService.refreshAllBodiesOfKnowledge();
+    return this.aiPersona.refreshAllBodiesOfKnowledge();
   }
 
   private async notifyPlatformGlobalRoleChange(

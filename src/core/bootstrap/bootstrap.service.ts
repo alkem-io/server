@@ -40,10 +40,9 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
-import { AiPersonaServiceService } from '@services/ai-server/ai-persona-service/ai.persona.service.service';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
-import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
@@ -54,6 +53,7 @@ import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
+import { AiPersonaService } from '@services/ai-server/ai-persona';
 
 @Injectable()
 export class BootstrapService {
@@ -80,7 +80,7 @@ export class BootstrapService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
-    private aiPersonaServiceService: AiPersonaServiceService,
+    private aiPersonaService: AiPersonaService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private templatesSetService: TemplatesSetService,
     private templateDefaultService: TemplateDefaultService,
@@ -500,16 +500,20 @@ export class BootstrapService {
     const platform = await this.platformService.getPlatformOrFail({
       relations: { guidanceVirtualContributor: true },
     });
+
+    const aiServer = await this.aiServer.getAiServerOrFail();
     if (!platform.guidanceVirtualContributor?.id) {
-      const aiPersonaService =
-        await this.aiPersonaServiceService.createAiPersonaService({
+      const aiPersona = await this.aiPersonaService.createAiPersona(
+        {
           bodyOfKnowledgeID: '',
           bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.NONE,
           engine: AiPersonaEngine.GUIDANCE,
-          dataAccessMode: AiPersonaDataAccessMode.NONE,
+          dataAccessMode: VirtualContributorDataAccessMode.NONE,
           prompt: [],
           externalConfig: undefined,
-        });
+        },
+        aiServer
+      );
 
       // Get admin account:
       const hostOrganization =
@@ -522,9 +526,7 @@ export class BootstrapService {
       // Create the VC
       const vc = await this.accountService.createVirtualContributorOnAccount({
         accountID: account.id,
-        aiPersona: {
-          aiPersonaServiceID: aiPersonaService.id,
-        },
+        aiPersona: aiPersona,
         profileData: {
           displayName: 'Guidance',
           description: 'Guidance Virtual Contributor',

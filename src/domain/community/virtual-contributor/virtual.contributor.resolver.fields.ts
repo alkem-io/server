@@ -18,7 +18,6 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
@@ -85,20 +84,6 @@ export class VirtualContributorResolverFields {
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(virtualContributor.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('aiPersona', () => IAiPersona, {
-    nullable: true,
-    description: 'The AI persona being used by this virtual contributor',
-  })
-  async aiPersona(
-    @Parent() virtualContributor: VirtualContributor
-  ): Promise<IAiPersona> {
-    return this.virtualContributorService.getAiPersonaOrFail(
-      virtualContributor
-    );
   }
 
   @ResolveField('knowledgeBase', () => IKnowledgeBase, {

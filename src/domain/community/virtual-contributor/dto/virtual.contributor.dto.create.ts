@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { CreateContributorInput } from '@domain/community/contributor/dto/contributor.dto.create';
-import { CreateAiPersonaInput } from '@domain/community/ai-persona/dto/ai.persona.dto.create';
+import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto/ai.persona.dto.create';
 import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -9,7 +9,7 @@ import { Type } from 'class-transformer';
 export class CreateVirtualContributorInput extends CreateContributorInput {
   @Field(() => CreateAiPersonaInput, {
     nullable: false,
-    description: 'Data used to create the AI Persona',
+    description: 'The ID of the AiPersona to use for this Collaboration.',
   })
   aiPersona!: CreateAiPersonaInput;
 

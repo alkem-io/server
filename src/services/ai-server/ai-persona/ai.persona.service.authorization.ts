@@ -8,14 +8,12 @@ import {
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAiPersona } from './ai.persona.interface';
-import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 
 @Injectable()
 export class AiPersonaAuthorizationService {
   constructor(
     private authorizationPolicy: AuthorizationPolicyService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private aiServerAdapter: AiServerAdapter
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -45,11 +43,6 @@ export class AiPersonaAuthorizationService {
     );
 
     // TODO: this is a hack to deal with the fact that the AI Persona Service has an authorization policy that uses the VC's account
-    const aiPersonaServiceAuthorizations =
-      await this.aiServerAdapter.resetAuthorizationOnAiPersonaService(
-        aiPersona.aiPersonaServiceID
-      );
-    updatedAuthorizations.push(...aiPersonaServiceAuthorizations);
     updatedAuthorizations.push(aiPersona.authorization);
 
     return updatedAuthorizations;
