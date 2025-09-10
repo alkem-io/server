@@ -7,6 +7,7 @@ import { MessageParent } from './message.details.parent.interface';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { NotSupportedException } from '@common/exceptions';
 
 @Injectable()
 export class MessageDetailsService {
@@ -86,6 +87,12 @@ export class MessageDetailsService {
           ),
           displayName: discussion.profile.displayName,
         };
+      }
+      case RoomType.UPDATES: {
+        throw new NotSupportedException(
+          `Message details not supported for room type: ${roomType}`,
+          LogContext.NOTIFICATIONS
+        );
       }
       default:
         throw new EntityNotFoundException(
