@@ -127,7 +127,7 @@ export class CalloutContributionService {
     }
   }
 
-  async delete(contributionID: string): Promise<ICalloutContribution> {
+  async delete(contributionID: string) {
     const contribution = await this.getCalloutContributionOrFail(
       contributionID,
       {
@@ -158,7 +158,12 @@ export class CalloutContributionService {
       contribution as CalloutContribution
     );
     result.id = contributionID;
-    return result;
+    return {
+      contribution: result,
+      whiteboard: contribution.whiteboard,
+      post: contribution.post,
+      link: contribution.link,
+    };
   }
 
   async save(
@@ -255,6 +260,25 @@ export class CalloutContributionService {
     }
 
     return calloutContribution.post;
+  }
+
+  public getContributionByChildIdOrFail(
+    childID: string,
+    relations?: FindOptionsRelations<ICalloutContribution>
+  ): Promise<ICalloutContribution> {
+    return this.contributionRepository.findOneOrFail({
+      where: [
+        { post: { id: childID } },
+        { whiteboard: { id: childID } },
+        { link: { id: childID } },
+      ],
+      relations: {
+        ...relations,
+        post: true,
+        whiteboard: true,
+        link: true,
+      },
+    });
   }
 
   /**
