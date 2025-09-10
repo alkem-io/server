@@ -3,13 +3,14 @@ import { InAppNotificationAdminService } from './in.app.notification.admin.servi
 import { InAppNotificationAdminResolverMutations } from './in.app.notification.admin.resolver.mutations';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
+import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
-    InAppNotificationModule,
     PlatformAuthorizationPolicyModule,
     AuthorizationModule,
+    TypeOrmModule.forFeature([InAppNotification]),
   ],
   providers: [
     InAppNotificationAdminService,

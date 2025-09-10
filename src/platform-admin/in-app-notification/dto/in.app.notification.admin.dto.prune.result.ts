@@ -4,7 +4,8 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export class PruneInAppNotificationAdminResult {
   @Field(() => Number, {
     nullable: false,
-    description: 'The number of InAppNotifications that were removed.',
+    description:
+      'The number of InAppNotifications that were removed due to being outside the retention period.',
   })
-  removedCount!: number;
+  removedCountOutsideRetentionPeriod!: number;
 }
