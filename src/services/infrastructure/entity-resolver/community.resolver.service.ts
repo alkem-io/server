@@ -287,6 +287,59 @@ export class CommunityResolverService {
     return community;
   }
 
+  public async getCommunityForMemoOrFail(memoId: string): Promise<ICommunity> {
+    const space = await this.entityManager.findOne(Space, {
+      where: [
+        {
+          collaboration: {
+            calloutsSet: {
+              callouts: {
+                contributions: {
+                  memo: {
+                    id: memoId,
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          collaboration: {
+            calloutsSet: {
+              callouts: {
+                framing: {
+                  memo: {
+                    id: memoId,
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+      relations: {
+        community: true,
+      },
+    });
+
+    if (!space) {
+      throw new EntityNotFoundException(
+        'Unable to find Space for Memo',
+        LogContext.COMMUNITY,
+        { memoId }
+      );
+    }
+    const community = space.community;
+    if (!community) {
+      throw new EntityNotFoundException(
+        'Unable to find Community for Space and Memo',
+        LogContext.COMMUNITY,
+        { spaceId: space.id, memoId }
+      );
+    }
+    return community;
+  }
+
   public async getCollaborationLicenseFromWhiteboardOrFail(
     whiteboardId: string
   ): Promise<ILicense> {
