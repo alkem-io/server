@@ -18,6 +18,8 @@ import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-noti
 import { InAppNotificationPayloadSpaceCommunityInvitationPlatform } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation.platform';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
+import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
+import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -30,7 +32,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
       case NotificationEventPayload.PLATFORM_USER_PROFILE_REMOVED:
         return InAppNotificationPayloadPlatformUserProfileRemoved;
       case NotificationEventPayload.PLATFORM_GLOBAL_ROLE_CHANGE:
-        return InAppNotificationPayloadUser;
+        return InAppNotificationPayloadPlatformGlobalRoleChange;
 
       // Organization notifications
       case NotificationEventPayload.ORGANIZATION_MESSAGE_DIRECT:
@@ -55,6 +57,8 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
         return InAppNotificationPayloadSpaceCommunicationUpdate;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT:
         return InAppNotificationPayloadSpaceCollaborationCallout;
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT:
+        return InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
 
       // User notifications
       case NotificationEventPayload.USER:

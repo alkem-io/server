@@ -1,14 +1,7 @@
-import { RoomType } from '@common/enums/room.type';
 import { NotificationInputBase } from '../notification.dto.input.base';
 
 export interface NotificationInputUserMention extends NotificationInputBase {
-  comment: string;
-  mentionedEntityID: string;
-  commentsId: string;
-  originEntity: {
-    id: string;
-    nameId: string;
-    displayName: string;
-  };
-  commentType: RoomType;
+  userID: string;
+  roomID: string;
+  messageID: string;
 }

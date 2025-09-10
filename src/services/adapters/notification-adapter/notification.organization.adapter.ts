@@ -12,6 +12,7 @@ import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-
 import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
+import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 
 @Injectable()
 export class NotificationOrganizationAdapter {
@@ -20,7 +21,8 @@ export class NotificationOrganizationAdapter {
     private readonly logger: LoggerService,
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
-    private notificationInAppAdapter: NotificationInAppAdapter
+    private notificationInAppAdapter: NotificationInAppAdapter,
+    private messageDetailsService: MessageDetailsService
   ) {}
 
   public async organizationMention(
@@ -30,7 +32,11 @@ export class NotificationOrganizationAdapter {
     const recipients = await this.getNotificationRecipientsOrganization(
       event,
       eventData,
-      eventData.mentionedEntityID
+      eventData.organizationID
+    );
+    const messageDetails = await this.messageDetailsService.getMessageDetails(
+      eventData.roomID,
+      eventData.messageID
     );
 
     if (recipients.emailRecipients.length > 0) {
@@ -39,11 +45,8 @@ export class NotificationOrganizationAdapter {
           event,
           eventData.triggeredBy,
           recipients.emailRecipients,
-          eventData.mentionedEntityID,
-          eventData.comment,
-          eventData.originEntity.id,
-          eventData.originEntity.displayName,
-          eventData.commentType
+          eventData.organizationID,
+          messageDetails
         );
 
       this.notificationExternalAdapter.sendExternalNotifications(
@@ -59,9 +62,9 @@ export class NotificationOrganizationAdapter {
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadOrganizationMessageRoom = {
         type: NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM,
-        organizationID: eventData.mentionedEntityID,
-        roomID: eventData.originEntity.id,
-        messageID: eventData.commentsId || 'unknown',
+        organizationID: eventData.organizationID,
+        roomID: eventData.roomID,
+        messageID: eventData.messageID,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -119,7 +122,6 @@ export class NotificationOrganizationAdapter {
       );
     }
 
-    /////////////////////////
     // And for the sender
     const eventSender = NotificationEvent.ORGANIZATION_MESSAGE_SENDER;
     const recipientsSender = await this.getNotificationRecipientsOrganization(

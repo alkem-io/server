@@ -6,6 +6,7 @@ import { MeQueryResults } from '@services/api/me/dto';
 import { IUser } from '@domain/community/user/user.interface';
 import {
   AuthenticationException,
+  ForbiddenException,
   ValidationException,
 } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
@@ -15,13 +16,59 @@ import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
+import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
+import { NotificationEventsFilterInput } from './dto/me.notification.event.filter.dto.input';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
   constructor(
     private meService: MeService,
-    private userService: UserService
+    private userService: UserService,
+    private inAppNotificationService: InAppNotificationService
   ) {}
+
+  @ResolveField('notifications', () => [IInAppNotification], {
+    nullable: false,
+    description: 'Get all notifications for the logged in user.',
+  })
+  public async notificationsInApp(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('filter', { nullable: true }) filter?: NotificationEventsFilterInput
+  ): Promise<IInAppNotification[]> {
+    if (!agentInfo.userID) {
+      throw new ForbiddenException(
+        'User could not be resolved',
+        LogContext.IN_APP_NOTIFICATION,
+        { agentInfo }
+      );
+    }
+
+    return await this.inAppNotificationService.getRawNotifications(
+      agentInfo.userID,
+      filter
+    );
+  }
+
+  @ResolveField('notificationsUnreadCount', () => Number, {
+    description:
+      'The number of unread notifications for the current authenticated user.',
+  })
+  public async notificationsUnreadCount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('filter', { nullable: true }) filter?: NotificationEventsFilterInput
+  ): Promise<number> {
+    if (agentInfo.userID === '') {
+      throw new ValidationException(
+        'Unable to retrieve invitations as no userID provided.',
+        LogContext.COMMUNITY
+      );
+    }
+    return await this.inAppNotificationService.getRawNotificationsUnreadCount(
+      agentInfo.userID,
+      filter
+    );
+  }
 
   @ResolveField('id', () => String, {
     description: 'The query id',

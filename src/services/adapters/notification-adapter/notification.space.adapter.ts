@@ -25,6 +25,7 @@ import { NotificationUserAdapter } from './notification.user.adapter';
 import { NotificationInputCollaborationCalloutContributionCreated } from './dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { NotificationInputCollaborationCalloutComment } from './dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
+import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 @Injectable()
 export class NotificationSpaceAdapter {
   constructor(
@@ -241,13 +242,15 @@ export class NotificationSpaceAdapter {
       .map(r => r.id);
 
     if (inAppReceiverCreators.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
-        type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
-        spaceID: space.id,
-        contributionID: eventData.post.id,
-        calloutID: eventData.callout.id,
-        messageID: eventData.commentSent.id,
-      };
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCalloutPostComment =
+        {
+          type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT,
+          spaceID: space.id,
+          contributionID: eventData.post.id,
+          calloutID: eventData.callout.id,
+          messageID: eventData.commentSent.id,
+          roomID: eventData.room.id,
+        };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT,

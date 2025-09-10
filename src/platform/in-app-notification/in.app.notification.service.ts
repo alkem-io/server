@@ -5,7 +5,7 @@ import { InAppNotification } from '@platform/in-app-notification/in.app.notifica
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { InAppNotificationFilterInput } from '@services/api/in-app-notification-reader/dto/in.app.notification.filter.dto.input';
+import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
 import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
 import { IInAppNotification } from './in.app.notification.interface';
 import {
@@ -63,14 +63,32 @@ export class InAppNotificationService {
 
   public getRawNotifications(
     receiverID: string,
-    filter?: InAppNotificationFilterInput
+    filter?: NotificationEventsFilterInput
   ): Promise<IInAppNotification[]> {
-    const where = filter
-      ? { receiverID, type: In(filter.types) }
-      : { receiverID };
+    const where =
+      filter && filter.types && filter.types.length > 0
+        ? { receiverID, type: In(filter.types) }
+        : { receiverID };
     return this.inAppNotificationRepo.find({
       where,
       order: { triggeredAt: 'desc' },
+    });
+  }
+
+  public getRawNotificationsUnreadCount(
+    receiverID: string,
+    filter?: NotificationEventsFilterInput
+  ): Promise<number> {
+    const where =
+      filter && filter.types && filter.types.length > 0
+        ? {
+            receiverID,
+            state: NotificationEventInAppState.UNREAD,
+            type: In(filter.types),
+          }
+        : { receiverID, state: NotificationEventInAppState.UNREAD };
+    return this.inAppNotificationRepo.count({
+      where,
     });
   }
 

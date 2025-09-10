@@ -95,9 +95,6 @@ export class RoomResolverMutations {
 
         this.roomMentionsService.processNotificationMentions(
           mentions,
-          post.id,
-          post.nameID,
-          post.profile,
           room,
           message,
           agentInfo
@@ -130,15 +127,8 @@ export class RoomResolverMutations {
         break;
       }
       case RoomType.CALENDAR_EVENT:
-        const calendar = await this.roomResolverService.getCalendarEventForRoom(
-          messageData.roomID
-        );
-
         this.roomMentionsService.processNotificationMentions(
           mentions,
-          calendar.id,
-          calendar.nameID,
-          calendar.profile,
           room,
           message,
           agentInfo
@@ -146,15 +136,8 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.DISCUSSION:
-        const discussion = await this.roomResolverService.getDiscussionForRoom(
-          messageData.roomID
-        );
-
         this.roomMentionsService.processNotificationMentions(
           mentions,
-          discussion.id,
-          discussion.nameID,
-          discussion.profile,
           room,
           message,
           agentInfo
@@ -167,9 +150,6 @@ export class RoomResolverMutations {
           );
         this.roomMentionsService.processNotificationMentions(
           mentions,
-          discussionForum.id,
-          discussionForum.nameID,
-          discussionForum.profile,
           room,
           message,
           agentInfo
@@ -201,9 +181,6 @@ export class RoomResolverMutations {
         // Mentions notifications should be sent regardless of callout visibility per client-web#5557
         this.roomMentionsService.processNotificationMentions(
           mentions,
-          callout.id,
-          callout.nameID,
-          callout.framing.profile,
           room,
           message,
           agentInfo
@@ -308,9 +285,6 @@ export class RoomResolverMutations {
           );
 
         this.roomServiceEvents.processNotificationCommentReply(
-          post.id,
-          post.nameID,
-          post.profile,
           room,
           reply,
           agentInfo,
@@ -368,14 +342,7 @@ export class RoomResolverMutations {
         break;
       }
       case RoomType.CALENDAR_EVENT:
-        const calendar = await this.roomResolverService.getCalendarEventForRoom(
-          messageData.roomID
-        );
-
         this.roomServiceEvents.processNotificationCommentReply(
-          calendar.id,
-          calendar.nameID,
-          calendar.profile,
           room,
           reply,
           agentInfo,
@@ -384,14 +351,7 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.DISCUSSION:
-        const discussion = await this.roomResolverService.getDiscussionForRoom(
-          messageData.roomID
-        );
-
         this.roomServiceEvents.processNotificationCommentReply(
-          discussion.id,
-          discussion.nameID,
-          discussion.profile,
           room,
           reply,
           agentInfo,
@@ -400,14 +360,7 @@ export class RoomResolverMutations {
 
         break;
       case RoomType.DISCUSSION_FORUM:
-        const discussionForum =
-          await this.roomResolverService.getDiscussionForRoom(
-            messageData.roomID
-          );
         this.roomServiceEvents.processNotificationCommentReply(
-          discussionForum.id,
-          discussionForum.nameID,
-          discussionForum.profile,
           room,
           reply,
           agentInfo,
@@ -466,9 +419,6 @@ export class RoomResolverMutations {
           );
 
           this.roomServiceEvents.processNotificationCommentReply(
-            callout.id,
-            callout.nameID,
-            callout.framing.profile,
             room,
             reply,
             agentInfo,
@@ -476,9 +426,6 @@ export class RoomResolverMutations {
           );
           this.roomMentionsService.processNotificationMentions(
             mentions,
-            callout.id,
-            callout.nameID,
-            callout.framing.profile,
             room,
             reply,
             agentInfo

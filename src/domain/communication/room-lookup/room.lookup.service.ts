@@ -52,6 +52,31 @@ export class RoomLookupService {
     return threadMessages;
   }
 
+  public async getMessageInRoom(
+    roomID: string,
+    messageID: string
+  ): Promise<{ message: IMessage; room: IRoom }> {
+    this.logger.verbose?.(
+      `Getting message in thread ${messageID} for room ${roomID}`,
+      LogContext.COMMUNICATION
+    );
+    const room = await this.getRoomOrFail(roomID);
+    const roomResult = await this.communicationAdapter.getCommunityRoom(
+      room.externalRoomID
+    );
+    // First message in the thread provides the threadID, but it itself does not have the threadID set
+    const message = roomResult.messages.find(m => m.id === messageID);
+
+    if (!message) {
+      throw new EntityNotFoundException(
+        `Not able to locate Message with the specified ID: ${messageID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    return { message, room };
+  }
+
   async getMessages(room: IRoom): Promise<IMessage[]> {
     const externalRoom = await this.communicationAdapter.getCommunityRoom(
       room.externalRoomID
