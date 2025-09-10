@@ -21,6 +21,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
 import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
+import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -60,6 +61,8 @@ import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-not
         return InAppNotificationPayloadSpaceCollaborationCallout;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT:
         return InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_COMMENT:
+        return InAppNotificationPayloadSpaceCollaborationCalloutComment;
 
       // User notifications
       case NotificationEventPayload.USER:
@@ -75,7 +78,7 @@ import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-not
     }
 
     throw new BaseException(
-      'Unable to determine in-app notification type',
+      'Unable to determine in-app notification type ' + payload.type,
       LogContext.IN_APP_NOTIFICATION,
       AlkemioErrorStatus.FORMAT_NOT_SUPPORTED,
       { id: payload.id, type: payload.type }
