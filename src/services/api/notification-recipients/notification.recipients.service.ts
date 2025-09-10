@@ -119,15 +119,12 @@ export class NotificationRecipientsService {
         eventData
       );
 
-    const requiredPrivilegeDescription = privilegeRequired
-      ? privilegeRequired
-      : 'none';
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 4a. ...and for email, of those ${emailRecipientsWithPrivilege.length} have the required privilege (${requiredPrivilegeDescription})`,
+      `[${eventData.eventType}] - 4a. ...and for email, of those ${emailRecipientsWithPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithEntityPrivilege.length} have the required privilege (${requiredPrivilegeDescription})`,
+      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithEntityPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
       LogContext.NOTIFICATIONS
     );
     // Filter by whether they have the InApp privilege on platform level
