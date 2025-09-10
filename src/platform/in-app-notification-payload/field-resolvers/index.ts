@@ -21,3 +21,4 @@ export * from './organization/in.app.notification.payload.organization.message.d
 // User Field Resolvers
 export * from './user/in.app.notification.payload.user.message.direct.resolver.fields';
 export * from './user/in.app.notification.payload.user.message.room.resolver.fields';
+export * from './vc/in.app.notification.payload.virtual.contributor.resolver.fields';

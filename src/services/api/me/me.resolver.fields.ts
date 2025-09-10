@@ -61,7 +61,7 @@ export class MeResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('filter', { nullable: true }) filter?: NotificationEventsFilterInput
   ): Promise<number> {
-    if (agentInfo.userID === '') {
+    if (!agentInfo.userID) {
       throw new ValidationException(
         'Unable to retrieve invitations as no userID provided.',
         LogContext.COMMUNITY
@@ -115,7 +115,7 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<number> {
-    if (agentInfo.userID === '') {
+    if (!agentInfo.userID) {
       throw new ValidationException(
         'Unable to retrieve invitations as no userID provided.',
         LogContext.COMMUNITY
@@ -140,7 +140,7 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<CommunityInvitationResult[]> {
-    if (agentInfo.userID === '') {
+    if (!agentInfo.userID) {
       throw new ValidationException(
         'Unable to retrieve invitations as no userID provided.',
         LogContext.COMMUNITY
@@ -166,7 +166,7 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<CommunityApplicationResult[]> {
-    if (agentInfo.userID === '') {
+    if (!agentInfo.userID) {
       throw new ValidationException(
         'Unable to retrieve applications as no userID provided.',
         LogContext.COMMUNITY

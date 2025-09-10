@@ -135,14 +135,6 @@ export class RoomResolverMutations {
         );
 
         break;
-      case RoomType.DISCUSSION:
-        this.roomMentionsService.processNotificationMentions(
-          mentions,
-          room,
-          message,
-          agentInfo
-        );
-        break;
       case RoomType.DISCUSSION_FORUM:
         const discussionForum =
           await this.roomResolverService.getDiscussionForRoom(
@@ -342,15 +334,6 @@ export class RoomResolverMutations {
         break;
       }
       case RoomType.CALENDAR_EVENT:
-        this.roomServiceEvents.processNotificationCommentReply(
-          room,
-          reply,
-          agentInfo,
-          messageOwnerId
-        );
-
-        break;
-      case RoomType.DISCUSSION:
         this.roomServiceEvents.processNotificationCommentReply(
           room,
           reply,
