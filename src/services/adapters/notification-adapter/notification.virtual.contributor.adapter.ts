@@ -59,6 +59,7 @@ export class NotificationVirtualContributorAdapter {
       const inAppPayload: InAppNotificationPayloadVirtualContributor = {
         type: NotificationEventPayload.VIRTUAL_CONTRIBUTOR,
         virtualContributorID: eventData.invitedContributorID,
+        space,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

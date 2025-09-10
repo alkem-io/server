@@ -1,5 +1,8 @@
 // Space Payload Field Resolvers
+export * from './space/in.app.notification.payload.space.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
+export * from './space/in.app.notification.payload.space.collaboration.callout.post.comment.resolver.fields';
+export * from './space/in.app.notification.payload.space.collaboration.callout.comment.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.contributor.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.application.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.invitation.resolver.fields';
@@ -19,3 +22,4 @@ export * from './organization/in.app.notification.payload.organization.message.d
 // User Field Resolvers
 export * from './user/in.app.notification.payload.user.message.direct.resolver.fields';
 export * from './user/in.app.notification.payload.user.message.room.resolver.fields';
+export * from './vc/in.app.notification.payload.virtual.contributor.resolver.fields';
