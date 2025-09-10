@@ -18,6 +18,7 @@ import {
   InAppNotificationPayloadSpaceResolverFields,
   InAppNotificationPayloadUserMessageDirectResolverFields,
   InAppNotificationPayloadUserMessageRoomResolverFields,
+  InAppNotificationPayloadVirtualContributorFieldsResolver,
 } from './field-resolvers';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 @Module({
@@ -42,6 +43,7 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
     InAppNotificationPayloadPlatformForumDiscussionResolverFields,
     InAppNotificationPayloadPlatformUserProfileRemovedResolverFields,
     OrganizationLoaderCreator,
+    InAppNotificationPayloadVirtualContributorFieldsResolver,
   ],
   exports: [],
 })

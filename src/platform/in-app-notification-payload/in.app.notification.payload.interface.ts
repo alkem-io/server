@@ -20,6 +20,7 @@ import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-ap
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
 import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
+import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -67,6 +68,10 @@ import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@p
         return InAppNotificationPayloadUserMessageRoom;
       case NotificationEventPayload.USER_MESSAGE_DIRECT:
         return InAppNotificationPayloadUserMessageDirect;
+
+      // Virtual Contributor notifications
+      case NotificationEventPayload.VIRTUAL_CONTRIBUTOR:
+        return InAppNotificationPayloadVirtualContributor;
     }
 
     throw new BaseException(

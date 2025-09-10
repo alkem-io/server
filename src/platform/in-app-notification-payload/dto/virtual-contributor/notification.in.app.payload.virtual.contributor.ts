@@ -1,6 +1,7 @@
 import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { ISpace } from '@domain/space/space/space.interface';
 @ObjectType('InAppNotificationPayloadVirtualContributor', {
   implements: () => IInAppNotificationPayload,
 })
@@ -13,5 +14,9 @@ export abstract class InAppNotificationPayloadVirtualContributor
   })
   type!: NotificationEventPayload;
 
+  @Field(() => String, { nullable: false })
   virtualContributorID!: string;
+
+  @Field(() => ISpace, { nullable: true })
+  space!: ISpace | null;
 }
