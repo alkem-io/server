@@ -122,7 +122,6 @@ export class NotificationOrganizationAdapter {
       );
     }
 
-    /////////////////////////
     // And for the sender
     const eventSender = NotificationEvent.ORGANIZATION_MESSAGE_SENDER;
     const recipientsSender = await this.getNotificationRecipientsOrganization(

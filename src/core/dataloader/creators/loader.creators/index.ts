@@ -33,3 +33,4 @@ export * from './in-app-notification/callout.loader.creator';
 export * from './in-app-notification/space.loader.creator';
 
 export * from './roleset.application.loader.creator';
+export * from './organization.loader.creator';
