@@ -4,14 +4,14 @@ import { PruneInAppNotificationAdminResult } from './dto/in.app.notification.adm
 import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
 import { Repository, LessThan } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types/alkemio.config';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class InAppNotificationAdminService {
-  // Time period to retain in-app notifications. Notifications older than this will be removed during pruning
-  // TODO: this needs to come from platform configuration
-  private static readonly NOTIFICATION_RETENTION_DAYS = 30;
-
   constructor(
+    private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(InAppNotification)
@@ -19,16 +19,25 @@ export class InAppNotificationAdminService {
   ) {}
 
   async pruneInAppNotifications(): Promise<PruneInAppNotificationAdminResult> {
+    // Time period to retain in-app notifications. Notifications older than this will be removed during pruning
+    const retentionDays = this.configService.get(
+      'notifications.in_app.max_retention_period_days',
+      { infer: true }
+    );
+    // Maximum number of in-app notifications any user can have
+    // When a user exceeds this limit, the oldest notifications will be removed
+    const maxPerUser = this.configService.get(
+      'notifications.in_app.max_notifications_per_user',
+      { infer: true }
+    );
     this.logger.verbose?.(
-      `Starting pruning of in-app notifications older than ${InAppNotificationAdminService.NOTIFICATION_RETENTION_DAYS} days`
+      `Starting pruning of in-app notifications: a) older than ${retentionDays} days b) max per user ${maxPerUser}`,
+      LogContext.NOTIFICATIONS
     );
 
     // Calculate the cutoff date - notifications older than this will be removed
     const cutoffDate = new Date();
-    cutoffDate.setDate(
-      cutoffDate.getDate() -
-        InAppNotificationAdminService.NOTIFICATION_RETENTION_DAYS
-    );
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
     try {
       // Remove all notifications older than the cutoff date
@@ -42,8 +51,17 @@ export class InAppNotificationAdminService {
         `Successfully pruned ${removedCountOutsideRetentionPeriod} in-app notifications older than ${cutoffDate.toISOString()}`
       );
 
+      // Now remove excess notifications per user (keeping only the most recent ones)
+      const removedCountExceedingUserLimit =
+        await this.pruneExcessNotificationsPerUser(maxPerUser);
+
+      this.logger.verbose?.(
+        `Successfully pruned ${removedCountExceedingUserLimit} in-app notifications exceeding user limit of ${maxPerUser}`
+      );
+
       return {
         removedCountOutsideRetentionPeriod,
+        removedCountExceedingUserLimit,
       };
     } catch (error) {
       this.logger.error(
@@ -52,7 +70,70 @@ export class InAppNotificationAdminService {
       );
       throw error;
     }
+  }
 
-    //
+  /**
+   * Remove excess notifications per user, keeping only the most recent ones
+   * @returns The number of notifications removed
+   */
+  private async pruneExcessNotificationsPerUser(
+    maxPerUser: number
+  ): Promise<number> {
+    this.logger.verbose?.(
+      `Starting pruning of excess notifications per user (max: ${maxPerUser})`
+    );
+
+    try {
+      // Get all users who have more than the maximum allowed notifications
+      const usersWithExcessNotifications = await this.inAppNotificationRepo
+        .createQueryBuilder('notification')
+        .select('notification.receiverID', 'receiverID')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('notification.receiverID')
+        .having('COUNT(*) > :maxNotifications', {
+          maxNotifications: maxPerUser,
+        })
+        .getRawMany();
+
+      let totalRemovedCount = 0;
+
+      // For each user with excess notifications, remove the oldest ones
+      for (const user of usersWithExcessNotifications) {
+        const receiverID = user.receiverID;
+        const excessCount = parseInt(user.count) - maxPerUser;
+
+        if (excessCount > 0) {
+          // Get the IDs of the oldest notifications for this user
+          const oldestNotifications = await this.inAppNotificationRepo
+            .createQueryBuilder('notification')
+            .select('notification.id')
+            .where('notification.receiverID = :receiverID', { receiverID })
+            .orderBy('notification.triggeredAt', 'ASC')
+            .limit(excessCount)
+            .getMany();
+
+          if (oldestNotifications.length > 0) {
+            const idsToDelete = oldestNotifications.map(n => n.id);
+
+            const deleteResult =
+              await this.inAppNotificationRepo.delete(idsToDelete);
+            const removedForUser = deleteResult.affected || 0;
+            totalRemovedCount += removedForUser;
+
+            this.logger.verbose?.(
+              `Removed ${removedForUser} excess notifications for user ${receiverID}`
+            );
+          }
+        }
+      }
+
+      return totalRemovedCount;
+    } catch (error) {
+      this.logger.error(
+        `Failed to prune excess notifications per user: ${error}`,
+        'InAppNotificationAdminService.pruneExcessNotificationsPerUser'
+      );
+      throw error;
+    }
   }
 }
