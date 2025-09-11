@@ -136,4 +136,11 @@ export class InAppNotificationService {
       { state }
     );
   }
+
+  async markAllNotificationsAsState(
+    userId: string,
+    state: NotificationEventInAppState
+  ): Promise<UpdateResult> {
+    return this.inAppNotificationRepo.update({ receiverID: userId }, { state });
+  }
 }

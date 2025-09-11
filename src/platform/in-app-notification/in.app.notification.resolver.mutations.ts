@@ -1,4 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { UpdateResult } from 'typeorm';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -55,7 +56,8 @@ export class InAppNotificationResolverMutations {
   }
 
   @Mutation(() => Boolean, {
-    description: 'Mark multiple notifications as read.',
+    description:
+      'Mark multiple notifications as read. If no IDs are provided, marks all user notifications as read.',
   })
   async markNotificationsAsRead(
     @CurrentUser() agentInfo: AgentInfo,
@@ -69,7 +71,8 @@ export class InAppNotificationResolverMutations {
   }
 
   @Mutation(() => Boolean, {
-    description: 'Mark multiple notifications as unread.',
+    description:
+      'Mark multiple notifications as unread. If no IDs are provided, marks all user notifications as unread.',
   })
   async markNotificationsAsUnread(
     @CurrentUser() agentInfo: AgentInfo,
@@ -87,16 +90,22 @@ export class InAppNotificationResolverMutations {
     notificationIds: string[],
     state: NotificationEventInAppState
   ): Promise<boolean> {
-    if (notificationIds.length === 0) {
-      return false;
-    }
+    let result: UpdateResult;
 
-    const result =
-      await this.inAppNotificationService.bulkUpdateNotificationState(
+    if (notificationIds.length === 0) {
+      // If no specific IDs provided, mark all user's notifications with the given state
+      result = await this.inAppNotificationService.markAllNotificationsAsState(
+        agentInfo.userID,
+        state
+      );
+    } else {
+      // Mark specific notifications
+      result = await this.inAppNotificationService.bulkUpdateNotificationState(
         notificationIds,
         agentInfo.userID,
         state
       );
+    }
 
     // Update counter for the user if any notifications were affected
     if ((result?.affected ?? 0) > 0) {
