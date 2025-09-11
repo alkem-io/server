@@ -26,7 +26,6 @@ import { MessageDetailsModule } from '@domain/communication/message.details/mess
   imports: [AuthorizationModule, MessageDetailsModule],
   providers: [
     // add in all the other payload resolvers from the ../field-resolvers directory
-    InAppNotificationPayloadOrganizationMessageDirectResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,

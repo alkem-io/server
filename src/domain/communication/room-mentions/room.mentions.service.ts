@@ -143,7 +143,7 @@ export class RoomMentionsService {
           entityMentionNotificationInput
         );
       }
-      if (mention.contributorType == MentionedEntityType.ORGANIZATION) {
+      if (mention.contributorType === MentionedEntityType.ORGANIZATION) {
         const entityMentionNotificationInput: NotificationInputOrganizationMention =
           {
             triggeredBy: eventData.triggeredBy,
