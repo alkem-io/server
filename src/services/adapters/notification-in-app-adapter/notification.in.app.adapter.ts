@@ -76,5 +76,20 @@ export class NotificationInAppAdapter {
         this.subscriptionPublishService.publishInAppNotificationReceived(x)
       )
     );
+
+    // Update counters for each affected user
+    const uniqueReceiverIDs = [...new Set(receiverIDs)]; // Remove duplicates
+    await Promise.all(
+      uniqueReceiverIDs.map(async receiverID => {
+        const count =
+          await this.inAppNotificationService.getRawNotificationsUnreadCount(
+            receiverID
+          );
+        return this.subscriptionPublishService.publishInAppNotificationCounter(
+          receiverID,
+          count
+        );
+      })
+    );
   }
 }

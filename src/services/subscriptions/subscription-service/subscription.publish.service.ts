@@ -3,6 +3,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@src/common/constants';
@@ -15,6 +16,7 @@ import {
   ActivityCreatedSubscriptionPayload,
   RoomEventSubscriptionPayload,
   VirtualContributorUpdatedSubscriptionPayload,
+  InAppNotificationCounterSubscriptionPayload,
 } from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -34,6 +36,8 @@ export class SubscriptionPublishService {
     private virtualContributorUpdatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
     private inAppNotificationReceivedSubscription: TypedPubSubEngine<IInAppNotification>,
+    @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
+    private inAppNotificationCounterSubscription: TypedPubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -111,6 +115,19 @@ export class SubscriptionPublishService {
         eventID: `in-app-notification-received-${randomInt()}`,
         notification,
       }
+    );
+  }
+
+  public publishInAppNotificationCounter(receiverID: string, count: number) {
+    const payload: InAppNotificationCounterSubscriptionPayload = {
+      eventID: `in-app-notification-counter-${randomInt()}`,
+      receiverID,
+      count,
+    };
+
+    return this.inAppNotificationCounterSubscription.publish(
+      SubscriptionType.IN_APP_NOTIFICATION_COUNTER,
+      payload
     );
   }
 }

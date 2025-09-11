@@ -7,12 +7,14 @@ import { ForbiddenException } from '@common/exceptions';
 import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { InAppNotificationService } from './in.app.notification.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 
 @InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverMutations {
   constructor(
-    private readonly inAppNotificationService: InAppNotificationService
+    private readonly inAppNotificationService: InAppNotificationService,
+    private readonly subscriptionPublishService: SubscriptionPublishService
   ) {}
 
   @Mutation(() => NotificationEventInAppState, {
@@ -37,6 +39,16 @@ export class InAppNotificationResolverMutations {
     await this.inAppNotificationService.updateNotificationState(
       notificationData.ID,
       notificationData.state
+    );
+
+    // Update counter for the user
+    const count =
+      await this.inAppNotificationService.getRawNotificationsUnreadCount(
+        agentInfo.userID
+      );
+    await this.subscriptionPublishService.publishInAppNotificationCounter(
+      agentInfo.userID,
+      count
     );
 
     return notificationData.state;
@@ -85,6 +97,18 @@ export class InAppNotificationResolverMutations {
         agentInfo.userID,
         state
       );
+
+    // Update counter for the user if any notifications were affected
+    if ((result?.affected ?? 0) > 0) {
+      const count =
+        await this.inAppNotificationService.getRawNotificationsUnreadCount(
+          agentInfo.userID
+        );
+      await this.subscriptionPublishService.publishInAppNotificationCounter(
+        agentInfo.userID,
+        count
+      );
+    }
 
     // Note: The `affected` property is not supported by all database drivers. For unsupported drivers, it will be `undefined`.
     return (result?.affected ?? 0) > 0;
