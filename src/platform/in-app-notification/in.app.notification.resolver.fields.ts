@@ -34,10 +34,15 @@ export class InAppNotificationResolverFields {
     @Loader(ContributorLoaderCreator)
     loader: ILoader<IContributor | null>
   ): Promise<IContributor | null> {
-    const triggeredBy = await loader.load(notification.triggeredByID);
+    const { triggeredByID, id } = notification;
+
+    if (!triggeredByID) {
+      return null;
+    }
+    const triggeredBy = await loader.load(triggeredByID);
     if (!triggeredBy) {
       this.logger.warn(
-        `InAppNotification ${notification.id} unable to resolve the contributor that triggered it ${notification.triggeredByID}`
+        `InAppNotification ${id} unable to resolve the contributor that triggered it ${triggeredByID}`
       );
       return null;
     }

@@ -40,7 +40,7 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolve
   }
 
   @ResolveField(() => MessageDetails, {
-    nullable: false,
+    nullable: true,
     description: 'The details of the message.',
   })
   public async messageDetails(

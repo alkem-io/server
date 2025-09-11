@@ -1,4 +1,4 @@
-import { Resolver } from '@nestjs/graphql';
+import { Resolver, Int } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentUser, TypedSubscription } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -56,7 +56,7 @@ export class InAppNotificationResolverSubscription {
   }
 
   @TypedSubscription<InAppNotificationCounterSubscriptionPayload, never>(
-    () => Number,
+    () => Int,
     {
       description:
         'Counter of unread in-app notifications for the currently authenticated user.',
