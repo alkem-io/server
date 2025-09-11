@@ -1,6 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum AiPersonaModelCardEntryFlagName {
+export enum VirtualContributorModelCardEntryFlagName {
   SPACE_DATA_ACCESS_ABOUT = 'space-data-access-about',
   SPACE_DATA_ACCESS_CONTENT = 'space-data-access-content',
   SPACE_DATA_ACCESS_SUBSPACES = 'space-data-access-subspaces',
@@ -11,6 +11,6 @@ export enum AiPersonaModelCardEntryFlagName {
   SPACE_ROLE_ADMIN = 'space-role-admin',
 }
 
-registerEnumType(AiPersonaModelCardEntryFlagName, {
-  name: 'AiPersonaModelCardEntryFlagName',
+registerEnumType(VirtualContributorModelCardEntryFlagName, {
+  name: 'VirtualContributorModelCardEntryFlagName',
 });

@@ -143,7 +143,7 @@ export class AiServerResolverMutations {
   })
   async aiServerCreateAiPersonaService(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('aiPersonaServiceData')
+    @Args('aiPersonaData')
     aiPersonaData: CreateAiPersonaInput
   ): Promise<IAiPersona> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
@@ -153,20 +153,20 @@ export class AiServerResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create Virtual persona: ${aiPersonaData.engine}`
     );
-    let aiPersonaService = await this.aiPersonaService.createAiPersona(
+    let aiPersona = await this.aiPersonaService.createAiPersona(
       aiPersonaData,
       aiServer
     );
-    aiPersonaService.aiServer = aiServer;
-    aiPersonaService = await this.aiPersonaService.save(aiPersonaService);
+    aiPersona.aiServer = aiServer;
+    aiPersona = await this.aiPersonaService.save(aiPersona);
 
     const authorizations =
       await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
-        aiPersonaService,
+        aiPersona,
         aiServer.authorization
       );
     await this.authorizationPolicyService.saveAll(authorizations);
 
-    return this.aiPersonaService.getAiPersonaOrFail(aiPersonaService.id);
+    return this.aiPersonaService.getAiPersonaOrFail(aiPersona.id);
   }
 }

@@ -1,9 +1,9 @@
 import { ObjectType } from '@nestjs/graphql';
 import { Paginate } from './paginated.type';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @ObjectType()
 export class PaginatedVirtualContributor extends Paginate(
-  VirtualContributor,
+  IVirtualContributor,
   'virtualContributors'
 ) {}

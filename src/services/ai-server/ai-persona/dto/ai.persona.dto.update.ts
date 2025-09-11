@@ -30,12 +30,12 @@ export class UpdateAiPersonaInput extends UpdateBaseAlkemioInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   bodyOfKnowledgeID?: string;
 
-  @Field(() => VirtualContributorDataAccessMode, { nullable: true })
-  dataAccessMode?: VirtualContributorDataAccessMode;
-
   @Field(() => String, { nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
   description?: string;
+
+  @Field(() => VirtualContributorDataAccessMode, { nullable: true })
+  dataAccessMode?: VirtualContributorDataAccessMode;
 
   @Field(() => [VirtualContributorInteractionMode], { nullable: true })
   interactionModes?: VirtualContributorInteractionMode[];

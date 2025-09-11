@@ -50,6 +50,10 @@ export abstract class IAiPersona extends IAuthorizable {
   })
   bodyOfKnowledgeLastUpdated!: Date | null;
 
+  @Field(() => IExternalConfig, {
+    nullable: true,
+    description: 'The external configuration for this AI Persona.',
+  })
   externalConfig?: IExternalConfig;
 
   @Field(() => Markdown, {

@@ -202,7 +202,7 @@ export class AiServerService {
     //   );
     // }
 
-    const personaService = await this.aiPersonaService.getAiPersonaOrFail(
+    const persona = await this.aiPersonaService.getAiPersonaOrFail(
       invocationInput.aiPersonaID
     );
 
@@ -217,7 +217,7 @@ export class AiServerService {
     let history: InteractionMessage[] = [];
 
     if (
-      HISTORY_ENABLED_ENGINES.has(personaService.engine) &&
+      HISTORY_ENABLED_ENGINES.has(persona.engine) &&
       invocationInput.resultHandler.roomDetails
     ) {
       const historyLimit = parseInt(
@@ -233,7 +233,7 @@ export class AiServerService {
       const includeEntityContents = [
         AiPersonaEngine.LIBRA_FLOW,
         AiPersonaEngine.EXPERT,
-      ].includes(personaService.engine);
+      ].includes(persona.engine);
 
       history = await this.getLastNInteractionMessages(
         invocationInput.resultHandler.roomDetails,
@@ -350,12 +350,9 @@ export class AiServerService {
   }
 
   async updateAiPersonaService(updateData: UpdateAiPersonaInput) {
-    const aiPersonaService =
-      await this.aiPersonaService.updateAiPersona(updateData);
-
+    const aiPersona = await this.aiPersonaService.updateAiPersona(updateData);
     // TBD: trigger a re-ingest?
-
-    return aiPersonaService;
+    return aiPersona;
   }
 
   async createAiPersona(personaData: CreateAiPersonaInput) {

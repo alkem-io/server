@@ -1,11 +1,11 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AiPersonaModelCard } from './dto/ai.persona.model.card.dto.result';
-import { ModelCardSpaceUsageResult } from './dto/ai.persona.model.card.dto.space.usage.result';
-import { AiPersonaModelCardEntry } from '@common/enums/ai.persona.model.card.entry';
-import { AiPersonaModelCardEntryFlagName } from '@common/enums/ai.persona.model.card.entry.flag.name';
-import { ModelCardAiEngineResult } from './dto/ai.persona.model.card.dto.ai.engine.result';
+import { VirtualContributorModelCard } from './dto/virtual.contributor.model.card.dto.result';
+import { ModelCardSpaceUsageResult } from './dto/virtual.contributor.model.card.dto.space.usage.result';
+import { VirtualContributorModelCardEntry } from '@common/enums/virtual.contributor.model.card.entry';
+import { VirtualContributorModelCardEntryFlagName } from '@common/enums/virtual.contributor.model.card.entry.flag.name';
+import { ModelCardAiEngineResult } from './dto/virtual.contributor.model.card.dto.ai.engine.result';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { ModelCardMonitoringResult } from './dto/ai.persona.model.card.dto.monitoring.result';
+import { ModelCardMonitoringResult } from './dto/virtual.contributor.model.card.dto.monitoring.result';
 
 const DEFAULT_ENGINE_HOSTING_LOCATION = 'Sweden, EU';
 
@@ -15,8 +15,8 @@ const DEFAULT_ENGINE_HOSTING_LOCATION = 'Sweden, EU';
  * that is used by the AI Persona. It is expected that the set of Model Cards returned will expand
  * in the future, as more engines are added and more data is available.
  */
-@Resolver(() => AiPersonaModelCard)
-export class AiPersonaModelCardResolverFields {
+@Resolver(() => VirtualContributorModelCard)
+export class VirtualContributorModelCardResolverFields {
   @ResolveField('spaceUsage', () => [ModelCardSpaceUsageResult], {
     nullable: true,
     description:
@@ -25,48 +25,48 @@ export class AiPersonaModelCardResolverFields {
   myPrivileges(): ModelCardSpaceUsageResult[] {
     const result: ModelCardSpaceUsageResult[] = [
       {
-        modelCardEntry: AiPersonaModelCardEntry.SPACE_CAPABILITIES,
+        modelCardEntry: VirtualContributorModelCardEntry.SPACE_CAPABILITIES,
         flags: [
           {
-            name: AiPersonaModelCardEntryFlagName.SPACE_CAPABILITY_TAGGING,
+            name: VirtualContributorModelCardEntryFlagName.SPACE_CAPABILITY_TAGGING,
             enabled: true,
           },
           {
-            name: AiPersonaModelCardEntryFlagName.SPACE_CAPABILITY_CREATE_CONTENT,
+            name: VirtualContributorModelCardEntryFlagName.SPACE_CAPABILITY_CREATE_CONTENT,
             enabled: false,
           },
           {
-            name: AiPersonaModelCardEntryFlagName.SPACE_CAPABILITY_COMMUNITY_MANAGEMENT,
+            name: VirtualContributorModelCardEntryFlagName.SPACE_CAPABILITY_COMMUNITY_MANAGEMENT,
             enabled: false,
           },
         ],
       },
       {
-        modelCardEntry: AiPersonaModelCardEntry.SPACE_DATA_ACCESS,
+        modelCardEntry: VirtualContributorModelCardEntry.SPACE_DATA_ACCESS,
         flags: [
           {
-            name: AiPersonaModelCardEntryFlagName.SPACE_DATA_ACCESS_ABOUT,
+            name: VirtualContributorModelCardEntryFlagName.SPACE_DATA_ACCESS_ABOUT,
             enabled: true,
           },
           {
-            name: AiPersonaModelCardEntryFlagName.SPACE_DATA_ACCESS_CONTENT,
+            name: VirtualContributorModelCardEntryFlagName.SPACE_DATA_ACCESS_CONTENT,
             enabled: false,
           },
           {
-            name: AiPersonaModelCardEntryFlagName.SPACE_DATA_ACCESS_SUBSPACES,
+            name: VirtualContributorModelCardEntryFlagName.SPACE_DATA_ACCESS_SUBSPACES,
             enabled: false,
           },
         ],
       },
       {
-        modelCardEntry: AiPersonaModelCardEntry.SPACE_ROLE_REQUIRED,
+        modelCardEntry: VirtualContributorModelCardEntry.SPACE_ROLE_REQUIRED,
         flags: [
           {
-            name: AiPersonaModelCardEntryFlagName.SPACE_ROLE_MEMBER,
+            name: VirtualContributorModelCardEntryFlagName.SPACE_ROLE_MEMBER,
             enabled: true,
           },
           {
-            name: AiPersonaModelCardEntryFlagName.SPACE_ROLE_ADMIN,
+            name: VirtualContributorModelCardEntryFlagName.SPACE_ROLE_ADMIN,
             enabled: false,
           },
         ],
@@ -81,7 +81,7 @@ export class AiPersonaModelCardResolverFields {
       'The model card information about the AI Engine behind the AI Persona.',
   })
   async aiEngine(
-    @Parent() modelCard: AiPersonaModelCard
+    @Parent() modelCard: VirtualContributorModelCard
   ): Promise<ModelCardAiEngineResult> {
     const engine = modelCard.aiPersonaEngine;
 

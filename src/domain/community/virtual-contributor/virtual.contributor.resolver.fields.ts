@@ -22,13 +22,40 @@ import { IContributor } from '../contributor/contributor.interface';
 import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { VirtualContributorModelCard } from '../virtual-contributor-model-card/dto/virtual.contributor.model.card.dto.result';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
   constructor(
     private virtualContributorService: VirtualContributorService,
-    private authorizationService: AuthorizationService
+    private authorizationService: AuthorizationService,
+    private aiServerAdapter: AiServerAdapter
   ) {}
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('modelCard', () => VirtualContributorModelCard, {
+    nullable: false,
+    description: 'The model card information about this Virtual Contributor',
+  })
+  async modelCard(
+    @Parent() virtualContributor: VirtualContributor
+  ): Promise<VirtualContributorModelCard> {
+    const engine = await this.aiServerAdapter.getPersonaEngine(
+      virtualContributor.aiPersonaID
+    );
+    const aiPersona = await this.aiServerAdapter.getPersonaOrFail(
+      virtualContributor.aiPersonaID
+    );
+
+    const modelCard: VirtualContributorModelCard = {
+      aiPersona,
+      aiPersonaEngine: engine,
+    };
+
+    return modelCard;
+  }
 
   @ResolveField('account', () => IAccount, {
     nullable: true,

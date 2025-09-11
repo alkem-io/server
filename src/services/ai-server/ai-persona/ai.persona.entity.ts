@@ -9,6 +9,7 @@ import { VirtualContributorInteractionMode } from '@common/enums/virtual.contrib
 import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { IExternalConfig } from './dto/external.config';
 
+// TODO: go through the fields and remove duplicates
 @Entity()
 export class AiPersona extends AuthorizableEntity implements IAiPersona {
   @ManyToOne(() => AiServer, aiServer => aiServer.aiPersonas, {

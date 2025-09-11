@@ -425,9 +425,9 @@ export class VirtualContributorService {
     virtualContributor: IVirtualContributor,
     agentInfo: AgentInfo
   ): Promise<boolean> {
-    if (!virtualContributor.aiPersonaID) {
+    if (!virtualContributor.aiPersona) {
       throw new EntityNotInitializedException(
-        `Virtual Contributor does not have aiPersonaID initialized: ${virtualContributor.id}`,
+        `Virtual Contributor does not have aiPersona initialized: ${virtualContributor.id}`,
         LogContext.AUTH
       );
     }
