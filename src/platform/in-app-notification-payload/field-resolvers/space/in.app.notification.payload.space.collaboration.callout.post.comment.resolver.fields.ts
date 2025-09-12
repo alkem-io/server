@@ -8,10 +8,17 @@ import { MessageDetails } from '@domain/communication/message.details/message.de
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutLoaderCreator } from '@core/dataloader/creators';
+import { LogContext } from '@common/enums/logging.context';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, LoggerService } from '@nestjs/common';
 
 @Resolver(() => InAppNotificationPayloadSpaceCollaborationCalloutPostComment)
 export class InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields {
-  constructor(private messageDetailsService: MessageDetailsService) {}
+  constructor(
+    private messageDetailsService: MessageDetailsService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
+  ) {}
 
   @ResolveField(() => ISpace, {
     nullable: true,
@@ -47,9 +54,23 @@ export class InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolve
     @Parent()
     payload: InAppNotificationPayloadSpaceCollaborationCalloutPostComment
   ): Promise<MessageDetails | null> {
-    return await this.messageDetailsService.getMessageDetails(
-      payload.roomID,
-      payload.messageID
-    );
+    try {
+      return await this.messageDetailsService.getMessageDetails(
+        payload.roomID,
+        payload.messageID
+      );
+    } catch (error) {
+      this.logger.error(
+        {
+          messageId: payload.messageID,
+          roomId: payload.roomID,
+          msg: 'BROKEN_NOTIFICATION_PAYLOAD',
+          name: InAppNotificationPayloadSpaceCollaborationCalloutPostComment.name,
+        },
+        (error as Error)?.stack,
+        LogContext.IN_APP_NOTIFICATION
+      );
+      return null;
+    }
   }
 }
