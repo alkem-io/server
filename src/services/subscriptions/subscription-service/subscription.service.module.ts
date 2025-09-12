@@ -3,6 +3,7 @@ import {
   RABBITMQ_EXCHANGE_NAME_DIRECT,
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
 } from '@src/common/constants';
 import { subscriptionFactoryProvider } from '@core/microservices/subscription.factory.provider';
 import { SubscriptionPublishService } from './subscription.publish.service';
@@ -18,6 +19,10 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
     queueName: MessagingQueue.SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  },
+  {
+    provide: SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
+    queueName: MessagingQueue.SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   },
 ];
 

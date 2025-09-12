@@ -4,8 +4,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 
 @ObjectType('Message', {
-  description:
-    'A message that was sent either as an Update or as part of a Discussion.',
+  description: 'A message that was sent in a chat room',
 })
 export class IMessage {
   @Field(() => MessageID, {

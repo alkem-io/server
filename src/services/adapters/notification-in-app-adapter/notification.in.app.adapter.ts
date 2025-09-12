@@ -10,13 +10,9 @@ import { IInAppNotificationPayload } from '@platform/in-app-notification-payload
 
 @Injectable()
 export class NotificationInAppAdapter {
-  private static readonly SUPPORTED_IN_APP_NOTIFICATION_TYPES: NotificationEvent[] =
-    [
-      NotificationEvent.USER_MENTIONED,
-      NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED,
-      NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER,
-      NotificationEvent.USER_SPACE_COMMUNITY_JOINED,
-    ];
+  private static readonly NOT_SUPPORTED_IN_APP_EVENTS: NotificationEvent[] = [
+    NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM,
+  ];
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -33,11 +29,7 @@ export class NotificationInAppAdapter {
     payload: IInAppNotificationPayload
   ) {
     // Filter out unsupported notification types
-    if (
-      !NotificationInAppAdapter.SUPPORTED_IN_APP_NOTIFICATION_TYPES.includes(
-        type
-      )
-    ) {
+    if (NotificationInAppAdapter.NOT_SUPPORTED_IN_APP_EVENTS.includes(type)) {
       this.logger.verbose?.(
         `Skipping in-app notification of type ${type} as it's not in the supported list`,
         LogContext.IN_APP_NOTIFICATION
@@ -84,5 +76,38 @@ export class NotificationInAppAdapter {
         this.subscriptionPublishService.publishInAppNotificationReceived(x)
       )
     );
+
+    // Update counters for each affected user - derive from actually saved notifications
+    const uniqueReceiverIDs = [
+      ...new Set(
+        savedNotifications.map(notification => notification.receiverID)
+      ),
+    ];
+    const counterUpdateResults = await Promise.allSettled(
+      uniqueReceiverIDs.map(async receiverID => {
+        const count =
+          await this.inAppNotificationService.getRawNotificationsUnreadCount(
+            receiverID
+          );
+        return this.subscriptionPublishService.publishInAppNotificationCounter(
+          receiverID,
+          count
+        );
+      })
+    );
+
+    // Log any counter update failures without failing the entire operation
+    counterUpdateResults.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.warn(
+          'Failed to update notification counter for user.',
+          LogContext.IN_APP_NOTIFICATION,
+          {
+            receiverID: uniqueReceiverIDs[index],
+            reason: result.reason,
+          }
+        );
+      }
+    });
   }
 }

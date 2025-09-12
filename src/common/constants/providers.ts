@@ -12,6 +12,8 @@ export const SUBSCRIPTION_ACTIVITY_CREATED =
   'alkemio-subscriptions-activity-created';
 export const SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED =
   'alkemio-subscriptions-notification-received';
+export const SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER =
+  'alkemio-subscriptions-notification-counter';
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';

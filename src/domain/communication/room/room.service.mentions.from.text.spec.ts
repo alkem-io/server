@@ -39,74 +39,151 @@ describe('RoomServiceMentions', () => {
     ['no mentions here', []],
     [
       'Hey, [@aleksandar-alex](https://localhost/user/alex123) - this look like you',
-      [{ id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' }],
+      [
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+      ],
     ],
 
     [
       'Hey, [@aleksandar-alex](http://localhost:3000/user/alex) - this look like you',
-      [{ id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' }],
+      [
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar-alex](https://localhost:3000/user/alex) - this look like you',
-      [{ id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' }],
+      [
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar](http://localhost:3000/user/alex-alex) - this look like you',
-      [{ id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' }],
+      [
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar](https://localhost:3000/user/alex-alex) - this look like you',
-      [{ id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' }],
+      [
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+      ],
     ],
 
     [
       'Hey, [@aleksandar-alex](http://localhost:3000/organization/alex) - this look like you',
-      [{ id: '03bb5b07-f134-4074-97b9-1dd7950c7fa4', type: 'organization' }],
+      [
+        {
+          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          contributorType: 'organization',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar-alex](https://localhost:3000/organization/alex) - this look like you',
-      [{ id: '03bb5b07-f134-4074-97b9-1dd7950c7fa4', type: 'organization' }],
+      [
+        {
+          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          contributorType: 'organization',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar](http://localhost:3000/organization/alex-alex) - this look like you',
-      [{ id: '03bb5b07-f134-4074-97b9-1dd7950c7fa4', type: 'organization' }],
+      [
+        {
+          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          contributorType: 'organization',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar](https://localhost:3000/organization/alex-alex) - this look like you',
-      [{ id: '03bb5b07-f134-4074-97b9-1dd7950c7fa4', type: 'organization' }],
+      [
+        {
+          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          contributorType: 'organization',
+        },
+      ],
     ],
 
     [
       'Hey, [@aleksandar](http://localhost:3000/user/alex) - this look like you',
-      [{ id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' }],
+      [
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar](https://localhost:3000/user/alex) - this look like you',
-      [{ id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' }],
+      [
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar](http://localhost:3000/organization/alex) - this look like you',
-      [{ id: '03bb5b07-f134-4074-97b9-1dd7950c7fa4', type: 'organization' }],
+      [
+        {
+          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          contributorType: 'organization',
+        },
+      ],
     ],
     [
       'Hey, [@aleksandar](https://localhost:3000/organization/alex) - this look like you',
-      [{ id: '03bb5b07-f134-4074-97b9-1dd7950c7fa4', type: 'organization' }],
+      [
+        {
+          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          contributorType: 'organization',
+        },
+      ],
     ],
 
     [
       'Hey, [@aleksandar](http://localhost:3000/user/alex) - this look like you\n' +
         'Hey, [@aleksandar](http://localhost:3000/organization/alex-org) - this look like you',
       [
-        { id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' },
-        { id: '03bb5b07-f134-4074-97b9-1dd7950c7fa4', type: 'organization' },
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+        {
+          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          contributorType: 'organization',
+        },
       ],
     ],
     [
       'Hey, [@aleksandar](https://localhost:3000/user/alex) - this look like you\n' +
         'Hey, [@aleksandar](https://localhost:3000/organization/alex-org) - this look like you',
       [
-        { id: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e', type: 'user' },
-        { id: '03bb5b07-f134-4074-97b9-1dd7950c7fa4', type: 'organization' },
+        {
+          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          contributorType: 'user',
+        },
+        {
+          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          contributorType: 'organization',
+        },
       ],
     ],
   ])('%s -> %j', async (text, expected) => {

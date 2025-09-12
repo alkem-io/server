@@ -3,12 +3,8 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
-import { Post } from '@domain/collaboration/post/post.entity';
 import {
   BaseEventPayload,
   ContributorPayload,
@@ -37,9 +33,7 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
@@ -57,6 +51,7 @@ import { CalloutContributionType } from '@common/enums/callout.contribution.type
 import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
+import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 
 interface CalloutContributionPayload {
   id: string;
@@ -72,12 +67,9 @@ export class NotificationExternalAdapter {
   constructor(
     private contributorLookupService: ContributorLookupService,
     private userLookupService: UserLookupService,
-    @InjectRepository(Post)
-    private postRepository: Repository<Post>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
-    private contributionResolverService: ContributionResolverService,
     private urlGeneratorService: UrlGeneratorService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
@@ -599,13 +591,13 @@ export class NotificationExternalAdapter {
     const discussionURL =
       await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
     const payload: NotificationEventPayloadPlatformForumDiscussion = {
+      ...basePayload,
       discussion: {
         id: discussion.id,
         createdBy: await this.getContributorPayloadOrFail(discussion.createdBy),
         displayName: discussion.profile.displayName,
         url: discussionURL,
       },
-      ...basePayload,
     };
 
     return payload;
@@ -637,18 +629,10 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    mentionedOrgUUID: string,
-    comment: string,
-    originEntityId: string,
-    originEntityDisplayName: string,
-    commentType: RoomType
+    organizationID: string,
+    messageDetails: MessageDetails
   ): Promise<NotificationEventPayloadOrganizationMessageRoom> {
-    const orgData = await this.getContributorPayloadOrFail(mentionedOrgUUID);
-
-    const commentOriginUrl = await this.buildCommentOriginUrl(
-      commentType,
-      originEntityId
-    );
+    const orgData = await this.getContributorPayloadOrFail(organizationID);
 
     const basePayload = await this.buildBaseEventPayload(
       eventType,
@@ -657,10 +641,10 @@ export class NotificationExternalAdapter {
     );
     const payload: NotificationEventPayloadOrganizationMessageRoom = {
       organization: orgData,
-      comment,
+      comment: messageDetails.message,
       commentOrigin: {
-        url: commentOriginUrl,
-        displayName: originEntityDisplayName,
+        url: messageDetails.parent.url,
+        displayName: messageDetails.parent.displayName,
       },
       ...basePayload,
     };
@@ -716,14 +700,10 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    data: NotificationInputCommentReply
+    data: NotificationInputCommentReply,
+    messageDetails: MessageDetails
   ): Promise<NotificationEventPayloadUserMessageRoomReply> {
-    const user = await this.getUserPayloadOrFail(data.commentOwnerID);
-
-    const commentOriginUrl = await this.buildCommentOriginUrl(
-      data.commentType,
-      data.originEntity.id
-    );
+    const user = await this.getUserPayloadOrFail(data.messageRepliedToOwnerID);
 
     const basePayload = await this.buildBaseEventPayload(
       eventType,
@@ -732,11 +712,11 @@ export class NotificationExternalAdapter {
     );
     const payload: NotificationEventPayloadUserMessageRoomReply = {
       user,
-      reply: data.reply,
+      reply: messageDetails.message,
       comment: {
-        commentUrl: commentOriginUrl,
-        commentOrigin: data.originEntity.displayName,
-        commentOwnerId: user.id,
+        commentUrl: messageDetails.parent.url,
+        commentOrigin: messageDetails.parent.displayName,
+        commentOwnerId: data.messageRepliedToOwnerID,
       },
       ...basePayload,
     };
@@ -749,17 +729,9 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     mentionedUserUUID: string,
-    comment: string,
-    originEntityId: string,
-    originEntityDisplayName: string,
-    commentType: RoomType
+    messageDetails: MessageDetails
   ): Promise<NotificationEventPayloadUserMessageRoom> {
     const userContributor = await this.getUserPayloadOrFail(mentionedUserUUID);
-
-    const commentOriginUrl = await this.buildCommentOriginUrl(
-      commentType,
-      originEntityId
-    );
 
     const basePayload = await this.buildBaseEventPayload(
       eventType,
@@ -769,58 +741,15 @@ export class NotificationExternalAdapter {
     //const userURL = await this.urlGeneratorService.
     const payload: NotificationEventPayloadUserMessageRoom = {
       user: userContributor,
-      comment,
+      comment: messageDetails.message,
       commentOrigin: {
-        url: commentOriginUrl,
-        displayName: originEntityDisplayName,
+        url: messageDetails.parent.url,
+        displayName: messageDetails.parent.displayName,
       },
       ...basePayload,
     };
 
     return payload;
-  }
-
-  public async buildCommentOriginUrl(
-    commentType: RoomType,
-    originEntityId: string
-  ): Promise<string> {
-    if (commentType === RoomType.CALLOUT) {
-      return await this.urlGeneratorService.getCalloutUrlPath(originEntityId);
-    }
-
-    if (commentType === RoomType.POST) {
-      const post = await this.postRepository.findOne({
-        where: {
-          id: originEntityId,
-        },
-      });
-
-      if (!post) {
-        throw new NotificationEventException(
-          `Could not acquire post with id: ${originEntityId}`,
-          LogContext.NOTIFICATIONS
-        );
-      }
-
-      return await this.urlGeneratorService.getPostUrlPath(post.id);
-    }
-
-    if (commentType === RoomType.CALENDAR_EVENT) {
-      return await this.urlGeneratorService.getCalendarEventUrlPath(
-        originEntityId
-      );
-    }
-
-    if (commentType === RoomType.DISCUSSION_FORUM) {
-      return await this.urlGeneratorService.getForumDiscussionUrlPath(
-        originEntityId
-      );
-    }
-
-    throw new NotificationEventException(
-      `Comment of type: ${commentType} does not exist.`,
-      LogContext.NOTIFICATIONS
-    );
   }
 
   private async buildSpacePayload(
