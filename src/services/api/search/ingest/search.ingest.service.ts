@@ -89,7 +89,7 @@ type IngestBulkReturnType = {
 
 type IngestReturnType = Record<string, IngestBulkReturnType>;
 
-const getIndices = (indexPattern: string) => [
+const getIndexAliases = (indexPattern: string) => [
   `${indexPattern}spaces`,
   `${indexPattern}subspaces`,
   `${indexPattern}organizations`,
@@ -122,7 +122,55 @@ export class SearchIngestService {
     }
   }
 
-  public async ensureIndicesExist(): Promise<{
+  public async getActiveAliases() {
+    const aliases = getIndexAliases(this.indexPattern);
+
+    // asyncMap(aliases, alias => {
+    //
+    // });
+
+    try {
+      const data = await this.elasticClient?.indices.getAlias({
+        name: aliases,
+      });
+      if (!data) {
+        return [];
+      }
+      // index names with these aliases
+      return Object.entries(data).flatMap(([index, aliases]) => ({
+        index,
+        alias: Object.keys(aliases.aliases)[0], // we expect just one alias per index
+      }));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  public getAliases() {
+    return getIndexAliases(this.indexPattern);
+  }
+
+  public async assignAliasToIndex(
+    data: { alias: string; index: string }[],
+    removeOldAlias?: boolean
+  ) {
+    for (const { alias, index } of data) {
+      await this.elasticClient?.indices.updateAliases({
+        body: {
+          actions: [
+            {
+              remove: removeOldAlias ? { index: '*', alias } : undefined,
+            },
+            {
+              add: { index, alias },
+            },
+          ],
+        },
+      });
+    }
+  }
+
+  public async ensureIndicesExist(suffix: string): Promise<{
     acknowledged: boolean;
     message?: string;
   }> {
@@ -133,11 +181,13 @@ export class SearchIngestService {
       };
     }
 
-    const indices = getIndices(this.indexPattern);
+    const indices = getIndexAliases(this.indexPattern);
 
     const results = await asyncMap(indices, async index => {
       try {
-        const ack = await this.elasticClient!.indices.create({ index });
+        const ack = await this.elasticClient!.indices.create({
+          index: `${index}-${suffix}`,
+        });
         return { acknowledged: ack.acknowledged };
       } catch (error) {
         const err = error as ElasticResponseError;
@@ -160,7 +210,7 @@ export class SearchIngestService {
     );
   }
 
-  public async removeIndices(): Promise<{
+  public async removeIndices(suffix: string): Promise<{
     acknowledged: boolean;
     message?: string;
   }> {
@@ -170,12 +220,16 @@ export class SearchIngestService {
         message: 'Elasticsearch client not initialized',
       };
     }
-    const indices = getIndices(this.indexPattern);
+    const aliases = getIndexAliases(this.indexPattern);
 
-    const results = await asyncMap(indices, async index => {
+    const results = await asyncMap(aliases, async alias => {
       // if it does not exist exit early, no need to delete
       try {
-        if (!(await this.elasticClient!.indices.exists({ index }))) {
+        if (
+          !(await this.elasticClient!.indices.exists({
+            index: `${alias}-${suffix}`,
+          }))
+        ) {
           return { acknowledged: true };
         }
       } catch (e: any) {
@@ -183,7 +237,9 @@ export class SearchIngestService {
       }
 
       try {
-        const ack = await this.elasticClient!.indices.delete({ index });
+        const ack = await this.elasticClient!.indices.delete({
+          index: `${alias}-${suffix}`,
+        });
         return { acknowledged: ack.acknowledged };
       } catch (error) {
         const err = error as ElasticResponseError;
@@ -206,7 +262,7 @@ export class SearchIngestService {
     );
   }
 
-  public async ingest(task: Task): Promise<IngestReturnType> {
+  public async ingest(task: Task, suffix: string): Promise<IngestReturnType> {
     if (!this.elasticClient) {
       return {
         'N/A': {
@@ -225,55 +281,55 @@ export class SearchIngestService {
     const result: IngestReturnType = {};
     const params = [
       {
-        index: `${this.indexPattern}spaces`,
+        index: `${this.indexPattern}spaces-${suffix}`,
         fetchFn: this.fetchSpacesLevel0.bind(this),
         countFn: this.fetchSpacesLevel0Count.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}subspaces`,
+        index: `${this.indexPattern}subspaces-${suffix}`,
         fetchFn: this.fetchSpacesLevel1.bind(this),
         countFn: this.fetchSpacesLevel1Count.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}subspaces`,
+        index: `${this.indexPattern}subspaces-${suffix}`,
         fetchFn: this.fetchSpacesLevel2.bind(this),
         countFn: this.fetchSpacesLevel2Count.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}organizations`,
+        index: `${this.indexPattern}organizations-${suffix}`,
         fetchFn: this.fetchOrganizations.bind(this),
         countFn: this.fetchOrganizationsCount.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}users`,
+        index: `${this.indexPattern}users-${suffix}`,
         fetchFn: this.fetchUsers.bind(this),
         countFn: this.fetchUsersCount.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}callouts`,
+        index: `${this.indexPattern}callouts-${suffix}`,
         fetchFn: this.fetchCallout.bind(this),
         countFn: this.fetchCalloutCount.bind(this),
         batchSize: 30,
       },
       {
-        index: `${this.indexPattern}posts`,
+        index: `${this.indexPattern}posts-${suffix}`,
         fetchFn: this.fetchPosts.bind(this),
         countFn: this.fetchPostsCount.bind(this),
         batchSize: 30,
       },
       {
-        index: `${this.indexPattern}whiteboards`,
+        index: `${this.indexPattern}whiteboards-${suffix}`,
         fetchFn: this.fetchWhiteboard.bind(this),
         countFn: this.fetchWhiteboardCount.bind(this),
         batchSize: 30,
       },
       {
-        index: `${this.indexPattern}memos`,
+        index: `${this.indexPattern}memos-${suffix}`,
         fetchFn: this.fetchMemo.bind(this),
         countFn: this.fetchMemoCount.bind(this),
         batchSize: 30,
@@ -346,7 +402,7 @@ export class SearchIngestService {
 
       start += batchSize;
       // delay between batches
-      await setTimeout(1000, null);
+      // await setTimeout(1000, null);
     }
 
     return results;
