@@ -128,7 +128,9 @@ export class LibraryService {
       },
       relations: {
         templatesSet: {
-          templates: true,
+          templates: {
+            profile: true,
+          },
         },
       },
     });
@@ -157,6 +159,14 @@ export class LibraryService {
         templateResults.push(result);
       }
     }
+
+    // Sort templates alphabetically by display name
+    templateResults.sort((a, b) => {
+      const displayNameA = a.template.profile?.displayName || '';
+      const displayNameB = b.template.profile?.displayName || '';
+      return displayNameA.localeCompare(displayNameB);
+    });
+
     return templateResults;
   }
 }

@@ -76,5 +76,38 @@ export class NotificationInAppAdapter {
         this.subscriptionPublishService.publishInAppNotificationReceived(x)
       )
     );
+
+    // Update counters for each affected user - derive from actually saved notifications
+    const uniqueReceiverIDs = [
+      ...new Set(
+        savedNotifications.map(notification => notification.receiverID)
+      ),
+    ];
+    const counterUpdateResults = await Promise.allSettled(
+      uniqueReceiverIDs.map(async receiverID => {
+        const count =
+          await this.inAppNotificationService.getRawNotificationsUnreadCount(
+            receiverID
+          );
+        return this.subscriptionPublishService.publishInAppNotificationCounter(
+          receiverID,
+          count
+        );
+      })
+    );
+
+    // Log any counter update failures without failing the entire operation
+    counterUpdateResults.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.warn(
+          'Failed to update notification counter for user.',
+          LogContext.IN_APP_NOTIFICATION,
+          {
+            receiverID: uniqueReceiverIDs[index],
+            reason: result.reason,
+          }
+        );
+      }
+    });
   }
 }

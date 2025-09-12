@@ -8,6 +8,11 @@ import { LogContext } from '@common/enums';
 import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
 import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
 import { IInAppNotification } from './in.app.notification.interface';
+import {
+  PaginationArgs,
+  PaginatedInAppNotifications,
+  getPaginationResults,
+} from '@core/pagination';
 
 @Injectable()
 export class InAppNotificationService {
@@ -87,6 +92,26 @@ export class InAppNotificationService {
     });
   }
 
+  public async getPaginatedNotifications(
+    receiverID: string,
+    paginationArgs: PaginationArgs,
+    filter?: NotificationEventsFilterInput
+  ): Promise<PaginatedInAppNotifications> {
+    const queryBuilder = this.inAppNotificationRepo
+      .createQueryBuilder('notification')
+      .where('notification.receiverID = :receiverID', { receiverID });
+
+    if (filter?.types && filter.types.length > 0) {
+      queryBuilder.andWhere('notification.type IN (:...types)', {
+        types: filter.types,
+      });
+    }
+
+    queryBuilder.orderBy('notification.triggeredAt', 'DESC');
+
+    return await getPaginationResults(queryBuilder, paginationArgs, 'DESC');
+  }
+
   public async updateNotificationState(
     ID: string,
     state: NotificationEventInAppState
@@ -110,5 +135,12 @@ export class InAppNotificationService {
       { id: In(notificationIds), receiverID: userId },
       { state }
     );
+  }
+
+  async markAllNotificationsAsState(
+    userId: string,
+    state: NotificationEventInAppState
+  ): Promise<UpdateResult> {
+    return this.inAppNotificationRepo.update({ receiverID: userId }, { state });
   }
 }
