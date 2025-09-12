@@ -201,7 +201,22 @@ export class CalloutFramingService {
         calloutFramingData.profile
       );
     }
+
     if (calloutFramingData.type) {
+      const oldType = calloutFraming.type;
+      const newType = calloutFramingData.type;
+
+      // Validate framing type transitions for callout templates
+      if (
+        isParentCalloutTemplate &&
+        newType !== oldType &&
+        newType !== CalloutFramingType.NONE
+      ) {
+        throw new ValidationException(
+          'Callout templates can only transition framing type to NONE.',
+          LogContext.COLLABORATION
+        );
+      }
       calloutFraming.type = calloutFramingData.type;
     }
 
