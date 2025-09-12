@@ -24,6 +24,7 @@ import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.int
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { VirtualContributorModelCard } from '../virtual-contributor-model-card/dto/virtual.contributor.model.card.dto.result';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { IAiPersona } from '@services/ai-server/ai-persona';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -32,6 +33,20 @@ export class VirtualContributorResolverFields {
     private authorizationService: AuthorizationService,
     private aiServerAdapter: AiServerAdapter
   ) {}
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('aiPersona', () => IAiPersona, {
+    nullable: false,
+    description: 'The aiPersona behind this Virtual Contributor',
+  })
+  async aiPersona(
+    @Parent() virtualContributor: VirtualContributor
+  ): Promise<IAiPersona> {
+    return await this.aiServerAdapter.getPersonaOrFail(
+      virtualContributor.aiPersonaID
+    );
+  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

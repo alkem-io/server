@@ -18,6 +18,10 @@ import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-noti
 import { InAppNotificationPayloadSpaceCommunityInvitationPlatform } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation.platform';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
+import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
+import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
+import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
+import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 
 @InterfaceType('InAppNotificationPayload', {
   isAbstract: true,
@@ -30,7 +34,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
       case NotificationEventPayload.PLATFORM_USER_PROFILE_REMOVED:
         return InAppNotificationPayloadPlatformUserProfileRemoved;
       case NotificationEventPayload.PLATFORM_GLOBAL_ROLE_CHANGE:
-        return InAppNotificationPayloadUser;
+        return InAppNotificationPayloadPlatformGlobalRoleChange;
 
       // Organization notifications
       case NotificationEventPayload.ORGANIZATION_MESSAGE_DIRECT:
@@ -55,6 +59,10 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
         return InAppNotificationPayloadSpaceCommunicationUpdate;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT:
         return InAppNotificationPayloadSpaceCollaborationCallout;
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_POST_COMMENT:
+        return InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_COMMENT:
+        return InAppNotificationPayloadSpaceCollaborationCalloutComment;
 
       // User notifications
       case NotificationEventPayload.USER:
@@ -63,10 +71,14 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
         return InAppNotificationPayloadUserMessageRoom;
       case NotificationEventPayload.USER_MESSAGE_DIRECT:
         return InAppNotificationPayloadUserMessageDirect;
+
+      // Virtual Contributor notifications
+      case NotificationEventPayload.VIRTUAL_CONTRIBUTOR:
+        return InAppNotificationPayloadVirtualContributor;
     }
 
     throw new BaseException(
-      'Unable to determine in-app notification type',
+      'Unable to determine in-app notification type ' + payload.type,
       LogContext.IN_APP_NOTIFICATION,
       AlkemioErrorStatus.FORMAT_NOT_SUPPORTED,
       { id: payload.id, type: payload.type }

@@ -12,6 +12,7 @@ import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
+import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
     ActivityLogModule,
     ActivityModule,
     EntityResolverModule,
+    InAppNotificationModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],

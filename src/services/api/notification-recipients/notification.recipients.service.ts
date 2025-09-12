@@ -118,6 +118,15 @@ export class NotificationRecipientsService {
         privilegeRequired,
         eventData
       );
+
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 4a. ...and for email, of those ${emailRecipientsWithPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
+      LogContext.NOTIFICATIONS
+    );
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithEntityPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
+      LogContext.NOTIFICATIONS
+    );
     // Filter by whether they have the InApp privilege on platform level
     const authorizationPolicyForInApp =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
@@ -132,11 +141,7 @@ export class NotificationRecipientsService {
       );
 
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 4a. ...and for email, of those ${emailRecipientsWithPrivilege.length} have the '${privilegeRequired}' privilege`,
-      LogContext.NOTIFICATIONS
-    );
-    this.logger.verbose?.(
-      `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithPrivilege.length} have the '${privilegeRequired}' privilege`,
+      `[${eventData.eventType}] - 4bb. ...and for in-app, of those ${inAppRecipientsWithPrivilege.length} are eligible for in-app notifications`,
       LogContext.NOTIFICATIONS
     );
 
@@ -152,11 +157,11 @@ export class NotificationRecipientsService {
     }
 
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
+      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients: ${inAppRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
+      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients: ${inAppRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
 
@@ -168,12 +173,12 @@ export class NotificationRecipientsService {
   }
 
   private async filterRecipientsWithPrivileges(
-    emailRecipientsWithNotificationEnabled: IUser[],
+    recipientsWithNotificationEnabled: IUser[],
     privilegeRequired: AuthorizationPrivilege | undefined,
     eventData: NotificationRecipientsInput
   ) {
     const recipientsWithNotificationEnabledIDs =
-      emailRecipientsWithNotificationEnabled.map(recipient => recipient.id);
+      recipientsWithNotificationEnabled.map(recipient => recipient.id);
     // Need to reload the users to get the full set of credentials for use in authorization evaluation
     const recipientsWithNotificationEnabledWithCredentials =
       await this.userLookupService.getUsersByUUID(
@@ -189,14 +194,15 @@ export class NotificationRecipientsService {
         }
       );
 
+    if (!privilegeRequired) {
+      // No privilege required, return all
+      return recipientsWithNotificationEnabledWithCredentials;
+    }
+
     // Filter out recipients who do not have the required privilege
-    let emailRecipientsWithPrivilege =
+    let recipientsWithPrivilege =
       recipientsWithNotificationEnabledWithCredentials;
-    if (
-      privilegeRequired &&
-      recipientsWithNotificationEnabledWithCredentials.length > 0
-    ) {
-      const privilege = privilegeRequired;
+    if (recipientsWithNotificationEnabledWithCredentials.length > 0) {
       const authorizationPolicy = await this.getAuthorizationPolicy(
         eventData.eventType,
         eventData.spaceID,
@@ -204,7 +210,7 @@ export class NotificationRecipientsService {
         eventData.organizationID,
         eventData.virtualContributorID
       );
-      emailRecipientsWithPrivilege =
+      recipientsWithPrivilege =
         recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
           const credentials = recipient.agent.credentials;
           if (!credentials) {
@@ -218,14 +224,14 @@ export class NotificationRecipientsService {
               credentials,
               [],
               authorizationPolicy,
-              privilege
+              privilegeRequired
             );
           if (accessGranted) {
             return recipient;
           }
         });
     }
-    return emailRecipientsWithPrivilege;
+    return recipientsWithPrivilege;
   }
 
   private getChannelsSettingsForEvent(
@@ -294,6 +300,10 @@ export class NotificationRecipientsService {
 
       // Fixed values
       case NotificationEvent.USER_SIGN_UP_WELCOME:
+        return {
+          email: true,
+          inApp: true,
+        };
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
         return {
           email: true,

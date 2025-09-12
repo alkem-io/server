@@ -52,7 +52,6 @@ export class VirtualContributorAuthorizationService {
       !virtual.account ||
       !virtual.profile ||
       !virtual.agent ||
-      !virtual.aiPersona ||
       !virtual.knowledgeBase ||
       !virtual.account
     )
