@@ -10,7 +10,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AccountResolverMutations } from './account.resolver.mutations';
 import { SpaceModule } from '../space/space.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
@@ -54,7 +53,6 @@ import { AccountLicensePlanModule } from '../account.license.plan/account.licens
     InnovationPackModule,
     VirtualContributorModule,
     VirtualContributorLookupModule,
-    NameReporterModule,
     NamingModule,
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,

@@ -22,6 +22,7 @@ import { PostModule } from '../post/post.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ClassificationModule } from '@domain/common/classification/classificati
     PostModule,
     ClassificationModule,
     TemporaryStorageModule,
+    RoleSetModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [

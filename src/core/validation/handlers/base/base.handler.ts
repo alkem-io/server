@@ -104,6 +104,7 @@ import { UpdateUserSettingsNotificationOrganizationInput } from '@domain/communi
 import { CreateUserSettingsNotificationSpaceAdminInput } from '@domain/community/user-settings/dto/user.settings.notification.space.admin.dto.create';
 import { UpdateUserSettingsNotificationSpaceAdminInput } from '@domain/community/user-settings/dto/user.settings.notification.space.admin.dto.update';
 import { UpdateUserSettingsNotificationSpaceInput } from '@domain/community/user-settings/dto/user.settings.notification.space.dto.update';
+import { UpdateCalloutEntityInput } from '@domain/collaboration/callout/dto';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -159,6 +160,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateSpaceAboutInput,
       UpdatePostInput,
       UpdateDocumentInput,
+      UpdateCalloutEntityInput,
       UpdateCalloutFramingInput,
       UpdateCalloutContributionDefaultsInput,
       UpdateTemplateInput,

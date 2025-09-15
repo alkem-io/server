@@ -1,4 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { UpdateResult } from 'typeorm';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { CurrentUser } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -7,12 +8,14 @@ import { ForbiddenException } from '@common/exceptions';
 import { UpdateNotificationStateInput } from './dto/in.app.notification.state.update';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { InAppNotificationService } from './in.app.notification.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 
 @InstrumentResolver()
 @Resolver()
 export class InAppNotificationResolverMutations {
   constructor(
-    private readonly inAppNotificationService: InAppNotificationService
+    private readonly inAppNotificationService: InAppNotificationService,
+    private readonly subscriptionPublishService: SubscriptionPublishService
   ) {}
 
   @Mutation(() => NotificationEventInAppState, {
@@ -39,11 +42,22 @@ export class InAppNotificationResolverMutations {
       notificationData.state
     );
 
+    // Update counter for the user
+    const count =
+      await this.inAppNotificationService.getRawNotificationsUnreadCount(
+        agentInfo.userID
+      );
+    await this.subscriptionPublishService.publishInAppNotificationCounter(
+      agentInfo.userID,
+      count
+    );
+
     return notificationData.state;
   }
 
   @Mutation(() => Boolean, {
-    description: 'Mark multiple notifications as read.',
+    description:
+      'Mark multiple notifications as read. If no IDs are provided, marks all user notifications as read.',
   })
   async markNotificationsAsRead(
     @CurrentUser() agentInfo: AgentInfo,
@@ -57,7 +71,8 @@ export class InAppNotificationResolverMutations {
   }
 
   @Mutation(() => Boolean, {
-    description: 'Mark multiple notifications as unread.',
+    description:
+      'Mark multiple notifications as unread. If no IDs are provided, marks all user notifications as unread.',
   })
   async markNotificationsAsUnread(
     @CurrentUser() agentInfo: AgentInfo,
@@ -75,16 +90,34 @@ export class InAppNotificationResolverMutations {
     notificationIds: string[],
     state: NotificationEventInAppState
   ): Promise<boolean> {
-    if (notificationIds.length === 0) {
-      return false;
-    }
+    let result: UpdateResult;
 
-    const result =
-      await this.inAppNotificationService.bulkUpdateNotificationState(
+    if (notificationIds.length === 0) {
+      // If no specific IDs provided, mark all user's notifications with the given state
+      result = await this.inAppNotificationService.markAllNotificationsAsState(
+        agentInfo.userID,
+        state
+      );
+    } else {
+      // Mark specific notifications
+      result = await this.inAppNotificationService.bulkUpdateNotificationState(
         notificationIds,
         agentInfo.userID,
         state
       );
+    }
+
+    // Update counter for the user if any notifications were affected
+    if ((result?.affected ?? 0) > 0) {
+      const count =
+        await this.inAppNotificationService.getRawNotificationsUnreadCount(
+          agentInfo.userID
+        );
+      await this.subscriptionPublishService.publishInAppNotificationCounter(
+        agentInfo.userID,
+        count
+      );
+    }
 
     // Note: The `affected` property is not supported by all database drivers. For unsupported drivers, it will be `undefined`.
     return (result?.affected ?? 0) > 0;

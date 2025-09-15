@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@src/common/constants';
@@ -18,7 +19,9 @@ export class SubscriptionReadService {
     @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
     private subscriptionVirtualContributorUpdated: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
-    private subscriptionInAppNotificationReceived: TypedPubSubEngine
+    private subscriptionInAppNotificationReceived: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
+    private subscriptionInAppNotificationCounter: TypedPubSubEngine
   ) {}
 
   public subscribeToActivities() {
@@ -42,6 +45,12 @@ export class SubscriptionReadService {
   public subscribeToInAppNotificationReceived() {
     return this.subscriptionInAppNotificationReceived.asyncIterator(
       SubscriptionType.IN_APP_NOTIFICATION_RECEIVED
+    );
+  }
+
+  public subscribeToInAppNotificationCounter() {
+    return this.subscriptionInAppNotificationCounter.asyncIterator(
+      SubscriptionType.IN_APP_NOTIFICATION_COUNTER
     );
   }
 }
