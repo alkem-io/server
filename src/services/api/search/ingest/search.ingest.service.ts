@@ -29,6 +29,7 @@ import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { isDefined } from '@common/utils';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
+import { TaskStatus } from '@domain/task/dto';
 
 const profileRelationOptions = {
   location: true,
@@ -124,7 +125,91 @@ export class SearchIngestService {
     }
   }
 
-  public async getActiveAliases() {
+  /**
+   * create new indices with new names
+   * ingest into new indices
+   * does the aliases exist?
+   * - no - fresh new setup -> assign alias to new indices
+   * - yes - we have old indices -> remove old aliases; assign alias to new indices
+   * did we have aliases?
+   *  - no -> do nothing
+   *  - yes -> delete index
+   */
+  public async ingestFromScratch(task: Task) {
+    this.logger.verbose?.('Starting search ingest from scratch');
+    // create new indices with suffix
+    await this.taskService.updateTaskResults(task.id, 'Creating indices');
+
+    const suffix = Date.now().toString(36);
+    const creationResult = await this.ensureIndicesExist(suffix);
+
+    if (!creationResult.acknowledged) {
+      await this.taskService.updateTaskErrors(
+        task.id,
+        `Failed to create indices: ${creationResult.message}`
+      );
+      await this.taskService.complete(task.id, TaskStatus.ERRORED);
+      return;
+    }
+
+    await this.taskService.updateTaskResults(task.id, 'Indices created');
+    // ingest data into the new indices
+    try {
+      await this.ingest(task, suffix);
+    } catch (e: any) {
+      await this.taskService.updateTaskErrors(task.id, e?.message);
+      await this.taskService.complete(task.id, TaskStatus.ERRORED);
+      this.logger.error?.(
+        `Search ingest from scratch completed with error: ${e?.message}`,
+        e?.stack,
+        LogContext.SEARCH_INGEST
+      );
+      return;
+    }
+    // aliases
+    const activeAliasData = await this.getActiveAliases();
+    const aliasesExist = activeAliasData.length > 0;
+
+    await this.taskService.updateTaskResults(
+      task.id,
+      aliasesExist ? 'Active aliases found' : 'No active aliases found'
+    );
+    await this.taskService.updateTaskResults(
+      task.id,
+      'Assigning aliases to new indices'
+    );
+    // map the aliases to the new indices
+    const data = this.getAliases().map(alias => ({
+      alias,
+      index: `${alias}-${suffix}`,
+    }));
+    // assign the aliases to the new indices and delete the old ones if the aliases already existed
+    await this.assignAliasToIndex(data, aliasesExist);
+    // delete old indices, if aliases existed
+    if (aliasesExist) {
+      await this.taskService.updateTaskResults(task.id, 'Removing old indices');
+      this.logger.verbose?.('Removing old indices', LogContext.SEARCH_INGEST);
+      // get the old index names from the then active aliases
+      const indexNames = activeAliasData.map(({ index }) => index);
+
+      const removalResult = await this.removeIndices(indexNames);
+      if (!removalResult.acknowledged) {
+        await this.taskService.updateTaskErrors(
+          task.id,
+          `Failed to delete old indices: ${removalResult.message}`
+        );
+        await this.taskService.complete(task.id, TaskStatus.ERRORED);
+        return;
+      }
+    }
+    await this.taskService.complete(task.id);
+    this.logger.verbose?.(
+      'Search ingest from scratch completed',
+      LogContext.SEARCH_INGEST
+    );
+  }
+
+  private async getActiveAliases() {
     if (!this.elasticClient) {
       throw new Error('Elasticsearch client not initialized');
     }
@@ -146,11 +231,11 @@ export class SearchIngestService {
     }
   }
 
-  public getAliases() {
+  private getAliases() {
     return getIndexAliases(this.indexPattern);
   }
 
-  public async assignAliasToIndex(
+  private async assignAliasToIndex(
     data: { alias: string; index: string }[],
     removeOldAlias?: boolean
   ) {
@@ -182,7 +267,7 @@ export class SearchIngestService {
     }
   }
 
-  public async ensureIndicesExist(suffix: string): Promise<{
+  private async ensureIndicesExist(suffix: string): Promise<{
     acknowledged: boolean;
     message?: string;
   }> {
@@ -222,7 +307,7 @@ export class SearchIngestService {
     );
   }
 
-  public async removeIndices(suffix: string): Promise<{
+  private async removeIndices(indices: Array<string>): Promise<{
     acknowledged: boolean;
     message?: string;
   }> {
@@ -232,14 +317,13 @@ export class SearchIngestService {
         message: 'Elasticsearch client not initialized',
       };
     }
-    const aliases = getIndexAliases(this.indexPattern);
 
-    const results = await asyncMap(aliases, async alias => {
+    const results = await asyncMap(indices, async index => {
       // if it does not exist exit early, no need to delete
       try {
         if (
           !(await this.elasticClient!.indices.exists({
-            index: `${alias}-${suffix}`,
+            index,
           }))
         ) {
           return { acknowledged: true };
@@ -250,7 +334,7 @@ export class SearchIngestService {
 
       try {
         const ack = await this.elasticClient!.indices.delete({
-          index: `${alias}-${suffix}`,
+          index,
         });
         return { acknowledged: ack.acknowledged };
       } catch (error) {
@@ -274,7 +358,7 @@ export class SearchIngestService {
     );
   }
 
-  public async ingest(task: Task, suffix: string): Promise<IngestReturnType> {
+  private async ingest(task: Task, suffix: string): Promise<IngestReturnType> {
     if (!this.elasticClient) {
       return {
         'N/A': {
