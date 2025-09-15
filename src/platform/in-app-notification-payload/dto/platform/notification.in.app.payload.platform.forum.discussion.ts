@@ -6,7 +6,12 @@ import { InAppNotificationPayloadPlatform } from './notification.in.app.payload.
   implements: () => IInAppNotificationPayload,
 })
 export abstract class InAppNotificationPayloadPlatformForumDiscussion extends InAppNotificationPayloadPlatform {
-  discussionID!: string;
-
-  commentID?: string;
+  discussion?: {
+    id: string;
+    displayName: string;
+    url: string;
+  };
+  comment?: {
+    message: string;
+  };
 }

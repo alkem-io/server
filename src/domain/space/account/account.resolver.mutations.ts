@@ -3,7 +3,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { AccountAuthorizationResetInput } from './dto/account.dto.reset.authorization';
 import { AccountAuthorizationService } from './account.service.authorization';
 import { AccountService } from './account.service';
@@ -63,7 +62,6 @@ export class AccountResolverMutations {
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private innovationPackService: InnovationPackService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
-    private namingReporter: NameReporterService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private spaceLicenseService: SpaceLicenseService,
@@ -128,11 +126,6 @@ export class AccountResolverMutations {
         LogContext.ACCOUNT
       );
     }
-
-    await this.namingReporter.createOrUpdateName(
-      space.id,
-      space.about.profile.displayName
-    );
 
     const notificationInput: NotificationInputSpaceCreated = {
       triggeredBy: agentInfo.userID,
