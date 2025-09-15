@@ -316,24 +316,6 @@ export class BootstrapService {
     }
   }
 
-  // // TODO: NOT USED?????
-  // private async ensureSpaceNamesInElastic() {
-  //   const spaces = await this.spaceService.getAllSpaces({
-  //     relations: {
-  //       profile: {
-  //         location: true,
-  //       },
-  //     },
-  //   });
-
-  //   const data = spaces.map(({ id, profile: { displayName: name } }) => ({
-  //     id,
-  //     name,
-  //   }));
-
-  //   this.nameReporter.bulkUpdateOrCreateNames(data);
-  // }
-
   async ensureSsiPopulated() {
     const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
     if (ssiEnabled) {

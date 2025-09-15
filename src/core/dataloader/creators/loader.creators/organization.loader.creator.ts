@@ -1,12 +1,12 @@
 import { EntityManager } from 'typeorm';
-import { Injectable, Scope } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { createTypedSimpleDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { Organization } from '@domain/community/organization/organization.entity';
 
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class OrganizationLoaderCreator
   implements DataLoaderCreator<IOrganization>
 {

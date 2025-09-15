@@ -9,7 +9,6 @@ import { CommunicationModule } from '@domain/communication/communication/communi
 import { PlatformModule } from '@platform/platform/platform.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { SearchIngestModule } from '@services/api/search/ingest';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
@@ -49,7 +48,6 @@ import { AiPersonaModule } from '@services/ai-server/ai-persona';
     PlatformAuthorizationPolicyModule,
     CommunicationModule,
     TypeOrmModule.forFeature([Space]),
-    NameReporterModule,
     SearchIngestModule,
     TemplatesSetModule,
     TemplatesManagerModule,
