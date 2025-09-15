@@ -10,6 +10,8 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { UUID } from '@domain/common/scalars';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
@@ -34,8 +36,6 @@ export class IVirtualContributor
   })
   aiPersona?: IAiPersona;
 
-  knowledgeBase!: IKnowledgeBase;
-
   @Field(() => SearchVisibility, {
     description: 'Visibility of the VC in searches.',
     nullable: false,
@@ -59,12 +59,6 @@ export class IVirtualContributor
   })
   description?: string;
 
-  @Field(() => Markdown, {
-    nullable: true,
-    description: 'A overview of knowledge provided by this AI Persona.',
-  })
-  bodyOfKnowledge?: string;
-
   @Field(() => VirtualContributorDataAccessMode, {
     nullable: false,
     description:
@@ -77,4 +71,25 @@ export class IVirtualContributor
     description: 'Interaction modes supported by this AI Persona when used.',
   })
   interactionModes!: VirtualContributorInteractionMode[];
+
+  @Field(() => VirtualContributorBodyOfKnowledgeType, {
+    nullable: false,
+    description:
+      'The type of body of knowledge used by this Virtual Contributor.',
+  })
+  bodyOfKnowledgeType!: VirtualContributorBodyOfKnowledgeType;
+
+  @Field(() => ISpace, {
+    nullable: true,
+    description:
+      'The Space linked to this Virtual Contributor as body of knowledge.',
+  })
+  knowledgeSpace?: ISpace;
+
+  @Field(() => IKnowledgeBase, {
+    nullable: false,
+    description:
+      'The Knowledge Base linked to this Virtual Contributor as body of knowledge.',
+  })
+  knowledgeBase!: IKnowledgeBase;
 }

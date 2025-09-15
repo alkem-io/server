@@ -15,6 +15,8 @@ import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.enti
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { Space } from '@domain/space/space/space.entity';
 
 @Entity()
 export class VirtualContributor
@@ -41,14 +43,6 @@ export class VirtualContributor
   @Column('varchar', { nullable: false, length: ENUM_LENGTH })
   aiPersonaID!: string;
 
-  @OneToOne(() => KnowledgeBase, {
-    eager: false,
-    cascade: true,
-    nullable: false,
-  })
-  @JoinColumn()
-  knowledgeBase!: KnowledgeBase;
-
   @Column()
   listedInStore!: boolean;
 
@@ -66,6 +60,25 @@ export class VirtualContributor
 
   @Column('simple-array', { nullable: false })
   interactionModes!: VirtualContributorInteractionMode[];
+
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  bodyOfKnowledgeType!: VirtualContributorBodyOfKnowledgeType;
+
+  @OneToOne(() => KnowledgeBase, {
+    eager: false,
+    cascade: true,
+    nullable: true,
+  })
+  @JoinColumn()
+  knowledgeBase!: KnowledgeBase;
+
+  @ManyToOne(() => Space, {
+    eager: false,
+    cascade: true,
+    nullable: true,
+  })
+  @JoinColumn()
+  knowledgeSpace?: Space;
 
   @Column('text', { nullable: true })
   bodyOfKnowledge?: string;

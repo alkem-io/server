@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto/knowledge.base.dto.create';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
@@ -27,7 +27,7 @@ export class VirtualContributorDefaultsService {
   public async createKnowledgeBaseInput(
     knowledgeBaseData?: CreateKnowledgeBaseInput,
     knowledgeBaseDefaultCalloutInputs: CreateCalloutInput[] = [],
-    bodyOfKnowledgeType?: AiPersonaBodyOfKnowledgeType
+    bodyOfKnowledgeType?: VirtualContributorBodyOfKnowledgeType
   ): Promise<CreateKnowledgeBaseInput> {
     // Create default data for a knowledge base if not provided
     let result = knowledgeBaseData;
@@ -62,7 +62,7 @@ export class VirtualContributorDefaultsService {
     if (!providedCallouts) {
       if (
         bodyOfKnowledgeType ===
-        AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
+        VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
       ) {
         // use the default templates
         result.calloutsSetData.calloutsData = knowledgeBaseDefaultCalloutInputs;

@@ -1,11 +1,11 @@
 import { registerEnumType } from '@nestjs/graphql';
-export enum AiPersonaBodyOfKnowledgeType {
+export enum VirtualContributorBodyOfKnowledgeType {
   ALKEMIO_SPACE = 'alkemio-space',
   ALKEMIO_KNOWLEDGE_BASE = 'alkemio-knowledge-base',
   WEBSITE = 'website',
   OTHER = 'other',
   NONE = 'none',
 }
-registerEnumType(AiPersonaBodyOfKnowledgeType, {
+registerEnumType(VirtualContributorBodyOfKnowledgeType, {
   name: 'AiPersonaBodyOfKnowledgeType',
 });

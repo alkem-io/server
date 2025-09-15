@@ -41,7 +41,6 @@ import { AccountLicenseService } from '@domain/space/account/account.service.lic
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
@@ -54,6 +53,7 @@ import { PlatformTemplatesService } from '@platform/platform-templates/platform.
 import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
 import { AiPersonaService } from '@services/ai-server/ai-persona';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
 @Injectable()
 export class BootstrapService {
@@ -505,10 +505,7 @@ export class BootstrapService {
     if (!platform.guidanceVirtualContributor?.id) {
       const aiPersona = await this.aiPersonaService.createAiPersona(
         {
-          bodyOfKnowledgeID: '',
-          bodyOfKnowledgeType: AiPersonaBodyOfKnowledgeType.NONE,
           engine: AiPersonaEngine.GUIDANCE,
-          dataAccessMode: VirtualContributorDataAccessMode.NONE,
           prompt: [],
           externalConfig: undefined,
         },
@@ -531,6 +528,8 @@ export class BootstrapService {
           displayName: 'Guidance',
           description: 'Guidance Virtual Contributor',
         },
+        dataAccessMode: VirtualContributorDataAccessMode.NONE,
+        bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.NONE,
         knowledgeBaseData: {
           profile: {
             displayName: 'Knowledge Base for Virtual Contributor',

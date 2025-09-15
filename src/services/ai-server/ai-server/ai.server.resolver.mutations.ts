@@ -139,9 +139,9 @@ export class AiServerResolverMutations {
   }
 
   @Mutation(() => IAiPersona, {
-    description: 'Creates a new AiPersonaService on the aiServer.',
+    description: 'Creates a new AiPersona on the aiServer.',
   })
-  async aiServerCreateAiPersonaService(
+  async aiServerCreateAiPersona(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('aiPersonaData')
     aiPersonaData: CreateAiPersonaInput

@@ -41,7 +41,7 @@ import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.ba
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { virtualContributorSettingsDefault } from './definition/virtual.contributor.settings.default';
 import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
 import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
@@ -106,7 +106,7 @@ export class VirtualContributorService {
       await this.virtualContributorDefaultsService.createKnowledgeBaseInput(
         virtualContributorData.knowledgeBaseData,
         knowledgeBaseDefaultCallouts,
-        virtualContributorData.aiPersona.bodyOfKnowledgeType
+        virtualContributorData.bodyOfKnowledgeType
       );
 
     virtualContributor.knowledgeBase =
@@ -115,10 +115,6 @@ export class VirtualContributorService {
         storageAggregator,
         agentInfo?.userID
       );
-
-    const kb = await this.knowledgeBaseService.save(
-      virtualContributor.knowledgeBase
-    );
 
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
@@ -131,13 +127,6 @@ export class VirtualContributorService {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
-
-    if (
-      virtualContributorData.aiPersona.bodyOfKnowledgeType ===
-      AiPersonaBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
-    ) {
-      aiPersonaInput.bodyOfKnowledgeID = kb.id;
-    }
 
     // Get the default AI server
     const aiServer = await this.aiServerAdapter.getAiServer();
@@ -436,14 +425,41 @@ export class VirtualContributorService {
       LogContext.VIRTUAL_CONTRIBUTOR
     );
 
+    const bokId = await this.getBodyOfKnowledgeId(virtualContributor.id);
+
+    return this.aiServerAdapter.refreshBodyOfKnowledge(
+      bokId,
+      virtualContributor.bodyOfKnowledgeType,
+      virtualContributor.aiPersonaID
+    );
+
     // TODO: Implement actual refresh logic via AI Persona service
     // For now, return true to indicate success
     return true;
   }
 
+  private async getBodyOfKnowledgeId(vcId: string): Promise<string> {
+    const vc = await this.getVirtualContributorOrFail(vcId, {
+      relations: { knowledgeBase: true, knowledgeSpace: true },
+    });
+    if (
+      vc.bodyOfKnowledgeType ===
+      VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE
+    ) {
+      if (!vc.knowledgeSpace) {
+        throw new EntityNotInitializedException(
+          `Virtual Contributor does not have knowledgeSpace initialized: ${vc.id}`,
+          LogContext.VIRTUAL_CONTRIBUTOR
+        );
+      }
+      return vc.knowledgeSpace.id;
+    }
+    return vc.knowledgeBase.id;
+  }
+
   // TODO: move to store
   async getVirtualContributors(
-    args: ContributorQueryArgs
+    args: ContributorQueryArgs = {}
   ): Promise<IVirtualContributor[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;

@@ -2,8 +2,12 @@ import { Field, InputType } from '@nestjs/graphql';
 import { CreateContributorInput } from '@domain/community/contributor/dto/contributor.dto.create';
 import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto/ai.persona.dto.create';
 import { CreateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
-import { IsOptional, ValidateNested } from 'class-validator';
+import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
+import { SMALL_TEXT_LENGTH } from '@common/constants';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 
 @InputType()
 export class CreateVirtualContributorInput extends CreateContributorInput {
@@ -21,4 +25,24 @@ export class CreateVirtualContributorInput extends CreateContributorInput {
   @IsOptional()
   @Type(() => CreateKnowledgeBaseInput)
   knowledgeBaseData!: CreateKnowledgeBaseInput;
+
+  @Field(() => VirtualContributorDataAccessMode, {
+    nullable: true,
+    defaultValue: VirtualContributorDataAccessMode.SPACE_PROFILE_AND_CONTENTS,
+  })
+  @MaxLength(SMALL_TEXT_LENGTH)
+  dataAccessMode!: VirtualContributorDataAccessMode;
+
+  @Field(() => VirtualContributorBodyOfKnowledgeType, {
+    nullable: true,
+    defaultValue: VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
+  })
+  @MaxLength(SMALL_TEXT_LENGTH)
+  bodyOfKnowledgeType!: VirtualContributorBodyOfKnowledgeType;
+
+  @Field(() => [VirtualContributorInteractionMode], {
+    nullable: true,
+    defaultValue: [VirtualContributorInteractionMode.DISCUSSION_TAGGING],
+  })
+  interactionModes?: VirtualContributorInteractionMode[];
 }

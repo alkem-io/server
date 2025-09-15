@@ -21,7 +21,6 @@ import { IExternalConfig } from './dto/external.config';
 import { EncryptionService } from '@hedger/nestjs-encryption';
 import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
 import { IAiServer } from '../ai-server/ai.server.interface';
-import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 
 @Injectable()
 export class AiPersonaService {
@@ -45,17 +44,9 @@ export class AiPersonaService {
     );
     aiPersona.aiServer = aiServer;
 
-    aiPersona.bodyOfKnowledgeID = aiPersonaData.bodyOfKnowledgeID;
     aiPersona.engine = aiPersonaData.engine;
-    aiPersona.bodyOfKnowledgeType = aiPersonaData.bodyOfKnowledgeType;
     aiPersona.prompt = aiPersonaData.prompt;
-    aiPersona.dataAccessMode = aiPersonaData.dataAccessMode;
     aiPersona.description = aiPersonaData.description ?? '';
-    aiPersona.bodyOfKnowledge = aiPersonaData.bodyOfKnowledge ?? '';
-    aiPersona.interactionModes = aiPersonaData.interactionModes || [
-      VirtualContributorInteractionMode.DISCUSSION_TAGGING,
-    ];
-
     aiPersona.externalConfig = this.encryptExternalConfig(
       aiPersonaData.externalConfig
     );
@@ -89,31 +80,13 @@ export class AiPersonaService {
       });
     }
 
-    if (aiPersonaData.bodyOfKnowledgeID !== undefined) {
-      aiPersona.bodyOfKnowledgeID = aiPersonaData.bodyOfKnowledgeID;
-    }
-
-    if (aiPersonaData.bodyOfKnowledgeType !== undefined) {
-      aiPersona.bodyOfKnowledgeType = aiPersonaData.bodyOfKnowledgeType;
-    }
-
-    if (aiPersonaData.dataAccessMode !== undefined) {
-      aiPersona.dataAccessMode = aiPersonaData.dataAccessMode;
-    }
-
     if (aiPersonaData.description !== undefined) {
       aiPersona.description = aiPersonaData.description;
     }
 
-    if (aiPersonaData.interactionModes !== undefined) {
-      aiPersona.interactionModes = aiPersonaData.interactionModes;
-    }
+    await this.aiPersonaRepository.save(aiPersona);
 
-    if (aiPersonaData.bodyOfKnowledge !== undefined) {
-      aiPersona.bodyOfKnowledge = aiPersonaData.bodyOfKnowledge;
-    }
-
-    return await this.aiPersonaRepository.save(aiPersona);
+    return await this.getAiPersonaOrFail(aiPersona.id);
   }
 
   async deleteAiPersona(deleteData: DeleteAiPersonaInput): Promise<IAiPersona> {
@@ -181,7 +154,8 @@ export class AiPersonaService {
       prompt: aiPersona.prompt,
       userID: invocationInput.userID,
       message: invocationInput.message,
-      bodyOfKnowledgeID: aiPersona.bodyOfKnowledgeID,
+      // TODO fix bodyOfKnowledgeID
+      bodyOfKnowledgeID: 'slon', // aiPersona.bodyOfKnowledgeID,
       contextID: invocationInput.contextID,
       history,
       interactionID: invocationInput.interactionID,
@@ -249,11 +223,11 @@ export class AiPersonaService {
     for (const aiPersona of aiPersonas) {
       this.logger.verbose?.(
         `Refreshing body of knowledge for AI Persona ${aiPersona.id}`,
-        LogContext.AI_PERSONA_SERVICE
+        LogContext.AI_PERSONA
       );
       // TODO: Implement actual refresh logic
       // For now, just update the lastUpdated timestamp
-      aiPersona.bodyOfKnowledgeLastUpdated = new Date();
+      // aiPersona.bodyOfKnowledgeLastUpdated = new Date();
       await this.aiPersonaRepository.save(aiPersona);
     }
 

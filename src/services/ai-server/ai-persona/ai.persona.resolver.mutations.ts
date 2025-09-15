@@ -39,7 +39,7 @@ export class AiPersonaResolverMutations {
   }
 
   @Mutation(() => IAiPersona, {
-    description: 'Deletes the specified AiPersonaService.',
+    description: 'Deletes the specified AiPersona.',
   })
   async aiServerDeleteAiPersona(
     @CurrentUser() agentInfo: AgentInfo,

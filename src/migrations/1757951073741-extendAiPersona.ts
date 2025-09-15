@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddAiPersonaFields1757579978770 implements MigrationInterface {
-  name = 'AddAiPersonaFields1757579978770';
+export class ExtendAiPersona1757951073741 implements MigrationInterface {
+  name = 'ExtendAiPersona1757951073741';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -14,13 +14,13 @@ export class AddAiPersonaFields1757579978770 implements MigrationInterface {
       `DROP INDEX \`REL_79206feb0038b1c5597668dc4b\` ON \`ai_persona\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona\` ADD \`description\` text NULL`
+      `ALTER TABLE \`ai_persona\` DROP COLUMN \`dataAccessMode\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona\` ADD \`interactionModes\` text NOT NULL`
+      `ALTER TABLE \`ai_persona\` DROP COLUMN \`bodyOfKnowledgeType\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona\` ADD \`bodyOfKnowledge\` text NULL`
+      `ALTER TABLE \`ai_persona\` DROP COLUMN \`bodyOfKnowledgeID\``
     );
     await queryRunner.query(
       `ALTER TABLE \`ai_persona\` ADD UNIQUE INDEX \`IDX_293f0d3ef60cb0ca0006044ecf\` (\`authorizationId\`)`
@@ -50,13 +50,13 @@ export class AddAiPersonaFields1757579978770 implements MigrationInterface {
       `ALTER TABLE \`ai_persona\` DROP INDEX \`IDX_293f0d3ef60cb0ca0006044ecf\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona\` DROP COLUMN \`bodyOfKnowledge\``
+      `ALTER TABLE \`ai_persona\` ADD \`bodyOfKnowledgeID\` varchar(128) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona\` DROP COLUMN \`interactionModes\``
+      `ALTER TABLE \`ai_persona\` ADD \`bodyOfKnowledgeType\` varchar(128) NOT NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona\` DROP COLUMN \`description\``
+      `ALTER TABLE \`ai_persona\` ADD \`dataAccessMode\` varchar(128) NOT NULL`
     );
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_79206feb0038b1c5597668dc4b\` ON \`ai_persona\` (\`authorizationId\`)`

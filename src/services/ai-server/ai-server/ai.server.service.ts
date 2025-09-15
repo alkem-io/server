@@ -34,7 +34,7 @@ import {
 } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
 import { RoomControllerService } from '@services/room-integration/room.controller.service';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { IngestWebsite } from '@services/infrastructure/event-bus/messages/ingest.website';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
@@ -80,30 +80,22 @@ export class AiServerService {
     private eventBus: EventBus
   ) {}
 
-  async getBodyOfKnowledgeLastUpdated(
-    personaServiceId: string
-  ): Promise<Date | null> {
-    const aiPersona =
-      await this.aiPersonaService.getAiPersonaOrFail(personaServiceId);
-    return aiPersona.bodyOfKnowledgeLastUpdated;
-  }
-
-  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
-    this.logger.verbose?.(
-      `AI server ensurePersonaIsUsable for AI Persona service ${personaServiceId} invoked`,
-      LogContext.AI_SERVER
-    );
-
-    const aiPersona =
-      await this.aiPersonaService.getAiPersonaOrFail(personaServiceId);
-    this.logger.verbose?.(
-      `AI Persona service ${personaServiceId} found for BOK refresh`,
-      LogContext.AI_SERVER
-    );
-
-    await this.ensureBoNIsIngested(aiPersona);
-    return true;
-  }
+  // async ensureBokIsIngested(personaServiceId: string): Promise<boolean> {
+  //   this.logger.verbose?.(
+  //     `AI server ensurePersonaIsUsable for AI Persona service ${personaServiceId} invoked`,
+  //     LogContext.AI_SERVER
+  //   );
+  //
+  //   const aiPersona =
+  //     await this.aiPersonaService.getAiPersonaOrFail(personaServiceId);
+  //   this.logger.verbose?.(
+  //     `AI Persona service ${personaServiceId} found for BOK refresh`,
+  //     LogContext.AI_SERVER
+  //   );
+  //
+  //   await this.ensureBoNIsIngested(aiPersona);
+  //   return true;
+  // }
 
   public async updatePersonaBoKLastUpdated(
     personaServiceId: string,
@@ -146,7 +138,13 @@ export class AiServerService {
     }
   }
 
-  public async ensureBoNIsIngested(persona: IAiPersona): Promise<void> {
+  public async ingestBodyOfKnowledge(
+    bokId: string,
+    bokType: VirtualContributorBodyOfKnowledgeType,
+    personaId: string
+  ): Promise<boolean> {
+    const persona = await this.aiPersonaService.getAiPersonaOrFail(personaId);
+
     this.logger.verbose?.(
       `AI Persona service ${persona.id} found for BOK refresh`,
       LogContext.AI_SERVER
@@ -160,29 +158,30 @@ export class AiServerService {
         this.eventBus.publish(
           new IngestWebsite(
             url,
-            AiPersonaBodyOfKnowledgeType.WEBSITE,
+            VirtualContributorBodyOfKnowledgeType.WEBSITE,
             IngestionPurpose.KNOWLEDGE,
             persona.id
           )
         );
       });
-      return;
+      return true;
     }
     this.eventBus.publish(
       new IngestBodyOfKnowledge(
-        persona.bodyOfKnowledgeID,
-        persona.bodyOfKnowledgeType,
+        bokId,
+        bokType,
         IngestionPurpose.KNOWLEDGE,
         persona.id
       )
     );
+    return true;
   }
 
   public async ensureContextIsIngested(spaceID: string): Promise<void> {
     this.eventBus.publish(
       new IngestBodyOfKnowledge(
         spaceID,
-        AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE,
+        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
         IngestionPurpose.CONTEXT
       )
     );
@@ -349,7 +348,7 @@ export class AiServerService {
     }
   }
 
-  async updateAiPersonaService(updateData: UpdateAiPersonaInput) {
+  async updateAiPersona(updateData: UpdateAiPersonaInput) {
     const aiPersona = await this.aiPersonaService.updateAiPersona(updateData);
     // TBD: trigger a re-ingest?
     return aiPersona;
@@ -411,7 +410,7 @@ export class AiServerService {
     if (!aiPersonas) {
       throw new EntityNotFoundException(
         'No AI Persona Services found!',
-        LogContext.AI_PERSONA_SERVICE
+        LogContext.AI_PERSONA
       );
     }
     return aiPersonas;
