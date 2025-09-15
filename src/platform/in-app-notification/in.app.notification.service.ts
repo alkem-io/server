@@ -127,13 +127,12 @@ export class InAppNotificationService {
   }
 
   private async getPaginatedNotificationsWithTriggeredAtCursor(
-    queryBuilder: any,
+    queryBuilder: import('typeorm').SelectQueryBuilder<InAppNotification>,
     paginationArgs: PaginationArgs
   ): Promise<PaginatedInAppNotifications> {
     // Custom cursor-based pagination that uses triggeredAt instead of rowId
     const { first, after, last, before } = paginationArgs;
     const limit = first ?? last ?? 25;
-
     if (after) {
       // Parse the cursor to get triggeredAt value
       const afterNotification = await this.inAppNotificationRepo.findOne({
@@ -149,7 +148,6 @@ export class InAppNotificationService {
         );
       }
     }
-
     if (before) {
       // Parse the cursor to get triggeredAt value
       const beforeNotification = await this.inAppNotificationRepo.findOne({
@@ -165,22 +163,20 @@ export class InAppNotificationService {
         );
       }
     }
-
+    // Compute total BEFORE applying take/skip
+    const total = await queryBuilder.clone().getCount();
     queryBuilder.take(limit + 1); // Get one extra to check if there are more
-
     const items = await queryBuilder.getMany();
     const hasNextPage = items.length > limit;
-    const hasPreviousPage = !!after || !!before;
-
+    // This is only correct for forward pagination; for `last`/`before` you must reverse and recompute.
+    const hasPreviousPage = Boolean(after);
     const actualItems = hasNextPage ? items.slice(0, limit) : items;
-    const total = await queryBuilder.clone().getCount();
-
     return {
       total,
       items: actualItems,
       pageInfo: {
-        startCursor: actualItems[0]?.id || null,
-        endCursor: actualItems[actualItems.length - 1]?.id || null,
+        startCursor: actualItems[0]?.id,
+        endCursor: actualItems[actualItems.length - 1]?.id,
         hasNextPage,
         hasPreviousPage,
       },

@@ -84,20 +84,25 @@ export const getRelayStylePaginationResults = async <
 
   const { first, after, last, before } = paginationArgs;
 
-  // Preserve existing orderBy clauses and only add rowId if not already present
+  // Preserve existing orderBy clauses and only add rowId if not already present.
   const existingOrderBys = query.expressionMap.orderBys || {};
   const hasExistingOrder = Object.keys(existingOrderBys).length > 0;
+  // Determine effective sort direction from existing order if present; otherwise use provided sort.
+  const firstExistingDir = hasExistingOrder
+    ? (Object.values(existingOrderBys)[0] as 'ASC' | 'DESC')
+    : undefined;
+  const effectiveSort: 'ASC' | 'DESC' = firstExistingDir ?? sort;
 
   if (hasExistingOrder) {
-    // Add rowId as secondary sort for pagination efficiency, preserving existing primary sort
+    // Add rowId as secondary sort for pagination stability, preserving existing primary sort
     const rowIdColumn = `${query.alias}.${SORTING_COLUMN}`;
     if (!existingOrderBys[rowIdColumn]) {
-      query.addOrderBy(rowIdColumn, sort);
+      query.addOrderBy(rowIdColumn, effectiveSort);
     }
   } else {
     // No existing order, use rowId as primary sort
     query.orderBy({
-      [`${query.alias}.${SORTING_COLUMN}`]: sort,
+      [`${query.alias}.${SORTING_COLUMN}`]: effectiveSort,
     });
   }
   // Transforms UUID cursor into rowId cursor
