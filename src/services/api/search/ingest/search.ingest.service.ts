@@ -429,7 +429,7 @@ export class SearchIngestService {
         const batches = await this.fetchAndIngest(
           index,
           fetchFn,
-          () => Promise.resolve(10),
+          countFn,
           batchSize,
           task
         );
