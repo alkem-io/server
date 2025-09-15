@@ -107,9 +107,85 @@ export class InAppNotificationService {
       });
     }
 
+    // Use triggeredAt as the primary ordering for notifications
+    // This ensures notifications are ordered by when they were actually triggered, not when saved
     queryBuilder.orderBy('notification.triggeredAt', 'DESC');
 
-    return await getPaginationResults(queryBuilder, paginationArgs, 'DESC');
+    // For cursor-based pagination, we need to use triggeredAt + id as composite cursor
+    // to ensure stable pagination while maintaining semantic ordering
+    if (paginationArgs.after || paginationArgs.before) {
+      // If using cursor pagination, add secondary ordering by id for stability
+      queryBuilder.addOrderBy('notification.id', 'DESC');
+      return await this.getPaginatedNotificationsWithTriggeredAtCursor(
+        queryBuilder,
+        paginationArgs
+      );
+    } else {
+      // For simple pagination (first page), we can use the standard approach
+      queryBuilder.addOrderBy('notification.rowId', 'DESC');
+      return await getPaginationResults(queryBuilder, paginationArgs, 'DESC');
+    }
+  }
+
+  private async getPaginatedNotificationsWithTriggeredAtCursor(
+    queryBuilder: any,
+    paginationArgs: PaginationArgs
+  ): Promise<PaginatedInAppNotifications> {
+    // Custom cursor-based pagination that uses triggeredAt instead of rowId
+    const { first, after, last, before } = paginationArgs;
+    const limit = first ?? last ?? 25;
+
+    if (after) {
+      // Parse the cursor to get triggeredAt value
+      const afterNotification = await this.inAppNotificationRepo.findOne({
+        where: { id: after },
+      });
+      if (afterNotification) {
+        queryBuilder.andWhere(
+          'notification.triggeredAt < :afterTriggeredAt OR (notification.triggeredAt = :afterTriggeredAt AND notification.id < :afterId)',
+          {
+            afterTriggeredAt: afterNotification.triggeredAt,
+            afterId: afterNotification.id,
+          }
+        );
+      }
+    }
+
+    if (before) {
+      // Parse the cursor to get triggeredAt value
+      const beforeNotification = await this.inAppNotificationRepo.findOne({
+        where: { id: before },
+      });
+      if (beforeNotification) {
+        queryBuilder.andWhere(
+          'notification.triggeredAt > :beforeTriggeredAt OR (notification.triggeredAt = :beforeTriggeredAt AND notification.id > :beforeId)',
+          {
+            beforeTriggeredAt: beforeNotification.triggeredAt,
+            beforeId: beforeNotification.id,
+          }
+        );
+      }
+    }
+
+    queryBuilder.take(limit + 1); // Get one extra to check if there are more
+
+    const items = await queryBuilder.getMany();
+    const hasNextPage = items.length > limit;
+    const hasPreviousPage = !!after || !!before;
+
+    const actualItems = hasNextPage ? items.slice(0, limit) : items;
+    const total = await queryBuilder.clone().getCount();
+
+    return {
+      total,
+      items: actualItems,
+      pageInfo: {
+        startCursor: actualItems[0]?.id || null,
+        endCursor: actualItems[actualItems.length - 1]?.id || null,
+        hasNextPage,
+        hasPreviousPage,
+      },
+    };
   }
 
   public async updateNotificationState(
