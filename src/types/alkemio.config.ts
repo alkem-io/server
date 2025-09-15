@@ -177,7 +177,6 @@ export type AlkemioConfig = {
       timeout: number;
       indices: {
         contribution: string;
-        namings: string;
         guidance_usage: string;
       };
       tls: {
