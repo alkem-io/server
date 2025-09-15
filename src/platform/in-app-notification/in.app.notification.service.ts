@@ -122,7 +122,6 @@ export class InAppNotificationService {
       );
     } else {
       // For simple pagination (first page), we can use the standard approach
-      queryBuilder.addOrderBy('notification.rowId', 'DESC');
       return await getPaginationResults(queryBuilder, paginationArgs, 'DESC');
     }
   }
