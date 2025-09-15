@@ -103,28 +103,26 @@ export class AdminSearchIngestResolverMutations {
       task.id,
       aliasesExist ? 'Active aliases found' : 'No active aliases found'
     );
-    if (aliasesExist) {
-      await this.taskService.updateTaskResults(task.id, 'Removing old aliases');
-    }
+
     await this.taskService.updateTaskResults(
       task.id,
       'Assigning aliases to new indices'
     );
 
-    if (aliasesExist) {
-      await this.searchIngestService.assignAliasToIndex(
-        aliasData,
-        aliasesExist
-      );
-    } else {
-      const aliases = this.searchIngestService.getAliases();
-      const data = aliases.map(alias => ({
-        alias,
-        index: `${alias}-${suffix}`,
-      }));
+    await this.taskService.updateTaskResults(
+      task.id,
+      'Assigning aliases to new indices'
+    );
 
-      await this.searchIngestService.assignAliasToIndex(data, aliasesExist);
-    }
+    const data = aliasesExist
+      ? aliasData
+      : this.searchIngestService.getAliases().map(alias => ({
+          alias,
+          index: `${alias}-${suffix}`,
+        }));
+
+    await this.searchIngestService.assignAliasToIndex(data, aliasesExist);
+
     // delete old indices, if aliases existed
     if (aliasesExist) {
       await this.taskService.updateTaskResults(task.id, 'Removing old indices');

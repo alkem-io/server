@@ -1,11 +1,13 @@
-import { setTimeout } from 'timers/promises';
 import { EntityManager, FindManyOptions } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
+import {
+  ErrorCause,
+  IndicesUpdateAliasesAction,
+} from '@elastic/elasticsearch/lib/api/types';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { Organization } from '@domain/community/organization';
@@ -123,25 +125,23 @@ export class SearchIngestService {
   }
 
   public async getActiveAliases() {
+    if (!this.elasticClient) {
+      throw new Error('Elasticsearch client not initialized');
+    }
+
     const aliases = getIndexAliases(this.indexPattern);
 
-    // asyncMap(aliases, alias => {
-    //
-    // });
-
     try {
-      const data = await this.elasticClient?.indices.getAlias({
+      const data = await this.elasticClient.indices.getAlias({
         name: aliases,
       });
-      if (!data) {
-        return [];
-      }
+
       // index names with these aliases
       return Object.entries(data).flatMap(([index, aliases]) => ({
         index,
         alias: Object.keys(aliases.aliases)[0], // we expect just one alias per index
       }));
-    } catch (e) {
+    } catch {
       return [];
     }
   }
@@ -154,19 +154,31 @@ export class SearchIngestService {
     data: { alias: string; index: string }[],
     removeOldAlias?: boolean
   ) {
+    if (!this.elasticClient) {
+      throw new Error('Elasticsearch client not initialized');
+    }
+
     for (const { alias, index } of data) {
-      await this.elasticClient?.indices.updateAliases({
-        body: {
-          actions: [
-            {
-              remove: removeOldAlias ? { index: '*', alias } : undefined,
-            },
-            {
-              add: { index, alias },
-            },
-          ],
+      const actions: IndicesUpdateAliasesAction[] = [
+        {
+          add: { index, alias },
         },
-      });
+      ];
+
+      if (removeOldAlias) {
+        this.logger.verbose?.(
+          `Removing alias '${alias}'`,
+          LogContext.SEARCH_INGEST
+        );
+        actions.unshift({ remove: { index: '*', alias } });
+      }
+
+      this.logger.verbose?.(
+        `Assigning alias '${alias}' to point to index '${index}'`,
+        LogContext.SEARCH_INGEST
+      );
+
+      await this.elasticClient?.indices.updateAliases({ actions });
     }
   }
 
@@ -342,7 +354,7 @@ export class SearchIngestService {
         const batches = await this.fetchAndIngest(
           index,
           fetchFn,
-          countFn,
+          () => Promise.resolve(10),
           batchSize,
           task
         );
