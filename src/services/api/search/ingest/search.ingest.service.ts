@@ -243,28 +243,26 @@ export class SearchIngestService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    for (const { alias, index } of data) {
-      const actions: IndicesUpdateAliasesAction[] = [
-        {
-          add: { index, alias },
-        },
-      ];
+    const actions: IndicesUpdateAliasesAction[] = [];
 
+    for (const { alias, index } of data) {
       if (removeOldAlias) {
         this.logger.verbose?.(
           `Removing alias '${alias}'`,
           LogContext.SEARCH_INGEST
         );
-        actions.unshift({ remove: { index: '*', alias } });
+        actions.push({ remove: { index: '*', alias } });
       }
 
       this.logger.verbose?.(
         `Assigning alias '${alias}' to point to index '${index}'`,
         LogContext.SEARCH_INGEST
       );
-
-      await this.elasticClient?.indices.updateAliases({ actions });
+      actions.push({ add: { index, alias } });
     }
+
+    // Execute all alias updates in a single atomic operation
+    await this.elasticClient.indices.updateAliases({ actions });
   }
 
   private async ensureIndicesExist(suffix: string): Promise<{
