@@ -278,12 +278,12 @@ export class SearchIngestService {
       };
     }
 
-    const indices = getIndexAliases(this.indexPattern);
+    const aliases = getIndexAliases(this.indexPattern);
 
-    const results = await asyncMap(indices, async index => {
+    const results = await asyncMap(aliases, async alias => {
       try {
         const ack = await this.elasticClient!.indices.create({
-          index: `${index}-${suffix}`,
+          index: `${alias}-${suffix}`,
         });
         return { acknowledged: ack.acknowledged };
       } catch (error) {
@@ -319,19 +319,6 @@ export class SearchIngestService {
     }
 
     const results = await asyncMap(indices, async index => {
-      // if it does not exist exit early, no need to delete
-      try {
-        if (
-          !(await this.elasticClient!.indices.exists({
-            index,
-          }))
-        ) {
-          return { acknowledged: true };
-        }
-      } catch (e: any) {
-        return { acknowledged: false, message: e?.message };
-      }
-
       try {
         const ack = await this.elasticClient!.indices.delete({
           index,
@@ -339,6 +326,12 @@ export class SearchIngestService {
         return { acknowledged: ack.acknowledged };
       } catch (error) {
         const err = error as ElasticResponseError;
+        // the API returns a number
+        if ((err.meta.statusCode as unknown as number) === 404) {
+          // already deleted or it never existed
+          return { acknowledged: true };
+        }
+
         return {
           acknowledged: false,
           message: err.meta.body.error.reason,
