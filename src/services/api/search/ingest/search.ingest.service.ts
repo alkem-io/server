@@ -1,3 +1,4 @@
+import { setTimeout } from 'node:timers/promises';
 import { EntityManager, FindManyOptions } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -489,7 +490,7 @@ export class SearchIngestService {
 
       start += batchSize;
       // delay between batches
-      await setTimeout(500, null);
+      await setTimeout(500);
     }
 
     return results;
