@@ -24,7 +24,6 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { UrlPathElement } from '@common/enums/url.path.element';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { UrlPathBase } from '@common/enums/url.path.base';
@@ -36,6 +35,7 @@ import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -297,12 +297,40 @@ export class UrlGeneratorService {
   private async getTemplatesSetUrlPathOrFail(
     templatesSetID: string
   ): Promise<string> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        templatesManager: {
+    const templatesManager = await this.entityManager.findOne(
+      TemplatesManager,
+      {
+        where: {
           templatesSet: {
             id: templatesSetID,
           },
+        },
+      }
+    );
+    if (!templatesManager) {
+      // Must be an InnovationPack
+      const innovationPack = await this.entityManager.findOne(InnovationPack, {
+        where: {
+          templatesSet: {
+            id: templatesSetID,
+          },
+        },
+      });
+      if (!innovationPack) {
+        throw new EntityNotFoundException(
+          `Unable to find InnovationPack for TemplatesSet: ${templatesSetID}`,
+          LogContext.URL_GENERATOR
+        );
+      }
+
+      return `${this.endpoint_cluster}/${UrlPathBase.INNOVATION_PACKS}/${innovationPack.nameID}`;
+    }
+
+    // In a TemplatesManager, on a Space or platform level?
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        templatesManager: {
+          id: templatesManager.id,
         },
       },
     });
@@ -311,22 +339,8 @@ export class UrlGeneratorService {
       // TODO: this later should link fully to the actual template by nameID when the client properly picks that up
       return `${this.endpoint_cluster}/${space.nameID}/settings/templates`;
     }
-
-    const innovationPack = await this.entityManager.findOne(InnovationPack, {
-      where: {
-        templatesSet: {
-          id: templatesSetID,
-        },
-      },
-    });
-    if (!innovationPack) {
-      throw new EntityNotFoundException(
-        `Unable to find InnovationPack for TemplatesSet: ${templatesSetID}`,
-        LogContext.URL_GENERATOR
-      );
-    }
-
-    return `${this.endpoint_cluster}/${UrlPathBase.INNOVATION_PACKS}/${innovationPack.nameID}`;
+    // Must be a platform level templates manager
+    return `${this.endpoint_cluster}/admin/templates`;
   }
 
   private async getInnovationFlowUrlPathOrFail(
@@ -466,7 +480,6 @@ export class UrlGeneratorService {
         calloutsSet: true,
       },
     });
-
     if (!callout) {
       throw new EntityNotFoundException(
         `Unable to find callout where id: ${calloutID}`,
@@ -474,71 +487,80 @@ export class UrlGeneratorService {
       );
     }
 
-    if (callout.calloutsSet) {
-      if (callout.calloutsSet.type === CalloutsSetType.COLLABORATION) {
-        const collaboration = await this.entityManager.findOne(Collaboration, {
-          where: {
-            calloutsSet: {
-              id: callout.calloutsSet.id,
-            },
+    if (!callout.calloutsSet) {
+      // Must be a CalloutTemplate
+      const template = await this.entityManager.findOne(Template, {
+        where: {
+          callout: {
+            id: callout.id,
           },
-        });
-        if (!collaboration) {
-          throw new EntityNotFoundException(
-            `Unable to find collaboration for callouts set where id: ${callout.calloutsSet.id}`,
-            LogContext.URL_GENERATOR
-          );
-        }
+        },
+        relations: {
+          templatesSet: true,
+        },
+      });
+      if (!template || !template.templatesSet) {
+        throw new EntityNotFoundException(
+          `Unable to find template info for Callout that was not in a Collaboration: ${callout.id}`,
+          LogContext.URL_GENERATOR
+        );
+      }
+      const templatesSetUrl = await this.getTemplatesSetUrlPathOrFail(
+        template.templatesSet.id
+      );
+      return `${templatesSetUrl}/${template.nameID}`;
+    }
 
-        if (collaboration.isTemplate) {
-          return this.getSpaceTemplateUrlPathOrFail(collaboration.id);
-        }
+    // Callout is in CalloutsSet, so much be linked to a Space, TemplateContentSpace or KnowledgeBase
 
+    // Next see if have a collaboration parent or not
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        calloutsSet: {
+          id: callout.calloutsSet.id,
+        },
+      },
+    });
+    if (collaboration) {
+      // Either Space or TemplateContentSpace
+      const space = await this.entityManager.findOne(Space, {
+        where: {
+          collaboration: {
+            id: collaboration.id,
+          },
+        },
+      });
+      if (space) {
         const collaborationJourneyUrlPath =
           await this.getSpaceUrlPathByCollaborationID(collaboration.id);
         return `${collaborationJourneyUrlPath}/${UrlPathElement.COLLABORATION}/${callout.nameID}`;
-      } else if (callout.calloutsSet.type === CalloutsSetType.KNOWLEDGE_BASE) {
-        const virtualContributor = await this.entityManager.findOne(
-          VirtualContributor,
-          {
-            where: {
-              knowledgeBase: {
-                calloutsSet: {
-                  id: callout.calloutsSet.id,
-                },
+      } else {
+        // must be a space template
+        return await this.getSpaceTemplateUrlPathOrFail(collaboration.id);
+      }
+    } else {
+      // Must be a KnowledgeBase
+      const virtualContributor = await this.entityManager.findOne(
+        VirtualContributor,
+        {
+          where: {
+            knowledgeBase: {
+              calloutsSet: {
+                id: callout.calloutsSet.id,
               },
             },
-          }
-        );
-        if (!virtualContributor) {
-          throw new EntityNotFoundException(
-            `Unable to find virtual contributor for callouts set where id: ${callout.calloutsSet.id}`,
-            LogContext.URL_GENERATOR
-          );
+          },
         }
-        const vcUrl = await this.generateUrlForVC(virtualContributor.nameID);
-        return `${vcUrl}/${UrlPathElement.KNOWLEDGE_BASE}/${callout.nameID}`;
-      }
-    }
-
-    const template = await this.entityManager.findOne(Template, {
-      where: {
-        callout: {
-          id: callout.id,
-        },
-      },
-      relations: {
-        profile: true,
-        templatesSet: true,
-      },
-    });
-    if (!template || !template.templatesSet || !template.profile) {
-      throw new EntityNotFoundException(
-        `Unable to find template info for Callout that was not in a Collaboration: ${callout.id}`,
-        LogContext.URL_GENERATOR
       );
+      if (!virtualContributor) {
+        throw new EntityNotFoundException(
+          `Unable to find VirtualContributor for CalloutsSet where id: ${callout.calloutsSet.id}`,
+          LogContext.URL_GENERATOR
+        );
+      }
+      const vcUrl = this.generateUrlForVC(virtualContributor.nameID);
+      return `${vcUrl}/${UrlPathElement.KNOWLEDGE_BASE}/${callout.nameID}`;
     }
-    return await this.getTemplateUrlPathOrFail(template.profile.id);
   }
 
   private async getSpaceUrlPathByCollaborationID(

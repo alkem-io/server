@@ -8,7 +8,7 @@ import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-a
 @Resolver(() => InAppNotificationPayloadSpaceCommunicationUpdate)
 export class InAppNotificationPayloadSpaceCommunicationUpdateResolverFields {
   @ResolveField(() => ISpace, {
-    nullable: false,
+    nullable: true,
     description: 'The Space where the update was sent.',
   })
   public space(
@@ -27,7 +27,7 @@ export class InAppNotificationPayloadSpaceCommunicationUpdateResolverFields {
   public update(
     @Parent()
     payload: InAppNotificationPayloadSpaceCommunicationUpdate
-  ): string {
-    return payload.updateID;
+  ): string | undefined {
+    return payload.update;
   }
 }

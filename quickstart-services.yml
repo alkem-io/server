@@ -29,6 +29,7 @@ services:
       - 5672:5672
       - 15672:15672
       - 6379:6379
+      - 8188:8188
     networks:
       - alkemio_dev_net
     environment:
@@ -91,6 +92,17 @@ services:
         source: ./.build/ory/kratos
         target: /etc/config/kratos
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+
+  kratos-admin-ui:
+    image: ghcr.io/dfoxg/kratos-admin-ui:v2.5.0
+    ports:
+      - 8080
+    restart: unless-stopped
+    environment:
+      - KRATOS_ADMIN_URL=http://kratos:4434
+      - KRATOS_PUBLIC_URL=http://kratos:4433
+    networks:
+      - alkemio_dev_net
 
   oathkeeper:
     extra_hosts:
@@ -204,7 +216,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.23.4
+    image: alkemio/notifications:v0.25.1
     platform: linux/amd64
     depends_on:
       rabbitmq:

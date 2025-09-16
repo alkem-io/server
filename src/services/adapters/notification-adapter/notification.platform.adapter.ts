@@ -19,7 +19,10 @@ import { NotificationEventPayload } from '@common/enums/notification.event.paylo
 import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.base';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
+import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
+import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.base';
 import { NotificationUserAdapter } from './notification.user.adapter';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 
 @Injectable()
 export class NotificationPlatformAdapter {
@@ -30,7 +33,8 @@ export class NotificationPlatformAdapter {
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   public async platformGlobalRoleChanged(
@@ -98,10 +102,20 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
+      const discussionURL =
+        await this.urlGeneratorService.getForumDiscussionUrlPath(
+          eventData.discussion.id
+        );
+
       const inAppPayload: InAppNotificationPayloadPlatformForumDiscussion = {
         type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
-        discussionID: eventData.discussion.id,
-        commentID: '',
+        discussion: {
+          id: eventData.discussion.id,
+          displayName: eventData.discussion.profile.displayName,
+          description: eventData.discussion.profile.description,
+          url: discussionURL,
+          category: eventData.discussion.category,
+        },
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -141,9 +155,23 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
+      const discussionURL =
+        await this.urlGeneratorService.getForumDiscussionUrlPath(
+          eventData.discussion.id
+        );
+
       const inAppPayload: InAppNotificationPayloadPlatformForumDiscussion = {
         type: NotificationEventPayload.PLATFORM_FORUM_DISCUSSION,
-        discussionID: eventData.discussion.id,
+        discussion: {
+          id: eventData.discussion.id,
+          displayName: eventData.discussion.profile.displayName,
+          description: eventData.discussion.profile.description,
+          url: discussionURL,
+          category: eventData.discussion.category,
+        },
+        comment: {
+          message: eventData.commentSent.message,
+        },
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -195,6 +223,25 @@ export class NotificationPlatformAdapter {
         eventData.space
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpace = {
+        type: NotificationEventPayload.SPACE,
+        spaceID: eventData.space.id,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
   public async platformUserProfileCreated(
@@ -259,6 +306,26 @@ export class NotificationPlatformAdapter {
       );
 
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadPlatformUserProfileRemoved = {
+        type: NotificationEventPayload.PLATFORM_USER_PROFILE_REMOVED,
+        userDisplayName: eventData.user.profile.displayName,
+        userEmail: eventData.user.email,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
+        NotificationEventCategory.PLATFORM,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
   private async getNotificationRecipientsPlatform(

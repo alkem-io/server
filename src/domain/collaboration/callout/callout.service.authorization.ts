@@ -25,6 +25,8 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleName } from '@common/enums/role.name';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -33,7 +35,8 @@ export class CalloutAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
-    private roomAuthorizationService: RoomAuthorizationService
+    private roomAuthorizationService: RoomAuthorizationService,
+    private roleSetService: RoleSetService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -48,6 +51,15 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
+        calloutsSet: {
+          collaboration: {
+            space: {
+              community: {
+                roleSet: true,
+              },
+            },
+          },
+        },
         framing: {
           profile: true,
           whiteboard: {
@@ -78,7 +90,7 @@ export class CalloutAuthorizationService {
     // require stricter access control: only global admins, space admins, global support, and the creator
     // should have READ privileges. The parent policy may grant broader access, so we need to filter it here.
     const parentAuthorizationAdjusted =
-      this.getParentAuthorizationPolicyForCalloutVisibility(
+      await this.getParentAuthorizationPolicyForCalloutVisibility(
         callout,
         parentAuthorization
       );
@@ -145,10 +157,10 @@ export class CalloutAuthorizationService {
    * @param parentAuthorization The parent authorization policy to modify.
    * @returns The modified authorization policy, or undefined if no parent policy is provided.
    */
-  private getParentAuthorizationPolicyForCalloutVisibility(
+  private async getParentAuthorizationPolicyForCalloutVisibility(
     callout: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy | undefined {
+  ): Promise<IAuthorizationPolicy | undefined> {
     if (
       !parentAuthorization ||
       callout.settings.visibility !== CalloutVisibility.DRAFT
@@ -183,9 +195,27 @@ export class CalloutAuthorizationService {
     // Add in who should READ
     const criteriasWithReadAccess: ICredentialDefinition[] = [
       { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-      { type: AuthorizationCredential.SPACE_ADMIN, resourceID: '' },
       { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
     ];
+
+    if (callout.calloutsSet?.collaboration?.space) {
+      const space = callout.calloutsSet.collaboration.space;
+      if (space.community?.roleSet) {
+        // Get space admin credentials including parent space admins for hierarchical access
+        const spaceAdminCredentials =
+          await this.roleSetService.getCredentialsForRoleWithParents(
+            space.community.roleSet,
+            RoleName.ADMIN
+          );
+        criteriasWithReadAccess.push(...spaceAdminCredentials);
+      } else {
+        // Fallback to just the current space admin if roleSet is not available
+        criteriasWithReadAccess.push({
+          type: AuthorizationCredential.SPACE_ADMIN,
+          resourceID: space.id,
+        });
+      }
+    }
     if (callout.createdBy) {
       criteriasWithReadAccess.push({
         type: AuthorizationCredential.USER_SELF_MANAGEMENT,

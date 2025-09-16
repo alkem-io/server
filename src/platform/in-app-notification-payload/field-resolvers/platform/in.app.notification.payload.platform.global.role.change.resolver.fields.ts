@@ -7,17 +7,19 @@ import { UserLoaderCreator } from '@core/dataloader/creators/loader.creators/use
 
 @Resolver(() => InAppNotificationPayloadPlatformGlobalRoleChange)
 export class InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields {
+  constructor() {}
+
   @ResolveField(() => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The User whose role was changed.',
   })
-  public user(
+  public async user(
     @Parent()
     payload: InAppNotificationPayloadPlatformGlobalRoleChange,
     @Loader(UserLoaderCreator, { resolveToNull: true })
     loader: ILoader<IUser | null>
-  ) {
-    return loader.load(payload.userID);
+  ): Promise<IUser | null> {
+    return await loader.load(payload.userID);
   }
 
   @ResolveField(() => String, {

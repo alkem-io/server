@@ -1,14 +1,25 @@
+import { LogContext } from '@common/enums/logging.context';
 import { UserLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
+import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver(() => InAppNotificationPayloadUserMessageRoom)
 export class InAppNotificationPayloadUserMessageRoomResolverFields {
+  constructor(
+    private messageDetailsService: MessageDetailsService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
+  ) {}
+
   @ResolveField(() => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The User for the message.',
   })
   public async user(
@@ -20,56 +31,31 @@ export class InAppNotificationPayloadUserMessageRoomResolverFields {
     return loader.load(payload.userID);
   }
 
-  @ResolveField(() => String, {
+  @ResolveField(() => MessageDetails, {
     nullable: true,
-    description: 'The original message ID.',
+    description: 'The details of the message.',
   })
-  public originalMessageID(
+  public async messageDetails(
     @Parent()
     payload: InAppNotificationPayloadUserMessageRoom
-  ): string | undefined {
-    return payload.messageID;
-  }
-  @ResolveField(() => String, {
-    nullable: true,
-    description: 'The original message ID.',
-  })
-  public comment(
-    @Parent()
-    payload: InAppNotificationPayloadUserMessageRoom
-  ): string | undefined {
-    return payload.comment;
-  }
-  @ResolveField(() => String, {
-    nullable: true,
-    description: 'The original message ID.',
-  })
-  public commentUrl(
-    @Parent()
-    payload: InAppNotificationPayloadUserMessageRoom
-  ): string | undefined {
-    return payload.commentUrl;
-  }
-
-  @ResolveField(() => String, {
-    nullable: true,
-    description: 'The original message ID.',
-  })
-  public commentOriginName(
-    @Parent()
-    payload: InAppNotificationPayloadUserMessageRoom
-  ): string | undefined {
-    return payload.commentOriginName;
-  }
-
-  @ResolveField(() => String, {
-    nullable: true,
-    description: 'The room for the message.',
-  })
-  public roomID(
-    @Parent()
-    payload: InAppNotificationPayloadUserMessageRoom
-  ): string | undefined {
-    return payload.roomID;
+  ): Promise<MessageDetails | null> {
+    try {
+      return await this.messageDetailsService.getMessageDetails(
+        payload.roomID,
+        payload.messageID
+      );
+    } catch (error) {
+      this.logger.error(
+        {
+          messageId: payload.messageID,
+          roomId: payload.roomID,
+          msg: 'BROKEN_NOTIFICATION_PAYLOAD',
+          name: InAppNotificationPayloadUserMessageRoom.name,
+        },
+        (error as Error)?.stack,
+        LogContext.IN_APP_NOTIFICATION
+      );
+      return null;
+    }
   }
 }
