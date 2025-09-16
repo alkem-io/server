@@ -27,7 +27,7 @@ export class InAppNotificationPayloadSpaceCommunicationUpdateResolverFields {
   public update(
     @Parent()
     payload: InAppNotificationPayloadSpaceCommunicationUpdate
-  ): string {
-    return payload.updateID;
+  ): string | undefined {
+    return payload.update;
   }
 }

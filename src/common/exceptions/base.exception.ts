@@ -16,6 +16,8 @@ export class BaseException extends GraphQLError {
       extensions: {
         // this needs to be set, since graphql automatically chooses a default code
         code: String(code),
+        errorId,
+        details,
       },
     });
     this.name = this.constructor.name;
