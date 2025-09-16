@@ -155,7 +155,7 @@ export class AiPersonaService {
       userID: invocationInput.userID,
       message: invocationInput.message,
       // TODO fix bodyOfKnowledgeID
-      bodyOfKnowledgeID: 'slon', // aiPersona.bodyOfKnowledgeID,
+      bodyOfKnowledgeID: invocationInput.bodyOfKnowledgeID,
       contextID: invocationInput.contextID,
       history,
       interactionID: invocationInput.interactionID,

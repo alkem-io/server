@@ -26,6 +26,7 @@ export class AiServerAdapterInvocationInput {
   operation?: InvocationOperation = InvocationOperation.QUERY;
   message!: string;
   aiPersonaID!: string;
+  bodyOfKnowledgeID?: string;
   contextID?: string;
   userID?: string;
   vcInteractionID?: string;

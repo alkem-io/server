@@ -119,6 +119,7 @@ export class VirtualContributorService {
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );
+
     if (communicationID) {
       virtualContributor.communicationID = communicationID;
     }
@@ -414,12 +415,6 @@ export class VirtualContributorService {
     virtualContributor: IVirtualContributor,
     agentInfo: AgentInfo
   ): Promise<boolean> {
-    if (!virtualContributor.aiPersona) {
-      throw new EntityNotInitializedException(
-        `Virtual Contributor does not have aiPersona initialized: ${virtualContributor.id}`,
-        LogContext.AUTH
-      );
-    }
     this.logger.verbose?.(
       `refreshing the body of knowledge ${virtualContributor.id}, by ${agentInfo.userID}`,
       LogContext.VIRTUAL_CONTRIBUTOR
@@ -432,10 +427,6 @@ export class VirtualContributorService {
       virtualContributor.bodyOfKnowledgeType,
       virtualContributor.aiPersonaID
     );
-
-    // TODO: Implement actual refresh logic via AI Persona service
-    // For now, return true to indicate success
-    return true;
   }
 
   private async getBodyOfKnowledgeId(vcId: string): Promise<string> {

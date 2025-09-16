@@ -26,7 +26,7 @@ export interface AiPersonaEngineAdapterInvocationInput
   message: string;
   prompt?: string[];
   contextID?: string;
-  bodyOfKnowledgeID: string;
+  bodyOfKnowledgeID?: string;
   interactionID?: string;
   history?: InteractionMessage[];
   description?: string;

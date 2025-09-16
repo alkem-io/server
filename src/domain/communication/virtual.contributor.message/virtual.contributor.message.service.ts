@@ -91,6 +91,7 @@ export class VirtualContributorMessageService {
     );
 
     const aiServerAdapterInvocationInput: AiServerAdapterInvocationInput = {
+      bodyOfKnowledgeID: virtualContributor.bodyOfKnowledge!,
       aiPersonaID: virtualContributor.aiPersonaID,
       message: invocationInput.message,
       contextID: invocationInput.contextSpaceID,

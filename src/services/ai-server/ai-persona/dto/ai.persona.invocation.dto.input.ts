@@ -79,6 +79,12 @@ export class AiPersonaInvocationInput {
 
   @Field(() => String, {
     nullable: true,
+    description: 'The ID of the body of knowledge to use.',
+  })
+  bodyOfKnowledgeID?: string;
+
+  @Field(() => String, {
+    nullable: true,
     description: 'The ID of the context, the AI Persona is asked a question.',
   })
   contextID?: string = undefined;

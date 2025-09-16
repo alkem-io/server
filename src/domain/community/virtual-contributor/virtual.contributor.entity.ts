@@ -10,7 +10,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { ENUM_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
@@ -40,8 +40,11 @@ export class VirtualContributor
   settings!: IVirtualContributorSettings;
 
   // Direct reference to AiPersona using aiPersonaID
-  @Column('varchar', { nullable: false, length: ENUM_LENGTH })
+  @Column('varchar', { nullable: false, length: SMALL_TEXT_LENGTH })
   aiPersonaID!: string;
+
+  @Column('varchar', { nullable: true, length: SMALL_TEXT_LENGTH })
+  bodyOfKnowledgeID!: string;
 
   @Column()
   listedInStore!: boolean;

@@ -93,9 +93,16 @@ export class IVirtualContributor
   })
   knowledgeBase!: IKnowledgeBase;
 
-  @Field(() => String, {
-    nullable: false,
-    description: 'The body of knowledge used by this Virtual Contributor.',
+  @Field(() => Markdown, {
+    nullable: true,
+    description: 'Description of the body of knowledge for this VC.',
   })
   bodyOfKnowledge?: string;
+
+  @Field(() => UUID, {
+    nullable: false,
+    description:
+      'The ID of the body of knowledge used by this Virtual Contributor.',
+  })
+  bodyOfKnowledgeID!: string;
 }

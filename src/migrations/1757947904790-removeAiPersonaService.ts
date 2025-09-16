@@ -47,6 +47,10 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
     );
 
     await queryRunner.query(
+      `ALTER TABLE \`virtual_contributor\` ADD \`bodyOfKnowledgeID\` varchar(128) NULL`
+    );
+
+    await queryRunner.query(
       `ALTER TABLE \`ai_persona_service\` ADD \`description\` text NULL`
     );
 
@@ -60,7 +64,8 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
         vc.dataAccessMode = ap.dataAccessMode,
         vc.interactionModes = ap.interactionModes,
         vc.bodyOfKnowledgeType = aps.bodyOfKnowledgeType,
-        vc.bodyOfKnowledge = aps.bodyOfKnowledgeID
+        vc.bodyOfKnowledge = ap.bodyOfKnowledge,
+        vc.bodyOfKnowledgeID = aps.bodyOfKnowledgeID
     `);
 
     await queryRunner.query(`
