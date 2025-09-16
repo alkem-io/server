@@ -112,7 +112,9 @@ export class NotificationPlatformAdapter {
         discussion: {
           id: eventData.discussion.id,
           displayName: eventData.discussion.profile.displayName,
+          description: eventData.discussion.profile.description,
           url: discussionURL,
+          category: eventData.discussion.category,
         },
       };
 
@@ -163,7 +165,9 @@ export class NotificationPlatformAdapter {
         discussion: {
           id: eventData.discussion.id,
           displayName: eventData.discussion.profile.displayName,
+          description: eventData.discussion.profile.description,
           url: discussionURL,
+          category: eventData.discussion.category,
         },
         comment: {
           message: eventData.commentSent.message,
