@@ -181,4 +181,15 @@ export class VirtualContributorResolverFields {
     }
     return VirtualContributorStatus.INITIALIZING;
   }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('bodyOfKnowledgeID', () => String, {
+    nullable: false,
+    description:
+      'The ID of the body of knowledge used by this virtual contributor',
+  })
+  bodyOfKnowledgeID(@Parent() virtualContributor: IVirtualContributor): string {
+    return virtualContributor.bodyOfKnowledge!;
+  }
 }

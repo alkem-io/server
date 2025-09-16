@@ -7,5 +7,5 @@ export enum VirtualContributorBodyOfKnowledgeType {
   NONE = 'none',
 }
 registerEnumType(VirtualContributorBodyOfKnowledgeType, {
-  name: 'AiPersonaBodyOfKnowledgeType',
+  name: 'VirtualContributorBodyOfKnowledgeType',
 });

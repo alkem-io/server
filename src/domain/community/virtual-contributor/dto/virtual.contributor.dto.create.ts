@@ -40,6 +40,13 @@ export class CreateVirtualContributorInput extends CreateContributorInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   bodyOfKnowledgeType!: VirtualContributorBodyOfKnowledgeType;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'The ID of the body of knowledge (if any) to use.',
+  })
+  @MaxLength(SMALL_TEXT_LENGTH)
+  bodyOfKnowledge?: string;
+
   @Field(() => [VirtualContributorInteractionMode], {
     nullable: true,
     defaultValue: [VirtualContributorInteractionMode.DISCUSSION_TAGGING],

@@ -92,4 +92,10 @@ export class IVirtualContributor
       'The Knowledge Base linked to this Virtual Contributor as body of knowledge.',
   })
   knowledgeBase!: IKnowledgeBase;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The body of knowledge used by this Virtual Contributor.',
+  })
+  bodyOfKnowledge?: string;
 }
