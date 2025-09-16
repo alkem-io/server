@@ -10,6 +10,8 @@ export abstract class InAppNotificationPayloadPlatformForumDiscussion extends In
     id: string;
     displayName: string;
     url: string;
+    description?: string;
+    category?: string;
   };
   comment?: {
     message: string;

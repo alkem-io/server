@@ -84,10 +84,22 @@ export const getRelayStylePaginationResults = async <
 
   const { first, after, last, before } = paginationArgs;
 
-  query.orderBy({
-    [`${query.alias}.${SORTING_COLUMN}`]: sort,
-    ...query.expressionMap.orderBys,
-  });
+  // Preserve existing orderBy clauses and only add rowId if not already present
+  const existingOrderBys = query.expressionMap.orderBys || {};
+  const hasExistingOrder = Object.keys(existingOrderBys).length > 0;
+
+  if (hasExistingOrder) {
+    // Add rowId as secondary sort for pagination efficiency, preserving existing primary sort
+    const rowIdColumn = `${query.alias}.${SORTING_COLUMN}`;
+    if (!existingOrderBys[rowIdColumn]) {
+      query.addOrderBy(rowIdColumn, sort);
+    }
+  } else {
+    // No existing order, use rowId as primary sort
+    query.orderBy({
+      [`${query.alias}.${SORTING_COLUMN}`]: sort,
+    });
+  }
   // Transforms UUID cursor into rowId cursor
   const rowId = await getRowIdFromCursor(query, cursorColumn, before, after);
   query = enforceCursor(query, first, last, rowId, sort);
