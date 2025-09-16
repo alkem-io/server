@@ -13,6 +13,7 @@ export const virtualContributorData: {
     nameID: 'bridgeuniandbusiness',
     bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
     aiPersonaID: 'ai-persona-08a43f9f-58e7-4c65-bf38-be283a548b3b',
+    bodyOfKnowledgeID: 'body-of-knowledge-08a43f9f-58e7-4c65-bf38-be283a548b3b',
     dataAccessMode: VirtualContributorDataAccessMode.SPACE_PROFILE,
     interactionModes: [VirtualContributorInteractionMode.DISCUSSION_TAGGING],
     agent: {
