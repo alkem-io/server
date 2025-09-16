@@ -489,7 +489,7 @@ export class SearchIngestService {
 
       start += batchSize;
       // delay between batches
-      // await setTimeout(1000, null);
+      await setTimeout(500, null);
     }
 
     return results;
