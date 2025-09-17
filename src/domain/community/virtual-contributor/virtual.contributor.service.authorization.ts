@@ -35,7 +35,8 @@ export class VirtualContributorAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    virtualInput: IVirtualContributor
+    virtualInput: IVirtualContributor,
+    accountSpaceMemberCredentials: ICredentialDefinition[]
   ): Promise<IAuthorizationPolicy[]> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
       virtualInput.id,
@@ -71,7 +72,7 @@ export class VirtualContributorAuthorizationService {
     const credentialCriteriasWithAccessToVC =
       await this.getCredentialsWithVisibilityOfVirtualContributor(
         virtual.searchVisibility,
-        accountAdminCredential
+        accountSpaceMemberCredentials
       );
 
     virtual.authorization = this.resetToBaseVirtualContributorAuthorization(
@@ -140,7 +141,7 @@ export class VirtualContributorAuthorizationService {
 
   private async getCredentialsWithVisibilityOfVirtualContributor(
     searchVisibility: SearchVisibility,
-    accountAdminCredential?: ICredentialDefinition
+    accountSpaceMemberCredentials: ICredentialDefinition[]
   ): Promise<ICredentialDefinition[]> {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
 
@@ -154,8 +155,8 @@ export class VirtualContributorAuthorizationService {
 
       case SearchVisibility.ACCOUNT:
         // ACCOUNT visibility: only accessible within the scope of the account
-        if (accountAdminCredential) {
-          credentialCriteriasWithAccess.push(accountAdminCredential);
+        if (accountSpaceMemberCredentials.length > 0) {
+          credentialCriteriasWithAccess.push(...accountSpaceMemberCredentials);
         }
         break;
 
