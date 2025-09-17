@@ -70,7 +70,8 @@ export class VirtualContributorAuthorizationService {
     // Key: what are the credentials that should be able to read about this VC
     const credentialCriteriasWithAccessToVC =
       await this.getCredentialsWithVisibilityOfVirtualContributor(
-        virtual.searchVisibility
+        virtual.searchVisibility,
+        accountAdminCredential
       );
 
     virtual.authorization = this.resetToBaseVirtualContributorAuthorization(
@@ -138,13 +139,29 @@ export class VirtualContributorAuthorizationService {
   }
 
   private async getCredentialsWithVisibilityOfVirtualContributor(
-    searchVisibility: SearchVisibility
+    searchVisibility: SearchVisibility,
+    accountAdminCredential?: ICredentialDefinition
   ): Promise<ICredentialDefinition[]> {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
-    if (searchVisibility !== SearchVisibility.HIDDEN) {
-      const globalAnonymousRegistered =
-        this.authorizationPolicyService.getCredentialDefinitionsAnonymousRegistered();
-      credentialCriteriasWithAccess.push(...globalAnonymousRegistered);
+
+    switch (searchVisibility) {
+      case SearchVisibility.PUBLIC:
+        // PUBLIC visibility: accessible to anonymous and registered users globally
+        const globalAnonymousRegistered =
+          this.authorizationPolicyService.getCredentialDefinitionsAnonymousRegistered();
+        credentialCriteriasWithAccess.push(...globalAnonymousRegistered);
+        break;
+
+      case SearchVisibility.ACCOUNT:
+        // ACCOUNT visibility: only accessible within the scope of the account
+        if (accountAdminCredential) {
+          credentialCriteriasWithAccess.push(accountAdminCredential);
+        }
+        break;
+
+      case SearchVisibility.HIDDEN:
+        // HIDDEN visibility: no additional global access credentials
+        break;
     }
 
     return credentialCriteriasWithAccess;
