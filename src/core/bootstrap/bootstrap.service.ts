@@ -419,6 +419,7 @@ export class BootstrapService {
       emailVerified: true,
       firstName: adminUser.firstName,
       lastName: adminUser.lastName,
+      guestName: '',
       avatarURL: '',
       credentials: adminUser.agent?.credentials || [],
       agentID: adminUser.agent?.id,

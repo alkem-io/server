@@ -32,6 +32,19 @@ export class AgentInfoService {
     return emptyAgentInfo;
   }
 
+  public createGuestAgentInfo(guestName: string): AgentInfo {
+    const guestAgentInfo = new AgentInfo();
+    const guestCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.GLOBAL_GUEST,
+      resourceID: '',
+    };
+    guestAgentInfo.credentials = [guestCredential];
+    guestAgentInfo.firstName = guestName;
+    guestAgentInfo.isAnonymous = false; // Guest has a name, so not truly anonymous
+    guestAgentInfo.guestName = guestName; // Store the guest name
+    return guestAgentInfo;
+  }
+
   /**
    * Retrieves the agent information metadata for a given email.
    *
