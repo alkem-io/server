@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { UserAuthenticationStatus } from '../enums/user.authentication.status';
+import { CredentialInfoDto } from './credential.info.dto';
 
 @ObjectType('WhoAmI')
 export class WhoAmIDto {
@@ -30,8 +31,9 @@ export class WhoAmIDto {
   })
   roles!: string[];
 
-  @Field(() => [String], {
-    description: 'The credentials of the current user',
+  @Field(() => [CredentialInfoDto], {
+    description:
+      'The credentials of the current user with detailed information',
   })
-  credentials!: string[];
+  credentials!: CredentialInfoDto[];
 }
