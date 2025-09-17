@@ -106,7 +106,7 @@ export class GeoLocationService {
   }
 
   public getCacheMetadata() {
-    if (this.enabled) {
+    if (!this.enabled) {
       throw new GeoServiceNotAvailableException(
         'Geo location service is disabled',
         LogContext.GEO
