@@ -11,7 +11,7 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
       `DROP INDEX \`REL_55b8101bdf4f566645e928c26e\` ON \`virtual_contributor\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` ADD \`aiPersonaID_tmp\` varchar(128) NOT NULL`
+      `ALTER TABLE \`virtual_contributor\` ADD \`aiPersonaID_tmp\` char(36) NOT NULL`
     );
 
     await queryRunner.query(
@@ -73,7 +73,7 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
       `ALTER TABLE \`virtual_contributor\` DROP COLUMN \`aiPersonaId\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` CHANGE \`aiPersonaID_tmp\` TO \`aiPersonaID\``
+      `ALTER TABLE \`virtual_contributor\` CHANGE \`aiPersonaID_tmp\` \`aiPersonaID\` char(36) NOT NULL`
     );
 
     await queryRunner.query(`
