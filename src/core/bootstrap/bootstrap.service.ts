@@ -506,7 +506,7 @@ export class BootstrapService {
           description: 'Guidance Virtual Contributor',
         },
         dataAccessMode: VirtualContributorDataAccessMode.NONE,
-        bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.NONE,
+        bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.WEBSITE,
         interactionModes: [
           VirtualContributorInteractionMode.DISCUSSION_TAGGING,
         ],
