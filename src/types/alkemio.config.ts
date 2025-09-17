@@ -158,6 +158,7 @@ export type AlkemioConfig = {
   };
   integrations: {
     geo: {
+      enabled: boolean;
       header: string;
       rest_endpoint: string;
       service_endpoint: string;
