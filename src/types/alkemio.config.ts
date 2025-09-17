@@ -158,6 +158,7 @@ export type AlkemioConfig = {
   };
   integrations: {
     geo: {
+      enabled: boolean;
       header: string;
       rest_endpoint: string;
       service_endpoint: string;
@@ -177,7 +178,6 @@ export type AlkemioConfig = {
       timeout: number;
       indices: {
         contribution: string;
-        namings: string;
         guidance_usage: string;
       };
       tls: {

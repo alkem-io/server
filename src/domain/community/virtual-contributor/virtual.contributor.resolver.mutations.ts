@@ -40,19 +40,31 @@ export class VirtualContributorResolverMutations {
     @Args('virtualContributorData')
     virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
-    const virtual =
+    const virtualContributor =
       await this.virtualContributorService.getVirtualContributorOrFail(
         virtualContributorData.ID
       );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      virtual.authorization,
+      virtualContributor.authorization,
       AuthorizationPrivilege.UPDATE,
-      `virtual contribtor Update: ${virtual.id}`
+      `virtual contributor Update: ${virtualContributor.id}`
     );
 
-    return await this.virtualContributorService.updateVirtualContributor(
-      virtualContributorData
+    const updatedVirtualContributor =
+      await this.virtualContributorService.updateVirtualContributor(
+        virtualContributorData
+      );
+
+    // Reset authorization policy as updates may affect authorization (e.g. searchVisibility changes)
+    const updatedAuthorizations =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        updatedVirtualContributor
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return this.virtualContributorService.getVirtualContributorOrFail(
+      updatedVirtualContributor.id
     );
   }
 
