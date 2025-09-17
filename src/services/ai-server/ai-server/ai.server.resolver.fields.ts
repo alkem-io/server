@@ -13,6 +13,8 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 export class AiServerResolverFields {
   constructor(private aiServerService: AiServerService) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     description: 'The authorization policy for the aiServer',
     nullable: false,
@@ -31,6 +33,8 @@ export class AiServerResolverFields {
     return await this.aiServerService.getDefaultAiPersonaOrFail();
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => [IAiPersona], {
     nullable: false,
     description: 'The AiPersonas on this aiServer',
@@ -39,6 +43,8 @@ export class AiServerResolverFields {
     return await this.aiServerService.getAiPersonas();
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => IAiPersona, {
     nullable: false,
     description: 'A particular AiPersona',

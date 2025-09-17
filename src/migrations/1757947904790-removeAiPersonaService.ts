@@ -27,9 +27,6 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
       `ALTER TABLE \`virtual_contributor\` ADD \`bodyOfKnowledgeType\` varchar(128) NOT NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` ADD \`knowledgeSpaceId\` char(36) NULL`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`virtual_contributor\` DROP FOREIGN KEY \`FK_409cc6ee5429588f868cd59a1de\``
     );
     await queryRunner.query(
@@ -37,9 +34,6 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`virtual_contributor\` ADD CONSTRAINT \`FK_409cc6ee5429588f868cd59a1de\` FOREIGN KEY (\`knowledgeBaseId\`) REFERENCES \`knowledge_base\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` ADD CONSTRAINT \`FK_b9f74364744b851ac6af1055f1d\` FOREIGN KEY (\`knowledgeSpaceId\`) REFERENCES \`space\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
@@ -69,15 +63,6 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      UPDATE \`virtual_contributor\` vc
-      LEFT JOIN \`space\` s ON vc.bodyOfKnowledge = s.id
-      SET
-        vc.knowledgeSpaceId = vc.bodyOfKnowledge
-      WHERE vc.bodyOfKnowledgeType = 'alkemio-space'
-      AND s.id IS NOT NULL;
-    `);
-
-    await queryRunner.query(`
       UPDATE \`ai_persona_service\` aps
       LEFT JOIN \`ai_persona\` ap ON ap.aiPersonaServiceID = aps.id
       SET
@@ -88,14 +73,14 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
       `ALTER TABLE \`virtual_contributor\` DROP COLUMN \`aiPersonaId\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` RENAME COLUMN \`aiPersonaID_tmp\` TO \`aiPersonaID\``
+      `ALTER TABLE \`virtual_contributor\` CHANGE \`aiPersonaID_tmp\` TO \`aiPersonaID\``
     );
 
     await queryRunner.query(`
       DROP TABLE IF EXISTS \`ai_persona\`;
     `);
     await queryRunner.query(`
-      ALTER TABLE ai_persona_service RENAME ai_persona;
+      RENAME TABLE ai_persona_service TO ai_persona;
     `);
   }
 

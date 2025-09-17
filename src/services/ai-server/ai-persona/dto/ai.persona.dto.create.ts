@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { ArrayMaxSize, IsString, MaxLength } from 'class-validator';
-import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { ArrayMaxSize, IsEnum, IsString, MaxLength } from 'class-validator';
+import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { IExternalConfig } from './external.config';
 
@@ -10,7 +10,7 @@ export class CreateAiPersonaInput {
     nullable: true,
     defaultValue: AiPersonaEngine.EXPERT,
   })
-  @MaxLength(SMALL_TEXT_LENGTH)
+  @IsEnum(AiPersonaEngine)
   engine!: AiPersonaEngine;
 
   @Field(() => [String], { nullable: true, defaultValue: [] })

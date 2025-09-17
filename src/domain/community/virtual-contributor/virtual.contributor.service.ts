@@ -41,7 +41,6 @@ import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.ba
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
-import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { virtualContributorSettingsDefault } from './definition/virtual.contributor.settings.default';
 import { UpdateVirtualContributorSettingsEntityInput } from '../virtual-contributor-settings';
 import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
@@ -420,32 +419,11 @@ export class VirtualContributorService {
       LogContext.VIRTUAL_CONTRIBUTOR
     );
 
-    const bokId = await this.getBodyOfKnowledgeId(virtualContributor.id);
-
     return this.aiServerAdapter.refreshBodyOfKnowledge(
-      bokId,
+      virtualContributor.bodyOfKnowledgeID,
       virtualContributor.bodyOfKnowledgeType,
       virtualContributor.aiPersonaID
     );
-  }
-
-  private async getBodyOfKnowledgeId(vcId: string): Promise<string> {
-    const vc = await this.getVirtualContributorOrFail(vcId, {
-      relations: { knowledgeBase: true, knowledgeSpace: true },
-    });
-    if (
-      vc.bodyOfKnowledgeType ===
-      VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE
-    ) {
-      if (!vc.knowledgeSpace) {
-        throw new EntityNotInitializedException(
-          `Virtual Contributor does not have knowledgeSpace initialized: ${vc.id}`,
-          LogContext.VIRTUAL_CONTRIBUTOR
-        );
-      }
-      return vc.knowledgeSpace.id;
-    }
-    return vc.knowledgeBase.id;
   }
 
   // TODO: move to store

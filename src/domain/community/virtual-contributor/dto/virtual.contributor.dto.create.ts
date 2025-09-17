@@ -45,7 +45,7 @@ export class CreateVirtualContributorInput extends CreateContributorInput {
     description: 'The ID of the body of knowledge (if any) to use.',
   })
   @MaxLength(SMALL_TEXT_LENGTH)
-  bodyOfKnowledge?: string;
+  bodyOfKnowledgeID?: string;
 
   @Field(() => [VirtualContributorInteractionMode], {
     nullable: true,

@@ -16,7 +16,6 @@ import { IVirtualContributorSettings } from '../virtual-contributor-settings/vir
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
-import { Space } from '@domain/space/space/space.entity';
 
 @Entity()
 export class VirtualContributor
@@ -74,14 +73,6 @@ export class VirtualContributor
   })
   @JoinColumn()
   knowledgeBase!: KnowledgeBase;
-
-  @ManyToOne(() => Space, {
-    eager: false,
-    cascade: true,
-    nullable: true,
-  })
-  @JoinColumn()
-  knowledgeSpace?: Space;
 
   @Column('text', { nullable: true })
   bodyOfKnowledge?: string;

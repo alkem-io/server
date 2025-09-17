@@ -23,9 +23,6 @@ export class ExtendAiPersona1757951073741 implements MigrationInterface {
       `ALTER TABLE \`ai_persona\` DROP COLUMN \`bodyOfKnowledgeID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`ai_persona\` ADD UNIQUE INDEX \`IDX_293f0d3ef60cb0ca0006044ecf\` (\`authorizationId\`)`
-    );
-    await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_293f0d3ef60cb0ca0006044ecf\` ON \`ai_persona\` (\`authorizationId\`)`
     );
     await queryRunner.query(
@@ -45,9 +42,6 @@ export class ExtendAiPersona1757951073741 implements MigrationInterface {
     );
     await queryRunner.query(
       `DROP INDEX \`REL_293f0d3ef60cb0ca0006044ecf\` ON \`ai_persona\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`ai_persona\` DROP INDEX \`IDX_293f0d3ef60cb0ca0006044ecf\``
     );
     await queryRunner.query(
       `ALTER TABLE \`ai_persona\` ADD \`bodyOfKnowledgeID\` varchar(128) NULL`

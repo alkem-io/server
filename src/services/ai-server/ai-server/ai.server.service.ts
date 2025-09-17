@@ -80,23 +80,6 @@ export class AiServerService {
     private eventBus: EventBus
   ) {}
 
-  // async ensureBokIsIngested(personaServiceId: string): Promise<boolean> {
-  //   this.logger.verbose?.(
-  //     `AI server ensurePersonaIsUsable for AI Persona service ${personaServiceId} invoked`,
-  //     LogContext.AI_SERVER
-  //   );
-  //
-  //   const aiPersona =
-  //     await this.aiPersonaService.getAiPersonaOrFail(personaServiceId);
-  //   this.logger.verbose?.(
-  //     `AI Persona service ${personaServiceId} found for BOK refresh`,
-  //     LogContext.AI_SERVER
-  //   );
-  //
-  //   await this.ensureBoNIsIngested(aiPersona);
-  //   return true;
-  // }
-
   public async updatePersonaBoKLastUpdated(
     personaServiceId: string,
     lastUpdated: Date | null

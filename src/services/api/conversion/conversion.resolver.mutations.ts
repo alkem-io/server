@@ -174,7 +174,6 @@ export class ConversionResolverMutations {
             knowledgeBase: {
               calloutsSet: true,
             },
-            knowledgeSpace: true,
           },
         }
       );
