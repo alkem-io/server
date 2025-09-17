@@ -2,15 +2,15 @@
 
 ## Overview
 
-This implementation provides ephemeral guest users - anonymous users with a client-provided name. No database storage or authentication tokens are required.
+This implementation provides ephemeral guest users - anonymous users with a client-provided name. No database storage or authentication tokens are required. The implementation uses header-based guest detection during the authentication flow for seamless integration.
 
 ## How It Works
 
-### User Types:
+### User Types & Authentication Status:
 
-1. **Anonymous**: No authentication, no name header → `GLOBAL_ANONYMOUS` credential
-2. **Guest**: No authentication, with name header → `GLOBAL_GUEST` credential
-3. **Registered**: Authenticated users → `GLOBAL_REGISTERED` credential
+1. **Anonymous**: No authentication, no name header → `GLOBAL_ANONYMOUS` credential → `UserAuthenticationStatus.ANONYMOUS`
+2. **Guest**: No authentication, with name header → `GLOBAL_GUEST` credential → `UserAuthenticationStatus.GUEST`
+3. **Authenticated**: Valid JWT session → `GLOBAL_REGISTERED` credential → `UserAuthenticationStatus.AUTHENTICATED`
 
 ### Guest Name Header
 
@@ -20,94 +20,150 @@ Clients can provide a guest name using the `x-guest-name` header:
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "x-guest-name: John Visitor" \
-  -d '{"query": "{ whoAmI }"}' \
-  http://localhost:3000/graphql
+  -d '{"query": "{ whoAmI { displayName authenticationStatus guestName credentials { type resourceID description } } }"}' \
+  http://localhost:4000/graphql
 ```
 
 ### Implementation Details
 
+#### Core Architecture:
+
 1. **AgentInfo Extension**: Added `guestName` field to store client-provided name
-2. **Authentication Flow**: Modified `GraphqlGuard` to check for `x-guest-name` header when authentication fails
+2. **Authentication Flow**: Modified `OryStrategy` to check for `x-guest-name` header when no valid JWT session exists
 3. **Authorization**: Guest users get `GLOBAL_GUEST` credential with configurable privileges
-4. **Space Access**: Guests can have different access levels than anonymous users (e.g., read user lists in public spaces)
+4. **Testing Interface**: Enhanced `whoAmI` query with structured response including credentials details
+
+#### Authentication Flow:
+
+The guest detection happens in `OryStrategy.validate()`:
+
+1. Check if valid JWT session exists
+2. If no session, check for `x-guest-name` header
+3. If guest name present, create guest `AgentInfo` with `GLOBAL_GUEST` credential
+4. Otherwise, fallback to anonymous `AgentInfo`
 
 ### Code Changes
 
 #### Core Components:
 
-- `AgentInfo`: Added `guestName` field
-- `AgentInfoService.createGuestAgentInfo()`: Creates guest agent info with name
-- `GraphqlGuard`: Checks for guest name header when auth fails
-- `RoleName.GUEST` & `AuthorizationCredential.GLOBAL_GUEST`: New role/credential types
+- **AgentInfo**: Added `guestName` field for ephemeral guest identification
+- **AgentInfoService.createGuestAgentInfo()**: Creates guest agent info with name and credentials
+- **OryStrategy**: Primary authentication strategy now handles guest header detection
+- **UserAuthenticationStatus**: New enum with `ANONYMOUS`, `GUEST`, `AUTHENTICATED` states
+- **RoleName.GUEST** & **AuthorizationCredential.GLOBAL_GUEST**: New role/credential types
+
+#### Test Interface:
+
+- **WhoAmIDto**: Structured response with authentication status, credentials, and user details
+- **CredentialInfoDto**: Detailed credential mapping with type, resourceID, and human-readable descriptions
+- **GuestTestResolver**: Enhanced resolver with comprehensive credential descriptions
 
 #### Authorization:
 
-- Guests get `READ_USERS` privilege in public spaces (unlike anonymous users)
-- Can be extended to allow guest contributions to callouts
+- Guests get `GLOBAL_GUEST` credential instead of `GLOBAL_ANONYMOUS`
+- Can be extended to allow different privileges than anonymous users
 - Configurable per-space guest access policies
 
-### Usage in Callouts
+### Enhanced Testing & Debugging
 
-For callout contributions, you can check if the user is a guest:
+The improved `whoAmI` query provides detailed information:
 
-```typescript
-@Mutation(() => Post)
-async createPost(
-  @Args('postData') postData: CreatePostInput,
-  @CurrentUser() agentInfo: AgentInfo
-): Promise<Post> {
-  const creatorName = agentInfo.guestName
-    ? `Guest: ${agentInfo.guestName}`
-    : agentInfo.firstName
-    ? `${agentInfo.firstName} ${agentInfo.lastName}`
-    : 'Anonymous';
-
-  // Create post with guest name as creator identifier
-  return await this.postService.createPost(postData, creatorName);
+```graphql
+query {
+  whoAmI {
+    displayName
+    authenticationStatus # ANONYMOUS | GUEST | AUTHENTICATED
+    userID
+    guestName
+    credentials {
+      type # e.g., "global-guest"
+      resourceID # e.g., "(global)" or specific resource ID
+      description # e.g., "Global guest access (ephemeral user)"
+    }
+  }
 }
 ```
 
-### Testing
+**Response Examples:**
 
-Test the functionality:
+Anonymous user:
 
-```graphql
-# Anonymous user (no header)
-query {
-  whoAmI
+```json
+{
+  "displayName": "Anonymous User",
+  "authenticationStatus": "ANONYMOUS",
+  "credentials": [
+    {
+      "type": "global-anonymous",
+      "resourceID": "(global)",
+      "description": "Global anonymous access"
+    }
+  ]
 }
-# Returns: "Hello, Anonymous User"
+```
 
-# Guest user (with header: x-guest-name: John Visitor)
-query {
-  whoAmI
-}
-# Returns: "Hello, Guest: John Visitor"
+Guest user (with `x-guest-name: John Visitor`):
 
-# Authenticated user
-query {
-  whoAmI
+```json
+{
+  "displayName": "John Visitor",
+  "authenticationStatus": "GUEST",
+  "guestName": "John Visitor",
+  "credentials": [
+    {
+      "type": "global-guest",
+      "resourceID": "(global)",
+      "description": "Global guest access (ephemeral user)"
+    }
+  ]
 }
-# Returns: "Hello, John Doe"
+```
+
+Authenticated user:
+
+```json
+{
+  "displayName": "John Doe",
+  "authenticationStatus": "AUTHENTICATED",
+  "userID": "user-123",
+  "credentials": [
+    {
+      "type": "global-registered",
+      "resourceID": "(global)",
+      "description": "Global registered user access"
+    },
+    {
+      "type": "space-member",
+      "resourceID": "space-456",
+      "description": "Space member for resource space-456"
+    }
+  ]
+}
 ```
 
 ### Extending Guest Privileges
 
-To allow guests to contribute to callouts, update the authorization policies in:
-
-- `CalloutAuthorizationService`
-- `PostAuthorizationService`
-- Space-level authorization policies
-
-Add rules like:
+To allow guests to contribute to callouts, update the authorization policies:
 
 ```typescript
+// In CalloutAuthorizationService or similar
 const guestContributeRule =
   this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
     [AuthorizationPrivilege.CREATE_POST],
     [AuthorizationCredential.GLOBAL_GUEST],
     'guest-contribute'
   );
+
+authorizationPolicy.credentialRules.push(guestContributeRule);
 ```
 
-This approach is lightweight, stateless, and doesn't require database changes while providing named anonymous users for better UX in callout contributions.
+### Benefits
+
+- **Lightweight**: No database storage, purely header-based
+- **Stateless**: No session management for guests
+- **Flexible**: Easy to extend guest privileges
+- **Debuggable**: Comprehensive credential and status information
+- **Type-safe**: Strong typing with enums and DTOs
+- **Standards-compliant**: Integrates with existing authentication flow
+
+This approach provides named anonymous users for better UX in callout contributions while maintaining the platform's security and authorization model.
