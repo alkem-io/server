@@ -130,7 +130,8 @@ export class KonfigService {
         endpoint: apm?.endpoint,
       },
       geo: {
-        endpoint: geoConfig?.rest_endpoint,
+        enabled: geoConfig.enabled,
+        endpoint: geoConfig.rest_endpoint,
       },
       storage: {
         file: {

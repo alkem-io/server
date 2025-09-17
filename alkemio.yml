@@ -372,6 +372,7 @@ microservices:
 integrations:
   # Different types of geo information like lat, lan, city, country, etc...
   geo:
+    enabled: ${GEO_ENABLED}:false
     # Header used to get the user IP
     header: ${GEO_HEADER}:x-forwarded-for
     rest_endpoint: ${GEO_REST_ENDPOINT}:http://localhost:3000/api/public/rest/geo

@@ -1,8 +1,16 @@
-import { BaseException } from '@common/exceptions/base.exception';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { BaseHttpException } from '@common/exceptions/http';
+import { HttpStatus } from '@nestjs/common';
+import { ExceptionDetails } from '@common/exceptions/exception.details';
 
-export class GeoServiceNotAvailableException extends BaseException {
-  constructor(error: string, context: LogContext) {
-    super(error, context, AlkemioErrorStatus.GEO_SERVICE_NOT_AVAILABLE);
+export class GeoServiceNotAvailableException extends BaseHttpException {
+  constructor(error: string, context: LogContext, details?: ExceptionDetails) {
+    super(
+      error,
+      HttpStatus.METHOD_NOT_ALLOWED,
+      context,
+      AlkemioErrorStatus.GEO_SERVICE_NOT_AVAILABLE,
+      details
+    );
   }
 }

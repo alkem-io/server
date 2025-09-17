@@ -25,6 +25,7 @@ export class GeoLocationService {
   private readonly allowedCallsToService: number;
   private readonly allowedCallsToServiceWindow: number;
   private readonly cacheEntryTtl: number;
+  private readonly disabled: boolean;
 
   constructor(
     @Inject(CACHE_MANAGER)
@@ -38,9 +39,16 @@ export class GeoLocationService {
     this.allowedCallsToService = config.allowed_calls_to_service;
     this.allowedCallsToServiceWindow = config.allowed_calls_to_service_window;
     this.cacheEntryTtl = config.cache_entry_ttl;
+    this.disabled = !config.enabled;
   }
 
   public async getGeo(ip: string): Promise<GeoInformation | undefined> {
+    if (this.disabled) {
+      throw new GeoServiceNotAvailableException(
+        'Geo location service is disabled',
+        LogContext.GEO
+      );
+    }
     const userGeoCached = await this.cacheManager.get<GeoInformation>(ip);
 
     if (userGeoCached) {
@@ -98,6 +106,13 @@ export class GeoLocationService {
   }
 
   public getCacheMetadata() {
+    if (this.disabled) {
+      throw new GeoServiceNotAvailableException(
+        'Geo location service is disabled',
+        LogContext.GEO
+      );
+    }
+
     return this.cacheManager.get<GeoLocationCacheMetadata>(geoServiceCallsKey);
   }
 
