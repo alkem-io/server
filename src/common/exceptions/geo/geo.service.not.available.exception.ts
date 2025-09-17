@@ -7,7 +7,7 @@ export class GeoServiceNotAvailableException extends BaseHttpException {
   constructor(error: string, context: LogContext, details?: ExceptionDetails) {
     super(
       error,
-      HttpStatus.METHOD_NOT_ALLOWED,
+      HttpStatus.SERVICE_UNAVAILABLE,
       context,
       AlkemioErrorStatus.GEO_SERVICE_NOT_AVAILABLE,
       details
