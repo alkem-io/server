@@ -54,6 +54,7 @@ import { AgentInfoService } from '@core/authentication.agent.info/agent.info.ser
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
 import { AiPersonaService } from '@services/ai-server/ai-persona';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 
 @Injectable()
 export class BootstrapService {
@@ -483,17 +484,7 @@ export class BootstrapService {
       relations: { guidanceVirtualContributor: true },
     });
 
-    const aiServer = await this.aiServer.getAiServerOrFail();
     if (!platform.guidanceVirtualContributor?.id) {
-      const aiPersona = await this.aiPersonaService.createAiPersona(
-        {
-          engine: AiPersonaEngine.GUIDANCE,
-          prompt: [],
-          externalConfig: undefined,
-        },
-        aiServer
-      );
-
       // Get admin account:
       const hostOrganization =
         await this.organizationLookupService.getOrganizationByNameIdOrFail(
@@ -505,13 +496,20 @@ export class BootstrapService {
       // Create the VC
       const vc = await this.accountService.createVirtualContributorOnAccount({
         accountID: account.id,
-        aiPersona: aiPersona,
+        aiPersona: {
+          engine: AiPersonaEngine.GUIDANCE,
+          prompt: [],
+          externalConfig: undefined,
+        },
         profileData: {
           displayName: 'Guidance',
           description: 'Guidance Virtual Contributor',
         },
         dataAccessMode: VirtualContributorDataAccessMode.NONE,
         bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.NONE,
+        interactionModes: [
+          VirtualContributorInteractionMode.DISCUSSION_TAGGING,
+        ],
         knowledgeBaseData: {
           profile: {
             displayName: 'Knowledge Base for Virtual Contributor',
