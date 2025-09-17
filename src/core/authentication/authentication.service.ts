@@ -41,6 +41,7 @@ export class AuthenticationService {
   public async getAgentInfo(opts: {
     cookie?: string;
     authorization?: string;
+    guestName?: string;
   }): Promise<AgentInfo> {
     let session: Session | undefined;
     try {
@@ -49,10 +50,18 @@ export class AuthenticationService {
         opts.cookie
       );
     } catch {
+      // No valid session, check if this is a guest user
+      if (opts.guestName) {
+        return this.agentInfoService.createGuestAgentInfo(opts.guestName);
+      }
       return this.agentInfoService.createAnonymousAgentInfo();
     }
 
     if (!session?.identity) {
+      // No identity in session, check if this is a guest user
+      if (opts.guestName) {
+        return this.agentInfoService.createGuestAgentInfo(opts.guestName);
+      }
       return this.agentInfoService.createAnonymousAgentInfo();
     }
 

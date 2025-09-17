@@ -5,7 +5,6 @@ import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { ScheduleModule } from '@nestjs/schedule';
 import { CloseCode } from 'graphql-ws';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
@@ -50,7 +49,6 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
-import { SessionSyncModule } from '@services/session-sync/session-sync.module';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
@@ -96,7 +94,7 @@ import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation
 import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
-import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
+import { GuestTestResolver } from '@domain/test/guest.test.resolver';
 
 @Module({
   imports: [
@@ -119,7 +117,6 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
       isGlobal: true,
       load: [configuration],
     }),
-    ScheduleModule.forRoot(),
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
@@ -288,13 +285,11 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
     MessageReactionModule,
     NotificationRecipientsModule,
     RegistrationModule,
-    SessionSyncModule,
     ConversionModule,
     LibraryModule,
     PlatformModule,
     PlatformHubModule,
     PlatformAdminModule,
-    InAppNotificationAdminModule,
     ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,
@@ -354,6 +349,7 @@ import { InAppNotificationAdminModule } from './platform-admin/in-app-notificati
       useClass: ValidationPipe,
     },
     APP_ID_PROVIDER,
+    GuestTestResolver,
   ],
 })
 export class AppModule {

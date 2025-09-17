@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   LoggerService,
+  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
@@ -18,6 +19,7 @@ import { AuthenticationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -37,6 +39,7 @@ export class GraphqlGuard extends AuthGuard([
   constructor(
     private reflector: Reflector,
     private authorizationService: AuthorizationService,
+    @Optional() private agentInfoService: AgentInfoService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -98,7 +101,10 @@ export class GraphqlGuard extends AuthGuard([
         `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
         LogContext.AUTH
       );
-      resultAgentInfo = this.createAnonymousAgentInfo();
+      // Check for guest name in headers
+      const request = this.getRequest(_context);
+      const guestName = request?.headers?.['x-guest-name'];
+      resultAgentInfo = this.createAgentInfoForGuest(guestName);
     }
 
     // Apply any rules
@@ -177,5 +183,15 @@ export class GraphqlGuard extends AuthGuard([
     };
     emptyAgentInfo.credentials = [anonymousCredential];
     return emptyAgentInfo;
+  }
+
+  public createAgentInfoForGuest(guestName?: string): AgentInfo {
+    if (guestName && guestName.trim().length > 0 && this.agentInfoService) {
+      // Create guest agent info if name is provided and service is available
+      return this.agentInfoService.createGuestAgentInfo(guestName.trim());
+    } else {
+      // Fall back to anonymous if no guest name or service not available
+      return this.createAnonymousAgentInfo();
+    }
   }
 }
