@@ -253,14 +253,6 @@ export class ConversionResolverMutations {
       );
     }
 
-    // Update the information on the AI Persona Service
-    await this.aiServerAdapter.updateAiPersona({
-      ID: virtualContributor.aiPersonaID,
-      bodyOfKnowledgeType:
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE,
-      bodyOfKnowledgeID: virtualContributor.knowledgeBase.id,
-    });
-
     // Reset the authorization policy for the callout
     const authorizations =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(

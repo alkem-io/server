@@ -94,7 +94,6 @@ import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation
 import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
-import { VirtualContributorModelCardModule } from '@domain/community/virtual-contributor-model-card/virtual.contributor.model.card.module';
 
 @Module({
   imports: [
@@ -299,7 +298,6 @@ import { VirtualContributorModelCardModule } from '@domain/community/virtual-con
     MeModule,
     ChatGuidanceModule,
     VirtualContributorModule,
-    VirtualContributorModelCardModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,

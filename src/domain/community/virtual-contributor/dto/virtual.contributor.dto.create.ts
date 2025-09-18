@@ -13,7 +13,7 @@ import { VirtualContributorInteractionMode } from '@common/enums/virtual.contrib
 export class CreateVirtualContributorInput extends CreateContributorInput {
   @Field(() => CreateAiPersonaInput, {
     nullable: false,
-    description: 'The ID of the AiPersona to use for this Collaboration.',
+    description: 'The AI Persona to use for this Virtual Contributor.',
   })
   aiPersona!: CreateAiPersonaInput;
 
@@ -46,6 +46,12 @@ export class CreateVirtualContributorInput extends CreateContributorInput {
   })
   @MaxLength(SMALL_TEXT_LENGTH)
   bodyOfKnowledgeID?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Description of the body of knowledge for this VC.',
+  })
+  bodyOfKnowledgeDescription?: string;
 
   @Field(() => [VirtualContributorInteractionMode], {
     nullable: true,

@@ -54,9 +54,6 @@ export class VirtualContributor
   })
   searchVisibility!: SearchVisibility;
 
-  @Column('text', { nullable: true })
-  description?: string;
-
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   dataAccessMode!: VirtualContributorDataAccessMode;
 
@@ -75,5 +72,5 @@ export class VirtualContributor
   knowledgeBase!: KnowledgeBase;
 
   @Column('text', { nullable: true })
-  bodyOfKnowledge?: string;
+  bodyOfKnowledgeDescription?: string;
 }

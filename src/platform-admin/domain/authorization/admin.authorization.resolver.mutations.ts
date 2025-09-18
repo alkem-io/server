@@ -43,7 +43,7 @@ export class AdminAuthorizationResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private authResetService: AuthResetService,
-    private aiPersona: AiPersonaService,
+    private aiPersonaService: AiPersonaService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private spaceService: SpaceService
@@ -64,7 +64,7 @@ export class AdminAuthorizationResolverMutations {
     grantCredentialData: GrantAuthorizationCredentialInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
@@ -243,7 +243,7 @@ export class AdminAuthorizationResolverMutations {
       `reset authorization on platform: ${agentInfo.email}`
     );
 
-    return this.aiPersona.refreshAllBodiesOfKnowledge();
+    return this.aiPersonaService.refreshAllBodiesOfKnowledge();
   }
 
   private async notifyPlatformGlobalRoleChange(

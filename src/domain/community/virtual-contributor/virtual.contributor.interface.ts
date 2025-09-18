@@ -30,10 +30,6 @@ export class IVirtualContributor
   })
   aiPersonaID!: string;
 
-  @Field(() => IAiPersona, {
-    description: 'The AI Persona powering this Virtual Contributor.',
-    nullable: false,
-  })
   aiPersona?: IAiPersona;
 
   @Field(() => SearchVisibility, {
@@ -53,11 +49,6 @@ export class IVirtualContributor
     description: 'The settings of this Virtual Contributor.',
   })
   settings!: IVirtualContributorSettings;
-  @Field(() => Markdown, {
-    nullable: true,
-    description: 'The description for this AI Persona.',
-  })
-  description?: string;
 
   @Field(() => VirtualContributorDataAccessMode, {
     nullable: false,
@@ -97,7 +88,7 @@ export class IVirtualContributor
     nullable: true,
     description: 'Description of the body of knowledge for this VC.',
   })
-  bodyOfKnowledge?: string;
+  bodyOfKnowledgeDescription?: string;
 
   @Field(() => UUID, {
     nullable: false,
