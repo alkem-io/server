@@ -21,6 +21,7 @@ import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -35,14 +36,15 @@ export class VirtualContributorAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    virtualInput: IVirtualContributor,
-    accountSpaceMemberCredentials: ICredentialDefinition[]
+    virtualInput: IVirtualContributor
   ): Promise<IAuthorizationPolicy[]> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
       virtualInput.id,
       {
         relations: {
-          account: true,
+          account: {
+            spaces: true,
+          },
           profile: true,
           agent: true,
           aiPersona: true,
@@ -52,6 +54,7 @@ export class VirtualContributorAuthorizationService {
     );
     if (
       !virtual.account ||
+      !virtual.account.spaces ||
       !virtual.profile ||
       !virtual.agent ||
       !virtual.aiPersona ||
@@ -72,7 +75,7 @@ export class VirtualContributorAuthorizationService {
     const credentialCriteriasWithAccessToVC =
       await this.getCredentialsWithVisibilityOfVirtualContributor(
         virtual.searchVisibility,
-        accountSpaceMemberCredentials
+        virtual.account
       );
 
     virtual.authorization = this.resetToBaseVirtualContributorAuthorization(
@@ -141,7 +144,7 @@ export class VirtualContributorAuthorizationService {
 
   private async getCredentialsWithVisibilityOfVirtualContributor(
     searchVisibility: SearchVisibility,
-    accountSpaceMemberCredentials: ICredentialDefinition[]
+    account: IAccount
   ): Promise<ICredentialDefinition[]> {
     const credentialCriteriasWithAccess: ICredentialDefinition[] = [];
 
@@ -155,6 +158,8 @@ export class VirtualContributorAuthorizationService {
 
       case SearchVisibility.ACCOUNT:
         // ACCOUNT visibility: only accessible within the scope of the account
+        const accountSpaceMemberCredentials =
+          this.getAccountSpaceMemberCredentials(account);
         if (accountSpaceMemberCredentials.length > 0) {
           credentialCriteriasWithAccess.push(...accountSpaceMemberCredentials);
         }
@@ -236,5 +241,23 @@ export class VirtualContributorAuthorizationService {
       updatedAuthorization,
       newRules
     );
+  }
+
+  private getAccountSpaceMemberCredentials(account: IAccount) {
+    if (!account.spaces) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with spaces to get members: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+    const accountMemberCredentials: ICredentialDefinition[] = [];
+    for (const space of account.spaces) {
+      const spaceMemberCredential: ICredentialDefinition = {
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: space.id,
+      };
+      accountMemberCredentials.push(spaceMemberCredential);
+    }
+    return accountMemberCredentials;
   }
 }

@@ -114,24 +114,6 @@ export class AccountAuthorizationService {
     return updatedAuthorizations;
   }
 
-  private getAccountSpaceMemberCredentials(account: IAccount) {
-    if (!account.spaces) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Account with spaces to get members: ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-    const accountMemberCredentials: ICredentialDefinition[] = [];
-    for (const space of account.spaces) {
-      const spaceMemberCredential: ICredentialDefinition = {
-        type: AuthorizationCredential.SPACE_MEMBER,
-        resourceID: space.id,
-      };
-      accountMemberCredentials.push(spaceMemberCredential);
-    }
-    return accountMemberCredentials;
-  }
-
   public async getClonedAccountAuthExtendedForChildEntities(
     account: IAccount
   ): Promise<IAuthorizationPolicy> {
@@ -202,13 +184,10 @@ export class AccountAuthorizationService {
       );
     updatedAuthorizations.push(...storageAggregatorAuthorizations);
 
-    const accountSpaceMemberCredentials =
-      this.getAccountSpaceMemberCredentials(account);
     for (const vc of account.virtualContributors) {
       const updatedVcAuthorizations =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-          vc,
-          accountSpaceMemberCredentials
+          vc
         );
       updatedAuthorizations.push(...updatedVcAuthorizations);
     }

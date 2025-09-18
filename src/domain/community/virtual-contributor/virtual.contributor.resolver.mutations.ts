@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorService } from './virtual.contributor.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -34,7 +34,6 @@ export class VirtualContributorResolverMutations {
   @Mutation(() => IVirtualContributor, {
     description: 'Updates the specified VirtualContributor.',
   })
-  @Profiling.api
   async updateVirtualContributor(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('virtualContributorData')
