@@ -14,7 +14,6 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
@@ -35,7 +34,6 @@ export class SpaceResolverMutations {
     private spaceAuthorizationService: SpaceAuthorizationService,
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
     private subspaceCreatedSubscription: PubSubEngine,
-    private namingReporter: NameReporterService,
     private spaceLicenseService: SpaceLicenseService,
     private licenseService: LicenseService
   ) {}
@@ -74,16 +72,6 @@ export class SpaceResolverMutations {
         email: agentInfo.email,
       }
     );
-
-    if (
-      spaceData?.about?.profile?.displayName &&
-      spaceData?.about?.profile?.displayName !== space.about.profile.displayName
-    ) {
-      this.namingReporter.createOrUpdateName(
-        space.id,
-        spaceData?.about?.profile?.displayName
-      );
-    }
 
     return updatedSpace;
   }

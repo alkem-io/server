@@ -62,11 +62,7 @@ export class AppController {
     try {
       geo = await this.geoLocationService.getGeo(ip);
     } catch (error: any) {
-      this.logger.error(
-        `Unable to fetch geo location for IP: ${ip} :: ${error?.message}`,
-        error?.stack,
-        LogContext.GEO
-      );
+      throw error;
     }
 
     return geo;
