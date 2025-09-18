@@ -58,12 +58,12 @@ export class VirtualContributorAuthorizationService {
       !virtual.profile ||
       !virtual.agent ||
       !virtual.aiPersona ||
-      !virtual.knowledgeBase ||
-      !virtual.account
+      !virtual.knowledgeBase
     )
       throw new RelationshipNotFoundException(
-        `Unable to load entities for virtual: ${virtual.id} `,
-        LogContext.COMMUNITY
+        'Unable to load entities for VC',
+        LogContext.COMMUNITY,
+        { virtualContributorID: virtual.id }
       );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     const accountAdminCredential: ICredentialDefinition = {
@@ -246,8 +246,9 @@ export class VirtualContributorAuthorizationService {
   private getAccountSpaceMemberCredentials(account: IAccount) {
     if (!account.spaces) {
       throw new RelationshipNotFoundException(
-        `Unable to load Account with spaces to get members: ${account.id} `,
-        LogContext.ACCOUNT
+        'Unable to load Account with spaces to get membership credentials',
+        LogContext.ACCOUNT,
+        { accountID: account.id }
       );
     }
     const accountMemberCredentials: ICredentialDefinition[] = [];
