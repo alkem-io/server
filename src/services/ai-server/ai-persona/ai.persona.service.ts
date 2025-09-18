@@ -80,10 +80,6 @@ export class AiPersonaService {
       });
     }
 
-    if (aiPersonaData.description !== undefined) {
-      aiPersona.description = aiPersonaData.description;
-    }
-
     await this.aiPersonaRepository.save(aiPersona);
 
     return await this.getAiPersonaOrFail(aiPersona.id);
@@ -154,7 +150,6 @@ export class AiPersonaService {
       prompt: aiPersona.prompt,
       userID: invocationInput.userID,
       message: invocationInput.message,
-      // TODO fix bodyOfKnowledgeID
       bodyOfKnowledgeID: invocationInput.bodyOfKnowledgeID,
       contextID: invocationInput.contextID,
       history,

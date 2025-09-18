@@ -10,7 +10,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
-import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
@@ -38,8 +38,8 @@ export class VirtualContributor
   @Column('json', { nullable: false })
   settings!: IVirtualContributorSettings;
 
-  // Direct reference to AiPersona using aiPersonaID
-  @Column('varchar', { nullable: false, length: SMALL_TEXT_LENGTH })
+  // Direct reference to AiPersona using aiPersonaID as potentially in a separate server.
+  @Column('char', { nullable: false, length: UUID_LENGTH })
   aiPersonaID!: string;
 
   @Column('varchar', { nullable: true, length: SMALL_TEXT_LENGTH })
@@ -53,9 +53,6 @@ export class VirtualContributor
     nullable: false,
   })
   searchVisibility!: SearchVisibility;
-
-  @Column('text', { nullable: true })
-  description?: string;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   dataAccessMode!: VirtualContributorDataAccessMode;
@@ -75,5 +72,5 @@ export class VirtualContributor
   knowledgeBase!: KnowledgeBase;
 
   @Column('text', { nullable: true })
-  bodyOfKnowledge?: string;
+  bodyOfKnowledgeDescription?: string;
 }

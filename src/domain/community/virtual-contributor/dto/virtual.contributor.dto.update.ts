@@ -4,6 +4,12 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { Type } from 'class-transformer';
 import { UpdateKnowledgeBaseInput } from '@domain/common/knowledge-base/dto';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { MaxLength } from 'class-validator';
+import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+
 @InputType()
 export class UpdateVirtualContributorInput extends UpdateContributorInput {
   @Field(() => Boolean, {
@@ -29,4 +35,20 @@ export class UpdateVirtualContributorInput extends UpdateContributorInput {
   @IsOptional()
   @Type(() => UpdateKnowledgeBaseInput)
   knowledgeBaseData!: UpdateKnowledgeBaseInput;
+
+  @Field(() => VirtualContributorBodyOfKnowledgeType, {
+    nullable: true,
+  })
+  @MaxLength(SMALL_TEXT_LENGTH)
+  bodyOfKnowledgeType?: VirtualContributorBodyOfKnowledgeType;
+
+  @Field(() => VirtualContributorDataAccessMode, { nullable: true })
+  dataAccessMode?: VirtualContributorDataAccessMode;
+
+  @Field(() => [VirtualContributorInteractionMode], { nullable: true })
+  interactionModes?: VirtualContributorInteractionMode[];
+
+  @Field(() => String, { nullable: true })
+  @MaxLength(LONG_TEXT_LENGTH)
+  bodyOfKnowledgeDescription?: string;
 }

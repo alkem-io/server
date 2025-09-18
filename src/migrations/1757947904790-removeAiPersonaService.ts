@@ -11,12 +11,9 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
       `DROP INDEX \`REL_55b8101bdf4f566645e928c26e\` ON \`virtual_contributor\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` ADD \`aiPersonaID_tmp\` varchar(128) NOT NULL`
+      `ALTER TABLE \`virtual_contributor\` ADD \`aiPersonaID_tmp\` char(36) NOT NULL`
     );
 
-    await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` ADD \`description\` text NULL`
-    );
     await queryRunner.query(
       `ALTER TABLE \`virtual_contributor\` ADD \`dataAccessMode\` varchar(128) NOT NULL`
     );
@@ -37,7 +34,7 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` ADD \`bodyOfKnowledge\` text NULL`
+      `ALTER TABLE \`virtual_contributor\` ADD \`bodyOfKnowledgeDescription\` text NULL`
     );
 
     await queryRunner.query(
@@ -54,11 +51,10 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
       LEFT JOIN \`ai_persona_service\` aps ON ap.aiPersonaServiceID = aps.id
       SET
         vc.aiPersonaID_tmp = ap.aiPersonaServiceID,
-        vc.description = ap.description,
         vc.dataAccessMode = ap.dataAccessMode,
         vc.interactionModes = ap.interactionModes,
         vc.bodyOfKnowledgeType = aps.bodyOfKnowledgeType,
-        vc.bodyOfKnowledge = ap.bodyOfKnowledge,
+        vc.bodyOfKnowledgeDescription = ap.bodyOfKnowledge,
         vc.bodyOfKnowledgeID = aps.bodyOfKnowledgeID
     `);
 
@@ -73,7 +69,7 @@ export class RemoveAiPersonaService1757947904790 implements MigrationInterface {
       `ALTER TABLE \`virtual_contributor\` DROP COLUMN \`aiPersonaId\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`virtual_contributor\` CHANGE \`aiPersonaID_tmp\` TO \`aiPersonaID\``
+      `ALTER TABLE \`virtual_contributor\` CHANGE \`aiPersonaID_tmp\` \`aiPersonaID\` char(36) NOT NULL`
     );
 
     await queryRunner.query(`
