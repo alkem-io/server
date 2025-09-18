@@ -10,6 +10,9 @@ import { IAiPersona } from './ai.persona.interface';
 import { AiPersonaService } from './ai.persona.service';
 import { AiPersona } from './ai.persona.entity';
 
+import graphJson from './dto/graph.json';
+import { PromptGraph } from './dto/prompt.graph.dto';
+
 const EXTERNALY_CONFIGURABLE_ENGINES = [
   AiPersonaEngine.LIBRA_FLOW,
   AiPersonaEngine.GENERIC_OPENAI,
@@ -21,6 +24,34 @@ export class AiPersonaResolverFields {
     private authorizationService: AuthorizationService,
     private aiPersonaServiceService: AiPersonaService
   ) {}
+
+  @ResolveField('promptGraph', () => PromptGraph, {
+    nullable: true,
+    description: 'The PromptGraph for this Virtual.',
+  })
+  async promptGraph(
+    @Parent() parent: AiPersona,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
+    // Deep clone to avoid mutating the imported object
+    const graph = graphJson;
+    if (Array.isArray(graph.nodes)) {
+      graph.nodes.forEach((node: any) => {
+        if (
+          node.output &&
+          node.output.properties &&
+          typeof node.output.properties === 'object' &&
+          !Array.isArray(node.output.properties)
+        ) {
+          node.output.properties = Object.entries(node.output.properties).map(
+            //@ts-ignore-next-line
+            ([key, value]) => ({ name: key, ...value })
+          );
+        }
+      });
+    }
+    return graph;
+  }
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,

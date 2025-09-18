@@ -3,6 +3,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IAiServer } from '../ai-server/ai.server.interface';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { IExternalConfig } from './dto/external.config';
+import { PromptGraph } from './dto/prompt.graph.dto';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @ObjectType('AiPersona')
@@ -38,4 +39,10 @@ export abstract class IAiPersona extends IAuthorizable {
     description: 'The date when the body of knowledge was last ingested.',
   })
   bodyOfKnowledgeLastUpdated: Date | null = null;
+
+  @Field(() => PromptGraph, {
+    nullable: true,
+    description: 'The prompt graph for this AI Persona.',
+  })
+  promptGraph?: PromptGraph;
 }

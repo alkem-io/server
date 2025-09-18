@@ -9,6 +9,8 @@ import { AiPersonaAuthorizationService } from './ai.persona.service.authorizatio
 import { AiPersonaResolverMutations } from './ai.persona.resolver.mutations';
 import { AiPersonaResolverFields } from './ai.persona.service.resolver.fields';
 import { AiPersonaExternalConfigResolverFields } from './ai.persona.external.config.resolver.fields';
+import { PromptGraphDataPointResolver } from './prompt.graph.data.point.resolver.resolver';
+import { PromptGrapDataStructResolver } from './prompt.grap.data.struct.resolver';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { AiPersonaExternalConfigResolverFields } from './ai.persona.external.con
     AiPersonaResolverMutations,
     AiPersonaResolverFields,
     AiPersonaExternalConfigResolverFields,
+    PromptGraphDataPointResolver,
+    PromptGrapDataStructResolver,
   ],
   exports: [AiPersonaService, AiPersonaAuthorizationService],
 })
