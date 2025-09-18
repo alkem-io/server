@@ -90,6 +90,31 @@ export class InvitationService {
         invitation.invitedContributorID,
         invitation.roleSet.id
       );
+      const contributor = await this.contributorService.getContributor(
+        invitation.invitedContributorID,
+        {
+          relations: { agent: true },
+        }
+      );
+
+      if (!contributor || !contributor.agent) {
+        this.logger.error(
+          {
+            message:
+              'Unable to invalidate membership status cache for Contributor',
+            cause: 'Contributor or associated Agent not found',
+            invitationId: invitation.id,
+            contributorId: invitation.invitedContributorID,
+          },
+          undefined,
+          LogContext.COMMUNITY
+        );
+      } else {
+        await this.roleSetCacheService.deleteMembershipStatusCache(
+          contributor.agent.id,
+          invitation.roleSet.id
+        );
+      }
     }
 
     return result;
